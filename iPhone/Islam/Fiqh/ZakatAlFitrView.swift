@@ -44,8 +44,8 @@ struct ZakatAlFitrView: View {
         List {
             Group {
                 Section {
-                    CalculatorResultCard(title: "Food to give",
-                                         value: "\(fitrPeople) sa\u{2018}") {
+                    CalculatorResultCard(title: String(localized: "Food to give"),
+                                         value: String(localized: "\(fitrPeople) sa\u{2018}")) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("About \(totalKilos) kg of the staple your household eats: rice, dates, flour.")
                                 .font(.caption)
@@ -98,9 +98,9 @@ struct ZakatAlFitrView: View {
                     .padding(.vertical, 2)
 
                     ExplainerButton(
-                        title: "Why the cost is only a guide",
-                        body_: "Ibn Baz, Ibn \u{2018}Uthaymin and the Permanent Committee all held that zakat al-Fitr must be given as FOOD and not as its price; Abu Hanifa allowed the money. This app follows the first view, so the amount here is only to tell you what the food will run to; it is not the thing you give.",
-                        caption: "Given as food, not money. The cost is only so you can budget for it."
+                        title: String(localized: "Why the cost is only a guide"),
+                        body_: String(localized: "Ibn Baz, Ibn \u{2018}Uthaymin and the Permanent Committee all held that zakat al-Fitr must be given as FOOD and not as its price; Abu Hanifa allowed the money. This app follows the first view, so the amount here is only to tell you what the food will run to; it is not the thing you give."),
+                        caption: String(localized: "Given as food, not money. The cost is only so you can budget for it.")
                     )
                 }
 
@@ -108,19 +108,20 @@ struct ZakatAlFitrView: View {
                 // read (Abu, 2026-10-03): what it is as the lead card, the early-giving allowance as a
                 // callout. The words are unchanged.
                 Section(header: Text("WHAT IT IS")) {
-                    ArticleLead("A separate obligation from the zakah on wealth, and it is not worked out on wealth at all. One sa\u{2018} of the staple food people eat, for every person you are responsible for, given before the Eid prayer.")
+                    ArticleLead(String(localized: "A separate obligation from the zakah on wealth, and it is not worked out on wealth at all. One sa\u{2018} of the staple food people eat, for every person you are responsible for, given before the Eid prayer."),
+                                eyebrow: String(localized: "IN SHORT"))
 
                     ScriptureQuote(hadith: "bukhari:1503", cite: "Sahih al-Bukhari 1503",
                                    arabic: 29...62, english: 0...46)
                 }
 
                 Section(header: Text("WHEN TO GIVE IT")) {
-                    Text(verbatim: "Before the Eid prayer. Ibn \u{2018}Abbas said the Prophet (peace and blessings be upon him) made it obligatory as a purification for the fasting person from idle talk and obscenity, and as food for the poor: whoever gives it before the prayer, it is an accepted zakah, and whoever gives it after the prayer, it is one charity among charities (Sunan Abi Dawud 1609; graded hasan by al-Albani).")
+                    Text(verbatim: String(localized: "Before the Eid prayer. Ibn \u{2018}Abbas said the Prophet (peace and blessings be upon him) made it obligatory as a purification for the fasting person from idle talk and obscenity, and as food for the poor: whoever gives it before the prayer, it is an accepted zakah, and whoever gives it after the prayer, it is one charity among charities (Sunan Abi Dawud 1609; graded hasan by al-Albani).").localizedDigits)
                         .font(.body)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    ArticleCallout(paragraphs: ["It may be given a day or two early, as Ibn \u{2018}Umar and the people of his time used to do (Sahih al-Bukhari 1511), so that it reaches the poor in time for the day itself."],
-                                   title: "A Day or Two Early", systemImage: "calendar.badge.clock")
+                    ArticleCallout(paragraphs: [String(localized: "It may be given a day or two early, as Ibn \u{2018}Umar and the people of his time used to do (Sahih al-Bukhari 1511), so that it reaches the poor in time for the day itself.")],
+                                   title: String(localized: "A Day or Two Early"), systemImage: "calendar.badge.clock")
                 }
             }
             .themedListRowBackground()

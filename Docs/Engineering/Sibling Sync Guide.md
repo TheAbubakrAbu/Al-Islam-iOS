@@ -23,7 +23,8 @@ one folder up from each repo.
   `#available(iOS 16, *)` checks even though Al-Islam no longer needs them.
 - **Per-app files are never merged:** the two roots (`iPhone/Al-<App>App.swift`, `Apple Watch/Al-<App>App.swift`),
   `Resources/Entitlements*`, every `PrivacyInfo.xcprivacy`, each repo's `project.pbxproj`, and the store copy
-  in the sibling's `Docs/`.
+  in the sibling's `Docs/`. The language files are not merged either: `sync_localization.py` copies the string
+  catalog over whole and WRITES each app's own `InfoPlist.xcstrings` and Siri phrase files from Al-Islam's.
 
 ## 2. Ground rules
 
@@ -40,19 +41,21 @@ one folder up from each repo.
 | File (in `~/Downloads/Islam/`) | What it does |
 |---|---|
 | `sync_from_islam.sh <quran\|adhan> [--apply] [--update-base]` | the sync: 3-way merge per file (BASE = Al-Islam at `<sibling>/.sync-base`, OURS = the sibling, THEIRS = Al-Islam's **working tree**), then four checks |
-| `sync-manifests/<app>.conf` | `SYNC` prefixes, `EXCLUDE` (never synced), `PER_APP` (never merged), `FLAG` / `FLAG_SKIP`, `ROOT_SKIP` |
+| `sync-manifests/<app>.conf` | `SYNC` prefixes, `EXCLUDE` (never synced), `PER_APP` (never merged), `FLAG` / `FLAG_SKIP`, `ROOT_SKIP`, `L10N_MIRROR` / `L10N_DERIVED` (sync_localization.py's) |
 | `sync-report-<app>.txt` | the report every run writes; read it, do not trust a summary of an old one |
 | `sync_renames.py` | finds files Al-Islam moved since BASE, so a move ports as one file instead of NEW plus DELETE |
 | `sync_build_flags.py` | the sibling's project-level compile conditions; `--apply` writes them |
+| `sync_localization.py <quran\|adhan> [--apply]` | the interface languages (pass 3b, also runs alone): copies `Resources/Localizable.xcstrings`, writes the app's own `InfoPlist.xcstrings` (its name, its prompts) and `*.lproj/AppShortcuts.strings` (only the phrases it compiles, per target), sets knownRegions and the catalog build settings, and registers all of it |
 | `check_feature_isolation.py` | the LEAK check (section 4) |
 | `check_root_wiring.py` | compares the per-app roots' modifiers with Al-Islam's |
-| `register_in_pbxproj.py <sibling> <paths...>` | registers NEW files in the sibling's project (the report prints the exact command); `--move` re-parents moved ones |
+| `register_in_pbxproj.py <sibling> <paths...>` | registers NEW files in the sibling's project (the report prints the exact command), a `<lang>.lproj/` file as a language of a variant group; `--move` re-parents moved ones |
 | `membership_diff.py <sibling>` | lists files whose target membership differs from Al-Islam's (a widget file also needs the Widget target) |
 
 Report labels: `MOVE`, `NEW`, `UPDATE` (only Al-Islam changed it), `MERGE` (both changed, merged cleanly),
 `CONFLICT` (merged with `<<<<<<<` markers left in), `BIN-CONFL` (binary changed on both sides: the sibling's
-copy is kept), `DELETE`, `PER-APP`, `FLAG-ADD` / `FLAG-ERROR`, `LEAK`, `ROOT-WARN` / `ROOT-ERROR`. The script
-exits 1 while any LEAK, FLAG-ERROR or ROOT-ERROR remains, even after a successful `--apply`.
+copy is kept), `DELETE`, `PER-APP`, `FLAG-ADD` / `FLAG-ERROR`, `LEAK`, `ROOT-WARN` / `ROOT-ERROR`,
+`LOC-WRITE` / `LOC-PROJECT` / `LOC-REGISTER` / `LOC-DROP` / `LOC-ERROR`. The script exits 1 while any LEAK,
+FLAG-ERROR, ROOT-ERROR or LOC-ERROR remains, even after a successful `--apply`.
 
 **`--update-base` only advances `.sync-base` at the end of an `--apply` run.** Never run `--apply` twice
 against the same base: the second run 3-way merges your hand-resolved conflict files again and can write
@@ -120,6 +123,14 @@ nested types and argument labels (the old `.sheet(` false positive was WidgetGal
    live in a widget-only file.
 6. **Fix the remaining LEAKs** (section 4), plus any FLAG-ERROR. `FLAG-ADD` lines are applied by `--apply`
    (Al-Quran has never defined HAS_QURAN until this lands).
+6b. **Languages.** `--apply` ran `sync_localization.py`; fix each LOC-ERROR it printed, then run it again
+   alone (`./sync_localization.py quran --apply`) until it prints none. The first port after 2026-10-25
+   reports "phrases written in Arabic in the code" while `AppIntents.swift` still holds the sibling's old
+   Arabic lines (Al-Islam deleted its own): take Al-Islam's side of that conflict, they are one more ENGLISH
+   phrase to Siri. Once the sibling builds (step 9), `Al-Islam-iOS/Scripts/localize_catalog.py sibling
+   <its -derivedDataPath>` lists keys only its code has; `--add`, translate and merge them in Al-Islam, then
+   run `sync_localization.py` again. Check it in Arabic: launch with `-AppleLanguages "(ar)" -AppleLocale ar_SA`
+   and look at the home-screen name (الأذان / القرآن).
 7. **Roots by hand.** The per-app roots are never merged, so anything Al-Islam wired into ITS roots since
    BASE has to be ported: `git -C Al-Islam-iOS diff <base> HEAD -- iPhone/Al-IslamApp.swift "Apple Watch/Al-IslamApp.swift"`.
    On 2026-10-13 that was the About You root stage, the warm walk, the deep-link receivers, the post-reveal
@@ -187,6 +198,30 @@ Tricks" (Al-Quran shows 78, Al-Adhan 83); Al-Adhan's "a Free Palestine poster wi
 not new (the poster was deleted by this sync, the wallpaper is 2.6.4's); Al-Quran's "Tajweed Foundations is
 now a 58-lesson course" (the course is a separate Tajweed Course tile); Al-Quran's App Store Description says
 Ask AI cites "only the ayahs it shows" (it now cites tafsir, articles and duas too).
+
+## 6b. Arabic for the siblings (staged 2026-10-25, not applied)
+
+Abu: "write the code for al adhan and al quran WITHOUT updating them now". Nothing in either sibling changed.
+What is ready: `sync_localization.py` (new), the L10N lines in both manifests, variant groups in
+`register_in_pbxproj.py`, pass 3b in `sync_from_islam.sh`, and `localize_catalog.py sibling` in Al-Islam.
+Their dry runs: Al-Adhan gets the catalog, an InfoPlist.xcstrings of 5 keys (الأذان, the three location
+prompts, the photo prompt) and 25 Siri phrases on each target; Al-Quran gets the catalog, 2 keys (القرآن, the
+photo prompt; it declares no location prompt) and 64 phrases on the iPhone, 44 on the Watch (no Open Surah
+there). Both also get `ar` in knownRegions and catalog symbols off. Their Arabic store listings are staged
+in `~/Downloads/Islam/sibling-staging/<App>-iOS/Docs/Arabic Listing.md`, to copy into each sibling's `Docs/`.
+Verified on APFS clones in a scratchpad (`cp -cR`, toolchain copied, Al-Islam symlinked), never the siblings:
+`--apply` wrote and registered everything and a second run changed nothing; both clones built (Al-Adhan's only
+warnings are its old `lock()`/`unlock()` calls, Al-Quran had none, and no "phrase is not used" warning); the
+bundles carry الأذان / القرآن and their phrase files on the iPhone and the Watch; Al-Adhan launched right to
+left in Arabic. On the clones the siblings' old `AppIntents.swift` still had their 20 Arabic-in-code phrases:
+the pass names them as a LOC-ERROR until the merge (or a hand edit) removes them.
+
+The whole sync's dry run that day: Al-Adhan 131 LEAKs and 107 conflicts, Al-Quran 87 and 130. Every LEAK
+sits on a line changed since HEAD; most are Arabic rewrites (`return "Khatm"` became `String(localized:)`) of
+lines a sibling had stripped, in `Achievements.swift` (101 / 56) and `ProfileView.swift` (18 / 7): resolve
+by keeping the sibling's deletion and taking Al-Islam's wording for the lines it kept, or gate the badges
+by domain in Al-Islam first (section 4). The rest is the stale base: `.sync-base` is still `60cd3c0` (step 10
+of the 10-13 port never ran), so the real port also needs everything else since then (section 5).
 
 ## 7. Traps from earlier syncs
 

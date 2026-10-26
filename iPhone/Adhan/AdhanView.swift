@@ -196,11 +196,11 @@ struct AdhanView: View {
     /// other"), the current one ticked inside it and named under the row.
     @ViewBuilder
     private var adhanMoreItems: some View {
-        TabMoreMenuItem("Prayer Calendar", systemImage: "calendar") {
+        TabMoreMenuItem(String(localized: "Prayer Calendar"), systemImage: "calendar") {
             settings.hapticFeedback()
             if pushedCalendar == nil { pushedCalendar = .prayerCalendar }
         }
-        TabMoreMenuItem("Hijri Calendar", systemImage: "moon.stars") {
+        TabMoreMenuItem(String(localized: "Hijri Calendar"), systemImage: "moon.stars") {
             settings.hapticFeedback()
             if pushedCalendar == nil { pushedCalendar = .hijriCalendar }
         }
@@ -278,7 +278,7 @@ struct AdhanView: View {
                 // Simple Mode leaves the glance wall out: each tile is a shortcut to a door the tab
                 // already has (the calendar button, the compass, the city pill, the sky's moon).
                 if !settings.hides(.atAGlance) {
-                    Section(header: SectionIconHeader("AT A GLANCE", icon: "rectangle.grid.2x2.fill")) {
+                    Section(header: SectionIconHeader(String(localized: "AT A GLANCE"), icon: "rectangle.grid.2x2.fill")) {
                         GlanceCard(onSelect: handleGlance)
                     }
                 }
@@ -559,6 +559,10 @@ struct AdhanView: View {
                 PrayerCountdown()
                     .equatable()
             }
+            // The Islamic date under way or coming this week, first beneath the countdown (Abu,
+            // 2026-10-25: "when an event is coming or its an event put it in adhan ... above or below
+            // prayer countdown"). See IslamicEventBanner.swift.
+            eventSection
             // Traveling mode sits right under the countdown, above the list it explains - one compact
             // row (Abu, 2026-10-19: "smaller and simpler ... before or after prayer countdown"; it was
             // a loud card leading the whole tab). With the sky on, the countdown rides in the sky
@@ -578,6 +582,29 @@ struct AdhanView: View {
     }
 
     #if os(iOS)
+    /// The event row: today's or this week's Islamic date, opening the Hijri calendar (the same push
+    /// the Moon and Next Islamic Date tiles make). Nothing near, no row.
+    @ViewBuilder
+    private var eventSection: some View {
+        if let occurrence = IslamicEventBanner.occurrence(now: eventNow, settings: settings) {
+            Section {
+                IslamicEventBanner(occurrence: occurrence) { handleGlance(.hijriCalendar) }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
+            .transition(.opacity.combined(with: .move(edge: .top)))
+        }
+    }
+
+    /// The Hijri reference moment the banner reads the day from: after Maghrib with the date switch
+    /// on it is already tomorrow, as the date row above says. `-adhanToday` stands in for now (DEBUG).
+    private var eventNow: Date {
+        #if DEBUG
+        if let today = AdhanDebugClock.today { return settings.effectiveHijriReferenceDate(now: today) }
+        #endif
+        return settings.effectiveHijriReferenceDate()
+    }
+
     /// The traveling-mode row: what Qasr changed, how far from home, and the door to Travel Settings
     /// (see TravelingModeBanner.swift). "View Full Prayers" stays in the footer under the list.
     @ViewBuilder
@@ -634,7 +661,7 @@ struct AdhanView: View {
                     if let hijriDate = settings.hijriDate {
                         // Two lines before any shrink: a long Hijri date used to compress to 60% on one
                         // line, which read as unreadably tiny on the small screens.
-                        Text(hijriDate.english)
+                        Text(hijriDate.interfaceLine)
                             .font(showBigQibla ? .system(size: 9) : .caption2)
                             .foregroundColor(settings.accentColor.accent1)
                             .lineLimit(showBigQibla ? 1 : 2)
@@ -646,7 +673,7 @@ struct AdhanView: View {
                             .font(showBigQibla ? .system(size: 9) : .caption2)
                             .foregroundColor(settings.accentColor.accent1)
 
-                        Text((live.prayers != nil ? live.currentLocation?.city : nil) ?? "No location")
+                        Text((live.prayers != nil ? live.currentLocation?.displayCity : nil) ?? String(localized: "No location"))
                             .font(showBigQibla ? .system(size: 10) : .caption)
                             .lineLimit(showBigQibla ? 1 : 2)
                             .minimumScaleFactor(0.8)
@@ -862,9 +889,9 @@ struct AdhanView: View {
         if let card = autoChangeCard { return card.title }
         switch showAlert {
         case .locationAlert:
-            return "Location Access Needed"
+            return String(localized: "Location Access Needed")
         case .notificationAlert:
-            return "Notifications Off"
+            return String(localized: "Notifications Off")
         default:
             return ""
         }
@@ -1045,21 +1072,23 @@ private struct HijriDateRow: View {
 
                 Button {
                     settings.hapticFeedback()
-                    UIPasteboard.general.string = hijriDate.english
+                    UIPasteboard.general.string = hijriDate.companionLine
                 } label: {
-                    Label("Copy English Date", systemImage: "doc.on.doc")
+                    Label(hijriDate.companionCopyTitle, systemImage: "doc.on.doc")
                 }
 
                 Button {
                     settings.hapticFeedback()
                     UIPasteboard.general.string = hijriDate.arabic
                 } label: {
-                    Label("Copy Arabic Date", systemImage: "doc.on.doc")
+                    // In Arabic every date on the row is Arabic: this one is named for its calendar.
+                    Label(AppLanguage.isArabic ? String(localized: "Copy Hijri Date") : String(localized: "Copy Arabic Date"),
+                          systemImage: "doc.on.doc")
                 }
             }
         }
         #else
-        Text(hijriDate.english)
+        Text(hijriDate.interfaceLine)
             .font(.footnote)
             .foregroundColor(settings.accentColor.color)
             .frame(maxWidth: .infinity, alignment: .center)
@@ -1067,14 +1096,15 @@ private struct HijriDateRow: View {
     }
 
     #if os(iOS)
+    /// The English Hijri date; in an Arabic interface, today's Gregorian date (`HijriDate.companionLine`).
     private var englishDate: some View {
-        Text(hijriDate.english)
+        Text(hijriDate.companionLine)
             .font(.footnote.weight(.semibold))
             .foregroundColor(.primary)
     }
 
     private var arabicDate: some View {
-        Text(hijriDate.arabic)
+        Text(hijriDate.arabic.localizedDigits)
             .font(.footnote)
             .foregroundColor(settings.accentColor.color)
     }
@@ -1189,7 +1219,7 @@ private struct CurrentLocationRow: View {
     private var locationLabel: some View {
         #if os(iOS)
         if let currentLoc = live.currentLocation {
-            let currentCity = currentLoc.city
+            let currentCity = currentLoc.displayCity
 
             Button {
                 settings.hapticFeedback()
@@ -1212,7 +1242,7 @@ private struct CurrentLocationRow: View {
 
                             Button {
                                 settings.hapticFeedback()
-                                UIPasteboard.general.string = currentCity
+                                UIPasteboard.general.string = currentLoc.city.cityDisplay
                             } label: {
                                 Label("Copy City Name", systemImage: "doc.on.doc")
                             }
@@ -1223,10 +1253,11 @@ private struct CurrentLocationRow: View {
                                location.latitude != 1000, location.longitude != 1000 {
                                 Button {
                                     settings.hapticFeedback()
-                                    UIPasteboard.general.string = formatCoordinates(
-                                        latitude: location.latitude,
-                                        longitude: location.longitude
-                                    )
+                                    // In Arabic the formatted line carries direction marks and Arabic
+                                    // digits no other app can read: copy the plain pair there.
+                                    UIPasteboard.general.string = AppLanguage.isArabic
+                                        ? "\(location.latitude), \(location.longitude)"
+                                        : formatCoordinates(latitude: location.latitude, longitude: location.longitude)
                                 } label: {
                                     Label("Copy Coordinates", systemImage: "location.circle")
                                 }
@@ -1256,7 +1287,7 @@ private struct CurrentLocationRow: View {
         #else
         Group {
             if live.prayers != nil, let currentLoc = live.currentLocation {
-                Text(currentLoc.city)
+                Text(currentLoc.displayCity)
             } else {
                 Text("No location")
             }
@@ -1356,10 +1387,18 @@ private struct CurrentLocationRow: View {
 ///
 /// Free function, not a static on `CurrentLocationRow`: that row is `private` and iOS-only, and the watch's
 /// enlarged-compass card needs this too.
+///
+/// One localized key, so Arabic can put its own comma between the two halves; each number keeps its degree
+/// sign on the correct side there (`SymbolNumber`: isolated, in the locale's digits). Every part is an
+/// argument, so the line has no Arabic letter outside its isolates and is led right to left explicitly
+/// (`SymbolNumber.rightToLeftLine`): without that, Arabic drew the longitude first.
 func formatCoordinates(latitude: Double, longitude: Double) -> String {
-    let latDir = latitude >= 0 ? "N" : "S"
-    let lonDir = longitude >= 0 ? "E" : "W"
-    return String(format: "%.4f° %@, %.4f° %@", abs(latitude), latDir, abs(longitude), lonDir)
+    let latDir = latitude >= 0 ? String(localized: "N") : String(localized: "S")
+    let lonDir = longitude >= 0 ? String(localized: "E") : String(localized: "W")
+    let lat = SymbolNumber.degrees(abs(latitude), places: 4)
+    let lon = SymbolNumber.degrees(abs(longitude), places: 4)
+    return SymbolNumber.rightToLeftLine(String(localized: "\(lat) \(latDir), \(lon) \(lonDir)",
+                  comment: "Coordinates: latitude with degree sign, N or S, then longitude with degree sign, E or W"))
 }
 
 /// An altitude in metres as e.g. "1,204 ft · 367 m above sea level". Both units, feet first: the one
@@ -1383,8 +1422,9 @@ func formatElevation(metres: Double) -> String {
     let number = elevationNumberFormatter
     let feetText = number.string(from: NSNumber(value: abs(feet).rounded())) ?? "0"
     let metresText = number.string(from: NSNumber(value: abs(metres).rounded())) ?? "0"
-    let suffix = metres < 0 ? "below sea level" : "above sea level"
-    return "\(feetText) ft · \(metresText) m \(suffix)"
+    return metres < 0
+        ? String(localized: "\(feetText) ft · \(metresText) m below sea level")
+        : String(localized: "\(feetText) ft · \(metresText) m above sea level")
 }
 
 

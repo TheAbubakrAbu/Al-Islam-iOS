@@ -65,13 +65,13 @@ enum OnDeviceAsk {
         guard let generationError = error as? LanguageModelSession.GenerationError else { return nil }
         switch generationError {
         case .guardrailViolation:
-            return "Apple Intelligence declined to answer this one. Try rephrasing the question, or asking about it in a different way."
+            return String(localized: "Apple Intelligence declined to answer this one. Try rephrasing the question, or asking about it in a different way.")
         case .unsupportedLanguageOrLocale:
-            return "Apple Intelligence can\u{2019}t work in that language yet. Try asking in English."
+            return String(localized: "Apple Intelligence can\u{2019}t work in that language yet. Try asking in English.")
         case .rateLimited, .concurrentRequests:
-            return "Apple Intelligence is busy right now. Try again in a moment."
+            return String(localized: "Apple Intelligence is busy right now. Try again in a moment.")
         case .exceededContextWindowSize:
-            return "This text is longer than Apple Intelligence can read in one go on this device."
+            return String(localized: "This text is longer than Apple Intelligence can read in one go on this device.")
         default:
             return nil
         }

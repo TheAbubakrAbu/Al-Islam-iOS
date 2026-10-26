@@ -9,7 +9,7 @@ struct SurahsHeader: View {
     /// The glyph leading the title; REVELATION ORDER passes its own.
     var icon: String
 
-    init(text: String = "SURAHS", icon: String = "book.fill") {
+    init(text: String = String(localized: "SURAHS"), icon: String = "book.fill") {
         headerText = text
         self.icon = icon
     }
@@ -89,13 +89,20 @@ struct JuzHeader: View {
 
     var body: some View {
         HStack {
-            SectionIconHeader("JUZ \(juz.id)", icon: "square.grid.3x3.fill")
+            SectionIconHeader(String(localized: "JUZ \(juz.id)"), icon: "square.grid.3x3.fill")
                 .lineLimit(1)
 
-            Text("- \(juz.nameTransliteration.uppercased()) - \(Settings.shared.cleanedQuranArabic(juz.nameArabic))")
-                .font(.footnote)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
+            // The Arabic interface names the juz once, in Arabic.
+            Group {
+                if AppLanguage.isArabic {
+                    Text(verbatim: "- \(juz.displayName)")
+                } else {
+                    Text("- \(juz.nameTransliteration.uppercased()) - \(Settings.shared.cleanedQuranArabic(juz.nameArabic))")
+                }
+            }
+            .font(.footnote)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
 
             #if os(iOS)
             Spacer()
@@ -129,7 +136,7 @@ struct JuzHeader: View {
     #if os(iOS)
     private var infoMessage: String {
         let stats = quranData.juzStats(for: juz)
-        return """
+        return String(localized: """
         \(Settings.shared.cleanedQuranArabic(juz.nameArabic))
 
         Ayahs: \(stats.ayahCount)
@@ -139,7 +146,7 @@ struct JuzHeader: View {
 
         Starts: Surah \(juz.startSurah):\(juz.startAyah)
         Ends: Surah \(juz.endSurah):\(juz.endAyah)
-        """
+        """)
     }
 
     private var surahCountBadge: some View {
@@ -166,14 +173,17 @@ struct JuzHeader: View {
         .buttonStyle(.plain)
         .foregroundStyle(settings.accentColor.color)
         // Anchored to the info button itself, so the dialog pops from where the tap happened.
+        // In Arabic the message's first line already names the juz in Arabic: the title is the number.
         .confirmationDialog(
-            "Juz \(juz.id) - \(juz.nameTransliteration)",
+            AppLanguage.isArabic ? String(localized: "Juz \(juz.id)") : String(localized: "Juz \(juz.id) - \(juz.nameTransliteration)"),
             isPresented: $showInfo,
             titleVisibility: .visible
         ) {
             Button("Copy Info") {
                 settings.hapticFeedback()
-                UIPasteboard.general.string = "Juz \(juz.id) - \(juz.nameTransliteration)\n\(infoMessage)"
+                UIPasteboard.general.string = AppLanguage.isArabic
+                    ? String(localized: "Juz \(juz.id)") + "\n" + infoMessage
+                    : String(localized: "Juz \(juz.id) - \(juz.nameTransliteration)\n\(infoMessage)")
             }
             Button("OK") {}
         } message: {
@@ -211,7 +221,7 @@ struct PageHeader: View {
 
     var body: some View {
         HStack {
-            SectionIconHeader("PAGE \(page)", icon: "doc.text.fill")
+            SectionIconHeader(String(localized: "PAGE \(page)"), icon: "doc.text.fill")
                 .lineLimit(1)
 
             Spacer()
@@ -398,6 +408,7 @@ struct HeaderRow: View {
                 )
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity, alignment: .center)
+                .leftToRightContent()
                 .padding(.vertical, 4)
             }
 
@@ -412,6 +423,7 @@ struct HeaderRow: View {
                 )
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity, alignment: .center)
+                .leftToRightContent()
                 .padding(.vertical, 4)
             }
         }

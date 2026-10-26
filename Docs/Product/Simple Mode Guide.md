@@ -80,7 +80,7 @@ Since Simple Mode v2 (2026-10-20) the table of what Simple hides is generated fr
 | bookStats | hadith | A book's stats and era lines on the tab | The book's own screen |
 | chapterStats | hadithBook | The CHAPTERS header's pills, each chapter's count and range | The reading screen's chapter header |
 | topChapterPair | hadithReader | The top Previous/Next chapter pair | The bottom pair |
-| foldedGroups | islam | TOOLS, SIGNS & PROOFS and ASK AI | The More Resources row |
+| foldedGroups | islam | TOOLS and ASK AI | The More Resources row |
 | prophetQuote | islam | The Prophet Muhammad ﷺ quote card | Dropped |
 | appsSection | islam | AL-ISLAMIC APPS | Settings › the Settings tab's copy |
 | cardTodayPills | islam | The Today pills on the Reminder of the Day and Dua of the Day cards | ⋯ menu › Today |
@@ -314,7 +314,7 @@ Design: `Docs/Product/Simple Mode v2 Design.md`.
   - **VoiceOver bug, a failed fix:** hiding the icon from accessibility emptied EVERY item's label, so `SimpleMoreMenuItem` stays a plain `Label`.
   - UITest `testHadithMoreMenuOpensTopics` passes; it checks Topics and Show as Grid by name.
 - **2026-10-10, Task 8 (Islam).**
-  - **Folding:** TOOLS, SIGNS & PROOFS and ASK AI fold into a More Resources row (`IslamDestination.moreResources`, pushed by value, never `available`). Its screen lists them in the tab's grid or list form.
+  - **Folding:** TOOLS, SIGNS & PROOFS and ASK AI fold into a More Resources row (`IslamDestination.moreResources`, pushed by value, never `available`). Its screen lists them in the tab's grid or list form. Since 2026-10-24 only TOOLS and ASK AI fold: SIGNS & PROOFS merged with FAITH & PRACTICE into FAITH & PROOFS, which stays on the tab for its pillars and how-to guides.
   - **Row tap:** a plain Button there never took the tap in the UI test, so the row is a `GridTileMenu` (with "Open More Resources" on the hold), as the banners are.
   - **Also hidden:** the quote card and AL-ISLAMIC APPS.
   - UITest `testIslamMoreResourcesListsTools` passes. The `-islamDestination moreResources` screenshot shows the folded groups.

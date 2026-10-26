@@ -18,9 +18,9 @@ struct ZakahCalculatorView: View {
 
         var label: String {
             switch self {
-            case .silver: return "Silver"
-            case .gold: return "Gold"
-            case .custom: return "Enter it"
+            case .silver: return String(localized: "Silver")
+            case .gold: return String(localized: "Gold")
+            case .custom: return String(localized: "Enter it")
             }
         }
 
@@ -40,9 +40,10 @@ struct ZakahCalculatorView: View {
     private enum YearBasis: String, CaseIterable {
         case lunar, solar
 
-        var label: String { self == .lunar ? "Lunar year" : "Solar year" }
+        var label: String { self == .lunar ? String(localized: "Lunar year") : String(localized: "Solar year") }
         var rate: Double { self == .lunar ? 0.025 : 0.02577 }
-        var rateText: String { self == .lunar ? "2.5%" : "2.577%" }
+        /// "2.5%" and "2.577%", written the way the interface writes a percentage.
+        var rateText: String { rate.formatted(.percent.precision(.fractionLength(0...3))) }
     }
 
     // Persisted so a work-in-progress calculation survives leaving the screen. Stored as strings
@@ -169,15 +170,15 @@ struct ZakahCalculatorView: View {
                 #if os(iOS)
                 if shows("result") {
                     ResourceHeroSection(ResourceHero(
-                        eyebrow: "THE THIRD PILLAR",
+                        eyebrow: String(localized: "THE THIRD PILLAR"),
                         systemImage: "percent",
-                        headline: "Take, [O, Muhammad], from their wealth a charity by which you purify them and cause them increase.",
-                        source: "Quran 9:103",
-                        message: "Enter what you own and what you owe. The calculator weighs it against the nisab and works out what is due, with zakat al-fitr beside it.",
+                        headline: String(localized: "Take, [O, Muhammad], from their wealth a charity by which you purify them and cause them increase."),
+                        source: String(localized: "Quran 9:103"),
+                        message: String(localized: "Enter what you own and what you owe. The calculator weighs it against the nisab and works out what is due, with zakat al-fitr beside it."),
                         stats: [
-                            ResourceHeroStat("2.5%", "the rate"),
-                            ResourceHeroStat("1 year", "held (hawl)"),
-                            ResourceHeroStat("8", "recipient groups"),
+                            ResourceHeroStat(YearBasis.lunar.rateText, String(localized: "the rate")),
+                            ResourceHeroStat(String(localized: "1 year"), String(localized: "held (hawl)")),
+                            ResourceHeroStat("8".localizedDigits, String(localized: "recipient groups")),
                         ]
                     ))
                 }
@@ -196,7 +197,7 @@ struct ZakahCalculatorView: View {
                 // carry, pointed at the zakah articles that already exist.
                 #if os(iOS)
                 if shows("about") {
-                    AboutSignsSection(heading: "About Zakah",
+                    AboutSignsSection(heading: String(localized: "About Zakah"),
                                       systemImage: "percent",
                                       doors: [.zakah, .howToZakah, .islam],
                                       openDoor: $aboutDoor)
@@ -249,15 +250,15 @@ struct ZakahCalculatorView: View {
             // The three most people need are always here; the other four are behind a disclosure
             // (Abu, 2026-09-19 - seven rows of "0" was most of the first screen). It opens by
             // itself when any of them already holds a figure, so a saved calculation is never hidden.
-            amountRow("Cash & bank balances", systemImage: "banknote", text: $cash)
-            amountRow("Gold you own", systemImage: "circle.hexagongrid", text: $gold)
-            amountRow("Silver you own", systemImage: "circle.grid.cross", text: $silver)
+            amountRow(String(localized: "Cash & bank balances"), systemImage: "banknote", text: $cash)
+            amountRow(String(localized: "Gold you own"), systemImage: "circle.hexagongrid", text: $gold)
+            amountRow(String(localized: "Silver you own"), systemImage: "circle.grid.cross", text: $silver)
 
             DisclosureGroup(isExpanded: $showMoreAssets) {
-                amountRow("Shares held to trade", systemImage: "chart.line.uptrend.xyaxis", text: $tradeShares)
-                amountRow("Long-term shares", systemImage: "building.columns", text: $longShares)
-                amountRow("Business stock", systemImage: "shippingbox", text: $business)
-                amountRow("Money owed to you", systemImage: "person.crop.circle.badge.checkmark", text: $owedToYou)
+                amountRow(String(localized: "Shares held to trade"), systemImage: "chart.line.uptrend.xyaxis", text: $tradeShares)
+                amountRow(String(localized: "Long-term shares"), systemImage: "building.columns", text: $longShares)
+                amountRow(String(localized: "Business stock"), systemImage: "shippingbox", text: $business)
+                amountRow(String(localized: "Money owed to you"), systemImage: "person.crop.circle.badge.checkmark", text: $owedToYou)
             } label: {
                 HStack {
                     Text("Shares, business, money owed")
@@ -273,9 +274,9 @@ struct ZakahCalculatorView: View {
             .tint(settings.accentColor.color)
 
             ExplainerButton(
-                title: "What counts, and what does not",
-                body_: "What you have held for a full lunar year, in your own currency. Your home, your car, your furniture and the tools you work with are not zakatable, and neither is a pension you cannot draw on yet.\n\nGold and silver count whatever they are for, jewellery included, even a woman's own jewellery kept for wearing. Abu Hanifa held it is due; Malik, ash-Shafi\u{2018}i and Ahmad exempted jewellery kept for lawful use. Ibn Baz, al-Albani and the Permanent Committee held it is due, on the hadith of the woman whose daughter wore two heavy gold bangles and who was asked \u{201C}Do you pay the zakah on this?\u{201D} (Abu Dawud 1563). This calculator follows that view; if you follow the other, leave the field empty.\n\nA debt somebody owes YOU and you expect back counts every year, as if it were in your hand. A debt on somebody who denies it or cannot pay is not counted until you actually receive it, and then for one year.\n\nShares bought to trade are counted at today's market value. Shares held for the long term are counted on the zakatable assets of the company behind them, not on the share price, so enter that part alone. Business stock is valued at what you would sell it for today, not what you paid.",
-                caption: "Held for a lunar year. Your home, car and tools are not counted."
+                title: String(localized: "What counts, and what does not"),
+                body_: String(localized: "What you have held for a full lunar year, in your own currency. Your home, your car, your furniture and the tools you work with are not zakatable, and neither is a pension you cannot draw on yet.\n\nGold and silver count whatever they are for, jewellery included, even a woman's own jewellery kept for wearing. Abu Hanifa held it is due; Malik, ash-Shafi\u{2018}i and Ahmad exempted jewellery kept for lawful use. Ibn Baz, al-Albani and the Permanent Committee held it is due, on the hadith of the woman whose daughter wore two heavy gold bangles and who was asked \u{201C}Do you pay the zakah on this?\u{201D} (Abu Dawud 1563). This calculator follows that view; if you follow the other, leave the field empty.\n\nA debt somebody owes YOU and you expect back counts every year, as if it were in your hand. A debt on somebody who denies it or cannot pay is not counted until you actually receive it, and then for one year.\n\nShares bought to trade are counted at today's market value. Shares held for the long term are counted on the zakatable assets of the company behind them, not on the share price, so enter that part alone. Business stock is valued at what you would sell it for today, not what you paid."),
+                caption: String(localized: "Held for a lunar year. Your home, car and tools are not counted.")
             )
         }
     }
@@ -286,12 +287,12 @@ struct ZakahCalculatorView: View {
 
     private var liabilitiesSection: some View {
         Section(header: Text("WHAT YOU OWE")) {
-            amountRow("Debts due now", systemImage: "creditcard", text: $debts)
+            amountRow(String(localized: "Debts due now"), systemImage: "creditcard", text: $debts)
 
             ExplainerButton(
-                title: "Which debts come off",
-                body_: "Only what is actually due now: this month's bills, this year's instalments, a debt somebody can demand today. A mortgage stretching over twenty years is not subtracted whole, or almost nobody would ever pay zakah again.",
-                caption: "Only what is due now, not a whole mortgage."
+                title: String(localized: "Which debts come off"),
+                body_: String(localized: "Only what is actually due now: this month's bills, this year's instalments, a debt somebody can demand today. A mortgage stretching over twenty years is not subtracted whole, or almost nobody would ever pay zakah again."),
+                caption: String(localized: "Only what is due now, not a whole mortgage.")
             )
         }
     }
@@ -310,22 +311,22 @@ struct ZakahCalculatorView: View {
             .padding(.vertical, 2)
 
             if nisabBasis == .custom {
-                amountRow("Nisab threshold", systemImage: "scalemass", text: $customNisab)
+                amountRow(String(localized: "Nisab threshold"), systemImage: "scalemass", text: $customNisab)
             } else {
-                amountRow(nisabBasis == .gold ? "Gold price per gram" : "Silver price per gram",
+                amountRow(nisabBasis == .gold ? String(localized: "Gold price per gram") : String(localized: "Silver price per gram"),
                           systemImage: "tag", text: nisabBasis == .gold ? $goldPrice : $silverPrice)
 
                 HStack {
                     Text("Nisab (\(Int(nisabBasis.grams))g)")
                         .font(.subheadline)
                     Spacer()
-                    Text(knowsNisab ? formatted(nisabValue) : "Enter a price")
+                    Text(knowsNisab ? formatted(nisabValue) : String(localized: "Enter a price"))
                         .font(.subheadline.monospacedDigit())
                         .foregroundColor(knowsNisab ? .primary : .secondary)
                 }
             }
 
-            ExplainerButton(title: "About the nisab", body_: nisabFooter,
+            ExplainerButton(title: String(localized: "About the nisab"), body_: nisabFooter,
                             caption: nisabCaption)
         }
     }
@@ -333,20 +334,20 @@ struct ZakahCalculatorView: View {
     /// The one line that stays on the screen; the rest is behind the explainer.
     private var nisabCaption: String {
         switch nisabBasis {
-        case .silver: return "595g of silver: nearly always the lower of the two, and the better one for the poor."
-        case .gold:   return "85g of gold, twenty mithqal."
-        case .custom: return "Enter the threshold directly, or leave it empty to skip the check."
+        case .silver: return String(localized: "595g of silver: nearly always the lower of the two, and the better one for the poor.")
+        case .gold:   return String(localized: "85g of gold, twenty mithqal.")
+        case .custom: return String(localized: "Enter the threshold directly, or leave it empty to skip the check.")
         }
     }
 
     private var nisabFooter: String {
         switch nisabBasis {
         case .silver:
-            return "The silver nisab is 595g, and it is nearly always the lower of the two. Banknotes are not gold or silver, so they are measured against whichever nisab is lower: that takes in more payers and is the better of the two for the poor, which is how Ibn Baz and the Permanent Committee read it. Look up today's silver price per gram and enter it."
+            return String(localized: "The silver nisab is 595g, and it is nearly always the lower of the two. Banknotes are not gold or silver, so they are measured against whichever nisab is lower: that takes in more payers and is the better of the two for the poor, which is how Ibn Baz and the Permanent Committee read it. Look up today's silver price per gram and enter it.")
         case .gold:
-            return "The gold nisab is 85g, twenty mithqal. Look up today's gold price per gram and enter it. Gold you actually own is measured against this one; for cash, most scholars use the lower threshold instead."
+            return String(localized: "The gold nisab is 85g, twenty mithqal. Look up today's gold price per gram and enter it. Gold you actually own is measured against this one; for cash, most scholars use the lower threshold instead.")
         case .custom:
-            return "Enter the threshold directly if you already know it in your currency. Leave it empty to skip the check and just see the fortieth."
+            return String(localized: "Enter the threshold directly if you already know it in your currency. Leave it empty to skip the check and just see the fortieth.")
         }
     }
 
@@ -362,9 +363,9 @@ struct ZakahCalculatorView: View {
             .padding(.vertical, 2)
 
             ExplainerButton(
-                title: "Why a lunar year",
-                body_: "Zakah falls due when wealth has been at or above the nisab for one full lunar year (hawl). If it drops below the nisab during the year, the year starts again once it reaches the nisab: the view of Malik, ash-Shafi‘i, Ahmad and most scholars. Abu Hanifa held that only the two ends of the year matter. If you count your year on the Gregorian calendar instead, the rate is raised to 2.577% to make up the eleven extra days.",
-                caption: yearBasis == .lunar ? "A fortieth, once the wealth has sat a lunar year." : "2.577%, to make up the eleven days a solar year adds."
+                title: String(localized: "Why a lunar year"),
+                body_: String(localized: "Zakah falls due when wealth has been at or above the nisab for one full lunar year (hawl). If it drops below the nisab during the year, the year starts again once it reaches the nisab: the view of Malik, ash-Shafi‘i, Ahmad and most scholars. Abu Hanifa held that only the two ends of the year matter. If you count your year on the Gregorian calendar instead, the rate is raised to 2.577% to make up the eleven extra days."),
+                caption: yearBasis == .lunar ? String(localized: "A fortieth, once the wealth has sat a lunar year.") : String(localized: "2.577%, to make up the eleven days a solar year adds.")
             )
         }
     }
@@ -374,7 +375,7 @@ struct ZakahCalculatorView: View {
     private var resultSection: some View {
         Section {
             CalculatorResultCard(
-                title: isBelowNisab ? "Nothing due" : "Zakah due (\(yearBasis.rateText))",
+                title: isBelowNisab ? String(localized: "Nothing due") : String(localized: "Zakah due (\(yearBasis.rateText))"),
                 value: isBelowNisab ? formatted(0) : formatted(zakahDue)
             ) {
                 if isBelowNisab {
@@ -388,9 +389,9 @@ struct ZakahCalculatorView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     VStack(alignment: .leading, spacing: 2) {
-                        workingRow("Total assets", value: totalAssets)
-                        if debtsDue > 0 { workingRow("Less debts due", value: -debtsDue) }
-                        if knowsNisab { workingRow("Nisab", value: nisabValue) }
+                        workingRow(String(localized: "Total assets"), value: totalAssets)
+                        if debtsDue > 0 { workingRow(String(localized: "Less debts due"), value: -debtsDue) }
+                        if knowsNisab { workingRow(String(localized: "Nisab"), value: nisabValue) }
                     }
                 }
             }
@@ -405,18 +406,18 @@ struct ZakahCalculatorView: View {
 
             if !isBelowNisab, debtsDue > 0 {
                 ExplainerButton(
-                    title: "Why two figures?",
-                    body_: "Whether a debt cancels the zakah on wealth already in your hand is a real difference among the scholars, so both are worth knowing. Without deducting the debt you would owe \(formatted(zakahBeforeDebts)). The safer of the two is the larger.",
-                    caption: "Without deducting the debt: \(formatted(zakahBeforeDebts))"
+                    title: String(localized: "Why two figures?"),
+                    body_: String(localized: "Whether a debt cancels the zakah on wealth already in your hand is a real difference among the scholars, so both are worth knowing. Without deducting the debt you would owe \(formatted(zakahBeforeDebts)). The safer of the two is the larger."),
+                    caption: String(localized: "Without deducting the debt: \(formatted(zakahBeforeDebts))")
                 )
             } else if isBelowNisab, debtsDue > 0, totalAssets >= nisabValue {
                 // Only the debt put the wealth under the threshold. On the view that a debt is not
                 // deducted the whole sum is still due, and "Nothing due" alone hid that figure in
                 // exactly the case where the two views differ most.
                 ExplainerButton(
-                    title: "Why might something still be due?",
-                    body_: "What you own reaches the nisab; it is only after your debts that it falls below it. Whether a debt cancels the zakah on wealth already in your hand is a real difference among the scholars. On the view that it does, nothing is due. On the view that it does not, you would owe \(formatted(zakahBeforeDebts)). The safer of the two is the larger.",
-                    caption: "Without deducting the debt: \(formatted(zakahBeforeDebts))"
+                    title: String(localized: "Why might something still be due?"),
+                    body_: String(localized: "What you own reaches the nisab; it is only after your debts that it falls below it. Whether a debt cancels the zakah on wealth already in your hand is a real difference among the scholars. On the view that it does, nothing is due. On the view that it does not, you would owe \(formatted(zakahBeforeDebts)). The safer of the two is the larger."),
+                    caption: String(localized: "Without deducting the debt: \(formatted(zakahBeforeDebts))")
                 )
             }
         }
@@ -465,12 +466,12 @@ struct ZakahCalculatorView: View {
 
     private var otherZakahSection: some View {
         Section(header: Text("OTHER ZAKAH, NOT COUNTED ABOVE")) {
-            otherRow("Crops and fruit",
-                     detail: "A tenth of what rain or a spring watered, a twentieth of what you paid to irrigate (al-Bukhari 1483). Due on harvest day, with no year to wait out: وَءَاتُوا حَقَّهُۥ يَومَ حَصَادِهِۦ, \"and give its due on the day of its harvest\" (6:141). The threshold is five awsuq, about 612kg of the dried crop.")
-            otherRow("Grazing livestock",
-                     detail: "Camels, cattle and sheep left to graze for most of the year and kept for milk or breeding. The first thresholds are five camels, thirty cattle and forty sheep, and the tables above them are long, so take the herd to someone who knows them.")
-            otherRow("Buried treasure (rikaz)",
-                     detail: "A fifth, straight away: وَفِى ٱلرِّكَازِ ٱلخُمُسُ (al-Bukhari 1499). No threshold and no year to wait.")
+            otherRow(String(localized: "Crops and fruit"),
+                     detail: String(localized: "A tenth of what rain or a spring watered, a twentieth of what you paid to irrigate (al-Bukhari 1483). Due on harvest day, with no year to wait out: وَءَاتُوا حَقَّهُۥ يَومَ حَصَادِهِۦ, \"and give its due on the day of its harvest\" (6:141). The threshold is five awsuq, about 612kg of the dried crop."))
+            otherRow(String(localized: "Grazing livestock"),
+                     detail: String(localized: "Camels, cattle and sheep left to graze for most of the year and kept for milk or breeding. The first thresholds are five camels, thirty cattle and forty sheep, and the tables above them are long, so take the herd to someone who knows them."))
+            otherRow(String(localized: "Buried treasure (rikaz)"),
+                     detail: String(localized: "A fifth, straight away: وَفِى ٱلرِّكَازِ ٱلخُمُسُ (al-Bukhari 1499). No threshold and no year to wait."))
         }
     }
 
@@ -478,7 +479,7 @@ struct ZakahCalculatorView: View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
                 .font(.subheadline.weight(.semibold))
-            Text(detail)
+            Text(detail.localizedDigits)
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -492,7 +493,7 @@ struct ZakahCalculatorView: View {
     /// its paragraph breaks.
     private var notesSection: some View {
         Section(header: Text("WHAT THIS ASSUMES")) {
-            ArticleLead(Self.notesLead)
+            ArticleLead(Self.notesLead, eyebrow: String(localized: "IN SHORT"))
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(verbatim: Self.notesSides)
@@ -505,24 +506,24 @@ struct ZakahCalculatorView: View {
             }
             .padding(.vertical, 4)
 
-            ArticleCallout(paragraphs: [Self.notesCaution], title: "Not a Fatwa",
+            ArticleCallout(paragraphs: [Self.notesCaution], title: String(localized: "Not a Fatwa"),
                            systemImage: "exclamationmark.triangle.fill")
         }
     }
 
-    static let notesLead = "Zakah is a fortieth of the wealth that has sat with you at or above the nisab for a lunar year. وَأَقِيمُوا ٱلصَّلَوٰةَ وَءَاتُوا ٱلزَّكَوٰةَ \"And establish prayer and give zakah\" (2:110). It goes to the eight kinds of people named in 9:60, and not to your parents, your children or your wife, who are yours to support anyway."
+    static let notesLead = String(localized: "Zakah is a fortieth of the wealth that has sat with you at or above the nisab for a lunar year. وَأَقِيمُوا ٱلصَّلَوٰةَ وَءَاتُوا ٱلزَّكَوٰةَ \"And establish prayer and give zakah\" (2:110). It goes to the eight kinds of people named in 9:60, and not to your parents, your children or your wife, who are yours to support anyway.")
 
-    static let notesSides = "Where scholars differ, this calculator takes a side, and you should know which:"
+    static let notesSides = String(localized: "Where scholars differ, this calculator takes a side, and you should know which:")
 
     static let notesPositions = [
-        "Gold and silver jewellery is counted, even a woman's own jewellery kept for wearing. Abu Hanifa held it is due; Malik, ash-Shafi‘i and Ahmad exempted jewellery kept for lawful use. Ibn Baz, al-Albani and the Permanent Committee held it is due, on the hadith of the woman whose daughter wore two heavy gold bangles and who was asked \"Do you pay the zakah on this?\" (Abu Dawud 1563). If you follow the other view, leave the field empty.",
-        "Banknotes are measured against the lower of the two nisabs, which is silver.",
-        "A debt somebody owes YOU and you expect back counts every year, as if it were in your hand. A debt on somebody who denies it or cannot pay is not counted until you actually receive it, and then for one year.",
-        "Shares bought to trade are counted at today's market value. Shares held for the long term are counted on the zakatable assets of the company behind them, not on the share price, so enter that part alone.",
-        "Business stock is valued at what you would sell it for today, not what you paid.",
+        String(localized: "Gold and silver jewellery is counted, even a woman's own jewellery kept for wearing. Abu Hanifa held it is due; Malik, ash-Shafi‘i and Ahmad exempted jewellery kept for lawful use. Ibn Baz, al-Albani and the Permanent Committee held it is due, on the hadith of the woman whose daughter wore two heavy gold bangles and who was asked \"Do you pay the zakah on this?\" (Abu Dawud 1563). If you follow the other view, leave the field empty."),
+        String(localized: "Banknotes are measured against the lower of the two nisabs, which is silver."),
+        String(localized: "A debt somebody owes YOU and you expect back counts every year, as if it were in your hand. A debt on somebody who denies it or cannot pay is not counted until you actually receive it, and then for one year."),
+        String(localized: "Shares bought to trade are counted at today's market value. Shares held for the long term are counted on the zakatable assets of the company behind them, not on the share price, so enter that part alone."),
+        String(localized: "Business stock is valued at what you would sell it for today, not what you paid."),
     ]
 
-    static let notesCaution = "This is a quick guide for the ordinary case, and nothing more. It is not a fatwa. Property held to rent, a business with debtors and creditors on both sides, retirement accounts, crops, livestock, gold mixed with stones, a year you are unsure of: every one of those needs a knowledgeable scholar of Ahl as-Sunnah wa al-Jamaʿah who can hear your actual situation. Ask one before you rely on this number."
+    static let notesCaution = String(localized: "This is a quick guide for the ordinary case, and nothing more. It is not a fatwa. Property held to rent, a business with debtors and creditors on both sides, retirement accounts, crops, livestock, gold mixed with stones, a year you are unsure of: every one of those needs a knowledgeable scholar of Ahl as-Sunnah wa al-Jamaʿah who can hear your actual situation. Ask one before you rely on this number.")
 
     // MARK: Rows
 

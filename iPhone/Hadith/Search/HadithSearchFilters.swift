@@ -25,9 +25,9 @@ struct HadithSearchFilters: Equatable {
 
         var title: String {
             switch self {
-            case .chapters: return "Chapters"
-            case .ai: return "AI"
-            case .hadiths: return "Hadiths"
+            case .chapters: return String(localized: "Chapters")
+            case .ai: return String(localized: "AI")
+            case .hadiths: return String(localized: "Hadiths")
             }
         }
 
@@ -41,14 +41,14 @@ struct HadithSearchFilters: Equatable {
 
         var detail: String {
             switch self {
-            case .chapters: return "Chapter titles, in Arabic or English"
-            case .ai: return "Meaning matches and the Ask AI row"
-            case .hadiths: return "The narration, its narrator line and its Arabic"
+            case .chapters: return String(localized: "Chapter titles, in Arabic or English")
+            case .ai: return String(localized: "Meaning matches and the Ask AI row")
+            case .hadiths: return String(localized: "The narration, its narrator line and its Arabic")
             }
         }
 
         func detail(in scope: Scope) -> String {
-            self == .ai && scope == .oneChapter ? "Meaning matches from this chapter" : detail
+            self == .ai && scope == .oneChapter ? String(localized: "Meaning matches from this chapter") : detail
         }
     }
 
@@ -58,17 +58,17 @@ struct HadithSearchFilters: Equatable {
 
         var title: String {
             switch self {
-            case .phrase: return "As a Phrase"
-            case .allWords: return "All Words"
-            case .anyWord: return "Any Word"
+            case .phrase: return String(localized: "As a Phrase")
+            case .allWords: return String(localized: "All Words")
+            case .anyWord: return String(localized: "Any Word")
             }
         }
 
         var detail: String {
             switch self {
-            case .phrase: return "The words together, in the order typed"
-            case .allWords: return "Every word, anywhere in the hadith: \u{201C}anger control\u{201D} finds both apart"
-            case .anyWord: return "At least one of the words"
+            case .phrase: return String(localized: "The words together, in the order typed")
+            case .allWords: return String(localized: "Every word, anywhere in the hadith: \u{201C}anger control\u{201D} finds both apart")
+            case .anyWord: return String(localized: "At least one of the words")
             }
         }
     }
@@ -80,17 +80,17 @@ struct HadithSearchFilters: Equatable {
 
         var title: String {
             switch self {
-            case .sahih: return "Sahih"
-            case .hasan: return "Hasan"
-            case .daif: return "Da'if"
+            case .sahih: return String(localized: "Sahih")
+            case .hasan: return String(localized: "Hasan")
+            case .daif: return String(localized: "Da'if")
             }
         }
 
         var detail: String {
             switch self {
-            case .sahih: return "Graded authentic. Everything in Sahih al-Bukhari and Sahih Muslim counts."
-            case .hasan: return "Graded good"
-            case .daif: return "Graded weak, including munkar and fabricated reports"
+            case .sahih: return String(localized: "Graded authentic. Everything in Sahih al-Bukhari and Sahih Muslim counts.")
+            case .hasan: return String(localized: "Graded good")
+            case .daif: return String(localized: "Graded weak, including munkar and fabricated reports")
             }
         }
     }
@@ -99,20 +99,20 @@ struct HadithSearchFilters: Equatable {
         case collection, relevance
         var id: String { rawValue }
 
-        var title: String { self == .collection ? "Collection Order" : "Best Match" }
+        var title: String { self == .collection ? String(localized: "Collection Order") : String(localized: "Best Match") }
 
         var detail: String {
             switch self {
-            case .collection: return "Every match, book by book, in the order of the shelf"
-            case .relevance: return "Closest matches first: chapter titles and whole words rank higher, and spelling is forgiven"
+            case .collection: return String(localized: "Every match, book by book, in the order of the shelf")
+            case .relevance: return String(localized: "Closest matches first: chapter titles and whole words rank higher, and spelling is forgiven")
             }
         }
 
         func detail(in scope: Scope) -> String {
             switch (self, scope) {
-            case (.collection, .oneBook): return "Every match, in the order of the book"
-            case (.collection, .oneChapter): return "Every match, in the order of the chapter"
-            case (.relevance, .oneChapter): return "Closest matches first: whole words rank higher, and spelling is forgiven"
+            case (.collection, .oneBook): return String(localized: "Every match, in the order of the book")
+            case (.collection, .oneChapter): return String(localized: "Every match, in the order of the chapter")
+            case (.relevance, .oneChapter): return String(localized: "Closest matches first: whole words rank higher, and spelling is forgiven")
             default: return detail
             }
         }
@@ -314,7 +314,7 @@ struct HadithSearchFilterBar: View {
                 .accessibilityLabel("All search filters")
 
                 if filters.hasSessionFilters {
-                    chipButton("Reset", systemImage: "xmark", isOn: false) { filters.resetSession() }
+                    chipButton(String(localized: "Reset"), systemImage: "xmark", isOn: false) { filters.resetSession() }
                 }
 
                 if scope.choosesBooks {
@@ -322,11 +322,11 @@ struct HadithSearchFilterBar: View {
                     booksMenu
                     // The short row keeps the one preset most readers want; the other shows once it is on.
                     if showsEveryButton || filters.books == HadithSearchFilters.sixBooks {
-                        chipButton("Six Books", systemImage: nil, isOn: filters.books == HadithSearchFilters.sixBooks) {
+                        chipButton(String(localized: "Six Books"), systemImage: nil, isOn: filters.books == HadithSearchFilters.sixBooks) {
                             filters.books = filters.books == HadithSearchFilters.sixBooks ? [] : HadithSearchFilters.sixBooks
                         }
                     }
-                    chipButton("Bukhari & Muslim", systemImage: nil, isOn: filters.books == HadithSearchFilters.sahihayn) {
+                    chipButton(String(localized: "Bukhari & Muslim"), systemImage: nil, isOn: filters.books == HadithSearchFilters.sahihayn) {
                         filters.books = filters.books == HadithSearchFilters.sahihayn ? [] : HadithSearchFilters.sahihayn
                     }
                 }
@@ -358,15 +358,15 @@ struct HadithSearchFilterBar: View {
                     }
                 } else {
                     // The one ordering choice as a switch, then a Words rule only once it is set.
-                    chipButton("Best Match", systemImage: "arrow.up.arrow.down", isOn: filters.sort == .relevance) {
+                    chipButton(String(localized: "Best Match"), systemImage: "arrow.up.arrow.down", isOn: filters.sort == .relevance) {
                         filters.sort = filters.sort == .relevance ? .collection : .relevance
                     }
                     if filters.words != .phrase { wordsMenu }
                 }
 
                 divider
-                chipButton(showsEveryButton ? "Fewer" : "More",
-                           systemImage: showsEveryButton ? "chevron.left" : "ellipsis", isOn: false) {
+                chipButton(showsEveryButton ? String(localized: "Fewer") : String(localized: "More"),
+                           systemImage: showsEveryButton ? "chevron.backward" : "ellipsis", isOn: false) {
                     showsEveryButton.toggle()
                 }
                 .accessibilityHint(showsEveryButton ? "Shows only the common filters" : "Shows every filter as a button")
@@ -388,16 +388,16 @@ struct HadithSearchFilterBar: View {
                 ForEach(HadithSearchFilters.Words.allCases) { Text($0.title).tag($0) }
             }
         } label: {
-            chipLabel(filters.words == .phrase ? "Words" : filters.words.title,
+            chipLabel(filters.words == .phrase ? String(localized: "Words") : filters.words.title,
                       systemImage: "text.word.spacing", isOn: filters.words != .phrase, isMenu: true)
         }
     }
 
     private var booksTitle: String {
         switch filters.books.count {
-        case 0: return "Books"
-        case 1: return HadithCatalogBook.bySlug[filters.books.first ?? ""]?.englishTitle ?? "1 Book"
-        default: return "\(filters.books.count) Books"
+        case 0: return String(localized: "Books")
+        case 1: return HadithCatalogBook.bySlug[filters.books.first ?? ""]?.displayTitle ?? String(localized: "1 Book")
+        default: return String(localized: "\(filters.books.count) Books")
         }
     }
 
@@ -415,7 +415,7 @@ struct HadithSearchFilterBar: View {
                     let picked = books.filter { filters.books.contains($0.slug) }.count
                     Menu {
                         ForEach(books, id: \.slug) { book in
-                            Toggle(book.englishTitle, isOn: Binding(
+                            Toggle(book.displayTitle, isOn: Binding(
                                 get: { filters.books.contains(book.slug) },
                                 set: { isOn in
                                     if isOn { filters.books.insert(book.slug) } else { filters.books.remove(book.slug) }
@@ -425,8 +425,8 @@ struct HadithSearchFilterBar: View {
                             .toggleStyle(.automatic)
                         }
                     } label: {
-                        let title = group.rawValue.capitalized
-                        Label(picked > 0 ? "\(title) (\(picked))" : title,
+                        let title = group.rawValue.localizedDisplay.capitalized
+                        Label(picked > 0 ? "\(title) (\(String(picked).localizedDigits))" : title,
                               systemImage: picked > 0 ? "checkmark" : group.systemImage)
                     }
                 }
@@ -502,19 +502,19 @@ struct HadithSearchFilterSheet: View {
                 Group {
                     if scope.choosesBooks {
                     Section {
-                        optionRow("Every Collection", detail: "All \(HadithCatalogBook.all.count) books on the shelf",
+                        optionRow(String(localized: "Every Collection"), detail: String(localized: "All \(HadithCatalogBook.all.count) books on the shelf"),
                                   isOn: filters.books.isEmpty) { filters.books = [] }
-                        optionRow("The Six Books", detail: "Bukhari, Muslim, Abu Dawud, at-Tirmidhi, an-Nasa'i, Ibn Majah",
+                        optionRow(String(localized: "The Six Books"), detail: String(localized: "Bukhari, Muslim, Abu Dawud, at-Tirmidhi, an-Nasa'i, Ibn Majah"),
                                   isOn: filters.books == HadithSearchFilters.sixBooks) { filters.books = HadithSearchFilters.sixBooks }
-                        optionRow("Bukhari & Muslim", detail: "The two Sahihs only",
+                        optionRow(String(localized: "Bukhari & Muslim"), detail: String(localized: "The two Sahihs only"),
                                   isOn: filters.books == HadithSearchFilters.sahihayn) { filters.books = HadithSearchFilters.sahihayn }
                         ForEach(HadithCatalogBook.all, id: \.slug) { book in
-                            optionRow(book.englishTitle, detail: book.authorEnglish, isOn: filters.books.contains(book.slug)) {
+                            optionRow(book.displayTitle, detail: book.displayAuthor, isOn: filters.books.contains(book.slug)) {
                                 if filters.books.contains(book.slug) { filters.books.remove(book.slug) } else { filters.books.insert(book.slug) }
                             }
                         }
                     } header: {
-                        header("COLLECTIONS")
+                        header(String(localized: "COLLECTIONS"))
                     } footer: {
                         Text("Chapters, hadiths and AI matches all come from the chosen books only.")
                     }
@@ -527,12 +527,12 @@ struct HadithSearchFilterSheet: View {
                             }
                         }
                     } header: {
-                        header("GRADING")
+                        header(String(localized: "GRADING"))
                     } footer: {
-                        Text("Pick any number. The gradings are the named scholars' own, as the collections record them; where they differ, a hadith counts under each. With a grading chosen, hadiths that carry no grading are left out. "
+                        Text((String(localized: "Pick any number. The gradings are the named scholars' own, as the collections record them; where they differ, a hadith counts under each. With a grading chosen, hadiths that carry no grading are left out. ")
                              + (scope.choosesBooks
-                                ? "A reference such as \u{201C}tirmidhi 2516\u{201D} always answers, whatever is chosen here."
-                                : "A hadith looked up by its number always answers, whatever is chosen here."))
+                                ? String(localized: "A reference such as \u{201C}tirmidhi 2516\u{201D} always answers, whatever is chosen here.")
+                                : String(localized: "A hadith looked up by its number always answers, whatever is chosen here."))).localizedDigits)
                     }
 
                     Section {
@@ -540,7 +540,7 @@ struct HadithSearchFilterSheet: View {
                             optionRow(words.title, detail: words.detail, isOn: filters.words == words) { filters.words = words }
                         }
                     } header: {
-                        header("SEVERAL WORDS")
+                        header(String(localized: "SEVERAL WORDS"))
                     }
 
                     Section {
@@ -548,7 +548,7 @@ struct HadithSearchFilterSheet: View {
                             optionRow(sort.title, detail: sort.detail(in: scope), isOn: filters.sort == sort) { filters.sort = sort }
                         }
                     } header: {
-                        header("HADITH ORDER")
+                        header(String(localized: "HADITH ORDER"))
                     } footer: {
                         Text("Remembered between searches.")
                     }
@@ -560,30 +560,30 @@ struct HadithSearchFilterSheet: View {
                             }
                         }
                     } header: {
-                        header("SHOW")
+                        header(String(localized: "SHOW"))
                     } footer: {
                         Text("Remembered between searches.")
                     }
 
                     Section {
-                        optionRow("Keyword Results", detail: "The hadiths carrying your words, closest match first",
+                        optionRow(String(localized: "Keyword Results"), detail: String(localized: "The hadiths carrying your words, closest match first"),
                                   isOn: !opensOnAI) { opensOnAI = false }
-                        optionRow("AI Results", detail: "The hadiths closest in meaning, found on this device",
+                        optionRow(String(localized: "AI Results"), detail: String(localized: "The hadiths closest in meaning, found on this device"),
                                   isOn: opensOnAI) { opensOnAI = true }
                     } header: {
-                        header("OPEN ON")
+                        header(String(localized: "OPEN ON"))
                     } footer: {
                         Text("When both answer a search, one switch chooses between them. This is the side it starts on. For the Quran search too.")
                     }
 
                     Section {
-                        optionRow("Every Filter as a Button",
-                                  detail: "The row over the results shows all of these, not only the common ones",
+                        optionRow(String(localized: "Every Filter as a Button"),
+                                  detail: String(localized: "The row over the results shows all of these, not only the common ones"),
                                   isOn: showsEveryButton) {
                             showsEveryButton.toggle()
                         }
                     } header: {
-                        header("THE ROW OVER THE RESULTS")
+                        header(String(localized: "THE ROW OVER THE RESULTS"))
                     } footer: {
                         Text("Off, the row keeps to the collections, the gradings and Best Match, plus any filter set here. The More button in the row does the same. For the Quran search too.")
                     }

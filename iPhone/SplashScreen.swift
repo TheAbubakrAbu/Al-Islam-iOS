@@ -181,9 +181,9 @@ struct SplashScreen: View {
 
             // Skip too, like every page of the welcome; the "Learn More" sheet is one page, and Done.
             WelcomeActionBar(
-                primaryTitle: presentedAsSheet ? "Done" : "Get Started",
+                primaryTitle: presentedAsSheet ? String(localized: "Done") : String(localized: "Get Started"),
                 primaryAction: primaryAction,
-                secondaryTitle: presentedAsSheet ? nil : "Skip",
+                secondaryTitle: presentedAsSheet ? nil : String(localized: "Skip"),
                 secondaryIdentifier: "welcomeSkip",
                 secondaryAction: advance
             )
@@ -208,9 +208,9 @@ struct SplashScreen: View {
             }
 
             WelcomeActionBar(
-                primaryTitle: "Continue",
+                primaryTitle: String(localized: "Continue"),
                 primaryAction: finishFirstLaunch,
-                secondaryTitle: "Skip",
+                secondaryTitle: String(localized: "Skip"),
                 secondaryIdentifier: "welcomeSkip",
                 secondaryAction: {
                     choosesSimple = false
@@ -297,6 +297,8 @@ struct SplashScreen: View {
                 openAppStoreFromHero(Self.alAdhanAppURL)
             } label: {
                 VStack(spacing: 10 * s) {
+                    // The family's names in the interface language (الأذان، القرآن، الإسلام in Arabic), like the
+                    // tab titles; the card art below carries the Latin logos.
                     Text("Al-Adhan")
                         .font(titleFont)
                         .foregroundColor(.primary)
@@ -413,11 +415,14 @@ struct SplashScreen: View {
                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                 .foregroundColor(accent)
 
-            Text("Assalamu Alaikum")
-                .font(.title.bold())
-                .foregroundColor(.primary)
+            // The Arabic greeting above already says it in Arabic.
+            if !AppLanguage.isArabic {
+                Text("Assalamu Alaikum")
+                    .font(.title.bold())
+                    .foregroundColor(.primary)
+            }
 
-            Text("Peace be upon you, and welcome to \(AppIdentifiers.appName): \(Self.whatTheAppIs)")
+            Text("Peace be upon you, and welcome to \(AppIdentifiers.displayName): \(Self.whatTheAppIs)")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -430,11 +435,11 @@ struct SplashScreen: View {
     /// al islam is").
     private static var whatTheAppIs: String {
         #if HAS_ADHAN && HAS_QURAN
-        return "prayer times, the Quran, hadith and more, in one place."
+        return String(localized: "prayer times, the Quran, hadith and more, in one place.")
         #elseif HAS_ADHAN
-        return "prayer times, the adhan, the Qibla and more, in one place."
+        return String(localized: "prayer times, the adhan, the Qibla and more, in one place.")
         #else
-        return "the Quran with its tajweed, translations and reciters, in one place."
+        return String(localized: "the Quran with its tajweed, translations and reciters, in one place.")
         #endif
     }
 
@@ -457,24 +462,24 @@ struct SplashScreen: View {
     private var features: [Feature] {
         #if HAS_ICLOUD_BACKUP
         return [
-            Feature(icon: "lock.shield.fill", title: "Private by design",
-                    text: "No accounts and no tracking, and it works offline. What you save is yours alone."),
-            Feature(icon: "heart.fill", title: "Free forever",
-                    text: "No ads, fees or subscriptions. Offered as sadaqah jariyah."),
-            Feature(icon: "icloud.fill", title: "iCloud Backup",
-                    text: "Optional: your bookmarks, prayer tracker, khatm and journal, in your own private iCloud.",
-                    tag: "Only in Al-Islam"),
-            Feature(icon: "square.grid.2x2.fill", title: "One family of apps",
-                    text: "Everything Al-Quran and Al-Adhan do, in one app. Tap an app below to see it on the App Store."),
+            Feature(icon: "lock.shield.fill", title: String(localized: "Private by design"),
+                    text: String(localized: "No accounts and no tracking, and it works offline. What you save is yours alone.")),
+            Feature(icon: "heart.fill", title: String(localized: "Free forever"),
+                    text: String(localized: "No ads, fees or subscriptions. Offered as sadaqah jariyah.")),
+            Feature(icon: "icloud.fill", title: String(localized: "iCloud Backup"),
+                    text: String(localized: "Optional: your bookmarks, prayer tracker, khatm and journal, in your own private iCloud."),
+                    tag: String(localized: "Only in Al-Islam")),
+            Feature(icon: "square.grid.2x2.fill", title: String(localized: "One family of apps"),
+                    text: String(localized: "Everything Al-Quran and Al-Adhan do, in one app. Tap an app below to see it on the App Store.")),
         ]
         #else
         return [
-            Feature(icon: "lock.shield.fill", title: "Private by design",
-                    text: "Everything stays on your device: no accounts, no tracking, and it works offline."),
-            Feature(icon: "heart.fill", title: "Free forever",
-                    text: "No ads, fees or subscriptions. Offered as sadaqah jariyah."),
-            Feature(icon: "square.grid.2x2.fill", title: "One family of apps",
-                    text: "Al-Islam does everything Al-Quran and Al-Adhan do, plus iCloud Backup, weather on the sky and iMessage stickers. Tap an app below to see it on the App Store."),
+            Feature(icon: "lock.shield.fill", title: String(localized: "Private by design"),
+                    text: String(localized: "Everything stays on your device: no accounts, no tracking, and it works offline.")),
+            Feature(icon: "heart.fill", title: String(localized: "Free forever"),
+                    text: String(localized: "No ads, fees or subscriptions. Offered as sadaqah jariyah.")),
+            Feature(icon: "square.grid.2x2.fill", title: String(localized: "One family of apps"),
+                    text: String(localized: "Al-Islam does everything Al-Quran and Al-Adhan do, plus iCloud Backup, weather on the sky and iMessage stickers. Tap an app below to see it on the App Store.")),
         ]
         #endif
     }

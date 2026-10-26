@@ -217,7 +217,7 @@ struct SummaryWordTile: View, Equatable {
         textStylePointSize(style, at: dynamicTypeSize)
     }
 
-    static let title = "Word of the Day"
+    static let title = String(localized: "Word of the Day")
 
     let word: WordOfDayEntry
     let surahName: String
@@ -269,7 +269,7 @@ struct SummaryWordTile: View, Equatable {
                     Spacer(minLength: 0)
                 }
 
-                Text("\(surahName) \(word.surah):\(word.ayah)")
+                Text(verbatim: "\(surahName) \(word.surah):\(word.ayah)".localizedDigits)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(accent)
                     .lineLimit(1)
@@ -283,13 +283,19 @@ struct SummaryWordTile: View, Equatable {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                        .environment(\.layoutDirection, .leftToRight)
                 }
 
+                // The English gloss keeps the left edge in the Arabic interface, like the ayah tile's
+                // translation beside it.
                 Text(word.meaning)
                     .font(.caption)
                     .foregroundColor(.secondaryOnGlass)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
             }
             .padding(10)
             // The content keeps its IDEAL height whatever the tile is stretched to, so the measurement
@@ -389,11 +395,11 @@ struct WordOfDayDetailView: View {
 
             Section(header: Text("ACROSS THE QURAN")) {
                 HStack(spacing: 0) {
-                    stat(value: word.count, label: word.count == 1 ? "Occurrence" : "Occurrences")
+                    stat(value: word.count, label: word.count == 1 ? String(localized: "Occurrence") : String(localized: "Occurrences"))
                     Divider()
-                    stat(value: spread.ayahs, label: spread.ayahs == 1 ? "Ayah" : "Ayahs")
+                    stat(value: spread.ayahs, label: spread.ayahs == 1 ? String(localized: "Ayah") : String(localized: "Ayahs"))
                     Divider()
-                    stat(value: spread.surahs, label: spread.surahs == 1 ? "Surah" : "Surahs")
+                    stat(value: spread.surahs, label: spread.surahs == 1 ? String(localized: "Surah") : String(localized: "Surahs"))
                 }
                 .padding(.vertical, 4)
 
@@ -405,7 +411,7 @@ struct WordOfDayDetailView: View {
 
             morphologySection
 
-            Section(header: SectionPillHeader(title: "WHERE IT APPEARS", count: rows.count)) {
+            Section(header: SectionPillHeader(title: String(localized: "WHERE IT APPEARS"), count: rows.count)) {
                 ForEach(Array(shown.enumerated()), id: \.element.id) { index, row in
                     occurrenceRow(row, isAnchor: index == 0 && row.surah.id == word.surah && row.ayah.id == word.ayah)
                 }
@@ -471,6 +477,7 @@ struct WordOfDayDetailView: View {
             Text(word.transliteration)
                 .font(.subheadline.italic())
                 .foregroundStyle(.secondary)
+                .leftToRightContent()
 
             Text("MEANING")
                 .kerning(0.8)
@@ -482,9 +489,10 @@ struct WordOfDayDetailView: View {
                 .font(.title3)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
+                .leftToRightContent()
 
             if let surah = QuranData.shared.surah(word.surah) {
-                Text("First appears in \(surah.nameTransliteration) \(word.surah):\(word.ayah)")
+                Text("First appears in \(surah.displayName) \(word.surah):\(word.ayah)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.top, 2)
@@ -517,13 +525,13 @@ struct WordOfDayDetailView: View {
                 if let root = morphology.root {
                     NavigationLink(destination: LazyDestination {
                         RootOccurrencesView(
-                            title: "Root \(root.root.letters)",
+                            title: String(localized: "Root \(root.root.letters)"),
                             locations: morphology.rootLocations,
                             highlight: WordLocation(surah: word.surah, ayah: word.ayah, token: word.token),
                             onOpenAyah: onOpenAyah
                         )
                     }) {
-                        morphologyRow(label: "Root", arabic: root.root.letters, count: morphology.rootLocations.count)
+                        morphologyRow(label: String(localized: "Root"), arabic: root.root.letters, count: morphology.rootLocations.count)
                     }
                 }
                 if let lemma = morphology.lemma {
@@ -535,7 +543,7 @@ struct WordOfDayDetailView: View {
                             onOpenAyah: onOpenAyah
                         )
                     }) {
-                        morphologyRow(label: "Form", arabic: lemma.lemma.text, count: morphology.lemmaLocations.count)
+                        morphologyRow(label: String(localized: "Form"), arabic: lemma.lemma.text, count: morphology.lemmaLocations.count)
                     }
                 }
             }
@@ -560,8 +568,8 @@ struct WordOfDayDetailView: View {
     @ViewBuilder
     private func occurrenceRow(_ row: Row, isAnchor: Bool) -> some View {
         let caption: String? = {
-            if isAnchor { return "First appearance" }
-            if row.tokens.count > 1 { return "\(row.tokens.count) times in this ayah" }
+            if isAnchor { return String(localized: "First appearance") }
+            if row.tokens.count > 1 { return String(localized: "\(row.tokens.count) times in this ayah") }
             return nil
         }()
         let content = WordOccurrenceRow(surah: row.surah, ayah: row.ayah, tokens: row.tokens, caption: caption).equatable()

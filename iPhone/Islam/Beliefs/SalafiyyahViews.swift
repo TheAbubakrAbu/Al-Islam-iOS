@@ -248,7 +248,7 @@ struct TawhidView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Tawhid: The Oneness of Allah")
-        .selectableArticleList(article: "TawhidView")
+        .englishArticle().selectableArticleList(article: "TawhidView")
     }
 }
 
@@ -263,7 +263,7 @@ struct SalafiyyahView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Salafiyyah")
-        .selectableArticleList(article: "SalafiyyahView")
+        .englishArticle().selectableArticleList(article: "SalafiyyahView")
     }
 
     static let sections: [ArticleSection] = [
@@ -637,7 +637,7 @@ struct QuranSunnahView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Quran and Sunnah")
-        .selectableArticleList(article: "QuranSunnahView")
+        .englishArticle().selectableArticleList(article: "QuranSunnahView")
     }
 }
 
@@ -651,8 +651,8 @@ struct ShirkView: View {
             }
             .themedListRowBackground()
         }
-        .navigationTitle("Shirk")
-        .selectableArticleList(article: "ShirkView")
+        .navigationTitle(AppLanguage.article("Shirk"))
+        .englishArticle().selectableArticleList(article: "ShirkView")
     }
 
     static let sections: [ArticleSection] = [
@@ -1062,7 +1062,7 @@ struct KufrView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Kufr")
-        .selectableArticleList(article: "KufrView")
+        .englishArticle().selectableArticleList(article: "KufrView")
     }
 }
 
@@ -1268,7 +1268,7 @@ struct BidahView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Bid'ah")
-        .selectableArticleList(article: "BidahView")
+        .englishArticle().selectableArticleList(article: "BidahView")
     }
 }
 
@@ -1410,6 +1410,6 @@ struct MawlidView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The Mawlid")
-        .selectableArticleList(article: "MawlidView")
+        .englishArticle().selectableArticleList(article: "MawlidView")
     }
 }

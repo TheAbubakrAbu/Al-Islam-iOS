@@ -162,10 +162,10 @@ struct HadithTopicsView: View {
                 // The library's front as the Islam resources' hero card (Abu, 2026-10-03: "make it
                 // pretty like pillars and beliefs"), from the words the old icon card carried.
                 ResourceHeroSection(ResourceHero(
-                    eyebrow: "BROWSE BY TOPIC",
+                    eyebrow: String(localized: "BROWSE BY TOPIC"),
                     systemImage: "square.grid.2x2.fill",
-                    headline: "The same subject across the books",
-                    message: "\(store.entries.count) narrations from Bukhari, Muslim, Abu Dawud and at-Tirmidhi, each with a title, filed under \(store.topics.count) subjects. Open one to read how each collection words it."
+                    headline: String(localized: "The same subject across the books"),
+                    message: String(localized: "\(store.entries.count) narrations from Bukhari, Muslim, Abu Dawud and at-Tirmidhi, each with a title, filed under \(store.topics.count) subjects. Open one to read how each collection words it.")
                 ))
 
                 ForEach(store.lanes) { lane in
@@ -174,9 +174,9 @@ struct HadithTopicsView: View {
                             NavigationLink(destination: LazyDestination { HadithTopicView(topic: topic) }) {
                                 HStack(spacing: 12) {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(topic.label)
+                                        Text(topic.label.localizedDisplay)
                                             .font(.subheadline.weight(.semibold))
-                                        Text(topic.subtitle)
+                                        Text(topic.subtitle.localizedDisplay)
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
                                             .fixedSize(horizontal: false, vertical: true)
@@ -217,12 +217,12 @@ struct HadithTopicsView: View {
     private func laneHeader(_ lane: HadithLane) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
-                Text(lane.label.uppercased())
+                Text(lane.label.localizedDisplay.uppercased())
                 Spacer()
                 Text("\(store.count(inLane: lane.id))")
                     .hiddenInSimple(.sectionCounts)
             }
-            Text(lane.subtitle)
+            Text(lane.subtitle.localizedDisplay)
                 .font(.caption2)
                 .textCase(nil)
                 .foregroundStyle(.secondary)
@@ -250,7 +250,7 @@ struct HadithTopicView: View {
 
     /// The lane this subject is filed under, as the index's section header names it.
     private var laneLabel: String {
-        (HadithTopicsStore.shared.lanes.first(where: { $0.id == topic.lane })?.label ?? "Browse by Topic").uppercased()
+        (HadithTopicsStore.shared.lanes.first(where: { $0.id == topic.lane })?.label.localizedDisplay ?? String(localized: "Browse by Topic")).uppercased()
     }
 
     private static let bookOrder = ["bukhari", "muslim", "abudawud", "tirmidhi"]
@@ -272,8 +272,8 @@ struct HadithTopicView: View {
                 ResourceHeroSection(ResourceHero(
                     eyebrow: laneLabel,
                     systemImage: "square.grid.2x2.fill",
-                    headline: topic.label,
-                    message: topic.subtitle
+                    headline: topic.label.localizedDisplay,
+                    message: topic.subtitle.localizedDisplay
                 ))
 
                 if loading {
@@ -286,7 +286,7 @@ struct HadithTopicView: View {
                     }
                 } else {
                     ForEach(groups, id: \.book.slug) { group in
-                        Section(header: SectionPillHeader(title: group.book.englishTitle.uppercased(), count: group.rows.count)) {
+                        Section(header: SectionPillHeader(title: group.book.displayTitle.uppercased(), count: group.rows.count)) {
                             ForEach(group.rows) { row in
                                 // Lazy: an eager destination built a `HadithChapterView` per visible
                                 // row, whose init slices the chapter and checks its text blocks.
@@ -306,7 +306,7 @@ struct HadithTopicView: View {
             .themedListRowBackground()
         }
         .applyConditionalListStyle()
-        .navigationTitle(topic.label)
+        .navigationTitle(topic.label.localizedDisplay)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await resolve()
@@ -438,7 +438,8 @@ struct HadithHistoryView: View {
                 // (Abu, 2026-09-07). The article kit's lead card since 2026-10-03, the way the Pillars
                 // & Beliefs pages open.
                 Section {
-                    ArticleLead("Everything this tab remembers: the hadiths you opened, the daily hadith of earlier days, where you left each book, and your recent searches. Tap any of them to open it. It never leaves this device.")
+                    ArticleLead(String(localized: "Everything this tab remembers: the hadiths you opened, the daily hadith of earlier days, where you left each book, and your recent searches. Tap any of them to open it. It never leaves this device."),
+                                eyebrow: String(localized: "IN SHORT"))
                 }
 
                 if derived.isEmpty, searches.isEmpty {
@@ -450,9 +451,10 @@ struct HadithHistoryView: View {
                 }
 
                 ForEach(derived.viewedByDay, id: \.day) { group in
-                    Section(header: Text("OPENED · " + group.day.uppercased())) {
+                    Section(header: Text("OPENED · \(group.day.uppercased())")) {
                         ForEach(group.rows) { entry in
-                            historyRow(slug: entry.slug, idInBook: entry.idInBook, reference: entry.reference,
+                            historyRow(slug: entry.slug, idInBook: entry.idInBook,
+                                       reference: HadithCatalogBook.displayReference(stored: entry.reference, slug: entry.slug),
                                        arabic: entry.arabicPreview, english: entry.englishPreview, chapterId: entry.chapterId)
                         }
                     }
@@ -461,7 +463,8 @@ struct HadithHistoryView: View {
                 if !leftOff.isEmpty {
                     Section(header: Text("WHERE YOU LEFT OFF")) {
                         ForEach(leftOff, id: \.slug) { entry in
-                            historyRow(slug: entry.slug, idInBook: entry.idInBook, reference: entry.reference,
+                            historyRow(slug: entry.slug, idInBook: entry.idInBook,
+                                       reference: HadithCatalogBook.displayReference(stored: entry.reference, slug: entry.slug),
                                        arabic: entry.arabicPreview, english: entry.englishPreview, chapterId: entry.chapterId)
                         }
                     }
@@ -470,7 +473,8 @@ struct HadithHistoryView: View {
                 if !daily.isEmpty {
                     Section(header: Text("HADITH OF THE DAY, EARLIER")) {
                         ForEach(Array(daily.reversed().prefix(30)), id: \.dayKey) { entry in
-                            historyRow(slug: entry.slug, idInBook: entry.idInBook, reference: entry.reference + " · " + entry.dayKey,
+                            historyRow(slug: entry.slug, idInBook: entry.idInBook,
+                                       reference: HadithCatalogBook.displayReference(stored: entry.reference, slug: entry.slug) + " · " + entry.dayKey.localizedDigits,
                                        arabic: entry.arabicPreview, english: entry.englishPreview, chapterId: nil)
                         }
                     }
@@ -526,12 +530,18 @@ struct HadithHistoryView: View {
                             .lineLimit(2)
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: .infinity, alignment: .trailing)
+                            // The right edge in the Arabic interface too (`.trailing` is right only
+                            // left to right).
+                            .environment(\.layoutDirection, .leftToRight)
                     }
                     if settings.showHadithEnglish, !english.isEmpty {
                         Text(english)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
+                            // English content keeps the left edge in the Arabic interface.
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .leftToRightContent()
                     }
                 }
                 .padding(.vertical, 2)

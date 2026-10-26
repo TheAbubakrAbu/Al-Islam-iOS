@@ -404,10 +404,10 @@ enum PrayerNotificationPrompt {
         // this question does not have and which drop the Cancel button - and Dismiss is always
         // there (Abu, 2026-09-20). iPhone keeps the sheet that slides up from the bottom.
         let alert = UIAlertController(
-            title: "Did you pray \(question.displayName)\(dayPhrase(for: question))?",
+            title: questionTitle(for: question),
             message: settings.naggingMode
-                ? "Answering yes marks it in the prayer tracker and stops the remaining reminders."
-                : "Answering yes marks it in the prayer tracker.",
+                ? String(localized: "Answering yes marks it in the prayer tracker and stops the remaining reminders.")
+                : String(localized: "Answering yes marks it in the prayer tracker."),
             preferredStyle: UIDevice.current.userInterfaceIdiom == .phone ? .actionSheet : .alert
         )
         func answer(_ mark: PrayerMark) -> (UIAlertAction) -> Void {
@@ -418,11 +418,11 @@ enum PrayerNotificationPrompt {
         }
         // "Late" only once the prayer's window has closed. Until then a prayer that was prayed was
         // prayed on time, so there is one yes and it does not need the qualifier.
-        alert.addAction(UIAlertAction(title: offersLate ? "Yes, on time" : "Yes, I prayed it", style: .default, handler: answer(.onTime)))
+        alert.addAction(UIAlertAction(title: offersLate ? String(localized: "Yes, on time") : String(localized: "Yes, I prayed it"), style: .default, handler: answer(.onTime)))
         if offersLate {
-            alert.addAction(UIAlertAction(title: "Yes, but late", style: .default, handler: answer(.late)))
+            alert.addAction(UIAlertAction(title: String(localized: "Yes, but late"), style: .default, handler: answer(.late)))
         }
-        alert.addAction(UIAlertAction(title: "Dismiss", style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "Dismiss"), style: .cancel))
         alert.view.tintColor = UIColor(settings.accentColor.color)
 
         top.present(alert, animated: true)
@@ -430,12 +430,14 @@ enum PrayerNotificationPrompt {
         return true
     }
 
-    /// Nothing for the prayer's most recent instance; " yesterday", " on Thursday" or " on Sep 12" for
-    /// a notification tapped after a later one began, so an old notification in Notification Center
-    /// asks about (and marks) the day it was for instead of passing as today's.
-    private static func dayPhrase(for question: Settings.PrayerQuestion, now: Date = Date()) -> String {
+    /// "Did you pray Asr?" for the prayer's most recent instance; "... yesterday?", "... on Thursday?" or
+    /// "... on Sep 12?" for a notification tapped after a later one began, so an old notification in
+    /// Notification Center asks about (and marks) the day it was for instead of passing as today's.
+    /// Whole sentences, so a translation can order the day and the prayer its own way.
+    private static func questionTitle(for question: Settings.PrayerQuestion, now: Date = Date()) -> String {
+        let name = question.displayName
         // The next instance begins a day later, give or take the minutes prayer times drift.
-        guard now.timeIntervalSince(question.prayerTime) > 23.5 * 3600 else { return "" }
+        guard now.timeIntervalSince(question.prayerTime) > 23.5 * 3600 else { return String(localized: "Did you pray \(name)?") }
         let calendar = Calendar.current
         let days = calendar.dateComponents(
             [.day], from: calendar.startOfDay(for: question.trackerDay), to: calendar.startOfDay(for: now)
@@ -443,13 +445,13 @@ enum PrayerNotificationPrompt {
         let formatter = DateFormatter()
         switch days {
         case ...1:
-            return " yesterday"
+            return String(localized: "Did you pray \(name) yesterday?")
         case 2...6:
             formatter.dateFormat = "EEEE"
         default:
             formatter.setLocalizedDateFormatFromTemplate("MMMd")
         }
-        return " on \(formatter.string(from: question.trackerDay))"
+        return String(localized: "Did you pray \(name) on \(formatter.string(from: question.trackerDay))?")
     }
 
     #if DEBUG

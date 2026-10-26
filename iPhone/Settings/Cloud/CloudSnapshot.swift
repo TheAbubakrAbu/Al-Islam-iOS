@@ -34,9 +34,9 @@ struct CloudSnapshot {
         var errorDescription: String? {
             switch self {
             case .unreadable:
-                return "This is not a backup made by \(AppIdentifiers.appName), or it is damaged."
+                return String(localized: "This is not a backup made by \(AppIdentifiers.displayName), or it is damaged.")
             case .newerSchema:
-                return "This backup was made by a newer version of the app. Update the app, then restore."
+                return String(localized: "This backup was made by a newer version of the app. Update the app, then restore.")
             }
         }
     }

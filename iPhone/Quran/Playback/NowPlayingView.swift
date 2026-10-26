@@ -325,7 +325,7 @@ struct NowPlayingView: View {
                 // playback while expanded, both showed the spinner over a page that was just there.
                 // Flexible everything: the labels shrink to their text, the spacers to nothing.
                 HStack(spacing: 8) {
-                    Text(total > 0 ? Self.formatMMSS(safeElapsed) : "")
+                    Text(total > 0 ? Self.formatMMSS(safeElapsed).localizedDigits : "")
                         .frame(minWidth: 0, idealWidth: 40, maxWidth: 40, alignment: .leading)
 
                     Spacer(minLength: 0)
@@ -336,7 +336,7 @@ struct NowPlayingView: View {
 
                     Spacer(minLength: 0)
 
-                    Text(total > 0 ? Self.formatMMSS(total) : "")
+                    Text(total > 0 ? Self.formatMMSS(total).localizedDigits : "")
                         .frame(minWidth: 0, idealWidth: 40, maxWidth: 40, alignment: .trailing)
                 }
                 .font(.caption2)
@@ -344,6 +344,9 @@ struct NowPlayingView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             }
+            // Media transport never mirrors: rewind stays left of play, the bar fills left to right,
+            // elapsed time on the left (the Arabic interface flipped all of it).
+            .environment(\.layoutDirection, .leftToRight)
             // The progress bar / times tick every 0.5s and on play/resume. Opt this subtree out of any
             // implicit animation inherited from the player card so the bar jumps to its position instead of
             // easing - otherwise resuming (and each tick) shows a weird sliding/lurching animation.
@@ -411,7 +414,7 @@ struct NowPlayingView: View {
         let section = customRangeLoops ? 1 : nowPlaying.customRangeRepeatSection
         let total = nowPlaying.customRangeTotalItems
             ?? max(1, (end - start + 1) * nowPlaying.customRangeRepeatPerAyah * section)
-        return "Ayahs \(start)\u{2013}\(end) \u{00B7} \(current)/\(total)"
+        return String(localized: "Ayahs \(start)\u{2013}\(end) \u{00B7} \(current)/\(total)")
     }
 
     /// "Ayah 1/3 · Section 1/∞": the repeat counts.
@@ -420,7 +423,7 @@ struct NowPlayingView: View {
         let ayahTotal = max(1, nowPlaying.customRangeRepeatPerAyah)
         let sectionProgress = nowPlaying.customRangeRepeatSectionIndex ?? 1
         let sectionTotal = customRangeLoops ? "\u{221E}" : "\(max(1, nowPlaying.customRangeRepeatSection))"
-        return "Ayah \(ayahProgress)/\(ayahTotal) · Section \(sectionProgress)/\(sectionTotal)"
+        return String(localized: "Ayah \(ayahProgress)/\(ayahTotal) · Section \(sectionProgress)/\(sectionTotal.localizedDigits)")
     }
 
     /// For a custom range, keep the top title short (just "Name S:A") since the per-ayah/section detail
@@ -430,7 +433,7 @@ struct NowPlayingView: View {
            let surahNumber = nowPlaying.currentSurahNumber,
            let ayahNumber = nowPlaying.currentAyahNumber,
            let surah = quranPlayer.quranData.quran.first(where: { $0.id == surahNumber }) {
-            return "\(surah.nameTransliteration) \(surahNumber):\(ayahNumber)"
+            return "\(surah.displayName) \(surahNumber):\(ayahNumber)"
         }
         return nowPlaying.nowPlayingTitle
     }
@@ -503,6 +506,7 @@ struct NowPlayingView: View {
             HStack(spacing: 12) {
                 transportButtons(isPlaying: isPlaying)
             }
+            .environment(\.layoutDirection, .leftToRight)
             .font(.headline)
             .padding(.top, 2)
         }
@@ -539,6 +543,7 @@ struct NowPlayingView: View {
                 HStack(spacing: 14) {
                     transportButtons(isPlaying: isPlaying)
                 }
+                .environment(\.layoutDirection, .leftToRight)
             }
         }
         .padding(.vertical, 6)
@@ -566,6 +571,7 @@ struct NowPlayingView: View {
             HStack(spacing: 14) {
                 transportButtons(isPlaying: isPlaying)
             }
+            .environment(\.layoutDirection, .leftToRight)
             .fixedSize()
             // Clearance for the expand button, as on the small player.
             .padding(.trailing, 30)
@@ -588,7 +594,7 @@ struct NowPlayingView: View {
             let safeElapsed = scrubFraction.map { $0 * total } ?? playedElapsed
 
             HStack(spacing: 8) {
-                Text(total > 0 ? Self.formatMMSS(safeElapsed) : "")
+                Text(total > 0 ? Self.formatMMSS(safeElapsed).localizedDigits : "")
                     .frame(minWidth: 0, idealWidth: 40, maxWidth: 48, alignment: .trailing)
 
                 if total > 0 {
@@ -597,9 +603,11 @@ struct NowPlayingView: View {
                     TinyProgressBar(fraction: 0, color: settings.accentColor.color)
                 }
 
-                Text(total > 0 ? Self.formatMMSS(total) : "")
+                Text(total > 0 ? Self.formatMMSS(total).localizedDigits : "")
                     .frame(minWidth: 0, idealWidth: 40, maxWidth: 48, alignment: .leading)
             }
+            // A scrubber, like the transport beside it, never mirrors.
+            .environment(\.layoutDirection, .leftToRight)
             .font(.caption2)
             .monospacedDigit()
             .foregroundColor(.secondary)
@@ -624,6 +632,8 @@ struct NowPlayingView: View {
             HStack(spacing: 10) {
                 compactTransportButtons(isPlaying: isPlaying)
             }
+            // Media transport never mirrors (rewind left of play in every language).
+            .environment(\.layoutDirection, .leftToRight)
             // Clearance for the top-right expand button lives on the controls (not the row) so the row keeps
             // the SAME horizontal padding as the expanded player.
             .padding(.trailing, 30)
@@ -674,7 +684,7 @@ struct NowPlayingView: View {
         // 2026-10-19: "reciter is small but the range is big"). The detail now sits under the reciter
         // at the reciter's size, as the small player always drew it, and opens the range sheet.
         if let title = displayTitle {
-            Text(title)
+            Text(title.localizedDigits)
                 .foregroundColor(.primary)
                 #if os(iOS)
                 .font(.headline.bold())
@@ -723,7 +733,7 @@ struct NowPlayingView: View {
         #if os(iOS)
         HStack(spacing: 3) {
             Text(text)
-            Image(systemName: "chevron.right")
+            Image(systemName: "chevron.forward")
                 .font(.system(size: 8, weight: .bold))
         }
         .font(.caption2.weight(.medium))
@@ -796,7 +806,7 @@ struct NowPlayingView: View {
             quranPlayer.seek(by: seconds)
         } label: {
             Label(
-                seconds < 0 ? "Back 10 Seconds" : "Forward 10 Seconds",
+                seconds < 0 ? String(localized: "Back 10 Seconds").localizedDigits : String(localized: "Forward 10 Seconds").localizedDigits,
                 systemImage: seconds < 0 ? "gobackward.10" : "goforward.10"
             )
         }
@@ -998,7 +1008,7 @@ struct PlaybackScrubber: View {
             .onDisappear { shownFraction = nil }
             .accessibilityElement()
             .accessibilityLabel("Playback Position")
-            .accessibilityValue(Self.spoken(shown * total) + " of " + Self.spoken(total))
+            .accessibilityValue(String(localized: "\(Self.spoken(shown * total)) of \(Self.spoken(total))"))
             .accessibilityAdjustableAction { direction in
                 let step: Double = direction == .increment ? 10 : -10
                 onSeek(min(total, max(0, shown * total + step))) {}

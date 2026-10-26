@@ -32,7 +32,7 @@ struct Prayers2EntryView: View {
                             Image(systemName: currentPrayer.image)
                                 .foregroundColor(accent)
 
-                            Text(currentPrayer.displayName)
+                            Text(currentPrayer.displayName.localizedDisplay)
                                 .foregroundColor(accent)
                                 .fontWeight(.bold)
 
@@ -134,7 +134,7 @@ struct Prayers2EntryView: View {
                     Image(systemName: prayer.image)
                         .frame(width: 10, alignment: .center)
 
-                    Text(prayer.displayName)
+                    Text(prayer.displayName.localizedDisplay)
                         .fontWeight(.bold)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)

@@ -19,39 +19,39 @@ enum ThemeWashColor: String, Codable, CaseIterable, Identifiable {
     /// The colour's plain name ("Lit in blue").
     var name: String {
         switch self {
-        case .signs: return "blue"
-        case .prophets: return "green"
-        case .law: return "brown"
-        case .stories: return "yellow"
-        case .quran: return "purple"
-        case .afterlife: return "orange"
-        case .hell: return "red"
+        case .signs: return String(localized: "blue")
+        case .prophets: return String(localized: "green")
+        case .law: return String(localized: "brown")
+        case .stories: return String(localized: "yellow")
+        case .quran: return String(localized: "purple")
+        case .afterlife: return String(localized: "orange")
+        case .hell: return String(localized: "red")
         }
     }
 
     /// What the colour stands for.
     var meaning: String {
         switch self {
-        case .signs: return "Signs of Allah"
-        case .prophets: return "The Prophet and the Believers"
-        case .law: return "Rulings and Worship"
-        case .stories: return "Stories of the Prophets"
-        case .quran: return "The Quran and Human Nature"
-        case .afterlife: return "The Hereafter"
-        case .hell: return "Hellfire"
+        case .signs: return String(localized: "Signs of Allah")
+        case .prophets: return String(localized: "The Prophet and the Believers")
+        case .law: return String(localized: "Rulings and Worship")
+        case .stories: return String(localized: "Stories of the Prophets")
+        case .quran: return String(localized: "The Quran and Human Nature")
+        case .afterlife: return String(localized: "The Hereafter")
+        case .hell: return String(localized: "Hellfire")
         }
     }
 
     /// The legend's line under each meaning (Tilawa's wording).
     var legendDescription: String {
         switch self {
-        case .signs: return "The signs of Allah, evidence of His power and oneness, and the grace He gives to His creation."
-        case .prophets: return "The traits and honors of the Prophet, the attributes of believers, their rewards, and descriptions of Paradise."
-        case .law: return "Legal rulings, obligations, transactions, family matters, boundaries, and worship practice."
-        case .stories: return "Stories of messengers and prophets, their biographies, miracles, and the histories of earlier nations."
-        case .quran: return "The Quran and revelation, human character, denial and arrogance, false accusations, and Allah's way with creation."
-        case .afterlife: return "The Day of Resurrection, its signs and warnings, death, the grave, the reckoning, and scenes of Judgment."
-        case .hell: return "Hell, its descriptions, and the torment of the polytheists and disbelievers."
+        case .signs: return String(localized: "The signs of Allah, evidence of His power and oneness, and the grace He gives to His creation.")
+        case .prophets: return String(localized: "The traits and honors of the Prophet, the attributes of believers, their rewards, and descriptions of Paradise.")
+        case .law: return String(localized: "Legal rulings, obligations, transactions, family matters, boundaries, and worship practice.")
+        case .stories: return String(localized: "Stories of messengers and prophets, their biographies, miracles, and the histories of earlier nations.")
+        case .quran: return String(localized: "The Quran and revelation, human character, denial and arrogance, false accusations, and Allah's way with creation.")
+        case .afterlife: return String(localized: "The Day of Resurrection, its signs and warnings, death, the grave, the reckoning, and scenes of Judgment.")
+        case .hell: return String(localized: "Hell, its descriptions, and the torment of the polytheists and disbelievers.")
         }
     }
 
@@ -436,11 +436,16 @@ final class ThemeHighlights: ObservableObject {
 
     /// One line for a settings row: "Off", "All passages", "3 passages · 1 theme".
     var summary: String {
-        if allSectionsLit { return lit.isEmpty ? "All passages" : "All passages · \(lit.count) theme\(lit.count == 1 ? "" : "s")" }
+        if allSectionsLit {
+            if lit.isEmpty { return String(localized: "All passages") }
+            return lit.count == 1 ? String(localized: "All passages · \(lit.count) theme") : String(localized: "All passages · \(lit.count) themes")
+        }
         var parts: [String] = []
-        if !litSectionIDs.isEmpty { parts.append("\(litSectionIDs.count) passage\(litSectionIDs.count == 1 ? "" : "s")") }
-        if !lit.isEmpty { parts.append("\(lit.count) theme\(lit.count == 1 ? "" : "s")") }
-        return parts.isEmpty ? "Off" : parts.joined(separator: " · ")
+        if !litSectionIDs.isEmpty {
+            parts.append(litSectionIDs.count == 1 ? String(localized: "\(litSectionIDs.count) passage") : String(localized: "\(litSectionIDs.count) passages"))
+        }
+        if !lit.isEmpty { parts.append(lit.count == 1 ? String(localized: "\(lit.count) theme") : String(localized: "\(lit.count) themes")) }
+        return parts.isEmpty ? String(localized: "Off") : parts.joined(separator: " · ")
     }
 
     // MARK: Themes

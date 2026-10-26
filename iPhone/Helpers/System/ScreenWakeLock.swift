@@ -22,6 +22,10 @@ import UIKit
 /// whichever view disappeared last would clear a lock the other still needs, so holders are counted and
 /// the flag only falls when the last one lets go.
 ///
+/// ONE OPT-IN HOLDER BESIDES THE HIGHLIGHT. The ayah actions sheet's "Keep Screen On" switch (off by
+/// default, Abu 2026-10-25) holds the lock while that sheet is on screen, playing or not: the reader
+/// asked for it by name, so it is not the guess about intent that "while playing" would be.
+///
 /// WHY THE FLAG IS WRITTEN AND NOT TRUSTED. `isIdleTimerDisabled` is a property of the WINDOW SCENE's
 /// application object and iOS resets it across background transitions, so the count is the truth and the
 /// flag is re-asserted from it (see `reassert`) rather than read back.

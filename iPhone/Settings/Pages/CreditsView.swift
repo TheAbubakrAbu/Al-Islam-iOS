@@ -32,177 +32,177 @@ struct CreditItem: Identifiable, Hashable {
 
     static let all: [CreditItem] = [
         // Prayer times
-        CreditItem(id: "adhan-calculations", title: "Adhan calculations: Batoul Apps",
-                   detail: "Credit for the Adhan calculations, which does everything offline on the device, goes to Batoul Apps",
+        CreditItem(id: "adhan-calculations", title: String(localized: "Adhan calculations: Batoul Apps"),
+                   detail: String(localized: "Credit for the Adhan calculations, which does everything offline on the device, goes to Batoul Apps"),
                    url: "https://github.com/batoulapps/adhan-swift", group: .adhan, keywords: "prayer times library swift"),
-        CreditItem(id: "adhan-sounds", title: "Adhan sounds: Omar Al-Ejel",
-                   detail: "Credit for the Adhan sounds goes to Omar Al-Ejel",
+        CreditItem(id: "adhan-sounds", title: String(localized: "Adhan sounds: Omar Al-Ejel"),
+                   detail: String(localized: "Credit for the Adhan sounds goes to Omar Al-Ejel"),
                    url: "https://github.com/oalejel/Athan-Utility", group: .adhan, keywords: "audio athan utility"),
-        CreditItem(id: "serene-adhan", title: "Serene adhan: Adam-synagda (CC0)",
-                   detail: "The Serene adhan is \"Beautiful adhan\" by Adam-synagda (CC0, via Wikimedia Commons), trimmed and loudness-normalized",
+        CreditItem(id: "serene-adhan", title: String(localized: "Serene adhan: Adam-synagda (CC0)"),
+                   detail: String(localized: "The Serene adhan is \"Beautiful adhan\" by Adam-synagda (CC0, via Wikimedia Commons), trimmed and loudness-normalized"),
                    url: "https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg", group: .adhan, keywords: "audio sound license"),
-        CreditItem(id: "aaqib-adhan", title: "Aaqib Azeez adhan (CC BY-SA 4.0)",
-                   detail: "The Aaqib Azeez adhan is by Aaqib Azeez (CC BY-SA 4.0, via Wikimedia Commons), trimmed and loudness-normalized; the clips remain CC BY-SA 4.0",
+        CreditItem(id: "aaqib-adhan", title: String(localized: "Aaqib Azeez adhan (CC BY-SA 4.0)"),
+                   detail: String(localized: "The Aaqib Azeez adhan is by Aaqib Azeez (CC BY-SA 4.0, via Wikimedia Commons), trimmed and loudness-normalized; the clips remain CC BY-SA 4.0"),
                    url: "https://commons.wikimedia.org/wiki/File:The_Adhan_-_Muslim_Call_to_Prayer_-_Aaqib_Azeez.mp3", group: .adhan, keywords: "audio sound license"),
-        CreditItem(id: "takbir-tone", title: "Takbir alert tone: Aaqib Azeez (CC BY-SA 4.0)",
-                   detail: "The Takbir alert tone is the opening takbir pair of the Aaqib Azeez adhan (CC BY-SA 4.0, via Wikimedia Commons), trimmed and loudness-normalized; the clip remains CC BY-SA 4.0",
+        CreditItem(id: "takbir-tone", title: String(localized: "Takbir alert tone: Aaqib Azeez (CC BY-SA 4.0)"),
+                   detail: String(localized: "The Takbir alert tone is the opening takbir pair of the Aaqib Azeez adhan (CC BY-SA 4.0, via Wikimedia Commons), trimmed and loudness-normalized; the clip remains CC BY-SA 4.0"),
                    url: "https://commons.wikimedia.org/wiki/File:The_Adhan_-_Muslim_Call_to_Prayer_-_Aaqib_Azeez.mp3", group: .adhan, keywords: "notification sound reminder"),
-        CreditItem(id: "chime-tone", title: "Chime alert tone: GabFitzgerald (CC0)",
-                   detail: "The Chime alert tone is \"[UI Sound] Approval - High Pitched Bell Synth\" by GabFitzgerald (CC0, via Freesound), trimmed, repeated, and loudness-normalized",
+        CreditItem(id: "chime-tone", title: String(localized: "Chime alert tone: GabFitzgerald (CC0)"),
+                   detail: String(localized: "The Chime alert tone is \"[UI Sound] Approval - High Pitched Bell Synth\" by GabFitzgerald (CC0, via Freesound), trimmed, repeated, and loudness-normalized"),
                    url: "https://freesound.org/people/GabFitzgerald/sounds/625174/", group: .adhan, keywords: "notification sound reminder"),
-        CreditItem(id: "ring-tone", title: "Ring alert tone: Vendarro (CC0)",
-                   detail: "The Ring alert tone is \"Signal-Ring 1\" by Vendarro (CC0, via Freesound), trimmed, repeated, and loudness-normalized",
+        CreditItem(id: "ring-tone", title: String(localized: "Ring alert tone: Vendarro (CC0)"),
+                   detail: String(localized: "The Ring alert tone is \"Signal-Ring 1\" by Vendarro (CC0, via Freesound), trimmed, repeated, and loudness-normalized"),
                    url: "https://freesound.org/people/Vendarro/sounds/399315/", group: .adhan, keywords: "notification sound reminder"),
-        CreditItem(id: "alarm-tone", title: "Alarm alert tone: Kesu (CC0)",
-                   detail: "The Alarm alert tone is \"Alarm clock beep\" by Kesu (CC0, via Freesound), trimmed, repeated, and loudness-normalized",
+        CreditItem(id: "alarm-tone", title: String(localized: "Alarm alert tone: Kesu (CC0)"),
+                   detail: String(localized: "The Alarm alert tone is \"Alarm clock beep\" by Kesu (CC0, via Freesound), trimmed, repeated, and loudness-normalized"),
                    url: "https://freesound.org/people/Kesu/sounds/182351/", group: .adhan, keywords: "notification sound reminder"),
-        CreditItem(id: "moon-phase", title: "Moon phase algorithm: SunCalc",
-                   detail: "Credit for the moon phase algorithm behind the sky card and the Moon widgets goes to SunCalc by Vladimir Agafonkin, built on the lunar theory in Meeus' Astronomical Algorithms",
+        CreditItem(id: "moon-phase", title: String(localized: "Moon phase algorithm: SunCalc"),
+                   detail: String(localized: "Credit for the moon phase algorithm behind the sky card and the Moon widgets goes to SunCalc by Vladimir Agafonkin, built on the lunar theory in Meeus' Astronomical Algorithms"),
                    url: "https://github.com/mourner/suncalc", group: .adhan, keywords: "lunar hijri widget sky"),
-        CreditItem(id: "moon-globe", title: "3D moon maps: NASA's Scientific Visualization Studio",
-                   detail: "The 3D moon opened from the sky card is drawn with the CGI Moon Kit by NASA's Scientific Visualization Studio (Ernie Wright, with Noah Petro): its color map from the Lunar Reconnaissance Orbiter Camera and its elevation map from the Lunar Orbiter Laser Altimeter",
+        CreditItem(id: "moon-globe", title: String(localized: "3D moon maps: NASA's Scientific Visualization Studio"),
+                   detail: String(localized: "The 3D moon opened from the sky card is drawn with the CGI Moon Kit by NASA's Scientific Visualization Studio (Ernie Wright, with Noah Petro): its color map from the Lunar Reconnaissance Orbiter Camera and its elevation map from the Lunar Orbiter Laser Altimeter"),
                    url: "https://svs.gsfc.nasa.gov/4720", group: .adhan, keywords: "nasa lro lroc lola lunar globe texture 3d moon"),
 
         // Quran
-        CreditItem(id: "kfgqpc-text", title: "Arabic text and qiraat data: KFGQPC",
-                   detail: "Credit for all the Quranic Arabic text and all qiraat/riwayaat data goes to quran-data-kfgqpc (KFGQPC)",
+        CreditItem(id: "kfgqpc-text", title: String(localized: "Arabic text and qiraat data: KFGQPC"),
+                   detail: String(localized: "Credit for all the Quranic Arabic text and all qiraat/riwayaat data goes to quran-data-kfgqpc (KFGQPC)"),
                    url: "https://github.com/thetruetruth/quran-data-kfgqpc", group: .quran, keywords: "king fahd complex uthmani hafs warsh qaloon riwayah readings"),
-        CreditItem(id: "islamweb", title: "Printed mushaf PDFs and beta qiraat text: Islamweb",
-                   detail: "Credit for the printed mushaf PDFs of the nineteen riwayat other than Hafs, the Islamweb edition of the Hafs printed mushaf, and the beta qiraat text goes to Islamweb",
+        CreditItem(id: "islamweb", title: String(localized: "Printed mushaf PDFs and beta qiraat text: Islamweb"),
+                   detail: String(localized: "Credit for the printed mushaf PDFs of the nineteen riwayat other than Hafs, the Islamweb edition of the Hafs printed mushaf, and the beta qiraat text goes to Islamweb"),
                    url: "https://www.islamweb.net", group: .quran, keywords: "mushaf pdf riwayah beta"),
-        CreditItem(id: "hafs-facsimile-layout", title: "Hafs printed-mushaf page layout: Quran.com",
-                   detail: "The Hafs printed mushaf is set by this app from its own KFGQPC text; its line breaks follow the Madinah Mushaf (1421 AH print) as published in the Quran.com word-by-word data",
+        CreditItem(id: "hafs-facsimile-layout", title: String(localized: "Hafs printed-mushaf page layout: Quran.com"),
+                   detail: String(localized: "The Hafs printed mushaf is set by this app from its own KFGQPC text; its line breaks follow the Madinah Mushaf (1421 AH print) as published in the Quran.com word-by-word data"),
                    url: "https://quran.com", group: .quran, keywords: "mushaf pdf hafs madinah lines layout"),
-        CreditItem(id: "amiri-font", title: "Amiri font (frame labels of the Hafs printed mushaf)",
-                   detail: "The surah and juz labels, surah banners' notes and page numbers of the Hafs printed mushaf are set in Amiri by Khaled Hosny, SIL Open Font License 1.1",
+        CreditItem(id: "amiri-font", title: String(localized: "Amiri font (frame labels of the Hafs printed mushaf)"),
+                   detail: String(localized: "The surah and juz labels, surah banners' notes and page numbers of the Hafs printed mushaf are set in Amiri by Khaled Hosny, SIL Open Font License 1.1"),
                    url: "https://github.com/aliftype/amiri", group: .quran, keywords: "naskh font ofl mushaf pdf"),
-        CreditItem(id: "quran-com-qiraat", title: "Readings of the Ten: Quran.com (Quran Foundation)",
-                   detail: "Credit for the annotated variant readings under an ayah (who among the Ten reads which form, with its meaning and notes) goes to the qiraat reference of Quran.com by the Quran Foundation",
+        CreditItem(id: "quran-com-qiraat", title: String(localized: "Readings of the Ten: Quran.com (Quran Foundation)"),
+                   detail: String(localized: "Credit for the annotated variant readings under an ayah (who among the Ten reads which form, with its meaning and notes) goes to the qiraat reference of Quran.com by the Quran Foundation"),
                    url: "https://quran.com/1:4/qiraat", group: .quran, keywords: "qiraat readings variants ten imams transmitters"),
-        CreditItem(id: "qiraathub", title: "Qiraat companion reference: QiraatHub",
-                   detail: "Credit for the qiraat guide's companion reference on the ten imams and twenty narrators goes to QiraatHub",
+        CreditItem(id: "qiraathub", title: String(localized: "Qiraat companion reference: QiraatHub"),
+                   detail: String(localized: "Credit for the qiraat guide's companion reference on the ten imams and twenty narrators goes to QiraatHub"),
                    url: "https://qiraathub.com/", group: .quran, keywords: "imams narrators readings"),
-        CreditItem(id: "tilawa-qiraat-explorer", title: "Qiraat Explorer and place index: Tilawa and Quran.com",
-                   detail: "Credit for the Qiraat Explorer's idea (every place the riwayat differ, by ayah and by surah) and for the worked examples on each narrator's page (where he differs from Hafs, with a recording where one exists) goes to Tilawa, by my friend Jamil Hammoudeh; the place index is computed from this app's own riwayah texts, and the readings' meanings draw on Quran.com's qiraat reference",
+        CreditItem(id: "tilawa-qiraat-explorer", title: String(localized: "Qiraat Explorer and place index: Tilawa and Quran.com"),
+                   detail: String(localized: "Credit for the Qiraat Explorer's idea (every place the riwayat differ, by ayah and by surah) and for the worked examples on each narrator's page (where he differs from Hafs, with a recording where one exists) goes to Tilawa, by my friend Jamil Hammoudeh; the place index is computed from this app's own riwayah texts, and the readings' meanings draw on Quran.com's qiraat reference"),
                    url: "https://github.com/jamilhammoudeh/quran-app", group: .quran, keywords: "qiraat explorer riwayat differences tilawa"),
-        CreditItem(id: "saheeh", title: "Saheeh International translation: Global Quran",
-                   detail: "Credit for the English Saheeh International translation of the Quran data goes to Global Quran",
+        CreditItem(id: "saheeh", title: String(localized: "Saheeh International translation: Global Quran"),
+                   detail: String(localized: "Credit for the English Saheeh International translation of the Quran data goes to Global Quran"),
                    url: "https://globalquran.com/download/data/", group: .quran, keywords: "english translation"),
-        CreditItem(id: "transliteration", title: "English transliteration: QUL (Tarteel) and Risan Bagja Pradana",
-                   detail: "Credit for the ayah transliteration, written the way each ayah is recited, goes to the English Transliteration (Tajweed) dataset of the Quranic Universal Library by Tarteel; the app's original transliteration came from Risan Bagja Pradana's quran-json",
+        CreditItem(id: "transliteration", title: String(localized: "English transliteration: QUL (Tarteel) and Risan Bagja Pradana"),
+                   detail: String(localized: "Credit for the ayah transliteration, written the way each ayah is recited, goes to the English Transliteration (Tajweed) dataset of the Quranic Universal Library by Tarteel; the app's original transliteration came from Risan Bagja Pradana's quran-json"),
                    url: "https://qul.tarteel.ai/resources/transliteration", group: .quran, keywords: "quran json latin pronunciation tajweed"),
-        CreditItem(id: "translation-api", title: "Translation comparison API: Al Quran Cloud",
-                   detail: "Credit for the English Quran translation comparison API goes to Al Quran Cloud",
+        CreditItem(id: "translation-api", title: String(localized: "Translation comparison API: Al Quran Cloud"),
+                   detail: String(localized: "Credit for the English Quran translation comparison API goes to Al Quran Cloud"),
                    url: "https://alquran.cloud/api", group: .quran, keywords: "translations compare"),
-        CreditItem(id: "uthmani-fonts", title: "Uthmani Quran fonts: KFGQPC",
-                   detail: "Credit for the Uthmani Quran fonts (the Hafs face, and the Warsh face behind the Maghribi script style) goes to King Fahad Complex (KFGQPC)",
+        CreditItem(id: "uthmani-fonts", title: String(localized: "Uthmani Quran fonts: KFGQPC"),
+                   detail: String(localized: "Credit for the Uthmani Quran fonts (the Hafs face, and the Warsh face behind the Maghribi script style) goes to King Fahad Complex (KFGQPC)"),
                    url: "https://qul.tarteel.ai/resources/font/245", group: .quran, keywords: "font typeface script hafs warsh maghribi"),
-        CreditItem(id: "indopak-font", title: "Indopak Nastaleeq font: Ayman Siddiqui and R. Siddiqua",
-                   detail: "Credit for the Indopak Nastaleeq Quran font goes to Ayman Siddiqui and R. Siddiqua",
+        CreditItem(id: "indopak-font", title: String(localized: "Indopak Nastaleeq font: Ayman Siddiqui and R. Siddiqua"),
+                   detail: String(localized: "Credit for the Indopak Nastaleeq Quran font goes to Ayman Siddiqui and R. Siddiqua"),
                    url: "https://qul.tarteel.ai/resources/font/242", group: .quran, keywords: "font typeface script urdu"),
-        CreditItem(id: "kufi-font", title: "Kufi Quran font: Noto Kufi Arabic",
-                   detail: "Credit for the Kufi Quran font (Noto Kufi Arabic) goes to the Noto Project Authors at Google, used under the SIL Open Font License 1.1",
+        CreditItem(id: "kufi-font", title: String(localized: "Kufi Quran font: Noto Kufi Arabic"),
+                   detail: String(localized: "Credit for the Kufi Quran font (Noto Kufi Arabic) goes to the Noto Project Authors at Google, used under the SIL Open Font License 1.1"),
                    url: "https://fonts.google.com/noto/specimen/Noto+Kufi+Arabic", group: .quran, keywords: "font typeface script google"),
-        CreditItem(id: "hijazi-font", title: "Hijazi Quran font: Khalid Alabdullah",
-                   detail: "Credit for the Hijazi Quran font goes to Khalid Alabdullah, whose hijazifont models the hand of the earliest mushafs (CC BY-NC 4.0, used with the author's permission); the vowel marks, hamza, digits and mark positioning of Al-Islam Hijazi, in its light, bold and dot-vowel styles, were added by this app",
+        CreditItem(id: "hijazi-font", title: String(localized: "Hijazi Quran font: Khalid Alabdullah"),
+                   detail: String(localized: "Credit for the Hijazi Quran font goes to Khalid Alabdullah, whose hijazifont models the hand of the earliest mushafs (CC BY-NC 4.0, used with the author's permission); the vowel marks, hamza, digits and mark positioning of Al-Islam Hijazi, in its light, bold and dot-vowel styles, were added by this app"),
                    url: "https://github.com/khalidalabdullah/hijazifont", group: .quran, keywords: "font typeface script early mushaf"),
-        CreditItem(id: "mp3quran", title: "Surah recitations: MP3 Quran",
-                   detail: "Credit for the Surah Quran Recitations goes to MP3 Quran",
+        CreditItem(id: "mp3quran", title: String(localized: "Surah recitations: MP3 Quran"),
+                   detail: String(localized: "Credit for the Surah Quran Recitations goes to MP3 Quran"),
                    url: "https://mp3quran.net/eng", group: .quran, keywords: "audio reciters reciter listen"),
-        CreditItem(id: "alquran-cloud-audio", title: "Ayah recitations: Al Quran Cloud",
-                   detail: "Credit for the Ayah Quran Recitations goes to Al Quran",
+        CreditItem(id: "alquran-cloud-audio", title: String(localized: "Ayah recitations: Al Quran Cloud"),
+                   detail: String(localized: "Credit for the Ayah Quran Recitations goes to Al Quran"),
                    url: "https://alquran.cloud/cdn", group: .quran, keywords: "audio reciters reciter listen verse"),
-        CreditItem(id: "everyayah", title: "Additional ayah recitations: EveryAyah",
-                   detail: "Credit for additional Ayah Quran Recitations goes to EveryAyah",
+        CreditItem(id: "everyayah", title: String(localized: "Additional ayah recitations: EveryAyah"),
+                   detail: String(localized: "Credit for additional Ayah Quran Recitations goes to EveryAyah"),
                    url: "https://everyayah.com/", group: .quran, keywords: "audio reciters reciter listen verse"),
-        CreditItem(id: "qdc-timings", title: "Ayah audio timings: Quran.com (Quran Foundation)",
-                   detail: "Credit for the ayah audio timings that power offline ayah playback goes to the QDC audio API by Quran.com (Quran Foundation)",
+        CreditItem(id: "qdc-timings", title: String(localized: "Ayah audio timings: Quran.com (Quran Foundation)"),
+                   detail: String(localized: "Credit for the ayah audio timings that power offline ayah playback goes to the QDC audio API by Quran.com (Quran Foundation)"),
                    url: "https://api-docs.quran.foundation/", group: .quran, keywords: "audio offline playback segments"),
-        CreditItem(id: "word-by-word-meanings", title: "Word-by-word meanings: Quran.com and the Quranic Arabic Corpus",
-                   detail: "Credit for the word-by-word English meanings, shown when you tap a word while reading, goes to the QDC content API by Quran.com (Quran Foundation), whose per-word glosses come from the Quranic Arabic Corpus by Kais Dukes",
+        CreditItem(id: "word-by-word-meanings", title: String(localized: "Word-by-word meanings: Quran.com and the Quranic Arabic Corpus"),
+                   detail: String(localized: "Credit for the word-by-word English meanings, shown when you tap a word while reading, goes to the QDC content API by Quran.com (Quran Foundation), whose per-word glosses come from the Quranic Arabic Corpus by Kais Dukes"),
                    url: "https://corpus.quran.com/", group: .quran, keywords: "gloss word card translation"),
-        CreditItem(id: "tilawa-word-by-word", title: "Word-by-word reader: Tilawa, by Jamil Hammoudeh",
-                   detail: "Credit for the word-by-word reader itself (the idea, and the assembled gloss corpus this app's pack was built from) goes to Tilawa, by my friend Jamil Hammoudeh",
+        CreditItem(id: "tilawa-word-by-word", title: String(localized: "Word-by-word reader: Tilawa, by Jamil Hammoudeh"),
+                   detail: String(localized: "Credit for the word-by-word reader itself (the idea, and the assembled gloss corpus this app's pack was built from) goes to Tilawa, by my friend Jamil Hammoudeh"),
                    url: "https://github.com/jamilhammoudeh/quran-app", group: .quran, keywords: "gloss word card"),
-        CreditItem(id: "qac-morphology", title: "Roots, dictionary forms and grammar: Quranic Arabic Corpus",
-                   detail: "Credit for the root, dictionary form and grammar of every word (its prefixes, stem and suffixes, part of speech and analysis), on the Word Study card and behind the root search, goes to the Quranic Arabic Corpus morphology by Kais Dukes, via the Quranic Universal Library and Tilawa; Word Study itself follows Tilawa's, by my friend Jamil Hammoudeh",
+        CreditItem(id: "qac-morphology", title: String(localized: "Roots, dictionary forms and grammar: Quranic Arabic Corpus"),
+                   detail: String(localized: "Credit for the root, dictionary form and grammar of every word (its prefixes, stem and suffixes, part of speech and analysis), on the Word Study card and behind the root search, goes to the Quranic Arabic Corpus morphology by Kais Dukes, via the Quranic Universal Library and Tilawa; Word Study itself follows Tilawa's, by my friend Jamil Hammoudeh"),
                    url: "https://corpus.quran.com/", group: .quran, keywords: "root lemma morphology grammar word study prefix suffix"),
-        CreditItem(id: "tilawa-word-of-day", title: "Word of the Day: Tilawa and Quran.com",
-                   detail: "Credit for the Word of the Day curation (149 words, their themes interleaved) goes to my friend Jamil Hammoudeh, who chose them for Tilawa and gave his permission to bring them here; each word's gloss is Quran.com's word-by-word English, and every occurrence is located in this app's own Hafs text",
+        CreditItem(id: "tilawa-word-of-day", title: String(localized: "Word of the Day: Tilawa and Quran.com"),
+                   detail: String(localized: "Credit for the Word of the Day curation (149 words, their themes interleaved) goes to my friend Jamil Hammoudeh, who chose them for Tilawa and gave his permission to bring them here; each word's gloss is Quran.com's word-by-word English, and every occurrence is located in this app's own Hafs text"),
                    url: "https://github.com/jamilhammoudeh/quran-app", group: .quran, keywords: "vocabulary word of the day tilawa gloss"),
-        CreditItem(id: "similar-ayahs", title: "Similar Ayahs: qurani.ai, Tilawa and QUL",
-                   detail: "Credit for the verified Similar Ayahs matches goes to qurani.ai's similar-ayah corpus; the phrase-overlap matches come from Tilawa's generator, built on the Quranic Arabic Corpus morphology by Kais Dukes; the tinted shared words and further pairs come from the similar-ayah table of the Quranic Universal Library",
+        CreditItem(id: "similar-ayahs", title: String(localized: "Similar Ayahs: qurani.ai, Tilawa and QUL"),
+                   detail: String(localized: "Credit for the verified Similar Ayahs matches goes to qurani.ai's similar-ayah corpus; the phrase-overlap matches come from Tilawa's generator, built on the Quranic Arabic Corpus morphology by Kais Dukes; the tinted shared words and further pairs come from the similar-ayah table of the Quranic Universal Library"),
                    url: "https://qurani.ai/", group: .quran, keywords: "verses related shared words"),
-        CreditItem(id: "qul-mutashabihat", title: "Repeated phrases (Mutashabihat): QUL (Tarteel)",
-                   detail: "Credit for the repeated phrases of the Quran, every occurrence with its words marked, goes to the Mutashabihat ul Quran dataset of the Quranic Universal Library by Tarteel",
+        CreditItem(id: "qul-mutashabihat", title: String(localized: "Repeated phrases (Mutashabihat): QUL (Tarteel)"),
+                   detail: String(localized: "Credit for the repeated phrases of the Quran, every occurrence with its words marked, goes to the Mutashabihat ul Quran dataset of the Quranic Universal Library by Tarteel"),
                    url: "https://qul.tarteel.ai/resources/mutashabihat", group: .quran, keywords: "mutashabihat phrases memorisation hifz"),
-        CreditItem(id: "clear-quran-topics", title: "Thematic topics: The Clear Quran",
-                   detail: "Credit for the Topics corpus of Browse by Theme (Doctrine, Stories, The Unseen) goes to the thematic index of The Clear Quran by Dr. Mustafa Khattab, via the Quranic Universal Library",
+        CreditItem(id: "clear-quran-topics", title: String(localized: "Thematic topics: The Clear Quran"),
+                   detail: String(localized: "Credit for the Topics corpus of Browse by Theme (Doctrine, Stories, The Unseen) goes to the thematic index of The Clear Quran by Dr. Mustafa Khattab, via the Quranic Universal Library"),
                    url: "https://theclearquran.org/", group: .quran, keywords: "topics themes doctrine stories unseen khattab"),
-        CreditItem(id: "quran-ontology", title: "Quranic concepts: Quranic Arabic Corpus ontology",
-                   detail: "Credit for the Concepts corpus of Browse by Theme goes to the Quranic Ontology of the Quranic Arabic Corpus by Kais Dukes, via the Quranic Universal Library",
+        CreditItem(id: "quran-ontology", title: String(localized: "Quranic concepts: Quranic Arabic Corpus ontology"),
+                   detail: String(localized: "Credit for the Concepts corpus of Browse by Theme goes to the Quranic Ontology of the Quranic Arabic Corpus by Kais Dukes, via the Quranic Universal Library"),
                    url: "https://corpus.quran.com/ontology.jsp", group: .quran, keywords: "concepts ontology named entities"),
-        CreditItem(id: "qul-index", title: "Topic index, passage themes and mushaf divisions: QUL (Tarteel)",
-                   detail: "Credit for the general A-Z topic index, the passage themes (one line per run of ayahs) and the hizb, ruku and manzil boundaries goes to the Quranic Universal Library by Tarteel",
+        CreditItem(id: "qul-index", title: String(localized: "Topic index, passage themes and mushaf divisions: QUL (Tarteel)"),
+                   detail: String(localized: "Credit for the general A-Z topic index, the passage themes (one line per run of ayahs) and the hizb, ruku and manzil boundaries goes to the Quranic Universal Library by Tarteel"),
                    url: "https://qul.tarteel.ai/", group: .quran, keywords: "index passages themes hizb ruku manzil"),
-        CreditItem(id: "qsac-themes", title: "Browse by Theme topics: QSAC by Ahmad Bilal",
-                   detail: "Credit for the Browse by Theme topics goes to the Quran Semantic Annotation Corpus (QSAC) by Ahmad Bilal, used under CC BY 4.0",
+        CreditItem(id: "qsac-themes", title: String(localized: "Browse by Theme topics: QSAC by Ahmad Bilal"),
+                   detail: String(localized: "Credit for the Browse by Theme topics goes to the Quran Semantic Annotation Corpus (QSAC) by Ahmad Bilal, used under CC BY 4.0"),
                    url: "https://github.com/dev-ahmadbilal/quran-semantic-annotation-corpus", group: .quran, keywords: "topics themes subjects"),
-        CreditItem(id: "surah-info", title: "Surah Info: Quran.com (Quran Foundation)",
-                   detail: "Credit for the Surah Info goes to Quran.com (Quran Foundation)",
+        CreditItem(id: "surah-info", title: String(localized: "Surah Info: Quran.com (Quran Foundation)"),
+                   detail: String(localized: "Credit for the Surah Info goes to Quran.com (Quran Foundation)"),
                    url: "https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/get-chapter-info/#get-chapter-info", group: .quran, keywords: "about this surah chapter"),
 
-        CreditItem(id: "quranpedia-outlines", title: "Surah outlines: Quranpedia",
-                   detail: "Credit for the surah outlines (the Outline source in About this Surah) goes to Quranpedia",
+        CreditItem(id: "quranpedia-outlines", title: String(localized: "Surah outlines: Quranpedia"),
+                   detail: String(localized: "Credit for the surah outlines (the Outline source in About this Surah) goes to Quranpedia"),
                    url: "https://quranpedia.net/", group: .quran, keywords: "surah info sections"),
-        CreditItem(id: "tafsir-api", title: "English Tafsir API: Quran API Pages",
-                   detail: "Credit for the English Tafsir API goes to Quran API Pages",
+        CreditItem(id: "tafsir-api", title: String(localized: "English Tafsir API: Quran API Pages"),
+                   detail: String(localized: "Credit for the English Tafsir API goes to Quran API Pages"),
                    url: "https://quranapi.pages.dev/", group: .quran, keywords: "tafseer commentary"),
-        CreditItem(id: "arabic-tafsir-api", title: "Arabic Tafsirs: Tafsir API by spa5k",
-                   detail: "Credit for the Arabic Tafsirs (Ibn Kathir, al-Tabari, as-Sa'di) goes to the Tafsir API by spa5k, built from QUL (Tarteel) data",
+        CreditItem(id: "arabic-tafsir-api", title: String(localized: "Arabic Tafsirs: Tafsir API by spa5k"),
+                   detail: String(localized: "Credit for the Arabic Tafsirs (Ibn Kathir, al-Tabari, as-Sa'di) goes to the Tafsir API by spa5k, built from QUL (Tarteel) data"),
                    url: "https://github.com/spa5k/tafsir_api", group: .quran, keywords: "tafseer commentary ibn kathir tabari saadi"),
-        CreditItem(id: "tajweed-lessons", title: "Tajweed Lessons course: Jamil Hammoudeh (Tilawa)",
-                   detail: "Credit for the Tajweed Lessons course (every chapter, lesson, drill, and example) goes to my friend Jamil Hammoudeh, who wrote it for Tilawa and gave his permission to bring it here",
+        CreditItem(id: "tajweed-lessons", title: String(localized: "Tajweed Lessons course: Jamil Hammoudeh (Tilawa)"),
+                   detail: String(localized: "Credit for the Tajweed Lessons course (every chapter, lesson, drill, and example) goes to my friend Jamil Hammoudeh, who wrote it for Tilawa and gave his permission to bring it here"),
                    url: "https://github.com/jamilhammoudeh/quran-app", group: .quran, keywords: "tajwid rules course"),
-        CreditItem(id: "tilawa-theme-wash", title: "Theme wash and share backdrops: Tilawa",
-                   detail: "Credit for lighting the ayahs of a theme in the reader (the theme wash) and for the four share backdrop designs goes to Tilawa, by my friend Jamil Hammoudeh, with his permission; the wash here is fainter than Tilawa's, like the bookmark highlighter",
+        CreditItem(id: "tilawa-theme-wash", title: String(localized: "Theme wash and share backdrops: Tilawa"),
+                   detail: String(localized: "Credit for lighting the ayahs of a theme in the reader (the theme wash) and for the four share backdrop designs goes to Tilawa, by my friend Jamil Hammoudeh, with his permission; the wash here is fainter than Tilawa's, like the bookmark highlighter"),
                    url: "https://github.com/jamilhammoudeh/quran-app", group: .quran, keywords: "highlight theme wash share image backdrop tilawa"),
-        CreditItem(id: "tilawa-ranked-search", title: "Ranked search lanes: Tilawa",
-                   detail: "Credit for the ranked, forgiving search of the Quran and the hadith shelf (stems, spelling correction, consonant skeletons and the strict-then-relaxed passes) goes to Tilawa's search engines, by my friend Jamil Hammoudeh, ported with his permission onto this app's own indexes",
+        CreditItem(id: "tilawa-ranked-search", title: String(localized: "Ranked search lanes: Tilawa"),
+                   detail: String(localized: "Credit for the ranked, forgiving search of the Quran and the hadith shelf (stems, spelling correction, consonant skeletons and the strict-then-relaxed passes) goes to Tilawa's search engines, by my friend Jamil Hammoudeh, ported with his permission onto this app's own indexes"),
                    url: "https://github.com/jamilhammoudeh/quran-app", group: .quran, keywords: "search ranked typo correction skeleton tilawa"),
-        CreditItem(id: "tilawa-daily", title: "Reminder of the Day, Names depth, hadith topics, qiraat clips: Tilawa",
-                   detail: "Credit for the Reminder of the Day corpus, the themes, roots, explanations and living lines behind the 99 Names, the hadith topic library, the paired riwayah recordings table, and the reminder kinds goes to my friend Jamil Hammoudeh, who built them for Tilawa and gave his permission to bring them here; the Quran and hadith text in every one of them is this app's own",
+        CreditItem(id: "tilawa-daily", title: String(localized: "Reminder of the Day, Names depth, hadith topics, qiraat clips: Tilawa"),
+                   detail: String(localized: "Credit for the Reminder of the Day corpus, the themes, roots, explanations and living lines behind the 99 Names, the hadith topic library, the paired riwayah recordings table, and the reminder kinds goes to my friend Jamil Hammoudeh, who built them for Tilawa and gave his permission to bring them here; the Quran and hadith text in every one of them is this app's own"),
                    url: "https://github.com/jamilhammoudeh/quran-app", group: .quran, keywords: "tilawa daily reminder names topics qiraat audio streak"),
 
         // Hadith
-        CreditItem(id: "hadith-json", title: "Hadith collections: hadith-json by Ahmed Baset",
-                   detail: "Credit for the Hadith collections goes to hadith-json by Ahmed Baset",
+        CreditItem(id: "hadith-json", title: String(localized: "Hadith collections: hadith-json by Ahmed Baset"),
+                   detail: String(localized: "Credit for the Hadith collections goes to hadith-json by Ahmed Baset"),
                    url: "https://github.com/AhmedBaset/hadith-json", group: .hadith, keywords: "bukhari muslim books"),
-        CreditItem(id: "hadith-restored", title: "Restored English narrations: sunnah.com scrapes",
-                   detail: "The English narrations that hadith-json truncated are restored from the clean scrapes of fawazahmed0/hadith-api and CheeseWithSauce/HadithsJSONFormat; all of them trace back to sunnah.com",
+        CreditItem(id: "hadith-restored", title: String(localized: "Restored English narrations: sunnah.com scrapes"),
+                   detail: String(localized: "The English narrations that hadith-json truncated are restored from the clean scrapes of fawazahmed0/hadith-api and CheeseWithSauce/HadithsJSONFormat; all of them trace back to sunnah.com"),
                    url: "https://sunnah.com", group: .hadith, keywords: "translation english text"),
-        CreditItem(id: "hadith-gradings", title: "Hadith gradings and numbering: sunnah.com",
-                   detail: "The scholar gradings (sahih, hasan, da'if) and the standard hadith numbering shown throughout the app also come from those two scrapes of sunnah.com, which quotes the published verdicts of Al-Albani, Zubair Ali Zai, Ahmad Muhammad Shakir, Shuaib Al Arnaut, the Darussalam editors, and others",
+        CreditItem(id: "hadith-gradings", title: String(localized: "Hadith gradings and numbering: sunnah.com"),
+                   detail: String(localized: "The scholar gradings (sahih, hasan, da'if) and the standard hadith numbering shown throughout the app also come from those two scrapes of sunnah.com, which quotes the published verdicts of Al-Albani, Zubair Ali Zai, Ahmad Muhammad Shakir, Shuaib Al Arnaut, the Darussalam editors, and others"),
                    url: "https://sunnah.com", group: .hadith, keywords: "grade authentic weak albani"),
 
         // Islam
-        CreditItem(id: "names-of-allah", title: "99 Names of Allah: MyIslam",
-                   detail: "Credit for the 99 Names of Allah goes to MyIslam",
+        CreditItem(id: "names-of-allah", title: String(localized: "99 Names of Allah: MyIslam"),
+                   detail: String(localized: "Credit for the 99 Names of Allah goes to MyIslam"),
                    url: "https://myislam.org/99-names-of-allah/", group: .islam, keywords: "asma ul husna"),
-        CreditItem(id: "hisn-al-muslim", title: "Hisn al-Muslim: islamic.app and hisnmuslim.com",
-                   detail: "Credit for the Hisn al-Muslim texts, transliterations, translations and references goes to the Dhikr API of islamic.app; the recitations stream from hisnmuslim.com; the library came to the app from Tilawa, by my friend Jamil Hammoudeh, with his permission",
+        CreditItem(id: "hisn-al-muslim", title: String(localized: "Hisn al-Muslim: islamic.app and hisnmuslim.com"),
+                   detail: String(localized: "Credit for the Hisn al-Muslim texts, transliterations, translations and references goes to the Dhikr API of islamic.app; the recitations stream from hisnmuslim.com; the library came to the app from Tilawa, by my friend Jamil Hammoudeh, with his permission"),
                    url: "https://www.hisnmuslim.com/", group: .islam, keywords: "fortress of the muslim dua dhikr audio tilawa"),
-        CreditItem(id: "miracles-of-quran", title: "Miracles of the Quran: miracles-of-quran.com and Tilawa",
-                   detail: "Credit for the Miracles of the Quran articles goes to miracles-of-quran.com, whose author waived rights on the site's own prose; the illustrations stream from Tilawa's copy, by my friend Jamil Hammoudeh, with his permission, and third-party excerpts are kept short and attributed to their sources",
+        CreditItem(id: "miracles-of-quran", title: String(localized: "Miracles of the Quran: miracles-of-quran.com and Tilawa"),
+                   detail: String(localized: "Credit for the Miracles of the Quran articles goes to miracles-of-quran.com, whose author waived rights on the site's own prose; the illustrations stream from Tilawa's copy, by my friend Jamil Hammoudeh, with his permission, and third-party excerpts are kept short and attributed to their sources"),
                    url: "https://www.miracles-of-quran.com/", group: .islam, keywords: "science miracles articles tilawa"),
-        CreditItem(id: "islamqa", title: "Islam articles further reading: IslamQA",
-                   detail: "Credit for the further-reading answers the Islam articles link out to goes to IslamQA; the articles themselves are written for this app and cite the classical works by name",
+        CreditItem(id: "islamqa", title: String(localized: "Islam articles further reading: IslamQA"),
+                   detail: String(localized: "Credit for the further-reading answers the Islam articles link out to goes to IslamQA; the articles themselves are written for this app and cite the classical works by name"),
                    url: "https://islamqa.info/en", group: .islam, keywords: "fatwa answers questions articles further reading"),
-        CreditItem(id: "hadeeth-encyclopedia", title: "Hadith Encyclopedia: hadeethenc.com",
-                   detail: "Credit for the Hadith Encyclopedia's 2,328 narrations with their explanations, lessons, gradings and sources goes to hadeethenc.com, prepared under the supervision of the Dawah and Guidance Association and the Association for Serving Islamic Content in Languages, reproduced without modification of the narrations; the pack was assembled from Tilawa's capture, by my friend Jamil Hammoudeh, with his permission",
+        CreditItem(id: "hadeeth-encyclopedia", title: String(localized: "Hadith Encyclopedia: hadeethenc.com"),
+                   detail: String(localized: "Credit for the Hadith Encyclopedia's 2,328 narrations with their explanations, lessons, gradings and sources goes to hadeethenc.com, prepared under the supervision of the Dawah and Guidance Association and the Association for Serving Islamic Content in Languages, reproduced without modification of the narrations; the pack was assembled from Tilawa's capture, by my friend Jamil Hammoudeh, with his permission"),
                    url: "https://hadeethenc.com/", group: .islam, keywords: "encyclopedia explained hadeeth enc tilawa"),
-        CreditItem(id: "tilawa-journal", title: "Islamic Journal: Tilawa",
-                   detail: "Credit for the Islamic Journal (its kinds, prompts, tags, attachments and the margin notes drawn from bookmarks) goes to Tilawa, by my friend Jamil Hammoudeh, with his permission; every entry stays on this device",
+        CreditItem(id: "tilawa-journal", title: String(localized: "Islamic Journal: Tilawa"),
+                   detail: String(localized: "Credit for the Islamic Journal (its kinds, prompts, tags, attachments and the margin notes drawn from bookmarks) goes to Tilawa, by my friend Jamil Hammoudeh, with his permission; every entry stays on this device"),
                    url: "https://github.com/jamilhammoudeh/quran-app", group: .islam, keywords: "journal notes khutbah tilawa"),
     ]
 
@@ -288,7 +288,7 @@ struct CreditsView: View {
             .collapseBarsOnScroll($barsCollapsed)
             .adaptiveSafeArea(edge: .bottom) {
                 SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)),
-                          placeholder: "Search credits")
+                          placeholder: String(localized: "Search credits"))
                     .minimizedBarStyle(barsCollapsed)
                     .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
                     .padding(.horizontal, 24)
@@ -375,7 +375,7 @@ struct CreditsView: View {
         }
 
         if !credits.isEmpty {
-            Section(header: SectionPillHeader(title: "CREDITS", count: credits.count)) {
+            Section(header: SectionPillHeader(title: String(localized: "CREDITS"), count: credits.count)) {
                 ForEach(credits) { item in
                     creditResultRow(item)
                 }
@@ -383,19 +383,19 @@ struct CreditsView: View {
         }
 
         if !apps.isEmpty {
-            Section(header: SectionPillHeader(title: "APPS", count: apps.count)) {
+            Section(header: SectionPillHeader(title: String(localized: "APPS"), count: apps.count)) {
                 ForEach(apps) { app in
                     AppLinkRow(imageName: app.imageName, title: app.title, url: app.url, query: query)
-                        .creditRowActions(label: "Scroll To App") { scrollToRow(Self.appRowID(app)) }
+                        .creditRowActions(label: String(localized: "Scroll To App")) { scrollToRow(Self.appRowID(app)) }
                 }
             }
         }
 
         if !bots.isEmpty {
-            Section(header: SectionPillHeader(title: "DISCORD BOTS", count: bots.count)) {
+            Section(header: SectionPillHeader(title: String(localized: "DISCORD BOTS"), count: bots.count)) {
                 ForEach(bots) { bot in
                     AppLinkRow(imageName: bot.imageName, title: bot.title, url: bot.url, query: query)
-                        .creditRowActions(label: "Scroll To Bot") { scrollToRow(Self.botRowID(bot)) }
+                        .creditRowActions(label: String(localized: "Scroll To Bot")) { scrollToRow(Self.botRowID(bot)) }
                 }
             }
         }
@@ -416,7 +416,7 @@ struct CreditsView: View {
                 )
                 .padding(.vertical, 2)
             }
-            .creditRowActions(label: "Scroll To Credit", copyURL: item.url) { scrollToRow(item.rowID) }
+            .creditRowActions(label: String(localized: "Scroll To Credit"), copyURL: item.url) { scrollToRow(item.rowID) }
         }
     }
 
@@ -440,10 +440,10 @@ struct CreditsView: View {
                 .shadow(color: settings.accentColor.color.opacity(0.35), radius: 14, x: 0, y: 6)
                 .padding(.top, 6)
 
-            Text(AppIdentifiers.appName)
+            Text(AppIdentifiers.displayName)
                 .font(.title2.bold())
 
-            Text("Created by Abubakr Elmallah (أَبُوبَكر المَلَّاح), a 17-year-old high school student when the app launched on July 26, 2023.")
+            Text(String(localized: "Created by Abubakr Elmallah (أَبُوبَكر المَلَّاح), a 17-year-old high school student when the app launched on July 26, 2023.").localizedDigits)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -510,11 +510,11 @@ struct CreditsView: View {
 
     private var storySection: some View {
         Section {
-            ProseText(text: """
+            ProseText(text: String(localized: """
             This app was inspired by my desire to help new reverts and non-Muslims learn about Islam and easily access the Quran and prayer times. I’m deeply grateful to my parents for instilling in me a love for the faith (may Allah reward them).
 
             I also want to express my gratitude to my high school teacher, Mr. Joe Silvey, who, despite not being Muslim, stood with our Muslim Student Association and helped us organize weekly Jumuah prayers.
-            """)
+            """))
 
             let urlText = "https://github.com/TheAbubakrAbu/Al-Islam-iOS"
             if let url = URL(string: urlText) {
@@ -557,7 +557,7 @@ struct CreditsView: View {
     @ViewBuilder
     private var creditsLinksSection: some View {
         ForEach(CreditItem.groupsPresent, id: \.self) { group in
-            Section(header: Text(group.rawValue.uppercased())) {
+            Section(header: Text(group.rawValue.localizedDisplay.uppercased())) {
                 ForEach(CreditItem.inGroup(group)) { item in
                     creditLink(item)
                         .id(item.rowID)
@@ -591,14 +591,14 @@ struct CreditsView: View {
 
     private var intentSection: some View {
         Section(header: Text("A NOTE ON INTENT")) {
-            ProseText(text: "This app is offered as *sadaqah jariyah*, a contribution for the benefit of the Muslim community and anyone building tools to read, learn, and listen to the Quran. If it helps you, please keep the chain of attribution intact and consider contributing improvements back.")
+            ProseText(text: String(localized: "This app is offered as *sadaqah jariyah*, a contribution for the benefit of the Muslim community and anyone building tools to read, learn, and listen to the Quran. If it helps you, please keep the chain of attribution intact and consider contributing improvements back."))
         }
     }
 
     @ViewBuilder
     private func creditLink(_ item: CreditItem) -> some View {
         if let destination = URL(string: item.url) {
-            Link(item.detail, destination: destination)
+            Link(item.detail.localizedDigits, destination: destination)
                 .contextMenu {
                     Text("Copy")
                         .foregroundStyle(.secondary)

@@ -244,7 +244,7 @@ struct RiwayatDifferencesView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Riwayat on the Page")
-        .selectableArticleList(article: "RiwayatDifferencesView")
+        .englishArticle().selectableArticleList(article: "RiwayatDifferencesView")
     }
 }
 
@@ -293,6 +293,9 @@ struct RiwayahSpellingCard: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        // The Arabic word sits on the right in both interfaces (`.trailing` alone is the
+                        // left edge in a right-to-left layout).
+                        .environment(\.layoutDirection, .leftToRight)
 
                     Text(spelling.riwayat)
                         .font(.subheadline.weight(.semibold))

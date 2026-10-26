@@ -150,10 +150,17 @@ enum ChosenAyahCatalog {
         return (1...entry.ayahCount).contains(ayah)
     }
 
-    /// "Al-Baqarah 2:255": the reference every surface of the widget shows.
+    /// "Al-Baqarah 2:255": the reference the picker's text search matches against.
     static func reference(surah: Int, ayah: Int) -> String {
         guard let entry = Self.surah(surah) else { return "\(surah):\(ayah)" }
         return "\(entry.name) \(surah):\(ayah)"
+    }
+
+    /// The reference every surface of the widget shows: `reference`, with the Arabic name in an
+    /// Arabic interface ("البقرة 2:255").
+    static func displayReference(surah: Int, ayah: Int) -> String {
+        guard AppLanguage.isArabic, let entry = Self.surah(surah) else { return reference(surah: surah, ayah: ayah) }
+        return "\(entry.arabicName) \(surah):\(ayah)"
     }
 
     /// The name index the picker's text search uses: every surah's transliterated and English-ish
@@ -205,7 +212,8 @@ struct ChosenAyahEntity: AppEntity, Identifiable {
     static var defaultQuery = ChosenAyahQuery()
 
     var displayRepresentation: DisplayRepresentation {
-        let title = ChosenAyahCatalog.reference(surah: surah, ayah: ayah)
+        // The picker row's title in the locale's digits; the id and the search text keep Western ones.
+        let title = ChosenAyahCatalog.displayReference(surah: surah, ayah: ayah).localizedDigits
         if let subtitle, !subtitle.isEmpty {
             return DisplayRepresentation(title: "\(title)", subtitle: "\(subtitle)")
         }
@@ -353,7 +361,7 @@ struct ChosenAyahQuery: EntityQuery, EntityStringQuery {
     private static let starters: [(surah: Int, ayah: Int, label: String)] = [
         (2, 255, "Ayat al-Kursi"),
         (1, 1, "Al-Fatihah"),
-        (2, 286, "The last ayah of al-Baqarah"),
+        (2, 286, String(localized: "The last ayah of al-Baqarah")),
         (36, 1, "Ya-Sin"),
         (55, 1, "Ar-Rahman"),
         (67, 1, "Al-Mulk"),

@@ -33,12 +33,12 @@ struct PlaceLocatorProfile {
     /// the Arabic spellings, which used to be dropped: a masjid named only مسجد… never matched the
     /// Latin-only keyword list even when MapKit returned it.
     static let masjid = PlaceLocatorProfile(
-        title: "Masjid Locator",
-        loadingText: "Loading masaajid…",
-        searchingText: "Searching nearby masaajid…",
-        emptyText: "No masaajid found in this area",
-        fallbackName: "Masjid",
-        contextMenuTitle: "Masjid Info",
+        title: String(localized: "Masjid Locator"),
+        loadingText: String(localized: "Loading masaajid…"),
+        searchingText: String(localized: "Searching nearby masaajid…"),
+        emptyText: String(localized: "No masaajid found in this area"),
+        fallbackName: String(localized: "Masjid"),
+        contextMenuTitle: String(localized: "Masjid Info"),
         baseQueries: ["mosque", "masjid", "islamic center", "muslim", "rahma", "مسجد"],
         queries: { trimmed in
             var seen = Set<String>()
@@ -61,12 +61,12 @@ struct PlaceLocatorProfile {
     /// markets - not hotels and gas stations), and the "halal" relevance comes from the query itself, because
     /// most halal restaurants don't have "halal" in their NAME and a name filter would throw them away.
     static let halalFood = PlaceLocatorProfile(
-        title: "Halal Food Locator",
-        loadingText: "Loading halal places…",
-        searchingText: "Searching nearby halal food…",
-        emptyText: "No halal places found in this area",
-        fallbackName: "Halal Place",
-        contextMenuTitle: "Place Info",
+        title: String(localized: "Halal Food Locator"),
+        loadingText: String(localized: "Loading halal places…"),
+        searchingText: String(localized: "Searching nearby halal food…"),
+        emptyText: String(localized: "No halal places found in this area"),
+        fallbackName: String(localized: "Halal Place"),
+        contextMenuTitle: String(localized: "Place Info"),
         baseQueries: ["halal restaurant", "halal food", "halal market", "halal butcher", "حلال"],
         queries: { trimmed in
             var seen = Set<String>()
@@ -408,14 +408,14 @@ struct PlaceLocatorView: View {
 
     private var searchPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SearchBar(text: $searchText.animation(.easeInOut))
+            SearchBar(text: $searchText.animation(.easeInOut), placeholder: String(localized: "Search"))
 
             if shouldShowResultsPanel {
                 HStack {
                     if isSearching {
                         Text(profile.loadingText)
                     } else {
-                        Text("\(results.count) match\(results.count == 1 ? "" : "es") found")
+                        Text(results.count == 1 ? String(localized: "\(results.count) match found") : String(localized: "\(results.count) matches found"))
                     }
 
                     Spacer()
@@ -631,7 +631,7 @@ struct PlaceLocatorView: View {
         .filter { !$0.isEmpty }
 
         if parts.isEmpty {
-            return "Address unavailable"
+            return String(localized: "Address unavailable")
         }
 
         return Array(NSOrderedSet(array: parts)).compactMap { $0 as? String }.joined(separator: ", ")
@@ -676,7 +676,8 @@ struct PlaceLocatorView: View {
         )
 
         let miles = here.distance(from: there) / 1_609.344
-        return String(format: "%.1f miles away", miles)
+        let figure = miles.formatted(.number.precision(.fractionLength(1)))
+        return String(localized: "\(figure) miles away")
     }
 
     private func updateRegion(to coord: CLLocationCoordinate2D) {

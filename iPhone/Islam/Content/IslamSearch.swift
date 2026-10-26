@@ -29,7 +29,8 @@ enum IslamArticleHome: String, Hashable, CaseIterable {
     /// the Ask AI corpus and the in-page search reach them like any other page.
     case proving
 
-    /// The resource's title, as the Islam tab prints it.
+    /// The resource's English title. Data (the Ask AI sources cite it); it is shown beside the English
+    /// articles through `AppLanguage.article`, while the Islam tab's own tile translates.
     var title: String {
         switch self {
         case .pillars: return "Pillars & Beliefs"
@@ -432,7 +433,7 @@ enum IslamArticleCatalog {
     @MainActor
     static func destination(id: String, section: String? = nil) -> AnyView {
         guard let view = IslamArticles.destination(for: id) else {
-            return AnyView(Text("Article not found").foregroundColor(.secondary))
+            return AnyView(Text(verbatim: AppLanguage.article("Article not found")).foregroundColor(.secondary))
         }
         // Declared open by id, so a `door` row further down the stack that leads back here greys
         // out (`ArticleDoorRow`): articles that cite each other could be pushed without end.
@@ -493,7 +494,9 @@ struct IslamArticleIndexSections: View {
                 Image(systemName: folded ? "chevron.down.circle" : "chevron.up.circle")
                     .font(.subheadline)
 
-                Text(folded ? "Show All \(group.entries.count) \(group.rowNoun)" : "Show Fewer")
+                // The index is an article screen: English, like the rows above it.
+                Text(verbatim: folded ? AppLanguage.article("Show All \(group.entries.count) \(group.rowNoun)")
+                                      : AppLanguage.article("Show Fewer"))
                     .font(.subheadline.weight(.semibold))
 
                 Spacer()
@@ -518,7 +521,7 @@ struct IslamArticleIndexSections: View {
             HStack(spacing: 12) {
                 AccentIconChip(systemImage: icon, size: 29)
 
-                Text(entry.title)
+                Text(AppLanguage.article(entry.title))
                     .font(.subheadline.weight(entry.emphasized ? .semibold : .regular))
                     .foregroundColor(entry.emphasized ? appearance.accent : .primary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -549,11 +552,11 @@ struct ArticleHeader: View {
 
     var body: some View {
         #if os(iOS)
-        Text(title)
+        Text(title.articleDisplayDigits)
             .background(ArticleHeaderProbe(heading: title))
             .id(Self.anchorID(title))
         #else
-        Text(title)
+        Text(title.articleDisplayDigits)
             .id(Self.anchorID(title))
         #endif
     }
@@ -854,13 +857,15 @@ struct ArticleDoorRow: View {
                 OpenScreenLink(screen: .islamArticle, id: id) {
                     IslamArticleCatalog.destination(entry)
                 } label: {
-                    label(title: entry.title, subtitle: "\(entry.home.title) \u{203A} \(Self.groupTitle(entry.group))",
+                    label(title: AppLanguage.article(entry.title),
+                          subtitle: "\(AppLanguage.article(entry.home.title)) \u{203A} \(Self.groupTitle(entry.group))",
                           systemImage: IslamArticleCatalog.groups(for: entry.home).first { $0.title == entry.group }?.systemImage
                               ?? entry.home.systemImage)
                 }
                 #else
                 NavigationLink(destination: LazyDestination { IslamArticleCatalog.destination(entry) }) {
-                    label(title: entry.title, subtitle: "\(entry.home.title) \u{203A} \(Self.groupTitle(entry.group))",
+                    label(title: AppLanguage.article(entry.title),
+                          subtitle: "\(AppLanguage.article(entry.home.title)) \u{203A} \(Self.groupTitle(entry.group))",
                           systemImage: IslamArticleCatalog.groups(for: entry.home).first { $0.title == entry.group }?.systemImage
                               ?? entry.home.systemImage)
                 }
@@ -879,7 +884,7 @@ struct ArticleDoorRow: View {
         case .miracle(let slug, let title):
             #if os(iOS)
             NavigationLink(destination: LazyDestination { MiracleDoorDestination(slug: slug) }) {
-                label(title: title, subtitle: "Miracles of the Quran", systemImage: "sparkle.magnifyingglass")
+                label(title: title, subtitle: AppLanguage.article("Miracles of the Quran"), systemImage: "sparkle.magnifyingglass")
             }
             #else
             EmptyView()
@@ -896,26 +901,31 @@ struct ArticleDoorRow: View {
             #endif
         case .library(let library):
             #if os(iOS)
+            // A door sits inside an English article, so the words it shares with the Islam tab's tiles
+            // read English with it (`AppLanguage.article`).
             switch library {
             case .miraclesOfQuran:
                 OpenScreenLink(screen: .miraclesLibrary) {
                     MiraclesView().openScreen(.miraclesLibrary)
                 } label: {
-                    label(title: "Miracles of the Quran", subtitle: "Signs in creation, science, and history",
+                    label(title: AppLanguage.article("Miracles of the Quran"),
+                          subtitle: AppLanguage.article("Signs in creation, science, and history"),
                           systemImage: "sparkle.magnifyingglass")
                 }
             case .propheciesOfProphet:
                 OpenScreenLink(screen: .propheciesLibrary) {
                     PropheciesView().openScreen(.propheciesLibrary)
                 } label: {
-                    label(title: "Prophecies of the Prophet", subtitle: "What he foretold, and what history did",
+                    label(title: AppLanguage.article("Prophecies of the Prophet"),
+                          subtitle: AppLanguage.article("What he foretold, and what history did"),
                           systemImage: "checkmark.seal")
                 }
             case .miraclesOfProphets:
                 OpenScreenLink(screen: .prophetMiraclesLibrary) {
                     ProphetMiraclesView().openScreen(.prophetMiraclesLibrary)
                 } label: {
-                    label(title: "Miracles of the Prophets", subtitle: "The signs given to the prophets, and to him",
+                    label(title: AppLanguage.article("Miracles of the Prophets"),
+                          subtitle: AppLanguage.article("The signs given to the prophets, and to him"),
                           systemImage: "staroflife")
                 }
             }
@@ -1139,9 +1149,13 @@ enum IslamArticleSearch {
 
     /// Every section of ONE article whose prose carries every word of the query, in page order: the
     /// page's own search, which has no per-article cap. Off the main actor, like `contentHits`.
-    static func sectionHits(_ query: String, articleID: String) -> [ContentHit] {
+    /// `fallback`: the page's own sections, scanned when the corpus has no article for `articleID`
+    /// (the prophecy and prophet-miracle pages are generated from data, so the corpus never carries
+    /// them and their bar found nothing).
+    static func sectionHits(_ query: String, articleID: String, fallback: IslamArticle? = nil) -> [ContentHit] {
         let terms = words(query)
-        guard !terms.isEmpty, let article = IslamArticles.all.first(where: { $0.id == articleID }) else { return [] }
+        guard !terms.isEmpty,
+              let article = IslamArticles.all.first(where: { $0.id == articleID }) ?? fallback else { return [] }
         var hits: [ContentHit] = []
         for (index, section) in article.sections.enumerated() where !section.heading.isEmpty {
             guard terms.allSatisfy({ section.folded.contains($0) }) else { continue }
@@ -1213,7 +1227,9 @@ final class IslamArticleSearchModel: ObservableObject {
 
     /// `within`: the open article's id on an article page. Its own sections come back in `articleHits`
     /// (all of them), while `contentHits` still covers every article for the "other articles" rows.
-    func update(query: String, homes: Set<IslamArticleHome>, within articleID: String? = nil) {
+    /// `fallback`: the page's own sections for an id the corpus lacks (see `sectionHits`).
+    func update(query: String, homes: Set<IslamArticleHome>, within articleID: String? = nil,
+                fallback: IslamArticle? = nil) {
         task?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -1228,7 +1244,7 @@ final class IslamArticleSearchModel: ObservableObject {
             guard !Task.isCancelled else { return }
             let (hits, own) = await Task.detached(priority: .userInitiated) {
                 (IslamArticleSearch.contentHits(trimmed, homes: homes),
-                 articleID.map { IslamArticleSearch.sectionHits(trimmed, articleID: $0) } ?? [])
+                 articleID.map { IslamArticleSearch.sectionHits(trimmed, articleID: $0, fallback: fallback) } ?? [])
             }.value
             guard !Task.isCancelled else { return }
             self?.contentHits = hits
@@ -1255,7 +1271,7 @@ struct IslamArticleTitleRow: View {
     var onScrollTo: (() -> Void)? = nil
 
     private var caption: String {
-        showHome ? "\(entry.home.title) \u{203A} \(entry.group)" : entry.group
+        showHome ? "\(AppLanguage.article(entry.home.title)) \u{203A} \(entry.group)" : entry.group
     }
 
     @MainActor
@@ -1268,8 +1284,10 @@ struct IslamArticleTitleRow: View {
     var body: some View {
         NavigationLink(destination: LazyDestination { destination }) {
             VStack(alignment: .leading, spacing: 3) {
+                // Shown through `AppLanguage.article`: many titles are keys a translated screen shares
+                // (the search itself matches the English `title`).
                 HighlightedSnippet(
-                    source: entry.title,
+                    source: AppLanguage.article(entry.title),
                     term: query,
                     font: entry.emphasized ? .headline : .subheadline,
                     accent: appearance.accent,
@@ -1281,10 +1299,14 @@ struct IslamArticleTitleRow: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
+            // The article's English keeps the left edge in the Arabic interface.
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .leftToRightContent()
             .padding(.vertical, 4)
         }
         .id(entry.listID)
-        .islamArticleRowActions(title: entry.title, copyText: nil, scrollLabel: scrollLabel, onScrollTo: onScrollTo)
+        .islamArticleRowActions(title: entry.title, copyText: nil, scrollLabel: scrollLabel, onScrollTo: onScrollTo,
+                                translated: openViaHome)
     }
 }
 
@@ -1303,8 +1325,8 @@ struct IslamArticleContentRow: View {
 
     private var caption: String {
         var parts: [String] = []
-        if showHome, let home = hit.home { parts.append(home.title) }
-        parts.append(hit.article.title)
+        if showHome, let home = hit.home { parts.append(AppLanguage.article(home.title)) }
+        parts.append(AppLanguage.article(hit.article.title))
         if !hit.section.heading.isEmpty { parts.append(hit.section.heading) }
         return parts.joined(separator: " \u{203A} ")
     }
@@ -1336,9 +1358,13 @@ struct IslamArticleContentRow: View {
                     guaranteeMatch: true
                 )
             }
+            // The article's English keeps the left edge in the Arabic interface.
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .leftToRightContent()
             .padding(.vertical, 4)
         }
-        .islamArticleRowActions(title: hit.article.title, copyText: hit.snippet, scrollLabel: scrollLabel, onScrollTo: onScrollTo)
+        .islamArticleRowActions(title: hit.article.title, copyText: hit.snippet, scrollLabel: scrollLabel, onScrollTo: onScrollTo,
+                                translated: openViaHome)
     }
 }
 
@@ -1349,11 +1375,14 @@ private struct IslamArticleRowActions: ViewModifier {
     let copyText: String?
     let scrollLabel: String
     let onScrollTo: (() -> Void)?
+    /// True on a translated screen (the Islam tab's root): the menu's own words follow the interface.
+    /// Elsewhere the row sits in an English article screen and its menu reads English with it.
+    let translated: Bool
 
     func body(content: Content) -> some View {
         content
             .contextMenu {
-                Text("Article Actions")
+                Text(verbatim: translated ? String(localized: "Article Actions") : AppLanguage.article("Article Actions"))
                     .foregroundStyle(.secondary)
 
                 if let onScrollTo {
@@ -1371,7 +1400,7 @@ private struct IslamArticleRowActions: ViewModifier {
                     Settings.shared.hapticFeedback()
                     UIPasteboard.general.string = title
                 } label: {
-                    Label("Copy Title", systemImage: "doc.on.doc")
+                    Label(translated ? String(localized: "Copy Title") : AppLanguage.article("Copy Title"), systemImage: "doc.on.doc")
                 }
 
                 if let copyText, !copyText.isEmpty {
@@ -1379,7 +1408,8 @@ private struct IslamArticleRowActions: ViewModifier {
                         Settings.shared.hapticFeedback()
                         UIPasteboard.general.string = copyText.replacingOccurrences(of: "\u{2026}", with: "")
                     } label: {
-                        Label("Copy Passage", systemImage: "doc.on.doc")
+                        Label(translated ? String(localized: "Copy Passage") : AppLanguage.article("Copy Passage"),
+                              systemImage: "doc.on.doc")
                     }
                 }
             }
@@ -1399,8 +1429,9 @@ private struct IslamArticleRowActions: ViewModifier {
 
 extension View {
     func islamArticleRowActions(title: String, copyText: String?, scrollLabel: String = "Scroll To Article",
-                                onScrollTo: (() -> Void)?) -> some View {
-        modifier(IslamArticleRowActions(title: title, copyText: copyText, scrollLabel: scrollLabel, onScrollTo: onScrollTo))
+                                onScrollTo: (() -> Void)?, translated: Bool = false) -> some View {
+        modifier(IslamArticleRowActions(title: title, copyText: copyText, scrollLabel: scrollLabel, onScrollTo: onScrollTo,
+                                        translated: translated))
     }
 }
 
@@ -1415,13 +1446,15 @@ struct IslamArticleSearchSections: View {
     let isSearching: Bool
     var showHome: Bool = false
     /// True on the Islam tab's root: a result opens the article's index with the article pushed on top.
+    /// The root is also the one translated screen these results sit on, so there the empty state and
+    /// the rows' menus follow the interface; on the article screens they read English.
     var openViaHome: Bool = false
     /// The open article on an article page: it has its own IN THIS ARTICLE rows, so it is left out here.
     var excludeArticle: String? = nil
     /// The two headers: ARTICLES and IN THE ARTICLES on the indexes and the root, OTHER ARTICLES and IN
-    /// OTHER ARTICLES under a page's own matches.
-    var articlesTitle: String = "ARTICLES"
-    var passagesTitle: String = "IN THE ARTICLES"
+    /// OTHER ARTICLES under a page's own matches. The root passes its own, translated.
+    var articlesTitle: String = AppLanguage.article("ARTICLES")
+    var passagesTitle: String = AppLanguage.article("IN THE ARTICLES")
     /// True when the screen has other matches of its own (the Islam tab's resources), so an empty
     /// article result is not "nothing matched".
     var hasOtherResults: Bool = false
@@ -1457,7 +1490,8 @@ struct IslamArticleSearchSections: View {
 
         if titleHits.isEmpty, passages.isEmpty, !isSearching, !hasOtherResults {
             Section {
-                Text("No articles match your search.")
+                Text(verbatim: openViaHome ? String(localized: "No articles match your search.")
+                                           : AppLanguage.article("No articles match your search."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -1478,13 +1512,17 @@ struct AskAISearchSection: View {
     @State private var showAskAI = false
 
     let query: String
+    /// True on a translated screen (the Islam tab's root). The index screens and article pages are
+    /// English articles (`englishArticle()`), so there the section reads English with them.
+    var translated: Bool = false
 
     var body: some View {
         if OnDeviceAsk.isAvailable {
+            let asked = query.trimmingCharacters(in: .whitespacesAndNewlines)
             // Header gray: a search section (`SectionIconHeader.accentTitle`'s rule).
             Section(header: HStack(spacing: 6) {
                 Image(systemName: "sparkles")
-                Text("ASK AI")
+                Text(verbatim: translated ? String(localized: "ASK AI") : AppLanguage.article("ASK AI"))
                 Spacer()
             }) {
                 Button {
@@ -1495,12 +1533,13 @@ struct AskAISearchSection: View {
                         Image(systemName: "sparkles")
                             .font(.caption)
 
-                        Text("Ask AI about \u{201C}\(query.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}")
+                        Text(verbatim: translated ? String(localized: "Ask AI about \u{201C}\(asked)\u{201D}")
+                                                  : AppLanguage.article("Ask AI about \u{201C}\(asked)\u{201D}"))
                             .font(.caption.weight(.semibold))
 
                         Spacer()
 
-                        Image(systemName: "chevron.right")
+                        Image(systemName: "chevron.forward")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
@@ -1543,7 +1582,9 @@ struct IslamArticleIndexSearch: ViewModifier {
             // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
             .collapseBarsOnScroll($barsCollapsed)
             .adaptiveSafeArea(edge: .bottom) {
-                SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
+                // The index screens are article screens: their bar reads English with them.
+                SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)),
+                          placeholder: AppLanguage.article("Search"))
                     .minimizedBarStyle(barsCollapsed)
                     .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
                     .padding(.horizontal, 24)
@@ -1582,6 +1623,10 @@ struct ArticleSearchChrome: ViewModifier {
     let handle: ArticleScrollHandle
     let disableNowPlayingInset: Bool
     let topContentMargin: CGFloat
+    /// The page's own sections, scanned in place of the corpus article when the corpus has none for
+    /// `articleID` (a generated page). Its headings are the page's `ArticleHeader`s, so a hit still
+    /// scrolls to its section. Nil on the catalog pages, which the corpus carries.
+    var fallback: IslamArticle? = nil
 
     @State private var searchText = ""
     /// Apple Music-style bar minimization: true while scrolling down.
@@ -1638,7 +1683,7 @@ struct ArticleSearchChrome: ViewModifier {
                 #endif
             }
             .onChange(of: searchText) { text in
-                search.update(query: text, homes: [.pillars, .guides, .proving], within: articleID)
+                search.update(query: text, homes: [.pillars, .guides, .proving], within: articleID, fallback: fallback)
                 if !text.isEmpty { scrollTarget = nil }
             }
             .onChange(of: scrollTarget) { target in
@@ -1666,7 +1711,7 @@ private struct ArticleSearchResults: View {
                 if !search.articleHits.isEmpty || !search.isSearching {
                     Section(header: SectionPillHeader(title: "IN THIS ARTICLE", count: search.articleHits.count)) {
                         if search.articleHits.isEmpty {
-                            Text("Nothing in this article matches your search.")
+                            Text(verbatim: AppLanguage.article("Nothing in this article matches your search."))
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
@@ -1693,6 +1738,8 @@ private struct ArticleSearchResults: View {
             }
             .themedListRowBackground()
         }
+        // An overlay outside the page's own `englishArticle()`: the results are the article's English too.
+        .englishArticle()
     }
 }
 

@@ -28,8 +28,8 @@ func formatHistoryTimestamp(_ date: Date) -> String {
     let calendar = Calendar.current
     let time = historyTimeFormatter.string(from: date)
 
-    if calendar.isDateInToday(date) { return "Today \(time)" }
-    if calendar.isDateInYesterday(date) { return "Yesterday \(time)" }
+    if calendar.isDateInToday(date) { return String(localized: "Today \(time)") }
+    if calendar.isDateInYesterday(date) { return String(localized: "Yesterday \(time)") }
 
     let daysAgo = calendar.dateComponents(
         [.day],
@@ -56,7 +56,7 @@ func formatCompactHistoryTimestamp(_ date: Date) -> String {
         to: calendar.startOfDay(for: Date())
     ).day ?? 0
 
-    if daysAgo > 0 && daysAgo < 7 { return "\(daysAgo)d" }
+    if daysAgo > 0 && daysAgo < 7 { return String(localized: "\(daysAgo)d") }
     return historyDayFormatter.string(from: date)
 }
 
@@ -116,7 +116,7 @@ struct LastListenedSurahRow: View {
         return AnyView(
             Section(header:
                 HStack {
-                    SectionIconHeader("LAST LISTENED SURAH", icon: "headphones", accentTitle: true)
+                    SectionIconHeader(String(localized: "LAST LISTENED SURAH"), icon: "headphones", accentTitle: true)
 
                     Spacer()
 
@@ -172,7 +172,7 @@ struct LastListenedSurahRow: View {
 
                         Spacer()
 
-                        Text("\(formatMMSS(lastListenedSurah.currentDuration)) / \(formatMMSS(lastListenedSurah.fullDuration))")
+                        Text("\(formatMMSS(lastListenedSurah.currentDuration).localizedDigits) / \(formatMMSS(lastListenedSurah.fullDuration).localizedDigits)")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                             .padding(.leading, 4)
@@ -307,7 +307,7 @@ struct LastListenedSurahRow: View {
 
     private func lastListenedTitleRow(surah: Surah) -> some View {
         HStack {
-            Text("Surah \(lastListenedSurah.surahNumber): \(lastListenedSurah.surahName)")
+            Text("Surah \(lastListenedSurah.surahNumber): \(lastListenedSurah.displaySurahName)")
                 .font(.title2.bold())
                 .foregroundColor(settings.accentColor.color)
                 .lineLimit(1)
@@ -315,7 +315,7 @@ struct LastListenedSurahRow: View {
 
             Spacer()
 
-            ShortcutMenu(doubleTap: MenuShortcut("Play Last Listened") {
+            ShortcutMenu(doubleTap: MenuShortcut(String(localized: "Play Last Listened")) {
                 settings.hapticFeedback()
                 quranPlayer.playSurah(surahNumber: lastListenedSurah.surahNumber,
                                       surahName: lastListenedSurah.surahName, certainReciter: true)
@@ -360,7 +360,7 @@ struct LastListenedSurahRow: View {
     private func listeningHistoryLabel(_ item: ListeningHistoryItem) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Surah \(item.surahNumber): \(item.surahName)")
+                Text("Surah \(item.surahNumber): \(item.displaySurahName)")
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(settings.accentColor.color.opacity(0.75))
                     .lineLimit(1)
@@ -374,7 +374,7 @@ struct LastListenedSurahRow: View {
 
                 // Where the user stopped, when the entry knows it (entries from older builds don't).
                 if let current = item.currentDuration, let full = item.fullDuration, full > 0 {
-                    Text("\(formatMMSS(current)) / \(formatMMSS(full))")
+                    Text("\(formatMMSS(current).localizedDigits) / \(formatMMSS(full).localizedDigits)")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
@@ -389,11 +389,11 @@ struct LastListenedSurahRow: View {
             #if os(iOS)
             // Play controls for the history entry: from the top, or - when the stopped position is known - 
             // picking up exactly where the user left off (the same resume path Last Listened uses).
-            ShortcutMenu(doubleTap: MenuShortcut("Play from Beginning") {
+            ShortcutMenu(doubleTap: MenuShortcut(String(localized: "Play from Beginning")) {
                 settings.hapticFeedback()
                 quranPlayer.playSurah(surahNumber: item.surahNumber, surahName: item.surahName)
             }) {
-                Text("Surah \(item.surahNumber): \(item.surahName)")
+                Text("Surah \(item.surahNumber): \(item.displaySurahName)")
                     .foregroundStyle(.secondary)
 
                 if let current = item.currentDuration, item.fullDuration != nil, current > 1 {
@@ -403,7 +403,7 @@ struct LastListenedSurahRow: View {
                         // position, after filing the surah it displaces (`resumeHistoryItem`).
                         quranPlayer.resumeHistoryItem(item)
                     } label: {
-                        Label("Resume from \(formatMMSS(current))", systemImage: "play.fill")
+                        Label("Resume from \(formatMMSS(current).localizedDigits)", systemImage: "play.fill")
                     }
                 }
 
@@ -466,7 +466,7 @@ struct SummaryAyahTile: View {
     let onTap: () -> Void
 
     /// e.g. "Al-Fatiha 1:5"
-    private var detail: String { "\(surah.nameTransliteration) \(surah.id):\(ayah.id)" }
+    private var detail: String { "\(surah.displayName) \(surah.id):\(ayah.id)" }
 
     private func arabicDisplayText() -> String {
         let text = ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText)
@@ -535,7 +535,7 @@ struct SummaryAyahTile: View {
                     }
                 }
 
-                Text(detail)
+                Text(detail.localizedDigits)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(settings.accentColor.color)
                     .lineLimit(1)
@@ -580,6 +580,8 @@ struct SummaryAyahTile: View {
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                .environment(\.layoutDirection, .leftToRight)
             }
 
             if settings.showTransliteration, settings.isHafsDisplay {
@@ -588,6 +590,7 @@ struct SummaryAyahTile: View {
                     .foregroundColor(.primary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
             }
 
             if settings.showEnglishSaheeh, settings.isHafsDisplay {
@@ -596,12 +599,14 @@ struct SummaryAyahTile: View {
                     .foregroundColor(.primary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
             } else if settings.showEnglishMustafa, settings.isHafsDisplay {
                 Text(ayah.textEnglishMustafa)
                     .font(.caption)
                     .foregroundColor(.primary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
             }
         }
     }
@@ -685,7 +690,7 @@ struct SummarySurahTile: View {
     }
 
     /// e.g. "1 - Al-Fatiha"
-    private var detail: String { "\(surah.id) - \(surah.nameTransliteration)" }
+    private var detail: String { "\(surah.id) - \(surah.displayName)" }
 
     var body: some View {
         Button {
@@ -722,7 +727,7 @@ struct SummarySurahTile: View {
                     }
                 }
 
-                Text(detail)
+                Text(detail.localizedDigits)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(settings.accentColor.color)
                     .lineLimit(1)
@@ -749,7 +754,7 @@ struct SummarySurahTile: View {
                     }
 
                 HStack(spacing: 6) {
-                    Text("\(formatMMSS(lastListenedSurah.currentDuration)) / \(formatMMSS(lastListenedSurah.fullDuration))")
+                    Text("\(formatMMSS(lastListenedSurah.currentDuration).localizedDigits) / \(formatMMSS(lastListenedSurah.fullDuration).localizedDigits)")
                         .font(.caption2)
                         // The system secondary read 3.1:1 on this glass (see `secondaryOnGlass`).
                         .foregroundColor(.secondaryOnGlass)
@@ -758,7 +763,7 @@ struct SummarySurahTile: View {
 
                     Spacer()
 
-                    ShortcutMenu(doubleTap: MenuShortcut("Play Last Listened") {
+                    ShortcutMenu(doubleTap: MenuShortcut(String(localized: "Play Last Listened")) {
                         settings.hapticFeedback()
                         quranPlayer.playSurah(surahNumber: lastListenedSurah.surahNumber,
                                               surahName: lastListenedSurah.surahName, certainReciter: true)
@@ -897,7 +902,7 @@ struct LastReadAyahRow: View {
     var body: some View {
         Section(header:
             HStack {
-                SectionIconHeader("LAST READ AYAH", icon: "clock.arrow.circlepath", accentTitle: true)
+                SectionIconHeader(String(localized: "LAST READ AYAH"), icon: "clock.arrow.circlepath", accentTitle: true)
 
                 Spacer()
 
@@ -1122,7 +1127,7 @@ struct LastListenedAyahRow: View {
     var body: some View {
         Section(header:
             HStack {
-                SectionIconHeader("LAST LISTENED AYAH", icon: "headphones", accentTitle: true)
+                SectionIconHeader(String(localized: "LAST LISTENED AYAH"), icon: "headphones", accentTitle: true)
 
                 Spacer()
 
@@ -1261,10 +1266,12 @@ struct AyahOfTheDayRow: View {
                     .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                     .multilineTextAlignment(.trailing)
                     .frame(maxWidth: .infinity, alignment: .trailing)
+                    // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                    .environment(\.layoutDirection, .leftToRight)
                     .lineSpacing(6)
             }
 
-            Text("Surah \(surah.id):\(ayah.id) · \(surah.nameTransliteration)")
+            Text("Surah \(surah.id):\(ayah.id) · \(surah.displayName)")
                 .font(.caption.weight(.semibold))
                 .foregroundColor(settings.accentColor.color)
 
@@ -1272,6 +1279,7 @@ struct AyahOfTheDayRow: View {
                 .font(.subheadline)
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .leftToRightContent()
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1282,7 +1290,7 @@ struct AyahOfTheDayRow: View {
     var body: some View {
         Section(header:
             // Gray: the day's pick, not one of yours (`SectionIconHeader.accentTitle`'s rule).
-            SectionIconHeader("AYAH OF THE DAY", icon: "sparkles")
+            SectionIconHeader(String(localized: "AYAH OF THE DAY"), icon: "sparkles")
         ) {
             Group {
                 if let onSelectAyah {
@@ -1390,14 +1398,14 @@ struct QuranHistoryView: View {
                 // What the screen is, said once at the top rather than as a caption on the door that
                 // opens it (Abu, 2026-09-07).
                 Section {
-                    Text(verbatim: "Everything this tab remembers: the ayahs you read, what you listened to, the Ayah of the Day on earlier days, and your recent searches. Tap any of them to open it in the reader. It never leaves this device.")
+                    Text(String(localized: "Everything this tab remembers: the ayahs you read, what you listened to, the Ayah of the Day on earlier days, and your recent searches. Tap any of them to open it in the reader. It never leaves this device."))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
 
                 if reading.isEmpty, listenedAyahs.isEmpty, listenedSurahs.isEmpty, daily.isEmpty, searches.isEmpty {
                     Section {
-                        Text(verbatim: "Nothing yet. Read an ayah, play a surah or search, and it collects here.")
+                        Text(String(localized: "Nothing yet. Read an ayah, play a surah or search, and it collects here."))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -1526,7 +1534,7 @@ struct QuranHistoryView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
 
-                Text("\(surah.id) - \(surah.nameTransliteration)")
+                Text("\(surah.id) - \(surah.displayName)")
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(settings.accentColor.color)
 

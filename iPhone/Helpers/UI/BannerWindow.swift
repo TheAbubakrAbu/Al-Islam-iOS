@@ -96,7 +96,7 @@ final class CopyConfirmation {
     func show() {
         dismissal?.cancel()
         banner.present()
-        UIAccessibility.post(notification: .announcement, argument: "Copied")
+        UIAccessibility.post(notification: .announcement, argument: String(localized: "Copied"))
         dismissal = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 1_600_000_000)
             guard !Task.isCancelled else { return }

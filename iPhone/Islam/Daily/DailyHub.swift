@@ -74,10 +74,13 @@ struct DailyHubView: View {
     private var dateSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 4) {
-                Text(Date().formatted(date: .complete, time: .omitted))
+                // The GREGORIAN date, said explicitly: a device on the Islamic calendar would otherwise print
+                // a Hijri date here, above the Hijri line.
+                Text(Date().formatted(Date.FormatStyle(date: .complete, time: .omitted, calendar: Calendar(identifier: .gregorian))))
                     .font(.headline)
                 if let hijri = settings.hijriDate {
-                    Text(hijri.english)
+                    // The Arabic Hijri date in an Arabic interface, the English one otherwise.
+                    Text(hijri.interfaceLine)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -106,9 +109,9 @@ struct DailyHubView: View {
     private var rolloverLine: String {
         let next = settings.nextDailyRollover()
         if settings.dailyRolloverAtFajr, settings.dailyFajr(for: next) != nil {
-            return "Everything here turns over at Fajr, \(settings.formatDate(next))."
+            return String(localized: "Everything here turns over at Fajr, \(settings.formatDate(next)).")
         }
-        return "Everything here turns over at midnight."
+        return String(localized: "Everything here turns over at midnight.")
     }
 
     // MARK: Ayah
@@ -120,14 +123,16 @@ struct DailyHubView: View {
            let ayah = quranData.ayah(surah: ref.surahID, ayah: ref.ayahID) {
             Section {
                 VStack(alignment: .leading, spacing: 10) {
-                    cardHeader("AYAH OF THE DAY", symbol: "sparkles") {
-                        shuffleButton(label: "Shuffle the Ayah of the Day") {
+                    cardHeader(String(localized: "AYAH OF THE DAY"), symbol: "sparkles") {
+                        shuffleButton(label: String(localized: "Shuffle the Ayah of the Day")) {
                             withAnimation(.easeInOut) { settings.shuffleAyahOfTheDay() }
                         }
                         .hiddenInSimple(.dailyHubShuffles)
                     }
 
-                    Text("\(surah.nameTransliteration) \(surah.id):\(ayah.id)")
+                    // The surah's Arabic name in an Arabic interface; the line opens on an argument, so it
+                    // gets a right-to-left mark there (`interfaceParagraph`) or its parts swap.
+                    Text(String(localized: "\(surah.displayName) \(surah.id):\(ayah.id)").interfaceParagraph)
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(accent)
 
@@ -138,12 +143,16 @@ struct DailyHubView: View {
                         .lineSpacing(6)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .fixedSize(horizontal: false, vertical: true)
+                        // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                        .environment(\.layoutDirection, .leftToRight)
 
                     Text(ayah.textEnglishSaheeh)
                         .font(.subheadline)
                         .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent()
 
-                    openRow("Read in the Quran", symbol: "book") {
+                    openRow(String(localized: "Read in the Quran"), symbol: "book") {
                         openAyah(surah.id, ayah.id)
                     }
                 }
@@ -154,20 +163,27 @@ struct DailyHubView: View {
 
     // MARK: Word
 
+    /// "l-qiyāmati · first in al-Baqarah 2:85 · 70 times". Opens on an argument: a right-to-left mark in an
+    /// Arabic interface (`interfaceParagraph`), or its parts swap.
+    private func wordCaption(_ word: WordOfDayEntry, surah: Surah) -> some View {
+        Text(String(localized: "\(word.transliteration) · first in \(surah.displayName) \(word.surah):\(word.ayah) · \(word.count) times").interfaceParagraph)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+    }
+
     @ViewBuilder
     private var wordSection: some View {
         if wordReady, let word = WordOfDayStore.shared.entryIfLoaded(), let surah = quranData.surah(word.surah) {
             Section {
                 VStack(alignment: .leading, spacing: 10) {
-                    cardHeader("WORD OF THE DAY", symbol: "character.book.closed.fill")
+                    cardHeader(String(localized: "WORD OF THE DAY"), symbol: "character.book.closed.fill")
 
+                    // The English meaning on the left and the Arabic word on the right in BOTH languages.
                     HStack(alignment: .firstTextBaseline) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(word.meaning)
                                 .font(.subheadline.weight(.semibold))
-                            Text("\(word.transliteration) · first in \(surah.nameTransliteration) \(word.surah):\(word.ayah) · \(word.count) times")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            if !AppLanguage.isArabic { wordCaption(word, surah: surah) }
                         }
                         Spacer(minLength: 12)
                         Text(settings.cleanedQuranArabic(word.arabic))
@@ -175,11 +191,19 @@ struct DailyHubView: View {
                             .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                             .foregroundColor(accent)
                     }
+                    .environment(\.layoutDirection, .leftToRight)
+
+                    // In Arabic the caption is an Arabic sentence: its own row, on the interface's edge,
+                    // not inside the left-to-right pair above.
+                    if AppLanguage.isArabic {
+                        wordCaption(word, surah: surah)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
 
                     NavigationLink(destination: LazyDestination {
                         WordOfDayDetailView(word: word) { surahID, ayahID in openAyah(surahID, ayahID) }
                     }) {
-                        openLabel("Every ayah with this word", symbol: "text.magnifyingglass")
+                        openLabel(String(localized: "Every ayah with this word"), symbol: "text.magnifyingglass")
                     }
                     .buttonStyle(.plain)
                 }
@@ -195,14 +219,14 @@ struct DailyHubView: View {
         if let pick = hadithStore.daily {
             Section {
                 VStack(alignment: .leading, spacing: 10) {
-                    cardHeader("HADITH OF THE DAY", symbol: "text.book.closed.fill") {
-                        shuffleButton(label: "Pick a random hadith of the day") {
+                    cardHeader(String(localized: "HADITH OF THE DAY"), symbol: "text.book.closed.fill") {
+                        shuffleButton(label: String(localized: "Pick a random hadith of the day")) {
                             Task { await hadithStore.shuffleDailyHadith() }
                         }
                         .hiddenInSimple(.dailyHubShuffles)
                     }
 
-                    Text("\(pick.book.englishTitle) \(pick.hadith.displayNumber)")
+                    Text(verbatim: pick.book.displayReference(pick.hadith.displayNumber))
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(accent)
 
@@ -214,12 +238,14 @@ struct DailyHubView: View {
                         Text(pick.englishPreview)
                             .font(.subheadline)
                             .lineLimit(4)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .leftToRightContent()
                     }
 
                     NavigationLink(destination: LazyDestination {
                         HadithBookView(book: pick.book, autoOpenHadithID: pick.hadith.idInBook)
                     }) {
-                        openLabel("Read the hadith", symbol: "book")
+                        openLabel(String(localized: "Read the hadith"), symbol: "book")
                     }
                     .buttonStyle(.plain)
                 }
@@ -236,9 +262,10 @@ struct DailyHubView: View {
             let category = library.categories.first { $0.id == dua.categoryID }
             Section {
                 VStack(alignment: .leading, spacing: 10) {
-                    cardHeader("DUA OF THE DAY", symbol: "hands.sparkles.fill") {
+                    cardHeader(String(localized: "DUA OF THE DAY"), symbol: "hands.sparkles.fill") {
                         if let category {
-                            Text(category.label)
+                            // The category's Arabic name in an Arabic interface.
+                            Text(AppLanguage.isArabic && !category.arabic.isEmpty ? category.arabic : category.label)
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
@@ -252,10 +279,14 @@ struct DailyHubView: View {
                         .lineSpacing(6)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .fixedSize(horizontal: false, vertical: true)
+                        // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                        .environment(\.layoutDirection, .leftToRight)
 
                     Text(dua.translation)
                         .font(.subheadline)
                         .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent()
 
                     HStack {
                         if !dua.sourceLine.isEmpty {
@@ -274,7 +305,7 @@ struct DailyHubView: View {
                         NavigationLink(destination: LazyDestination {
                             DuaCollectionView(collection: HisnDuaLibraryView.collection(for: category, library: library))
                         }) {
-                            openLabel("More duas for this situation", symbol: "arrow.right.circle")
+                            openLabel(String(localized: "More duas for this situation"), symbol: "arrow.forward.circle")
                         }
                         .buttonStyle(.plain)
                     }
@@ -299,8 +330,9 @@ struct DailyHubView: View {
         if let name = todaysName {
             Section {
                 VStack(alignment: .leading, spacing: 10) {
-                    cardHeader("NAME OF ALLAH · \(name.number) OF 99", symbol: "signature")
+                    cardHeader(String(localized: "NAME OF ALLAH · \(name.number) OF 99"), symbol: "signature")
 
+                    // The English on the left and the Arabic Name on the right in BOTH languages.
                     HStack(alignment: .firstTextBaseline) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(name.transliteration)
@@ -317,15 +349,18 @@ struct DailyHubView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
                     }
+                    .environment(\.layoutDirection, .leftToRight)
 
                     if let living = nameLiving, !living.isEmpty {
                         Text(living)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .leftToRightContent()
                     }
 
-                    openRow("Open in the 99 Names", symbol: "arrow.up.right.square") {
+                    openRow(String(localized: "Open in the 99 Names"), symbol: "arrow.up.right.square") {
                         AppNavigation.shared.openIslam(.names(name.number))
                     }
                 }
@@ -339,7 +374,7 @@ struct DailyHubView: View {
     private func cardHeader<Trailing: View>(_ title: String, symbol: String, @ViewBuilder trailing: () -> Trailing) -> some View {
         HStack(spacing: 8) {
             AccentIconChip(systemImage: symbol, size: 26)
-            Text(title)
+            Text(title.localizedDigits)
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)

@@ -265,17 +265,19 @@ struct ProfileSettingsRow: View {
     private func caption(_ stats: ProfileStats) -> String {
         var parts: [String] = []
         if stats.prayer.currentStreak > 0 {
-            parts.append("\(stats.prayer.currentStreak)-day streak")
+            parts.append(String(localized: "\(stats.prayer.currentStreak)-day streak"))
         }
         if stats.khatmCompleted > 0 {
-            parts.append("\(Int((stats.khatmFraction * 100).rounded()))% of the Quran")
+            parts.append(String(localized: "\(Int((stats.khatmFraction * 100).rounded()))% of the Quran"))
         }
         let earned = achievements.unlockedCount(stats)
         if earned > 0 {
-            parts.append("\(earned) badge\(earned == 1 ? "" : "s")")
+            parts.append(earned == 1 ? String(localized: "1 badge") : String(localized: "\(earned) badges"))
         }
         // Nothing recorded yet: say what the screen is FOR rather than showing three zeros.
-        return parts.isEmpty ? "Your prayers, reading, and badges" : parts.joined(separator: " · ")
+        // Joined through the catalog: a middle dot beside Arabic-Indic digits reads as a zero ("٠").
+        return parts.isEmpty ? String(localized: "Your prayers, reading, and badges")
+            : parts.dropFirst().reduce(parts[0]) { String(localized: "\($0) · \($1)") }
     }
 
     var body: some View {
@@ -329,6 +331,14 @@ struct ProfileView: View {
         case locked = "In Progress"
 
         var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .all: return String(localized: "All")
+            case .unlocked: return String(localized: "Earned")
+            case .locked: return String(localized: "In Progress")
+            }
+        }
     }
 
     private var stats: ProfileStats {
@@ -365,60 +375,60 @@ struct ProfileView: View {
 
     private func streakStrip(_ stats: ProfileStats) -> some View {
         HStack(spacing: 10) {
-            miniStat("\(stats.prayer.currentStreak)", "Current", systemImage: "flame.fill",
-                     spoken: "Current prayer streak")
-            miniStat("\(stats.prayer.bestStreak)", "Best", systemImage: "trophy.fill",
-                     spoken: "Best prayer streak")
-            miniStat("\(stats.prayer.perfectDays)", "Perfect days", systemImage: "checkmark.seal.fill",
-                     spoken: "Perfect days")
+            miniStat("\(stats.prayer.currentStreak)".localizedDigits, String(localized: "Current"), systemImage: "flame.fill",
+                     spoken: String(localized: "Current prayer streak"))
+            miniStat("\(stats.prayer.bestStreak)".localizedDigits, String(localized: "Best"), systemImage: "trophy.fill",
+                     spoken: String(localized: "Best prayer streak"))
+            miniStat("\(stats.prayer.perfectDays)".localizedDigits, String(localized: "Perfect days"), systemImage: "checkmark.seal.fill",
+                     spoken: String(localized: "Perfect days"))
         }
     }
 
     private func prayerCard(_ stats: ProfileStats) -> some View {
-        ProfileCard(title: "Prayer", systemImage: "safari.fill") {
-            statRow("Prayers marked", value: formatted(stats.prayer.totalPrayed))
+        ProfileCard(title: String(localized: "Prayer"), systemImage: "safari.fill") {
+            statRow(String(localized: "Prayers marked"), value: formatted(stats.prayer.totalPrayed))
             if stats.prayer.totalPrayed > 0 {
                 // The share of marked prayers recorded as on time (a late prayer is still prayed, so
                 // it stays in "marked" and only moves this percentage).
-                statRow("Prayed on time", value: "\(Int((stats.prayer.onTimeFraction * 100).rounded()))%")
+                statRow(String(localized: "Prayed on time"), value: Int((stats.prayer.onTimeFraction * 100).rounded()).formatted(.percent))
             }
-            statRow("Days tracked", value: formatted(stats.prayer.trackedDays))
-            statRow("Coverage", value: "\(Int((stats.prayerCoverageFraction * 100).rounded()))%")
+            statRow(String(localized: "Days tracked"), value: formatted(stats.prayer.trackedDays))
+            statRow(String(localized: "Coverage"), value: Int((stats.prayerCoverageFraction * 100).rounded()).formatted(.percent))
             if stats.prayer.exemptDayCount > 0 {
                 // Named, not hidden: an exempt day is a deliberate pause, and the screen should show
                 // that those days were excluded rather than leaving the user to wonder why the
                 // denominator looks short.
-                statRow("Exempt days", value: formatted(stats.prayer.exemptDayCount))
+                statRow(String(localized: "Exempt days"), value: formatted(stats.prayer.exemptDayCount))
             }
             if let since = stats.prayer.trackingSince {
-                statRow("Tracking since", value: since.formatted(date: .abbreviated, time: .omitted))
+                statRow(String(localized: "Tracking since"), value: since.formatted(date: .abbreviated, time: .omitted))
             }
         }
     }
 
     private func quranCard(_ stats: ProfileStats) -> some View {
-        ProfileCard(title: "Quran", systemImage: "character.book.closed.ar") {
-            statRow("Ayahs read", value: "\(formatted(stats.khatmCompleted)) of \(formatted(stats.khatmTotal))")
+        ProfileCard(title: String(localized: "Quran"), systemImage: "character.book.closed.ar") {
+            statRow(String(localized: "Ayahs read"), value: String(localized: "\(formatted(stats.khatmCompleted)) of \(formatted(stats.khatmTotal))"))
             if let streak = stats.planStreak {
-                statRow("Plan streak", value: "\(formatted(streak)) day\(streak == 1 ? "" : "s")")
-                statRow("Today's target", value: "\(formatted(stats.planDoneToday)) of \(formatted(stats.planTarget))")
+                statRow(String(localized: "Plan streak"), value: streak == 1 ? String(localized: "1 day") : String(localized: "\(formatted(streak)) days"))
+                statRow(String(localized: "Today's target"), value: String(localized: "\(formatted(stats.planDoneToday)) of \(formatted(stats.planTarget))"))
             }
-            statRow("Surahs opened", value: formatted(stats.surahsOpened))
+            statRow(String(localized: "Surahs opened"), value: formatted(stats.surahsOpened))
             if let most = stats.mostReadSurah, let surah = quranData.surah(most.id) {
-                statRow("Most read", value: "\(surah.nameTransliteration) · \(formatted(most.count))×")
+                statRow(String(localized: "Most read"), value: mostLine(surah, count: most.count))
             }
-            statRow("Surahs played", value: formatted(stats.totalPlays))
+            statRow(String(localized: "Surahs played"), value: formatted(stats.totalPlays))
             if let most = stats.mostPlayedSurah, let surah = quranData.surah(most.id) {
-                statRow("Most played", value: "\(surah.nameTransliteration) · \(formatted(most.count))×")
+                statRow(String(localized: "Most played"), value: mostLine(surah, count: most.count))
             }
         }
     }
 
     private func libraryCard(_ stats: ProfileStats) -> some View {
-        ProfileCard(title: "Library", systemImage: "bookmark.fill") {
-            statRow("Bookmarks", value: formatted(stats.bookmarks))
-            statRow("Notes", value: formatted(stats.notes))
-            statRow("Highlights", value: formatted(stats.highlights))
+        ProfileCard(title: String(localized: "Library"), systemImage: "bookmark.fill") {
+            statRow(String(localized: "Bookmarks"), value: formatted(stats.bookmarks))
+            statRow(String(localized: "Notes"), value: formatted(stats.notes))
+            statRow(String(localized: "Highlights"), value: formatted(stats.highlights))
 
             // The highlighter's own breakdown: one dot per color with its count, so the palette the
             // user actually reaches for is visible at a glance.
@@ -444,8 +454,8 @@ struct ProfileView: View {
                 .padding(.top, 2)
             }
 
-            statRow("Favorite surahs", value: formatted(stats.favoriteSurahs))
-            statRow("Favorite reciters", value: formatted(stats.favoriteReciters))
+            statRow(String(localized: "Favorite surahs"), value: formatted(stats.favoriteSurahs))
+            statRow(String(localized: "Favorite reciters"), value: formatted(stats.favoriteReciters))
             if !SavedReflectionsStore.shared.items.isEmpty {
                 NavigationLink(destination: LazyDestination { SavedReflectionsView() }) {
                     HStack {
@@ -463,28 +473,28 @@ struct ProfileView: View {
     }
 
     private func hadithCard(_ stats: ProfileStats) -> some View {
-        ProfileCard(title: "Hadith", systemImage: "text.book.closed.fill") {
-            statRow("Books started", value: formatted(stats.hadithBooksStarted))
-            statRow("Bookmarks", value: formatted(stats.hadithBookmarks))
-            statRow("Favorite books", value: formatted(stats.hadithFavoriteBooks))
+        ProfileCard(title: String(localized: "Hadith"), systemImage: "text.book.closed.fill") {
+            statRow(String(localized: "Books started"), value: formatted(stats.hadithBooksStarted))
+            statRow(String(localized: "Bookmarks"), value: formatted(stats.hadithBookmarks))
+            statRow(String(localized: "Favorite books"), value: formatted(stats.hadithFavoriteBooks))
         }
     }
 
     private func dhikrCard(_ stats: ProfileStats) -> some View {
-        ProfileCard(title: "Dhikr", systemImage: "circle.hexagonpath.fill") {
-            statRow("Counted on the tasbih", value: formatted(stats.dhikrTotal))
-            statRow("Counted today", value: formatted(stats.dhikrToday))
-            statRow("Day streak", value: "\(formatted(stats.dhikrStreak)) day\(stats.dhikrStreak == 1 ? "" : "s")")
-            statRow("Best streak", value: "\(formatted(stats.dhikrBestStreak)) day\(stats.dhikrBestStreak == 1 ? "" : "s")")
-            statRow("Days with dhikr", value: formatted(stats.dhikrActiveDays))
+        ProfileCard(title: String(localized: "Dhikr"), systemImage: "circle.hexagonpath.fill") {
+            statRow(String(localized: "Counted on the tasbih"), value: formatted(stats.dhikrTotal))
+            statRow(String(localized: "Counted today"), value: formatted(stats.dhikrToday))
+            statRow(String(localized: "Day streak"), value: stats.dhikrStreak == 1 ? String(localized: "1 day") : String(localized: "\(formatted(stats.dhikrStreak)) days"))
+            statRow(String(localized: "Best streak"), value: stats.dhikrBestStreak == 1 ? String(localized: "1 day") : String(localized: "\(formatted(stats.dhikrBestStreak)) days"))
+            statRow(String(localized: "Days with dhikr"), value: formatted(stats.dhikrActiveDays))
         }
     }
 
     private func badgesSection(_ stats: ProfileStats) -> some View {
         let unlockedCount = achievements.unlockedCount(stats)
 
-        return ProfileCard(title: "Badges", systemImage: "rosette",
-                           trailing: "\(unlockedCount) of \(AlIslamBadge.allCases.count)") {
+        return ProfileCard(title: String(localized: "Badges"), systemImage: "rosette",
+                           trailing: String(localized: "\(unlockedCount) of \(AlIslamBadge.allCases.count)")) {
             // The whole cabinet at a glance: one thin accent bar under the header, so "how far along
             // am I overall" is answered before any scrolling through the families.
             ProgressView(value: Double(unlockedCount), total: Double(AlIslamBadge.allCases.count))
@@ -496,7 +506,7 @@ struct ProfileView: View {
 
             Picker("Show", selection: $badgeFilter) {
                 ForEach(BadgeFilter.allCases) { filter in
-                    Text(filter.rawValue).tag(filter)
+                    Text(filter.title).tag(filter)
                 }
             }
             .pickerStyle(.segmented)
@@ -518,7 +528,7 @@ struct ProfileView: View {
                 if !shown.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(alignment: .firstTextBaseline) {
-                            Text(family.rawValue.uppercased())
+                            Text(family.title.uppercased())
                                 .font(.caption2.weight(.semibold))
                                 .foregroundColor(.secondaryOnGlass)
 
@@ -530,7 +540,7 @@ struct ProfileView: View {
                         }
                         .padding(.top, 4)
                         .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(family.rawValue)
+                        .accessibilityLabel(family.title)
                         .accessibilityValue("\(familyUnlocked) of \(badges.count) earned")
                         .accessibilityAddTraits(.isHeader)
 
@@ -580,9 +590,9 @@ struct ProfileView: View {
 
     /// "Earned", or the receipt in the badge's own unit ("3 of 7") for one still in progress.
     private func badgeSpokenValue(_ badge: AlIslamBadge, _ stats: ProfileStats) -> String {
-        if achievements.isUnlocked(badge, stats) { return "Earned" }
+        if achievements.isUnlocked(badge, stats) { return String(localized: "Earned") }
         let (value, goal) = badge.progress(stats)
-        return "\(value.formatted(.number)) of \(goal.formatted(.number))"
+        return String(localized: "\(value.formatted(.number)) of \(goal.formatted(.number))")
     }
 
     /// `spoken` names the stat for VoiceOver, which read the icon ("Trophy Cup, Filled") and then every
@@ -614,6 +624,12 @@ struct ProfileView: View {
     private func formatted(_ value: Int) -> String {
         value.formatted(.number)
     }
+
+    /// "Al-Baqarah · 12×": one whole phrase from the catalog, so Arabic can name the count its own way
+    /// (a "·" beside Arabic-Indic digits reads as a zero), with the surah's Arabic name there.
+    private func mostLine(_ surah: Surah, count: Int) -> String {
+        String(localized: "\(surah.displayName) · \(count)×")
+    }
 }
 
 // MARK: - Hero
@@ -637,15 +653,18 @@ private struct RingHero: View {
 
     private var rings: [(fraction: Double, color: Color, label: String, value: String)] {
         let accent = settings.accentColor.color
+        // Numbers in the interface's digits and its percent sign ("٣/٥", "٥٢٪" in Arabic): a plain
+        // interpolation drew Western digits beside the Arabic-Indic ones around them.
+        func count(_ value: Int) -> String { value.formatted(.number.grouping(.never)) }
         var list: [(Double, Color, String, String)] = [
-            (stats.todayPrayerFraction, accent, "Today",
-             "\(stats.todayCovered)/\(stats.todayTrackable)"),
-            (stats.khatmFraction, settings.accentColor.accent2.opacity(0.75), "Quran",
-             "\(Int((stats.khatmFraction * 100).rounded()))%"),
+            (stats.todayPrayerFraction, accent, String(localized: "Today"),
+             "\(count(stats.todayCovered))/\(count(stats.todayTrackable))"),
+            (stats.khatmFraction, settings.accentColor.accent2.opacity(0.75), String(localized: "Quran"),
+             Int((stats.khatmFraction * 100).rounded()).formatted(.percent)),
         ]
         if stats.planTarget > 0 {
-            list.append((stats.planFraction, accent.opacity(0.5), "Plan",
-                         "\(stats.planDoneToday)/\(stats.planTarget)"))
+            list.append((stats.planFraction, accent.opacity(0.5), String(localized: "Plan"),
+                         "\(count(stats.planDoneToday))/\(count(stats.planTarget))"))
         }
         return list.map { (fraction: $0.0, color: $0.1, label: $0.2, value: $0.3) }
     }
@@ -686,7 +705,7 @@ private struct RingHero: View {
                     // "Today, 3 of 5", where the columns read every value before any label.
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(ring.label)
-                    .accessibilityValue(ring.value.replacingOccurrences(of: "/", with: " of "))
+                    .accessibilityValue(ring.value.replacingOccurrences(of: "/", with: String(localized: " of ")))
                 }
             }
         }
@@ -906,7 +925,7 @@ private struct BadgeDetailSheet: View {
                 .onAppear { appeared = true }
 
                 VStack(spacing: 6) {
-                    Text(badge.family.rawValue.uppercased())
+                    Text(badge.family.title.uppercased())
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(settings.accentColor.color)
                         .padding(.horizontal, 8)
@@ -916,7 +935,7 @@ private struct BadgeDetailSheet: View {
                     Text(badge.title)
                         .font(.title3.weight(.bold))
 
-                    Text(badge.detail)
+                    Text(badge.detail.localizedDigits)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)

@@ -19,7 +19,7 @@ struct PlayCustomRangeSheet: View {
 
     enum SelectionMode: String, CaseIterable {
         case ayahs, pages
-        var title: String { self == .ayahs ? "Ayahs" : "Pages" }
+        var title: String { self == .ayahs ? String(localized: "Ayahs") : String(localized: "Pages") }
     }
 
     let surah: Surah
@@ -42,6 +42,11 @@ struct PlayCustomRangeSheet: View {
     /// Loop the whole range until stopped (Abu, 2026-09-26: "have an infinite option"). The player
     /// fetches each ayah once and replays the file on every pass (`PlaybackAudioCache`).
     @AppStorage("customRangeRepeatForever") private var repeatForever = false
+    /// The preview lists every ayah of the range only on request: its first and last ayah stand for
+    /// it until the row under them is tapped (Abu, 2026-10-23: "just show the beginning and last
+    /// ayah but I would like an option for preview to see all of them... at the very end"). Every
+    /// ayah of a long range pushed the Range card a screen or two down.
+    @State private var showsEveryAyah = false
 
     @FocusState private var startAyahFocused: Bool
     @FocusState private var endAyahFocused: Bool
@@ -124,9 +129,9 @@ struct PlayCustomRangeSheet: View {
     /// the page annotated with its position within this surah, e.g. "Page 102 (3/12)".
     private func ayahPageLabel(_ ayahID: Int) -> String {
         if hasPageData, let page = pageNumber(forAyah: ayahID) {
-            return "Ayah \(ayahID) \u{00B7} \(mushafPageLabel(forAbsolutePage: page, in: surah))"
+            return String(localized: "Ayah \(ayahID) \u{00B7} \(mushafPageDisplayLabel(forAbsolutePage: page, in: surah))")
         }
-        return "Ayah \(ayahID)"
+        return String(localized: "Ayah \(ayahID)")
     }
 
     /// Mushaf pages within this surah (clamped to the active qiraah), each mapped to its first/last ayah.
@@ -254,10 +259,12 @@ struct PlayCustomRangeSheet: View {
     /// "X ayahs · Y pages" describing the current selection (pages dropped when no page data).
     private var rangeCountSummary: String {
         let pagesInRange = self.pagesInRange
+        let ayahs = ayahCount == 1 ? String(localized: "\(ayahCount) ayah") : String(localized: "\(ayahCount) ayahs")
         if hasPageData {
-            return "\(ayahCount) ayah\(ayahCount == 1 ? "" : "s") \u{00B7} \(pagesInRange) page\(pagesInRange == 1 ? "" : "s")"
+            let pages = pagesInRange == 1 ? String(localized: "\(pagesInRange) page") : String(localized: "\(pagesInRange) pages")
+            return "\(ayahs) \u{00B7} \(pages)"
         }
-        return "\(ayahCount) ayah\(ayahCount == 1 ? "" : "s")"
+        return ayahs
     }
 
     /// Total recitations the range will play: each ayah × its per-ayah repeats × the whole-range repeats.
@@ -272,16 +279,16 @@ struct PlayCustomRangeSheet: View {
     /// "2 ayahs · 1 page · 4 plays", or "... · Repeats forever": the line over the Play button.
     private var playSummary: String {
         if repeatForever {
-            return "\(rangeCountSummary) \u{00B7} Repeats forever"
+            return String(localized: "\(rangeCountSummary) \u{00B7} Repeats forever")
         }
         let total = totalPlayCount
-        let plays = total == Int.max ? "Too many plays" : "\(total) play\(total == 1 ? "" : "s")"
-        return "\(rangeCountSummary) \u{00B7} \(plays)"
+        let plays = total == Int.max ? String(localized: "Too many plays") : (total == 1 ? String(localized: "\(total) play") : String(localized: "\(total) plays"))
+        return (rangeCountSummary + JoinSeparator.dot + plays).interfaceParagraph
     }
 
     /// "Ayahs 1–6", or "Ayah 3" for a range of one: the preview section's title.
     private var previewTitle: String {
-        startAyah == endAyah ? "Ayah \(startAyah)" : "Ayahs \(startAyah)\u{2013}\(endAyah)"
+        startAyah == endAyah ? String(localized: "Ayah \(startAyah)") : String(localized: "Ayahs \(startAyah)\u{2013}\(endAyah)")
     }
 
     /// Every ayah the chosen range will actually play, in playback order, clamped to the active
@@ -293,7 +300,27 @@ struct PlayCustomRangeSheet: View {
         }
     }
 
+    /// A range longer than this previews as its two ends over a Show All row.
+    private static let previewEndsCount = 2
+
+    /// The rows the preview draws from `ayahs`: all of them while the range is short or expanded,
+    /// else its first and last ayah.
+    private func previewAyahs(of ayahs: [Ayah]) -> [Ayah] {
+        guard !showsEveryAyah, ayahs.count > Self.previewEndsCount,
+              let first = ayahs.first, let last = ayahs.last else { return ayahs }
+        return [first, last]
+    }
+
     // MARK: - Text fields
+
+    /// A number field's text as the reader sees it, in the locale's digits (١٢ in Arabic), while the
+    /// state behind it, which every parse reads, keeps Western digits; typed Arabic-Indic digits fold back.
+    private func localizedDigitsField(_ text: Binding<String>) -> Binding<String> {
+        Binding(
+            get: { text.wrappedValue.localizedDigits },
+            set: { text.wrappedValue = $0.normalizingArabicIndicDigitsToWestern }
+        )
+    }
 
     private func sanitizedNumberText(from value: String) -> String {
         value.filter(\.isNumber)
@@ -468,34 +495,28 @@ struct PlayCustomRangeSheet: View {
                 List {
                     // The ayahs lead (Abu, 2026-10-20: "put the preview at the top"): what the range
                     // will play is the first thing on screen, and it follows the fields as they move.
-                    Section {
-                        ForEach(rangeAyahs, id: \.id) { ayah in
-                            previewRow(ayah)
-                        }
-                    } header: {
-                        SectionIconHeader("\(surah.nameTransliteration) \u{00B7} \(previewTitle)", icon: "book.closed")
-                    }
+                    previewSection
 
                     Section {
                         rangeCard
                     } header: {
-                        SectionIconHeader("Range", icon: "arrow.left.and.right")
+                        SectionIconHeader(String(localized: "Range"), icon: "arrow.left.and.right")
                     }
 
                     Section {
-                        repeatRow(title: "Each Ayah", value: $repeatPerAyah, text: $repeatPerAyahText, isFocused: $repeatPerAyahFocused)
-                        repeatRow(title: "Whole Range", value: $repeatSection, text: $repeatSectionText, isFocused: $repeatSectionFocused)
+                        repeatRow(title: String(localized: "Each Ayah"), value: $repeatPerAyah, text: $repeatPerAyahText, isFocused: $repeatPerAyahFocused)
+                        repeatRow(title: String(localized: "Whole Range"), value: $repeatSection, text: $repeatSectionText, isFocused: $repeatSectionFocused)
                             .disabled(repeatForever)
                             .opacity(repeatForever ? 0.45 : 1)
                         foreverRow
                     } header: {
-                        SectionIconHeader("Repeat", icon: "repeat")
+                        SectionIconHeader(String(localized: "Repeat"), icon: "repeat")
                     }
 
                     Section {
                         reciterRow
                     } header: {
-                        SectionIconHeader("Reciter", icon: "person.wave.2")
+                        SectionIconHeader(String(localized: "Reciter"), icon: "person.wave.2")
                     }
 
                     // The ranges played from here before, newest first: one tap plays one again.
@@ -509,7 +530,7 @@ struct PlayCustomRangeSheet: View {
                                 rangeHistory.remove(atOffsets: offsets)
                             }
                         } header: {
-                            SectionIconHeader("Recent Ranges", icon: "clock.arrow.circlepath", accentTitle: true)
+                            SectionIconHeader(String(localized: "Recent Ranges"), icon: "clock.arrow.circlepath", accentTitle: true)
                         }
                     }
                 }
@@ -597,7 +618,7 @@ struct PlayCustomRangeSheet: View {
     }
 
     private var arrow: some View {
-        Image(systemName: "arrow.right")
+        Image(systemName: "arrow.forward")
             .font(.subheadline.weight(.semibold))
             .foregroundColor(.secondary)
     }
@@ -615,9 +636,9 @@ struct PlayCustomRangeSheet: View {
     private var ayahFields: some View {
         VStack(spacing: 6) {
             HStack(alignment: .center, spacing: 12) {
-                rangeField(title: "From", value: $startAyah, text: $startAyahText, isFocused: $startAyahFocused, onStep: stepStart)
+                rangeField(title: String(localized: "From"), value: $startAyah, text: $startAyahText, isFocused: $startAyahFocused, onStep: stepStart)
                 arrow
-                rangeField(title: "To", value: $endAyah, text: $endAyahText, isFocused: $endAyahFocused, onStep: stepEnd)
+                rangeField(title: String(localized: "To"), value: $endAyah, text: $endAyahText, isFocused: $endAyahFocused, onStep: stepEnd)
             }
             .onChange(of: startAyah) { ayah in
                 startAyahText = "\(ayah)"
@@ -637,7 +658,7 @@ struct PlayCustomRangeSheet: View {
     }
 
     private func pageCaption(forAyah ayah: Int) -> String {
-        pageNumber(forAyah: ayah).map { mushafPageLabel(forAbsolutePage: $0, in: surah) } ?? " "
+        pageNumber(forAyah: ayah).map { mushafPageDisplayLabel(forAbsolutePage: $0, in: surah) } ?? " "
     }
 
     /// "Ayahs 1–12" (or "Ayah 5") for the page at `index` of `pageGroups`.
@@ -645,8 +666,8 @@ struct PlayCustomRangeSheet: View {
         let groups = pageGroups
         guard groups.indices.contains(index) else { return " " }
         let group = groups[index]
-        if group.firstAyah == group.lastAyah { return "Ayah \(group.firstAyah)" }
-        return "Ayahs \(group.firstAyah)\u{2013}\(group.lastAyah)"
+        if group.firstAyah == group.lastAyah { return String(localized: "Ayah \(group.firstAyah)") }
+        return String(localized: "Ayahs \(group.firstAyah)\u{2013}\(group.lastAyah)")
     }
 
     @ViewBuilder
@@ -658,7 +679,7 @@ struct PlayCustomRangeSheet: View {
         VStack(spacing: 6) {
             HStack(alignment: .center, spacing: 12) {
                 pageField(
-                    title: "From Page",
+                    title: String(localized: "From Page"),
                     pageNumber: groups.indices.contains(fromIdx) ? groups[fromIdx].page : nil,
                     canDecrement: fromIdx > 0,
                     canIncrement: fromIdx < toIdx,
@@ -667,7 +688,7 @@ struct PlayCustomRangeSheet: View {
                 )
                 arrow
                 pageField(
-                    title: "To Page",
+                    title: String(localized: "To Page"),
                     pageNumber: groups.indices.contains(toIdx) ? groups[toIdx].page : nil,
                     canDecrement: toIdx > fromIdx,
                     canIncrement: toIdx < groups.count - 1,
@@ -690,21 +711,21 @@ struct PlayCustomRangeSheet: View {
     private var quickActions: some View {
         if selectionMode == .pages && hasPageData {
             let groups = pageGroups
-            chip("All Pages (\(groups.count))", systemImage: "book.closed",
+            chip(String(localized: "All Pages (\(groups.count))"), systemImage: "book.closed",
                  enabled: !(fromPageIndex == 0 && toPageIndex == groups.count - 1)) {
                 selectWholeSurah()
             }
         } else {
             HStack(spacing: 10) {
                 if hasMultiplePages {
-                    chip(pagesInRange > 1 ? "Whole Pages" : "Whole Page", systemImage: "doc.text",
+                    chip(pagesInRange > 1 ? String(localized: "Whole Pages") : String(localized: "Whole Page"), systemImage: "doc.text",
                          enabled: !(startAtPageStart && endAtPageEnd)) {
                         commitBothAyahFields()
                         withAnimation(.easeInOut(duration: 0.2)) { snapRangeToPages() }
                     }
                 }
 
-                chip("Whole Surah", systemImage: "book.closed",
+                chip(String(localized: "Whole Surah"), systemImage: "book.closed",
                      enabled: !(startAyah == 1 && endAyah == maxAyah)) {
                     commitBothAyahFields()
                     selectWholeSurah()
@@ -805,7 +826,7 @@ struct PlayCustomRangeSheet: View {
 
                 Spacer()
 
-                TextField("", text: text)
+                TextField("", text: localizedDigitsField(text))
                     .font(.title2.monospacedDigit().weight(.semibold))
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
@@ -881,7 +902,7 @@ struct PlayCustomRangeSheet: View {
                 .accessibilityLabel("Fewer")
 
             HStack(spacing: 1) {
-                TextField("", text: text)
+                TextField("", text: localizedDigitsField(text))
                     .font(.body.monospacedDigit().weight(.semibold))
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.trailing)
@@ -977,6 +998,44 @@ struct PlayCustomRangeSheet: View {
 
     // MARK: - Preview
 
+    /// The first and last ayah of the range, or every ayah once the row under them asks for it.
+    @ViewBuilder
+    private var previewSection: some View {
+        let ayahs = rangeAyahs
+        Section {
+            ForEach(previewAyahs(of: ayahs), id: \.id) { ayah in
+                previewRow(ayah)
+            }
+            if ayahs.count > Self.previewEndsCount {
+                previewToggleRow(count: ayahs.count)
+            }
+        } header: {
+            // A plain String here is drawn verbatim, so it goes through the catalog; the Arabic
+            // interface names the surah in Arabic.
+            SectionIconHeader(
+                String(localized: "\(surah.displayName) \u{00B7} \(previewTitle)"),
+                icon: "book.closed"
+            )
+        }
+    }
+
+    /// Under the two ends of a longer range: shows every ayah in place, and folds them back.
+    private func previewToggleRow(count: Int) -> some View {
+        Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut(duration: 0.25)) { showsEveryAyah.toggle() }
+        } label: {
+            Label(showsEveryAyah ? "Show First and Last Only" : "Show All \(count) Ayahs",
+                  systemImage: showsEveryAyah ? "chevron.up" : "chevron.down")
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(settings.accentColor.color)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("customRangePreviewToggle")
+    }
+
     /// One ayah the range will play: its label (number + mushaf page) over the full Arabic text.
     private func previewRow(_ ayah: Ayah) -> some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -993,6 +1052,8 @@ struct PlayCustomRangeSheet: View {
                 // line and cut a long ayah off with an ellipsis.
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                .environment(\.layoutDirection, .leftToRight)
         }
         .padding(.vertical, 2)
     }
@@ -1009,7 +1070,7 @@ struct PlayCustomRangeSheet: View {
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(item.title)
+                    Text(item.title.localizedDigits)
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(settings.accentColor.color)
                         .lineLimit(1)
@@ -1036,7 +1097,7 @@ struct PlayCustomRangeSheet: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Play \(item.title), \(item.caption)")
+        .accessibilityLabel("Play \(item.title.localizedDigits), \(item.caption)")
         .contextMenu {
             Button(role: .destructive) {
                 rangeHistory.remove(item)
@@ -1159,21 +1220,23 @@ struct CustomRangeHistoryItem: Identifiable, Codable, Equatable {
     var timestamp: Date = Date()
 
     /// "Al-Kahf 1-6" (an en dash), or "Al-Kahf 3" for a range of one.
+    /// `surahName` is stored (and synced) as the transliteration; the title shows the interface's name.
     var title: String {
-        startAyah == endAyah ? "\(surahName) \(startAyah)" : "\(surahName) \(startAyah)\u{2013}\(endAyah)"
+        let name = Surah.displayName(id: surahNumber, stored: surahName)
+        return startAyah == endAyah ? "\(name) \(startAyah)" : "\(name) \(startAyah)\u{2013}\(endAyah)"
     }
 
     /// "6 ayahs · Each ×2 · Range ×3", "6 ayahs · Forever", or "6 ayahs · Once".
     var caption: String {
         let count = Swift.max(1, endAyah - startAyah + 1)
-        var parts = ["\(count) ayah\(count == 1 ? "" : "s")"]
-        if repeatPerAyah > 1 { parts.append("Each \u{00D7}\(repeatPerAyah)") }
+        var parts = [count == 1 ? String(localized: "\(count) ayah") : String(localized: "\(count) ayahs")]
+        if repeatPerAyah > 1 { parts.append(String(localized: "Each \u{00D7}\(repeatPerAyah)")) }
         if repeatSection == QuranPlayer.infiniteRepeat {
-            parts.append("Forever")
+            parts.append(String(localized: "Forever"))
         } else if repeatSection > 1 {
-            parts.append("Range \u{00D7}\(repeatSection)")
+            parts.append(String(localized: "Range \u{00D7}\(repeatSection)"))
         }
-        if parts.count == 1 { parts.append("Once") }
+        if parts.count == 1 { parts.append(String(localized: "Once")) }
         return parts.joined(separator: " \u{00B7} ")
     }
 

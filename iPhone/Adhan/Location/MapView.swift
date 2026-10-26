@@ -119,7 +119,7 @@ struct MapView: View {
             let mileText = Self.distanceFormatter.string(from: miles as NSNumber)
         else { return nil }
 
-        return "\(mileText) mi / \(kmText) km"
+        return String(localized: "\(mileText) mi / \(kmText) km")
     }
 
     var body: some View {
@@ -195,11 +195,11 @@ struct MapView: View {
                         .foregroundStyle(settings.accentColor.color)
                         .font(.title3)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(city.isEmpty ? fullName : city)
+                        Text(city.isEmpty ? fullName.cityDisplay : city)
                             .font(.headline)
                             .foregroundStyle(.primary)
                         if !state.isEmpty || !country.isEmpty {
-                            Text([state, country].filter { !$0.isEmpty }.joined(separator: ", "))
+                            Text([state, country].filter { !$0.isEmpty }.joined(separator: ", ").cityDisplay)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -217,7 +217,7 @@ struct MapView: View {
                     )
                     onSelectCity(location)
                 } label: {
-                    Text("Select \(city.isEmpty ? "City" : city)")
+                    Text("Select \(city.isEmpty ? String(localized: "City") : city)")
                         .font(.headline)
                         .foregroundColor(.primary)
                         .frame(maxWidth: .infinity)
@@ -309,14 +309,14 @@ struct MapView: View {
     }
 
     private func primaryLocationName(for item: MKMapItem) -> String {
-        item.placemark.locality ?? item.placemark.name ?? "Unknown"
+        item.placemark.locality ?? item.placemark.name ?? String(localized: "Unknown")
     }
 
     private func secondaryLocationName(for item: MKMapItem) -> String {
         let state = item.placemark.administrativeArea ?? ""
         let country = item.placemark.country ?? ""
         let parts = [state, country].filter { !$0.isEmpty }
-        return parts.isEmpty ? formattedName(for: item) : parts.joined(separator: ", ")
+        return (parts.isEmpty ? formattedName(for: item) : parts.joined(separator: ", ")).cityDisplay
     }
 
     private func cityIconName(for item: MKMapItem) -> String {
@@ -465,7 +465,7 @@ private struct SearchOverlay: View {
             SearchBar(text: $searchText.animation(.easeInOut))
 
             if !searchText.isEmpty {
-                Text("\(cityItems.count) match\(cityItems.count == 1 ? "" : "es") found")
+                Text(cityItems.count == 1 ? String(localized: "\(cityItems.count) match found") : String(localized: "\(cityItems.count) matches found"))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(settings.accentColor.color)
                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -573,18 +573,18 @@ private struct HomeLocationSummaryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            locationInfoRow("Home", value: home.city, systemImage: "house.fill", accent: true)
+            locationInfoRow(String(localized: "Home"), value: home.displayCity, systemImage: "house.fill", accent: true)
 
             if let current = live.currentLocation {
-                locationInfoRow("Current", value: current.city, systemImage: "location.fill", accent: true)
+                locationInfoRow(String(localized: "Current"), value: current.displayCity, systemImage: "location.fill", accent: true)
 
                 if let distanceString {
-                    locationInfoRow("Distance", value: distanceString, systemImage: "arrow.right.arrow.left")
+                    locationInfoRow(String(localized: "Distance"), value: distanceString, systemImage: "arrow.right.arrow.left")
                         .font(.subheadline)
                 }
             }
 
-            Text("• Must be at least 48 miles (≈ 77 km) from home to be considered traveling")
+            Text(String(localized: "• Must be at least 48 miles (≈ 77 km) from home to be considered traveling").localizedDigits)
                 .font(.footnote)
                 .foregroundColor(.secondary)
                 .padding(.top, 4)

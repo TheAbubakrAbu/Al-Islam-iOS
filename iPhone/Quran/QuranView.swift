@@ -106,7 +106,7 @@ private struct QuranLeadingToolbar: ViewModifier {
             content.toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     TabMoreMenu(isBusy: isPreparingPageMode, doubleTap: gridShortcut,
-                                hold: settings.isHafsDisplay ? MenuShortcut("Open Quran Planner") {
+                                hold: settings.isHafsDisplay ? MenuShortcut(String(localized: "Open Quran Planner")) {
                                     settings.hapticFeedback()
                                     plannerRequest = true
                                 } : nil) { moreMenuItems }
@@ -356,10 +356,10 @@ struct QuranView: View {
 
         var title: String {
             switch self {
-            case .ayahOfTheDay: return "Recent Ayahs of the Day"
-            case .reading: return "Recent Read Ayahs"
-            case .listenedAyah: return "Recent Listened Ayahs"
-            case .listenedSurah: return "Recent Listened Surahs"
+            case .ayahOfTheDay: return String(localized: "Recent Ayahs of the Day")
+            case .reading: return String(localized: "Recent Read Ayahs")
+            case .listenedAyah: return String(localized: "Recent Listened Ayahs")
+            case .listenedSurah: return String(localized: "Recent Listened Surahs")
             }
         }
     }
@@ -1252,7 +1252,8 @@ struct QuranView: View {
         return VStack(alignment: .leading, spacing: 10) {
             // The help folds away behind a -/+ (a reader who knows the syntax keeps only the recent
             // chips); the chips stay, at the BOTTOM, nearest the field and the thumb. Folded, a trash
-            // removes the help for good, examples included.
+            // removes the help for good. The TRY row of example queries under it is gone (Abu,
+            // 2026-10-25: "get rid of try menu for quran and hadith"; hadith never had one).
             if !examplesHidden, !quranSearchHelpRemoved {
             HStack(spacing: 8) {
                 Text("Quick Search Help")
@@ -1291,8 +1292,8 @@ struct QuranView: View {
             if !quranSearchHelpCollapsed {
             VStack(alignment: .leading, spacing: 4) {
                 Text("• The buttons above do all of this without typing")
-                Text("• Surah or ayah: a name, a number, 2:255, or any text")
-                Text("• Go to: page 5, juz 30, hizb 5, ruku 12, or -1 for the last")
+                Text(String(localized: "• Surah or ayah: a name, a number, 2:255, or any text").localizedDigits)
+                Text(String(localized: "• Go to: page 5, juz 30, hizb 5, ruku 12, or -1 for the last").localizedDigits)
                 Text("• Surah filters: makki, madani, 286 ayahs, >20 pages")
             }
             .font(.caption)
@@ -1330,9 +1331,6 @@ struct QuranView: View {
             }
 
             quranRecentSearches
-            if !examplesHidden, !quranSearchHelpRemoved {
-                quranSearchExamples
-            }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1816,7 +1814,7 @@ struct QuranView: View {
 
                     // A pick closes the sheet; nothing is pushed, so nothing is promised.
                     if !isPicker {
-                        Image(systemName: "chevron.right")
+                        Image(systemName: "chevron.forward")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.tertiary)
                     }
@@ -2079,6 +2077,21 @@ struct QuranView: View {
                     }
                 }
             }
+            #if DEBUG
+            // "-quranRootScroll <n>": 2 s after the root appears, scrolls its List to the view with that
+            // Int identity, centred - a grid tile's surah number, or a grid chunk row's start index (a
+            // multiple of `tileGridChunk(columns:)`). The only headless way to put a chunk seam on
+            // screen: a simulated swipe that starts on a tile is taken by its hold layer, and one at
+            // the edge by the back-swipe zone.
+            .onAppear {
+                let args = ProcessInfo.processInfo.arguments
+                guard let i = args.firstIndex(of: "-quranRootScroll"), args.indices.contains(i + 1),
+                      let id = Int(args[i + 1]) else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    scrollProxy.scrollTo(id, anchor: .center)
+                }
+            }
+            #endif
 
         }
         .navigationTitle(isPicker ? "Choose Surah" : "Al-Quran")
@@ -2093,7 +2106,7 @@ struct QuranView: View {
             performReadingModeToggle: performReadingModeToggle,
             push: { surahID, ayahID in push(surahID: surahID, ayahID: ayahID) },
             moreMenuItems: AnyView(moreMenuItems),
-            gridShortcut: MenuShortcut(settings.gridMode && !listForJump ? "Show as List" : "Show as Grid") {
+            gridShortcut: MenuShortcut(settings.gridMode && !listForJump ? String(localized: "Show as List") : String(localized: "Show as Grid")) {
                 settings.hapticFeedback()
                 withAnimation {
                     if listForJump { listForJump = false } else { settings.gridMode.toggle() }
@@ -2417,27 +2430,6 @@ struct QuranView: View {
         #endif
     }
 
-    /// One example per shape of query, so the grammar is learned by tapping it (Tilawa's "Try" row).
-    private static let searchExamples = [
-        "mercy", "patience in hardship", "2:255", "Al-Kahf", "juz 30", "hizb 5",
-        "alhamdulillah", "رحم", "makki", ">100 ayahs", "sajdah"
-    ]
-
-    @ViewBuilder
-    private var quranSearchExamples: some View {
-        #if os(iOS)
-        RecentSearchChips(
-            queries: Self.searchExamples,
-            title: "TRY",
-            onPick: { query in
-                searchText = query
-                endEditing()
-            },
-            onRemove: nil
-        )
-        #endif
-    }
-
     private var sortControls: some View {
         #if os(iOS)
         HStack(spacing: 8) {
@@ -2631,7 +2623,7 @@ struct QuranView: View {
             text: $searchText,
             focusRequestID: searchFocusRequestID,
             // A Go To button says what the field now reads: a page number, a juz, ...
-            placeholder: searchFilters.goTo?.placeholder ?? "Search",
+            placeholder: searchFilters.goTo?.placeholder.localizedDigits ?? String(localized: "Search"),
             onSearchButtonClicked: {
                 self.endEditing()
             },
@@ -2679,13 +2671,13 @@ struct QuranView: View {
             } else {
                 ShortcutMenu(
                     doubleTap: settings.lastListenedSurah.map { last in
-                        MenuShortcut("Play Last Listened") {
+                        MenuShortcut(String(localized: "Play Last Listened")) {
                             settings.hapticFeedback()
                             quranPlayer.playSurah(surahNumber: last.surahNumber, surahName: last.surahName,
                                                   certainReciter: true)
                         }
                     },
-                    hold: MenuShortcut("Choose Reciter") {
+                    hold: MenuShortcut(String(localized: "Choose Reciter")) {
                         settings.hapticFeedback()
                         showReciterPickerSheet = true
                     }
@@ -2782,7 +2774,7 @@ struct QuranView: View {
                     certainReciter: true
                 )
             } label: {
-                Label("Play Last Listened Surah (\(surah.nameTransliteration))", systemImage: "play.fill")
+                Label("Play Last Listened Surah (\(surah.displayName))", systemImage: "play.fill")
             }
         }
         #endif
@@ -2914,7 +2906,7 @@ struct QuranView: View {
                             // pill on a surah row, so it simply leads the card).
                             historyTimestampLabel(item.timestamp)
 
-                            Text("\(surah.id) - \(surah.nameTransliteration)")
+                            Text("\(surah.id) - \(surah.displayName)")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundColor(settings.accentColor.color)
 
@@ -3013,7 +3005,7 @@ struct QuranView: View {
             Section(header: summaryHeader) {
                 SummaryTileGrid(columns: quranGridColumns.count) {
                     if hasLastRead, let lastReadSurah, let lastReadAyah {
-                        SummaryAyahTile(title: "Last Read Ayah", icon: "book", surah: lastReadSurah, ayah: lastReadAyah, titleColor: .secondaryOnGlass,
+                        SummaryAyahTile(title: String(localized: "Last Read Ayah"), icon: "book", surah: lastReadSurah, ayah: lastReadAyah, titleColor: .secondaryOnGlass,
                                         rowHeight: rowHeight,
                                         isExpanded: summaryHistoryExpansion == .reading,
                                         onExpand: expandersHidden || playbackHistory.readingHistory.isEmpty ? nil : { toggleSummaryExpansion(.reading) }) {
@@ -3022,7 +3014,7 @@ struct QuranView: View {
                         .animation(.easeInOut, value: reading.lastReadSurah * 1000 + reading.lastReadAyah)
                     }
                     if let pair = ayahOfTheDay {
-                        SummaryAyahTile(title: "Ayah of the Day", icon: "sparkles", surah: pair.surah, ayah: pair.ayah, titleColor: .secondaryOnGlass,
+                        SummaryAyahTile(title: String(localized: "Ayah of the Day"), icon: "sparkles", surah: pair.surah, ayah: pair.ayah, titleColor: .secondaryOnGlass,
                                         rowHeight: rowHeight,
                                         isExpanded: summaryHistoryExpansion == .ayahOfTheDay,
                                         onExpand: expandersHidden ? nil : { toggleSummaryExpansion(.ayahOfTheDay) }) {
@@ -3031,7 +3023,7 @@ struct QuranView: View {
                         .animation(.easeInOut, value: pair.surah.id * 1000 + pair.ayah.id)
                     }
                     if let pair = lastListenedAyah {
-                        SummaryAyahTile(title: "Last Listened Ayah", icon: "headphones.circle", surah: pair.surah, ayah: pair.ayah, titleColor: .secondaryOnGlass,
+                        SummaryAyahTile(title: String(localized: "Last Listened Ayah"), icon: "headphones.circle", surah: pair.surah, ayah: pair.ayah, titleColor: .secondaryOnGlass,
                                         rowHeight: rowHeight,
                                         isExpanded: summaryHistoryExpansion == .listenedAyah,
                                         onExpand: playbackHistory.ayahListeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedAyah) }) {
@@ -3040,7 +3032,7 @@ struct QuranView: View {
                         .animation(.easeInOut, value: pair.surah.id * 1000 + pair.ayah.id)
                     }
                     if let last = lastListened, let surah = lastListenedSurah {
-                        SummarySurahTile(title: "Last Listened Surah", icon: "headphones", surah: surah, lastListenedSurah: last, titleColor: .secondaryOnGlass,
+                        SummarySurahTile(title: String(localized: "Last Listened Surah"), icon: "headphones", surah: surah, lastListenedSurah: last, titleColor: .secondaryOnGlass,
                                          rowHeight: rowHeight,
                                         isExpanded: summaryHistoryExpansion == .listenedSurah,
                                          onExpand: playbackHistory.listeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedSurah) }) {
@@ -3051,7 +3043,7 @@ struct QuranView: View {
                     if wordFillsGrid, let word, let wordSurah {
                         // Pushed through `openWordOfDay` rather than `push(surahID:)`: the word's page lists
                         // every ayah it appears in and pushes the reader itself.
-                        SummaryWordTile(word: word, surahName: wordSurah.nameTransliteration, rowHeight: rowHeight) {
+                        SummaryWordTile(word: word, surahName: wordSurah.displayName, rowHeight: rowHeight) {
                             // Through the doors' guard, like the More menu's items.
                             guard !anyDoorOpen, path.isEmpty else { return }
                             openWordOfDay = true
@@ -3122,9 +3114,9 @@ struct QuranView: View {
     /// the door; see `summaryDoorDestination`.
     @ViewBuilder
     var moreMenuItems: some View {
-        TabMoreMenuItem("Today", systemImage: "sun.horizon.fill") { openMenuDoor(.daily) }
-        TabMoreMenuItem("History", systemImage: "clock.arrow.circlepath") { openMenuDoor(.history) }
-        TabMoreMenuItem("Open a Random Surah", systemImage: "shuffle") {
+        TabMoreMenuItem(String(localized: "Today"), systemImage: "sun.horizon.fill") { openMenuDoor(.daily) }
+        TabMoreMenuItem(String(localized: "History"), systemImage: "clock.arrow.circlepath") { openMenuDoor(.history) }
+        TabMoreMenuItem(String(localized: "Open a Random Surah"), systemImage: "shuffle") {
             settings.hapticFeedback()
             guard !anyDoorOpen, path.isEmpty, let surah = quranData.quran.randomElement() else { return }
             push(surahID: surah.id)
@@ -3136,7 +3128,7 @@ struct QuranView: View {
         if ThematicTopicsStore.isBundled || offersWordOfDay || settings.showQiraahDetails || settings.isHafsDisplay {
             Menu {
                 if ThematicTopicsStore.isBundled {
-                    TabMoreMenuItem("Browse by Theme", systemImage: "rectangle.stack.fill") { openMenuDoor(.themes) }
+                    TabMoreMenuItem(String(localized: "Browse by Theme"), systemImage: "rectangle.stack.fill") { openMenuDoor(.themes) }
                 }
                 if offersWordOfDay {
                     TabMoreMenuItem(SummaryWordTile.title, systemImage: "character.book.closed.fill") {
@@ -3146,10 +3138,10 @@ struct QuranView: View {
                     }
                 }
                 if settings.showQiraahDetails {
-                    TabMoreMenuItem("Qiraat Explorer", systemImage: "arrow.left.and.right.text.vertical") { openMenuDoor(.qiraat) }
+                    TabMoreMenuItem(String(localized: "Qiraat Explorer"), systemImage: "arrow.left.and.right.text.vertical") { openMenuDoor(.qiraat) }
                 }
                 if settings.isHafsDisplay {
-                    TabMoreMenuItem("Quran Planner", systemImage: "calendar.badge.clock") {
+                    TabMoreMenuItem(String(localized: "Quran Planner"), systemImage: "calendar.badge.clock") {
                         settings.hapticFeedback()
                         plannerRequest = true
                     }
@@ -3192,13 +3184,13 @@ struct QuranView: View {
             Label("Sort", systemImage: "arrow.up.arrow.down")
         }
 
-        TabMoreMenuItem(settings.quranPageMode ? "Read as List" : "Read as Pages",
+        TabMoreMenuItem(settings.quranPageMode ? String(localized: "Read as List") : String(localized: "Read as Pages"),
                            systemImage: settings.quranPageMode ? "list.bullet.rectangle" : "book") {
             settings.hapticFeedback()
             showReadingModeConfirm = true
         }
         let showsGrid = settings.gridMode && !listForJump
-        TabMoreMenuItem(showsGrid ? "Show as List" : "Show as Grid", systemImage: showsGrid ? "list.bullet" : "square.grid.2x2") {
+        TabMoreMenuItem(showsGrid ? String(localized: "Show as List") : String(localized: "Show as Grid"), systemImage: showsGrid ? "list.bullet" : "square.grid.2x2") {
             settings.hapticFeedback()
             withAnimation {
                 if listForJump { listForJump = false } else { settings.gridMode.toggle() }
@@ -3252,13 +3244,14 @@ struct QuranView: View {
                         // in a List row answered a different height on each self-sizing pass (the iPad
                         // sidebar trapped on this one when rotated, 2026-10-09), and one non-lazy row of
                         // every bookmark would build them all at once. The List still virtualizes rows.
-                        ForEach(Array(stride(from: 0, to: sortedBookmarks.count, by: tileGridChunk)), id: \.self) { start in
+                        let chunk = tileGridChunk(columns: quranGridColumns.count)
+                        ForEach(Array(stride(from: 0, to: sortedBookmarks.count, by: chunk)), id: \.self) { start in
                             SummaryTileGrid(columns: quranGridColumns.count) {
-                                ForEach(sortedBookmarks[start..<min(start + tileGridChunk, sortedBookmarks.count)], id: \.id) { bookmarkedAyah in
+                                ForEach(sortedBookmarks[start..<min(start + chunk, sortedBookmarks.count)], id: \.id) { bookmarkedAyah in
                                     bookmarkGridTile(bookmarkedAyah, context: context)
                                 }
                             }
-                            .tileGridChunkRow(start: start, count: sortedBookmarks.count)
+                            .tileGridChunkRow(start: start, count: sortedBookmarks.count, chunk: chunk)
                         }
                     } else {
                         ForEach(sortedBookmarks, id: \.id) { bookmarkedAyah in
@@ -3275,7 +3268,7 @@ struct QuranView: View {
     /// magnifier starts a search held to the bookmarks.
     private func bookmarkHeader(count: Int) -> some View {
         SectionPillHeader(
-            title: "BOOKMARKS",
+            title: String(localized: "BOOKMARKS"),
             count: count,
             icon: "bookmark.fill",
             accentTitle: true,
@@ -3318,7 +3311,7 @@ struct QuranView: View {
         // Typed with no name or note match: the ayah lanes below carry the text matches alone.
         if !matches.isEmpty || !typed {
             Section(header: SectionPillHeader(
-                title: typed ? "BOOKMARKS BY NAME OR NOTE" : "BOOKMARKS",
+                title: typed ? String(localized: "BOOKMARKS BY NAME OR NOTE") : String(localized: "BOOKMARKS"),
                 count: matches.count,
                 icon: "bookmark.fill",
                 accentTitle: true
@@ -3443,13 +3436,14 @@ struct QuranView: View {
                 if settings.showFavorites {
                     if usesGrid {
                         // Chunked non-lazy rows, as the bookmarks above (`tileGridChunk`).
-                        ForEach(Array(stride(from: 0, to: sortedFavorites.count, by: tileGridChunk)), id: \.self) { start in
+                        let chunk = tileGridChunk(columns: quranGridColumns.count)
+                        ForEach(Array(stride(from: 0, to: sortedFavorites.count, by: chunk)), id: \.self) { start in
                             SummaryTileGrid(columns: quranGridColumns.count) {
-                                ForEach(sortedFavorites[start..<min(start + tileGridChunk, sortedFavorites.count)], id: \.self) { surahID in
+                                ForEach(sortedFavorites[start..<min(start + chunk, sortedFavorites.count)], id: \.self) { surahID in
                                     favoriteGridTile(surahID: surahID, context: context)
                                 }
                             }
-                            .tileGridChunkRow(start: start, count: sortedFavorites.count)
+                            .tileGridChunkRow(start: start, count: sortedFavorites.count, chunk: chunk)
                         }
                     } else {
                         ForEach(sortedFavorites, id: \.self) { surahID in
@@ -3464,7 +3458,7 @@ struct QuranView: View {
     /// The shared pill header, for favorites - with the shuffle: open a random favorite surah.
     private func favoriteHeader(count: Int) -> some View {
         SectionPillHeader(
-            title: "FAVORITES",
+            title: String(localized: "FAVORITES"),
             count: count,
             icon: "star.fill",
             accentTitle: true,
@@ -3504,7 +3498,7 @@ struct QuranView: View {
             .gridFavoriteStar(
                 isFavorite: context.favoriteSurahs.contains(surah.id),
                 accent: settings.accentColor.color,
-                accessibilityName: surah.nameTransliteration
+                accessibilityName: surah.displayName
             ) {
                 settings.toggleSurahFavoriteOrConfirm(surah: surah.id)
             }
@@ -3738,7 +3732,7 @@ struct QuranView: View {
 
     private func pagesHeader(count: Int) -> some View {
         HStack {
-            SectionIconHeader("QURAN PAGES", icon: "doc.on.doc.fill")
+            SectionIconHeader(String(localized: "QURAN PAGES"), icon: "doc.on.doc.fill")
 
             Spacer()
 
@@ -3765,7 +3759,7 @@ struct QuranView: View {
 
     private func sajdahHeader(count: Int) -> some View {
         HStack {
-            SectionIconHeader("SAJDAH AYAHS", icon: "figure.mind.and.body")
+            SectionIconHeader(String(localized: "SAJDAH AYAHS"), icon: "figure.mind.and.body")
 
             Spacer()
 
@@ -3798,13 +3792,14 @@ struct QuranView: View {
         if usesGrid {
             // Chunked non-lazy rows (`tileGridChunk`): a lazy grid in a List row can answer a different
             // height on each self-sizing pass, which iOS 26 traps on.
-            ForEach(Array(stride(from: 0, to: rows.count, by: tileGridChunk)), id: \.self) { start in
+            let chunk = tileGridChunk(columns: quranGridColumns.count)
+            ForEach(Array(stride(from: 0, to: rows.count, by: chunk)), id: \.self) { start in
                 SummaryTileGrid(columns: quranGridColumns.count) {
-                    ForEach(start..<min(start + tileGridChunk, rows.count), id: \.self) { index in
+                    ForEach(start..<min(start + chunk, rows.count), id: \.self) { index in
                         specialAyahGridTile(item: rows[index], context: context)
                     }
                 }
-                .tileGridChunkRow(start: start, count: rows.count)
+                .tileGridChunkRow(start: start, count: rows.count, chunk: chunk)
             }
         } else {
             ForEach(Array(rows.enumerated()), id: \.offset) { _, item in
@@ -3857,7 +3852,7 @@ struct QuranView: View {
 
     private func muqattaatHeader(count: Int) -> some View {
         HStack {
-            SectionIconHeader("MUQATTA'AT AYAHS", icon: "textformat.abc")
+            SectionIconHeader(String(localized: "MUQATTA'AT AYAHS"), icon: "textformat.abc")
 
             Spacer()
 
@@ -3985,7 +3980,7 @@ struct QuranView: View {
                 }
             }
         } header: {
-            SectionIconHeader("KHATM PROGRESS", icon: "flag.checkered", accentTitle: true)
+            SectionIconHeader(String(localized: "KHATM PROGRESS"), icon: "flag.checkered", accentTitle: true)
         }
         .onChange(of: settings.automaticKhatmCompletion) { _ in
             settings.hapticFeedback()
@@ -4019,7 +4014,7 @@ struct QuranView: View {
 
                             Spacer()
 
-                            Text("\(Int((Double(totals.words)/Double(max(totals.totalWords,1))*100)).description)%")
+                            Text(Int((Double(totals.words)/Double(max(totals.totalWords,1))*100)).formatted(.percent))
                                 .monospacedDigit()
                         }
 
@@ -4028,7 +4023,7 @@ struct QuranView: View {
 
                             Spacer()
 
-                            Text("\(Int((Double(totals.letters)/Double(max(totals.totalLetters,1))*100)).description)%")
+                            Text(Int((Double(totals.letters)/Double(max(totals.totalLetters,1))*100)).formatted(.percent))
                                 .monospacedDigit()
                         }
                     } else {
@@ -4156,13 +4151,14 @@ struct QuranView: View {
     private func surahGrid(_ surahs: [Surah], context: SearchDisplayContext) -> some View {
         // Chunked non-lazy rows (`tileGridChunk`): a lazy grid in a List row can answer a different
         // height on each self-sizing pass, which iOS 26 traps on (landscape and the iPad sidebar).
-        ForEach(Array(stride(from: 0, to: surahs.count, by: tileGridChunk)), id: \.self) { start in
+        let chunk = tileGridChunk(columns: surahGridColumns.count)
+        ForEach(Array(stride(from: 0, to: surahs.count, by: chunk)), id: \.self) { start in
             SummaryTileGrid(columns: surahGridColumns.count) {
-                ForEach(surahs[start..<min(start + tileGridChunk, surahs.count)], id: \.id) { surah in
+                ForEach(surahs[start..<min(start + chunk, surahs.count)], id: \.id) { surah in
                     surahGridTile(surah: surah, context: context)
                 }
             }
-            .tileGridChunkRow(start: start, count: surahs.count)
+            .tileGridChunkRow(start: start, count: surahs.count, chunk: chunk)
         }
     }
 
@@ -4198,7 +4194,7 @@ struct QuranView: View {
         .gridFavoriteStar(
             isFavorite: context.favoriteSurahs.contains(surah.id),
             accent: settings.accentColor.color,
-            accessibilityName: surah.nameTransliteration
+            accessibilityName: surah.displayName
         ) {
             settings.toggleSurahFavoriteOrConfirm(surah: surah.id)
         }
@@ -4214,7 +4210,7 @@ struct QuranView: View {
     @ViewBuilder
     private func surahBrowseHeader(showsRevelationOrder: Bool) -> some View {
         if showsRevelationOrder {
-            SurahsHeader(text: "REVELATION ORDER", icon: "list.number")
+            SurahsHeader(text: String(localized: "REVELATION ORDER"), icon: "list.number")
         } else {
             SurahsHeader()
         }
@@ -4331,7 +4327,7 @@ struct QuranView: View {
     private func surahSectionHeader(context: SearchDisplayContext) -> some View {
         if context.isSearching {
             HStack {
-                SectionIconHeader("SURAH SEARCH RESULTS", icon: "magnifyingglass")
+                SectionIconHeader(String(localized: "SURAH SEARCH RESULTS"), icon: "magnifyingglass")
 
                 Spacer()
 
@@ -4371,13 +4367,19 @@ struct QuranView: View {
                     // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
                     // height on each self-sizing pass, which iOS 26 traps on (juz sort's section index
                     // narrows every row). A juz holds 37 tiles at most (juz 30).
-                    SummaryTileGrid(columns: surahGridColumns.count) {
-                        ForEach(sectionData.rows) { row in
-                            juzGridTile(row: row, isOpen: row.id == openRowID, context: context)
+                    // Chunked like every long grid (`tileGridChunk`): juz 30 holds 37 tiles. The jump
+                    // anchor rides the first chunk.
+                    let rows = sectionData.rows
+                    let chunk = tileGridChunk(columns: surahGridColumns.count)
+                    ForEach(Array(stride(from: 0, to: rows.count, by: chunk)), id: \.self) { start in
+                        SummaryTileGrid(columns: surahGridColumns.count) {
+                            ForEach(rows[start..<min(start + chunk, rows.count)]) { row in
+                                juzGridTile(row: row, isOpen: row.id == openRowID, context: context)
+                            }
                         }
+                        .tileGridChunkRow(start: start, count: rows.count, chunk: chunk)
+                        .id(start == 0 ? Self.juzRowAnchor(juz.id) : "\(Self.juzRowAnchor(juz.id))_\(start)")
                     }
-                    .padding(.vertical, 4)
-                    .id(Self.juzRowAnchor(juz.id))
                 } else {
                     let firstRowID = sectionData.rows.first?.id
                     ForEach(sectionData.rows) { row in
@@ -4422,7 +4424,7 @@ struct QuranView: View {
         let readingJuz = quranData.ayah(surah: settings.lastReadSurah, ayah: settings.lastReadAyah)?.juz
 
         Section(header: SectionPillHeader(
-            title: "JUMP TO JUZ",
+            title: String(localized: "JUMP TO JUZ"),
             count: QuranData.juzList.count,
             icon: "square.grid.3x3.fill",
             isExpanded: $showJuzJumpGrid
@@ -4451,7 +4453,7 @@ struct QuranView: View {
                                 .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Juz \(juz.id), \(juz.nameTransliteration)")
+                        .accessibilityLabel("Juz \(juz.id), \(juz.displayName)")
                         .accessibilityHint(isReading ? "Where you are reading" : "")
                     }
                 }
@@ -4517,7 +4519,7 @@ struct QuranView: View {
             .gridFavoriteStar(
                 isFavorite: context.favoriteSurahs.contains(surah.id),
                 accent: settings.accentColor.color,
-                accessibilityName: surah.nameTransliteration
+                accessibilityName: surah.displayName
             ) {
                 settings.toggleSurahFavoriteOrConfirm(surah: surah.id)
             }
@@ -4636,7 +4638,7 @@ struct QuranView: View {
 
     @ViewBuilder
     private func revelationSections(context: SearchDisplayContext) -> some View {
-        Section(header: SurahsHeader(text: "REVELATION ORDER", icon: "list.number")) {
+        Section(header: SurahsHeader(text: String(localized: "REVELATION ORDER"), icon: "list.number")) {
             ForEach(quranData.revelationOrderSurahIDs, id: \.self) { surahID in
                 if let surah = quranData.surah(surahID) {
                     Group {
@@ -4868,8 +4870,8 @@ struct QuranView: View {
         if let query = parseDivisionQuery(compiledSearch.navigation),
            let ayahs = divisionAyahs(query.division, number: query.number) {
             let title = query.division.title
-            Section(header: pageSearchHeader(title: "\(title.uppercased()) SEARCH RESULT",
-                                             valueText: "\(title) \(query.number) of \(QuranMetadata.count(of: query.division)) • \(ayahs.count) Ayahs")) {
+            Section(header: pageSearchHeader(title: String(localized: "\(title.uppercased()) SEARCH RESULT"),
+                                             valueText: String(localized: "\(title) \(query.number) of \(QuranMetadata.count(of: query.division)) • \(ayahs.count) Ayahs"))) {
                 pageJuzRangeRows(first: ayahs.first, last: ayahs.last, count: ayahs.count)
             }
         }
@@ -4888,15 +4890,15 @@ struct QuranView: View {
             let roots = MorphologyStore.isBundled ? MorphologyStore.shared.roots(matching: query) : []
             let lemmas = MorphologyStore.isBundled ? MorphologyStore.shared.lemmas(matching: query) : []
             if !roots.isEmpty || !lemmas.isEmpty {
-                Section(header: pageSearchHeader(title: "ROOTS AND WORDS", valueText: "\(roots.count + lemmas.count)")) {
+                Section(header: pageSearchHeader(title: String(localized: "ROOTS AND WORDS"), valueText: "\(roots.count + lemmas.count)")) {
                     ForEach(roots, id: \.id) { entry in
                         let locations = MorphologyStore.shared.occurrences(ofRoot: entry.id)
-                        morphologyRow(arabic: entry.root.letters, kind: "Root", locations: locations,
-                                      title: "Root \(entry.root.letters)")
+                        morphologyRow(arabic: entry.root.letters, kind: String(localized: "Root"), locations: locations,
+                                      title: String(localized: "Root \(entry.root.letters)"))
                     }
                     ForEach(lemmas, id: \.id) { entry in
                         let locations = MorphologyStore.shared.occurrences(ofLemma: entry.id)
-                        morphologyRow(arabic: entry.lemma.text, kind: "Dictionary form", locations: locations,
+                        morphologyRow(arabic: entry.lemma.text, kind: String(localized: "Dictionary form"), locations: locations,
                                       title: entry.lemma.text)
                     }
                 }
@@ -4905,13 +4907,14 @@ struct QuranView: View {
             let qsacTopics = ThematicTopicsStore.isBundled ? ThematicTopicsStore.shared.search(query, limit: 6) : []
             let qulTopics = QuranTopicsStore.isBundled ? QuranTopicsStore.shared.search(query, limit: 8) : []
             // Two libraries, one list: the topic named for the query leads whichever library holds it.
-            let topics: [ThemeTopic] = SearchRank.sorted(
+            let ranked: [ThemeTopic] = SearchRank.sorted(
                 qsacTopics + qulTopics.map { $0.asThemeTopic(parentName: QuranTopicsStore.shared.parent(of: $0)?.name) },
                 by: query) { [$0.name] }
+            let topics = Self.onePerShownName(ranked)
             if !topics.isEmpty {
                 let shownTopics = showsAllSearchTopics || topics.count <= Self.insightRowLimit + 1
                     ? topics : Array(topics.prefix(Self.insightRowLimit))
-                Section(header: pageSearchHeader(title: "TOPICS", valueText: "\(topics.count)")) {
+                Section(header: pageSearchHeader(title: String(localized: "TOPICS"), valueText: "\(topics.count)")) {
                     ForEach(shownTopics) { topic in
                         NavigationLink {
                             LazyDestination {
@@ -4923,12 +4926,22 @@ struct QuranView: View {
                             HStack(spacing: 10) {
                                 AccentIconChip(systemImage: "square.grid.2x2.fill", size: 26)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    HighlightedSnippet(source: topic.name, term: query, font: .subheadline.weight(.semibold),
+                                    HighlightedSnippet(source: topic.displayName, term: query, font: .subheadline.weight(.semibold),
                                                        accent: settings.accentColor.color, fg: .primary)
-                                    Text([topic.domain, topic.category].filter { !$0.isEmpty }.joined(separator: " › "))
+                                        // An English topic name keeps the left edge in the Arabic interface; an
+                                        // Arabic one (the QUL pack names about 1,000 topics) reads right to left.
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .leftToRightContent(topic.displaysEnglish)
+                                    // The category is English pack data: in Arabic the line is the translated
+                                    // domain alone, on the English title's edge, not "الموضوعات › Allah".
+                                    Text(AppLanguage.isArabic
+                                         ? topic.domain.localizedDisplay
+                                         : [topic.domain, topic.category].filter { !$0.isEmpty }.joined(separator: " › "))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                         .lineLimit(1)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .leftToRightContent(topic.displaysEnglish)
                                 }
                                 Spacer(minLength: 8)
                                 Text("\(topic.ayahs.count)")
@@ -4942,7 +4955,7 @@ struct QuranView: View {
                         }
                     }
                     if shownTopics.count < topics.count {
-                        insightShowMoreRow(count: topics.count - shownTopics.count, noun: "topics") {
+                        insightShowMoreRow(count: topics.count - shownTopics.count, noun: String(localized: "topics")) {
                             showsAllSearchTopics = true
                         }
                     }
@@ -4953,14 +4966,17 @@ struct QuranView: View {
             if !passages.isEmpty {
                 let shownPassages = showsAllSearchPassages || passages.count <= Self.insightRowLimit + 1
                     ? passages : Array(passages.prefix(Self.insightRowLimit))
-                Section(header: pageSearchHeader(title: "PASSAGES", valueText: "\(passages.count)")) {
+                Section(header: pageSearchHeader(title: String(localized: "PASSAGES"), valueText: "\(passages.count)")) {
                     ForEach(shownPassages) { passage in
                         quranNavigationLink(route: .ayahs(surahID: passage.surah, ayah: passage.start)) {
                             VStack(alignment: .leading, spacing: 3) {
                                 HighlightedSnippet(source: passage.title, term: query, font: .subheadline,
                                                    accent: settings.accentColor.color, fg: .primary)
                                     .fixedSize(horizontal: false, vertical: true)
-                                Text("\(quranData.surah(passage.surah)?.nameTransliteration ?? "Surah \(passage.surah)") \(passage.rangeLabel) · \(passage.ayahCount == 1 ? "1 ayah" : "\(passage.ayahCount) ayahs")")
+                                    // An English passage title keeps the left edge in the Arabic interface.
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .leftToRightContent()
+                                Text("\(quranData.surah(passage.surah)?.displayName ?? String(localized: "Surah \(passage.surah)")) \(passage.rangeLabel.localizedDigits) · \(passage.ayahCount == 1 ? String(localized: "1 ayah") : String(localized: "\(passage.ayahCount) ayahs"))")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -4968,7 +4984,7 @@ struct QuranView: View {
                         }
                     }
                     if shownPassages.count < passages.count {
-                        insightShowMoreRow(count: passages.count - shownPassages.count, noun: "passages") {
+                        insightShowMoreRow(count: passages.count - shownPassages.count, noun: String(localized: "passages")) {
                             showsAllSearchPassages = true
                         }
                     }
@@ -5049,7 +5065,7 @@ struct QuranView: View {
         if let page = context.pageJuzQuery.page {
             let ayahs = quranData.ayahs(onPage: page)
             if let first = ayahs.first {
-                Section(header: pageSearchHeader(title: "PAGE SEARCH RESULT", valueText: "Page \(page) • \(ayahs.count) Ayahs")) {
+                Section(header: pageSearchHeader(title: String(localized: "PAGE SEARCH RESULT"), valueText: String(localized: "Page \(page) • \(ayahs.count) Ayahs"))) {
                     pageJuzRangeRows(first: first, last: ayahs.last, count: ayahs.count)
                 }
             }
@@ -5061,7 +5077,7 @@ struct QuranView: View {
         if let juz = context.pageJuzQuery.juz {
             let ayahs = quranData.ayahs(inJuz: juz)
             if let first = ayahs.first {
-                Section(header: pageSearchHeader(title: "JUZ SEARCH RESULT", valueText: "Juz \(juz) • \(ayahs.count) Ayahs")) {
+                Section(header: pageSearchHeader(title: String(localized: "JUZ SEARCH RESULT"), valueText: String(localized: "Juz \(juz) • \(ayahs.count) Ayahs"))) {
                     pageJuzRangeRows(first: first, last: ayahs.last, count: ayahs.count)
                 }
             }
@@ -5074,8 +5090,8 @@ struct QuranView: View {
     @ViewBuilder
     private func pageJuzRangeRows(first: (surah: Surah, ayah: Ayah), last: (surah: Surah, ayah: Ayah)?, count: Int) -> some View {
         if count > 1, let last {
-            pageJuzAyahRow(item: first, leadingLabel: "Start")
-            pageJuzAyahRow(item: last, leadingLabel: "End")
+            pageJuzAyahRow(item: first, leadingLabel: String(localized: "Start"))
+            pageJuzAyahRow(item: last, leadingLabel: String(localized: "End"))
         } else {
             pageJuzAyahRow(item: first)
         }
@@ -5123,13 +5139,23 @@ struct QuranView: View {
         )
     }
 
+    /// In Arabic two English topics can share one Arabic name ("Prayer" and "Salat" are both الصلاة): the
+    /// better-ranked one stands for both, or the list shows the same name twice. English is untouched.
+    #if os(iOS)
+    private static func onePerShownName(_ topics: [ThemeTopic]) -> [ThemeTopic] {
+        guard AppLanguage.isArabic else { return topics }
+        var seen = Set<String>()
+        return topics.filter { seen.insert($0.displayName).inserted }
+    }
+    #endif
+
     private func pageSearchHeader(title: String, valueText: String) -> some View {
         HStack {
             Text(title)
 
             Spacer()
 
-            Text(valueText)
+            Text(valueText.localizedDigits)
                 .font(.caption.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(settings.accentColor.color)
@@ -5354,7 +5380,7 @@ struct QuranView: View {
 
                 Spacer()
 
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.forward")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
@@ -5374,7 +5400,7 @@ struct QuranView: View {
 
             Spacer()
 
-            Text(String(count))
+            Text(String(count).localizedDigits)
                 .font(.caption.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(settings.accentColor.color)
@@ -5423,7 +5449,7 @@ struct QuranView: View {
 
             Spacer()
 
-            Text(String(count))
+            Text(String(count).localizedDigits)
                 .font(.caption.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(settings.accentColor.color)
@@ -5523,7 +5549,18 @@ struct QuranView: View {
     @ViewBuilder
     private func surahSearchSectionHeader(surahId: Int, matchCount: Int? = nil) -> some View {
         Group {
-            if let s = quranData.surah(surahId) {
+            if let s = quranData.surah(surahId), AppLanguage.isArabic {
+                // The Arabic name once: no transliteration and no English meaning beside it.
+                HStack(spacing: 6) {
+                    Text("\(s.id). \(s.displayName)")
+
+                    if let matchCount {
+                        Spacer()
+
+                        CountPill(count: matchCount)
+                    }
+                }
+            } else if let s = quranData.surah(surahId) {
                 let latinHeader1 = "\(s.id). \(s.nameTransliteration)".uppercased()
 
                 let latinHeader2 = "(\(s.nameEnglish)) - ".uppercased()
@@ -5573,12 +5610,12 @@ struct QuranView: View {
         HStack {
             // An ayah found by its name says the name back: the row alone shows "2:255".
             Text(context.isExactAyahReference
-                 ? (NamedAyah.resolve(compiledSearch.navigation)?.title.uppercased() ?? "AYAH SEARCH RESULTS")
-                 : "AYAH SEARCH RESULTS")
+                 ? (NamedAyah.resolve(compiledSearch.navigation)?.title.uppercased() ?? String(localized: "AYAH SEARCH RESULTS"))
+                 : String(localized: "AYAH SEARCH RESULTS"))
 
             Spacer()
 
-            Text(context.ayahCountDisplayText)
+            Text(context.ayahCountDisplayText.localizedDigits)
                 .font(.caption.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(settings.accentColor.color)
@@ -5635,7 +5672,7 @@ struct QuranView: View {
         if context.canShowMoreAyahHits && quranData.isVerseSearchReady {
             #if os(iOS)
             LoadMoreControls(
-                label: "ayah matches",
+                label: String(localized: "ayah matches"),
                 onLoad: { loadMoreAyahMatches($0) },
                 onLoadAll: { loadAllAyahMatches() }
             )
@@ -5863,7 +5900,7 @@ private extension View {
     @ViewBuilder
     func sectionIndexLabelWhenAvailable(_ label: String) -> some View {
         if #available(iOS 26.0, watchOS 26.0, *) {
-            sectionIndexLabel(label)
+            sectionIndexLabel(label.localizedDigits)
         } else {
             self
         }

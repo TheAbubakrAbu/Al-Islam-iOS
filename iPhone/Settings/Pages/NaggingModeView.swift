@@ -49,12 +49,12 @@ struct NaggingDeadline: Identifiable {
     let key: ReferenceWritableKeyPath<Settings, Bool>
 
     static let all: [NaggingDeadline] = [
-        .init(id: "shurooq", asks: "Fajr", caption: "Before Shurooq", key: \Settings.naggingSunrise),
-        .init(id: "asr", asks: "Dhuhr", caption: "Before Asr", key: \Settings.naggingAsr),
-        .init(id: "maghrib", asks: "Asr", caption: "Before Maghrib", key: \Settings.naggingMaghrib),
-        .init(id: "isha", asks: "Maghrib", caption: "Before Isha", key: \Settings.naggingIsha),
-        .init(id: "midnight", asks: "Isha", caption: "Before Islamic Midnight", key: \Settings.naggingIslamicMidnight),
-        .init(id: "fajr", asks: "Isha", caption: "Before Fajr, the last call", key: \Settings.naggingFajr),
+        .init(id: "shurooq", asks: "Fajr", caption: String(localized: "Before Shurooq"), key: \Settings.naggingSunrise),
+        .init(id: "asr", asks: "Dhuhr", caption: String(localized: "Before Asr"), key: \Settings.naggingAsr),
+        .init(id: "maghrib", asks: "Asr", caption: String(localized: "Before Maghrib"), key: \Settings.naggingMaghrib),
+        .init(id: "isha", asks: "Maghrib", caption: String(localized: "Before Isha"), key: \Settings.naggingIsha),
+        .init(id: "midnight", asks: "Isha", caption: String(localized: "Before Islamic Midnight"), key: \Settings.naggingIslamicMidnight),
+        .init(id: "fajr", asks: "Isha", caption: String(localized: "Before Fajr, the last call"), key: \Settings.naggingFajr),
     ]
 }
 
@@ -65,8 +65,8 @@ struct NaggingModeView: View {
     @ObservedObject private var systemSettings = SystemSettings.shared
     /// The row's trailing read-out wherever this screen is linked from: "Off", "On", or "Paused".
     static func statusValue(_ settings: Settings) -> String {
-        guard settings.naggingMode else { return "Off" }
-        return settings.naggingPauseEnd == nil ? "On" : "Paused"
+        guard settings.naggingMode else { return String(localized: "Off") }
+        return settings.naggingPauseEnd == nil ? String(localized: "On") : String(localized: "Paused")
     }
 
     // MARK: What the choices amount to
@@ -92,10 +92,13 @@ struct NaggingModeView: View {
 
     /// "30, 15, 10 and 5 minutes before", from the scheduler's own arithmetic.
     private func scheduleLine(forLead lead: Int) -> String {
-        let minutes = cascade(forLead: lead).map(String.init)
-        guard let last = minutes.last else { return "No reminders" }
-        if minutes.count == 1 { return "\(last) minutes before" }
-        return minutes.dropLast().joined(separator: ", ") + " and \(last) minutes before"
+        let minutes = cascade(forLead: lead).map { $0.formatted() }
+        guard let last = minutes.last else { return String(localized: "No reminders") }
+        if minutes.count == 1 { return String(localized: "\(last) minutes before") }
+        // The list, then the one "minutes before" phrase: English reads as it always did, Arabic joins
+        // the numbers in its own list format.
+        let list = minutes.sentenceList { String(localized: "\($0.dropLast().joined(separator: ", ")) and \($0.last!)") }
+        return String(localized: "\(list) minutes before")
     }
 
     /// Reminders in a day on which nothing gets marked: the most this schedule can ever send.
@@ -109,10 +112,10 @@ struct NaggingModeView: View {
 
     private static func leadTitle(_ minutes: Int) -> String {
         switch minutes {
-        case 60: return "1 hour"
-        case 90: return "1.5 hours"
-        case 120: return "2 hours"
-        default: return "\(minutes) min"
+        case 60: return String(localized: "1 hour")
+        case 90: return String(localized: "1.5 hours")
+        case 120: return String(localized: "2 hours")
+        default: return String(localized: "\(minutes) min")
         }
     }
 
@@ -153,7 +156,7 @@ struct NaggingModeView: View {
                 // Every advanced section here lives inside `if settings.naggingMode` above, so with
                 // the mode off the switch would hide nothing at all.
                 AdvancedSettingsSection(screen: .naggingMode,
-                                        hides: "how often the reminders repeat, the last calls, a start for each prayer, a check-in after the adhan, the tone and the verse",
+                                        hides: String(localized: "how often the reminders repeat, the last calls, a start for each prayer, a check-in after the adhan, the tone and the verse"),
                                         applies: settings.naggingMode)
             }
             .themedListRowBackground()
@@ -166,7 +169,7 @@ struct NaggingModeView: View {
     }
 
     private func caption(_ text: String) -> some View {
-        Text(text)
+        Text(text.localizedDigits)
             .font(.caption)
             .foregroundColor(.secondary)
             .fixedSize(horizontal: false, vertical: true)
@@ -177,8 +180,8 @@ struct NaggingModeView: View {
 
     private var masterSection: some View {
         Section {
-            SettingsToggle("Nagging Mode",
-                           caption: "Asks \u{201C}Did you pray?\u{201D} as a prayer's time runs out, and keeps asking until you answer.",
+            SettingsToggle(String(localized: "Nagging Mode"),
+                           caption: String(localized: "Asks \u{201C}Did you pray?\u{201D} as a prayer's time runs out, and keeps asking until you answer."),
                            isOn: Binding(
                 get: { settings.naggingMode },
                 set: { newValue in
@@ -216,7 +219,7 @@ struct NaggingModeView: View {
     // MARK: Pause
 
     private static let pauseChoices: [(hours: Int, title: String)] = [
-        (24, "For a Day"), (72, "For 3 Days"), (168, "For a Week"),
+        (24, String(localized: "For a Day")), (72, String(localized: "For 3 Days")), (168, String(localized: "For a Week")),
     ]
 
     /// One row under the switch, not a section of its own: the control someone reaches for on a sick
@@ -228,7 +231,7 @@ struct NaggingModeView: View {
         VStack(alignment: .leading, spacing: 4) {
             Menu {
                 ForEach(Self.pauseChoices, id: \.hours) { choice in
-                    Button(choice.title) {
+                    Button(choice.title.localizedDigits) {
                         settings.hapticFeedback()
                         withAnimation { settings.pauseNagging(forHours: choice.hours) }
                     }
@@ -246,11 +249,11 @@ struct NaggingModeView: View {
                 .contentShape(Rectangle())
             }
 
-            caption("For a sick day or a flight. Adhans and prayer-time notifications keep coming.")
+            caption(String(localized: "For a sick day or a flight. Adhans and prayer-time notifications keep coming."))
         }
         #else
         ForEach(Self.pauseChoices, id: \.hours) { choice in
-            Button("Pause \(choice.title)") {
+            Button(String(localized: "Pause \(choice.title)").localizedDigits) {
                 settings.hapticFeedback()
                 withAnimation { settings.pauseNagging(forHours: choice.hours) }
             }
@@ -267,7 +270,7 @@ struct NaggingModeView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Until \(end.formatted(date: .abbreviated, time: .shortened))")
 
-                    caption("Only the \u{201C}Did you pray?\u{201D} reminders are held. For menstruation or postpartum, pause tracking in the Prayer Tracker instead.")
+                    caption(String(localized: "Only the \u{201C}Did you pray?\u{201D} reminders are held. For menstruation or postpartum, pause tracking in the Prayer Tracker instead."))
                 }
             }
 
@@ -304,7 +307,7 @@ struct NaggingModeView: View {
                     .foregroundColor(settings.accentColor.color)
                     .fixedSize(horizontal: false, vertical: true)
             } else if !settings.advanced(.naggingMode) {
-                caption("Each prayer has its own start time, under Which Prayers.")
+                caption(String(localized: "Each prayer has its own start time, under Which Prayers."))
             }
 
             if settings.advanced(.naggingMode) {
@@ -317,12 +320,12 @@ struct NaggingModeView: View {
 
                 Picker("Last Calls", selection: $adhanSettings.naggingLastCallsRaw) {
                     ForEach(NaggingLastCalls.allCases) { option in
-                        Text(option.title).tag(option.rawValue)
+                        Text(option.title.localizedDigits).tag(option.rawValue)
                     }
                 }
                 .onChange(of: settings.naggingLastCallsRaw) { _ in settings.hapticFeedback() }
 
-                SettingsToggle("Different Start for Each Prayer", caption: "A short lead before Shurooq, a long one before Maghrib: set each under Which Prayers.", isOn: $adhanSettings.naggingPerDeadlineStart)
+                SettingsToggle(String(localized: "Different Start for Each Prayer"), caption: String(localized: "A short lead before Shurooq, a long one before Maghrib: set each under Which Prayers."), isOn: $adhanSettings.naggingPerDeadlineStart)
                     .onChange(of: settings.naggingPerDeadlineStart) { _ in fitIntervalToLeads() }
 
                 caption(budgetLine)
@@ -335,9 +338,9 @@ struct NaggingModeView: View {
     /// which only matters to someone who does not open the app.
     private var budgetLine: String {
         let count = remindersPerDay
-        let base = "Up to \(count) reminder\(count == 1 ? "" : "s") a day, none for a prayer once you mark it."
+        let base = count == 1 ? String(localized: "Up to 1 reminder a day, none for a prayer once you mark it.") : String(localized: "Up to \(count) reminders a day, none for a prayer once you mark it.")
         guard count > 24 else { return base }
-        return base + " iOS queues 64 notifications at a time, so a schedule this busy covers fewer days ahead; opening the app every day or two keeps it topped up."
+        return String(localized: "\(base) iOS queues 64 notifications at a time, so a schedule this busy covers fewer days ahead; opening the app every day or two keeps it topped up.")
     }
 
     // MARK: Which prayers
@@ -349,7 +352,7 @@ struct NaggingModeView: View {
             // CLOSES. The scheduler (`Settings.prayerQuestion(for:)`) has always worked this way;
             // the old labels ("Nagging before Dhuhr") just never said so.
             ForEach(NaggingDeadline.all) { deadline in
-                SettingsToggle("Did you pray \(deadline.asks)?", caption: deadline.caption, isOn: Binding(
+                SettingsToggle(String(localized: "Did you pray \(deadline.asks.localizedDisplay)?"), caption: deadline.caption, isOn: Binding(
                     get: { settings[keyPath: deadline.key] },
                     set: { newValue in
                         settings[keyPath: deadline.key] = newValue
@@ -383,7 +386,7 @@ struct NaggingModeView: View {
                 }
             }
 
-            caption("Isha has two rows because its end is read two ways, the middle of the night or Fajr. Keep either or both.")
+            caption(String(localized: "Isha has two rows because its end is read two ways, the middle of the night or Fajr. Keep either or both."))
         }
     }
 
@@ -396,12 +399,12 @@ struct NaggingModeView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Picker("Check In After the Adhan", selection: $adhanSettings.naggingFollowUpMinutes) {
                     ForEach(Settings.naggingFollowUpOptions, id: \.self) { minutes in
-                        Text(minutes == 0 ? "Off" : "\(minutes) min after").tag(minutes)
+                        Text(minutes == 0 ? String(localized: "Off") : String(localized: "\(minutes) min after")).tag(minutes)
                     }
                 }
                 .onChange(of: settings.naggingFollowUpMinutes) { _ in settings.hapticFeedback() }
 
-                caption("One early nudge, \u{201C}Have you prayed Dhuhr yet?\u{201D}, this long after the adhan while the prayer is unmarked.")
+                caption(String(localized: "One early nudge, \u{201C}Have you prayed Dhuhr yet?\u{201D}, this long after the adhan while the prayer is unmarked."))
             }
 
             Picker("Nag Tone", selection: $adhanSettings.naggingSound) {
@@ -412,10 +415,17 @@ struct NaggingModeView: View {
             }
             .onChange(of: settings.naggingSound) { _ in settings.hapticFeedback() }
 
-            SettingsToggle("Louder Last Call", caption: "The final reminder before each deadline plays Alarm, the tone that carries furthest.", isOn: $adhanSettings.naggingLoudLastCall)
+            SettingsToggle(String(localized: "Louder Last Call"), caption: String(localized: "The final reminder before each deadline plays Alarm, the tone that carries furthest."), isOn: $adhanSettings.naggingLoudLastCall)
 
-            SettingsToggle("Add a Verse to the Last Call", caption: "A verse about prayer, such as \(Settings.nagAyat[0].reference), in Saheeh International.", isOn: $adhanSettings.naggingAyahInLastCall)
+            SettingsToggle(String(localized: "Add a Verse to the Last Call"), caption: String(localized: "A verse about prayer, such as \(nagAyahCitation), in Saheeh International."), isOn: $adhanSettings.naggingAyahInLastCall)
         }
+    }
+
+    /// The caption's example verse: the stored "Quran 4:103" is data, written here the way the interface
+    /// writes a Quran citation, in its own digits.
+    private var nagAyahCitation: String {
+        let verse = Settings.nagAyat[0].reference.replacingOccurrences(of: "Quran ", with: "").localizedDigits
+        return String(localized: "Quran \(verse)")
     }
 
     // MARK: How it works
@@ -424,8 +434,8 @@ struct NaggingModeView: View {
     private var howItWorksSection: some View {
         Section {
             NavigationLink(destination: LazyDestination { NaggingHowItWorksView() }) {
-                SettingsRowLabel(title: "How Nagging Works", systemImage: "questionmark.circle.fill",
-                                 subtitle: "Lock Screen answers, the tracker, a Focus",
+                SettingsRowLabel(title: String(localized: "How Nagging Works"), systemImage: "questionmark.circle.fill",
+                                 subtitle: String(localized: "Lock Screen answers, the tracker, a Focus"),
                                  tint: SettingsTint.notifications)
             }
             .tint(settings.accentColor.color)
@@ -441,14 +451,14 @@ struct NaggingHowItWorksView: View {
         List {
             Group {
                 Section {
-                    knowRow("hand.tap.fill", "Answer without opening the app",
-                            "Touch and hold a reminder on the Lock Screen for \u{201C}Yes, on time\u{201D} and \u{201C}Yes, but late\u{201D}. Either one marks the prayer tracker and cancels the rest of that prayer's reminders.")
-                    knowRow("checklist", "Marking the tracker counts as your answer",
-                            "Mark a prayer on the Adhan tab, on time, late, or missed, and its reminders stop for the day. Clear the mark and they come back.")
-                    knowRow("questionmark.bubble.fill", "Tapping any prayer notification asks too",
-                            "Open the app from an adhan, a prenotification, or a nag, and it asks \u{201C}Did you pray it?\u{201D} about the prayer that notification was for, even days later, unless you have already answered.")
-                    knowRow("moon.zzz.fill", "They reach you in a Focus if you let them",
-                            "Prayer notifications are marked Time Sensitive. Allow Time Sensitive notifications for \(AppIdentifiers.appName) in your Focus and they come through Sleep and Do Not Disturb.")
+                    knowRow("hand.tap.fill", String(localized: "Answer without opening the app"),
+                            String(localized: "Touch and hold a reminder on the Lock Screen for \u{201C}Yes, on time\u{201D} and \u{201C}Yes, but late\u{201D}. Either one marks the prayer tracker and cancels the rest of that prayer's reminders."))
+                    knowRow("checklist", String(localized: "Marking the tracker counts as your answer"),
+                            String(localized: "Mark a prayer on the Adhan tab, on time, late, or missed, and its reminders stop for the day. Clear the mark and they come back."))
+                    knowRow("questionmark.bubble.fill", String(localized: "Tapping any prayer notification asks too"),
+                            String(localized: "Open the app from an adhan, a prenotification, or a nag, and it asks \u{201C}Did you pray it?\u{201D} about the prayer that notification was for, even days later, unless you have already answered."))
+                    knowRow("moon.zzz.fill", String(localized: "They reach you in a Focus if you let them"),
+                            String(localized: "Prayer notifications are marked Time Sensitive. Allow Time Sensitive notifications for \(AppIdentifiers.displayName) in your Focus and they come through Sleep and Do Not Disturb."))
                 }
             }
             .themedListRowBackground()

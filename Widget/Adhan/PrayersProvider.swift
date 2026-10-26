@@ -52,7 +52,15 @@ enum AdhanWidgetDateFormatting {
     /// `.medium`: "Rab. I 24, 1448 AH". `.full`: "Sunday, Rabiʻ I 24, 1448 AH", composed rather than
     /// formatted in one go, so the weekday is the weekday date's and the rest the adjusted date's (a
     /// single formatter printed the adjusted date's weekday, a day off under any adjustment).
+    ///
+    /// In the language the interface is showing (`Language.interface`): an Arabic interface writes the
+    /// captions the Arabic lock-screen tile does, "٢٤ ربيع الأول ١٤٤٨ هـ" and "الأحد، ٢٤ ربيع الأول ١٤٤٨ هـ",
+    /// where they were English beside Arabic prayer names.
     static func hijriDate(for entry: PrayersEntry, style: DateFormatter.Style) -> String {
+        if Language.interface == .arabic {
+            let parts = hijriParts(for: entry, language: .arabic)
+            return style == .full ? "\(parts.weekday)، \(parts.dayMonthYear)" : parts.dayMonthYear
+        }
         let date = hijriReferenceDate(for: entry)
         guard style == .full else { return mediumHijriFormatter.string(from: date) }
         let weekday = englishWeekdayFormatter.string(from: hijriWeekdayDate(for: entry))
@@ -67,6 +75,11 @@ enum AdhanWidgetDateFormatting {
     enum Language {
         case english
         case arabic
+
+        /// The language the interface is showing (`AppLanguage`, which reads the widget extension's own
+        /// bundle, so it follows the app's language choice): for everything but the Hijri-alone tiles,
+        /// whose English and Arabic kinds are explicit.
+        static var interface: Language { AppLanguage.isArabic ? .arabic : .english }
     }
 
     /// One Hijri date broken into the pieces the lock-screen date widgets set separately: a circular
@@ -141,6 +154,8 @@ enum AdhanWidgetDateFormatting {
     /// may already have turned at Maghrib, the clock's has not.
     static let gregorianWeekdayFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        // Gregorian named, not inherited: a device on the Islamic calendar printed a second Hijri date.
+        formatter.calendar = Calendar(identifier: .gregorian)
         formatter.setLocalizedDateFormatFromTemplate("EEEE")
         return formatter
     }()
@@ -148,6 +163,7 @@ enum AdhanWidgetDateFormatting {
     /// "September 5, 2026" (the weekday sits on the line above it).
     static let gregorianLongFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
         formatter.dateStyle = .long
         return formatter
     }()
@@ -495,7 +511,8 @@ struct PrayersProvider: TimelineProvider {
         return PrayersEntry(
             date:                       now,
             accentColor:                settings.accentColor,
-            currentCity:                settings.currentLocation?.city ?? "",
+            // The label as the widgets SHOW it (`Location.displayCity`): the entry is display-only.
+            currentCity:                settings.currentLocation?.displayCity ?? "",
             prayers:                    obj.prayers,
             fullPrayers:                obj.fullPrayers,
             currentPrayer:              settings.currentPrayer,
@@ -533,7 +550,7 @@ struct PrayersProvider: TimelineProvider {
         return PrayersEntry(
             date: now,
             accentColor: accent,
-            currentCity: "Mecca",
+            currentCity: String(localized: "Mecca"),
             prayers: prayers,
             fullPrayers: prayers,
             currentPrayer: current,

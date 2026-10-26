@@ -16,10 +16,12 @@ enum ActivityKind: String, CaseIterable, Codable {
 
     var title: String {
         switch self {
-        case .read: return "Read"
-        case .listen: return "Listen"
-        case .dhikr: return "Dhikr"
-        case .hadith: return "Hadith"
+        case .read: return String(localized: "Read")
+        // Arabic names the activities as nouns (القراءة, الذكر), so it takes the noun key; the shared
+        // "Listen" key is the verb on the play buttons. English keeps "Listen" beside "Read".
+        case .listen: return AppLanguage.isArabic ? String(localized: "Listening") : String(localized: "Listen")
+        case .dhikr: return String(localized: "Dhikr")
+        case .hadith: return String(localized: "Hadith")
         }
     }
 
@@ -35,10 +37,10 @@ enum ActivityKind: String, CaseIterable, Codable {
     /// "12 ayahs", "1 surah", "100 counts", "3 hadiths".
     func amount(_ n: Int) -> String {
         switch self {
-        case .read: return "\(n) ayah\(n == 1 ? "" : "s")"
-        case .listen: return "\(n) surah\(n == 1 ? "" : "s")"
-        case .dhikr: return "\(n) count\(n == 1 ? "" : "s")"
-        case .hadith: return "\(n) hadith\(n == 1 ? "" : "s")"
+        case .read: return n == 1 ? String(localized: "1 ayah") : String(localized: "\(n) ayahs")
+        case .listen: return n == 1 ? String(localized: "1 surah") : String(localized: "\(n) surahs")
+        case .dhikr: return n == 1 ? String(localized: "1 count") : String(localized: "\(n) counts")
+        case .hadith: return n == 1 ? String(localized: "1 hadith") : String(localized: "\(n) hadiths")
         }
     }
 }

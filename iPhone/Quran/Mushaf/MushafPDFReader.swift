@@ -244,6 +244,36 @@ private final class FitFlooredPDFView: PDFView {
     private var pinnedSize: CGSize = .zero
     private var pinnedDocument: ObjectIdentifier?
 
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        guard window != nil else { return }
+        // A tick later: PDFKit makes its document view first responder from this very entry into
+        // the window, and the hosting view's focus bridge must not be driven from inside it.
+        DispatchQueue.main.async { [weak self] in self?.releaseFirstResponder() }
+    }
+
+    /// PDFKit's document view takes first responder as it enters the window and keeps it. UIKit
+    /// resigns a first responder inside a collection view in the middle of any batch update that
+    /// moves its cell (`_resignOrRebaseFirstResponderViewWithIndexPathMapping`), and PDFKit's resign
+    /// hands first responder straight on - through `_UIHostingView._didChange(toFirstResponder:)`,
+    /// inside SwiftUI's own update of the pager (`UIKitPagingView.updateUIView`): the view graph
+    /// cycled and the main thread never came back. Measured 2026-10-25: a far Choose Surah turn over
+    /// the facsimile mounted the target's ring, the title said al-Hadid, the page stayed on
+    /// al-Mujadilah, 100% CPU for good (Abu: "it will go to mujadilah"). Nothing here needs the
+    /// responder: paging is the pager's, the arrow keys are the reader's, the find interaction is off.
+    func releaseFirstResponder() {
+        guard let responder = Self.firstResponder(in: self) else { return }
+        responder.resignFirstResponder()
+    }
+
+    private static func firstResponder(in view: UIView) -> UIView? {
+        if view.isFirstResponder { return view }
+        for subview in view.subviews {
+            if let found = firstResponder(in: subview) { return found }
+        }
+        return nil
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
         let documentID = document.map(ObjectIdentifier.init)
@@ -348,6 +378,8 @@ private struct MushafPDFPageView: UIViewRepresentable {
             view.autoScales = true
             view.setNeedsLayout()
             view.layoutIfNeeded()
+            // The new document view took first responder as it was laid into the window.
+            (view as? FitFlooredPDFView)?.releaseFirstResponder()
         }
     }
 
@@ -439,6 +471,31 @@ private struct MushafPDFPageView: UIViewRepresentable {
         let top = rect.maxY - CGFloat(firstInkRow) * scale
         let bottom = rect.maxY - CGFloat(lastInkRow + 1) * scale
         return (top, bottom)
+    }
+}
+
+/// The reader's guard before it changes the pager's mounted set over the facsimile: no PDFKit view may
+/// hold first responder when the pager's batch update runs (see `FitFlooredPDFView.releaseFirstResponder`).
+/// Called outside SwiftUI's update, right before the write that changes the set.
+enum MushafFacsimileFocus {
+    static func release() {
+        let windows = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+        for window in windows {
+            guard let responder = firstResponder(in: window) else { continue }
+            if NSStringFromClass(type(of: responder)).contains("PDF") {
+                responder.resignFirstResponder()
+            }
+        }
+    }
+
+    private static func firstResponder(in view: UIView) -> UIView? {
+        if view.isFirstResponder { return view }
+        for subview in view.subviews {
+            if let found = firstResponder(in: subview) { return found }
+        }
+        return nil
     }
 }
 

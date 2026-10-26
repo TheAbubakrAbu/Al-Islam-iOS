@@ -194,14 +194,58 @@ struct SheetPresentationModifier: ViewModifier {
     /// `PresentationDetent`, which does not exist on iOS 15.
     @State private var isLarge: Bool
 
-    init(startLarge: Bool = false) {
+    /// The sheet's own reason to refuse interactive dismissal (a save in flight, a system prompt up),
+    /// folded in with the opening guard below. Passed here rather than stacked as a second
+    /// `interactiveDismissDisabled` outside this modifier: nested copies resolve in one direction
+    /// only, and whichever lost would be silently ignored.
+    var dismissDisabled: Bool
+
+    /// True for the first moments after the sheet appears. A sheet opened by a tap is closed by the
+    /// SECOND tap of a double tap: UIKit presents on the first, and the second lands on the dimmed
+    /// backdrop above the still-rising sheet, which is its "tap outside to close" (reproduced on the
+    /// simulator at a 300 ms gap; at 150 ms the transition still swallows it). The ayah preview card
+    /// opens a word card on ONE tap, so a double-tapped word opened its card and closed it again in
+    /// the same motion (Abu, 2026-10-22: "when I double click a word there it auto dismisses it").
+    /// Nobody means to close a sheet half a second after opening it, so interactive dismissal (the
+    /// backdrop tap, the swipe down) waits that long; programmatic dismissal never does.
+    @State private var settling = true
+    private static let settleDuration: TimeInterval = 0.6
+
+    init(startLarge: Bool = false, dismissDisabled: Bool = false) {
         _isLarge = State(initialValue: startLarge)
+        self.dismissDisabled = dismissDisabled
     }
 
     func body(content: Content) -> some View {
+        detents(content)
+            .interactiveDismissDisabled(settling || dismissDisabled)
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDuration) { settling = false }
+            }
+    }
+
+    /// The keyboard came up for a field in THIS sheet while it stood at the medium detent: commit the
+    /// large detent. UIKit already lifts a medium sheet to make room for the keyboard, so nothing moves
+    /// that was not already moving; what changes is the way OUT. Closed with the keyboard up (the X, a
+    /// pick, a swipe), a sheet that was merely lifted snapped back toward its medium height while
+    /// sliding away, its content re-laid out mid-slide (Abu, 2026-10-23, Choose Surah: "when it's half
+    /// screen and I type and then dismiss it does a weird glitch thing"; frame-scanned on the
+    /// simulator: the sheet jumped about 90 pt down a quarter of the way out and its search bar
+    /// vanished). At a committed large detent the same close is one clean slide (checked first with
+    /// `-sheetLarge`). The sheet then STAYS large once the keyboard goes, which the results it was
+    /// typed for want anyway; it can still be dragged back down. Every sheet with a search bar or a
+    /// text field gets this, so none of them needs to open full screen for it.
+    private func growForKeyboard() {
+        guard !isLarge else { return }
+        isLarge = true
+    }
+
+    @ViewBuilder
+    private func detents(_ content: Content) -> some View {
         if #available(iOS 16.0, *) {
             if UIDevice.current.userInterfaceIdiom == .phone {
                 content
+                    .background(SheetKeyboardProbe(onKeyboard: growForKeyboard))
                     .presentationDetents(
                         Self.forceLarge ? [.large] : [.medium, .large],
                         selection: Binding(
@@ -218,6 +262,73 @@ struct SheetPresentationModifier: ViewModifier {
             }
         } else {
             content
+        }
+    }
+}
+
+/// Reports a keyboard coming up for a first responder inside the sheet this view sits in, and not for
+/// one in a sheet stacked above it or anywhere else: the keyboard notification is app-wide, so the probe
+/// finds the root of its own presentation up the responder chain and checks that the first responder is
+/// a descendant of that controller's view. Inert otherwise: no size of its own, no touches.
+private struct SheetKeyboardProbe: UIViewRepresentable {
+    let onKeyboard: () -> Void
+
+    func makeUIView(context: Context) -> ProbeView {
+        let view = ProbeView()
+        view.onKeyboard = onKeyboard
+        return view
+    }
+
+    func updateUIView(_ view: ProbeView, context: Context) {
+        view.onKeyboard = onKeyboard
+    }
+
+    final class ProbeView: UIView {
+        var onKeyboard: (() -> Void)?
+
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            isUserInteractionEnabled = false
+            backgroundColor = .clear
+            // Selector-based, so the observation ends with the view and nothing has to be removed.
+            NotificationCenter.default.addObserver(
+                self, selector: #selector(keyboardWillShow),
+                name: UIResponder.keyboardWillShowNotification, object: nil
+            )
+        }
+
+        required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+        @objc private func keyboardWillShow() {
+            guard let window, let sheet = presentedRoot,
+                  let responder = Self.firstResponder(in: window),
+                  responder.isDescendant(of: sheet.view) else { return }
+            onKeyboard?()
+        }
+
+        /// The root of the presentation this view is part of: up the responder chain to the first view
+        /// controller that is presented, then up its parents. A navigation stack inside the sheet is a
+        /// CHILD of the presented controller, and a `.searchable` field lives in its bar, outside the
+        /// content's own view, so the check has to be against the root.
+        private var presentedRoot: UIViewController? {
+            var responder: UIResponder? = next
+            while let current = responder {
+                if let controller = current as? UIViewController, controller.presentingViewController != nil {
+                    var root = controller
+                    while let parent = root.parent { root = parent }
+                    return root
+                }
+                responder = current.next
+            }
+            return nil
+        }
+
+        private static func firstResponder(in view: UIView) -> UIView? {
+            if view.isFirstResponder { return view }
+            for subview in view.subviews {
+                if let found = firstResponder(in: subview) { return found }
+            }
+            return nil
         }
     }
 }
@@ -305,9 +416,12 @@ extension View {
     }
 
     #if os(iOS)
-    /// `startLarge` opens the sheet at full height (see `SheetPresentationModifier.isLarge`).
-    func smallMediumSheetPresentation(startLarge: Bool = false) -> some View {
-        modifier(SheetPresentationModifier(startLarge: startLarge))
+    /// `startLarge` opens the sheet at full height (see `SheetPresentationModifier.isLarge`);
+    /// `dismissDisabled` is the sheet's own reason to refuse interactive dismissal (see
+    /// `SheetPresentationModifier.dismissDisabled`). Every standard sheet also refuses it for its
+    /// first moments on screen (`SheetPresentationModifier.settling`).
+    func smallMediumSheetPresentation(startLarge: Bool = false, dismissDisabled: Bool = false) -> some View {
+        modifier(SheetPresentationModifier(startLarge: startLarge, dismissDisabled: dismissDisabled))
     }
 
     /// An X to close, plus an optional checkmark to confirm. See `SheetDismissToolbar`.

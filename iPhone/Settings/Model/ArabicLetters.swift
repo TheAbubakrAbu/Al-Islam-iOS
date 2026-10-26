@@ -3,6 +3,13 @@ import SwiftUI
 struct LetterData: Identifiable, Codable, Equatable, Comparable {
     let id: Int
     let letter: String
+    /// [final, medial, initial]. A letter that never joins forward (alif, daal, dhaal, raa, zaay,
+    /// waaw, the hamza seats on alif and waaw, laam alif, zhe) shows the joined shape for the end and
+    /// the middle and the bare shape for the start: a detached tatweel after a space ("ا ـ") used to
+    /// stand for "the next letter starts fresh" and read as a stray dash on the tiles (Abu, 2026-10-22:
+    /// "make sure the three forms of beginning, middle, and end look good everywhere"). A position the
+    /// letter never takes is "" (taa marbuuTah and alif maqSoorah only end a word, hamzatul waSl only
+    /// begins one); every renderer reads `writtenForms`, which skips those.
     let forms: [String]
     let name: String
     let transliteration: String
@@ -25,12 +32,28 @@ struct LetterData: Identifiable, Codable, Equatable, Comparable {
     var weight: LetterWeight?
     var weightRule: String?
 
+    /// The forms the letter is actually written in, [final, medial, initial] order, without the
+    /// positions it never takes.
+    var writtenForms: [String] { forms.prefix(3).filter { !$0.isEmpty } }
+
+    /// The indices into `forms` of `writtenForms`, for a renderer that labels each position.
+    var writtenFormIndices: [Int] { forms.prefix(3).indices.filter { !forms[$0].isEmpty } }
+
     static func < (lhs: LetterData, rhs: LetterData) -> Bool {
         lhs.id < rhs.id
     }
 
     var isNonArabicScriptLetter: Bool {
         nonArabicArabicScriptLetters.contains { $0.id == id }
+    }
+}
+
+extension LetterData {
+    /// The letter's name inside a sentence: its Arabic name (بَاء) in an Arabic interface, the Latin
+    /// transliteration ("baa") otherwise. The transliteration itself stays the pronunciation guide drawn
+    /// under the letter, the search key and the AI corpus text.
+    var displayName: String {
+        AppLanguage.isArabic ? name : transliteration
     }
 }
 
@@ -80,7 +103,7 @@ let standardArabicLetters: [LetterData] = [
     LetterData(
         id: LetterID.next(),
         letter: "ا",
-        forms: ["ـا", "ـا ـ", "ا ـ"],
+        forms: ["ـا", "ـا", "ا"],
         name: "أَلِف",
         transliteration: "alif",
         showTashkeel: false,
@@ -98,13 +121,13 @@ let standardArabicLetters: [LetterData] = [
 
     LetterData(id: LetterID.next(), letter: "خ", forms: ["ـخ", "ـخـ", "خـ"], name: "خَاء", transliteration: "khaa", showTashkeel: true, sound: "kh", englishSound: "No English equivalent: the ch in the Scottish “loch” or the German “Bach”, a scrape at the back of the mouth.", weight: .heavy),
 
-    LetterData(id: LetterID.next(), letter: "د", forms: ["ـد", "ـد ـ", "د ـ"], name: "دَال", transliteration: "daal", showTashkeel: true, sound: "d", englishSound: "Like the d in “door”, with the tongue on the back of the upper front teeth.", weight: .light),
-    LetterData(id: LetterID.next(), letter: "ذ", forms: ["ـذ", "ـذ ـ", "ذ ـ"], name: "ذَال", transliteration: "dhaal", showTashkeel: true, sound: "dh", englishSound: "Like the th in “this” or “mother” (the voiced one), never the th in “three”.", weight: .light),
+    LetterData(id: LetterID.next(), letter: "د", forms: ["ـد", "ـد", "د"], name: "دَال", transliteration: "daal", showTashkeel: true, sound: "d", englishSound: "Like the d in “door”, with the tongue on the back of the upper front teeth.", weight: .light),
+    LetterData(id: LetterID.next(), letter: "ذ", forms: ["ـذ", "ـذ", "ذ"], name: "ذَال", transliteration: "dhaal", showTashkeel: true, sound: "dh", englishSound: "Like the th in “this” or “mother” (the voiced one), never the th in “three”.", weight: .light),
 
     LetterData(
         id: LetterID.next(),
         letter: "ر",
-        forms: ["ـر", "ـر ـ", "ر ـ"],
+        forms: ["ـر", "ـر", "ر"],
         name: "رَاء",
         transliteration: "raa",
         showTashkeel: true,
@@ -114,7 +137,7 @@ let standardArabicLetters: [LetterData] = [
         weightRule: "Heavy with fatha/damma, or sukoon preceded by fatha/damma (or by an incidental kasra); light with kasra, or sukoon preceded by an original kasra, unless an isti'la letter with fatha/damma follows in the same word (قِرطَاس), which makes it heavy."
     ),
 
-    LetterData(id: LetterID.next(), letter: "ز", forms: ["ـز", "ـز ـ", "ز ـ"], name: "زَاي", transliteration: "zaay", showTashkeel: true, sound: "z", englishSound: "Like the z in “zebra”.", weight: .light),
+    LetterData(id: LetterID.next(), letter: "ز", forms: ["ـز", "ـز", "ز"], name: "زَاي", transliteration: "zaay", showTashkeel: true, sound: "z", englishSound: "Like the z in “zebra”.", weight: .light),
     LetterData(id: LetterID.next(), letter: "س", forms: ["ـس", "ـسـ", "سـ"], name: "سِين", transliteration: "seen", showTashkeel: true, sound: "s", englishSound: "Like the s in “sun”.", weight: .light),
     LetterData(id: LetterID.next(), letter: "ش", forms: ["ـش", "ـشـ", "شـ"], name: "شِين", transliteration: "sheen", showTashkeel: true, sound: "sh", englishSound: "Like the sh in “ship”.", weight: .light),
 
@@ -149,7 +172,7 @@ let standardArabicLetters: [LetterData] = [
     LetterData(
         id: LetterID.next(),
         letter: "و",
-        forms: ["ـو", "ـو ـ", "و ـ"],
+        forms: ["ـو", "ـو", "و"],
         name: "وَاو",
         transliteration: "waaw",
         showTashkeel: true,
@@ -179,18 +202,18 @@ let otherArabicLetters: [LetterData] = {
     // the tables are first touched.
     _ = standardArabicLetters.count
     return [
-    LetterData(id: LetterID.next(), letter: "ة", forms: ["ـة", "ـة ـ", "ة ـ"], name: "تَاء مَربُوطَة", transliteration: "taa marbuuTah", showTashkeel: false, sound: ""),
-    LetterData(id: LetterID.next(), letter: "ء", forms: ["ـ ء", "ـ ء ـ", "ء ـ"], name: "هَمزَة", transliteration: "hamza", showTashkeel: false, sound: ""),
-    LetterData(id: LetterID.next(), letter: "أ", forms: ["ـأ", "ـأ ـ", "أ ـ"], name: "هَمزَة عَلَى أَلِف", transliteration: "hamza on alif", showTashkeel: false, sound: ""),
-    LetterData(id: LetterID.next(), letter: "إ", forms: ["ـإ", "ـإ ـ", "إ ـ"], name: "هَمزَة تَحتَ أَلِف", transliteration: "hamza under alif", showTashkeel: false, sound: ""),
+    LetterData(id: LetterID.next(), letter: "ة", forms: ["ـة", "", ""], name: "تَاء مَربُوطَة", transliteration: "taa marbuuTah", showTashkeel: false, sound: ""),
+    LetterData(id: LetterID.next(), letter: "ء", forms: ["ء", "ء", "ء"], name: "هَمزَة", transliteration: "hamza", showTashkeel: false, sound: ""),
+    LetterData(id: LetterID.next(), letter: "أ", forms: ["ـأ", "ـأ", "أ"], name: "هَمزَة عَلَى أَلِف", transliteration: "hamza on alif", showTashkeel: false, sound: ""),
+    LetterData(id: LetterID.next(), letter: "إ", forms: ["ـإ", "ـإ", "إ"], name: "هَمزَة تَحتَ أَلِف", transliteration: "hamza under alif", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "ئ", forms: ["ـئ", "ـئـ", "ئـ"], name: "هَمزَة عَلَى يَاء", transliteration: "hamza on yaa", showTashkeel: false, sound: ""),
-    LetterData(id: LetterID.next(), letter: "ؤ", forms: ["ـؤ", "ـؤ ـ", "ؤ ـ"], name: "هَمزَة عَلَى وَاو", transliteration: "hamza on waaw", showTashkeel: false, sound: ""),
-    LetterData(id: LetterID.next(), letter: "ٱ", forms: ["ـٱ", "ـٱ ـ", "ٱ ـ"], name: "هَمزَة الوَصل", transliteration: "hamzatul waSl", showTashkeel: false, sound: ""),
-    LetterData(id: LetterID.next(), letter: "آ", forms: ["ـآ", "ـآ ـ", "آ ـ"], name: "أَلِف مَدّ", transliteration: "alif madd", showTashkeel: false, sound: ""),
+    LetterData(id: LetterID.next(), letter: "ؤ", forms: ["ـؤ", "ـؤ", "ؤ"], name: "هَمزَة عَلَى وَاو", transliteration: "hamza on waaw", showTashkeel: false, sound: ""),
+    LetterData(id: LetterID.next(), letter: "ٱ", forms: ["", "", "ٱ"], name: "هَمزَة الوَصل", transliteration: "hamzatul waSl", showTashkeel: false, sound: ""),
+    LetterData(id: LetterID.next(), letter: "آ", forms: ["ـآ", "ـآ", "آ"], name: "أَلِف مَدّ", transliteration: "alif madd", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "يٓ", forms: ["ـيٓ", "ـيٓـ", "يٓـ"], name: "يَاء مَدّ", transliteration: "yaa madd", showTashkeel: false, sound: ""),
-    LetterData(id: LetterID.next(), letter: "وٓ", forms: ["ـوٓ", "ـوٓ ـ", "وٓ ـ"], name: "وَاو مَدّ", transliteration: "waaw madd", showTashkeel: false, sound: ""),
-    LetterData(id: LetterID.next(), letter: "ى", forms: ["ـى", "ـى ـ", "ى ـ"], name: "أَلِف مَقصُورَة", transliteration: "alif maqSoorah", showTashkeel: false, sound: ""),
-    LetterData(id: LetterID.next(), letter: "ل ا - لا", forms: ["ـلا", "ـلا ـ", "لا ـ"], name: "لَام أَلِف", transliteration: "laam alif", showTashkeel: false, sound: ""),
+    LetterData(id: LetterID.next(), letter: "وٓ", forms: ["ـوٓ", "ـوٓ", "وٓ"], name: "وَاو مَدّ", transliteration: "waaw madd", showTashkeel: false, sound: ""),
+    LetterData(id: LetterID.next(), letter: "ى", forms: ["ـى", "", ""], name: "أَلِف مَقصُورَة", transliteration: "alif maqSoorah", showTashkeel: false, sound: ""),
+    LetterData(id: LetterID.next(), letter: "ل ا - لا", forms: ["ـلا", "ـلا", "لا"], name: "لَام أَلِف", transliteration: "laam alif", showTashkeel: false, sound: ""),
     ]
 }()
 
@@ -204,7 +227,7 @@ let nonArabicArabicScriptLetters: [LetterData] = {
     LetterData(id: LetterID.next(), letter: "ڤ", forms: ["ـڤ", "ـڤـ", "ڤـ"], name: "ڤے", transliteration: "ve", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "گ", forms: ["ـگ", "ـگـ", "گـ"], name: "گاف", transliteration: "gaaf (gaa)", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "ڭ", forms: ["ـڭ", "ـڭـ", "ڭـ"], name: "ڭاف", transliteration: "ngaf", showTashkeel: false, sound: ""),
-    LetterData(id: LetterID.next(), letter: "ژ", forms: ["ـژ", "ـژ ـ", "ژ ـ"], name: "ژے", transliteration: "zhe", showTashkeel: false, sound: "")
+    LetterData(id: LetterID.next(), letter: "ژ", forms: ["ـژ", "ـژ", "ژ"], name: "ژے", transliteration: "zhe", showTashkeel: false, sound: "")
     ]
 }()
 

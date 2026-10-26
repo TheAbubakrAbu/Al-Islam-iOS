@@ -13,12 +13,19 @@ struct TrackedBar: View {
     /// the whole sense of "forward" - runs right-to-left.
     var rightToLeft: Bool = false
 
+    /// `.leading` / `.trailing` follow the interface: in the Arabic interface `.trailing` is the LEFT
+    /// edge, which grew the mushaf's bars from the wrong side. `rightToLeft` means the physical right.
+    @Environment(\.layoutDirection) private var layoutDirection
+
     var body: some View {
         let clamped = min(max(fraction, 0), 1)
+        let fillEdge: Alignment = rightToLeft
+            ? (layoutDirection == .rightToLeft ? .leading : .trailing)
+            : .leading
         return GeometryReader { geo in
             Capsule()
                 .fill(color.opacity(0.20))
-                .overlay(alignment: rightToLeft ? .trailing : .leading) {
+                .overlay(alignment: fillEdge) {
                     Capsule()
                         .fill(color)
                         .frame(width: max(geo.size.width * clamped, clamped > 0 ? height : 0))
@@ -169,12 +176,12 @@ enum AyahDisplayOption: CaseIterable, Hashable, Sendable {
 
     var title: String {
         switch self {
-        case .beginner:       return "Beginner Mode"
-        case .tajweed:        return "Tajweed Colors"
-        case .hideTashkeel:   return "Hide Tashkeel"
-        case .hideDots:       return "Hide Dots"
-        case .highlightAllah: return "Highlight Allah"
-        case .wordByWord:     return "Word by Word"
+        case .beginner:       return String(localized: "Beginner Mode")
+        case .tajweed:        return String(localized: "Tajweed Colors")
+        case .hideTashkeel:   return String(localized: "Hide Tashkeel")
+        case .hideDots:       return String(localized: "Hide Dots")
+        case .highlightAllah: return String(localized: "Highlight Allah")
+        case .wordByWord:     return String(localized: "Word by Word")
         }
     }
 
@@ -955,23 +962,23 @@ struct SurahView: View {
 
         switch model.style {
         case .allGreen:
-            title = "Highlighted divider"
-            message = "\(model.text)\n\nThis divider is highlighted because it marks a surah start or end. It is mostly a visual marker, not a page or juz change."
+            title = String(localized: "Highlighted divider")
+            message = String(localized: "\(localizedDividerLabel(model.text))\n\nThis divider is highlighted because it marks a surah start or end. It is mostly a visual marker, not a page or juz change.")
         case .allSecondary:
-            title = "Surah boundary"
-            message = "\(model.text)\n\nGray means the page and juz do not change here. It is mainly showing a surah start or end."
+            title = String(localized: "Surah boundary")
+            message = String(localized: "\(localizedDividerLabel(model.text))\n\nGray means the page and juz do not change here. It is mainly showing a surah start or end.")
         case .pageAccentJuzSecondary:
-            title = "Page boundary"
-            message = "\(model.text)\n\nThe color change means the page changes here. The juz stays the same."
+            title = String(localized: "Page boundary")
+            message = String(localized: "\(localizedDividerLabel(model.text))\n\nThe color change means the page changes here. The juz stays the same.")
         case .allAccent:
-            title = "Page and juz boundary"
-            message = "\(model.text)\n\nThe color change means both the page and the juz change here."
+            title = String(localized: "Page and juz boundary")
+            message = String(localized: "\(localizedDividerLabel(model.text))\n\nThe color change means both the page and the juz change here.")
         }
 
         // Same-surah page dividers annotate the absolute page with its position within this surah,
         // e.g. "Page 102 (3)". Translate the bare "(N)" into its plain meaning: the Nth page of this surah.
         if let relative = pageWithinSurah(fromSegment: model.pageSegment) {
-            message += "\n\n(\(relative)) means you're on the \(ordinal(relative)) page of this surah."
+            message += String(localized: "\n\n(\(relative)) means you're on the \(ordinal(relative)) page of this surah.")
         }
 
         return DividerInfo(title: title, message: message)
@@ -990,18 +997,18 @@ struct SurahView: View {
     private func ordinal(_ n: Int) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .ordinal
-        return formatter.string(from: NSNumber(value: n)) ?? "\(n)th"
+        return formatter.string(from: NSNumber(value: n)) ?? String(localized: "\(n)th")
     }
 
     private func surahInfoDialog(for surah: Surah) -> SurahInfoDialog {
-        let revelationOrderText = surah.revelationOrder.map(String.init) ?? "Unknown"
-        var message = "Revelation order: #\(revelationOrderText)"
+        let revelationOrderText = surah.revelationOrder.map { String($0).localizedDigits } ?? String(localized: "Unknown")
+        var message = String(localized: "Revelation order: #\(revelationOrderText)")
 
         if let exceptions = surah.revelationExceptions?.trimmingCharacters(in: .whitespacesAndNewlines), !exceptions.isEmpty {
-            message += "\n\nExceptions: \(exceptions)"
+            message += String(localized: "\n\nExceptions: \(exceptions)")
         }
 
-        return SurahInfoDialog(title: "Revelation Info", message: message)
+        return SurahInfoDialog(title: String(localized: "Revelation Info"), message: message)
     }
 
     /// Ayah row id to scroll to after clearing search (first ayah following this boundary).
@@ -1475,6 +1482,7 @@ struct SurahView: View {
                     .foregroundColor(.primary)
                     .lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
             }
             .contentShape(Rectangle())
         }
@@ -1677,6 +1685,38 @@ struct SurahView: View {
         return String(segment[..<slash]) + ")" + String(segment[segment.index(after: close)...])
     }
 
+    /// A divider label in the reader's language. The divider models keep their English labels ("Page 102
+    /// (3/6) • Juz 5"): the keyword search matches them and the page segment is parsed, so the label is
+    /// rebuilt from its numbers only where it is shown. A shape it does not know shows as it is.
+    private func localizedDividerLabel(_ label: String) -> String {
+        label.components(separatedBy: " • ").map { segment -> String in
+            let words = segment.split(separator: " ")
+            guard words.count >= 2, let number = Int(words[1]) else { return segment }
+            switch (words[0], words.count) {
+            case ("Juz", 2):
+                return String(localized: "Juz \(number)")
+            case ("Page", 2):
+                return String(localized: "Page \(number)")
+            case ("Page", 3):
+                let position = words[2]
+                guard position.hasPrefix("("), position.hasSuffix(")") else { return segment }
+                let parts = position.dropFirst().dropLast().split(separator: "/", omittingEmptySubsequences: false)
+                let numbers = parts.compactMap { Int($0) }
+                guard numbers.count == parts.count else { return segment }
+                if numbers.count == 2 {
+                    return String(localized: "Page \(number) (\(numbers[0])/\(numbers[1]))")
+                }
+                if numbers.count == 1 {
+                    return String(localized: "Page \(number) (\(numbers[0]))")
+                }
+                return segment
+            default:
+                return segment
+            }
+        }
+        .joined(separator: " • ")
+    }
+
     private func boundaryDivider(model: BoundaryDividerModel, isOverlay: Bool = false, nextAyahID: Int? = nil, showAyahPreview: Bool = false, showAyahLabel: Bool = true) -> some View {
         let accent = settings.accentColor.color
 
@@ -1732,12 +1772,12 @@ struct SurahView: View {
             #endif
 
             (
-                Text(displayPageSegment(model.pageSegment, isOverlay: isOverlay))
+                Text(localizedDividerLabel(displayPageSegment(model.pageSegment, isOverlay: isOverlay)))
                     .foregroundColor(pageColor)
                 +
                 (model.juzSegment.map {
                     Text(" • ").foregroundColor(separatorColor)
-                    + Text($0).foregroundColor(juzColor)
+                    + Text(localizedDividerLabel($0)).foregroundColor(juzColor)
                 } ?? Text(""))
             )
             // The overlay is the reader's one persistent "where am I" - it earns a real footnote size; the
@@ -1987,7 +2027,7 @@ struct SurahView: View {
             // or accept the beta text (list renders immediately).
             // Comparison users only: everyone else never sees the beta pitch (branch below).
             BetaTextConsentCard(
-                riwayahLabel: Settings.Riwayah.option(for: settings.displayQiraah).label,
+                riwayahLabel: Settings.Riwayah.option(for: settings.displayQiraah).displayLabel(),
                 onReadPrint: {
                     withAnimation(.easeInOut) { settings.quranPageMode = true }
                 }
@@ -2194,6 +2234,27 @@ struct SurahView: View {
             if launchArgs.contains("-openSurahPicker") {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { showSurahPickerSheet = true }
             }
+            // "-pickSurah <n>": the Choose Surah sheet opens, then picks surah n and closes, exactly as
+            // a tap on its row does (the pick is recorded, the sheet dismisses, `onDismiss` performs
+            // it), so a landing can be checked headlessly: `-windowTrace` logs the page and position.
+            if let i = launchArgs.firstIndex(of: "-pickSurah"), i + 1 < launchArgs.count,
+               let id = Int(launchArgs[i + 1]) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { showSurahPickerSheet = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                    if let surah = quranData.surah(id), surah.id != displayedSurah.id {
+                        pendingPicked = (surah, nil)
+                    }
+                    showSurahPickerSheet = false
+                }
+            }
+            // "-jumpSurah <n>": the same navigation with no sheet at all (what the Previous/Next pair
+            // and a search hit do), to tell a page-turn fault from a sheet-dismissal one.
+            if let i = launchArgs.firstIndex(of: "-jumpSurah"), i + 1 < launchArgs.count,
+               let id = Int(launchArgs[i + 1]) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                    if let surah = quranData.surah(id) { navigateToSurah(surah) }
+                }
+            }
             // "-surahSearch <text>" types into the reader's OWN search field a beat after it appears,
             // so the rows' search state (filtered list, term highlight) can be screenshotted headlessly.
             if let i = launchArgs.firstIndex(of: "-surahSearch"), i + 1 < launchArgs.count {
@@ -2216,7 +2277,7 @@ struct SurahView: View {
         .sheet(isPresented: $showBulkNoteSheet) {
             // One note, applied to every selected ayah (each becomes a bookmarked ayah carrying it).
             NoteEditorSheet(
-                title: "Note for \(selectedAyahs.count) Ayahs",
+                title: String(localized: "Note for \(selectedAyahs.count) Ayahs"),
                 text: $bulkNoteDraft,
                 onAttemptSave: { text in
                     if textContainsProfanity(text) {
@@ -2326,7 +2387,7 @@ struct SurahView: View {
             .smallMediumSheetPresentation()
         }
         .confirmationDialog(
-            dividerInfo?.title ?? "Boundary",
+            dividerInfo?.title ?? String(localized: "Boundary"),
             isPresented: Binding(
                 get: { dividerInfo != nil },
                 set: { if !$0 { dividerInfo = nil } }
@@ -2340,7 +2401,7 @@ struct SurahView: View {
             Text(info.message)
         }
         .confirmationDialog(
-            surahInfoDialog?.title ?? "Surah Info",
+            surahInfoDialog?.title ?? String(localized: "Surah Info"),
             isPresented: Binding(
                 get: { surahInfoDialog != nil },
                 set: { if !$0 { surahInfoDialog = nil } }
@@ -2364,7 +2425,7 @@ struct SurahView: View {
         }
         #else
         surahCoreBody
-            .navigationTitle("\(surah.id) - \(surah.nameTransliteration)")
+            .navigationTitle("\(surah.id) - \(surah.displayName)")
         #endif
     }
 
@@ -2684,7 +2745,7 @@ struct SurahView: View {
                         HStack {
                             Spacer()
 
-                            Text(String(searchCount))
+                            Text(String(searchCount).localizedDigits)
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(settings.accentColor.color)
                                 .padding(.horizontal, 12)
@@ -2752,7 +2813,7 @@ struct SurahView: View {
                             }
                         }
                     } header: {
-                        SectionPillHeader(title: "AI MATCHES", count: surahAIHits.count, icon: "sparkles")
+                        SectionPillHeader(title: String(localized: "AI MATCHES"), count: surahAIHits.count, icon: "sparkles")
                     }
                 }
                 #endif
@@ -3212,7 +3273,7 @@ struct SurahView: View {
                     .padding(.vertical, 4)
                 }
             } header: {
-                SectionIconHeader("KHATM PROGRESS", icon: "flag.checkered", accentTitle: true)
+                SectionIconHeader(String(localized: "KHATM PROGRESS"), icon: "flag.checkered", accentTitle: true)
             }
             .onReceive(settings.objectWillChange) { _ in computeKhatmOverviewIfNeeded(force: false) }
             .id(Self.khatmTopAnchorID)
@@ -3237,16 +3298,19 @@ struct SurahView: View {
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
 
+                            // The Arabic interface names the riwayah once, in Arabic (`displayLabel`).
                             HStack {
-                                Text(option.label)
+                                Text(option.displayLabel())
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(.primary)
 
-                                Text(option.arabic)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                                    .minimumScaleFactor(0.8)
+                                if !AppLanguage.isArabic {
+                                    Text(option.arabic)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(2)
+                                        .minimumScaleFactor(0.8)
+                                }
                             }
                         }
 
@@ -3281,7 +3345,7 @@ struct SurahView: View {
                             Image(systemName: "arrow.uturn.backward")
                             Text("Use Default Hafs an Asim")
                             Spacer(minLength: 0)
-                            Image(systemName: "chevron.right")
+                            Image(systemName: "chevron.forward")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
                         }
@@ -3487,18 +3551,18 @@ struct SurahView: View {
             .foregroundColor(settings.accentColor.color)
 
             HStack(spacing: 0) {
-                bulkActionButton("Copy", systemImage: "doc.on.doc") {
+                bulkActionButton(String(localized: "Copy"), systemImage: "doc.on.doc") {
                     UIPasteboard.general.string = bulkSelectionText()
                 }
-                bulkActionButton("Share", systemImage: "square.and.arrow.up") {
+                bulkActionButton(String(localized: "Share"), systemImage: "square.and.arrow.up") {
                     presentSystemShareSheet(items: [bulkSelectionText()])
                 }
-                bulkActionButton(allSelectedBookmarked ? "Unbookmark" : "Bookmark",
+                bulkActionButton(allSelectedBookmarked ? String(localized: "Unbookmark") : String(localized: "Bookmark"),
                                  systemImage: allSelectedBookmarked ? "bookmark.fill" : "bookmark") {
                     bulkToggleBookmarks()
                 }
                 bulkHighlightMenu
-                bulkActionButton("Note", systemImage: "square.and.pencil") {
+                bulkActionButton(String(localized: "Note"), systemImage: "square.and.pencil") {
                     bulkNoteDraft = ""
                     showBulkNoteSheet = true
                 }
@@ -3511,7 +3575,7 @@ struct SurahView: View {
                     ayahDisplayMenuItems(refs: selectedAyahs, settings: settings,
                                          offersWordByWord: !settings.quranPageMode)
                 } label: {
-                    bulkActionLabel("Settings", systemImage: "slider.horizontal.3",
+                    bulkActionLabel(String(localized: "Settings"), systemImage: "slider.horizontal.3",
                                     tint: displayOverrides.hasOverride(selectedAyahs) ? settings.accentColor.accent1 : nil)
                 }
                 .buttonStyle(.plain)
@@ -3573,7 +3637,7 @@ struct SurahView: View {
                 }
             }
         } label: {
-            bulkActionLabel("Highlight", systemImage: "highlighter", tint: selected?.color)
+            bulkActionLabel(String(localized: "Highlight"), systemImage: "highlighter", tint: selected?.color)
         }
         .buttonStyle(.plain)
     }
@@ -3610,7 +3674,7 @@ struct SurahView: View {
     /// has enabled - the bulk counterpart of copying a single ayah.
     private func bulkSelectionText() -> String {
         selectedAyahsSorted.map { (surah, ayah) in
-            var parts: [String] = ["[\(surah.nameTransliteration) \(surah.id):\(ayah.id)]"]
+            var parts: [String] = ["[\(surah.displayName) \(surah.id):\(ayah.id)]"]
             parts.append(ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: settings.displayQiraahForArabic))
             if settings.isHafsDisplay {
                 if settings.showTransliteration, !ayah.textTransliteration.isEmpty {
@@ -3854,8 +3918,11 @@ struct SurahView: View {
                     .accessibilityLabel("Search the whole Quran for what is typed in the search bar")
                 }
 
+                // The Arabic interface drops Hafs's "(default)" here as the page bar does: beside the
+                // Legend, the full label left "Global" no room for its word.
                 if comparisonVisible {
-                    ArabicTextRiwayahPicker(selection: $quranDisplay.displayQiraah)
+                    ArabicTextRiwayahPicker(selection: $quranDisplay.displayQiraah,
+                                            omitsDefaultSuffix: AppLanguage.isArabic)
                         .layoutPriority(1)
                 }
             }
@@ -3938,11 +4005,11 @@ struct SurahView: View {
 
         if playerIdle {
             ShortcutMenu(
-                doubleTap: MenuShortcut("Play Surah") {
+                doubleTap: MenuShortcut(String(localized: "Play Surah")) {
                     settings.hapticFeedback()
                     quranPlayer.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
                 },
-                hold: MenuShortcut(settings.isHafsDisplay ? "Play Custom Range" : "Choose Reciter") {
+                hold: MenuShortcut(settings.isHafsDisplay ? String(localized: "Play Custom Range") : String(localized: "Choose Reciter")) {
                     settings.hapticFeedback()
                     if settings.isHafsDisplay { showCustomRangeSheet = true }
                     else { showReciterPickerSheet = true }
@@ -4341,17 +4408,20 @@ struct SurahView: View {
                 // A fixed gap, NOT a `Spacer()`: the Menu wrapping this label sizes it to its intrinsic width,
                 // and an expanding Spacer collapses to zero there - which is what shrank the title to a pill.
                 HStack(spacing: 10) {
-                    HStack {
-                        // The Latin side never shrinks - a scaled-down transliteration next to full-size
-                        // Arabic reads as a mistake. It truncates instead.
-                        Text("\(surah.id)")
-                            .font(.subheadline.bold())
-                            .foregroundColor(settings.accentColor.color)
-                            .lineLimit(1)
+                    // The Arabic interface names the surah once: the Arabic name and number beside it.
+                    if !AppLanguage.isArabic {
+                        HStack {
+                            // The Latin side never shrinks - a scaled-down transliteration next to full-size
+                            // Arabic reads as a mistake. It truncates instead.
+                            Text("\(surah.id)")
+                                .font(.subheadline.bold())
+                                .foregroundColor(settings.accentColor.color)
+                                .lineLimit(1)
 
-                        Text(surah.nameTransliteration)
-                            .font(.subheadline.bold())
-                            .lineLimit(1)
+                            Text(surah.nameTransliteration)
+                                .font(.subheadline.bold())
+                                .lineLimit(1)
+                        }
                     }
 
                     HStack {
@@ -4374,7 +4444,9 @@ struct SurahView: View {
 
                 // Not in a compact height (a phone in landscape): the bar is the page's dearest chrome
                 // there, and the two-line pill held it some 20 pt taller than the one-line one does.
-                if verticalSizeClass != .compact {
+                // Not in the Arabic interface either: the English meaning under an Arabic title read
+                // as untranslated, and the Arabic name already sits in the pill.
+                if verticalSizeClass != .compact, !AppLanguage.isArabic {
                     Text(surah.nameEnglish)
                         .font(.caption2)
                         .lineLimit(1)
@@ -4413,8 +4485,8 @@ struct SurahView: View {
                             .fill(Color.secondary.opacity(0.35))
                             .frame(width: 1, height: 16)
 
-                        (Text(displayPageSegment(model.pageSegment, isOverlay: true))
-                            + (model.juzSegment.map { Text(" • ") + Text($0) } ?? Text("")))
+                        (Text(localizedDividerLabel(displayPageSegment(model.pageSegment, isOverlay: true)))
+                            + (model.juzSegment.map { Text(" • ") + Text(localizedDividerLabel($0)) } ?? Text("")))
                             .font(.footnote.weight(.semibold))
                             .monospacedDigit()
                             .lineLimit(1)
@@ -4792,10 +4864,10 @@ struct SurahView: View {
     @ViewBuilder
     private func surahNavigationButtonPair(previous: Surah?, next: Surah?) -> some View {
         HStack(spacing: 10) {
-            surahNavigationButton(title: "Previous", surah: previous, endNote: "First Surah",
-                                  systemImage: "chevron.left", trailing: false)
-            surahNavigationButton(title: "Next", surah: next, endNote: "Last Surah",
-                                  systemImage: "chevron.right", trailing: true)
+            surahNavigationButton(title: String(localized: "Previous"), surah: previous, endNote: String(localized: "First Surah"),
+                                  systemImage: "chevron.backward", trailing: false)
+            surahNavigationButton(title: String(localized: "Next"), surah: next, endNote: String(localized: "Last Surah"),
+                                  systemImage: "chevron.forward", trailing: true)
         }
     }
 
@@ -4814,7 +4886,7 @@ struct SurahView: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(targetSurah != nil ? .primary : .secondary)
 
-                    Text(targetSurah.map { "\($0.id) - \($0.nameTransliteration)" } ?? endNote)
+                    Text(targetSurah.map { "\($0.id) - \($0.displayName)".localizedDigits } ?? endNote)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
@@ -4889,7 +4961,7 @@ struct ArabicTextRiwayahPicker: View {
     /// everywhere. `false` = the bare glass chip for toolbars/bars.
     var useMenuRow: Bool = false
     /// The row's leading title (`useMenuRow`).
-    var title: String = "Arabic Riwayah"
+    var title: String = String(localized: "Arabic Riwayah")
     /// Whether Hafs is offered. Off for a picker that chooses what to compare AGAINST Hafs.
     var includeHafs: Bool = true
     /// A compact side card ("A" / "B") for head-to-head pickers: the side letter over the current
@@ -4906,11 +4978,7 @@ struct ArabicTextRiwayahPicker: View {
     var omitsDefaultSuffix: Bool = false
 
     private var currentLabel: String {
-        let label = Settings.Riwayah.option(for: selection).label
-        if omitsDefaultSuffix, label.hasSuffix(" (default)") {
-            return String(label.dropLast(" (default)".count))
-        }
-        return label
+        Settings.Riwayah.option(for: selection).displayLabel(omitsDefaultSuffix: omitsDefaultSuffix)
     }
 
     private func choose(_ option: Settings.Riwayah.Option) {
@@ -4930,7 +4998,7 @@ struct ArabicTextRiwayahPicker: View {
                 qiraahMenuContent
             } label: {
                 HStack(spacing: 5) {
-                    Text(QiraatProfiles.shortName(of: selection))
+                    Text(QiraatProfiles.shortName(of: selection).localizedDisplay)
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(.primary)
                         .lineLimit(1)
@@ -5035,10 +5103,10 @@ struct ArabicTextRiwayahPicker: View {
             ForEach(Settings.Riwayah.textGroups) { group in
                 Section {
                     ForEach(group.options, id: \.tag) { option in
-                        Text(option.beta ? "\(option.label) (Beta)" : option.label).tag(option.tag)
+                        Text(option.beta ? String(localized: "\(option.displayLabel()) (Beta)") : option.displayLabel()).tag(option.tag)
                     }
                 } header: {
-                    Text("\(group.teacher) - \(group.teacherArabic)")
+                    Text(AppLanguage.isArabic ? group.teacherArabic : "\(group.teacher) - \(group.teacherArabic)")
                         .foregroundStyle(.secondary)
                 }
             }
@@ -5091,8 +5159,9 @@ struct ArabicTextRiwayahPicker: View {
                 qiraahButton(option, current: current)
             }
         } label: {
+            // The Arabic interface names the imam once, in Arabic; English keeps both names.
             Label(
-                "\(group.teacher) - \(group.teacherArabic)",
+                AppLanguage.isArabic ? group.teacherArabic : "\(group.teacher) - \(group.teacherArabic)",
                 systemImage: group.options.contains(where: { $0.tag == current }) ? "checkmark" : "book.closed"
             )
 
@@ -5116,14 +5185,15 @@ struct ArabicTextRiwayahPicker: View {
 
                 // Beta riwayat only appear here at all once beta text is unlocked, and then
                 // they carry the marker so the unverified text is never picked unknowingly.
-                Text(option.beta ? "\(option.label) (Beta)" : option.label)
+                Text(option.beta ? String(localized: "\(option.displayLabel()) (Beta)") : option.displayLabel())
             }
             .font(.caption)
 
             // The menu subtitle: the riwayah's Arabic name, then the rawi's own death year
-            // (the standalone Hafs entry omits it).
+            // (the standalone Hafs entry omits it). The Arabic interface already titles the row
+            // with the Arabic name, so its subtitle is the year alone.
             if !hideDetail, let detail = option.narratorDetail {
-                Text("\(option.arabic) · \(detail)")
+                Text(AppLanguage.isArabic ? detail : "\(option.arabic) · \(detail)")
             }
         }
     }
@@ -5195,7 +5265,7 @@ private struct ReaderLegendMenu: View {
         }
         if let tag = settings.riwayahTajweedPackTag {
             return QiraahTajweedStore.shared.legend(for: tag).prefix(6).map {
-                ($0.color, $0.english, $0.arabic)
+                ($0.color, $0.english.localizedDisplay, $0.arabic)
             }
         }
         return TajweedLegendCategory.allCases

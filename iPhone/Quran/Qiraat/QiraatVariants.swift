@@ -67,8 +67,8 @@ final class QiraatVariantsStore: @unchecked Sendable {
         /// codices (the Uthmanic masahif) themselves spell differently.
         var senseNote: String? {
             switch category.first {
-            case "A": return "Differs in sense"
-            case "B": return "Same sense, another form"
+            case "A": return String(localized: "Differs in sense")
+            case "B": return String(localized: "Same sense, another form")
             default: return nil
             }
         }
@@ -79,7 +79,7 @@ final class QiraatVariantsStore: @unchecked Sendable {
         var categoryCaption: String? {
             var parts: [String] = []
             if let senseNote { parts.append(senseNote) }
-            if codicesDiffer { parts.append("The early codices spell it differently") }
+            if codicesDiffer { parts.append(String(localized: "The early codices spell it differently")) }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         }
     }
@@ -314,7 +314,9 @@ struct AyahQiraatVariantsSection: View {
 
     /// The riwayah's name without the picker's "(default)" suffix: a pill, not a menu row.
     private var currentLabel: String {
-        Settings.Riwayah.option(for: currentTag).label
+        // The Arabic interface names it in Arabic (`displayLabel`).
+        if AppLanguage.isArabic { return Settings.Riwayah.option(for: currentTag).displayLabel(omitsDefaultSuffix: true) }
+        return Settings.Riwayah.option(for: currentTag).label
             .replacingOccurrences(of: #"\s*\([^)]*\)"#, with: "", options: .regularExpression)
     }
 
@@ -346,7 +348,7 @@ struct AyahQiraatVariantsSection: View {
                         Text("All Readings and Notes")
                             .fontWeight(.medium)
                         Spacer()
-                        Image(systemName: "chevron.right")
+                        Image(systemName: "chevron.forward")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.tertiary)
                     }
@@ -380,6 +382,8 @@ struct AyahQiraatVariantsSection: View {
                 .arabicFontDesign(custom: true)
                 .foregroundColor(settings.accentColor.color)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                .environment(\.layoutDirection, .leftToRight)
 
             if let caption = juncture.categoryCaption {
                 Text(caption)
@@ -410,6 +414,8 @@ struct AyahQiraatVariantsSection: View {
                                 .font(.caption)
                                 .foregroundStyle(.primary)
                                 .fixedSize(horizontal: false, vertical: true)
+                                // English content keeps its own direction in the Arabic interface.
+                                .leftToRightContent()
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -420,6 +426,8 @@ struct AyahQiraatVariantsSection: View {
                         .foregroundColor(isMine ? settings.accentColor.color : .primary)
                         .multilineTextAlignment(.trailing)
                         .fixedSize(horizontal: false, vertical: true)
+                        // Wrapped lines keep the right edge (`.trailing` is the left in Arabic).
+                        .environment(\.layoutDirection, .leftToRight)
                 }
                 .padding(.vertical, 2)
             }
@@ -450,6 +458,13 @@ struct AyahQiraatVariantsView: View {
 
     private var currentTag: String { Settings.Riwayah.canonicalTag(settings.displayQiraah) }
 
+    /// The riwayah's name without the picker's "(default)" suffix, in the reader's language (`displayLabel`).
+    private var currentLabel: String {
+        if AppLanguage.isArabic { return Settings.Riwayah.option(for: currentTag).displayLabel(omitsDefaultSuffix: true) }
+        return Settings.Riwayah.option(for: currentTag).label
+            .replacingOccurrences(of: #"\s*\([^)]*\)"#, with: "", options: .regularExpression)
+    }
+
     var body: some View {
         List {
             Section {
@@ -465,6 +480,8 @@ struct AyahQiraatVariantsView: View {
                         .arabicFontDesign(custom: true)
                         .foregroundColor(settings.accentColor.color)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                        .environment(\.layoutDirection, .leftToRight)
                         .padding(.vertical, 4)
 
                     if let caption = juncture.categoryCaption {
@@ -482,6 +499,10 @@ struct AyahQiraatVariantsView: View {
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
+                            // English content: the left edge in the Arabic interface too (and the
+                            // reading's rendering and explanation below).
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .leftToRightContent()
                     }
                 }
             }
@@ -501,7 +522,7 @@ struct AyahQiraatVariantsView: View {
             HStack(alignment: .top, spacing: 8) {
                 VStack(alignment: .leading, spacing: 3) {
                     if mine {
-                        Text("YOUR RIWAYAH · \(Settings.Riwayah.option(for: currentTag).label.replacingOccurrences(of: #"\s*\([^)]*\)"#, with: "", options: .regularExpression).uppercased())")
+                        Text("YOUR RIWAYAH · \(currentLabel.uppercased())")
                             .font(.caption2.weight(.bold))
                             .foregroundColor(settings.accentColor.color)
                     }
@@ -512,6 +533,7 @@ struct AyahQiraatVariantsView: View {
                         Text(reading.transliteration)
                             .font(.caption.italic())
                             .foregroundStyle(.secondary)
+                            .leftToRightContent()
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -522,12 +544,16 @@ struct AyahQiraatVariantsView: View {
                     .foregroundColor(mine ? settings.accentColor.color : .primary)
                     .multilineTextAlignment(.trailing)
                     .fixedSize(horizontal: false, vertical: true)
+                    // Wrapped lines keep the right edge (`.trailing` is the left in Arabic).
+                    .environment(\.layoutDirection, .leftToRight)
             }
 
             if !reading.english.isEmpty {
                 Text(reading.english)
                     .font(.footnote)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
             }
 
             if !reading.explanation.isEmpty {
@@ -535,6 +561,8 @@ struct AyahQiraatVariantsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
             }
 
             if !reading.grammaticalForm.isEmpty || !reading.rootLetters.isEmpty {

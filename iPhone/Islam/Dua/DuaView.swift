@@ -99,6 +99,28 @@ struct DuaItem: Identifiable, Sendable {
         return filled
     }
 
+    /// The citation as the reader sees it. `reference` stays the English it is stored as (it is part
+    /// of the row's id, its search text and the on-device model's provenance); the Arabic interface
+    /// shows a Quran reference in its own digits, and a single narration ("Sahih Muslim 2739") under
+    /// the book's Arabic title. A citation carrying a grading or a second source reads as written.
+    var displayReference: String? {
+        guard let reference else { return nil }
+        switch source {
+        case .quran?:
+            return reference.localizedDigits
+        case let .shelf(link, _, _)?:
+            #if os(iOS) && HAS_HADITH
+            guard !reference.contains(";"), let slug = link.split(separator: ":").first else { return reference }
+            return HadithCatalogBook.displayReference(stored: reference, slug: String(slug))
+            #else
+            _ = link
+            return reference
+            #endif
+        case nil:
+            return reference
+        }
+    }
+
     /// Stable whether or not the words have been filled in: a reference names itself by its
     /// reference and transliteration, never by text that arrives later.
     var id: String {
@@ -109,20 +131,28 @@ struct DuaItem: Identifiable, Sendable {
 }
 
 struct DuaCollection: Identifiable, Sendable {
+    /// English DATA, like `subtitle`: the id, the resume key, the search text, the Ask AI match and
+    /// source line all read it. Screens show `displayTitle`.
     let title: String
     let subtitle: String
     let systemImage: String
     let introductionTitle: String
     let introduction: String
     let items: [DuaItem]
+    /// The title in the reader's language when the source carries one (Hisn al-Muslim's own Arabic
+    /// chapter titles); nil looks `title` up in the catalog.
+    var localTitle: String? = nil
 
     var id: String { title }
+
+    /// The title as the screens show it.
+    var displayTitle: String { localTitle ?? title.localizedDisplay }
 
     /// The collection with every referenced dua's words filled in from the app's own Quran and shelf.
     func resolved() -> DuaCollection {
         DuaCollection(title: title, subtitle: subtitle, systemImage: systemImage,
                       introductionTitle: introductionTitle, introduction: introduction,
-                      items: items.map { $0.resolved() })
+                      items: items.map { $0.resolved() }, localTitle: localTitle)
     }
 }
 
@@ -238,9 +268,16 @@ struct DuaView: View {
         let matched = collections.filter {
             $0.title.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(normalizedQuery)
                 || $0.subtitle.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(normalizedQuery)
+                || Self.translatedNames($0).contains { $0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(normalizedQuery) }
         }
         // The collection named for the query leads the ones whose subtitle mentions it.
-        return SearchRank.sorted(matched, by: normalizedQuery) { [$0.title, $0.subtitle] }
+        return SearchRank.sorted(matched, by: normalizedQuery) { [$0.title, $0.subtitle] + Self.translatedNames($0) }
+    }
+
+    /// The title and subtitle as a translated interface shows them, after the English, where they differ.
+    private static func translatedNames(_ collection: DuaCollection) -> [String] {
+        [collection.displayTitle, collection.subtitle.localizedDisplay]
+            .filter { $0 != collection.title && $0 != collection.subtitle }
     }
 
     /// Every dua in EVERY collection matching the query - so a search here finds the supplication
@@ -351,7 +388,7 @@ struct DuaView: View {
 
                 Spacer()
 
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.forward")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
@@ -401,13 +438,13 @@ struct DuaView: View {
                                 searchQuery: searchText,
                                 alwaysTrailing: true,
                                 speechEnabled: true,
-                                source: item.reference
+                                source: item.displayReference
                             )
                             .equatable()
                             .spokenRowWash(item.arabicText)
                         }
                     } header: {
-                        SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles")
+                        SectionPillHeader(title: String(localized: "AI MATCHES"), count: aiHits.count, icon: "sparkles")
                     }
                 }
             } else if !semanticEngine.failedCorpora.contains(Self.semanticCorpusID) {
@@ -440,21 +477,22 @@ struct DuaView: View {
             if query.isEmpty {
             #if os(iOS)
             ResourceHeroSection(ResourceHero(
-                eyebrow: "SUPPLICATION",
+                eyebrow: String(localized: "SUPPLICATION"),
                 systemImage: "text.book.closed.fill",
-                headline: "Call upon Me; I will respond to you.",
-                source: "Quran 40:60",
+                headline: String(localized: "Call upon Me; I will respond to you."),
+                source: String(localized: "Quran 40:60"),
                 message: HisnDuasStore.isBundled
-                    ? "Short, daily supplications that keep your heart connected to Allah in every situation, each with its source, and the whole of Hisn al-Muslim beside them."
-                    : "Short, daily supplications that keep your heart connected to Allah in every situation, each with its source.",
+                    ? String(localized: "Short, daily supplications that keep your heart connected to Allah in every situation, each with its source, and the whole of Hisn al-Muslim beside them.")
+                    : String(localized: "Short, daily supplications that keep your heart connected to Allah in every situation, each with its source."),
                 stats: [
-                    ResourceHeroStat("\(DuaLibrary.shared.allItems.count)", "duas"),
-                    ResourceHeroStat("\(DuaLibrary.shared.collections.count)", "collections"),
-                ] + (hisnLibrary.map { [ResourceHeroStat("\($0.entries.count)", "in Hisn al-Muslim")] } ?? [])
+                    ResourceHeroStat("\(DuaLibrary.shared.allItems.count)".localizedDigits, String(localized: "duas")),
+                    ResourceHeroStat("\(DuaLibrary.shared.collections.count)".localizedDigits, String(localized: "collections")),
+                ] + (hisnLibrary.map { [ResourceHeroStat("\($0.entries.count)".localizedDigits, String(localized: "in Hisn al-Muslim"))] } ?? [])
             ))
             #else
             Section(header: Text("SUPPLICATIONS TO ALLAH")) {
-                ArticleLead("Short, daily supplications that keep your heart connected to Allah in every situation. \"Call upon Me; I will respond to you.\" (Quran 40:60)")
+                ArticleLead(String(localized: "Short, daily supplications that keep your heart connected to Allah in every situation. \"Call upon Me; I will respond to you.\" (Quran 40:60)"),
+                            eyebrow: String(localized: "IN SHORT"))
             }
             #endif
 
@@ -485,7 +523,7 @@ struct DuaView: View {
                                 Text("Fortress of the Muslim")
                                     .font(.body.weight(.medium))
                                     .foregroundStyle(.primary)
-                                Text("268 duas for 132 situations, with references and recitations")
+                                Text(String(localized: "268 duas for 132 situations, with references and recitations").localizedDigits)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(2)
@@ -516,8 +554,8 @@ struct DuaView: View {
                     if shownCollections.isEmpty, matching.isEmpty {
                         #if os(iOS)
                         Text(aiHits.isEmpty
-                             ? "No duas match your search."
-                             : "No keyword matches; see the AI results above.")
+                             ? String(localized: "No duas match your search.")
+                             : String(localized: "No keyword matches; see the AI results above."))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         #else
@@ -540,11 +578,13 @@ struct DuaView: View {
                                 AccentIconChip(systemImage: collection.systemImage)
 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(collection.title)
+                                    // Title and subtitle are the collection's English DATA (its id, its
+                                    // search text, the on-device model's source line): translated here only.
+                                    Text(collection.displayTitle)
                                         .font(.body.weight(.medium))
                                         .foregroundStyle(.primary)
 
-                                    Text(collection.subtitle)
+                                    Text(collection.subtitle.localizedDisplay)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                         .lineLimit(2)
@@ -566,7 +606,7 @@ struct DuaView: View {
                         .id(Self.collectionRowID(collection))
                         #if os(iOS)
                         .contextMenu {
-                            Text(collection.title)
+                            Text(collection.displayTitle)
                                 .foregroundStyle(.secondary)
 
                             if !query.isEmpty {
@@ -580,7 +620,7 @@ struct DuaView: View {
 
                             Button {
                                 settings.hapticFeedback()
-                                UIPasteboard.general.string = collection.title
+                                UIPasteboard.general.string = collection.displayTitle
                             } label: {
                                 Label("Copy Title", systemImage: "doc.on.doc")
                             }
@@ -629,11 +669,11 @@ struct DuaView: View {
                             searchQuery: searchText,
                             alwaysTrailing: true,
                             speechEnabled: true,
-                            source: item.reference,
+                            source: item.displayReference,
                             onScrollTo: Self.collection(of: item).map { collection in
                                 { scrollToCollection(collection) }
                             },
-                            scrollLabel: "Scroll To Collection"
+                            scrollLabel: String(localized: "Scroll To Collection")
                         )
                         .equatable()
                         .spokenRowWash(item.arabicText)
@@ -659,30 +699,31 @@ struct DuaView: View {
             // word and its root as an etymology card, the virtues as a lead and two quoted callouts.
             Section(header: Text("ETYMOLOGY")) {
                 ArticleEtymologyCard("Dua", arabic: "دُعَاء", root: "د ع و", rootLatin: "d-ʿ-w",
-                                     coreMeaning: "to call, to invite, to summon",
-                                     text: "Dua literally means calling out, especially calling upon Allah. In Islam it is not just asking for things; it is an act of worship, turning to Him with need, hope, fear, and love.")
+                                     coreMeaning: String(localized: "to call, to invite, to summon"),
+                                     text: String(localized: "Dua literally means calling out, especially calling upon Allah. In Islam it is not just asking for things; it is an act of worship, turning to Him with need, hope, fear, and love."))
             }
 
             Section(header: Text("VIRTUES OF DUA")) {
-                ArticleLead("Dua is an act of worship and a direct connection with Allah. No sincere call is lost: it is answered soon, stored as reward in the Hereafter, or an equal harm is turned away by it.")
+                ArticleLead(String(localized: "Dua is an act of worship and a direct connection with Allah. No sincere call is lost: it is answered soon, stored as reward in the Hereafter, or an equal harm is turned away by it."),
+                            eyebrow: String(localized: "IN SHORT"))
 
                 ArticleCallout(
                     bullets: [
-                        "And your Lord says, \"Call upon Me; I will respond to you.\" (Quran 40:60)",
-                        "And when My servants ask you concerning Me, indeed I am near. I respond to the invocation of the supplicant when he calls upon Me. (Quran 2:186)",
-                        "Is He [not best] who responds to the desperate one when he calls upon Him and removes evil and makes you inheritors of the earth? (Quran 27:62)"
+                        String(localized: "And your Lord says, \"Call upon Me; I will respond to you.\" (Quran 40:60)"),
+                        String(localized: "And when My servants ask you concerning Me, indeed I am near. I respond to the invocation of the supplicant when he calls upon Me. (Quran 2:186)"),
+                        String(localized: "Is He [not best] who responds to the desperate one when he calls upon Him and removes evil and makes you inheritors of the earth? (Quran 27:62)")
                     ],
-                    title: "Quranic Promise",
+                    title: String(localized: "Quranic Promise"),
                     systemImage: "book.closed.fill"
                 )
                 .articleCardRow()
 
                 ArticleCallout(
                     bullets: [
-                        "Dua is worship. (Abu Dawud 1479; Tirmidhi 3247, sahih)",
-                        "No Muslim supplicates, so long as it is not for sin or for severing kinship, but Allah gives him one of three: the answer is hastened, it is stored for him in the Hereafter, or an equivalent evil is turned away from him. (Musnad Ahmad 11133, hasan)"
+                        String(localized: "Dua is worship. (Abu Dawud 1479; Tirmidhi 3247, sahih)"),
+                        String(localized: "No Muslim supplicates, so long as it is not for sin or for severing kinship, but Allah gives him one of three: the answer is hastened, it is stored for him in the Hereafter, or an equivalent evil is turned away from him. (Musnad Ahmad 11133, hasan)")
                     ],
-                    title: "Prophetic Guidance",
+                    title: String(localized: "Prophetic Guidance"),
                     systemImage: "quote.bubble.fill"
                 )
                 .articleCardRow()
@@ -693,7 +734,7 @@ struct DuaView: View {
                 }
             }
                 #if os(iOS)
-                AboutSignsSection(heading: "About Dua",
+                AboutSignsSection(heading: String(localized: "About Dua"),
                                   systemImage: "text.book.closed",
                                   doors: [.makeDua, .allah, .tawhid],
                                   openDoor: Binding(get: { aboutDoor },
@@ -874,7 +915,7 @@ struct DuaCollectionView: View {
             introductionSection
             #if os(iOS)
             if !query.isEmpty, !aiHits.isEmpty {
-                Section(header: SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles")) {
+                Section(header: SectionPillHeader(title: String(localized: "AI MATCHES"), count: aiHits.count, icon: "sparkles")) {
                     duaRows(aiHits, scrollable: false)
                 }
             }
@@ -920,7 +961,7 @@ struct DuaCollectionView: View {
         .applyConditionalListStyle()
         #endif
         .compactListSectionSpacing()
-        .navigationTitle(collection.title)
+        .navigationTitle(collection.displayTitle)
         .onDisappear { ArabicSpeech.shared.stop() }
         .onChange(of: scrollTarget) { target in
             guard let target else { return }
@@ -936,7 +977,7 @@ struct DuaCollectionView: View {
         // "ABOUT", not the collection's own name again - the navigation title directly above already says
         // "Sleep & Waking"; a header shouting "SLEEP & WAKING DUAS" right under it was saying it twice.
         Section(header: Text("ABOUT")) {
-            ArticleLead(collection.introduction)
+            ArticleLead(collection.introduction, eyebrow: String(localized: "IN SHORT"))
         }
     }
 
@@ -955,14 +996,14 @@ struct DuaCollectionView: View {
                     searchQuery: searchText,
                     alwaysTrailing: true,
                     speechEnabled: true,
-                    source: item.reference,
+                    source: item.displayReference,
                     rowID: scrollable ? item.id : nil,
                     // Only while searching: with the whole collection showing, the row is already where it lives.
                     onScrollTo: (searching && scrollable) ? {
                         withAnimation { searchText = "" }
                         scrollTarget = item.id
                     } : nil,
-                    scrollLabel: "Scroll To Dua"
+                    scrollLabel: String(localized: "Scroll To Dua")
                 )
                 .equatable()
                 .spokenRowWash(item.arabicText)
@@ -1004,7 +1045,7 @@ private enum DuaCollections {
         subtitle: "Daily supplications for protection, ease, and blessing",
         systemImage: "text.book.closed",
         introductionTitle: "Supplications to Allah",
-        introduction: "Short, daily supplications that keep your heart connected to Allah in every situation. \"Call upon Me; I will respond to you.\" (Quran 40:60)",
+        introduction: String(localized: "Short, daily supplications that keep your heart connected to Allah in every situation. \"Call upon Me; I will respond to you.\" (Quran 40:60)"),
         items: [
             DuaItem(hadith: "muslim:2739", cite: "Sahih Muslim 2739", arabic: 42...54, english: 1...34, transliteration: "Allahumma inni a'udhu bika min zawali ni'matika wa tahawwuli 'afiyatika wa fuja'ati niqmatika wa jamee'i sakhatika"),
             DuaItem(hadith: "ibnmajah:3871", cite: "Sunan Ibn Majah 3871", arabic: 44...51, english: 59...74, transliteration: "Allahumma inni as'aluka al-'afwa wal-'afiyah fi ad-dunya wal-akhirah"),
@@ -1029,7 +1070,7 @@ private enum DuaCollections {
         subtitle: "The Prophet's daily adhkar for morning and evening",
         systemImage: "sun.horizon",
         introductionTitle: "Morning & Evening Adhkar",
-        introduction: "Remembrances the Prophet ﷺ said at the start and end of every day, seeking Allah's protection, provision, and pleasure before the day makes its own claims. \"And exalt [Allah] with praise of your Lord before the rising of the sun and before its setting.\" (Quran 20:130)",
+        introduction: String(localized: "Remembrances the Prophet ﷺ said at the start and end of every day, seeking Allah's protection, provision, and pleasure before the day makes its own claims. \"And exalt [Allah] with praise of your Lord before the rising of the sun and before its setting.\" (Quran 20:130)"),
         items: [
             DuaItem(hadith: "bukhari:6306", cite: "Sahih al-Bukhari 6306", arabic: 39...75, english: 15...84, transliteration: "Allahumma anta Rabbi la ilaha illa anta, khalaqtani wa ana 'abduka, wa ana 'ala 'ahdika wa wa'dika ma istata'tu, a'udhu bika min sharri ma sana'tu, abu'u laka bini'matika 'alayya, wa abu'u laka bidhanbi faghfir li, fa innahu la yaghfiru adh-dhunuba illa anta", note: "The best way of seeking forgiveness; said in the morning and in the evening"),
             DuaItem(hadith: "tirmidhi:3390", cite: "Jami' at-Tirmidhi 3390; Sahih Muslim 2723", arabic: [34...47, 51...90], english: [11...44, 66...152], transliteration: "Amsayna wa amsal-mulku lillah, walhamdu lillah, la ilaha illallahu wahdahu la sharika lah, lahul-mulku wa lahul-hamdu wa huwa 'ala kulli shay'in qadir. Rabbi as'aluka khayra ma fi hadhihil-laylati wa khayra ma ba'daha, wa a'udhu bika min sharri ma fi hadhihil-laylati wa sharri ma ba'daha", note: "In the evening; in the morning it begins: Asbahna wa asbahal-mulku lillah"),
@@ -1047,7 +1088,7 @@ private enum DuaCollections {
         subtitle: "What the Prophet said lying down to sleep and on waking",
         systemImage: "moon.zzz",
         introductionTitle: "Sleep & Waking Duas",
-        introduction: "The Prophet ﷺ closed each day surrendering his soul to Allah and opened each morning with gratitude for its return. \"And it is He who has made the night for you as clothing and sleep [a means for] rest.\" (Quran 25:47)",
+        introduction: String(localized: "The Prophet ﷺ closed each day surrendering his soul to Allah and opened each morning with gratitude for its return. \"And it is He who has made the night for you as clothing and sleep [a means for] rest.\" (Quran 25:47)"),
         items: [
             DuaItem(hadith: "bukhari:6324", cite: "Sahih al-Bukhari 6324", arabic: 29...32, english: 17...26, transliteration: "Bismika Allahumma amutu wa ahya", note: "When going to bed"),
             DuaItem(hadith: "bukhari:6324", cite: "Sahih al-Bukhari 6324", arabic: 40...48, english: 47...69, transliteration: "Alhamdu lillahil-ladhi ahyana ba'da ma amatana wa ilayhin-nushur", note: "On waking"),
@@ -1065,7 +1106,7 @@ private enum DuaCollections {
         subtitle: "The Prophet's duas for worry, grief, and hardship",
         systemImage: "heart",
         introductionTitle: "Duas for Distress & Anxiety",
-        introduction: "Supplications the Prophet ﷺ said (and taught) for the moments when the heart is tight and the way out is hidden. \"Is He [not best] who responds to the desperate one when he calls upon Him and removes evil?\" (Quran 27:62)",
+        introduction: String(localized: "Supplications the Prophet ﷺ said (and taught) for the moments when the heart is tight and the way out is hidden. \"Is He [not best] who responds to the desperate one when he calls upon Him and removes evil?\" (Quran 27:62)"),
         items: [
             DuaItem(hadith: "muslim:2730a", cite: "Sahih Muslim 2730; Sahih al-Bukhari 6346", arabic: 43...66, english: 1...42, transliteration: "La ilaha illallahul-'Azimul-Halim, la ilaha illallahu Rabbul-'arshil-'azim, la ilaha illallahu Rabbus-samawati wa Rabbul-ardi wa Rabbul-'arshil-karim", note: "The Prophet's dua at times of distress"),
             DuaItem(hadith: "tirmidhi:3524", cite: "Jami' at-Tirmidhi 3524", arabic: 37...42, english: 11...22, transliteration: "Ya Hayyu ya Qayyum, bi-rahmatika astaghith", note: "Said by the Prophet ﷺ whenever a matter distressed him"),
@@ -1082,7 +1123,7 @@ private enum DuaCollections {
         subtitle: "Duas for setting out, the road, and returning home",
         systemImage: "airplane",
         introductionTitle: "Travel Duas",
-        introduction: "From mounting the ride to returning home, the Prophet ﷺ wrapped the whole journey in remembrance. \"...that you may settle yourselves upon their backs and then remember the favor of your Lord.\" (Quran 43:13)",
+        introduction: String(localized: "From mounting the ride to returning home, the Prophet ﷺ wrapped the whole journey in remembrance. \"...that you may settle yourselves upon their backs and then remember the favor of your Lord.\" (Quran 43:13)"),
         items: [
             DuaItem(hadith: "muslim:1342", cite: "Sahih Muslim 1342", arabic: 44...56, english: 0...30, transliteration: "Subhanal-ladhi sakhkhara lana hadha wa ma kunna lahu muqrinin, wa inna ila Rabbina lamunqalibun", note: "Said after Allahu Akbar three times, when mounted for travel"),
             DuaItem(hadith: "muslim:1342", cite: "Sahih Muslim 1342", arabic: 57...84, english: 31...78, transliteration: "Allahumma inna nas'aluka fi safarina hadhal-birra wat-taqwa, wa minal-'amali ma tarda. Allahumma hawwin 'alayna safarana hadha watwi 'anna bu'dah. Allahumma antas-sahibu fis-safari wal-khalifatu fil-ahl"),
@@ -1098,7 +1139,7 @@ private enum DuaCollections {
         subtitle: "Duas for stepping out, coming home, and the masjid",
         systemImage: "door.left.hand.open",
         introductionTitle: "Home & Mosque Duas",
-        introduction: "The Prophet ﷺ marked every threshold with remembrance: leaving in Allah's care, returning with His name, and entering His house asking for His mercy.",
+        introduction: String(localized: "The Prophet ﷺ marked every threshold with remembrance: leaving in Allah's care, returning with His name, and entering His house asking for His mercy."),
         items: [
             DuaItem(hadith: "abudawud:5095", cite: "Sunan Abi Dawud 5095", arabic: 38...48, english: 14...32, transliteration: "Bismillah, tawakkaltu 'alallah, la hawla wa la quwwata illa billah", note: "On leaving the home; it is said to him: you are guided, defended and protected"),
             DuaItem(hadith: "abudawud:5094", cite: "Sunan Abi Dawud 5094; graded sahih by al-Albani", arabic: 32...52, english: 20...54, transliteration: "Allahumma inni a'udhu bika an adilla aw udall, aw azilla aw uzall, aw azlima aw uzlam, aw ajhala aw yujhala 'alayy", note: "On leaving the home"),
@@ -1113,7 +1154,7 @@ private enum DuaCollections {
         subtitle: "Duas before, during, and after eating and drinking",
         systemImage: "fork.knife",
         introductionTitle: "Food & Drink Duas",
-        introduction: "\"O messengers, eat from the good foods and work righteousness.\" (Quran 23:51) The sunnah surrounds every meal with Allah's name and gratitude for His provision.",
+        introduction: String(localized: "\"O messengers, eat from the good foods and work righteousness.\" (Quran 23:51) The sunnah surrounds every meal with Allah's name and gratitude for His provision."),
         items: [
             DuaItem(hadith: "bukhari:5376", cite: "Sahih al-Bukhari 5376", arabic: 49...57, english: 31...53, transliteration: "Ya ghulam, sammi Allah, wa kul bi-yaminik, wa kul mimma yalik", note: "Before eating: say Bismillah"),
             DuaItem(hadith: "abudawud:3767", cite: "Sunan Abi Dawud 3767", arabic: 64...67, english: 29...42, transliteration: "Bismillahi awwalahu wa akhirah", note: "If one forgot to say Bismillah before starting"),
@@ -1128,7 +1169,7 @@ private enum DuaCollections {
         subtitle: "Seeking Allah's pardon, as the Prophet did daily",
         systemImage: "arrow.uturn.backward.circle",
         introductionTitle: "Forgiveness & Repentance Duas",
-        introduction: "The Prophet ﷺ, though forgiven, sought Allah's forgiveness dozens of times a day, and taught his companions to do the same. \"And whoever does a wrong or wrongs himself but then seeks forgiveness of Allah will find Allah Forgiving and Merciful.\" (Quran 4:110)",
+        introduction: String(localized: "The Prophet ﷺ, though forgiven, sought Allah's forgiveness dozens of times a day, and taught his companions to do the same. \"And whoever does a wrong or wrongs himself but then seeks forgiveness of Allah will find Allah Forgiving and Merciful.\" (Quran 4:110)"),
         items: [
             DuaItem(hadith: "abudawud:1516", cite: "Sunan Abi Dawud 1516", arabic: 37...45, english: 16...29, transliteration: "Rabbi-ghfir li wa tub 'alayya, innaka antat-Tawwabur-Rahim", note: "The Prophet ﷺ was counted saying it a hundred times in a single gathering"),
             DuaItem(hadith: "bukhari:834", cite: "Sahih al-Bukhari 834", arabic: 47...67, english: 49...82, transliteration: "Allahumma inni zalamtu nafsi zulman kathiran, wa la yaghfirudh-dhunuba illa anta, faghfir li maghfiratan min 'indika, warhamni, innaka antal-Ghafurur-Rahim", note: "Taught by the Prophet ﷺ to Abu Bakr to say in prayer"),
@@ -1143,7 +1184,7 @@ private enum DuaCollections {
         subtitle: "Supplications of the prophets recorded in the Quran",
         systemImage: "sparkles",
         introductionTitle: "Duas of the Prophets",
-        introduction: "The Quran preserves the very words the prophets called upon their Lord with (in illness, loneliness, need, and gratitude), and every one was answered. \"So We responded to him...\" (Quran 21:84)",
+        introduction: String(localized: "The Quran preserves the very words the prophets called upon their Lord with (in illness, loneliness, need, and gratitude), and every one was answered. \"So We responded to him...\" (Quran 21:84)"),
         items: [
             DuaItem(quran: "21:83", words: 5...10, transliteration: "Anni massaniyad-durru wa anta arhamur-rahimin", translation: "Indeed, adversity has touched me, and you are the Most Merciful of the merciful.", note: "Ayyub, in his affliction; Allah answered him and removed it"),
             DuaItem(quran: "21:89", words: 4...10, transliteration: "Rabbi la tadharni fardan wa anta khayrul-warithin", translation: "My Lord, do not leave me alone [with no heir], while you are the best of inheritors.", note: "Zakariyya, asking for a child; and he was given Yahya"),
@@ -1159,7 +1200,7 @@ private enum DuaCollections {
         subtitle: "Quranic duas beginning with Rabbana",
         systemImage: "40.circle",
         introductionTitle: "40 Rabbana Duas",
-        introduction: "رَبَّنَا (Rabbanaa) means \"Our Lord.\" These Quranic supplications begin by calling on Allah with that intimate address, then ask for forgiveness, guidance, mercy, patience, protection, victory, provision, and success in this life and the Hereafter.",
+        introduction: String(localized: "رَبَّنَا (Rabbanaa) means \"Our Lord.\" These Quranic supplications begin by calling on Allah with that intimate address, then ask for forgiveness, guidance, mercy, patience, protection, victory, provision, and success in this life and the Hereafter."),
         // Each entry carries ONLY its own supplication, not the whole ayah it sits in. Many of these duas are a
         // clause inside a longer verse ("and among them are those who say..."), and three ayahs (2:286, 3:193,
         // 59:10) hold more than one dua. Storing the full ayah on every entry made the same Arabic render two or
@@ -1233,6 +1274,10 @@ final class HisnDuasStore: @unchecked Sendable {
         let label: String
         let arabic: String
         let count: Int
+
+        /// The label as the reader sees it: the book's own Arabic chapter title in the Arabic
+        /// interface (as the Today screen shows it). `label` stays the English data.
+        var displayLabel: String { AppLanguage.isArabic && !arabic.isEmpty ? arabic : label.localizedDisplay }
     }
 
     struct Collection: Identifiable {
@@ -1243,6 +1288,9 @@ final class HisnDuasStore: @unchecked Sendable {
         let icon: String
         let entryIDs: [String]
         let categoryNumbers: [String]
+
+        /// The label as the reader sees it (`Category.displayLabel`'s rule).
+        var displayLabel: String { AppLanguage.isArabic && !arabic.isEmpty ? arabic : label.localizedDisplay }
 
         /// The shelf's SF symbol (the pack carries Tilawa's icon keys).
         var systemImage: String {
@@ -1279,10 +1327,11 @@ final class HisnDuasStore: @unchecked Sendable {
         let reference: String
         let audio: URL?
 
-        /// "Recite 3x · Muslim 4/2083": what the row prints under the dua.
+        /// "Recite 3x · Muslim 4/2083": what the row prints under the dua. Display only (the pack's
+        /// `reference` stays as written).
         var sourceLine: String {
             var parts: [String] = []
-            if repeatCount > 1 { parts.append("Recite \(repeatCount)x") }
+            if repeatCount > 1 { parts.append(String(localized: "Recite \(repeatCount)x")) }
             else if !notes.isEmpty, notes != "Recite 1x" { parts.append(notes) }
             if !reference.isEmpty { parts.append(reference) }
             return parts.joined(separator: " · ")
@@ -1479,7 +1528,7 @@ struct HisnDuaAudioButton: View {
             HStack(spacing: 6) {
                 Image(systemName: playing ? "stop.fill" : "play.fill")
                     .font(.caption2)
-                Text(playing ? "Stop" : "Recitation")
+                Text(playing ? String(localized: "Stop") : String(localized: "Recitation"))
                     .font(.caption.weight(.semibold))
             }
             .foregroundColor(playing ? .white : settings.accentColor.color)
@@ -1488,7 +1537,7 @@ struct HisnDuaAudioButton: View {
             .background(Capsule().fill(playing ? settings.accentColor.color : settings.accentColor.color.opacity(0.12)))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(playing ? "Stop the recitation" : "Play the recitation")
+        .accessibilityLabel(playing ? String(localized: "Stop the recitation") : String(localized: "Play the recitation"))
     }
 }
 
@@ -1519,8 +1568,13 @@ struct HisnDuaLibraryView: View {
             subtitle: category.arabic,
             systemImage: "text.book.closed.fill",
             introductionTitle: "From Hisn al-Muslim",
-            introduction: "\(category.label): \(entries.count == 1 ? "one supplication" : "\(entries.count) supplications") from the Fortress of the Muslim, with the reference each is narrated from. Tap the play pill under a dua to hear it recited.",
-            items: entries.map(\.asDuaItem)
+            // The situation's label is the pack's English (the collection's title and id): shown in
+            // the reader's language, the sentence around it as a whole.
+            introduction: entries.count == 1
+                ? String(localized: "\(category.displayLabel): one supplication from the Fortress of the Muslim, with the reference each is narrated from. Tap the play pill under a dua to hear it recited.")
+                : String(localized: "\(category.displayLabel): \(entries.count) supplications from the Fortress of the Muslim, with the reference each is narrated from. Tap the play pill under a dua to hear it recited."),
+            items: entries.map(\.asDuaItem),
+            localTitle: category.displayLabel
         )
     }
 
@@ -1531,8 +1585,11 @@ struct HisnDuaLibraryView: View {
             subtitle: shelf.arabic,
             systemImage: shelf.systemImage,
             introductionTitle: shelf.label,
-            introduction: shelf.subtitle.isEmpty ? "\(entries.count) supplications from Hisn al-Muslim." : shelf.subtitle,
-            items: entries.map(\.asDuaItem)
+            introduction: shelf.subtitle.isEmpty
+                ? String(localized: "\(entries.count) supplications from Hisn al-Muslim.")
+                : shelf.subtitle.localizedDisplay,
+            items: entries.map(\.asDuaItem),
+            localTitle: shelf.displayLabel
         )
     }
 
@@ -1543,20 +1600,24 @@ struct HisnDuaLibraryView: View {
                 if let library {
                     if query.isEmpty {
                         Section(header: Text("THE FORTRESS OF THE MUSLIM")) {
-                            ArticleLead("Hisn al-Muslim, the pocket book of supplications compiled by Sa'id ibn Ali ibn Wahf al-Qahtani from the Quran and the authentic Sunnah: \(library.entries.count) duas for \(library.categories.count) situations, each with its reference, and a recitation to follow along with.")
+                            ArticleLead(String(localized: "Hisn al-Muslim, the pocket book of supplications compiled by Sa'id ibn Ali ibn Wahf al-Qahtani from the Quran and the authentic Sunnah: \(library.entries.count) duas for \(library.categories.count) situations, each with its reference, and a recitation to follow along with."),
+                                        eyebrow: String(localized: "IN SHORT"))
                         }
 
-                        Section(header: SectionPillHeader(title: "THROUGH THE DAY", count: library.collections.count)) {
+                        Section(header: SectionPillHeader(title: String(localized: "THROUGH THE DAY"), count: library.collections.count)) {
                             ForEach(library.collections) { shelf in
                                 NavigationLink(destination: LazyDestination { DuaCollectionView(collection: Self.collection(for: shelf, library: library)) }) {
                                     HStack(spacing: 12) {
                                         AccentIconChip(systemImage: shelf.systemImage)
                                         VStack(alignment: .leading, spacing: 2) {
-                                            Text(shelf.label)
+                                            Text(shelf.displayLabel)
                                                 .font(.body.weight(.medium))
-                                            Text(shelf.arabic)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
+                                            // The Arabic title once, in the Arabic interface.
+                                            if shelf.displayLabel != shelf.arabic {
+                                                Text(shelf.arabic)
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
                                         }
                                         Spacer(minLength: 8)
                                         Text("\(shelf.entryIDs.count)")
@@ -1576,24 +1637,25 @@ struct HisnDuaLibraryView: View {
                     let matches = shownMatches
 
                     if !query.isEmpty, !matches.isEmpty {
-                        Section(header: SectionPillHeader(title: "MATCHING DUAS", count: matches.count)) {
+                        Section(header: SectionPillHeader(title: String(localized: "MATCHING DUAS"), count: matches.count)) {
                             ForEach(matches.prefix(30)) { entry in
                                 NavigationLink(destination: LazyDestination {
                                     DuaCollectionView(collection: Self.collection(for: library.categories.first { $0.id == entry.categoryID } ?? HisnDuasStore.Category(id: entry.categoryID, number: "", label: entry.title, arabic: "", count: 1), library: library))
                                 }) {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text(library.categories.first { $0.id == entry.categoryID }?.label ?? entry.title)
+                                        Text(library.categories.first { $0.id == entry.categoryID }?.displayLabel ?? entry.title)
                                             .font(.caption.weight(.semibold))
                                             .foregroundColor(accent)
                                         HighlightedSnippet(source: entry.translation, term: searchText, font: .subheadline, accent: accent, fg: .primary)
                                             .lineLimit(3)
+                                            .leftToRightContent()
                                     }
                                 }
                             }
                         }
                     }
 
-                    Section(header: SectionPillHeader(title: "EVERY SITUATION", count: categories.count)) {
+                    Section(header: SectionPillHeader(title: String(localized: "EVERY SITUATION"), count: categories.count)) {
                         if categories.isEmpty, matches.isEmpty {
                             Text("No duas match your search.")
                                 .font(.subheadline)
@@ -1602,15 +1664,18 @@ struct HisnDuaLibraryView: View {
                         ForEach(categories) { category in
                             NavigationLink(destination: LazyDestination { DuaCollectionView(collection: Self.collection(for: category, library: library)) }) {
                                 HStack(spacing: 10) {
-                                    Text(category.number)
+                                    Text(category.number.localizedDigits)
                                         .font(.caption2.weight(.semibold).monospacedDigit())
                                         .foregroundStyle(.secondary)
                                         .frame(width: 30, alignment: .leading)
                                     VStack(alignment: .leading, spacing: 2) {
-                                        HighlightedSnippet(source: category.label, term: searchText, font: .subheadline, accent: accent, fg: .primary)
-                                        Text(category.arabic)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
+                                        HighlightedSnippet(source: category.displayLabel, term: searchText, font: .subheadline, accent: accent, fg: .primary)
+                                        // The Arabic title once, in the Arabic interface.
+                                        if category.displayLabel != category.arabic {
+                                            Text(category.arabic)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
                                     }
                                     Spacer(minLength: 8)
                                     Text("\(category.count)")
@@ -1643,7 +1708,7 @@ struct HisnDuaLibraryView: View {
         .applyConditionalListStyle(disableNowPlayingInset: true)
         .compactListSectionSpacing()
         .adaptiveSafeArea(edge: .bottom) {
-            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search Hisn al-Muslim")
+            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search Hisn al-Muslim"))
                 .padding(.horizontal, 24)
                 .padding(.bottom, BottomBarCushion.standard)
                 .background(Color.white.opacity(0.00001))
@@ -1696,6 +1761,7 @@ enum HisnDuaCardDoor {
 
 struct HisnDuaOfTheDayCard: View {
     private let settings = Settings.shared
+    @Environment(\.layoutDirection) private var layoutDirection
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @ObservedObject private var islamSettings = IslamSettings.shared
     @ObservedObject private var quranDisplay = QuranDisplay.shared
@@ -1713,7 +1779,7 @@ struct HisnDuaOfTheDayCard: View {
                 Text("DUA OF THE DAY")
                 Spacer()
                 if let category {
-                    Text(category.label)
+                    Text(category.displayLabel)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }
@@ -1734,14 +1800,16 @@ struct HisnDuaOfTheDayCard: View {
             Text.islamArabic(entry.arabic, highlightAllah: settings.highlightAllahNamesIslam)
                 .font(.custom(settings.nonQuranArabicFontName, size: 24))
                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
-                .multilineTextAlignment(.trailing)
+                // The Arabic sits on the right in both interfaces: there the leading edge is the right.
+                .multilineTextAlignment(layoutDirection == .rightToLeft ? .leading : .trailing)
                 .lineSpacing(6)
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .frame(maxWidth: .infinity, alignment: layoutDirection == .rightToLeft ? .leading : .trailing)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(entry.translation)
                 .font(.footnote)
                 .fixedSize(horizontal: false, vertical: true)
+                .leftToRightContent()
 
             HStack {
                 if !entry.sourceLine.isEmpty {
@@ -1761,7 +1829,7 @@ struct HisnDuaOfTheDayCard: View {
                     settings.hapticFeedback()
                     open(.collection(HisnDuaLibraryView.collection(for: category, library: library)))
                 } label: {
-                    Label("More duas for this situation", systemImage: "arrow.right.circle")
+                    Label("More duas for this situation", systemImage: "arrow.forward.circle")
                         .font(.caption.weight(.semibold))
                         .foregroundColor(settings.accentColor.color)
                 }

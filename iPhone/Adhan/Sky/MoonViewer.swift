@@ -278,7 +278,7 @@ struct MoonViewer: View {
 
                     // The white days are the full moon's nights: the Sunnah fast of every month.
                     if (13...15).contains(hijri.day) {
-                        Text("A White Day: fasting the 13th, 14th and 15th of the month is Sunnah (Sunan al-Tirmidhi 761, graded hasan sahih by al-Albani).")
+                        Text(String(localized: "A White Day: fasting the 13th, 14th and 15th of the month is Sunnah (Sunan al-Tirmidhi 761, graded hasan sahih by al-Albani).").localizedDigits)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -288,8 +288,8 @@ struct MoonViewer: View {
 
             if let cycle {
                 HStack(spacing: 10) {
-                    eventTile("NEXT FULL MOON", cycle.nextFullMoon)
-                    eventTile("NEXT NEW MOON", cycle.nextNewMoon)
+                    eventTile(String(localized: "NEXT FULL MOON"), cycle.nextFullMoon)
+                    eventTile(String(localized: "NEXT NEW MOON"), cycle.nextNewMoon)
                 }
             }
 
@@ -301,10 +301,14 @@ struct MoonViewer: View {
     }
 
     private func detailLine(_ phase: MoonPhase, cycle: MoonPhase.Cycle?) -> String {
-        let lit = "\(phase.illuminationPercent)% illuminated"
+        let lit = String(localized: "\(phase.illuminationPercent)% illuminated")
         guard let cycle else { return lit }
         let age = cycle.age(at: shownDate)
-        return "\(lit) · \(String(format: "%.1f", age)) days old"
+        // The locale's digits in Arabic ("١٢٫٣"); English keeps "12.3".
+        let ageText = AppLanguage.isArabic
+            ? age.formatted(.number.precision(.fractionLength(1)).grouping(.never))
+            : String(format: "%.1f", age)
+        return String(localized: "\(lit) · \(ageText) days old")
     }
 
     private func eventTile(_ title: String, _ event: Date) -> some View {
@@ -334,22 +338,22 @@ struct MoonViewer: View {
         let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: shownDate),
                                            to: calendar.startOfDay(for: event)).day ?? 0
         switch days {
-        case ..<1: return "Today"
-        case 1: return "Tomorrow"
-        default: return "In \(days) days"
+        case ..<1: return String(localized: "Today")
+        case 1: return String(localized: "Tomorrow")
+        default: return String(localized: "In \(days) days")
         }
     }
 
     private var dayControl: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(dayOffset == 0 && isLive ? "Now" : shownDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+                Text(dayOffset == 0 && isLive ? String(localized: "Now") : shownDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(.primary)
 
                 if dayOffset != 0 {
-                    Text(dayOffset > 0 ? "+\(dayOffset) \(dayOffset == 1 ? "day" : "days")"
-                                       : "\u{2212}\(-dayOffset) \(dayOffset == -1 ? "day" : "days")")
+                    Text(dayOffset > 0 ? (dayOffset == 1 ? String(localized: "+\(dayOffset) day") : String(localized: "+\(dayOffset) days"))
+                                       : (dayOffset == -1 ? String(localized: "\u{2212}\(-dayOffset) day") : String(localized: "\u{2212}\(-dayOffset) days")))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
@@ -382,7 +386,7 @@ struct MoonViewer: View {
             ), in: -15...15, step: 1)
             .tint(settings.accentColor.color)
             .accessibilityLabel("Day")
-            .accessibilityValue(dayOffset == 0 ? "Now" : shownDate.formatted(date: .complete, time: .omitted))
+            .accessibilityValue(dayOffset == 0 ? String(localized: "Now") : shownDate.formatted(date: .complete, time: .omitted))
         }
     }
 
@@ -394,7 +398,9 @@ struct MoonViewer: View {
         let reference = settings.effectiveHijriReferenceDate(now: date)
         let calendar = settings.hijriCalendar
         guard let adjusted = calendar.date(byAdding: .day, value: settings.hijriOffset, to: reference) else { return nil }
-        return (Self.hijriFormatter.string(from: adjusted), calendar.component(.day, from: adjusted))
+        // An Arabic interface gets the header's Arabic date, not its English transliteration.
+        let text = AppLanguage.isArabic ? settings.arabicHijriText(for: adjusted).localizedDigits : Self.hijriFormatter.string(from: adjusted)
+        return (text, calendar.component(.day, from: adjusted))
     }
 
     /// The header's English Hijri format (`Settings.updateDates`).
@@ -447,7 +453,7 @@ private struct MoonGlobe: UIViewRepresentable {
         controller.setFullLight(fullLight)
         controller.setRegion(region)
         controller.reset(token: resetToken)
-        view.accessibilityLabel = "The moon, \(phase.name), \(phase.illuminationPercent) percent illuminated"
+        view.accessibilityLabel = String(localized: "The moon, \(phase.name), \(phase.illuminationPercent) percent illuminated")
     }
 
     static func dismantleUIView(_ view: MoonGlobeView, coordinator: MoonGlobeController) {
@@ -516,7 +522,7 @@ final class MoonGlobeController: NSObject, UIGestureRecognizerDelegate, SCNScene
         view.pointOfView = cameraNode
         view.isAccessibilityElement = true
         view.accessibilityTraits = .image
-        view.accessibilityHint = "Drag to turn it, pinch to zoom, double-tap to face Earth."
+        view.accessibilityHint = String(localized: "Drag to turn it, pinch to zoom, double-tap to face Earth.")
         view.onLayout = { [weak self] size in self?.layout(size) }
         buildScene()
         addGestures(to: view)

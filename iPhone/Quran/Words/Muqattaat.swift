@@ -152,9 +152,9 @@ enum Muqattaat {
             let leen = chars.contains(Muqattaat.leenLetter)
 
             switch (lazim, natural) {
-            case (true, true):   return leen ? "Madd is 2, 4, or 6 counts" : "Madd is 2 or 6 counts"
-            case (true, false):  return leen ? "Madd is 4 or 6 counts" : "Madd is 6 counts"
-            case (false, true):  return "Madd is 2 counts"
+            case (true, true):   return leen ? String(localized: "Madd is 2, 4, or 6 counts") : String(localized: "Madd is 2 or 6 counts")
+            case (true, false):  return leen ? String(localized: "Madd is 4 or 6 counts") : String(localized: "Madd is 6 counts")
+            case (false, true):  return String(localized: "Madd is 2 counts")
             case (false, false): return nil
             }
         }

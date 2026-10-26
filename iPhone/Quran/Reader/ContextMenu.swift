@@ -6,12 +6,18 @@ import UIKit
 /// The one format every ayah sheet titles itself with: "Surah Name S:A" (or "Surah Name S:A-B" for a sheet
 /// that covers a range, e.g. a tafsir that groups several ayahs). Kept in a single helper so the sheets can
 /// never drift apart again ("Preview", "Qiraah Comparison", ... all used to invent their own).
-func ayahSheetTitle(surahNumber: Int, ayahNumber: Int, endAyah: Int? = nil) -> String {
-    let name = QuranData.shared.surah(surahNumber)?.nameTransliteration ?? "Surah"
+/// `english` keeps the transliteration for a title the on-device model reads (`SummarizeSheet.title`);
+/// a title on screen shows the interface's name (`Surah.displayName`) and the interface's digits.
+func ayahSheetTitle(surahNumber: Int, ayahNumber: Int, endAyah: Int? = nil, english: Bool = false) -> String {
+    let surah = QuranData.shared.surah(surahNumber)
+    let name = (english ? surah?.nameTransliteration : surah?.displayName) ?? String(localized: "Surah")
+    let reference: String
     if let endAyah, endAyah > ayahNumber {
-        return "\(name) \(surahNumber):\(ayahNumber)-\(endAyah)"
+        reference = "\(surahNumber):\(ayahNumber)-\(endAyah)"
+    } else {
+        reference = "\(surahNumber):\(ayahNumber)"
     }
-    return "\(name) \(surahNumber):\(ayahNumber)"
+    return "\(name) \(english ? reference : reference.localizedDigits)"
 }
 
 /// The English translation currently being shown, by name - so ayah sheets can mention it consistently.
@@ -318,7 +324,7 @@ struct SurahContextMenu: View {
                 quranPlayer.playSurah(surahNumber: surahID, surahName: surahName)
             } label: {
                 #if os(iOS)
-                ReciterCaptionedMenuLabel(title: "Play Surah", systemImage: "play.fill")
+                ReciterCaptionedMenuLabel(title: String(localized: "Play Surah"), systemImage: "play.fill")
                 #else
                 Label("Play Surah", systemImage: "play.fill")
                 #endif
@@ -921,7 +927,7 @@ struct AyahContextMenuModifier: ViewModifier {
                     scrollToSurahID: $scrollToSurahID
                 )
             } label: {
-                Label("Surah \(surah.nameTransliteration)", systemImage: "book.closed")
+                Label("Surah \(surah.displayName)", systemImage: "book.closed")
             }
         }
     }
@@ -960,14 +966,15 @@ struct AyahContextMenuModifier: ViewModifier {
                         Image(systemName: "ellipsis.circle")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .frame(width: 19, height: 19)
+                            .frame(width: 25, height: 25)
                             .foregroundColor(settings.accentColor.color)
                             .conditionalGlassEffect()
-                            .frame(width: 22, height: 22)
+                            .frame(width: 28, height: 28)
                             .contentShape(Rectangle())
                     }
-                    // Lands in the 22pt slot the compact search row reserves at its header's
-                    // trailing edge; the 2pt matches the row's own vertical padding.
+                    // Lands in the 28pt slot the compact search row reserves at its header's
+                    // trailing edge, the HadithRow's full-size pill-and-ellipsis pair (its 28pt
+                    // reference pill sits beside it); the 2pt matches the row's own vertical padding.
                     .padding(.top, 2)
                 }
             }
@@ -1045,7 +1052,7 @@ struct AyahContextMenuModifier: ViewModifier {
             .sheet(isPresented: $showingNoteSheet) {
                 if let surah = surahObj {
                     NoteEditorSheet(
-                        title: "Note for \(surah.nameTransliteration) \(surah.id):\(ayah)",
+                        title: String(localized: "Note for \(surah.displayName) \(surah.id):\(ayah)"),
                         text: $draftNote,
                         onAttemptSave: { text in
                             if isNoteAllowed(text) {
@@ -1462,19 +1469,32 @@ extension FocusItem {
     static func surah(_ surah: Surah) -> FocusItem {
         // The name honours Hide Tashkeel / Hide Dots like the list rows and toolbar title do.
         let displayName = Settings.shared.cleanedQuranArabic(surah.nameArabic)
+        let footnote = String(localized: "\(surah.type.capitalized.localizedDisplay) · \(surah.numberOfAyahs) ayahs")
+        // In Arabic the hero already IS the name and there is no English meaning: the caption carries
+        // the type and length alone, and the share text names the surah once.
+        if AppLanguage.isArabic {
+            return FocusItem(
+                id: "surah-\(surah.id)",
+                arabic: displayName,
+                title: footnote,
+                secondaryArabic: surah.idArabic,
+                shareLabel: String(localized: "Share Surah"),
+                shareText: String(localized: "Surah \(surah.id): \(surah.displayName)") + "\n" + footnote
+            )
+        }
         return FocusItem(
             id: "surah-\(surah.id)",
             arabic: displayName,
             title: "\(surah.id) · \(surah.nameTransliteration)",
             subtitle: surah.nameEnglish,
-            footnote: "\(surah.type.capitalized) · \(surah.numberOfAyahs) ayahs",
+            footnote: footnote,
             secondaryArabic: surah.idArabic,
-            shareLabel: "Share Surah",
-            shareText: """
+            shareLabel: String(localized: "Share Surah"),
+            shareText: String(localized: """
             Surah \(surah.id) - \(surah.nameTransliteration) (\(displayName))
             \(surah.nameEnglish)
-            \(surah.type.capitalized) · \(surah.numberOfAyahs) ayahs
-            """
+            \(surah.type.capitalized.localizedDisplay) · \(surah.numberOfAyahs) ayahs
+            """)
         )
     }
 }
@@ -1600,11 +1620,11 @@ struct SelectAyahTextSheet: View {
     private var riwayahFooterText: String {
         if smartAyahMatching {
             if arabicAyah.id != ayah.id {
-                return "Switching the riwayah changes the Arabic text only. Smart Ayah Matching: these words sit at ayah \(arabicAyah.id) in this riwayah (ayah numbering differs between riwayat), so that ayah is shown."
+                return String(localized: "Switching the riwayah changes the Arabic text only. Smart Ayah Matching: these words sit at ayah \(arabicAyah.id) in this riwayah (ayah numbering differs between riwayat), so that ayah is shown.")
             }
-            return "Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently. Smart Ayah Matching follows the words, so the matching ayah is shown even where numbering differs."
+            return String(localized: "Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently. Smart Ayah Matching follows the words, so the matching ayah is shown even where numbering differs.")
         }
-        return "Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat). With Smart Ayah Matching off, the exact tapped number is shown as-is."
+        return String(localized: "Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat). With Smart Ayah Matching off, the exact tapped number is shown as-is.")
     }
 
     var body: some View {
@@ -1669,7 +1689,7 @@ struct SelectAyahTextSheet: View {
 
                     if ayahExistsInSelectedQiraah {
                         selectableBlock(
-                            title: "ARABIC",
+                            title: String(localized: "ARABIC"),
                             text: arabicText,
                             font: usesCustomArabicFace
                                 ? .custom(arabicFontName, size: settings.fontArabicSize)
@@ -1686,7 +1706,7 @@ struct SelectAyahTextSheet: View {
 
                     if !hafsAyah.textTransliteration.isEmpty {
                         selectableBlock(
-                            title: "TRANSLITERATION",
+                            title: String(localized: "TRANSLITERATION"),
                             text: hafsAyah.textTransliteration,
                             font: .system(size: settings.englishFontSize),
                             isArabic: false
@@ -1741,6 +1761,8 @@ struct SelectAyahTextSheet: View {
                 isArabic: isArabic,
                 lineSpacing: isArabic ? 8 : 2
             )
+            // The transliteration and the translations read left to right in the Arabic interface.
+            .leftToRightContent(!isArabic)
             .padding(.vertical, 4)
         } header: {
             HStack {

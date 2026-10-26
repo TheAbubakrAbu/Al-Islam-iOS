@@ -1,0 +1,381 @@
+#!/usr/bin/env python3
+"""Keep Resources/Localizable.xcstrings in step with the code, and carry translations into it.
+
+The compiler writes one `.stringsdata` file per Swift source (SWIFT_EMIT_LOC_STRINGS) listing every
+localizable literal it found. Xcode's IDE folds those into the catalog on each build; `xcodebuild` from
+the command line does not, so this script does the same fold, then adds what only a person can supply:
+the Arabic. Arabic is written into the catalog, which stays the one source of truth for translations
+(Xcode's catalog editor reads and writes the same file).
+
+The Islam tab's articles are not translated yet (2026-10-25): a key whose every source is an article file
+(ARTICLE_SOURCES) is listed in the catalog but never offered for translation, and reads English.
+
+    # after a build with -derivedDataPath DD:
+    ./Scripts/localize_catalog.py sync DD                  # add new keys, mark vanished ones stale
+    ./Scripts/localize_catalog.py todo DD OUTDIR [--chunk 300]   # batches of keys still missing Arabic
+    ./Scripts/localize_catalog.py merge FILE.json [...]    # write translations in (validated)
+    ./Scripts/localize_catalog.py validate FILE.json [...] # the same checks, writing nothing
+    ./Scripts/localize_catalog.py check                    # every Arabic value against its key
+    ./Scripts/localize_catalog.py manual KEYS.json         # data strings shown through .localizedDisplay
+    ./Scripts/localize_catalog.py sibling DD [--add]       # Al-Adhan's or Al-Quran's build: keys only it has
+
+Al-Adhan and Al-Quran carry a copy of this catalog (../sync_localization.py replaces theirs whole on every
+sync), so their Arabic is made here too. `sibling` reads one of their builds and lists the keys their code has
+that this catalog cannot translate; --add writes them in as manual keys (this app's own `sync` never marks
+those stale), and `todo` then offers them with the rest.
+
+A translation file is a JSON object {english key: arabic}. A key holding exactly one integer argument
+(%lld, %d, %ld, %u, %lu) may map to an object of CLDR plural forms instead:
+{"one": ..., "two": ..., "few": ..., "many": ..., "other": ..., "zero": ...} ("zero" optional).
+"""
+import glob
+import json
+import os
+import re
+import sys
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CATALOG = os.path.join(REPO, "Resources", "Localizable.xcstrings")
+LANG = "ar"
+TARGET_BUILDS = ("iPhone.build", "Widget.build", "Watch.build", "Complication.build")
+# The Islam tab's articles (Faith & Proofs, the How-To Guides, Hadith & Its Sciences, the riwayat
+# differences) stay English for now; the rest of that tab is translated. The article kit (ArticleDesign.swift)
+# is shared with translated pages, so its few literals are translated; its String defaults stay English and
+# translated pages pass their own.
+ARTICLE_SOURCES = ("iPhone/Islam/Beliefs/", "iPhone/Islam/Proofs/", "iPhone/Islam/Fiqh/HowToGuides.swift",
+                   "iPhone/Islam/Content/HadithSciencesViews.swift", "iPhone/Islam/Content/IslamArticles.swift",
+                   "iPhone/Islam/Qiraat/RiwayatDifferencesView.swift")
+
+# printf conversions as Foundation writes them into catalog keys: %@ %lld %d %f %.1f %1$@ %%.
+# The space flag is left out on purpose: "80% coverage" is prose, not a "% c" conversion.
+SPEC = re.compile(r"%(?:(\d+)\$)?[-+#0]*\d*(?:\.\d+)?(ll|l|h|hh|q|z|t|j)?([@dDiuUxXoOfFeEgGcsSpaA%])")
+# App Shortcuts parameter tokens ("Open ${surah}") stay literal in every language.
+PARAM_TOKEN = re.compile(r"\$\{[A-Za-z_]+\}")
+INT_CONV = set("dDiuUxXoO")
+EM_DASH = chr(0x2014)
+PLURAL_FORMS = ("zero", "one", "two", "few", "many", "other")
+REQUIRED_PLURALS = ("one", "two", "few", "many", "other")
+# Latin words allowed to stay in an Arabic value.
+LATIN_OK = {"al-islam", "al-adhan", "al-quran", "apple", "icloud", "carplay", "siri", "watch", "ios",
+            "ipados", "macos", "watchos", "intelligence", "id", "gps", "pdf", "ai", "faceid", "touch",
+            "airplay", "wi-fi", "wifi", "bluetooth", "imessage", "facetime", "safari", "url", "qr",
+            "utc", "gmt", "am", "pm", "hafs", "warsh", "qalun", "app", "store", "tilawa", "quran.com",
+            "github", "dynamic", "island", "pro", "max", "ipad", "iphone", "mac", "kfgqpc", "uthmani",
+            "indopak", "sf", "rounded", "mp3", "ok"}
+
+
+def load_catalog():
+    with open(CATALOG, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_catalog(cat):
+    cat["strings"] = dict(sorted(cat["strings"].items(), key=lambda kv: kv[0]))
+    # Written beside the catalog and moved over it, so a reader never sees half a file.
+    tmp = CATALOG + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(cat, f, ensure_ascii=False, indent=2, separators=(",", " : "))
+        f.write("\n")
+    os.replace(tmp, CATALOG)
+
+
+def specs(s):
+    """The argument conversions in a format string, position-free, '%%' excluded."""
+    out = []
+    for m in SPEC.finditer(s):
+        if m.group(3) == "%":
+            continue
+        conv = m.group(3)
+        kind = "int" if conv in INT_CONV else "obj" if conv == "@" else "float" if conv in "fFeEgGaA" else conv
+        out.append(kind)
+    return sorted(out)
+
+
+def plural_eligible(key):
+    sp = specs(key)
+    return len(sp) == 1 and sp[0] == "int"
+
+
+def repo_of(path, cache={}):
+    """The checkout a source file belongs to: the nearest folder above it holding an .xcodeproj."""
+    d = os.path.dirname(path)
+    if d not in cache:
+        up = d
+        while up != os.path.dirname(up) and not any(f.endswith(".xcodeproj") for f in os.listdir(up)):
+            up = os.path.dirname(up)
+        cache[d] = up if up != os.path.dirname(up) else REPO
+    return cache[d]
+
+
+def extracted(dd):
+    """{key: set(source paths)} for the Localizable table, from a build's .stringsdata files. Paths are
+    relative to the checkout that built them (this one, or a sibling's)."""
+    keys = {}
+    pattern = os.path.join(dd, "Build", "Intermediates.noindex", "**", "*.stringsdata")
+    for path in glob.glob(pattern, recursive=True):
+        if not any(t in path for t in TARGET_BUILDS):
+            continue
+        try:
+            data = json.load(open(path, encoding="utf-8"))
+        except (ValueError, OSError):
+            continue
+        source = data.get("source", "")
+        src = os.path.relpath(source, repo_of(source) if os.path.isabs(source) else REPO)
+        for entry in data.get("tables", {}).get("Localizable", []):
+            keys.setdefault(entry["key"], set()).add(src)
+    return keys
+
+
+def translatable(sources):
+    return any(not s.startswith(ARTICLE_SOURCES) for s in sources)
+
+
+def has_arabic(entry):
+    return LANG in entry.get("localizations", {})
+
+
+def cmd_sync(dd):
+    cat = load_catalog()
+    keys = extracted(dd)
+    if not keys:
+        sys.exit(f"no .stringsdata under {dd}: build with -derivedDataPath first")
+    strings = cat["strings"]
+    added = stale = revived = 0
+    for key in keys:
+        entry = strings.get(key)
+        if entry is None:
+            strings[key] = {}
+            added += 1
+        elif entry.get("extractionState") == "stale":
+            entry.pop("extractionState")
+            revived += 1
+    for key, entry in strings.items():
+        if key not in keys and entry.get("extractionState") not in ("manual", "stale"):
+            entry["extractionState"] = "stale"
+            stale += 1
+    save_catalog(cat)
+    print(f"sync: {len(keys)} extracted, {added} added, {revived} revived, {stale} marked stale")
+
+
+def cmd_manual(path):
+    cat = load_catalog()
+    added = 0
+    for key in json.load(open(path, encoding="utf-8")):
+        entry = cat["strings"].get(key)
+        if entry is None:
+            cat["strings"][key] = {"extractionState": "manual"}
+            added += 1
+        elif entry.get("extractionState") == "stale":
+            # Gone from the code but still shown as data: keep it.
+            entry["extractionState"] = "manual"
+        # An entry the compiler extracts (no extractionState) stays as it is.
+    save_catalog(cat)
+    print(f"manual: {added} added")
+
+
+def cmd_todo(dd, outdir, chunk):
+    cat = load_catalog()
+    keys = extracted(dd)
+    todo = []
+    for key, entry in cat["strings"].items():
+        if has_arabic(entry) or entry.get("extractionState") == "stale" or not key.strip():
+            continue
+        sources = keys.get(key)
+        if sources is not None and not translatable(sources):
+            continue
+        # Nothing to translate in a bare argument ("%lld") or a symbol.
+        if not re.search(r"[A-Za-z]", SPEC.sub("", key)):
+            continue
+        todo.append({"key": key, "files": sorted(sources or ["(data shown via .localizedDisplay)"]),
+                     "plural": plural_eligible(key)})
+    # Grouped by first source file so a batch reads as whole screens.
+    todo.sort(key=lambda t: (t["files"][0], t["key"]))
+    os.makedirs(outdir, exist_ok=True)
+    n = 0
+    for i in range(0, len(todo), chunk):
+        n += 1
+        with open(os.path.join(outdir, f"todo_{n:03d}.json"), "w", encoding="utf-8") as f:
+            json.dump(todo[i:i + chunk], f, ensure_ascii=False, indent=1)
+    print(f"todo: {len(todo)} keys in {n} files under {outdir}")
+
+
+def cmd_sibling(dd, add):
+    cat = load_catalog()
+    keys = extracted(dd)
+    if not keys:
+        sys.exit(f"no .stringsdata under {dd}: build the sibling with -derivedDataPath first")
+    strings = cat["strings"]
+    have = untranslated = articles = 0
+    missing, revive = [], []
+    for key, sources in sorted(keys.items()):
+        if not translatable(sources):
+            articles += 1
+            continue
+        if not re.search(r"[A-Za-z]", SPEC.sub("", key)):
+            continue
+        entry = strings.get(key)
+        if entry is None:
+            missing.append((key, sorted(sources)[0]))
+        elif has_arabic(entry):
+            have += 1
+        else:
+            untranslated += 1
+            if entry.get("extractionState") == "stale":
+                revive.append(key)  # gone from this app's code: `todo` skips it unless it turns manual
+    print(f"sibling: {len(keys)} keys in that build; {have} have Arabic here, {untranslated} are here without "
+          f"Arabic yet ({len(revive)} of them stale), {len(missing)} are missing; {articles} article-only skipped")
+    for key, src in missing[:40]:
+        print(f"  missing  {key!r}  ({src})")
+    if len(missing) > 40:
+        print(f"  ... and {len(missing) - 40} more")
+    if add and (missing or revive):
+        for key, _ in missing:
+            strings[key] = {"extractionState": "manual"}
+        for key in revive:
+            strings[key]["extractionState"] = "manual"
+        save_catalog(cat)
+        print(f"sibling: {len(missing)} added and {len(revive)} kept as manual keys; `todo` offers them now")
+
+
+def problems(key, value, may_drop_count=False):
+    """What is wrong with one Arabic value (a string), as a list of messages. `may_drop_count`: a plural's
+    zero/one/two form, which can say the number as a word (one ayah, two ayahs) instead of printing it."""
+    out = []
+    if not value.strip():
+        out.append("empty")
+    if EM_DASH in value or "&mdash;" in value:
+        out.append("em dash")
+    if specs(value) != specs(key) and not (may_drop_count and not specs(value)):
+        out.append(f"placeholders {specs(value)} != key {specs(key)}")
+    if key.count("%%") > value.count("%%") + value.count("\u066A"):
+        out.append("a literal %% is missing")
+    if sorted(PARAM_TOKEN.findall(value)) != sorted(PARAM_TOKEN.findall(key)):
+        out.append("${...} parameter tokens differ from the key")
+    quoted = set(quoted_latin(value))
+    key_words = {w.lower() for w in re.findall(r"[A-Za-z]+", key)}
+    for word in re.findall(r"[A-Za-z][A-Za-z.\-]*", PARAM_TOKEN.sub(" ", SPEC.sub(" ", value))):
+        w = word.lower().strip(".-")
+        if not w or w in LATIN_OK:
+            continue
+        # The Arabic lessons compare a letter with an English word ("like the b in “book”"): a Latin
+        # word the key has too may stay when it is a letter or two, or quoted in the Arabic.
+        if w in key_words and (len(w) <= 2 or w in quoted):
+            continue
+        out.append(f"Latin word {word!r}")
+        break
+    return out
+
+
+QUOTED = re.compile(r"[\u201C\u00AB\"]([^\u201D\u00BB\"]{1,60})[\u201D\u00BB\"]")
+
+
+def quoted_latin(value):
+    """Latin words that sit inside quotation marks in an Arabic value."""
+    for m in QUOTED.finditer(value):
+        for w in re.findall(r"[A-Za-z]+", m.group(1)):
+            yield w.lower()
+
+
+RLM = "\u200F"
+ARABIC_LETTER = re.compile(r"[\u0600-\u06FF]")
+
+
+def directional(value):
+    """An Arabic value whose only Arabic sits inside its arguments starts with a right-to-left mark:
+    `String(localized:)` isolates every argument, so with nothing strong outside them the line fell back to
+    left to right and its parts swapped ("%1$@/%2$lld  %3$@" put the percent first). A middle dot beside
+    Arabic-Indic digits reads as a zero, so the separator becomes a bullet, and a literal percent becomes
+    the Arabic percent sign."""
+    value = value.replace(" \u00B7 ", " \u2022 ")
+    # Arabic writes its own percent sign beside its digits (a literal percent is "%%" in a format string).
+    value = value.replace("%%", "\u066A")
+    if specs(value) and not value.startswith(RLM) and not ARABIC_LETTER.search(SPEC.sub("", value)):
+        value = RLM + value
+    return value
+
+
+def unit(value):
+    return {"stringUnit": {"state": "translated", "value": directional(value)}}
+
+
+def cmd_merge(paths, dry_run=False):
+    cat = load_catalog()
+    strings = cat["strings"]
+    written = skipped = 0
+    bad = []
+    for path in paths:
+        for key, value in json.load(open(path, encoding="utf-8")).items():
+            if key not in strings:
+                bad.append((path, key, "key not in catalog"))
+                continue
+            if isinstance(value, dict):
+                if not plural_eligible(key):
+                    bad.append((path, key, "plural forms on a key without exactly one integer"))
+                    continue
+                missing = [f for f in REQUIRED_PLURALS if not value.get(f)]
+                errs = [f"{f}: {p}" for f, v in value.items() if f in PLURAL_FORMS
+                        for p in problems(key, v, may_drop_count=f in ("zero", "one", "two"))]
+                extra = [f for f in value if f not in PLURAL_FORMS]
+                if missing or errs or extra:
+                    bad.append((path, key, f"missing {missing} extra {extra} {errs}"))
+                    continue
+                loc = {"variations": {"plural": {f: unit(value[f]) for f in PLURAL_FORMS if value.get(f)}}}
+            else:
+                errs = problems(key, value)
+                if errs:
+                    bad.append((path, key, "; ".join(errs)))
+                    continue
+                loc = unit(value)
+            strings[key].setdefault("localizations", {})[LANG] = loc
+            written += 1
+    if not dry_run:
+        save_catalog(cat)
+    for path, key, why in bad:
+        print(f"REJECTED {os.path.basename(path)}: {key!r}: {why}")
+    print(f"{'validate' if dry_run else 'merge'}: {written} {'valid' if dry_run else 'written'}, {len(bad)} rejected")
+    return 1 if bad else 0
+
+
+def cmd_check():
+    cat = load_catalog()
+    bad = 0
+    for key, entry in cat["strings"].items():
+        loc = entry.get("localizations", {}).get(LANG)
+        if not loc:
+            continue
+        values = [("", loc["stringUnit"]["value"])] if "stringUnit" in loc else \
+            [(f, v["stringUnit"]["value"]) for f, v in loc.get("variations", {}).get("plural", {}).items()]
+        for form, v in values:
+            for p in problems(key, v, may_drop_count=form in ("zero", "one", "two")):
+                print(f"{key!r}: {p}")
+                bad += 1
+    total = sum(1 for e in cat["strings"].values() if has_arabic(e))
+    print(f"check: {total} Arabic entries, {bad} problems")
+    return 1 if bad else 0
+
+
+def main(argv):
+    if len(argv) < 2:
+        sys.exit(__doc__)
+    cmd, args = argv[1], argv[2:]
+    if cmd == "sync":
+        cmd_sync(args[0])
+    elif cmd == "todo":
+        chunk = int(args[args.index("--chunk") + 1]) if "--chunk" in args else 300
+        cmd_todo(args[0], args[1], chunk)
+    elif cmd == "merge":
+        sys.exit(cmd_merge(args))
+    elif cmd == "validate":
+        sys.exit(cmd_merge(args, dry_run=True))
+    elif cmd == "check":
+        sys.exit(cmd_check())
+    elif cmd == "manual":
+        cmd_manual(args[0])
+    elif cmd == "sibling":
+        cmd_sibling(args[0], "--add" in args)
+    else:
+        sys.exit(__doc__)
+
+
+if __name__ == "__main__":
+    main(sys.argv)

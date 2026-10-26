@@ -2,53 +2,19 @@ import SwiftUI
 
 // The Reading Test's screens: the ladder of tiers, one tier's page, and the session that asks the
 // questions. The model (tiers, the word bank, how wrong answers are made, progress) is in
-// ArabicReadingTest.swift. Phone only: a question wants a two-by-two grid and a row of letter tiles.
-
-// MARK: - Arabic text
-
-/// Arabic in the Islam tab's face, or in the plain system face for anything printed without marks
-/// (a mushaf face draws a final yaa without its dots, and a bare, dotless yaa spells something else).
-private struct ReadingArabic: View {
-    @Environment(\.appearance) private var appearance
-
-    let text: String
-    let base: CGFloat
-    let style: Font.TextStyle
-    var plain = false
-
-    var body: some View {
-        let custom = appearance.useFontArabic && !plain
-        Text(text)
-            .font(custom ? appearance.islamArabicFont(base: base, relativeTo: style) : .system(size: base * 0.9))
-            .arabicFontDesign(custom: custom && appearance.islamUsesCustomArabicFace)
-    }
-}
-
-/// An icon and a title side by side. Not a `Label`: inside a List row a Label's icon is given a column
-/// of its own (so that titles line up down the list), which opens a wide gap in a button or a capsule.
-private struct ReadingIconText: View {
-    let title: String
-    let systemImage: String
-
-    init(_ title: String, systemImage: String) {
-        self.title = title
-        self.systemImage = systemImage
-    }
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemImage)
-
-            Text(title)
-        }
-    }
-}
+// ArabicReadingTest.swift; the pieces shared with the Tajweed Test (buttons, headers, rows, the score
+// card, the match board) are in StudyKit.swift. Phone only: a question wants a two-by-two grid and a
+// row of letter tiles.
 
 private extension ReadingTier {
     /// The tile's glyph in the sukoon the reader has chosen, like everything else the tier draws.
     var drawnSpecimen: String {
         ReadingTestText.display(specimen, mushafMarks: Settings.shared.quranicSukoonInLetterPractice || display == .mushaf)
     }
+
+    /// The examples' glosses are English content (a word's meaning, a name's), except on the two tiers
+    /// whose gloss the app writes itself in the interface's language.
+    var glossIsEnglish: Bool { id != "harakat" && id != "openers" }
 }
 
 /// How a session draws its Arabic: which marks, which face, spaced or joined.
@@ -59,10 +25,18 @@ private struct ReadingTextStyle {
 
     var plainFace: Bool { tier.display == .unmarked }
 
+    var mushafMarks: Bool { mushafSukoon || tier.display == .mushaf }
+
     func draw(_ arabic: String, spaced: Bool) -> String {
-        let shown = ReadingTestText.display(arabic, mushafMarks: mushafSukoon || tier.display == .mushaf)
+        let shown = ReadingTestText.display(arabic, mushafMarks: mushafMarks)
         return spaced || tier.display == .spaced ? ReadingTestText.spaced(shown) : shown
     }
+}
+
+/// A word missed somewhere, with the tier it belongs to: what a review round is made of.
+struct ReadingMissedEntry: Hashable {
+    let tier: ReadingTier
+    let item: ReadingItem
 }
 
 // MARK: - The ladder
@@ -96,16 +70,18 @@ struct ReadingTestView: View {
                 letterQuizSection
 
                 ForEach(ReadingStage.allCases) { stage in
-                    Section(header: stageHeader(stage)) {
+                    Section(header: StudyStageHeader(systemImage: stage.systemImage, title: stage.title, arabic: stage.arabic, blurb: stage.blurb)) {
                         ForEach(ReadingTier.tiers(in: stage)) { tier in
                             NavigationLink(destination: LazyDestination { ReadingTierView(tier: tier) }) {
-                                ReadingTierRow(tier: tier, record: progress.record(for: tier),
-                                               isNext: progress.nextTier == tier)
+                                StudyTierRow(number: tier.number, specimen: tier.drawnSpecimen, specimenPlain: tier.display == .unmarked,
+                                             title: tier.title, arabic: tier.arabic, summary: tier.summary,
+                                             record: progress.record(for: tier), isNext: progress.nextTier == tier)
                             }
                         }
                     }
                 }
 
+                reviewSection
                 moreSection
             }
             .themedListRowBackground()
@@ -123,7 +99,7 @@ struct ReadingTestView: View {
                 withAnimation(.easeInOut) { progress.reset() }
             }
         } message: {
-            Text("Every tier goes back to not passed. This cannot be undone.")
+            Text("Every tier goes back to not passed, and the words kept for review are forgotten. This cannot be undone.")
         }
         #if DEBUG
         .debugPushDestination(isPresented: $debugTierOpen) {
@@ -135,11 +111,16 @@ struct ReadingTestView: View {
             guard !debugRouteFired else { return }
             debugRouteFired = true
             if let seed = Self.debugArgument("-readingTestSeed").flatMap(Int.init) { progress.debugSeed(passed: seed) }
+            let arguments = ProcessInfo.processInfo.arguments
             if Self.debugArgument("-readingTier") != nil, !debugTierOpen {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { debugTierOpen = true }
-            } else if ProcessInfo.processInfo.arguments.contains("-readingPlacement"), session == nil {
+            } else if arguments.contains("-readingPlacement"), session == nil {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { session = .placement }
-            } else if ProcessInfo.processInfo.arguments.contains("-readingKey"), !showKey {
+            } else if arguments.contains("-readingSpeed"), session == nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { session = .speed }
+            } else if arguments.contains("-readingReview"), session == nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { session = .review }
+            } else if arguments.contains("-readingKey"), !showKey {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { showKey = true }
             }
         }
@@ -152,85 +133,43 @@ struct ReadingTestView: View {
 
     // MARK: Sections
 
-    /// The ladder's `ResourceHero` (2026-10-03), the progress and the two ways in as its footer. The
-    /// footer holds buttons, so the card is a VoiceOver container and each one is reached on its own.
+    /// The ladder's `ResourceHero` (2026-10-03): the figures, the progress and the two ways in as its
+    /// footer. The footer holds buttons, so the card is a VoiceOver container and each one is reached
+    /// on its own.
     private var introSection: some View {
-        ResourceHeroSection(ResourceHero(
-            eyebrow: "READING TEST",
+        let total = ReadingTier.all.count
+        let started = progress.passedCount > 0 || progress.placement != nil || !progress.records.isEmpty
+        return ResourceHeroSection(ResourceHero(
+            eyebrow: String(localized: "READING TEST"),
             systemImage: "text.book.closed.fill",
-            headline: "From one letter to a page with no tashkeel",
-            message: "\(ReadingTier.all.count) tiers, in the order a qaa'idah teaches reading before the Quran. Each one tests reading, spelling and listening, never meaning. Eight right out of ten passes a tier, and any tier can be opened at any time."
+            headline: String(localized: "From one letter to a page with no tashkeel"),
+            message: String(localized: "\(total) tiers, in the order a qaa'idah teaches reading before the Quran. Each one tests reading, spelling and listening, never meaning. Eight right out of ten passes a tier, and any tier can be opened at any time."),
+            stats: started ? [
+                ResourceHeroStat("\(progress.passedCount)", String(localized: "of \(total) passed")),
+                ResourceHeroStat("\(progress.masteredCount)", String(localized: "mastered")),
+                ResourceHeroStat("\(progress.missed.count)", String(localized: "to review")),
+            ] : []
         ) {
             VStack(alignment: .leading, spacing: 10) {
                 if progress.passedCount > 0 {
-                    ProgressView(value: Double(progress.passedCount), total: Double(ReadingTier.all.count))
+                    ProgressView(value: Double(progress.passedCount), total: Double(total))
                         .tint(accent)
-
-                    Text("\(progress.passedCount) of \(ReadingTier.all.count) tiers passed")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundColor(accent)
                 }
 
                 HStack(spacing: 8) {
                     if let next = progress.nextTier {
-                        introButton(progress.passedCount == 0 && progress.placement == nil ? "Start: \(next.title)" : "Continue: \(next.title)",
-                                    systemImage: "play.fill", filled: true) {
+                        StudyHeroButton(title: progress.passedCount == 0 && progress.placement == nil ? String(localized: "Start: \(next.title)") : String(localized: "Continue: \(next.title)"),
+                                        systemImage: "play.fill", filled: true) {
                             session = .test(next)
                         }
                     }
 
-                    introButton("Find My Level", systemImage: "scope", filled: progress.nextTier == nil) {
+                    StudyHeroButton(title: String(localized: "Find My Level"), systemImage: "scope", filled: progress.nextTier == nil) {
                         session = .placement
                     }
                 }
             }
         })
-    }
-
-    private func introButton(_ title: String, systemImage: String, filled: Bool, action: @escaping () -> Void) -> some View {
-        Button {
-            Settings.shared.hapticFeedback()
-            action()
-        } label: {
-            HStack(spacing: 5) {
-                Image(systemName: systemImage)
-                    .font(.caption.weight(.semibold))
-
-                Text(title)
-                    .font(.caption.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-            }
-            .foregroundColor(filled ? .white : accent)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 9)
-            .padding(.horizontal, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(filled ? accent : accent.opacity(0.12))
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func stageHeader(_ stage: ReadingStage) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text(stage.title.uppercased())
-
-                Spacer()
-
-                Text(stage.arabic)
-                    .textCase(nil)
-                    .foregroundColor(accent)
-            }
-
-            Text(stage.blurb)
-                .font(.caption2)
-                .textCase(nil)
-                .foregroundStyle(.secondary)
-        }
     }
 
     /// The Letter Quiz, on this page since 2026-09-22 (Abu: "merge reading test with letter quiz"):
@@ -242,8 +181,8 @@ struct ReadingTestView: View {
             NavigationLink(destination: LazyDestination { LetterQuizView() }) {
                 ArabicTopicLinkLabel(
                     specimen: "\u{0628}",
-                    title: "Letter Quiz",
-                    caption: "Name a letter, find it, read its joined form, place its family, or pick the one you hear. Ten questions a round."
+                    title: String(localized: "Letter Quiz"),
+                    caption: String(localized: "Name a letter, find it, read its joined form, place its family, or pick the one you hear. Ten questions a round.")
                 )
             }
         } footer: {
@@ -251,147 +190,53 @@ struct ReadingTestView: View {
         }
     }
 
-    private var moreSection: some View {
+    /// Rounds that cut across the ladder: a mixed review, the clock, and the words that got away.
+    private var reviewSection: some View {
         Section {
-            Button {
-                Settings.shared.hapticFeedback()
+            StudyActionRow(title: String(localized: "Mixed Review"), systemImage: "shuffle",
+                           caption: progress.passedCount > 0 ? String(localized: "Fifteen questions from the tiers you have passed") : String(localized: "Fifteen questions from every tier")) {
                 session = .review
-            } label: {
-                moreRow("Mixed Review", systemImage: "shuffle",
-                        caption: progress.passedCount > 0 ? "Fifteen questions from the tiers you have passed" : "Fifteen questions from every tier")
             }
-            .buttonStyle(.plain)
 
-            Button {
-                Settings.shared.hapticFeedback()
-                showKey = true
-            } label: {
-                moreRow("Reading Key", systemImage: "character.book.closed", caption: "How the readings are spelled: H, S, aa, and the rest")
+            StudyActionRow(title: String(localized: "Speed Round"), systemImage: "timer",
+                           caption: String(localized: "\(StudySpeed.seconds) seconds of reading and spelling. How many can you get?"),
+                           detail: progress.speedBest > 0 ? String(localized: "best \(progress.speedBest)") : nil) {
+                session = .speed
             }
-            .buttonStyle(.plain)
 
-            if !progress.records.isEmpty || progress.placement != nil {
-                Button {
-                    Settings.shared.hapticFeedback()
-                    confirmReset = true
-                } label: {
-                    moreRow("Reset Progress", systemImage: "arrow.counterclockwise", caption: "Start the ladder again from nothing", tint: .red)
+            if !progress.missed.isEmpty {
+                StudyActionRow(title: String(localized: "Practice Missed Words"), systemImage: "arrow.uturn.backward.circle",
+                               caption: String(localized: "The words you missed in scored tests, until you get them right"),
+                               detail: "\(progress.missed.count)") {
+                    session = .missed(nil)
                 }
-                .buttonStyle(.plain)
             }
         } header: {
-            Text("MORE")
+            StudySectionHeader(String(localized: "REVIEW"), systemImage: "arrow.triangle.2.circlepath")
+        } footer: {
+            if !progress.missed.isEmpty {
+                Text("A word leaves the review list once you read it right in a review or a scored test.")
+            }
+        }
+    }
+
+    private var moreSection: some View {
+        Section {
+            StudyActionRow(title: String(localized: "Reading Key"), systemImage: "character.book.closed",
+                           caption: String(localized: "How the readings are spelled: H, S, aa, and the rest"), trailingSymbol: "chevron.forward") {
+                showKey = true
+            }
+
+            if !progress.records.isEmpty || progress.placement != nil || !progress.missed.isEmpty || progress.speedBest > 0 {
+                StudyActionRow(title: String(localized: "Reset Progress"), systemImage: "arrow.counterclockwise",
+                               caption: String(localized: "Start the ladder again from nothing"), tint: .red, trailingSymbol: nil) {
+                    confirmReset = true
+                }
+            }
+        } header: {
+            StudySectionHeader(String(localized: "MORE"), systemImage: "ellipsis.circle")
         } footer: {
             Text("Every Quranic word here is cut from the app's own Hafs text, and its reading is checked against the word-by-word transliteration before it is allowed in. The unmarked words are spelled the way the hadith collections print them.")
-        }
-    }
-
-    private func moreRow(_ title: String, systemImage: String, caption: String, tint: Color? = nil) -> some View {
-        HStack(spacing: 12) {
-            AccentIconChip(systemImage: systemImage, tint: tint)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.body.weight(.semibold))
-                    .foregroundColor(tint ?? .primary)
-
-                Text(caption)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(.vertical, 2)
-        .contentShape(Rectangle())
-    }
-}
-
-/// One tier on the ladder: its number, its name in both languages, and where the learner stands.
-private struct ReadingTierRow: View {
-    @Environment(\.appearance) private var appearance
-
-    let tier: ReadingTier
-    let record: ReadingTestProgress.Record
-    let isNext: Bool
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            ZStack(alignment: .bottomTrailing) {
-                ReadingArabic(text: tier.drawnSpecimen, base: 22, style: .title2, plain: tier.display == .unmarked)
-                    .foregroundColor(appearance.accent)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.35)
-                    .padding(.horizontal, 3)
-                    .frame(width: 46, height: 46)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(appearance.accent.opacity(isNext ? 0.22 : 0.12))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(isNext ? appearance.accent : .clear, lineWidth: 1.5)
-                    )
-
-                Text("\(tier.number)")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                    .frame(minWidth: 16, minHeight: 16)
-                    .background(Circle().fill(appearance.accent))
-                    .offset(x: 5, y: 5)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(tier.title)
-                    .font(.body.weight(.semibold))
-                    .foregroundColor(.primary)
-
-                Text(tier.arabic)
-                    .font(.caption)
-                    .foregroundColor(appearance.accent.opacity(0.9))
-                    .lineLimit(1)
-
-                Text(tier.summary)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 4)
-
-            status
-        }
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Tier \(tier.number), \(tier.title). \(tier.summary). \(statusLabel)")
-    }
-
-    private var statusLabel: String {
-        if record.mastered { return "Mastered" }
-        if record.passed { return "Passed, best \(record.best) percent" }
-        if record.attempts > 0 { return "Best \(record.best) percent" }
-        return isNext ? "Up next" : "Not started"
-    }
-
-    @ViewBuilder
-    private var status: some View {
-        if record.mastered {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.title3)
-                .foregroundColor(appearance.accent)
-        } else if record.passed {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.title3)
-                .foregroundColor(appearance.accent)
-        } else if record.attempts > 0 {
-            Text("\(record.best)%")
-                .font(.caption.weight(.bold))
-                .foregroundColor(.secondary)
-        } else if isNext {
-            Text("NEXT")
-                .font(.caption2.weight(.bold))
-                .foregroundColor(appearance.accent)
         }
     }
 }
@@ -424,9 +269,10 @@ struct ReadingTierView: View {
             Group {
                 heroSection(record)
                 teachesSection
+                catchesSection
                 examplesSection
                 testSection(record)
-                practiceSection
+                practiceSection(record)
             }
             .themedListRowBackground()
         }
@@ -438,7 +284,7 @@ struct ReadingTierView: View {
         }
         .onDisappear { ArabicSpeech.shared.stop() }
         #if DEBUG
-        // "-readingStart test|read|spell|listen|build|stop|aloud...": open the session straight away.
+        // "-readingStart test|read|spell|listen|build|stop|gap|match|odd|aloud...": open the session straight away.
         .onAppear {
             let arguments = ProcessInfo.processInfo.arguments
             guard !debugStartFired, session == nil,
@@ -454,25 +300,25 @@ struct ReadingTierView: View {
 
     /// The tier's `ResourceHero` (2026-10-03): its place on the ladder as the eyebrow, its name in both
     /// languages, then the specimen set large and where the learner stands, as the footer.
-    private func heroSection(_ record: ReadingTestProgress.Record) -> some View {
+    private func heroSection(_ record: StudyRecord) -> some View {
         ResourceHeroSection(ResourceHero(
-            eyebrow: "Tier \(tier.number) of \(ReadingTier.all.count) \u{00B7} \(tier.stage.title)".uppercased(),
+            eyebrow: String(localized: "Tier \(tier.number) of \(ReadingTier.all.count) \u{00B7} \(tier.stage.title)").uppercased(),
             systemImage: "text.book.closed.fill",
             headline: tier.title,
             arabic: tier.arabic,
             message: ""
         ) {
             VStack(spacing: 8) {
-                ReadingArabic(text: tier.drawnSpecimen, base: 44, style: .largeTitle, plain: tier.display == .unmarked)
+                StudyArabicText(text: tier.drawnSpecimen, base: 44, style: .largeTitle, plain: tier.display == .unmarked)
                     .foregroundColor(accent)
                     .lineLimit(1)
                     .minimumScaleFactor(0.4)
                     .frame(maxWidth: .infinity, minHeight: 64)
 
                 if record.attempts > 0 {
-                    ReadingIconText(record.mastered ? "Mastered: every answer right, no hints"
-                          : record.passed ? "Passed \u{00B7} best \(record.best)%"
-                          : "Best so far \(record.best)% \u{00B7} \(ReadingTestProgress.passMark)% passes",
+                    StudyIconText(record.mastered ? String(localized: "Mastered: every answer right, no hints")
+                          : record.passed ? String(localized: "Passed \u{00B7} best \(record.best)%")
+                          : String(localized: "Best so far \(record.best)% \u{00B7} \(ReadingTestProgress.passMark)% passes"),
                           systemImage: record.mastered ? "checkmark.seal.fill" : record.passed ? "checkmark.circle.fill" : "chart.bar")
                         .font(.caption.weight(.semibold))
                         .foregroundColor(record.passed ? accent : .secondary)
@@ -486,7 +332,7 @@ struct ReadingTierView: View {
     private var teachesSection: some View {
         Section {
             if let lead = tier.teaches.first {
-                ArticleLead(lead)
+                ArticleLead(lead, eyebrow: String(localized: "IN SHORT"))
             }
 
             if tier.teaches.count > 1 {
@@ -500,7 +346,34 @@ struct ReadingTierView: View {
                 .padding(.vertical, 2)
             }
         } header: {
-            Text("WHAT THIS TIER TESTS")
+            StudySectionHeader(String(localized: "WHAT THIS TIER TESTS"), systemImage: "text.book.closed")
+        }
+    }
+
+    /// The slips the wrong answers are built from: a learner can see what the test is listening for.
+    @ViewBuilder
+    private var catchesSection: some View {
+        let catches = tier.catches
+        if !catches.isEmpty {
+            Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(catches, id: \.self) { slip in
+                        HStack(alignment: .firstTextBaseline, spacing: 10) {
+                            Image(systemName: "exclamationmark.circle")
+                                .font(.caption.weight(.bold))
+                                .foregroundColor(accent)
+                            Text(slip)
+                                .font(.subheadline)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .padding(.vertical, 4)
+            } header: {
+                StudySectionHeader(String(localized: "WHAT IT CATCHES"), systemImage: "ear.badge.waveform")
+            } footer: {
+                Text("Every wrong answer is one of these slips made on the right word, so a miss tells you which habit to watch.")
+            }
         }
     }
 
@@ -511,22 +384,26 @@ struct ReadingTierView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(item.reading)
                             .font(.body.weight(.semibold))
+                            .leftToRightContent()
 
                         if let caption = item.gloss, tier.id != "letters" {
                             Text(caption)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .lineLimit(2)
+                                .leftToRightContent(tier.glossIsEnglish)
                         }
                     }
 
                     Spacer(minLength: 8)
 
-                    ReadingArabic(text: style.draw(item.arabic, spaced: examplesSpaced), base: 26, style: .title2, plain: style.plainFace)
+                    StudyArabicText(text: style.draw(item.arabic, spaced: examplesSpaced), base: 26, style: .title2, plain: style.plainFace)
                         .foregroundColor(accent)
                         .lineLimit(2)
                         .multilineTextAlignment(.trailing)
                         .minimumScaleFactor(0.5)
+                        // Its lines right-aligned, as Arabic is, in either interface.
+                        .environment(\.layoutDirection, .leftToRight)
 
                     if speech.isAvailable {
                         PracticeListenButton(text: item.spoken)
@@ -541,7 +418,7 @@ struct ReadingTierView: View {
                     .tint(accent)
             }
         } header: {
-            Text("EXAMPLES")
+            StudySectionHeader(String(localized: "EXAMPLES"), systemImage: "text.quote")
         } footer: {
             if tier.hint != .none, tier.display != .spaced {
                 Text("That switch is the hint you get inside a test: Beginner Mode, every letter apart.")
@@ -549,64 +426,32 @@ struct ReadingTierView: View {
         }
     }
 
-    private func testSection(_ record: ReadingTestProgress.Record) -> some View {
+    private func testSection(_ record: StudyRecord) -> some View {
         Section {
-            Button {
-                Settings.shared.hapticFeedback()
+            StudyResultButton(title: record.attempts == 0 ? String(localized: "Start the Test") : String(localized: "Take the Test Again"),
+                              systemImage: "play.fill", prominent: true) {
                 session = .test(tier)
-            } label: {
-                ReadingIconText(record.attempts == 0 ? "Start the Test" : "Take the Test Again", systemImage: "play.fill")
-                    .font(.body.weight(.semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 11)
-                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(accent))
-                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
         } header: {
-            Text("THE TEST")
+            StudySectionHeader(String(localized: "THE TEST"), systemImage: "checkmark.seal")
         } footer: {
             Text("Ten questions, the skills below mixed together. \(ReadingTestProgress.passMark)% passes. A hint never costs you the answer, but a tier is only mastered with every answer right and no hints.")
         }
     }
 
-    private var practiceSection: some View {
+    private func practiceSection(_ record: StudyRecord) -> some View {
         let skills = tier.skills.filter { speech.isAvailable || !$0.needsVoice } + (tier.id == "forms" ? [] : [.aloud])
         return Section {
             ForEach(skills) { skill in
-                Button {
-                    Settings.shared.hapticFeedback()
+                StudyActionRow(title: skill.title, systemImage: skill.systemImage, caption: skill.caption,
+                               detail: record.skillBest[skill.rawValue].map { "\($0)%" }) {
                     session = .practice(tier, skill)
-                } label: {
-                    HStack(spacing: 12) {
-                        AccentIconChip(systemImage: skill.systemImage)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(skill.title)
-                                .font(.body.weight(.semibold))
-                                .foregroundColor(.primary)
-
-                            Text(skill.caption)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-
-                        Spacer(minLength: 0)
-
-                        Image(systemName: "play.circle.fill")
-                            .font(.title3)
-                            .foregroundColor(accent)
-                    }
-                    .padding(.vertical, 2)
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
             }
         } header: {
-            Text("PRACTICE ONE SKILL")
+            StudySectionHeader(String(localized: "PRACTICE ONE SKILL"), systemImage: "figure.walk")
         } footer: {
-            Text("Practice rounds are not scored against the tier.")
+            Text("Practice rounds are not scored against the tier. The figure beside a skill is your best practice round of it.")
         }
     }
 }
@@ -619,6 +464,10 @@ struct ReadingSessionView: View {
         case practice(ReadingTier, ReadingSkill)
         case placement
         case review
+        /// Sixty seconds of quick questions.
+        case speed
+        /// The words missed before: these ones, or the whole review bank when nil.
+        case missed([ReadingMissedEntry]?)
     }
 
     @Environment(\.appearance) private var appearance
@@ -629,10 +478,12 @@ struct ReadingSessionView: View {
     @State private var mode: Mode
     @State private var questions: [ReadingQuestion] = []
     @State private var index = 0
-    /// Multiple choice: the choice tapped. Build: set once the word is checked.
+    /// Multiple choice: the choice tapped. Build and match: set once the answer is checked.
     @State private var chosen: Int?
     @State private var placed: [ReadingTile] = []
     @State private var buildRight: Bool?
+    /// Match Pairs: how many wrong pairs it took, once every pair is made.
+    @State private var matchWrong: Int?
     /// Read aloud: the reading has been shown.
     @State private var revealed = false
     /// 0 none, 1 letter by letter, 2 the marks shown (the unmarked tiers).
@@ -641,12 +492,16 @@ struct ReadingSessionView: View {
     @State private var right = 0
     @State private var hints = 0
     @State private var streak = 0
-    @State private var missed: [ReadingItem] = []
+    @State private var missed: [ReadingMissedEntry] = []
+    @State private var answeredRight: [ReadingMissedEntry] = []
     @State private var finished = false
     /// Find My Level: where on the ladder it is asking, and how the current pair is going.
     @State private var placementIndex = 0
     @State private var placementResult: ReadingTier?
     @State private var placementCleared = false
+    /// Speed Round: the clock.
+    @State private var secondsLeft = StudySpeed.seconds
+    @State private var clock: Task<Void, Never>?
     private let mushafSukoon = Settings.shared.quranicSukoonInLetterPractice
 
     init(mode: Mode) {
@@ -657,12 +512,16 @@ struct ReadingSessionView: View {
 
     private var isPlacement: Bool { mode == .placement }
 
+    private var isSpeed: Bool { mode == .speed }
+
     private var title: String {
         switch mode {
         case .test(let tier): return tier.title
         case .practice(_, let skill): return skill.title
-        case .placement: return "Find My Level"
-        case .review: return "Mixed Review"
+        case .placement: return String(localized: "Find My Level")
+        case .review: return String(localized: "Mixed Review")
+        case .speed: return String(localized: "Speed Round")
+        case .missed: return String(localized: "Practice Missed Words")
         }
     }
 
@@ -698,7 +557,10 @@ struct ReadingSessionView: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { if questions.isEmpty, !finished { start() } }
-        .onDisappear { ArabicSpeech.shared.stop() }
+        .onDisappear {
+            ArabicSpeech.shared.stop()
+            clock?.cancel()
+        }
     }
 
     private static let promptID = "readingPrompt"
@@ -727,7 +589,7 @@ struct ReadingSessionView: View {
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if !answered, !isPlacement {
+                if !answered, !isPlacement, !isSpeed {
                     hintRow(question)
                 }
             }
@@ -735,24 +597,18 @@ struct ReadingSessionView: View {
             .padding(.vertical, 6)
             .id(Self.promptID)
         } header: {
-            HStack {
-                Text(isPlacement ? "TIER \(question.tier.number): \(question.tier.title.uppercased())"
-                     : "QUESTION \(index + 1) OF \(questions.count)")
-
-                Spacer()
-
-                if streak > 1, !isPlacement {
-                    ReadingIconText("\(streak) in a row", systemImage: "flame.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(accent)
-                        .textCase(nil)
-                }
-            }
+            StudyQuestionHeader(
+                title: isPlacement ? String(localized: "TIER \(question.tier.number): \(question.tier.title.uppercased())")
+                    : isSpeed ? String(localized: "QUESTION \(index + 1)")
+                    : String(localized: "QUESTION \(index + 1) OF \(questions.count)"),
+                streak: isPlacement ? 0 : streak,
+                secondsLeft: isSpeed ? secondsLeft : nil)
         }
 
         Section {
             switch question.skill {
             case .build: buildArea(question, style: style)
+            case .match: matchArea(question, style: style)
             case .aloud: aloudArea(question)
             default: choiceArea(question, style: style)
             }
@@ -760,28 +616,22 @@ struct ReadingSessionView: View {
             if answered {
                 feedback(question, style: style)
 
-                Button {
-                    Settings.shared.hapticFeedback()
-                    advance()
-                } label: {
-                    Text(isLast ? "See Results" : "Next")
-                        .font(.body.weight(.semibold))
-                        .foregroundColor(accent)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .conditionalGlassEffect(rectangle: true)
+                if !isSpeed {
+                    StudyAdvanceButton(title: isLast ? String(localized: "See Results") : String(localized: "Next")) {
+                        advance()
+                    }
+                    .id(Self.nextID)
                 }
-                .buttonStyle(.plain)
-                .id(Self.nextID)
             }
         }
     }
 
-    private var isLast: Bool { !isPlacement && index + 1 == questions.count }
+    private var isLast: Bool { !isPlacement && !isSpeed && index + 1 == questions.count }
 
     private func isAnswered(_ question: ReadingQuestion) -> Bool {
         switch question.skill {
         case .build: return buildRight != nil
+        case .match: return matchWrong != nil
         default: return chosen != nil
         }
     }
@@ -789,10 +639,31 @@ struct ReadingSessionView: View {
     @ViewBuilder
     private func promptView(_ question: ReadingQuestion, style: ReadingTextStyle) -> some View {
         if question.skill == .listen {
-            speakerButton(question.item.spoken, size: 96)
+            StudySpeakerButton(text: question.item.spoken, size: 96)
+        } else if question.skill == .gap {
+            VStack(spacing: 8) {
+                // The word with its gap, then the reading: the gap is what the question is about.
+                ReadingGapWord(question: question, style: style, size: promptSize(question))
+                    .foregroundColor(accent)
+                    .frame(maxWidth: .infinity, minHeight: 84)
+
+                Text(question.prompt)
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .leftToRightContent()
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.5)
+
+                if speech.isAvailable {
+                    StudySpeakerButton(text: question.item.spoken, size: 40)
+                }
+            }
+        } else if question.skill == .match || question.skill == .odd {
+            // Nothing above the board or the four words: the question is the choices.
+            EmptyView()
         } else if question.promptIsArabic {
             VStack(spacing: 6) {
-                ReadingArabic(text: style.draw(question.prompt, spaced: hintLevel >= 1), base: promptSize(question), style: .largeTitle, plain: style.plainFace)
+                StudyArabicText(text: style.draw(question.prompt, spaced: hintLevel >= 1), base: promptSize(question), style: .largeTitle, plain: style.plainFace)
                     .foregroundColor(accent)
                     .multilineTextAlignment(.center)
                     .lineLimit(question.prompt.contains(" ") ? 4 : 1)
@@ -801,7 +672,7 @@ struct ReadingSessionView: View {
 
                 // The unmarked tiers' second hint: the same word with its marks on.
                 if hintLevel >= 2, let marked = question.item.marked {
-                    ReadingArabic(text: ReadingTestText.display(marked, mushafMarks: mushafSukoon), base: 30, style: .title)
+                    StudyArabicText(text: ReadingTestText.display(marked, mushafMarks: mushafSukoon), base: 30, style: .title)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.4)
@@ -811,6 +682,8 @@ struct ReadingSessionView: View {
             VStack(spacing: 8) {
                 Text(question.prompt)
                     .font(.system(size: question.prompt.count > 22 ? 22 : 34, weight: .bold, design: .rounded))
+                    // A reading is Latin content: its apostrophes and hyphens stay where they are written.
+                    .leftToRightContent()
                     .foregroundColor(accent)
                     .multilineTextAlignment(.center)
                     .minimumScaleFactor(0.5)
@@ -818,30 +691,16 @@ struct ReadingSessionView: View {
 
                 // A reading is easier to hold in the ear than in the eye, so it can be heard as well.
                 if speech.isAvailable {
-                    speakerButton(question.item.spoken, size: 44)
+                    StudySpeakerButton(text: question.item.spoken, size: 44)
                 }
             }
         }
     }
 
     private func promptSize(_ question: ReadingQuestion) -> CGFloat {
-        if question.prompt.contains(" ") { return question.prompt.count > 40 ? 30 : 36 }
-        return question.prompt.count > 14 ? 44 : 60
-    }
-
-    private func speakerButton(_ text: String, size: CGFloat) -> some View {
-        Button {
-            Settings.shared.hapticFeedback()
-            speech.speak(text)
-        } label: {
-            Image(systemName: speech.currentText == text ? "speaker.wave.3.fill" : "speaker.wave.2.fill")
-                .font(.system(size: size * 0.42, weight: .semibold))
-                .foregroundColor(accent)
-                .frame(width: size, height: size)
-                .background(Circle().fill(accent.opacity(0.12)))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Hear it")
+        let text = question.skill == .gap ? question.item.arabic : question.prompt
+        if text.contains(" ") { return text.count > 40 ? 30 : 36 }
+        return text.count > 14 ? 44 : 60
     }
 
     // MARK: Hints
@@ -849,38 +708,22 @@ struct ReadingSessionView: View {
     @ViewBuilder
     private func hintRow(_ question: ReadingQuestion) -> some View {
         if question.skill == .build {
-            hintButton("Place the next one for me", systemImage: "lightbulb") {
+            StudyHintChip(title: String(localized: "Place the next one for me"), systemImage: "lightbulb") {
                 placeNext(question)
             }
         } else if question.allowsHint, question.tier.display != .spaced {
             HStack(spacing: 8) {
-                hintButton(hintLevel >= 1 ? "Joined Again" : "Hint: Letter by Letter", systemImage: hintLevel >= 1 ? "arrow.uturn.backward" : "lightbulb") {
+                StudyHintChip(title: hintLevel >= 1 ? String(localized: "Joined Again") : String(localized: "Hint: Letter by Letter"), systemImage: hintLevel >= 1 ? "arrow.uturn.backward" : "lightbulb") {
                     if hintLevel >= 1 { hintLevel = 0 } else { useHint(level: 1) }
                 }
 
                 if case .letterByLetterThenMarks = question.tier.hint, question.item.marked != nil, question.promptIsArabic, hintLevel == 1 {
-                    hintButton("Show the Tashkeel", systemImage: "lightbulb.fill") {
+                    StudyHintChip(title: String(localized: "Show the Tashkeel"), systemImage: "lightbulb.fill") {
                         useHint(level: 2)
                     }
                 }
             }
         }
-    }
-
-    private func hintButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
-        Button {
-            Settings.shared.hapticFeedback()
-            withAnimation(.easeInOut) { action() }
-        } label: {
-            ReadingIconText(title, systemImage: systemImage)
-                .font(.caption.weight(.semibold))
-                .foregroundColor(accent)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(Capsule().fill(accent.opacity(0.12)))
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
     }
 
     private func useHint(level: Int) {
@@ -908,46 +751,24 @@ struct ReadingSessionView: View {
     }
 
     private func choiceButton(_ choice: ReadingChoice, in question: ReadingQuestion, style: ReadingTextStyle, long: Bool) -> some View {
-        let answered = chosen != nil
-        let isAnswer = choice.id == question.answer
-        let isWrongPick = chosen == choice.id && !isAnswer
-        let stroke: Color = !answered ? .clear : isAnswer ? .green : isWrongPick ? .red : .clear
-
-        return Button {
-            guard chosen == nil else { return }
-            Settings.shared.hapticFeedback()
+        let state = StudyChoiceState(answered: chosen != nil, isAnswer: choice.id == question.answer, picked: chosen == choice.id)
+        return StudyChoiceButton(state: state, long: long) {
             choose(choice.id, in: question)
         } label: {
-            Group {
-                if choice.isArabic {
-                    // The joined-shapes tier's spelled-out choices are already letter by letter.
-                    ReadingArabic(text: question.skill == .takeApart ? choice.text : style.draw(choice.text, spaced: hintLevel >= 1),
-                                  base: long ? 26 : 32, style: .title, plain: style.plainFace)
-                        .foregroundColor(accent)
-                } else {
-                    Text(choice.text)
-                        .font(long ? .body.weight(.semibold) : .title3.weight(.semibold))
-                        .foregroundColor(.primary)
-                }
+            if choice.isArabic {
+                // The joined-shapes tier's spelled-out choices are already letter by letter; a gap's
+                // choices are single letters; the odd one out's words are never spaced.
+                let spaced = hintLevel >= 1 && question.skill != .takeApart && question.skill != .gap && question.skill != .odd
+                StudyArabicText(text: question.skill == .takeApart ? choice.text : style.draw(choice.text, spaced: spaced),
+                                base: long ? 26 : 32, style: .title, plain: style.plainFace)
+                    .foregroundColor(accent)
+            } else {
+                Text(choice.text)
+                    .font(long ? .body.weight(.semibold) : .title3.weight(.semibold))
+                    .leftToRightContent()
+                    .foregroundColor(.primary)
             }
-            .multilineTextAlignment(.center)
-            .lineLimit(long ? 3 : 1)
-            .minimumScaleFactor(0.45)
-            .frame(maxWidth: .infinity, minHeight: long ? 52 : 64)
-            .padding(.horizontal, 8)
-            .padding(.vertical, long ? 6 : 0)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(accent.opacity(answered && isAnswer ? 0.18 : 0.08))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(stroke, lineWidth: 2)
-            )
-            .opacity(answered && !isAnswer && !isWrongPick ? 0.45 : 1)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
         .accessibilityLabel(choice.text)
     }
 
@@ -967,12 +788,12 @@ struct ReadingSessionView: View {
                             style: StrokeStyle(lineWidth: checked ? 2 : 1.5, dash: checked ? [] : [6, 4]))
 
                 if built.isEmpty {
-                    Text(question.tilesAreWords ? "Tap the words below" : "Tap the letters below")
+                    Text(question.tilesAreWords ? String(localized: "Tap the words below") : String(localized: "Tap the letters below"))
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 } else {
-                    ReadingArabic(text: ReadingTestText.display(built, mushafMarks: mushafSukoon || question.tier.display == .mushaf),
-                                  base: question.tilesAreWords ? 28 : 40, style: .title, plain: style.plainFace)
+                    StudyArabicText(text: ReadingTestText.display(built, mushafMarks: style.mushafMarks),
+                                    base: question.tilesAreWords ? 28 : 40, style: .title, plain: style.plainFace)
                         .foregroundColor(accent)
                         .multilineTextAlignment(.center)
                         .lineLimit(question.tilesAreWords ? 3 : 1)
@@ -990,8 +811,8 @@ struct ReadingSessionView: View {
                         Settings.shared.hapticFeedback()
                         withAnimation(.easeInOut(duration: 0.15)) { placed.append(tile) }
                     } label: {
-                        ReadingArabic(text: ReadingTestText.display(tile.text, mushafMarks: mushafSukoon || question.tier.display == .mushaf),
-                                      base: question.tilesAreWords ? 22 : 28, style: .title2, plain: style.plainFace)
+                        StudyArabicText(text: ReadingTestText.display(tile.text, mushafMarks: style.mushafMarks),
+                                        base: question.tilesAreWords ? 22 : 28, style: .title2, plain: style.plainFace)
                             .foregroundColor(accent)
                             .lineLimit(1)
                             .padding(.horizontal, question.tilesAreWords ? 12 : 10)
@@ -1011,43 +832,22 @@ struct ReadingSessionView: View {
 
             if !checked {
                 HStack(spacing: 8) {
-                    buildControl("Undo", systemImage: "delete.left", enabled: !placed.isEmpty) {
+                    StudyControlButton(title: String(localized: "Undo"), systemImage: "delete.left", enabled: !placed.isEmpty) {
                         // `enabled` is from the last render: a second fast tap can find nothing left.
                         if !placed.isEmpty { placed.removeLast() }
                     }
 
-                    buildControl("Clear", systemImage: "xmark", enabled: !placed.isEmpty) {
+                    StudyControlButton(title: String(localized: "Clear"), systemImage: "xmark", enabled: !placed.isEmpty) {
                         placed.removeAll()
                     }
 
-                    buildControl("Check", systemImage: "checkmark", enabled: !placed.isEmpty, filled: true) {
+                    StudyControlButton(title: String(localized: "Check"), systemImage: "checkmark", enabled: !placed.isEmpty, filled: true) {
                         check(question)
                     }
                 }
             }
         }
         .padding(.vertical, 4)
-    }
-
-    private func buildControl(_ title: String, systemImage: String, enabled: Bool, filled: Bool = false, action: @escaping () -> Void) -> some View {
-        Button {
-            guard enabled else { return }
-            Settings.shared.hapticFeedback()
-            withAnimation(.easeInOut(duration: 0.15)) { action() }
-        } label: {
-            ReadingIconText(title, systemImage: systemImage)
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(filled ? .white : accent)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 9)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(filled ? accent : accent.opacity(0.12))
-                )
-                .opacity(enabled ? 1 : 0.4)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     private func placeNext(_ question: ReadingQuestion) {
@@ -1074,6 +874,37 @@ struct ReadingSessionView: View {
         tally(isRight, question)
     }
 
+    // MARK: Match pairs
+
+    private func matchArea(_ question: ReadingQuestion, style: ReadingTextStyle) -> some View {
+        let pairs = question.pairs.map { StudyMatchBoard<AnyView, AnyView>.Pair(id: $0.id, leftSlot: $0.leftSlot, rightSlot: $0.rightSlot) }
+        return StudyMatchBoard(pairs: pairs, finished: matchWrong != nil, onFinish: { wrong in
+            matchWrong = wrong
+            chosen = 0
+            tally(wrong == 0, question)
+        }, left: { slot in
+            AnyView(
+                Group {
+                    if let pair = question.pairs.first(where: { $0.leftSlot == slot }) {
+                        StudyArabicText(text: style.draw(pair.item.arabic, spaced: false), base: 28, style: .title2, plain: style.plainFace)
+                            .foregroundColor(accent)
+                    }
+                }
+            )
+        }, right: { slot in
+            AnyView(
+                Group {
+                    if let pair = question.pairs.first(where: { $0.rightSlot == slot }) {
+                        Text(pair.item.reading)
+                            .font(.body.weight(.semibold))
+                            .leftToRightContent()
+                            .foregroundColor(.primary)
+                    }
+                }
+            )
+        })
+    }
+
     // MARK: Read aloud
 
     @ViewBuilder
@@ -1082,11 +913,12 @@ struct ReadingSessionView: View {
             if revealed {
                 Text(question.tier.id == "waqf" ? question.item.stopped : question.item.reading)
                     .font(.title2.weight(.bold))
+                    .leftToRightContent()
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
 
                 if speech.isAvailable {
-                    speakerButton(question.item.spoken, size: 44)
+                    StudySpeakerButton(text: question.item.spoken, size: 44)
                 }
 
                 if chosen == nil {
@@ -1095,19 +927,19 @@ struct ReadingSessionView: View {
                         .foregroundColor(.secondary)
 
                     HStack(spacing: 8) {
-                        buildControl("Not Yet", systemImage: "xmark", enabled: true) {
+                        StudyControlButton(title: String(localized: "Not Yet"), systemImage: "xmark") {
                             chosen = 1
                             tally(false, question)
                         }
 
-                        buildControl("I Read It Right", systemImage: "checkmark", enabled: true, filled: true) {
+                        StudyControlButton(title: String(localized: "I Read It Right"), systemImage: "checkmark", filled: true) {
                             chosen = 0
                             tally(true, question)
                         }
                     }
                 }
             } else {
-                buildControl("Show the Reading", systemImage: "eye", enabled: true, filled: true) {
+                StudyControlButton(title: String(localized: "Show the Reading"), systemImage: "eye", filled: true) {
                     revealed = true
                     if speech.isAvailable { speech.speak(question.item.spoken) }
                 }
@@ -1118,58 +950,109 @@ struct ReadingSessionView: View {
 
     // MARK: Feedback
 
+    private func wasRight(_ question: ReadingQuestion) -> Bool {
+        switch question.skill {
+        case .build: return buildRight == true
+        case .match: return matchWrong == 0
+        case .aloud: return chosen == 0
+        default: return chosen == question.answer
+        }
+    }
+
     @ViewBuilder
     private func feedback(_ question: ReadingQuestion, style: ReadingTextStyle) -> some View {
-        let wasRight = question.skill == .build ? buildRight == true : question.skill == .aloud ? chosen == 0 : chosen == question.answer
+        let wasRight = wasRight(question)
         let item = question.item
 
         VStack(alignment: .leading, spacing: 8) {
-            ReadingIconText(wasRight ? (hintedThisQuestion ? "Right, with a hint" : "Right") : "Not quite",
-                  systemImage: wasRight ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(wasRight ? .green : .red)
+            if question.skill == .match, let matchWrong, matchWrong > 0 {
+                StudyIconText(matchWrong == 1 ? String(localized: "One wrong pair on the way") : String(localized: "\(matchWrong) wrong pairs on the way"),
+                              systemImage: "xmark.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.red)
+            } else {
+                StudyVerdictLine(wasRight: wasRight, hinted: hintedThisQuestion)
+            }
 
-            HStack(alignment: .center, spacing: 10) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(question.skill == .stop ? item.stopped : item.reading)
-                        .font(.body.weight(.semibold))
+            if question.skill == .match {
+                // Every pair, settled: the word and its reading side by side.
+                ForEach(question.pairs) { pair in
+                    pairRow(pair.item, style: style)
+                }
+            } else {
+                HStack(alignment: .center, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(question.skill == .stop ? item.stopped : item.reading)
+                            .font(.body.weight(.semibold))
+                            .leftToRightContent()
 
-                    if question.skill == .stop {
-                        Text("Read on, it is \(item.reading).")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        if question.skill == .stop {
+                            Text("Read on, it is \(item.reading).")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Spacer(minLength: 8)
+
+                    if question.tier.id != "forms" {
+                        // Joined, even on the letter-by-letter tier: this is where its words close up.
+                        StudyArabicText(text: ReadingTestText.display(item.marked ?? item.arabic, mushafMarks: style.mushafMarks),
+                                        base: 26, style: .title2, plain: style.plainFace && item.marked == nil)
+                            .foregroundColor(accent)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.trailing)
+                            .minimumScaleFactor(0.4)
+                            .environment(\.layoutDirection, .leftToRight)
+                    }
+
+                    if speech.isAvailable, question.tier.id != "forms" {
+                        PracticeListenButton(text: item.spoken)
                     }
                 }
 
-                Spacer(minLength: 8)
-
-                if question.tier.id != "forms" {
-                    // Joined, even on the letter-by-letter tier: this is where its words close up.
-                    ReadingArabic(text: ReadingTestText.display(item.marked ?? item.arabic, mushafMarks: mushafSukoon || question.tier.display == .mushaf),
-                                  base: 26, style: .title2, plain: style.plainFace && item.marked == nil)
-                        .foregroundColor(accent)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.trailing)
-                        .minimumScaleFactor(0.4)
+                if !item.sounded.isEmpty {
+                    soundedOut(item, style: style)
                 }
 
-                if speech.isAvailable, question.tier.id != "forms" {
-                    PracticeListenButton(text: item.spoken)
+                if question.skill == .odd, let feature = question.tier.feature {
+                    Text("The other three all have \(feature): \(question.others.map(\.reading).joined(separator: ", ")).")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-            }
 
-            if !item.sounded.isEmpty {
-                soundedOut(item, style: style)
-            }
-
-            if let note = explanation(question) {
-                Text(note)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let note = explanation(question) {
+                    Text(note)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        // A name's meaning and a phrase's are English content, shown as they are.
+                        .leftToRightContent(["names", "everyday"].contains(question.tier.id))
+                }
             }
         }
         .padding(.vertical, 2)
+    }
+
+    private func pairRow(_ item: ReadingItem, style: ReadingTextStyle) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            Text(item.reading)
+                .font(.subheadline.weight(.semibold))
+                .leftToRightContent()
+
+            Spacer(minLength: 8)
+
+            StudyArabicText(text: ReadingTestText.display(item.marked ?? item.arabic, mushafMarks: style.mushafMarks),
+                            base: 22, style: .title3, plain: style.plainFace && item.marked == nil)
+                .foregroundColor(accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+
+            if speech.isAvailable {
+                PracticeListenButton(text: item.spoken)
+            }
+        }
     }
 
     /// The word a syllable at a time, each group of letters over how it is read: the answer's own
@@ -1179,13 +1062,14 @@ struct ReadingSessionView: View {
             HStack(alignment: .top, spacing: 6) {
                 ForEach(Array(item.sounded.enumerated()), id: \.offset) { _, part in
                     VStack(spacing: 2) {
-                        ReadingArabic(text: ReadingTestText.display(part.arabic, mushafMarks: mushafSukoon || style.tier.display == .mushaf),
-                                      base: 22, style: .title3)
+                        StudyArabicText(text: ReadingTestText.display(part.arabic, mushafMarks: style.mushafMarks),
+                                        base: 22, style: .title3)
                             .foregroundColor(accent)
                             .lineLimit(1)
 
                         Text(part.reading)
                             .font(.caption2.weight(.semibold))
+                            .leftToRightContent()
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                     }
@@ -1201,7 +1085,7 @@ struct ReadingSessionView: View {
             .environment(\.layoutDirection, .rightToLeft)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Sounded out: " + item.sounded.map(\.reading).joined(separator: ", "))
+        .accessibilityLabel(String(localized: "Sounded out: \(item.sounded.map(\.reading).joined(separator: ", "))"))
     }
 
     private func explanation(_ question: ReadingQuestion) -> String? {
@@ -1210,13 +1094,13 @@ struct ReadingSessionView: View {
         case "letters", "harakat", "openers", "names", "everyday":
             return item.gloss
         case "forms":
-            return "\(item.arabic) is \(item.reading), joined."
+            return String(localized: "\(item.arabic) is \(item.reading), joined.")
         case "ayat":
             guard let reference = item.reference, let gloss = item.gloss else { return nil }
-            return "\(reference): \u{201C}\(gloss)\u{201D} (Saheeh International)"
+            return String(localized: "\(reference.localizedDigits): \u{201C}\(gloss)\u{201D} (Saheeh International)")
         default:
             guard let reference = item.reference, let gloss = item.gloss, !gloss.isEmpty else { return nil }
-            return "In the Quran (\(reference)) it means \u{201C}\(gloss)\u{201D}."
+            return String(localized: "In the Quran (\(reference.localizedDigits)) it means \u{201C}\(gloss)\u{201D}.")
         }
     }
 
@@ -1225,12 +1109,19 @@ struct ReadingSessionView: View {
     private func start() {
         var factory = ReadingQuestionFactory()
         factory.voiceAvailable = speech.isAvailable
+        clock?.cancel()
+        let passed = ReadingTier.all.filter { progress.record(for: $0).passed }
         switch mode {
         case .test(let tier): questions = factory.round(for: tier)
         case .practice(let tier, let skill): questions = factory.round(for: tier, only: skill)
         case .review:
-            let passed = ReadingTier.all.filter { progress.record(for: $0).passed }
             questions = factory.review(of: passed.isEmpty ? ReadingTier.all : passed)
+        case .speed:
+            questions = factory.speedRound(from: passed.count >= 3 ? passed : ReadingTier.all)
+            secondsLeft = StudySpeed.seconds
+        case .missed(let entries):
+            let pool = entries ?? progress.missedItems.map { ReadingMissedEntry(tier: $0.tier, item: $0.item) }
+            questions = factory.review(ofMissed: pool.map { ($0.tier, $0.item) })
         case .placement:
             placementIndex = 0
             questions = factory.placementPair(for: ReadingTier.all[0])
@@ -1240,17 +1131,35 @@ struct ReadingSessionView: View {
         hints = 0
         streak = 0
         missed = []
+        answeredRight = []
         finished = questions.isEmpty
         placementResult = nil
         placementCleared = false
         resetQuestionState()
         speakCurrent()
+        if isSpeed, !finished { startClock() }
+    }
+
+    /// The Speed Round's clock: one tick a second, and the round ends when it runs out.
+    private func startClock() {
+        clock = Task { @MainActor in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                guard !Task.isCancelled, !finished else { return }
+                secondsLeft -= 1
+                if secondsLeft <= 0 {
+                    finish()
+                    return
+                }
+            }
+        }
     }
 
     private func resetQuestionState() {
         chosen = nil
         placed = []
         buildRight = nil
+        matchWrong = nil
         revealed = false
         hintLevel = 0
         hintedThisQuestion = false
@@ -1262,12 +1171,21 @@ struct ReadingSessionView: View {
     }
 
     private func tally(_ wasRight: Bool, _ question: ReadingQuestion) {
+        let entry = ReadingMissedEntry(tier: question.tier, item: question.item)
         if wasRight {
             right += 1
             streak += 1
+            if !answeredRight.contains(entry) { answeredRight.append(entry) }
         } else {
             streak = 0
-            if !missed.contains(question.item) { missed.append(question.item) }
+            if !missed.contains(entry) { missed.append(entry) }
+        }
+        // A Speed Round moves on by itself once the answer has shown.
+        if isSpeed {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                guard !finished, questions.indices.contains(index), isAnswered(questions[index]) else { return }
+                advance()
+            }
         }
     }
 
@@ -1288,8 +1206,7 @@ struct ReadingSessionView: View {
 
     /// Two questions a tier: both right moves up the ladder, a miss stops it there.
     private func advancePlacement() {
-        let wasRight = questions.indices.contains(index)
-            && (questions[index].skill == .build ? buildRight == true : chosen == questions[index].answer)
+        let wasRight = questions.indices.contains(index) && wasRight(questions[index])
         guard wasRight else {
             placementResult = ReadingTier.all[placementIndex]
             finish()
@@ -1316,13 +1233,20 @@ struct ReadingSessionView: View {
     }
 
     private func finish() {
+        clock?.cancel()
         switch mode {
         case .test(let tier):
-            progress.finish(tier, right: right, of: questions.count, hints: hints)
+            progress.finish(tier, right: right, of: questions.count, hints: hints,
+                            missed: missed.map(\.item), answeredRight: answeredRight.map(\.item))
+        case .practice(let tier, let skill):
+            progress.recordPractice(tier, skill: skill, right: right, of: questions.count)
         case .placement:
             if let placementResult { progress.setPlacement(placementResult) }
-        case .practice, .review:
-            break
+        case .speed:
+            progress.recordSpeed(right: right)
+        case .review, .missed:
+            progress.finishReview(missedIDs: missed.map { ($0.item.arabic, $0.tier.id) },
+                                  rightIDs: answeredRight.map { ($0.item.arabic, $0.tier.id) })
         }
         withAnimation(.easeInOut) { finished = true }
     }
@@ -1346,20 +1270,23 @@ struct ReadingSessionView: View {
 
         if !missed.isEmpty {
             Section {
-                ForEach(missed, id: \.self) { item in
+                ForEach(missed, id: \.self) { entry in
+                    let item = entry.item
                     HStack(spacing: 12) {
                         Text(item.reading)
                             .font(.body.weight(.semibold))
+                            .leftToRightContent()
                             .fixedSize(horizontal: false, vertical: true)
 
                         Spacer(minLength: 8)
 
-                        ReadingArabic(text: ReadingTestText.display(item.marked ?? item.arabic, mushafMarks: mushafSukoon),
-                                      base: 24, style: .title2, plain: item.marked == nil && !item.arabic.unicodeScalars.contains(where: ReadingTestText.isMark))
+                        StudyArabicText(text: ReadingTestText.display(item.marked ?? item.arabic, mushafMarks: mushafSukoon),
+                                        base: 24, style: .title2, plain: item.marked == nil && !item.arabic.unicodeScalars.contains(where: ReadingTestText.isMark))
                             .foregroundColor(accent)
                             .lineLimit(2)
                             .multilineTextAlignment(.trailing)
                             .minimumScaleFactor(0.4)
+                            .environment(\.layoutDirection, .leftToRight)
 
                         if speech.isAvailable {
                             PracticeListenButton(text: item.spoken)
@@ -1368,73 +1295,60 @@ struct ReadingSessionView: View {
                     .padding(.vertical, 2)
                 }
             } header: {
-                Text("LOOK AT THESE AGAIN")
+                StudySectionHeader(String(localized: "LOOK AT THESE AGAIN"), systemImage: "eye")
+            } footer: {
+                if case .test = mode {
+                    Text("These words are kept under Practice Missed Words on the ladder until you read them right.")
+                }
             }
         }
     }
 
     private var scoreSection: some View {
-        let total = questions.count
+        let total = isSpeed ? max(index + (questions.indices.contains(index) && isAnswered(questions[index]) ? 1 : 0), right) : questions.count
         let percent = total == 0 ? 0 : Int((Double(right) / Double(total) * 100).rounded())
         let passed = percent >= ReadingTestProgress.passMark
         let tier: ReadingTier? = { if case .test(let tier) = mode { return tier } else { return nil } }()
-        let mastered = tier != nil && right == total && hints == 0
+        let outcome: StudyOutcome? = tier == nil ? nil : (right == total && hints == 0) ? .mastered : passed ? .passed : .failed
 
         return Section {
-            VStack(spacing: 8) {
-                Text("\(right) of \(total)")
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
-                    .foregroundColor(accent)
-
-                if tier != nil {
-                    ReadingIconText(mastered ? "Mastered" : passed ? "Passed" : "Not passed yet",
-                          systemImage: mastered ? "checkmark.seal.fill" : passed ? "checkmark.circle.fill" : "arrow.clockwise.circle")
-                        .font(.headline)
-                        .foregroundColor(passed ? accent : .secondary)
-                }
-
-                Text(resultMessage(passed: passed, mastered: mastered, isTest: tier != nil))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if hints > 0 {
-                    ReadingIconText(hints == 1 ? "1 answer used a hint" : "\(hints) answers used a hint", systemImage: "lightbulb")
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
-            .listRowSeparator(.hidden)
-            .id(Self.promptID)
+            StudyScoreCard(right: right, total: total, outcome: outcome,
+                           message: isSpeed ? speedMessage : StudyScoreCard.message(right: right, total: total, outcome: outcome, passMark: ReadingTestProgress.passMark),
+                           hints: hints, speedBest: isSpeed ? progress.speedBest : nil)
+                .id(Self.promptID)
 
             if let tier, passed, let next = tier.next {
-                resultButton("Next Tier: \(next.title)", systemImage: "arrow.right.circle.fill", prominent: true) {
+                StudyResultButton(title: String(localized: "Next Tier: \(next.title)"), systemImage: "arrow.forward.circle.fill", prominent: true) {
                     mode = .test(next)
                     start()
                 }
             }
 
-            resultButton(tier != nil && !passed ? "Try Again" : "Go Again", systemImage: "arrow.clockwise", prominent: tier != nil && !passed) {
+            if !missed.isEmpty, !isSpeed || missed.count >= 3 {
+                StudyResultButton(title: String(localized: "Practice What You Missed"), systemImage: "arrow.uturn.backward.circle", prominent: tier != nil && !passed) {
+                    mode = .missed(missed)
+                    start()
+                }
+            }
+
+            StudyResultButton(title: tier != nil && !passed ? String(localized: "Try Again") : String(localized: "Go Again"), systemImage: "arrow.clockwise",
+                              prominent: tier != nil && !passed && missed.isEmpty) {
+                if case .missed = mode, missed.isEmpty { mode = .missed(nil) }
                 start()
             }
 
-            resultButton("Back", systemImage: "chevron.backward", prominent: false) {
+            StudyResultButton(title: String(localized: "Back"), systemImage: "chevron.backward") {
                 dismiss()
             }
         } header: {
-            Text("RESULTS")
+            StudySectionHeader(String(localized: "RESULTS"), systemImage: "chart.bar")
         }
     }
 
-    private func resultMessage(passed: Bool, mastered: Bool, isTest: Bool) -> String {
-        if mastered { return "Every answer right, and no hints. This tier is yours." }
-        if right == questions.count { return isTest ? "Every answer right. Do it once more without a hint to master the tier." : "Every one right." }
-        if passed { return "That is a pass. The ones you missed are below." }
-        return isTest ? "\(ReadingTestProgress.passMark)% passes. Look at the ones you missed, practise that skill on its own, and take it again."
-            : "Look at the ones you missed, then go again."
+    private var speedMessage: String {
+        if right == 0 { return String(localized: "The clock ran out. Read and spell questions only: one look, one tap.") }
+        if right >= progress.speedBest, right > 0 { return String(localized: "Your best yet. The clock only counts right answers, so slow down for the hard ones.") }
+        return String(localized: "The clock counts right answers only. Faster next time, or steadier.")
     }
 
     private var placementResults: some View {
@@ -1452,8 +1366,8 @@ struct ReadingSessionView: View {
                         .font(.headline)
                         .foregroundColor(accent)
 
-                    Text(tier.number == 1 ? "Begin at the beginning. It goes quickly."
-                         : "You read everything below it. This is the first tier that caught you, so it is where the ladder now starts for you.")
+                    Text(tier.number == 1 ? String(localized: "Begin at the beginning. It goes quickly.")
+                         : String(localized: "You read everything below it. This is the first tier that caught you, so it is where the ladder now starts for you."))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -1475,38 +1389,47 @@ struct ReadingSessionView: View {
             .id(Self.promptID)
 
             if let tier = placementResult {
-                resultButton("Take the Tier \(tier.number) Test", systemImage: "play.fill", prominent: true) {
+                StudyResultButton(title: String(localized: "Take the Tier \(tier.number) Test"), systemImage: "play.fill", prominent: true) {
                     mode = .test(tier)
                     start()
                 }
             }
 
-            resultButton("Back", systemImage: "chevron.backward", prominent: false) {
+            StudyResultButton(title: String(localized: "Back"), systemImage: "chevron.backward") {
                 dismiss()
             }
         } header: {
-            Text("YOUR LEVEL")
+            StudySectionHeader(String(localized: "YOUR LEVEL"), systemImage: "scope")
         }
     }
+}
 
-    private func resultButton(_ title: String, systemImage: String, prominent: Bool, action: @escaping () -> Void) -> some View {
-        Button {
-            Settings.shared.hapticFeedback()
-            action()
-        } label: {
-            ReadingIconText(title, systemImage: systemImage)
-                .font(.body.weight(.semibold))
-                .foregroundColor(prominent ? .white : accent)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(prominent ? accent : accent.opacity(0.12))
-                )
-                .contentShape(Rectangle())
+// MARK: - The gapped word
+
+/// A word with one letter taken out: the letters before, a dashed stroke where the letter was, the
+/// letters after, drawn as one run so the joining is right on both sides of the gap.
+private struct ReadingGapWord: View {
+    @Environment(\.appearance) private var appearance
+
+    let question: ReadingQuestion
+    let style: ReadingTextStyle
+    let size: CGFloat
+
+    var body: some View {
+        if let parts = question.gapParts {
+            let custom = appearance.useFontArabic && !style.plainFace
+            let font: Font = custom ? appearance.islamArabicFont(base: size, relativeTo: .largeTitle) : .system(size: size * 0.9)
+            let before = ReadingTestText.display(parts.before, mushafMarks: style.mushafMarks)
+            let after = ReadingTestText.display(parts.after, mushafMarks: style.mushafMarks)
+            // Two tatweels keep the pen on the line through the gap; the colour says "missing".
+            (Text(before) + Text("\u{0640}\u{0640}").foregroundColor(.secondary) + Text(after))
+                .font(font)
+                .arabicFontDesign(custom: custom && appearance.islamUsesCustomArabicFace)
+                .multilineTextAlignment(.center)
+                .lineLimit(1)
+                .minimumScaleFactor(0.3)
+                .accessibilityLabel(String(localized: "The word with one letter missing"))
         }
-        .buttonStyle(.plain)
-        .listRowSeparator(.hidden)
     }
 }
 
@@ -1556,11 +1479,12 @@ private struct ReadingKeySheet: View {
         HStack(alignment: .center, spacing: 12) {
             Text(sign)
                 .font(.system(.body, design: .monospaced).weight(.bold))
+                .leftToRightContent()
                 .foregroundColor(appearance.accent)
                 .frame(minWidth: letter == nil ? 96 : 34, alignment: .leading)
 
             if let letter {
-                ReadingArabic(text: letter, base: 24, style: .title2)
+                StudyArabicText(text: letter, base: 24, style: .title2)
                     .foregroundColor(.primary)
                     .frame(width: 30)
             }
@@ -1575,4 +1499,3 @@ private struct ReadingKeySheet: View {
         .padding(.vertical, 1)
     }
 }
-

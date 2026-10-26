@@ -176,45 +176,45 @@ enum ReadingScheme {
 
     /// Every line of the key, in the order the alphabet runs. Shown on the Reading Key sheet.
     static let key: [(sign: String, letter: String, note: String)] = [
-        ("'", "ء", "hamza: a catch in the throat, as between the two halves of \u{201C}uh-oh\u{201D}. Not written at the start of a word."),
-        ("b", "ب", "as in book"),
-        ("t", "ت", "as in table"),
-        ("th", "ث", "as in three, never as in this"),
-        ("j", "ج", "as in jam"),
-        ("H", "ح", "a deep, breathy h from the throat. Capital, to tell it from the soft h"),
-        ("kh", "خ", "the ch of the Scottish loch"),
-        ("d", "د", "as in door"),
-        ("dh", "ذ", "the th of this, never of three"),
-        ("r", "ر", "a tapped r, as in the Spanish pero"),
-        ("z", "ز", "as in zebra"),
-        ("s", "س", "as in sun"),
-        ("sh", "ش", "as in ship"),
-        ("S", "ص", "a heavy s, the mouth full. Capital = the heavy twin"),
-        ("D", "ض", "a heavy d, from the side of the tongue"),
-        ("T", "ط", "a heavy t"),
-        ("Dh", "ظ", "a heavy dh"),
-        (ayn, "ع", "'ayn: a voiced squeeze deep in the throat. A sound, not a pause"),
-        ("gh", "غ", "a gargled r, as in the French Paris"),
-        ("f", "ف", "as in fan"),
-        ("q", "ق", "a k made at the very back of the mouth"),
-        ("k", "ك", "as in king"),
-        ("l", "ل", "as in lamp"),
-        ("m", "م", "as in moon"),
-        ("n", "ن", "as in noon"),
-        ("h", "ه", "as in hat"),
-        ("w", "و", "as in water"),
-        ("y", "ي", "as in yes"),
+        ("'", "ء", String(localized: "hamza: a catch in the throat, as between the two halves of \u{201C}uh-oh\u{201D}. Not written at the start of a word.")),
+        ("b", "ب", String(localized: "as in book")),
+        ("t", "ت", String(localized: "as in table")),
+        ("th", "ث", String(localized: "as in three, never as in this")),
+        ("j", "ج", String(localized: "as in jam")),
+        ("H", "ح", String(localized: "a deep, breathy h from the throat. Capital, to tell it from the soft h")),
+        ("kh", "خ", String(localized: "the ch of the Scottish loch")),
+        ("d", "د", String(localized: "as in door")),
+        ("dh", "ذ", String(localized: "the th of this, never of three")),
+        ("r", "ر", String(localized: "a tapped r, as in the Spanish pero")),
+        ("z", "ز", String(localized: "as in zebra")),
+        ("s", "س", String(localized: "as in sun")),
+        ("sh", "ش", String(localized: "as in ship")),
+        ("S", "ص", String(localized: "a heavy s, the mouth full. Capital = the heavy twin")),
+        ("D", "ض", String(localized: "a heavy d, from the side of the tongue")),
+        ("T", "ط", String(localized: "a heavy t")),
+        ("Dh", "ظ", String(localized: "a heavy dh")),
+        (ayn, "ع", String(localized: "'ayn: a voiced squeeze deep in the throat. A sound, not a pause")),
+        ("gh", "غ", String(localized: "a gargled r, as in the French Paris")),
+        ("f", "ف", String(localized: "as in fan")),
+        ("q", "ق", String(localized: "a k made at the very back of the mouth")),
+        ("k", "ك", String(localized: "as in king")),
+        ("l", "ل", String(localized: "as in lamp")),
+        ("m", "م", String(localized: "as in moon")),
+        ("n", "ن", String(localized: "as in noon")),
+        ("h", "ه", String(localized: "as in hat")),
+        ("w", "و", String(localized: "as in water")),
+        ("y", "ي", String(localized: "as in yes")),
     ]
 
     static let vowelKey: [(sign: String, note: String)] = [
-        ("a  i  u", "the short vowels: fatha, kasra, damma (one count)"),
-        ("aa  ii  uu", "the long vowels, written with alif, yaa and waaw (two counts)"),
-        ("aaaa  iiii  uuuu", "a long vowel under the madd sign, held four to six counts"),
-        ("ay  aw", "the soft letters: a fatha gliding into a yaa or a waaw"),
-        ("an  in  un", "tanween: the n is heard and never written"),
-        ("bb", "a doubled letter is a shaddah: hold it"),
-        ("al-  ash-sh", "the hyphen marks the article; before a sun letter the laam is silent and the letter doubles"),
-        ("s-h", "a hyphen between two letters keeps them apart: s then h, not sh"),
+        ("a  i  u", String(localized: "the short vowels: fatha, kasra, damma (one count)")),
+        ("aa  ii  uu", String(localized: "the long vowels, written with alif, yaa and waaw (two counts)")),
+        ("aaaa  iiii  uuuu", String(localized: "a long vowel under the madd sign, held four to six counts")),
+        ("ay  aw", String(localized: "the soft letters: a fatha gliding into a yaa or a waaw")),
+        ("an  in  un", String(localized: "tanween: the n is heard and never written")),
+        ("bb", String(localized: "a doubled letter is a shaddah: hold it")),
+        ("al-  ash-sh", String(localized: "the hyphen marks the article; before a sun letter the laam is silent and the letter doubles")),
+        ("s-h", String(localized: "a hyphen between two letters keeps them apart: s then h, not sh")),
     ]
 }
 
@@ -257,12 +257,12 @@ enum ReadingStage: Int, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .letters: return "The Letters"
-        case .marks: return "The Vowel Marks"
-        case .longSounds: return "Long Sounds"
-        case .stops: return "Stops and Doubles"
-        case .mushaf: return "Reading the Mushaf"
-        case .unmarked: return "Without Tashkeel"
+        case .letters: return String(localized: "The Letters")
+        case .marks: return String(localized: "The Vowel Marks")
+        case .longSounds: return String(localized: "Long Sounds")
+        case .stops: return String(localized: "Stops and Doubles")
+        case .mushaf: return String(localized: "Reading the Mushaf")
+        case .unmarked: return String(localized: "Without Tashkeel")
         }
     }
 
@@ -279,12 +279,24 @@ enum ReadingStage: Int, CaseIterable, Identifiable {
 
     var blurb: String {
         switch self {
-        case .letters: return "Every letter alone, joined, and by its name."
-        case .marks: return "Fatha, kasra, damma, and the tanween that doubles them."
-        case .longSounds: return "What stretches a vowel, and what only glides."
-        case .stops: return "The letter with no vowel, and the letter said twice."
-        case .mushaf: return "What the mushaf writes that ordinary Arabic does not."
-        case .unmarked: return "How Arabic is printed everywhere except the mushaf."
+        case .letters: return String(localized: "Every letter alone, joined, and by its name.")
+        case .marks: return String(localized: "Fatha, kasra, damma, and the tanween that doubles them.")
+        case .longSounds: return String(localized: "What stretches a vowel, and what only glides.")
+        case .stops: return String(localized: "The letter with no vowel, and the letter said twice.")
+        case .mushaf: return String(localized: "What the mushaf writes that ordinary Arabic does not.")
+        case .unmarked: return String(localized: "How Arabic is printed everywhere except the mushaf.")
+        }
+    }
+
+    /// The symbol beside the stage's header on the ladder.
+    var systemImage: String {
+        switch self {
+        case .letters: return "textformat.size.ar"
+        case .marks: return "character.textbox.ar"
+        case .longSounds: return "waveform"
+        case .stops: return "hand.raised"
+        case .mushaf: return "book.closed"
+        case .unmarked: return "eye.slash"
         }
     }
 }
@@ -318,6 +330,12 @@ enum ReadingSkill: String, CaseIterable, Identifiable {
     case takeApart
     /// See loose letters, choose how they look joined.
     case join
+    /// See the reading and the word with one letter missing, choose the letter.
+    case gap
+    /// Four words and four readings: pair them up.
+    case match
+    /// Four words, three with the tier's feature and one without: find the one without.
+    case odd
     /// Read it aloud, then check yourself against the voice. Never part of a scored test.
     case aloud
 
@@ -325,27 +343,33 @@ enum ReadingSkill: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .read: return "Read"
-        case .spell: return "Spell"
-        case .listen: return "Listen"
-        case .build: return "Build"
-        case .stop: return "Stop"
-        case .takeApart: return "Take Apart"
-        case .join: return "Join"
-        case .aloud: return "Read Aloud"
+        case .read: return String(localized: "Read")
+        case .spell: return String(localized: "Spell")
+        case .listen: return String(localized: "Listen")
+        case .build: return String(localized: "Build")
+        case .stop: return String(localized: "Stop")
+        case .takeApart: return String(localized: "Take Apart")
+        case .join: return String(localized: "Join")
+        case .gap: return String(localized: "Fill the Gap")
+        case .match: return String(localized: "Match Pairs")
+        case .odd: return String(localized: "Odd One Out")
+        case .aloud: return String(localized: "Read Aloud")
         }
     }
 
     var caption: String {
         switch self {
-        case .read: return "See the Arabic, choose how it is read"
-        case .spell: return "See the reading, choose the spelling"
-        case .listen: return "Hear it, choose what was said"
-        case .build: return "Tap the letters into place"
-        case .stop: return "Choose how the word ends when you stop on it"
-        case .takeApart: return "See a joined word, choose its letters"
-        case .join: return "See the letters, choose the joined word"
-        case .aloud: return "Say it, then check yourself against the voice"
+        case .read: return String(localized: "See the Arabic, choose how it is read")
+        case .spell: return String(localized: "See the reading, choose the spelling")
+        case .listen: return String(localized: "Hear it, choose what was said")
+        case .build: return String(localized: "Tap the letters into place")
+        case .stop: return String(localized: "Choose how the word ends when you stop on it")
+        case .takeApart: return String(localized: "See a joined word, choose its letters")
+        case .join: return String(localized: "See the letters, choose the joined word")
+        case .gap: return String(localized: "One letter is missing: choose the one that belongs")
+        case .match: return String(localized: "Pair four words with their readings")
+        case .odd: return String(localized: "Three share the tier's feature; find the one that does not")
+        case .aloud: return String(localized: "Say it, then check yourself against the voice")
         }
     }
 
@@ -358,12 +382,18 @@ enum ReadingSkill: String, CaseIterable, Identifiable {
         case .stop: return "hand.raised"
         case .takeApart: return "scissors"
         case .join: return "link"
+        case .gap: return "rectangle.dashed"
+        case .match: return "arrow.left.arrow.right"
+        case .odd: return "questionmark.diamond"
         case .aloud: return "mouth"
         }
     }
 
     /// Needs the device's Arabic voice.
     var needsVoice: Bool { self == .listen }
+
+    /// Quick enough for a Speed Round: one look, one tap.
+    var isQuick: Bool { self == .read || self == .spell }
 }
 
 /// What the hint button does on a tier.
@@ -391,12 +421,45 @@ struct ReadingTier: Identifiable, Hashable {
     let display: ReadingDisplay
     let skills: [ReadingSkill]
     let hint: ReadingHint
+    /// What every word of the tier has that an earlier tier's word does not, named for Odd One Out
+    /// ("a tanween"); nil on a tier whose words share no one visible feature.
+    var feature: String? = nil
 
     static func == (lhs: ReadingTier, rhs: ReadingTier) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 
     /// 1-based place on the ladder.
     var number: Int { (ReadingTier.all.firstIndex(of: self) ?? 0) + 1 }
+
+    /// The slips the tier's wrong answers are built from, in words: what taking it catches.
+    var catches: [String] {
+        switch id {
+        case "letters": return [
+            String(localized: "A letter mistaken for the one that differs only by its dots"),
+            String(localized: "A letter mistaken for the one it sounds like to an English ear"),
+        ]
+        case "forms": return [
+            String(localized: "A joined shape read as the look-alike letter"),
+            String(localized: "The letters of a word put in the wrong order"),
+        ]
+        case "openers": return [
+            String(localized: "An opening read as a word instead of letter by letter"),
+            String(localized: "One opening mistaken for another that starts the same way"),
+        ]
+        case "names", "everyday": return [
+            String(localized: "A name or phrase mistaken for one that starts the same way"),
+        ]
+        case "waqf": return [
+            String(localized: "Reading on instead of stopping"),
+            String(localized: "Stopping on the wrong sound: a tanween kept, a taa marbuutah read as t"),
+        ]
+        default:
+            var seen = Set<String>()
+            return LatinMoves.focus(for: id, arabic: ReadingTestBank.items(for: self).first?.arabic ?? "")
+                .map(\.learnerDescription)
+                .filter { seen.insert($0).inserted }
+        }
+    }
 
     var next: ReadingTier? {
         guard let index = ReadingTier.all.firstIndex(of: self), index + 1 < ReadingTier.all.count else { return nil }
@@ -409,176 +472,270 @@ struct ReadingTier: Identifiable, Hashable {
 
     static let all: [ReadingTier] = [
         ReadingTier(
-            id: "letters", stage: .letters, title: "Letter Sounds", arabic: "الحُرُوف المُفرَدَة",
-            summary: "Each letter alone: its sound and its name",
+            id: "letters", stage: .letters, title: String(localized: "Letter Sounds"), arabic: "الحُرُوف المُفرَدَة",
+            summary: String(localized: "Each letter alone: its sound and its name"),
             teaches: [
-                "Every letter on its own: the sound it makes, and the name you hear it called by.",
-                "Letters that differ only by their dots, and letters that sound alike to an English ear, are asked against each other on purpose. Those are the ones that get mixed up.",
+                String(localized: "Every letter on its own: the sound it makes, and the name you hear it called by."),
+                String(localized: "Letters that differ only by their dots, and letters that sound alike to an English ear, are asked against each other on purpose. Those are the ones that get mixed up."),
             ],
-            specimen: "ب", display: .joined, skills: [.read, .spell, .listen], hint: .none),
+            specimen: "ب", display: .joined, skills: [.read, .spell, .listen, .match], hint: .none),
         ReadingTier(
-            id: "forms", stage: .letters, title: "Joined Shapes", arabic: "الحُرُوف المُرَكَّبَة",
-            summary: "Take a joined word apart, and join loose letters up",
+            id: "forms", stage: .letters, title: String(localized: "Joined Shapes"), arabic: "الحُرُوف المُرَكَّبَة",
+            summary: String(localized: "Take a joined word apart, and join loose letters up"),
             teaches: [
-                "Arabic is written joined, and a letter changes shape at the start, in the middle and at the end of a word.",
-                "Here a joined word is taken apart into its letters, and loose letters are joined back up. No vowels yet: only the shapes, and the dots that tell them apart.",
+                String(localized: "Arabic is written joined, and a letter changes shape at the start, in the middle and at the end of a word."),
+                String(localized: "Here a joined word is taken apart into its letters, and loose letters are joined back up. No vowels yet: only the shapes, and the dots that tell them apart."),
             ],
             specimen: "ـبـ", display: .unmarked, skills: [.takeApart, .join, .build], hint: .none),
         ReadingTier(
-            id: "openers", stage: .letters, title: "Opening Letters", arabic: "الحُرُوف المُقَطَّعَة",
-            summary: "The letters that open twenty-nine surahs, read by name",
+            id: "openers", stage: .letters, title: String(localized: "Opening Letters"), arabic: "الحُرُوف المُقَطَّعَة",
+            summary: String(localized: "The letters that open twenty-nine surahs, read by name"),
             teaches: [
-                "Twenty-nine surahs open with letters that are read by their NAMES, one after another, never as a word.",
-                "All it takes is knowing what each letter is called, which is why a qaa'idah teaches them this early. The madd sign over a letter means its name is held long.",
+                String(localized: "Twenty-nine surahs open with letters that are read by their NAMES, one after another, never as a word."),
+                String(localized: "All it takes is knowing what each letter is called, which is why a qaa'idah teaches them this early. The madd sign over a letter means its name is held long."),
             ],
-            specimen: "الٓمٓ", display: .mushaf, skills: [.read, .spell], hint: .letterByLetter),
+            specimen: "الٓمٓ", display: .mushaf, skills: [.read, .spell, .match], hint: .letterByLetter),
         ReadingTier(
-            id: "harakat", stage: .marks, title: "Short Vowels", arabic: "الحَرَكَات",
-            summary: "Fatha, kasra and damma on one letter at a time",
+            id: "harakat", stage: .marks, title: String(localized: "Short Vowels"), arabic: "الحَرَكَات",
+            summary: String(localized: "Fatha, kasra and damma on one letter at a time"),
             teaches: [
-                "A fatha above the letter is a short a, a kasra below it a short i, and a damma above it a short u. One count each.",
-                "Every syllable you will ever read is built on one of these three, so they come first, one letter at a time.",
+                String(localized: "A fatha above the letter is a short a, a kasra below it a short i, and a damma above it a short u. One count each."),
+                String(localized: "Every syllable you will ever read is built on one of these three, so they come first, one letter at a time."),
             ],
-            specimen: "بَ", display: .joined, skills: [.read, .spell, .listen], hint: .none),
+            specimen: "بَ", display: .joined, skills: [.read, .spell, .listen, .match], hint: .none),
         ReadingTier(
-            id: "spaced", stage: .marks, title: "Letter by Letter", arabic: "التَّهَجِّي",
-            summary: "Whole words with every letter apart, as Beginner Mode writes them",
+            id: "spaced", stage: .marks, title: String(localized: "Letter by Letter"), arabic: "التَّهَجِّي",
+            summary: String(localized: "Whole words with every letter apart, as Beginner Mode writes them"),
             teaches: [
-                "Whole words, written the way Beginner Mode writes them: every letter apart, each one carrying its own mark.",
-                "Read each letter, then run them together. Nothing is joined yet, so there is no shape to work out: only the sounds.",
+                String(localized: "Whole words, written the way Beginner Mode writes them: every letter apart, each one carrying its own mark."),
+                String(localized: "Read each letter, then run them together. Nothing is joined yet, so there is no shape to work out: only the sounds."),
             ],
-            specimen: "بَ تَ", display: .spaced, skills: [.read, .spell, .listen, .build], hint: .none),
+            specimen: "بَ تَ", display: .spaced, skills: [.read, .spell, .listen, .build, .match], hint: .none),
         ReadingTier(
-            id: "vowels", stage: .marks, title: "Short-Vowel Words", arabic: "كَلِمَات بِالحَرَكَات",
-            summary: "The same kind of word with its letters joined",
+            id: "vowels", stage: .marks, title: String(localized: "Short-Vowel Words"), arabic: "كَلِمَات بِالحَرَكَات",
+            summary: String(localized: "The same kind of word with its letters joined"),
             teaches: [
-                "The same kind of word with its letters joined, the way the mushaf prints them.",
-                "If a word will not come apart in your head, the hint spaces it out again, letter by letter.",
+                String(localized: "The same kind of word with its letters joined, the way the mushaf prints them."),
+                String(localized: "If a word will not come apart in your head, the hint spaces it out again, letter by letter."),
             ],
-            specimen: "كَتَبَ", display: .joined, skills: [.read, .spell, .listen, .build], hint: .letterByLetter),
+            specimen: "كَتَبَ", display: .joined, skills: [.read, .spell, .listen, .build, .gap, .match], hint: .letterByLetter),
         ReadingTier(
-            id: "tanween", stage: .marks, title: "Tanween", arabic: "التَّنوِين",
-            summary: "The doubled mark that adds an n: an, in, un",
+            id: "tanween", stage: .marks, title: String(localized: "Tanween"), arabic: "التَّنوِين",
+            summary: String(localized: "The doubled mark that adds an n: an, in, un"),
             teaches: [
-                "Two fathas, two kasras or two dammas on the last letter add an n that is heard and never written: an, in, un.",
-                "A double fatha usually sits before an alif. That alif is a seat for the mark, and is not read.",
+                String(localized: "Two fathas, two kasras or two dammas on the last letter add an n that is heard and never written: an, in, un."),
+                String(localized: "A double fatha usually sits before an alif. That alif is a seat for the mark, and is not read."),
             ],
-            specimen: "بٌ", display: .joined, skills: [.read, .spell, .listen, .build], hint: .letterByLetter),
+            specimen: "بٌ", display: .joined, skills: [.read, .spell, .listen, .build, .gap, .match, .odd], hint: .letterByLetter,
+            feature: String(localized: "a tanween")),
         ReadingTier(
-            id: "long", stage: .longSounds, title: "Long Vowels", arabic: "حُرُوف المَدّ",
-            summary: "Alif, yaa and waaw stretching the vowel before them",
+            id: "long", stage: .longSounds, title: String(localized: "Long Vowels"), arabic: "حُرُوف المَدّ",
+            summary: String(localized: "Alif, yaa and waaw stretching the vowel before them"),
             teaches: [
-                "An alif after a fatha, a yaa after a kasra, and a waaw after a damma stretch that vowel to two counts: aa, ii, uu.",
-                "The madd letter carries no mark of its own. That is how you know it is stretching the letter before it and not starting a syllable.",
+                String(localized: "An alif after a fatha, a yaa after a kasra, and a waaw after a damma stretch that vowel to two counts: aa, ii, uu."),
+                String(localized: "The madd letter carries no mark of its own. That is how you know it is stretching the letter before it and not starting a syllable."),
             ],
-            specimen: "بَا", display: .joined, skills: [.read, .spell, .listen, .build], hint: .letterByLetter),
+            specimen: "بَا", display: .joined, skills: [.read, .spell, .listen, .build, .gap, .match, .odd], hint: .letterByLetter,
+            feature: String(localized: "a long vowel")),
         ReadingTier(
-            id: "small", stage: .longSounds, title: "Small Alif, Yaa and Waaw", arabic: "الحُرُوف الصَّغِيرَة",
-            summary: "The long vowels the mushaf writes small",
+            id: "small", stage: .longSounds, title: String(localized: "Small Alif, Yaa and Waaw"), arabic: "الحُرُوف الصَّغِيرَة",
+            summary: String(localized: "The long vowels the mushaf writes small"),
             teaches: [
-                "The mushaf writes some long vowels small: a dagger alif standing over a letter, a small yaa or waaw after the pronoun for \u{201C}him\u{201D}, and a dotless yaa (alif maqsuurah) closing a word.",
-                "They sound exactly like the full letters. Only the writing is smaller.",
+                String(localized: "The mushaf writes some long vowels small: a dagger alif standing over a letter, a small yaa or waaw after the pronoun for \u{201C}him\u{201D}, and a dotless yaa (alif maqsuurah) closing a word."),
+                String(localized: "They sound exactly like the full letters. Only the writing is smaller."),
             ],
-            specimen: "بَٰ", display: .joined, skills: [.read, .spell, .listen, .build], hint: .letterByLetter),
+            specimen: "بَٰ", display: .joined, skills: [.read, .spell, .listen, .build, .gap, .match, .odd], hint: .letterByLetter,
+            feature: String(localized: "a small alif, yaa or waaw")),
         ReadingTier(
-            id: "leen", stage: .longSounds, title: "Soft Letters", arabic: "حُرُوف اللِّين",
-            summary: "A yaa or waaw after a fatha glides: ay, aw",
+            id: "leen", stage: .longSounds, title: String(localized: "Soft Letters"), arabic: "حُرُوف اللِّين",
+            summary: String(localized: "A yaa or waaw after a fatha glides: ay, aw"),
             teaches: [
-                "A yaa or a waaw with a sukoon, after a FATHA, does not stretch anything: it glides. Fatha into yaa is ay, fatha into waaw is aw.",
-                "This is the one readers get wrong, by stretching it into ii or uu. The vowel before it is what decides.",
+                String(localized: "A yaa or a waaw with a sukoon, after a FATHA, does not stretch anything: it glides. Fatha into yaa is ay, fatha into waaw is aw."),
+                String(localized: "This is the one readers get wrong, by stretching it into ii or uu. The vowel before it is what decides."),
             ],
-            specimen: "بَيۡ", display: .joined, skills: [.read, .spell, .listen, .build], hint: .letterByLetter),
+            specimen: "بَيۡ", display: .joined, skills: [.read, .spell, .listen, .build, .gap, .match, .odd], hint: .letterByLetter,
+            feature: String(localized: "a soft letter: a yaa or waaw with a sukoon after a fatha")),
         ReadingTier(
-            id: "sukoon", stage: .stops, title: "Sukoon", arabic: "السُّكُون",
-            summary: "The letter with no vowel: stop on it",
+            id: "sukoon", stage: .stops, title: String(localized: "Sukoon"), arabic: "السُّكُون",
+            summary: String(localized: "The letter with no vowel: stop on it"),
             teaches: [
-                "A sukoon means no vowel. Stop on the letter and close the syllable with it, joined to the vowel before.",
-                "The usual slip is to give the letter a vowel it does not have. If there is a sukoon, nothing follows the consonant.",
+                String(localized: "A sukoon means no vowel. Stop on the letter and close the syllable with it, joined to the vowel before."),
+                String(localized: "The usual slip is to give the letter a vowel it does not have. If there is a sukoon, nothing follows the consonant."),
             ],
-            specimen: "بۡ", display: .joined, skills: [.read, .spell, .listen, .build], hint: .letterByLetter),
+            specimen: "بۡ", display: .joined, skills: [.read, .spell, .listen, .build, .gap, .match, .odd], hint: .letterByLetter,
+            feature: String(localized: "a sukoon")),
         ReadingTier(
-            id: "shaddah", stage: .stops, title: "Shaddah", arabic: "الشَّدَّة",
-            summary: "The doubled letter: land on it, then carry on",
+            id: "shaddah", stage: .stops, title: String(localized: "Shaddah"), arabic: "الشَّدَّة",
+            summary: String(localized: "The doubled letter: land on it, then carry on"),
             teaches: [
-                "A shaddah doubles its letter. The first copy closes the syllable before it, and the second carries the vowel written with the shaddah.",
-                "In the readings a shaddah is simply the letter written twice. Missing it changes the word.",
+                String(localized: "A shaddah doubles its letter. The first copy closes the syllable before it, and the second carries the vowel written with the shaddah."),
+                String(localized: "In the readings a shaddah is simply the letter written twice. Missing it changes the word."),
             ],
-            specimen: "بَّ", display: .joined, skills: [.read, .spell, .listen, .build], hint: .letterByLetter),
+            specimen: "بَّ", display: .joined, skills: [.read, .spell, .listen, .build, .gap, .match, .odd], hint: .letterByLetter,
+            feature: String(localized: "a shaddah")),
         ReadingTier(
-            id: "mixed", stage: .stops, title: "Hamza and the Madd Sign", arabic: "الهَمزَة وَالمَدّ",
-            summary: "The hamza on its seats, and the long vowel held longer",
+            id: "mixed", stage: .stops, title: String(localized: "Hamza and the Madd Sign"), arabic: "الهَمزَة وَالمَدّ",
+            summary: String(localized: "The hamza on its seats, and the long vowel held longer"),
             teaches: [
-                "A hamza is one sound, a catch in the throat, whatever it sits on: an alif, a waaw, a yaa, or nothing at all. The readings write it as an apostrophe, and leave it off at the very start of a word.",
-                "The madd sign over a long vowel means hold it longer, four to six counts. The readings write that vowel four letters long.",
+                String(localized: "A hamza is one sound, a catch in the throat, whatever it sits on: an alif, a waaw, a yaa, or nothing at all. The readings write it as an apostrophe, and leave it off at the very start of a word."),
+                String(localized: "The madd sign over a long vowel means hold it longer, four to six counts. The readings write that vowel four letters long."),
             ],
-            specimen: "آ", display: .joined, skills: [.read, .spell, .listen, .build], hint: .letterByLetter),
+            specimen: "آ", display: .joined, skills: [.read, .spell, .listen, .build, .gap, .match, .odd], hint: .letterByLetter,
+            feature: String(localized: "a hamza or a madd sign")),
         ReadingTier(
-            id: "article", stage: .mushaf, title: "Sun and Moon Letters", arabic: "اللَّام الشَّمسِيَّة وَالقَمَرِيَّة",
-            summary: "The article al-, read or swallowed, and the Name of Allah",
+            id: "article", stage: .mushaf, title: String(localized: "Sun and Moon Letters"), arabic: "اللَّام الشَّمسِيَّة وَالقَمَرِيَّة",
+            summary: String(localized: "The article al-, read or swallowed, and the Name of Allah"),
             teaches: [
-                "Before a moon letter the article is read in full, al-, and its laam carries a sukoon. Before a sun letter the laam is written and not read: the sun letter is doubled instead, and carries a shaddah to say so.",
-                "The Name of Allah is read with a long vowel that the script does not write: allaah.",
+                String(localized: "Before a moon letter the article is read in full, al-, and its laam carries a sukoon. Before a sun letter the laam is written and not read: the sun letter is doubled instead, and carries a shaddah to say so."),
+                String(localized: "The Name of Allah is read with a long vowel that the script does not write: allaah."),
             ],
-            specimen: "ٱلۡ", display: .joined, skills: [.read, .spell, .listen, .build], hint: .letterByLetter),
+            specimen: "ٱلۡ", display: .joined, skills: [.read, .spell, .listen, .build, .gap, .match, .odd], hint: .letterByLetter,
+            feature: String(localized: "the article al-")),
         ReadingTier(
-            id: "wasl", stage: .mushaf, title: "Hamzat al-Wasl", arabic: "هَمزَة الوَصل",
-            summary: "The alif that is only read when you start on it",
+            id: "wasl", stage: .mushaf, title: String(localized: "Hamzat al-Wasl"), arabic: "هَمزَة الوَصل",
+            summary: String(localized: "The alif that is only read when you start on it"),
             teaches: [
-                "An alif with a small Saad over it is a joining hamza: it is read only when you START on its word. After wa- or fa- it is silent, and the reading runs straight into the next letter.",
-                "Started on, a verb opens with u when its third letter carries a damma and with i otherwise. A handful of nouns (the words for name and son among them) always open with i.",
+                String(localized: "An alif with a small Saad over it is a joining hamza: it is read only when you START on its word. After wa- or fa- it is silent, and the reading runs straight into the next letter."),
+                String(localized: "Started on, a verb opens with u when its third letter carries a damma and with i otherwise. A handful of nouns (the words for name and son among them) always open with i."),
             ],
-            specimen: "ٱ", display: .joined, skills: [.read, .spell, .listen, .build], hint: .letterByLetter),
+            specimen: "ٱ", display: .joined, skills: [.read, .spell, .listen, .build, .gap, .match, .odd], hint: .letterByLetter,
+            feature: String(localized: "a joining hamza")),
         ReadingTier(
-            id: "silent", stage: .mushaf, title: "Marks of the Mushaf", arabic: "عَلَامَات الضَّبط",
-            summary: "Letters written and never read, and the noon left bare",
+            id: "silent", stage: .mushaf, title: String(localized: "Marks of the Mushaf"), arabic: "عَلَامَات الضَّبط",
+            summary: String(localized: "Letters written and never read, and the noon left bare"),
             teaches: [
-                "The mushaf puts a small circle over a letter that is written and never read, such as the alif after the waaw of a plural verb.",
-                "It leaves a noon with no mark at all when that noon is hidden into the letter after it. The noon is still read, through the nose.",
-                "This tier always shows the mushaf's own marks: its sukoon is the small head of a khaa, so that the circle can mean \u{201C}not read\u{201D}.",
+                String(localized: "The mushaf puts a small circle over a letter that is written and never read, such as the alif after the waaw of a plural verb."),
+                String(localized: "It leaves a noon with no mark at all when that noon is hidden into the letter after it. The noon is still read, through the nose."),
+                String(localized: "This tier always shows the mushaf's own marks: its sukoon is the small head of a khaa, so that the circle can mean \u{201C}not read\u{201D}."),
             ],
-            specimen: "واْ", display: .mushaf, skills: [.read, .spell, .listen, .build], hint: .letterByLetter),
+            specimen: "واْ", display: .mushaf, skills: [.read, .spell, .listen, .build, .gap, .match, .odd], hint: .letterByLetter,
+            feature: String(localized: "a letter written and not read, or a noon left bare")),
         ReadingTier(
-            id: "waqf", stage: .mushaf, title: "Stopping on a Word", arabic: "الوَقف",
-            summary: "How a word's ending changes when you stop on it",
+            id: "waqf", stage: .mushaf, title: String(localized: "Stopping on a Word"), arabic: "الوَقف",
+            summary: String(localized: "How a word's ending changes when you stop on it"),
             teaches: [
-                "You never stop on a vowel. Stop on a word and its last short vowel is dropped, and so is a tanween of kasra or damma.",
-                "A double fatha becomes a long aa, and a taa marbuutah is read as a soft h. A long vowel or a sukoon stays as it is.",
+                String(localized: "You never stop on a vowel. Stop on a word and its last short vowel is dropped, and so is a tanween of kasra or damma."),
+                String(localized: "A double fatha becomes a long aa, and a taa marbuutah is read as a soft h. A long vowel or a sukoon stays as it is."),
             ],
             specimen: "ة", display: .joined, skills: [.stop], hint: .letterByLetter),
         ReadingTier(
-            id: "ayat", stage: .mushaf, title: "Short Ayat", arabic: "آيَات قَصِيرَة",
-            summary: "Whole ayat read straight through, stopping at the end",
+            id: "ayat", stage: .mushaf, title: String(localized: "Short Ayat"), arabic: "آيَات قَصِيرَة",
+            summary: String(localized: "Whole ayat read straight through, stopping at the end"),
             teaches: [
-                "Short ayat, read straight through. Inside an ayah a joining hamza is dropped, so the word before runs into the laam or the letter after it.",
-                "The last word is read the way you would stop on it.",
+                String(localized: "Short ayat, read straight through. Inside an ayah a joining hamza is dropped, so the word before runs into the laam or the letter after it."),
+                String(localized: "The last word is read the way you would stop on it."),
             ],
             specimen: "۝", display: .joined, skills: [.read, .spell, .listen, .build], hint: .letterByLetter),
         ReadingTier(
-            id: "bare", stage: .unmarked, title: "Unmarked Words", arabic: "كَلِمَات بِلَا تَشكِيل",
-            summary: "No tashkeel: read the word by its long vowels",
+            id: "bare", stage: .unmarked, title: String(localized: "Unmarked Words"), arabic: "كَلِمَات بِلَا تَشكِيل",
+            summary: String(localized: "No tashkeel: read the word by its long vowels"),
             teaches: [
-                "Outside the mushaf, Arabic is printed with no tashkeel. The long vowels are still written, as alif, waaw and yaa, and they are what you read a word by.",
-                "Every wrong answer here is a reading the bare spelling could NOT have, so the spelling alone settles it. Words are read stopped, without their case endings, the way they are said.",
-                "This is for reading outside the Quran. The mushaf is always fully marked.",
+                String(localized: "Outside the mushaf, Arabic is printed with no tashkeel. The long vowels are still written, as alif, waaw and yaa, and they are what you read a word by."),
+                String(localized: "Every wrong answer here is a reading the bare spelling could NOT have, so the spelling alone settles it. Words are read stopped, without their case endings, the way they are said."),
+                String(localized: "This is for reading outside the Quran. The mushaf is always fully marked."),
             ],
-            specimen: "كتب", display: .unmarked, skills: [.read, .spell, .listen, .build], hint: .letterByLetterThenMarks),
+            specimen: "كتب", display: .unmarked, skills: [.read, .spell, .listen, .build, .gap, .match], hint: .letterByLetterThenMarks),
         ReadingTier(
-            id: "names", stage: .unmarked, title: "Names You Know", arabic: "أَسمَاء مَعرُوفَة",
-            summary: "Surah names and the Names of Allah, printed bare",
+            id: "names", stage: .unmarked, title: String(localized: "Names You Know"), arabic: "أَسمَاء مَعرُوفَة",
+            summary: String(localized: "Surah names and the Names of Allah, printed bare"),
             teaches: [
-                "Surah names and the Names of Allah, the way a contents page or a poster prints them: no marks at all.",
-                "You already know how they sound. The test is finding them in the bare script.",
+                String(localized: "Surah names and the Names of Allah, the way a contents page or a poster prints them: no marks at all."),
+                String(localized: "You already know how they sound. The test is finding them in the bare script."),
             ],
-            specimen: "يس", display: .unmarked, skills: [.read, .spell], hint: .letterByLetterThenMarks),
+            specimen: "يس", display: .unmarked, skills: [.read, .spell, .match], hint: .letterByLetterThenMarks),
         ReadingTier(
-            id: "everyday", stage: .unmarked, title: "Everyday Phrases", arabic: "عِبَارَات يَومِيَّة",
-            summary: "The phrases you say every day, the way they are written",
+            id: "everyday", stage: .unmarked, title: String(localized: "Everyday Phrases"), arabic: "عِبَارَات يَومِيَّة",
+            summary: String(localized: "The phrases you say every day, the way they are written"),
             teaches: [
-                "The phrases you say every day, the way they are written in a message or on a wall.",
-                "You know them by ear. Here you meet them by eye.",
+                String(localized: "The phrases you say every day, the way they are written in a message or on a wall."),
+                String(localized: "You know them by ear. Here you meet them by eye."),
             ],
             specimen: "سلام", display: .unmarked, skills: [.read, .spell, .build], hint: .letterByLetter),
     ]
+}
+
+// MARK: - Features
+
+/// Whether a word shows the feature a tier is about, read off its marks and letters. Odd One Out
+/// needs this both ways: the three words that have it, and the one from an earlier tier that does not.
+enum ReadingFeature {
+    static func has(_ tierID: String, _ arabic: String) -> Bool {
+        let scalars = Array(arabic.unicodeScalars)
+        let letters = ReadingTestText.letters(arabic)
+        func isBareMadd(_ letter: String) -> Bool {
+            let parts = Array(letter.unicodeScalars)
+            guard let first = parts.first,
+                  [ReadingTestText.alif, ReadingTestText.waw, ReadingTestText.yaa, ReadingTestText.maqsura].contains(first) else { return false }
+            return parts.dropFirst().allSatisfy { $0 == ReadingTestText.maddah || $0 == ReadingTestText.dagger }
+        }
+        switch tierID {
+        case "tanween":
+            return scalars.contains(where: ReadingTestText.tanweens.contains)
+        case "long":
+            // a bare alif, yaa or waaw after the short vowel it stretches
+            return letters.indices.dropFirst().contains { index in
+                guard isBareMadd(letters[index]) else { return false }
+                let before = letters[index - 1].unicodeScalars
+                let base = letters[index].unicodeScalars.first
+                return (base == ReadingTestText.alif && before.contains(ReadingTestText.fatha))
+                    || (base == ReadingTestText.yaa && before.contains(ReadingTestText.kasra))
+                    || (base == ReadingTestText.waw && before.contains(ReadingTestText.damma))
+            }
+        case "small":
+            return scalars.contains { $0 == ReadingTestText.dagger || $0 == ReadingTestText.smallWaw || $0 == ReadingTestText.smallYaa || $0 == ReadingTestText.maqsura }
+        case "leen":
+            return letters.indices.dropFirst().contains { index in
+                let parts = Array(letters[index].unicodeScalars)
+                guard let base = parts.first, base == ReadingTestText.yaa || base == ReadingTestText.waw,
+                      parts.contains(where: { $0 == ReadingTestText.mushafSukoon || $0 == ReadingTestText.circle }) else { return false }
+                return letters[index - 1].unicodeScalars.contains(ReadingTestText.fatha)
+            }
+        case "sukoon":
+            return letters.contains { letter in
+                let parts = Array(letter.unicodeScalars)
+                guard let base = parts.first, base != ReadingTestText.alif else { return false }
+                return parts.contains(ReadingTestText.mushafSukoon)
+            }
+        case "shaddah":
+            return scalars.contains(ReadingTestText.shaddah)
+        case "mixed":
+            // The builder's rule: a hamza on its seat anywhere but a word-opening أ or إ (which every
+            // beginner's word may carry), or the madd sign.
+            if scalars.contains(ReadingTestText.maddah) { return true }
+            if scalars.contains("\u{0654}") || scalars.contains("\u{0655}") { return true }
+            let seats: Set<Unicode.Scalar> = ["\u{0621}", ReadingTestText.hamzaOnAlif, ReadingTestText.hamzaUnderAlif, "\u{0624}", "\u{0626}"]
+            return letters.indices.contains { index in
+                guard let base = letters[index].unicodeScalars.first, seats.contains(base) else { return false }
+                return !(index == 0 && (base == ReadingTestText.hamzaOnAlif || base == ReadingTestText.hamzaUnderAlif))
+            }
+        case "article":
+            // The article after any prefix (وَٱل, بِٱل), and the Name of Allah in its forms (لِلَّهِ has
+            // no wasl alif, only the doubled laam before the haa). Matched scalar by scalar: a String's
+            // `contains` compares whole characters, and the laam's own mark rides in its character.
+            func follows(_ pattern: [Unicode.Scalar]) -> Bool {
+                guard scalars.count >= pattern.count else { return false }
+                return (0...(scalars.count - pattern.count)).contains { start in
+                    pattern.indices.allSatisfy { scalars[start + $0] == pattern[$0] }
+                }
+            }
+            return follows([ReadingTestText.wasla, "\u{0644}"]) || follows(["\u{0644}", ReadingTestText.shaddah, ReadingTestText.fatha, "\u{0647}"])
+        case "wasl":
+            return scalars.contains(ReadingTestText.wasla)
+        case "silent":
+            if scalars.contains(ReadingTestText.circle) { return true }
+            // a noon with nothing on it, inside the word
+            return letters.indices.dropLast().contains { index in
+                let parts = Array(letters[index].unicodeScalars)
+                return parts.count == 1 && parts[0] == "\u{0646}"
+            }
+        default:
+            return false
+        }
+    }
+
+    /// The word tiers in ladder order: the pool an Odd One Out draws its outsider from is every tier
+    /// before the asked one.
+    static let wordTierOrder = ["spaced", "vowels", "tanween", "long", "small", "leen", "sukoon", "shaddah", "mixed", "article", "wasl", "silent"]
 }
 
 // MARK: - The bank, parsed
@@ -638,17 +795,18 @@ enum ReadingTestBank {
             return standardArabicLetters.first { $0.letter == String(scalar) }?.transliteration
         }
         guard !names.isEmpty else { return nil }
-        let surahs = opening.surahs.map(String.init).joined(separator: ", ")
+        // Shown only, after the answer: the surah numbers in the interface's digits.
+        let surahs = opening.surahs.map(String.init).joined(separator: ", ").localizedDigits
         return ReadingItem(arabic: opening.text, reading: names.joined(separator: " "),
                            stopped: names.joined(separator: " "),
-                           gloss: opening.surahs.count == 1 ? "Opens surah \(surahs)" : "Opens surahs \(surahs)")
+                           gloss: opening.surahs.count == 1 ? String(localized: "Opens surah \(surahs)") : String(localized: "Opens surahs \(surahs)"))
     }
 
     /// The 28 letters, read by their sound. The alif has none of its own, so it is left to its name.
     static let letters: [ReadingItem] = standardArabicLetters.compactMap { letter in
         guard let sound = ReadingScheme.consonants[letter.letter] else { return nil }
         return ReadingItem(arabic: letter.letter, reading: sound, stopped: sound,
-                           gloss: letter.englishSound, spokenOverride: letter.name)
+                           gloss: letter.englishSound?.localizedDisplay, spokenOverride: letter.name)
     }
 
     /// One letter under each short vowel: 27 letters and the hamza on its alif, three ways.
@@ -659,8 +817,10 @@ enum ReadingTestBank {
             guard let sound = ReadingScheme.consonants[letter.letter] else { continue }
             for (mark, vowel) in marks {
                 let arabic = letter.letter + String(mark)
-                out.append(ReadingItem(arabic: arabic, reading: sound + vowel, stopped: sound + vowel,
-                                       gloss: "\(letter.transliteration) with a \(vowel == "a" ? "fatha" : vowel == "i" ? "kasra" : "damma")"))
+                let gloss = vowel == "a" ? String(localized: "\(letter.displayName) with a fatha")
+                    : vowel == "i" ? String(localized: "\(letter.displayName) with a kasra")
+                    : String(localized: "\(letter.displayName) with a damma")
+                out.append(ReadingItem(arabic: arabic, reading: sound + vowel, stopped: sound + vowel, gloss: gloss))
             }
         }
         return out
@@ -725,6 +885,14 @@ struct ReadingTile: Identifiable, Hashable {
     let text: String
 }
 
+/// One pair of a Match Pairs question, and where its two halves sit in the shuffled columns.
+struct ReadingPair: Identifiable, Hashable {
+    let id: Int
+    let item: ReadingItem
+    let leftSlot: Int
+    let rightSlot: Int
+}
+
 struct ReadingQuestion: Identifiable {
     let id = UUID()
     let tier: ReadingTier
@@ -735,7 +903,7 @@ struct ReadingQuestion: Identifiable {
     /// What is shown: Arabic, or a reading. Empty for a listening question.
     let prompt: String
     let promptIsArabic: Bool
-    /// Multiple choice. Empty for `build` and `aloud`.
+    /// Multiple choice. Empty for `build`, `match` and `aloud`.
     let choices: [ReadingChoice]
     let answer: Int
     /// `build`: the tiles on offer, and the order that is right.
@@ -743,11 +911,25 @@ struct ReadingQuestion: Identifiable {
     let target: [String]
     /// True when the tiles are whole words (an ayah, a phrase), not letters.
     let tilesAreWords: Bool
+    /// `gap`: which of the word's letters (as `ReadingTestText.letters` counts them) is missing.
+    var gapIndex: Int? = nil
+    /// `match`: the four pairs.
+    var pairs: [ReadingPair] = []
+    /// `odd`: the three words that share the feature, for the explanation.
+    var others: [ReadingItem] = []
 
-    /// True when the tier has a hint to give (the letter tiers have nothing to reveal but the answer).
+    /// True when the tier has a hint to give (the letter tiles have nothing to reveal but the answer).
     var allowsHint: Bool {
         if case .none = tier.hint { return false }
-        return true
+        return skill != .match && skill != .odd
+    }
+
+    /// The word with its missing letter shown as a gap: the letters before it, the gap, the letters after.
+    var gapParts: (before: String, after: String)? {
+        guard let gapIndex else { return nil }
+        let letters = ReadingTestText.letters(item.arabic)
+        guard letters.indices.contains(gapIndex) else { return nil }
+        return (letters[..<gapIndex].joined(), letters[(gapIndex + 1)...].joined())
     }
 }
 
@@ -814,6 +996,46 @@ struct ReadingQuestionFactory {
         return out
     }
 
+    /// A Speed Round: quick questions (read, spell) from `tiers`, as many as the clock may get through.
+    /// Whole ayat and everyday phrases are left out: their answers take a moment to read.
+    mutating func speedRound(from tiers: [ReadingTier], length: Int = 60) -> [ReadingQuestion] {
+        let quick = tiers.filter { $0.skills.contains(where: \.isQuick) && $0.id != "ayat" && $0.id != "everyday" }
+        guard !quick.isEmpty else { return [] }
+        var out: [ReadingQuestion] = []
+        var guardrail = 0
+        while out.count < length, guardrail < length * 6 {
+            guardrail += 1
+            let tier = quick[Int(next(upTo: quick.count))]
+            let skills = tier.skills.filter(\.isQuick)
+            let items = ReadingTestBank.items(for: tier)
+            guard !items.isEmpty else { continue }
+            let item = items[Int(next(upTo: items.count))]
+            if let question = question(item, in: tier, skill: skills[Int(next(upTo: skills.count))]) {
+                out.append(question)
+            }
+        }
+        return out
+    }
+
+    /// A review of what was missed: each item once, asked the way its tier asks (read, spell or build;
+    /// never the listening or hands-on skills, which need the voice or a special layout).
+    mutating func review(ofMissed items: [(tier: ReadingTier, item: ReadingItem)], length: Int = 15) -> [ReadingQuestion] {
+        var out: [ReadingQuestion] = []
+        for (tier, item) in shuffled(items).prefix(length) {
+            let skills = tier.skills.filter { $0 == .read || $0 == .spell || $0 == .stop || $0 == .takeApart }
+            guard !skills.isEmpty else { continue }
+            var tries = 0
+            while tries < 4 {
+                tries += 1
+                if let question = question(item, in: tier, skill: skills[Int(next(upTo: skills.count))]) {
+                    out.append(question)
+                    break
+                }
+            }
+        }
+        return out
+    }
+
     // MARK: One question
 
     mutating func question(_ item: ReadingItem, in tier: ReadingTier, skill: ReadingSkill) -> ReadingQuestion? {
@@ -822,11 +1044,96 @@ struct ReadingQuestionFactory {
         case .spell, .listen: return spellingQuestion(item, in: tier, skill: skill)
         case .takeApart, .join: return shapeQuestion(item, in: tier, skill: skill)
         case .build: return buildQuestion(item, in: tier)
+        case .gap: return gapQuestion(item, in: tier)
+        case .match: return matchQuestion(item, in: tier)
+        case .odd: return oddQuestion(item, in: tier)
         case .aloud:
-            return ReadingQuestion(tier: tier, skill: .aloud, item: item, ask: "Read it aloud, then check yourself.",
+            return ReadingQuestion(tier: tier, skill: .aloud, item: item, ask: String(localized: "Read it aloud, then check yourself."),
                                    prompt: item.arabic, promptIsArabic: true, choices: [], answer: 0,
                                    tiles: [], target: [], tilesAreWords: false)
         }
+    }
+
+    /// One letter taken out of the word; the reading shown; the letter to choose from four.
+    private mutating func gapQuestion(_ item: ReadingItem, in tier: ReadingTier) -> ReadingQuestion? {
+        guard !item.arabic.contains(" ") else { return nil }
+        let letters = ReadingTestText.letters(item.arabic)
+        guard letters.count >= 2 else { return nil }
+        // Any letter but a joining hamza (its own tier's subject, and nothing else looks like it) and
+        // a letter written and never read (taking it out changes nothing the reading shows).
+        let candidates = letters.indices.filter { index in
+            let scalars = letters[index].unicodeScalars
+            guard let base = scalars.first, base != ReadingTestText.wasla, !scalars.contains(ReadingTestText.circle) else { return false }
+            return (0x0621...0x064A).contains(base.value)
+        }
+        guard let gapIndex = candidates.isEmpty ? nil : candidates[Int(next(upTo: candidates.count))] else { return nil }
+        let right = letters[gapIndex]
+        let rightScalars = Array(right.unicodeScalars)
+        guard let base = rightScalars.first else { return nil }
+        let marks = Array(rightScalars.dropFirst())
+        func withMarks(_ letter: String) -> String? {
+            guard let scalar = letter.unicodeScalars.first else { return nil }
+            var view = String.UnicodeScalarView()
+            view.append(scalar)
+            view.append(contentsOf: marks)
+            return String(view)
+        }
+        var wrong: [String] = []
+        // Look-alikes and sound-alikes first, wearing the same marks, then any other letter.
+        let near = shuffled(ArabicMoves.lookAlikes(of: String(base)) + ArabicMoves.soundAlikes(of: String(base)))
+        for glyph in near {
+            guard let candidate = withMarks(glyph), candidate != right, !wrong.contains(candidate) else { continue }
+            wrong.append(candidate)
+            if wrong.count == 2 { break }
+        }
+        for letter in shuffled(standardArabicLetters) where wrong.count < 3 {
+            guard let candidate = withMarks(letter.letter), candidate != right, !wrong.contains(candidate) else { continue }
+            wrong.append(candidate)
+        }
+        guard wrong.count == 3 else { return nil }
+        let (choices, answer) = arrange(right: right, wrong: wrong, arabic: true)
+        return ReadingQuestion(tier: tier, skill: .gap, item: item, ask: String(localized: "Which letter is missing?"),
+                               prompt: item.reading, promptIsArabic: false, choices: choices, answer: answer,
+                               tiles: [], target: [], tilesAreWords: false, gapIndex: gapIndex)
+    }
+
+    /// Four words of the tier against their four readings, both columns shuffled.
+    private mutating func matchQuestion(_ item: ReadingItem, in tier: ReadingTier) -> ReadingQuestion? {
+        var picked: [ReadingItem] = [item]
+        var seenArabic: Set<String> = [item.arabic]
+        var seenReading: Set<String> = [item.reading]
+        for other in shuffled(ReadingTestBank.items(for: tier)) where picked.count < 4 {
+            guard seenArabic.insert(other.arabic).inserted, seenReading.insert(other.reading).inserted else { continue }
+            picked.append(other)
+        }
+        guard picked.count == 4 else { return nil }
+        let leftOrder = shuffled(Array(0..<4))
+        let rightOrder = shuffled(Array(0..<4))
+        let pairs = picked.indices.map { ReadingPair(id: $0, item: picked[$0], leftSlot: leftOrder[$0], rightSlot: rightOrder[$0]) }
+        return ReadingQuestion(tier: tier, skill: .match, item: item, ask: String(localized: "Pair each word with its reading."),
+                               prompt: "", promptIsArabic: false, choices: [], answer: 0,
+                               tiles: [], target: [], tilesAreWords: false, pairs: pairs)
+    }
+
+    /// Three words with the tier's feature and one, from an earlier tier, without it.
+    private mutating func oddQuestion(_ item: ReadingItem, in tier: ReadingTier) -> ReadingQuestion? {
+        guard tier.feature != nil, ReadingFeature.has(tier.id, item.arabic),
+              let place = ReadingFeature.wordTierOrder.firstIndex(of: tier.id), place > 0 else { return nil }
+        var insiders: [ReadingItem] = [item]
+        for other in shuffled(ReadingTestBank.items(for: tier)) where insiders.count < 3 {
+            guard other.arabic != item.arabic, !other.arabic.contains(" "), !insiders.contains(other),
+                  ReadingFeature.has(tier.id, other.arabic) else { continue }
+            insiders.append(other)
+        }
+        guard insiders.count == 3 else { return nil }
+        let earlier = ReadingFeature.wordTierOrder[..<place].flatMap { ReadingTestBank.words[$0] ?? [] }
+        let outsiders = earlier.filter { !$0.arabic.contains(" ") && !ReadingFeature.has(tier.id, $0.arabic) }
+        guard !outsiders.isEmpty else { return nil }
+        let odd = outsiders[Int(next(upTo: outsiders.count))]
+        let (choices, answer) = arrange(right: odd.arabic, wrong: insiders.map(\.arabic), arabic: true)
+        return ReadingQuestion(tier: tier, skill: .odd, item: odd, ask: String(localized: "Three of these have \(tier.feature ?? ""). Which one does not?"),
+                               prompt: "", promptIsArabic: true, choices: choices, answer: answer,
+                               tiles: [], target: [], tilesAreWords: false, others: insiders)
     }
 
     /// Arabic shown, readings to choose from.
@@ -845,13 +1152,13 @@ struct ReadingQuestionFactory {
         let (choices, answer) = arrange(right: right, wrong: wrong, arabic: false)
         let ask: String
         switch (skill, tier.id) {
-        case (.stop, _): ask = "How is this read when you STOP on it?"
-        case (_, "letters"): ask = "Which sound does this letter make?"
-        case (_, "openers"): ask = "How are these opening letters read?"
-        case (_, "names"): ask = "Which name is this?"
-        case (_, "everyday"): ask = "Which phrase is this?"
-        case (_, "bare"): ask = "Which reading fits this spelling?"
-        default: ask = "How is this read?"
+        case (.stop, _): ask = String(localized: "How is this read when you STOP on it?")
+        case (_, "letters"): ask = String(localized: "Which sound does this letter make?")
+        case (_, "openers"): ask = String(localized: "How are these opening letters read?")
+        case (_, "names"): ask = String(localized: "Which name is this?")
+        case (_, "everyday"): ask = String(localized: "Which phrase is this?")
+        case (_, "bare"): ask = String(localized: "Which reading fits this spelling?")
+        default: ask = String(localized: "How is this read?")
         }
         return ReadingQuestion(tier: tier, skill: skill, item: item, ask: ask, prompt: item.arabic, promptIsArabic: true,
                                choices: choices, answer: answer, tiles: [], target: [], tilesAreWords: false)
@@ -872,9 +1179,9 @@ struct ReadingQuestionFactory {
         let (choices, answer) = arrange(right: item.arabic, wrong: wrong, arabic: true)
         let ask: String
         if skill == .listen {
-            ask = tier.id == "letters" ? "Which letter did you hear named?" : "Which one did you hear?"
+            ask = tier.id == "letters" ? String(localized: "Which letter did you hear named?") : String(localized: "Which one did you hear?")
         } else {
-            ask = tier.id == "letters" ? "Which letter makes this sound?" : "Which spelling is read this way?"
+            ask = tier.id == "letters" ? String(localized: "Which letter makes this sound?") : String(localized: "Which spelling is read this way?")
         }
         return ReadingQuestion(tier: tier, skill: skill, item: item, ask: ask,
                                prompt: skill == .listen ? "" : item.reading, promptIsArabic: false,
@@ -895,12 +1202,12 @@ struct ReadingQuestionFactory {
         let spell: (String) -> String = { $0.map(String.init).joined(separator: " ") }
         if skill == .takeApart {
             let (choices, answer) = arrange(right: item.reading, wrong: wrongWords.map(spell), arabic: true)
-            return ReadingQuestion(tier: tier, skill: skill, item: item, ask: "Which letters is this word made of?",
+            return ReadingQuestion(tier: tier, skill: skill, item: item, ask: String(localized: "Which letters is this word made of?"),
                                    prompt: item.arabic, promptIsArabic: true, choices: choices, answer: answer,
                                    tiles: [], target: [], tilesAreWords: false)
         }
         let (choices, answer) = arrange(right: item.arabic, wrong: wrongWords, arabic: true)
-        return ReadingQuestion(tier: tier, skill: skill, item: item, ask: "How do these letters look joined?",
+        return ReadingQuestion(tier: tier, skill: skill, item: item, ask: String(localized: "How do these letters look joined?"),
                                prompt: item.reading, promptIsArabic: true, choices: choices, answer: answer,
                                tiles: [], target: [], tilesAreWords: false)
     }
@@ -931,7 +1238,7 @@ struct ReadingQuestionFactory {
             }
         }
         let tiles = shuffled(target + decoys).enumerated().map { ReadingTile(id: $0.offset, text: $0.element) }
-        let ask = isPhrase ? "Tap the words into order." : tier.id == "forms" ? "Tap the letters of this word, in order." : "Spell it: tap the letters in order."
+        let ask = isPhrase ? String(localized: "Tap the words into order.") : tier.id == "forms" ? String(localized: "Tap the letters of this word, in order.") : String(localized: "Spell it: tap the letters in order.")
         return ReadingQuestion(tier: tier, skill: .build, item: item, ask: ask,
                                prompt: tier.id == "forms" ? item.arabic : item.reading,
                                promptIsArabic: tier.id == "forms", choices: [], answer: 0,
@@ -1146,6 +1453,28 @@ enum LatinMoves {
         case silentAlif
         /// A bare noon skipped, or swallowed into the next letter.
         case bareNoon
+
+        /// The slip, said to the learner: the tier page lists what its test catches.
+        var learnerDescription: String {
+            switch self {
+            case .vowel: return String(localized: "One short vowel read as another")
+            case .shorten: return String(localized: "A long vowel read short")
+            case .lengthen: return String(localized: "A short vowel stretched long")
+            case .moveLong: return String(localized: "The long vowel put on the wrong syllable")
+            case .undouble: return String(localized: "A shaddah missed")
+            case .double: return String(localized: "A shaddah that is not there")
+            case .consonant: return String(localized: "A letter read as its sound-alike: the heavy one as its light twin, 'ayn as a hamza")
+            case .tanween: return String(localized: "One tanween read as another")
+            case .dropTanween: return String(localized: "The tanween's n left off")
+            case .leen: return String(localized: "A soft letter stretched: ay read as ii, aw as uu")
+            case .insertVowel: return String(localized: "A vowel given to a letter with a sukoon")
+            case .article: return String(localized: "The article read the wrong way: al- before a sun letter, or a moon letter doubled")
+            case .waslVowel: return String(localized: "A joining hamza started on the wrong vowel")
+            case .dropHamza: return String(localized: "A hamza passed over")
+            case .silentAlif: return String(localized: "The silent alif after a plural waaw read out")
+            case .bareNoon: return String(localized: "A bare noon skipped, or swallowed into the next letter")
+            }
+        }
     }
 
     /// The mistakes that belong to a tier. `arabic` lets the mushaf-marks tier tell which of its
@@ -1539,16 +1868,33 @@ enum LetterWordExamples {
 
         var title: String {
             switch self {
-            case .start: return "At the start"
-            case .middle: return "In the middle"
-            case .end: return "At the end"
+            case .start: return String(localized: "At the start")
+            case .middle: return String(localized: "In the middle")
+            case .end: return String(localized: "At the end")
             }
         }
+    }
+
+    /// What a yaa or a waaw is doing where it was found. The two letters live double lives, and one
+    /// set of start-middle-end words mixed them: the yaa page's "middle" word could be a "y" or an
+    /// "ee" depending on which word the bank offered first (Abu, 2026-10-24: "do another section for
+    /// vowels middle and end"). Every other letter is looked up with `.any`.
+    enum Role: Hashable {
+        case any
+        /// The letter carries a vowel, a tanween or a shaddah of its own: the "y" of "yes", the "w"
+        /// of "water".
+        case consonant
+        /// Bare, after its matching short vowel (a kasra before yaa, a damma before waaw): the long
+        /// "ee" or "oo". A word never opens on one, so it is only ever found in the middle or at the end.
+        case vowel
     }
 
     struct Example: Hashable {
         let position: Position
         let item: ReadingItem
+        /// Where the letter sits in the word, counted the way `ReadingTestText.letters` counts, so the
+        /// row tints THIS occurrence and not an earlier one in another role.
+        var letterIndex: Int? = nil
     }
 
     /// The tiers in the order a learner meets them. Every word in these carries its full marks; the
@@ -1558,176 +1904,131 @@ enum LetterWordExamples {
         "article", "wasl", "silent", "waqf",
     ]
 
-    nonisolated(unsafe) private static var cache: [String: [Example]] = [:]
+    private struct CacheKey: Hashable {
+        let letter: String
+        let role: Role
+    }
+
+    nonisolated(unsafe) private static var cache: [CacheKey: [Example]] = [:]
 
     /// Where a letter may be shown: taa marbuuTah and alif maqSoorah only ever END a word (a pronoun
-    /// suffix can follow them in the mushaf, which the page's own footer would then contradict).
-    private static func positions(for letter: String) -> [Position] {
+    /// suffix can follow them in the mushaf, which the page's own footer would then contradict), and
+    /// a vowel letter never begins one.
+    private static func positions(for letter: String, role: Role) -> [Position] {
+        if role == .vowel { return [.middle, .end] }
         switch letter {
         case "\u{0629}", "\u{0649}": return [.end]
         default: return Position.allCases
         }
     }
 
+    /// The two letters `Role` tells apart.
+    static func hasTwoRoles(_ letter: String) -> Bool {
+        letter == String(ReadingTestText.yaa) || letter == String(ReadingTestText.waw)
+    }
+
+    /// Marks that make a yaa or waaw a consonant: a vowel, a tanween or a shaddah on the letter itself.
+    private static let consonantMarks: Set<Unicode.Scalar> = [
+        ReadingTestText.fatha, ReadingTestText.kasra, ReadingTestText.damma,
+        ReadingTestText.fathatan, ReadingTestText.kasratan, ReadingTestText.dammatan, ReadingTestText.shaddah,
+    ]
+
+    /// Whether the yaa or waaw at `index` is playing `role`. A leen letter (a sukoon after a fatha:
+    /// the "ay" of بَيۡنَ) and a silent one are neither, so they are never shown under either heading.
+    private static func plays(_ role: Role, in letters: [String], at index: Int) -> Bool {
+        guard role != .any else { return true }
+        let scalars = Array(letters[index].unicodeScalars)
+        guard let base = scalars.first else { return false }
+        let marks = scalars.dropFirst()
+        switch role {
+        case .any:
+            return true
+        case .consonant:
+            return marks.contains(where: consonantMarks.contains)
+        case .vowel:
+            guard marks.isEmpty, index > 0 else { return false }
+            let partner = base == ReadingTestText.yaa ? ReadingTestText.kasra : ReadingTestText.damma
+            return letters[index - 1].unicodeScalars.contains(partner)
+        }
+    }
+
+    /// The last letter that is sounded: the waaw of قَالُوا۟ ends the word even though the silent
+    /// alif after it is written.
+    private static func lastSoundedIndex(_ letters: [String]) -> Int {
+        letters.indices.last { !letters[$0].unicodeScalars.contains(ReadingTestText.circle) } ?? letters.count - 1
+    }
+
     /// The examples for one of the alphabet's letters (`LetterData.letter`), in start-middle-end order.
-    static func examples(for letter: String) -> [Example] {
-        if let cached = cache[letter] { return cached }
-        let wanted = positions(for: letter)
-        var found: [Position: ReadingItem] = [:]
+    /// `role` narrows a yaa or waaw to the words where it is a consonant, or the long vowel.
+    static func examples(for letter: String, role: Role = .any) -> [Example] {
+        let key = CacheKey(letter: letter, role: role)
+        if let cached = cache[key] { return cached }
+        let wanted = positions(for: letter, role: role)
+        var found: [Position: (item: ReadingItem, index: Int)] = [:]
         search: for tier in tierOrder {
             for item in ReadingTestBank.words[tier] ?? [] where !item.arabic.contains(" ") {
                 let letters = ReadingTestText.letters(item.arabic)
                 guard (2...7).contains(letters.count),
-                      let index = ArabicLetterMatch.firstIndex(of: letter, in: letters) else { continue }
-                let position: Position = index == 0 ? .start : index >= letters.count - 1 ? .end : .middle
+                      let index = ArabicLetterMatch.indices(of: letter, in: letters)
+                        .first(where: { plays(role, in: letters, at: $0) }) else { continue }
+                let position: Position = index == 0 ? .start : index >= lastSoundedIndex(letters) ? .end : .middle
                 guard wanted.contains(position) else { continue }
-                if found[position] == nil { found[position] = item }
+                if found[position] == nil { found[position] = (item, index) }
                 if found.count == wanted.count { break search }
             }
         }
-        let out = Position.allCases.compactMap { position in found[position].map { Example(position: position, item: $0) } }
-        cache[letter] = out
+        let out = Position.allCases.compactMap { position in
+            found[position].map { Example(position: position, item: $0.item, letterIndex: $0.index) }
+        }
+        cache[key] = out
         return out
     }
 }
 
 // MARK: - Progress
 
-/// What the learner has done on each tier. Small, in UserDefaults, like `TajweedLessonProgress`.
-final class ReadingTestProgress: ObservableObject {
-    static let shared = ReadingTestProgress()
+/// What the learner has done on each tier: the kit's ladder store (`StudyLadderProgress`), with the
+/// Reading Test's keys and its tiers typed. In UserDefaults and in the iCloud backup.
+final class ReadingTestProgress: StudyLadderProgress {
+    static let shared = ReadingTestProgress(key: "readingTestProgress", placementKey: "readingTestPlacement",
+                                            missedKey: "readingTestMissed", speedKey: "readingTestSpeedBest")
 
-    struct Record: Codable, Equatable {
-        /// Best score, as right answers out of a hundred.
-        var best = 0
-        var attempts = 0
-        /// A pass with no hint used and nothing missed.
-        var mastered = false
-        var lastPlayed: Date? = nil
+    typealias Record = StudyRecord
 
-        var passed: Bool { best >= ReadingTestProgress.passMark }
-    }
+    private static var tierIDs: [String] { ReadingTier.all.map(\.id) }
 
-    /// Eight in ten.
-    static let passMark = 80
-    private static let key = "readingTestProgress"
-    private static let placementKey = "readingTestPlacement"
+    func record(for tier: ReadingTier) -> StudyRecord { record(id: tier.id) }
 
-    @Published private(set) var records: [String: Record]
-    /// The tier Find My Level last sent the learner to, if they have taken it.
-    @Published private(set) var placement: String?
+    var passedCount: Int { passedCount(in: Self.tierIDs) }
 
-    /// True once this object has something on disk, so the wipe check below never clears a ladder
-    /// that was only ever in memory (the DEBUG seed).
-    private var hasSaved = false
-    private var defaultsObserver: NSObjectProtocol?
-
-    private init() {
-        let defaults = UserDefaults.standard
-        if let data = defaults.data(forKey: Self.key), let decoded = UserDataRescue.decode([String: Record].self, from: data, key: Self.key, defaults: defaults) {
-            records = decoded
-            hasSaved = true
-        } else {
-            records = [:]
-        }
-        placement = defaults.string(forKey: Self.placementKey)
-        if placement != nil { hasSaved = true }
-
-        // "Erase Everything" removes the whole defaults domain while this object still holds the
-        // ladder. Settings.swift compiles into targets this file is not in, so it cannot call in
-        // here: notice the keys going instead.
-        // `queue: nil` (deliver on the posting thread), NOT `queue: .main`. A main-queue observer
-        // of an app-wide notification makes every background post BLOCK on the main thread:
-        // NotificationCenter delivers through an NSOperation and waits for it. `UserDefaults.set`
-        // posts this notification, and the stores write defaults on their own io queues, so a
-        // main-queue observer here put a main-thread hop inside every one of those writes - one
-        // half of a deadlock that froze and then killed the app on Mac (2026-10-05,
-        // iPhone-2026-10-05-004500.ips: the main thread sat in `ViewedLog.flushSynchronously`'s
-        // `ioQueue.sync` while that queue's `UserDefaults.set` waited for main to drain THIS
-        // observer). The work below is a few defaults reads and a decision; it needs no main
-        // thread, and the two published properties are set on main explicitly.
-        defaultsObserver = NotificationCenter.default.addObserver(
-            forName: UserDefaults.didChangeNotification, object: nil, queue: nil
-        ) { [weak self] _ in
-            guard let self, self.hasSaved,
-                  UserDefaults.standard.data(forKey: Self.key) == nil,
-                  UserDefaults.standard.string(forKey: Self.placementKey) == nil else { return }
-            // `records`/`placement` are observed by views, so they change on main - asynchronously,
-            // because the poster may BE the main thread (an erase runs there) and a sync hop would
-            // deadlock on itself.
-            DispatchQueue.main.async {
-                self.hasSaved = false
-                if !self.records.isEmpty { self.records = [:] }
-                if self.placement != nil { self.placement = nil }
-            }
-        }
-        // The observer above only notices the keys GOING (an erase). A restore writes them, which
-        // it cannot tell from this object's own save, so that case is announced instead.
-        storageObserver = StoredContentObserver(reload: { ReadingTestProgress.shared.reloadFromStorage() })
-    }
-
-    private var storageObserver: StoredContentObserver?
-
-    /// The ladder on disk changed underneath this object (a restore): take it.
-    private func reloadFromStorage() {
-        let defaults = UserDefaults.standard
-        let stored = defaults.data(forKey: Self.key).flatMap { try? JSONDecoder().decode([String: Record].self, from: $0) }
-        let storedPlacement = defaults.string(forKey: Self.placementKey)
-        hasSaved = stored != nil || storedPlacement != nil
-        if records != stored ?? [:] { records = stored ?? [:] }
-        if placement != storedPlacement { placement = storedPlacement }
-    }
-
-    func record(for tier: ReadingTier) -> Record { records[tier.id] ?? Record() }
-
-    var passedCount: Int { ReadingTier.all.filter { record(for: $0).passed }.count }
+    var masteredCount: Int { masteredCount(in: Self.tierIDs) }
 
     /// Where to go next: the first tier not yet passed, from the placement tier on when there is one.
-    var nextTier: ReadingTier? {
-        let start = placement.flatMap { id in ReadingTier.all.firstIndex { $0.id == id } } ?? 0
-        return ReadingTier.all[start...].first { !record(for: $0).passed } ?? ReadingTier.all.first { !record(for: $0).passed }
+    var nextTier: ReadingTier? { nextID(in: Self.tierIDs).flatMap(ReadingTier.tier(id:)) }
+
+    /// The words missed in scored tests, newest first, each with its tier: the Practice Missed round.
+    var missedItems: [(tier: ReadingTier, item: ReadingItem)] {
+        missed.compactMap { entry in
+            guard let tier = ReadingTier.tier(id: entry.tier),
+                  let item = ReadingTestBank.items(for: tier).first(where: { $0.arabic == entry.id }) else { return nil }
+            return (tier, item)
+        }
     }
 
     /// Files a finished round. `hints` and `missed` decide mastery; the best score only ever rises.
-    func finish(_ tier: ReadingTier, right: Int, of total: Int, hints: Int) {
-        guard total > 0 else { return }
-        var record = record(for: tier)
-        let score = Int((Double(right) / Double(total) * 100).rounded())
-        record.best = max(record.best, score)
-        record.attempts += 1
-        record.lastPlayed = Date()
-        if right == total, hints == 0 { record.mastered = true }
-        records[tier.id] = record
-        save()
+    func finish(_ tier: ReadingTier, right: Int, of total: Int, hints: Int, missed: [ReadingItem], answeredRight: [ReadingItem] = []) {
+        finish(id: tier.id, right: right, of: total, hints: hints,
+               missedIDs: missed.map(\.arabic), rightIDs: answeredRight.map(\.arabic))
     }
 
-    func setPlacement(_ tier: ReadingTier) {
-        placement = tier.id
-        hasSaved = true
-        UserDefaults.standard.set(tier.id, forKey: Self.placementKey)
+    func recordPractice(_ tier: ReadingTier, skill: ReadingSkill, right: Int, of total: Int) {
+        recordPractice(id: tier.id, skill: skill.rawValue, right: right, of: total)
     }
 
-    func reset() {
-        hasSaved = false
-        records = [:]
-        placement = nil
-        UserDefaults.standard.removeObject(forKey: Self.key)
-        UserDefaults.standard.removeObject(forKey: Self.placementKey)
-    }
-
-    private func save() {
-        if let data = try? JSONEncoder().encode(records) {
-            hasSaved = true
-            UserDefaults.standard.set(data, forKey: Self.key)
-        }
-    }
+    func setPlacement(_ tier: ReadingTier) { setPlacement(id: tier.id) }
 
     #if DEBUG
     /// "-readingTestSeed 12": marks the first twelve tiers passed, for a screenshot of a ladder in use.
-    func debugSeed(passed count: Int) {
-        for (index, tier) in ReadingTier.all.enumerated() where index < count {
-            records[tier.id] = Record(best: index % 3 == 0 ? 100 : 90, attempts: 2, mastered: index % 3 == 0, lastPlayed: Date())
-        }
-    }
+    func debugSeed(passed count: Int) { debugSeed(passed: count, in: Self.tierIDs) }
     #endif
 }

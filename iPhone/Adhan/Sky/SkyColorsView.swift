@@ -63,7 +63,7 @@ struct SkyColorsView: View {
                 .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
         )
         .overlay(alignment: .bottomLeading) {
-            Text(settings.customPrayerName(for: previewPrayer) ?? previewPrayer)
+            Text(settings.customPrayerName(for: previewPrayer) ?? previewPrayer.localizedDisplay)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white)
                 .padding(10)
@@ -74,7 +74,7 @@ struct SkyColorsView: View {
 
     private func row(for prayer: String) -> some View {
         HStack {
-            Text(settings.customPrayerName(for: prayer) ?? prayer)
+            Text(settings.customPrayerName(for: prayer) ?? prayer.localizedDisplay)
                 .font(.subheadline)
 
             Spacer()
@@ -87,7 +87,7 @@ struct SkyColorsView: View {
         .contentShape(Rectangle())
         .onTapGesture { withAnimation { previewPrayer = prayer } }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(prayer) sky colors, top and bottom")
+        .accessibilityLabel("\(prayer.localizedDisplay) sky colors, top and bottom")
     }
 
     /// `ColorPicker` needs a `Binding<Color>`, but the palette is stored as a hex pair. Reading rebuilds the

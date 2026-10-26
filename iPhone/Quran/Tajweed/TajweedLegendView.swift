@@ -39,7 +39,7 @@ struct TajweedLegendView: View {
         let canonical = Settings.Riwayah.canonicalTag(tag)
         return Settings.Riwayah.allOptions
             .first { Settings.Riwayah.canonicalTag($0.tag) == canonical }?
-            .label ?? tag
+            .displayLabel() ?? tag
     }
 
     private struct LegendSection: Identifiable {
@@ -129,7 +129,7 @@ struct TajweedLegendView: View {
                     .frame(width: 10, height: 10)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    legendLine(entry.english)
+                    legendLine(entry.english.localizedDisplay)
                     legendLine(entry.arabic, primary: false)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -179,7 +179,7 @@ struct TajweedLegendView: View {
     @ViewBuilder
     private func countBadge(_ item: TajweedLegendCategory) -> some View {
         if let count = item.countLabel {
-            Text(count)
+            Text(count.localizedDigits)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(item.color)
                 .padding(.horizontal, 8)
@@ -274,7 +274,7 @@ struct TajweedLegendView: View {
                         settings.hapticFeedback()
                         withAnimation { previewTag = Settings.Riwayah.hafsTag }
                     } label: {
-                        selectionLabel(Settings.Riwayah.hafsLabel, tag: Settings.Riwayah.hafsTag)
+                        selectionLabel(Settings.Riwayah.option(for: Settings.Riwayah.hafsTag).displayLabel(), tag: Settings.Riwayah.hafsTag)
                     }
 
                     // The same nested grammar as the riwayah picker everywhere else: one submenu
@@ -299,7 +299,7 @@ struct TajweedLegendView: View {
                 } label: {
                     HStack(spacing: 5) {
                         Text(previewTag.map { optionLabel(forTag: $0) }
-                             ?? "\(optionLabel(forTag: currentRiwayahLegendTag ?? Settings.Riwayah.hafsTag)) (reading)")
+                             ?? String(localized: "\(optionLabel(forTag: currentRiwayahLegendTag ?? Settings.Riwayah.hafsTag)) (reading)"))
                             .font(.subheadline.weight(.semibold))
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
@@ -351,12 +351,12 @@ struct TajweedLegendView: View {
                     settings.hapticFeedback()
                     withAnimation { previewTag = option.tag }
                 } label: {
-                    selectionLabel(option.label, tag: option.tag)
+                    selectionLabel(option.displayLabel(), tag: option.tag)
                 }
             }
         } label: {
             Label(
-                "\(group.teacher) - \(group.teacherArabic)",
+                AppLanguage.isArabic ? group.teacherArabic : "\(group.teacher) - \(group.teacherArabic)",
                 systemImage: group.options.contains(where: { option in
                     previewTag.map { tag in
                         Settings.Riwayah.canonicalTag(tag) == Settings.Riwayah.canonicalTag(option.tag)
@@ -422,14 +422,16 @@ struct TajweedLegendView: View {
         LazyVStack(alignment: .leading, spacing: 14) {
             ForEach(Self.compareQiraahGroups) { group in
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("\(group.teacher.uppercased()) - \(group.teacherArabic)")
+                    Text(AppLanguage.isArabic ? group.teacherArabic : "\(group.teacher.uppercased()) - \(group.teacherArabic)")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
 
                     if group.includesHafs {
+                        // The Arabic interface titles the card with the Arabic name, so the corner
+                        // caption (the same name again) stays empty there.
                         compareCardShell(
-                            title: Settings.Riwayah.hafsLabel,
-                            arabic: Settings.Riwayah.hafsArabic
+                            title: Settings.Riwayah.option(for: Settings.Riwayah.hafsTag).displayLabel(),
+                            arabic: AppLanguage.isArabic ? "" : Settings.Riwayah.hafsArabic
                         ) {
                             ForEach(TajweedLegendCategory.allCases.sorted { $0.sortRank < $1.sortRank }) { item in
                                 compareRuleRow(color: item.color, english: item.transliteration)
@@ -440,9 +442,9 @@ struct TajweedLegendView: View {
                     }
 
                     ForEach(group.options, id: \.tag) { option in
-                        compareCardShell(title: option.label, arabic: option.arabic) {
+                        compareCardShell(title: option.displayLabel(), arabic: AppLanguage.isArabic ? "" : option.arabic) {
                             ForEach(QiraahTajweedStore.shared.legend(for: option.tag)) { entry in
-                                compareRuleRow(color: entry.color, english: entry.english)
+                                compareRuleRow(color: entry.color, english: entry.english.localizedDisplay)
                             }
                         }
                         .contentShape(Rectangle())
@@ -460,7 +462,7 @@ struct TajweedLegendView: View {
                 ForEach(ruleSections) { section in
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(alignment: .firstTextBaseline) {
-                            Text(section.english)
+                            Text(section.english.localizedDisplay)
                                 .font(.subheadline.weight(.semibold))
 
                             Spacer(minLength: 6)
@@ -581,11 +583,13 @@ struct TajweedLegendView: View {
     nonisolated private static let compareRuleAliases: [String: String] = ["khilaf_word": "khilaf_harf"]
 
     /// Titles and descriptions for a folded section, so it isn't named after whichever print sorted first.
+    /// `english` is the plain English title, like the packs' captions it is sorted against
+    /// (`buildRuleSections`); the section header translates it when it draws it.
     nonisolated private static let compareRuleOverrides: [String: (english: String, arabic: String, description: String)] = [
         "khilaf_harf": (
             "Differing from Ḥafṣ",
             "المُخَالِفُ لِحَفصٍ",
-            "Read differently from the Ḥafṣ an ʿĀṣim reading. Every riwayah marks this."
+            String(localized: "Read differently from the Ḥafṣ an ʿĀṣim reading. Every riwayah marks this.")
         )
     ]
 
@@ -618,10 +622,10 @@ struct TajweedLegendView: View {
                 collected.rows.append(CompareRuleRowItem(
                     id: "\(key)-\(option.tag)",
                     color: entry.color,
-                    title: option.label,
+                    title: option.displayLabel(),
                     tag: option.tag
                 ))
-                collected.note(caption: entry.english, label: option.label)
+                collected.note(caption: entry.english, label: option.displayLabel())
                 byKey[key] = collected
             }
         }
@@ -632,7 +636,9 @@ struct TajweedLegendView: View {
                     CompareRuleRowItem(
                         id: "\(key)-hafs-\(category.rawValue)",
                         color: category.color,
-                        title: "\(Settings.Riwayah.hafsLabel) - \(category.transliteration)",
+                        title: AppLanguage.isArabic
+                            ? "\(Settings.Riwayah.option(for: Settings.Riwayah.hafsTag).displayLabel(omitsDefaultSuffix: true)) - \(category.transliteration)"
+                            : "\(Settings.Riwayah.hafsLabel) - \(category.transliteration)",
                         tag: Settings.Riwayah.hafsTag
                     )
                 }
@@ -678,9 +684,11 @@ struct TajweedLegendView: View {
               let majority = captions.max(by: { $0.labels.count < $1.labels.count }) else { return "" }
         let others = captions
             .filter { $0.english != majority.english }
-            .map { "“\($0.english)” in \(ListFormatter.localizedString(byJoining: $0.labels))" }
+            .map { String(localized: "“\($0.english.localizedDisplay)” in \(ListFormatter.localizedString(byJoining: $0.labels))") }
         guard !others.isEmpty else { return "" }
-        return "The prints caption it differently: \(others.joined(separator: "; ")); “\(majority.english)” in the rest."
+        // Arabic separates the clauses with its own semicolon ("؛").
+        let separator = AppLanguage.isArabic ? "؛ " : "; "
+        return String(localized: "The prints caption it differently: \(others.joined(separator: separator)); “\(majority.english.localizedDisplay)” in the rest.")
     }
 
     private func compareCardShell<Rows: View>(title: String, arabic: String,
@@ -802,11 +810,11 @@ struct TajweedLegendView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Text(item.englishMeaning)
+            Text(item.englishMeaning.localizedDigits)
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text(item.longDescription)
+            Text(item.longDescription.localizedDigits)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -815,8 +823,8 @@ struct TajweedLegendView: View {
                 colorKey: TajweedColorOverrides.key(for: item),
                 ruleName: item.transliteration,
                 current: item.color,
-                customCaption: "Your color",
-                defaultCaption: "Default color"
+                customCaption: String(localized: "Your color"),
+                defaultCaption: String(localized: "Default color")
             )
         }
         .contentShape(Rectangle())
@@ -961,9 +969,9 @@ struct TajweedLegendView: View {
                     }
 
                     HStack(spacing: 10) {
-                        riwayahVisibilityButton(title: "Show All", systemImage: "eye.fill",
+                        riwayahVisibilityButton(title: String(localized: "Show All"), systemImage: "eye.fill",
                                                 visible: true, entries: entries)
-                        riwayahVisibilityButton(title: "Hide All", systemImage: "eye.slash.fill",
+                        riwayahVisibilityButton(title: String(localized: "Hide All"), systemImage: "eye.slash.fill",
                                                 visible: false, entries: entries)
                     }
 
@@ -994,8 +1002,8 @@ struct TajweedLegendView: View {
                     }
 
                     HStack(spacing: 10) {
-                        visibilityButton(title: "Show All", systemImage: "eye.fill", visible: true)
-                        visibilityButton(title: "Hide All", systemImage: "eye.slash.fill", visible: false)
+                        visibilityButton(title: String(localized: "Show All"), systemImage: "eye.fill", visible: true)
+                        visibilityButton(title: String(localized: "Hide All"), systemImage: "eye.slash.fill", visible: false)
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
@@ -1087,7 +1095,7 @@ struct QiraahTajweedLegendView: View {
                     .frame(width: 12, height: 12)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.english)
+                    Text(entry.english.localizedDisplay)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.primary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1122,10 +1130,10 @@ struct QiraahTajweedLegendView: View {
             // riwayah: the caption says so, because the change reaches past the legend on screen.
             TajweedRuleColorRow(
                 colorKey: entry.colorKey,
-                ruleName: entry.english,
+                ruleName: entry.english.localizedDisplay,
                 current: entry.color,
-                customCaption: "Your color, in every riwayah that marks this rule",
-                defaultCaption: "The printed mushaf's color"
+                customCaption: String(localized: "Your color, in every riwayah that marks this rule"),
+                defaultCaption: String(localized: "The printed mushaf's color")
             )
         }
         .contentShape(Rectangle())

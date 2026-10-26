@@ -76,7 +76,7 @@ struct TajweedLessonDetailView: View {
         }
         .arabicDoorDestination($door)
         .openScreen(.tajweedLesson, id: lesson.id)
-        .navigationTitle(lesson.titleEn)
+        .navigationTitle(lesson.titleEn.localizedDisplay)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -92,7 +92,7 @@ struct TajweedLessonDetailView: View {
                 Button {
                     step(to: neighbors.previous)
                 } label: {
-                    Image(systemName: "chevron.left")
+                    Image(systemName: "chevron.backward")
                 }
                 .disabled(neighbors.previous == nil)
                 .accessibilityLabel("Previous lesson")
@@ -100,7 +100,7 @@ struct TajweedLessonDetailView: View {
                 Button {
                     step(to: neighbors.next)
                 } label: {
-                    Image(systemName: "chevron.right")
+                    Image(systemName: "chevron.forward")
                 }
                 .disabled(neighbors.next == nil)
                 .accessibilityLabel("Next lesson")
@@ -152,12 +152,12 @@ struct TajweedLessonDetailView: View {
         let done = progress.isDone(lesson.id)
         return Section {
             ResourceHero(
-                eyebrow: (TajweedLessonsStore.shared.chapter(of: lesson.id)?.title ?? "Tajweed").uppercased(),
+                eyebrow: (TajweedLessonsStore.shared.chapter(of: lesson.id)?.title.localizedDisplay ?? String(localized: "Tajweed")).uppercased(),
                 systemImage: "graduationcap.fill",
-                headline: lesson.titleEn,
+                headline: lesson.titleEn.localizedDisplay,
                 arabic: lesson.titleAr.isEmpty ? nil : lesson.titleAr,
                 source: lesson.translit.isEmpty ? nil : lesson.translit,
-                message: lesson.summary
+                message: lesson.summary.localizedDisplay
             ) {
                 if done || lesson.minutes > 0 {
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
@@ -188,31 +188,33 @@ struct TajweedLessonDetailView: View {
     @ViewBuilder
     private var ruleSection: some View {
         if let card = lesson.ruleCard {
-            Section(header: TajweedLessonHeader(systemImage: "arrow.triangle.branch", title: "The Rule",
-                                                subtitle: "What sets it off, what you do, how long you hold it.",
+            Section(header: TajweedLessonHeader(systemImage: "arrow.triangle.branch", title: String(localized: "The Rule"),
+                                                subtitle: String(localized: "What sets it off, what you do, how long you hold it."),
                                                 accent: accent)) {
                 VStack(alignment: .leading, spacing: 13) {
                     if !card.countEn.isEmpty {
-                        Text(card.countEn)
+                        Text(card.countEn.localizedDisplay)
                             .font(.caption.weight(.heavy))
                             .foregroundColor(accent)
                             .padding(.horizontal, 11)
                             .padding(.vertical, 5)
                             .background(Capsule().fill(accent.opacity(0.13)))
                     }
-                    if !card.trigger.isEmpty { ruleLine("When", card.trigger, systemImage: "arrow.triangle.branch") }
-                    if !card.action.isEmpty { ruleLine("Do", card.action, systemImage: "ear") }
-                    if !card.hold.isEmpty { ruleLine("Hold", card.hold, systemImage: "timer") }
+                    if !card.trigger.isEmpty { ruleLine(String(localized: "When"), card.trigger.localizedDisplay, systemImage: "arrow.triangle.branch") }
+                    if !card.action.isEmpty { ruleLine(String(localized: "Do"), card.action.localizedDisplay, systemImage: "ear") }
+                    if !card.hold.isEmpty { ruleLine(String(localized: "Hold"), card.hold.localizedDisplay, systemImage: "timer") }
                     if !card.mnemonicArabic.isEmpty {
                         VStack(alignment: .leading, spacing: 5) {
-                            TajweedCapsLabel("Memorize it with")
+                            TajweedCapsLabel(String(localized: "Memorize it with"))
                             Text(card.mnemonicArabic)
                                 .font(arabicFont)
                                 .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
                                 .foregroundColor(accent)
                                 .frame(maxWidth: .infinity, alignment: .trailing)
+                                // On the right, as Arabic sits, in either interface.
+                                .environment(\.layoutDirection, .leftToRight)
                             if !card.mnemonicGloss.isEmpty {
-                                Text(card.mnemonicGloss)
+                                Text(card.mnemonicGloss.localizedDisplay)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -229,7 +231,7 @@ struct TajweedLessonDetailView: View {
                         ForEach(card.fragments) { fragment in
                             HStack(alignment: .center, spacing: 12) {
                                 if !fragment.caption.isEmpty {
-                                    Text(fragment.caption)
+                                    Text(fragment.caption.localizedDisplay)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
@@ -241,6 +243,7 @@ struct TajweedLessonDetailView: View {
                                     .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
                                     .foregroundColor(accent)
                                     .multilineTextAlignment(.trailing)
+                                    .environment(\.layoutDirection, .leftToRight)
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
@@ -277,20 +280,21 @@ struct TajweedLessonDetailView: View {
         if let definition = lesson.definition {
             Section {
                 VStack(alignment: .leading, spacing: 10) {
-                    TajweedCapsLabel("The word itself")
+                    TajweedCapsLabel(String(localized: "The word itself"))
                     Text(definition.termAr)
                         .font(Font.arabic(appearance.quranDisplayFace, size: 32))
                         .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
                         .foregroundColor(accent)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        .environment(\.layoutDirection, .leftToRight)
                         // The mushaf faces' tall line box left the term floating under a band of air.
                         .padding(.vertical, appearance.quranUsesCustomArabicFace ? -10 : 0)
                     if !definition.literal.isEmpty {
-                        labeled("Literally", definition.literal)
+                        labeled(String(localized: "Literally"), definition.literal.localizedDisplay)
                         Divider()
                     }
                     if !definition.technical.isEmpty {
-                        labeled("In tajweed", definition.technical)
+                        labeled(String(localized: "In tajweed"), definition.technical.localizedDisplay)
                     }
                 }
                 .padding(.vertical, 6)
@@ -312,17 +316,17 @@ struct TajweedLessonDetailView: View {
     @ViewBuilder
     private var imagesSection: some View {
         if !lesson.images.isEmpty {
-            Section(header: TajweedLessonHeader(systemImage: "square.stack.3d.up", title: "How It Looks",
-                                                subtitle: "Tap a diagram to see it full screen.", accent: accent)) {
+            Section(header: TajweedLessonHeader(systemImage: "square.stack.3d.up", title: String(localized: "How It Looks"),
+                                                subtitle: String(localized: "Tap a diagram to see it full screen."), accent: accent)) {
                 ForEach(lesson.images) { image in
                     VStack(alignment: .leading, spacing: 8) {
                         Image(image.name)
                             .resizable()
                             .scaledToFit()
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .focusableImage(image.name, title: image.caption.isEmpty ? lesson.titleEn : image.caption)
+                            .focusableImage(image.name, title: (image.caption.isEmpty ? lesson.titleEn : image.caption).localizedDisplay)
                         if !image.caption.isEmpty {
-                            Text(image.caption)
+                            Text(image.caption.localizedDisplay)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -339,14 +343,14 @@ struct TajweedLessonDetailView: View {
     private var lettersSection: some View {
         if !lesson.letterSets.isEmpty {
             Section(header: TajweedLessonHeader(systemImage: "character.book.closed.ar",
-                                                title: lesson.letterSets.allSatisfy(\.isWords) ? "The Words" : "The Letters",
+                                                title: lesson.letterSets.allSatisfy(\.isWords) ? String(localized: "The Words") : String(localized: "The Letters"),
                                                 subtitle: lesson.letterSets.contains(where: { !$0.isWords })
-                                                    ? "Tap a letter to open its page." : nil,
+                                                    ? String(localized: "Tap a letter to open its page.") : nil,
                                                 accent: accent)) {
                 ForEach(lesson.letterSets) { set in
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(set.label)
+                            Text(set.label.localizedDisplay)
                                 .font(.subheadline.weight(.bold))
                                 .fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 8)
@@ -370,10 +374,10 @@ struct TajweedLessonDetailView: View {
     // MARK: Explanation
 
     private var explanationSection: some View {
-        Section(header: TajweedLessonHeader(systemImage: "book", title: "Explanation", accent: accent)) {
+        Section(header: TajweedLessonHeader(systemImage: "book", title: String(localized: "Explanation"), accent: accent)) {
             VStack(alignment: .leading, spacing: 14) {
                 ForEach(Array(lesson.body.enumerated()), id: \.offset) { _, paragraph in
-                    SelectableProse(text: paragraph)
+                    SelectableProse(text: paragraph.localizedDisplay)
                 }
             }
             .padding(.vertical, 6)
@@ -385,14 +389,14 @@ struct TajweedLessonDetailView: View {
     @ViewBuilder
     private var wordsSection: some View {
         if !lesson.words.isEmpty {
-            Section(header: TajweedLessonHeader(systemImage: "character.textbox.ar", title: "In Words",
-                                                subtitle: "Read each one aloud, then check it against its reading.",
+            Section(header: TajweedLessonHeader(systemImage: "character.textbox.ar", title: String(localized: "In Words"),
+                                                subtitle: String(localized: "Read each one aloud, then check it against its reading."),
                                                 accent: accent)) {
                 ForEach(lesson.words) { group in
                     VStack(alignment: .leading, spacing: 10) {
-                        TajweedCapsLabel(group.label)
+                        TajweedCapsLabel(group.label.localizedDisplay)
                         if !group.note.isEmpty {
-                            Text(group.note)
+                            Text(group.note.localizedDisplay)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -402,9 +406,10 @@ struct TajweedLessonDetailView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(word.translit)
                                         .font(.subheadline)
+                                        .leftToRightContent()
                                         .fixedSize(horizontal: false, vertical: true)
                                     if !word.note.isEmpty {
-                                        Text(word.note)
+                                        Text(word.note.localizedDisplay)
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
                                             .fixedSize(horizontal: false, vertical: true)
@@ -415,6 +420,7 @@ struct TajweedLessonDetailView: View {
                                     .font(Font.arabic(appearance.quranDisplayFace, size: 23))
                                     .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
                                     .multilineTextAlignment(.trailing)
+                                    .environment(\.layoutDirection, .leftToRight)
                                     .layoutPriority(1)
                                     // The mushaf faces carry a very tall line box; trim it so a list of
                                     // words reads as a list rather than a column of islands.
@@ -435,13 +441,13 @@ struct TajweedLessonDetailView: View {
         if !lesson.keyPoints.isEmpty {
             Section {
                 VStack(alignment: .leading, spacing: 10) {
-                    TajweedCapsLabel("Worth remembering")
+                    TajweedCapsLabel(String(localized: "Worth remembering"))
                     ForEach(Array(lesson.keyPoints.enumerated()), id: \.offset) { _, point in
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
                             Image(systemName: "circle.fill")
                                 .font(.system(size: 6))
                                 .foregroundColor(accent)
-                            Text(point)
+                            Text(point.localizedDisplay)
                                 .font(.subheadline)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -469,8 +475,8 @@ struct TajweedLessonDetailView: View {
     @ViewBuilder
     private var extrasSection: some View {
         if lesson.extras.contains(.waqfSigns) {
-            Section(header: TajweedLessonHeader(systemImage: "hand.raised", title: "Stop Signs",
-                                                subtitle: "What each sign above the line asks of you.", accent: accent),
+            Section(header: TajweedLessonHeader(systemImage: "hand.raised", title: String(localized: "Stop Signs"),
+                                                subtitle: String(localized: "What each sign above the line asks of you."), accent: accent),
                     footer: Text("These signs guide the meaning, not your breathing.")) {
                 QuranSignsSectionContent(accentColor: accent)
                     .padding(.vertical, 4)
@@ -483,23 +489,23 @@ struct TajweedLessonDetailView: View {
     @ViewBuilder
     private var mistakesSection: some View {
         if !lesson.mistakes.isEmpty {
-            Section(header: TajweedLessonHeader(systemImage: "exclamationmark.circle", title: "Common Mistakes", accent: accent)) {
+            Section(header: TajweedLessonHeader(systemImage: "exclamationmark.circle", title: String(localized: "Common Mistakes"), accent: accent)) {
                 ForEach(lesson.mistakes) { mistake in
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
-                            TajweedPill(text: "Instead of", color: .red)
-                            Text(mistake.wrong)
+                            TajweedPill(text: String(localized: "Instead of"), color: .red)
+                            Text(mistake.wrong.localizedDisplay)
                                 .font(.subheadline)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
-                            TajweedPill(text: "Do this", color: .green)
-                            Text(mistake.right)
+                            TajweedPill(text: String(localized: "Do this"), color: .green)
+                            Text(mistake.right.localizedDisplay)
                                 .font(.subheadline.weight(.semibold))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         if !mistake.why.isEmpty {
-                            Text(mistake.why)
+                            Text(mistake.why.localizedDisplay)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -516,15 +522,15 @@ struct TajweedLessonDetailView: View {
     @ViewBuilder
     private var drillsSection: some View {
         if !lesson.drills.isEmpty {
-            Section(header: TajweedLessonHeader(systemImage: "checklist", title: "Practice Patterns",
-                                                subtitle: "Build the movement before you meet it inside an ayah.",
+            Section(header: TajweedLessonHeader(systemImage: "checklist", title: String(localized: "Practice Patterns"),
+                                                subtitle: String(localized: "Build the movement before you meet it inside an ayah."),
                                                 accent: accent)) {
                 ForEach(Array(lesson.drills.enumerated()), id: \.element.id) { index, drill in
                     VStack(alignment: .leading, spacing: 10) {
                         if !drill.caption.isEmpty {
                             HStack(alignment: .top, spacing: 8) {
                                 TajweedNumberBadge(number: index + 1, accent: accent)
-                                Text(drill.caption)
+                                Text(drill.caption.localizedDisplay)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -543,6 +549,7 @@ struct TajweedLessonDetailView: View {
                             if !drill.translit.isEmpty {
                                 Text(drill.translit)
                                     .font(.caption)
+                                    .leftToRightContent()
                                     .foregroundStyle(.secondary)
                                     .multilineTextAlignment(.center)
                             }
@@ -562,8 +569,8 @@ struct TajweedLessonDetailView: View {
     @ViewBuilder
     private var examplesSection: some View {
         if !lesson.examples.isEmpty {
-            Section(header: TajweedLessonHeader(systemImage: "headphones", title: "In the Mushaf",
-                                                subtitle: "Real ayahs, recited by your reciter. Tap play and listen for the words in the box.",
+            Section(header: TajweedLessonHeader(systemImage: "headphones", title: String(localized: "In the Mushaf"),
+                                                subtitle: String(localized: "Real ayahs, recited by your reciter. Tap play and listen for the words in the box."),
                                                 accent: accent)) {
                 if let count = lesson.ruleCode.flatMap({ TajweedLessonsStore.shared.courseIfLoaded?.ruleCounts[$0] }),
                    count.ayahs > 0 {
@@ -583,7 +590,7 @@ struct TajweedLessonDetailView: View {
     @ViewBuilder
     private var videosSection: some View {
         if !lesson.videos.isEmpty {
-            Section(header: TajweedLessonHeader(systemImage: "play.rectangle", title: "Watch", accent: accent)) {
+            Section(header: TajweedLessonHeader(systemImage: "play.rectangle", title: String(localized: "Watch"), accent: accent)) {
                 ForEach(lesson.videos) { video in
                     Link(destination: video.url) {
                         HStack(spacing: 12) {
@@ -594,7 +601,7 @@ struct TajweedLessonDetailView: View {
                                     .foregroundColor(.primary)
                                     .fixedSize(horizontal: false, vertical: true)
                                 // Explicit greys: inside a Link the hierarchical styles take the link's tint.
-                                Text(video.channel.isEmpty ? "YouTube" : "\(video.channel), on YouTube")
+                                Text(video.channel.isEmpty ? "YouTube" : String(localized: "\(video.channel), on YouTube"))
                                     .font(.caption)
                                     .foregroundColor(Color(.secondaryLabel))
                             }
@@ -614,14 +621,48 @@ struct TajweedLessonDetailView: View {
 
     @ViewBuilder
     private var quizSection: some View {
-        if !lesson.quiz.isEmpty {
-            Section(header: TajweedLessonHeader(systemImage: "target", title: "Check Yourself",
-                                                subtitle: "Answer from the lesson, not from a guess.", accent: accent)) {
-                TajweedQuizCards(questions: lesson.quiz, accent: accent)
-                    // A new lesson starts with a clean sheet.
-                    .id(lesson.id)
+        let chapterTest = chapterTest
+        if !lesson.quiz.isEmpty || chapterTest != nil {
+            Section(header: TajweedLessonHeader(systemImage: "target", title: String(localized: "Check Yourself"),
+                                                subtitle: lesson.quiz.isEmpty ? nil : String(localized: "Answer from the lesson, not from a guess."), accent: accent)) {
+                if !lesson.quiz.isEmpty {
+                    TajweedQuizCards(questions: lesson.quiz, accent: accent)
+                        // A new lesson starts with a clean sheet.
+                        .id(lesson.id)
+                }
+
+                // The chapter's scored test (TajweedTestViews.swift): ten questions built from every
+                // lesson of the chapter, this one among them.
+                if let chapterTest {
+                    NavigationLink(destination: LazyDestination { TajweedTestTierView(tier: chapterTest.tier, tiers: chapterTest.tiers) }) {
+                        HStack(spacing: 12) {
+                            AccentIconChip(systemImage: "checkmark.seal.fill", tint: accent, size: 30)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Test This Chapter")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.primary)
+                                Text(chapterTest.tier.lessons.count == 1 ? String(localized: "A scored test on \(chapterTest.tier.title)")
+                                     : String(localized: "A scored test on \(chapterTest.tier.title): \(chapterTest.tier.lessons.count) lessons"))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
             }
         }
+    }
+
+    /// The chapter this lesson sits in, as a tier of the Tajweed Test, once the course is parsed (it is,
+    /// by the time a lesson is on screen).
+    private var chapterTest: (tier: TajweedTestTier, tiers: [TajweedTestTier])? {
+        guard let course = TajweedLessonsStore.shared.courseIfLoaded,
+              let chapter = TajweedLessonsStore.shared.chapter(of: lesson.id) else { return nil }
+        let tiers = TajweedTestLadder.tiers(in: course)
+        guard let tier = tiers.first(where: { $0.id == chapter.id }) else { return nil }
+        return (tier, tiers)
     }
 
     // MARK: On the alphabet
@@ -630,7 +671,7 @@ struct TajweedLessonDetailView: View {
     private var familiesSection: some View {
         let families = lesson.families
         if !families.isEmpty {
-            Section(header: TajweedLessonHeader(systemImage: "textformat.size.ar", title: "On the Alphabet", accent: accent),
+            Section(header: TajweedLessonHeader(systemImage: "textformat.size.ar", title: String(localized: "On the Alphabet"), accent: accent),
                     footer: Text("Each family opens its letters, the phrase that gathers them, and every letter's own page.")) {
                 ForEach(families) { family in
                     LetterFamilyLink(family: family) {
@@ -654,18 +695,18 @@ struct TajweedLessonDetailView: View {
     private var readNextSection: some View {
         let related = lesson.related.compactMap { TajweedLessonsStore.shared.lesson(id: $0) }
         if !related.isEmpty || !lesson.doors.isEmpty {
-            Section(header: TajweedLessonHeader(systemImage: "arrow.turn.down.right", title: "Read Next", accent: accent)) {
+            Section(header: TajweedLessonHeader(systemImage: "arrow.turn.down.right", title: String(localized: "Read Next"), accent: accent)) {
                 ForEach(related) { other in
                     Button {
                         step(to: other)
                     } label: {
                         HStack(spacing: 12) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(other.titleEn)
+                                Text(other.titleEn.localizedDisplay)
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundColor(.primary)
                                     .fixedSize(horizontal: false, vertical: true)
-                                Text(TajweedLessonsStore.shared.chapter(of: other.id)?.title ?? "")
+                                Text(TajweedLessonsStore.shared.chapter(of: other.id)?.title.localizedDisplay ?? "")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -675,7 +716,7 @@ struct TajweedLessonDetailView: View {
                                     .font(.subheadline)
                                     .foregroundColor(accent)
                             }
-                            Image(systemName: "chevron.right")
+                            Image(systemName: "chevron.forward")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.tertiary)
                         }
@@ -696,8 +737,8 @@ struct TajweedLessonDetailView: View {
         let neighbors = TajweedLessonsStore.shared.neighbors(of: lesson.id)
         return Section {
             HStack(spacing: 10) {
-                neighborButton(neighbors.previous, label: "Previous", systemImage: "chevron.left", leading: true)
-                neighborButton(neighbors.next, label: "Next", systemImage: "chevron.right", leading: false)
+                neighborButton(neighbors.previous, label: String(localized: "Previous"), systemImage: "chevron.backward", leading: true)
+                neighborButton(neighbors.next, label: String(localized: "Next"), systemImage: "chevron.forward", leading: false)
             }
             .padding(.vertical, 4)
 
@@ -707,7 +748,7 @@ struct TajweedLessonDetailView: View {
             } label: {
                 HStack {
                     Spacer()
-                    Label(progress.isDone(lesson.id) ? "Marked as Done" : "Mark as Done",
+                    Label(progress.isDone(lesson.id) ? String(localized: "Marked as Done") : String(localized: "Mark as Done"),
                           systemImage: progress.isDone(lesson.id) ? "checkmark.circle.fill" : "circle")
                         .font(.subheadline.weight(.semibold))
                     Spacer()
@@ -731,7 +772,7 @@ struct TajweedLessonDetailView: View {
                 .font(.caption2.weight(.heavy))
                 .foregroundStyle(.secondary)
 
-                Text(other?.titleEn ?? " ")
+                Text(other?.titleEn.localizedDisplay ?? " ")
                     .font(.footnote.weight(.bold))
                     .foregroundColor(.primary)
                     .multilineTextAlignment(leading ? .leading : .trailing)
@@ -845,8 +886,9 @@ private struct TajweedNoteText: View {
                 .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                .environment(\.layoutDirection, .leftToRight)
         } else {
-            Text(text)
+            Text(text.localizedDisplay)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -894,7 +936,7 @@ private struct TajweedLetterTiles: View {
                             LetterGlyphTile(letter: letter, isDimmed: open, tint: set.emphasis ? accent : nil)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityHint(open ? "You are already on this letter's page" : "Opens the letter")
+                        .accessibilityHint(open ? String(localized: "You are already on this letter's page") : String(localized: "Opens the letter"))
                     } else {
                         // A mark (a sukoon, a tanween shape) or a sign: drawn on a tatweel so a lone
                         // combining mark has a stroke to sit on.
@@ -930,14 +972,14 @@ private struct TajweedLessonTableView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(table.title.isEmpty ? "At a glance" : table.title)
+            Text(table.title.isEmpty ? String(localized: "At a glance") : table.title.localizedDisplay)
                 .font(.subheadline.weight(.heavy))
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 10)
 
             HStack(alignment: .top, spacing: 10) {
                 ForEach(Array(table.columns.enumerated()), id: \.offset) { _, column in
-                    Text(column.uppercased())
+                    Text(column.localizedDisplay.uppercased())
                         .font(.system(size: 9.5, weight: .heavy))
                         .tracking(0.6)
                         .foregroundStyle(.secondary)
@@ -971,7 +1013,7 @@ private struct TajweedLessonTableView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
         } else {
-            Text(cell)
+            Text(cell.localizedDisplay)
                 .font(first ? .caption.weight(.bold) : .caption)
                 .foregroundColor(first ? accent : .secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1039,14 +1081,14 @@ struct TajweedDoorRow: View {
             NavigationLink(destination: LazyDestination { SoundAlikeLettersView() }) { label }
         case .makharijShelf:
             GuardedScreenLink(screen: .letterFamilies, id: "makhraj") {
-                LetterFamiliesView(title: "Makharij", axes: [.makhraj])
+                LetterFamiliesView(title: String(localized: "Makharij"), axes: [.makhraj, .exit])
                     .openScreen(.letterFamilies, id: "makhraj")
             } label: {
                 label
             }
         case .sifaatShelf:
             GuardedScreenLink(screen: .letterFamilies, id: "sifaat") {
-                LetterFamiliesView(title: "Sifaat", axes: LetterAxis.Shelf.qualities.axes)
+                LetterFamiliesView(title: String(localized: "Sifaat"), axes: LetterAxis.Shelf.qualities.axes)
                     .openScreen(.letterFamilies, id: "sifaat")
             } label: {
                 label
@@ -1085,7 +1127,7 @@ private struct TajweedExampleCard: View {
                         HStack(spacing: 6) {
                             Image(systemName: "speaker.wave.2.fill")
                                 .foregroundColor(isPlayingThis ? accent : .secondary)
-                            TajweedCapsLabel("Example")
+                            TajweedCapsLabel(String(localized: "Example"))
                         }
                         .font(.caption2)
                         Text("\(surah.nameTransliteration) \u{00B7} \(example.surahId):\(example.ayahNumber)")
@@ -1103,7 +1145,7 @@ private struct TajweedExampleCard: View {
                             .background(Circle().fill(accent))
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(isPlayingThis ? "Pause example" : "Play example")
+                    .accessibilityLabel(isPlayingThis ? String(localized: "Pause example") : String(localized: "Play example"))
                 }
 
                 // The words the lesson points at, lifted out of the ayah by the pack's span, so a
@@ -1130,6 +1172,7 @@ private struct TajweedExampleCard: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                        .leftToRightContent()
                 }
 
                 if !example.focus.isEmpty {
@@ -1141,8 +1184,8 @@ private struct TajweedExampleCard: View {
                             .frame(width: 24, height: 24)
                             .background(Circle().fill(accent.opacity(0.12)))
                         VStack(alignment: .leading, spacing: 3) {
-                            TajweedCapsLabel("Listen for")
-                            Text(example.focus)
+                            TajweedCapsLabel(String(localized: "Listen for"))
+                            Text(example.focus.localizedDisplay)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -1160,7 +1203,7 @@ private struct TajweedExampleCard: View {
                         Text("Open in the Quran")
                             .font(.subheadline.weight(.semibold))
                         Spacer()
-                        Image(systemName: "chevron.right")
+                        Image(systemName: "chevron.forward")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.tertiary)
                     }
@@ -1218,6 +1261,8 @@ private struct TajweedExampleText: View {
         .arabicFontDesign(custom: true)
         .multilineTextAlignment(.trailing)
         .frame(maxWidth: .infinity, alignment: .trailing)
+        // The ayah's lines on the right, as the reader sets them, in either interface.
+        .environment(\.layoutDirection, .leftToRight)
         .task(id: "\(surah):\(ayah)") {
             let surah = surah, ayah = ayah, text = text
             styled = await Task.detached(priority: .userInitiated) {
@@ -1234,6 +1279,7 @@ private struct TajweedExampleText: View {
 /// try again. Nothing is stored: the questions exist to tell you whether the lesson landed.
 struct TajweedQuizCards: View {
     @Environment(\.appearance) private var appearance
+    @Environment(\.layoutDirection) private var layoutDirection
     /// A question about a real ayah shows its words from the app's own text.
     @ObservedObject private var quranData = QuranData.shared
 
@@ -1255,9 +1301,9 @@ struct TajweedQuizCards: View {
                 Text("\(correct) of \(questions.count) right")
                     .font(.title3.weight(.heavy))
                     .foregroundColor(accent)
-                Text(correct == questions.count ? "Every one. On to the next lesson."
-                     : correct * 2 >= questions.count ? "Most of it is there. Read the rule once more, then try again."
-                     : "Worth another pass through the lesson before moving on.")
+                Text(correct == questions.count ? String(localized: "Every one. On to the next lesson.")
+                     : correct * 2 >= questions.count ? String(localized: "Most of it is there. Read the rule once more, then try again.")
+                     : String(localized: "Worth another pass through the lesson before moving on."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1280,7 +1326,7 @@ struct TajweedQuizCards: View {
         return VStack(alignment: .leading, spacing: 11) {
             HStack(alignment: .top, spacing: 10) {
                 TajweedNumberBadge(number: index + 1, accent: accent)
-                Text(question.prompt)
+                Text(question.prompt.localizedDisplay)
                     .font(.subheadline.weight(.bold))
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -1303,11 +1349,11 @@ struct TajweedQuizCards: View {
             if let chosen {
                 Divider()
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(chosen == question.answer ? "CORRECT" : "NOT QUITE")
+                    Text(chosen == question.answer ? String(localized: "CORRECT") : String(localized: "NOT QUITE"))
                         .font(.caption2.weight(.heavy))
                         .tracking(0.7)
                         .foregroundColor(chosen == question.answer ? .green : .red)
-                    Text(question.explain)
+                    Text(question.explain.localizedDisplay)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1335,15 +1381,18 @@ struct TajweedQuizCards: View {
         } label: {
             HStack(spacing: 10) {
                 if isArabic {
-                    Spacer(minLength: 0)
+                    // On the right, as Arabic sits: that is the leading side in a right-to-left interface.
+                    let rightToLeft = layoutDirection == .rightToLeft
+                    if !rightToLeft { Spacer(minLength: 0) }
                     Text(choice)
                         .font(Font.arabic(appearance.quranDisplayFace, size: 23))
                         .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
                         .foregroundColor(tint ?? .primary)
-                        .multilineTextAlignment(.trailing)
+                        .multilineTextAlignment(rightToLeft ? .leading : .trailing)
                         .padding(.vertical, appearance.quranUsesCustomArabicFace ? -5 : 0)
+                    if rightToLeft { Spacer(minLength: 0) }
                 } else {
-                    Text(choice)
+                    Text(choice.localizedDisplay)
                         .font(.subheadline.weight(tint == nil ? .regular : .bold))
                         .foregroundColor(tint ?? .primary)
                         .multilineTextAlignment(.leading)
@@ -1369,7 +1418,7 @@ struct TajweedQuizCards: View {
         }
         .buttonStyle(.plain)
         .disabled(answered)
-        .accessibilityHint(answered ? (isAnswer ? "The correct answer" : "") : "Choose this answer")
+        .accessibilityHint(answered ? (isAnswer ? String(localized: "The correct answer") : "") : String(localized: "Choose this answer"))
     }
 }
 #endif

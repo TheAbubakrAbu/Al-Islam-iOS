@@ -45,11 +45,11 @@ private extension Settings {
     }
 
     func spokenPrayerName(for prayer: Prayer) -> String {
-        prayer.nameTransliteration == "Jumuah" ? "Jumuah (Dhuhr)" : prayer.nameTransliteration
+        prayer.nameTransliteration == "Jumuah" ? String(localized: "Jumuah (Dhuhr)") : prayer.nameTransliteration.localizedDisplay
     }
 
     func prayerTimeMessage(prefix: String, prayer: Prayer) -> String {
-        "\(prefix): \(spokenPrayerName(for: prayer)) at \(formatDate(prayer.time))."
+        String(localized: "\(prefix): \(spokenPrayerName(for: prayer)) at \(formatDate(prayer.time)).")
     }
 }
 
@@ -67,16 +67,16 @@ struct WhenIsPrayerIntent: AppIntent {
         let settings = Settings.shared
 
         guard let prayers = settings.todayFullPrayerList(), !prayers.isEmpty else {
-            let message = "Prayer times aren’t available yet. Open \(AppIdentifiers.appName) to refresh."
+            let message = String(localized: "Prayer times aren’t available yet. Open \(AppIdentifiers.displayName) to refresh.")
             return .result(value: message, dialog: IntentDialog(stringLiteral: message))
         }
 
         if let prayer = prayers.first(where: matchesRequestedPrayer) {
-            let message = "\(settings.spokenPrayerName(for: prayer)) is at \(settings.formatDate(prayer.time))."
+            let message = String(localized: "\(settings.spokenPrayerName(for: prayer)) is at \(settings.formatDate(prayer.time)).")
             return .result(value: message, dialog: IntentDialog(stringLiteral: message))
         }
 
-        let message = "Couldn’t find today’s time for \(prayer.rawValue)."
+        let message = String(localized: "Couldn’t find today’s time for \(prayer.rawValue.localizedDisplay).")
         return .result(value: message, dialog: IntentDialog(stringLiteral: message))
     }
 
@@ -97,17 +97,17 @@ struct CurrentPrayerIntent: AppIntent {
         settings.fetchPrayerTimes()
 
         if let currentPrayer = settings.currentPrayer {
-            let message = "Current prayer: \(settings.spokenPrayerName(for: currentPrayer)) (\(settings.formatDate(currentPrayer.time)))."
+            let message = String(localized: "Current prayer: \(settings.spokenPrayerName(for: currentPrayer)) (\(settings.formatDate(currentPrayer.time))).")
             return .result(value: message, dialog: IntentDialog(stringLiteral: message))
         }
 
         if let prayers = settings.todayFullPrayerList(),
            let prayer = prayers.last(where: { $0.time <= Date() }) {
-            let message = settings.prayerTimeMessage(prefix: "Current prayer", prayer: prayer)
+            let message = settings.prayerTimeMessage(prefix: String(localized: "Current prayer"), prayer: prayer)
             return .result(value: message, dialog: IntentDialog(stringLiteral: message))
         }
 
-        let message = "No current prayer determined yet. Open \(AppIdentifiers.appName) to refresh prayer times."
+        let message = String(localized: "No current prayer determined yet. Open \(AppIdentifiers.displayName) to refresh prayer times.")
         return .result(value: message, dialog: IntentDialog(stringLiteral: message))
     }
 }
@@ -124,17 +124,17 @@ struct NextPrayerIntent: AppIntent {
         settings.fetchPrayerTimes()
 
         if let nextPrayer = settings.nextPrayer {
-            let message = settings.prayerTimeMessage(prefix: "Next prayer", prayer: nextPrayer)
+            let message = settings.prayerTimeMessage(prefix: String(localized: "Next prayer"), prayer: nextPrayer)
             return .result(value: message, dialog: IntentDialog(stringLiteral: message))
         }
 
         if let prayers = settings.todayFullPrayerList(),
            let prayer = prayers.first(where: { $0.time > Date() }) {
-            let message = settings.prayerTimeMessage(prefix: "Next prayer", prayer: prayer)
+            let message = settings.prayerTimeMessage(prefix: String(localized: "Next prayer"), prayer: prayer)
             return .result(value: message, dialog: IntentDialog(stringLiteral: message))
         }
 
-        let message = "No upcoming prayer found. Open \(AppIdentifiers.appName) to refresh prayer times."
+        let message = String(localized: "No upcoming prayer found. Open \(AppIdentifiers.displayName) to refresh prayer times.")
         return .result(value: message, dialog: IntentDialog(stringLiteral: message))
     }
 }

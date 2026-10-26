@@ -51,11 +51,11 @@ final class CarPlayController {
     private let player = QuranPlayer.shared
     private let quranData = QuranData.shared
 
-    let listenTemplate = CPListTemplate(title: "Listen", sections: [])
-    let surahsTemplate = CPListTemplate(title: "Surahs", sections: [])
-    let recitersTemplate = CPListTemplate(title: "Reciters", sections: [])
+    let listenTemplate = CPListTemplate(title: String(localized: "Listen"), sections: [])
+    let surahsTemplate = CPListTemplate(title: String(localized: "Surahs"), sections: [])
+    let recitersTemplate = CPListTemplate(title: String(localized: "Reciters"), sections: [])
     #if HAS_ADHAN
-    let prayersTemplate = CPListTemplate(title: "Prayers", sections: [])
+    let prayersTemplate = CPListTemplate(title: String(localized: "Prayers"), sections: [])
     #endif
     private(set) lazy var tabBar = CPTabBarTemplate(templates: tabs)
 
@@ -120,18 +120,18 @@ final class CarPlayController {
     // MARK: Templates
 
     private func configureTemplates() {
-        listenTemplate.tabTitle = "Listen"
+        listenTemplate.tabTitle = String(localized: "Listen")
         listenTemplate.tabImage = UIImage(systemName: "play.circle")
-        surahsTemplate.tabTitle = "Surahs"
+        surahsTemplate.tabTitle = String(localized: "Surahs")
         surahsTemplate.tabImage = UIImage(systemName: "book")
-        surahsTemplate.emptyViewTitleVariants = ["Loading the Quran"]
-        recitersTemplate.tabTitle = "Reciters"
+        surahsTemplate.emptyViewTitleVariants = [String(localized: "Loading the Quran")]
+        recitersTemplate.tabTitle = String(localized: "Reciters")
         recitersTemplate.tabImage = UIImage(systemName: "person.wave.2")
         #if HAS_ADHAN
-        prayersTemplate.tabTitle = "Prayers"
+        prayersTemplate.tabTitle = String(localized: "Prayers")
         prayersTemplate.tabImage = UIImage(systemName: "clock")
-        prayersTemplate.emptyViewTitleVariants = ["No Prayer Times Yet"]
-        prayersTemplate.emptyViewSubtitleVariants = ["Open \(AppIdentifiers.appName) on your iPhone to set your location."]
+        prayersTemplate.emptyViewTitleVariants = [String(localized: "No Prayer Times Yet")]
+        prayersTemplate.emptyViewSubtitleVariants = [String(localized: "Open \(AppIdentifiers.displayName) on your iPhone to set your location.")]
         #endif
 
         let nowPlaying = CPNowPlayingTemplate.shared
@@ -199,7 +199,7 @@ final class CarPlayController {
             tomorrowFirst: Calendar.current.date(byAdding: .day, value: 1, to: now).flatMap { tomorrow in
                 displayedPrayers(settings.getPrayerTimes(for: tomorrow, fullPrayers: showsFullPrayers) ?? [], for: tomorrow).first
             },
-            city: settings.currentLocation?.city,
+            city: settings.currentLocation?.displayCity,
             now: now,
             formatTime: settings.formatDate
         ))
@@ -227,7 +227,8 @@ final class CarPlayController {
 
     private func surahIndex() -> [Int: CarPlaySurah] {
         Dictionary(quranData.quran.map {
-            ($0.id, CarPlaySurah(number: $0.id, name: $0.nameTransliteration, meaning: $0.nameEnglish, ayahCount: $0.numberOfAyahs))
+            // The names the rows show: Arabic, with no English meaning, in the Arabic interface.
+            ($0.id, CarPlaySurah(number: $0.id, name: $0.displayName, meaning: $0.displayMeaning ?? "", ayahCount: $0.numberOfAyahs))
         }, uniquingKeysWith: { first, _ in first })
     }
 
@@ -335,7 +336,7 @@ final class CarPlayController {
                 group, page: page, selectedID: selectedID, maxItems: Self.maxItems, maxSections: Self.maxSections
             ))
         case .openRiwayat:
-            pushList(title: "Other Riwayat", sections: CarPlayContent.riwayatSections(groups: reciterGroups))
+            pushList(title: String(localized: "Other Riwayat"), sections: CarPlayContent.riwayatSections(groups: reciterGroups))
         case .playQueued(let id):
             guard let item = player.surahQueue.first(where: { $0.id == id }) else { return }
             player.removeQueuedSurah(id: id)
@@ -346,7 +347,7 @@ final class CarPlayController {
             closeUpNext()
         case .openSunnah:
             let recitations = sunnahRecitations
-            pushLiveList(title: "Sunnah Recitations") { _, playback in
+            pushLiveList(title: String(localized: "Sunnah Recitations")) { _, playback in
                 CarPlayContent.sunnahSections(recitations, weekday: Calendar.current.component(.weekday, from: Date()), playback: playback)
             }
         case .playSunnah(let id):
@@ -373,9 +374,9 @@ final class CarPlayController {
 
     /// The Now Playing screen's Up Next button: the phone's surah queue, pushed over Now Playing.
     func showUpNext() {
-        let template = makeList(title: "Up Next", sections: CarPlayContent.upNextSections(queue: player.surahQueue, surahs: surahIndex()))
-        template.emptyViewTitleVariants = ["Nothing Up Next"]
-        template.emptyViewSubtitleVariants = ["Add surahs to the queue on your iPhone."]
+        let template = makeList(title: String(localized: "Up Next"), sections: CarPlayContent.upNextSections(queue: player.surahQueue, surahs: surahIndex()))
+        template.emptyViewTitleVariants = [String(localized: "Nothing Up Next")]
+        template.emptyViewSubtitleVariants = [String(localized: "Add surahs to the queue on your iPhone.")]
         guard push(template) else { return }
         upNextTemplate = template
     }
@@ -460,13 +461,13 @@ final class CarPlayController {
         let alerts = player.alerts
         var actions: [CPAlertAction] = []
         if let offer = alerts.offlineReciterSwitch {
-            actions.append(CPAlertAction(title: "Play \(offer.suggested.name)", style: .default) { [weak self] _ in
+            actions.append(CPAlertAction(title: String(localized: "Play \(offer.suggested.name)"), style: .default) { [weak self] _ in
                 self?.dismissFailure()
                 QuranPlayer.shared.acceptOfflineReciterSwitch()
                 self?.showNowPlaying()
             })
         }
-        actions.append(CPAlertAction(title: "OK", style: .cancel) { [weak self] _ in
+        actions.append(CPAlertAction(title: String(localized: "OK"), style: .cancel) { [weak self] _ in
             self?.dismissFailure()
             QuranPlayer.shared.offlineReciterSwitch = nil
             QuranPlayer.shared.showInternetAlert = false
@@ -592,7 +593,8 @@ enum CarPlayBadge {
             if let rounded = font.fontDescriptor.withDesign(.rounded) {
                 font = UIFont(descriptor: rounded, size: font.pointSize)
             }
-            let text = "\(number)" as NSString
+            // Drawn into the badge image, so in the locale's digits (the cache key above keeps Western ones).
+            let text = "\(number)".localizedDigits as NSString
             let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: inkColor(on: color)]
             let size = text.size(withAttributes: attributes)
             text.draw(at: CGPoint(x: (side - size.width) / 2, y: (side - size.height) / 2), withAttributes: attributes)

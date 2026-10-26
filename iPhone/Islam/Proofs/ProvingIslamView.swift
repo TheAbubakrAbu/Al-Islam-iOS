@@ -62,6 +62,7 @@ struct ProvingIslamView: View {
                 }
                 .themedListRowBackground()
             }
+            .englishArticle()
             .applyConditionalListStyle()
             .autoOpenArticle(openArticle, home: .proving)
             .islamArticleIndexSearch(searchText: $searchText, barsCollapsed: $barsCollapsed,

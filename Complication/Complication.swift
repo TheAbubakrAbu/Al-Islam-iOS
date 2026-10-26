@@ -133,7 +133,7 @@ struct PrayersEntryView: View {
     var inline: some View {
         if let currentPrayer = entry.currentPrayer, let nextPrayer = entry.nextPrayer {
             Label {
-                Text("\(currentPrayer.displayName) \(nextPrayer.time, style: .timer)")
+                Text("\(currentPrayer.displayName.localizedDisplay) \(nextPrayer.time, style: .timer)")
             } icon: {
                 Image(systemName: currentPrayer.image)
             }
@@ -154,7 +154,7 @@ struct PrayersEntryView: View {
                 .widgetAccentable()
                 .widgetLabel {
                     Gauge(value: entry.dayProgress) {
-                        Text(currentPrayer.displayName)
+                        Text(currentPrayer.displayName.localizedDisplay)
                     }
                     .tint(accent(for: currentPrayer))
                 }
@@ -217,7 +217,7 @@ struct PrayersEntryView: View {
                             .padding(.trailing, -4)
                     }
 
-                    Text(currentPrayer.displayName)
+                    Text(currentPrayer.displayName.localizedDisplay)
                         .font(.headline)
 
                     Text("\(nextPrayer.time, style: .timer)")
@@ -228,7 +228,7 @@ struct PrayersEntryView: View {
                 .foregroundColor(accent(for: currentPrayer))
                 .widgetAccentable()
 
-                Text("Next: \(nextPrayer.displayName) at \(Text(nextPrayer.time, style: .time))")
+                Text("Next: \(nextPrayer.displayName.localizedDisplay) at \(Text(nextPrayer.time, style: .time))")
                     .font(.subheadline)
 
                 HStack {
@@ -298,7 +298,7 @@ struct CountdownComplicationView: View {
             switch family {
             case .accessoryInline:
                 Label {
-                    Text("\(current.displayName) \(next.time, style: .timer)")
+                    Text("\(current.displayName.localizedDisplay) \(next.time, style: .timer)")
                 } icon: {
                     Image(systemName: current.image)
                 }
@@ -376,7 +376,7 @@ struct CountdownComplicationView: View {
             HStack(spacing: 4) {
                 Image(systemName: current.image)
                     .font(.subheadline)
-                Text(current.displayName)
+                Text(current.displayName.localizedDisplay)
                     .font(.headline)
             }
             .foregroundColor(accent(for: current))
@@ -390,7 +390,7 @@ struct CountdownComplicationView: View {
                     .monospacedDigit()
                     .foregroundColor(accent(for: current))
 
-                Text("\(next.displayName) \(Text(next.time, style: .time))")
+                Text("\(next.displayName.localizedDisplay) \(Text(next.time, style: .time))")
                     .font(.caption2)
                     .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
             }

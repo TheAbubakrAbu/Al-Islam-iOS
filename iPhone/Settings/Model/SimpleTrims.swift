@@ -69,18 +69,18 @@ enum SimpleTrim: String, CaseIterable, Identifiable {
 
         var title: String {
             switch self {
-            case .everywhere: return "Every tab"
-            case .adhan: return "Adhan"
-            case .quran: return "Quran tab"
-            case .listReader: return "List reader"
-            case .pageReader: return "Page reader"
-            case .playback: return "Play menus"
-            case .hadith: return "Hadith tab"
-            case .hadithBook: return "Hadith book"
-            case .hadithReader: return "Hadith reader"
-            case .islam: return "Islam tab"
-            case .destinations: return "Islam destinations"
-            case .settings: return "Settings"
+            case .everywhere: return String(localized: "Every tab")
+            case .adhan: return String(localized: "Adhan")
+            case .quran: return String(localized: "Quran tab")
+            case .listReader: return String(localized: "List reader")
+            case .pageReader: return String(localized: "Page reader")
+            case .playback: return String(localized: "Play menus")
+            case .hadith: return String(localized: "Hadith tab")
+            case .hadithBook: return String(localized: "Hadith book")
+            case .hadithReader: return String(localized: "Hadith reader")
+            case .islam: return String(localized: "Islam tab")
+            case .destinations: return String(localized: "Islam destinations")
+            case .settings: return String(localized: "Settings")
             }
         }
 
@@ -112,13 +112,15 @@ enum SimpleTrim: String, CaseIterable, Identifiable {
 
         var text: String {
             switch self {
-            case .moreMenu(let item): return "⋯ menu › \(item)"
-            case .settings(let path): return "Settings › \(path)"
-            case .longPress(let item): return "Press and hold › \(item)"
+            case .moreMenu(let item): return String(localized: "⋯ menu › \(item.localizedDisplay)")
+            case .settings(let path): return String(localized: "Settings › \(path.localizedDisplay)")
+            case .longPress(let item): return String(localized: "Press and hold › \(item.localizedDisplay)")
             // A place reads as a phrase ("the bottom pair") in the catalog, but the page shows it as
             // a line of its own, so it starts with a capital there.
-            case .elsewhere(let place): return place.prefix(1).uppercased() + place.dropFirst()
-            case .dropped(let note): return note.isEmpty ? "Dropped" : "Dropped: \(note)"
+            case .elsewhere(let place):
+                let shown = place.localizedDisplay
+                return shown.prefix(1).uppercased() + shown.dropFirst()
+            case .dropped(let note): return note.isEmpty ? String(localized: "Dropped") : String(localized: "Dropped: \(note.localizedDisplay)")
             }
         }
     }
@@ -131,11 +133,12 @@ enum SimpleTrim: String, CaseIterable, Identifiable {
 
         var id: SimpleTrim { trim }
 
-        /// Unlabeled first argument so each entry reads `Entry(.needAHand, surface: ...)`.
-        init(_ trim: SimpleTrim, surface: Surface, title: String, door: Door) {
+        /// Unlabeled first argument so each entry reads `Entry(.needAHand, surface: ...)`. The title is a
+        /// localization value so the plain literals the script parses are still extracted for translation.
+        init(_ trim: SimpleTrim, surface: Surface, title: String.LocalizationValue, door: Door) {
             self.trim = trim
             self.surface = surface
-            self.title = title
+            self.title = String(localized: title)
             self.door = door
         }
     }
@@ -177,7 +180,7 @@ enum SimpleTrim: String, CaseIterable, Identifiable {
         Entry(.bookStats, surface: .hadith, title: "A book's stats and era lines on the tab", door: .elsewhere("the book's own screen")),
         Entry(.chapterStats, surface: .hadithBook, title: "The CHAPTERS header's pills, each chapter's count and range", door: .elsewhere("the reading screen's chapter header")),
         Entry(.topChapterPair, surface: .hadithReader, title: "The top Previous/Next chapter pair", door: .elsewhere("the bottom pair")),
-        Entry(.foldedGroups, surface: .islam, title: "TOOLS, SIGNS & PROOFS and ASK AI", door: .elsewhere("the More Resources row")),
+        Entry(.foldedGroups, surface: .islam, title: "TOOLS and ASK AI", door: .elsewhere("the More Resources row")),
         Entry(.prophetQuote, surface: .islam, title: "The Prophet Muhammad ﷺ quote card", door: .dropped()),
         Entry(.appsSection, surface: .islam, title: "AL-ISLAMIC APPS", door: .settings("the Settings tab's copy")),
         Entry(.cardTodayPills, surface: .islam, title: "The Today pills on the Reminder of the Day and Dua of the Day cards", door: .moreMenu("Today")),

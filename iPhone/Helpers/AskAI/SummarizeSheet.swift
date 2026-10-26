@@ -24,6 +24,9 @@ struct SummarizeSheet: View {
 
     /// What the source text IS, shown to the user and to the model (e.g. "Ibn Kathir on Al-Baqarah 2:153").
     let title: String
+    /// `title` in the reader's language, for the sheet itself. `title` also goes to the model, which reads
+    /// English, so a caller with an interface translation passes it here.
+    var displayTitle: String? = nil
     /// The text to summarize - exactly what the sheet the user came from is showing.
     let sourceText: String
     /// Multi-source mode ("all tafsirs" / "all surah info"): `sourceText` (or the gathered text) is a
@@ -278,26 +281,31 @@ struct SummarizeSheet: View {
 
     private var sourceNoteBase: String {
         if isGathering {
-            return "Gathering every available text for this summary…"
+            return String(localized: "Gathering every available text for this summary…")
         }
         if let focus {
-            return "Summarizing \(focus) only" + (clippedSource.truncated ? " (shortened to fit the on-device model)" : "")
-                + ". The ayah's English translations and an English commentary are given to the model just to help it read the Arabic; questions are answered from the focused text first."
+            return clippedSource.truncated
+                ? String(localized: "Summarizing \(focus) only (shortened to fit the on-device model). The ayah's English translations and an English commentary are given to the model just to help it read the Arabic; questions are answered from the focused text first.")
+                : String(localized: "Summarizing \(focus) only. The ayah's English translations and an English commentary are given to the model just to help it read the Arabic; questions are answered from the focused text first.")
         }
         if multiSource || gatherSource != nil {
             return clippedSource.truncated
-                ? "Summarizing ALL the available texts together. Longer ones were shortened proportionally to fit the on-device model."
-                : "Summarizing ALL the available texts together, and answering questions about any of them."
+                ? String(localized: "Summarizing ALL the available texts together. Longer ones were shortened proportionally to fit the on-device model.")
+                : String(localized: "Summarizing ALL the available texts together, and answering questions about any of them.")
         }
-        let language = writesArabic ? " in Arabic" : ""
+        if writesArabic {
+            return clippedSource.truncated
+                ? String(localized: "Summarizing the first \(OnDeviceAsk.summarizeSourceLimit.formatted()) characters of this text in Arabic. It was shortened to fit the on-device model.")
+                : String(localized: "Summarizing the text currently shown in Arabic, and answering questions about it.")
+        }
         return clippedSource.truncated
-            ? "Summarizing the first \(OnDeviceAsk.summarizeSourceLimit.formatted()) characters of this text\(language). It was shortened to fit the on-device model."
-            : "Summarizing the text currently shown\(language), and answering questions about it."
+            ? String(localized: "Summarizing the first \(OnDeviceAsk.summarizeSourceLimit.formatted()) characters of this text. It was shortened to fit the on-device model.")
+            : String(localized: "Summarizing the text currently shown, and answering questions about it.")
     }
 
     private var sourceNoteCard: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label(title, systemImage: "doc.plaintext")
+            Label((displayTitle ?? title).localizedDigits, systemImage: "doc.plaintext")
                 .font(.subheadline.weight(.semibold))
 
             Text(sourceNoteText)
@@ -333,8 +341,8 @@ struct SummarizeSheet: View {
             if summaryFailed {
                 Text(summaryFailureMessage
                      ?? (gatherSource != nil
-                         ? "Couldn't load the texts to summarize. Check your connection, close, and try again."
-                         : "The on-device model couldn't summarize this text. Close and try again."))
+                         ? String(localized: "Couldn't load the texts to summarize. Check your connection, close, and try again.")
+                         : String(localized: "The on-device model couldn't summarize this text. Close and try again.")))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else if summary.isEmpty {
@@ -347,6 +355,8 @@ struct SummarizeSheet: View {
                 // right-to-left, from the right edge.
                 SelectableProse(text: Self.plainProse(summary), textStyle: .subheadline,
                                 isArabic: writesArabic, alignment: writesArabic ? .right : nil)
+                    // An English summary reads left to right in the Arabic interface too.
+                    .leftToRightContent(!writesArabic)
             }
 
             Text(multiSource || gatherSource != nil
@@ -406,6 +416,7 @@ struct SummarizeSheet: View {
                 } else {
                     SelectableProse(text: Self.plainProse(turn.answer), textStyle: .subheadline,
                                     isArabic: writesArabic, alignment: writesArabic ? .right : nil)
+                        .leftToRightContent(!writesArabic)
                 }
             }
             .padding(12)
@@ -456,7 +467,7 @@ struct SummarizeSheet: View {
             Text("Apple Intelligence Unavailable")
                 .font(.headline)
 
-            Text("Summarize runs entirely on device and needs Apple Intelligence enabled on a supported device (iOS 26 or later).")
+            Text(String(localized: "Summarize runs entirely on device and needs Apple Intelligence enabled on a supported device (iOS 26 or later).").localizedDigits)
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)

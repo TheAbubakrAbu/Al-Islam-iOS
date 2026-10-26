@@ -100,6 +100,13 @@ enum CloudMergeRules {
         "favoriteIslamResources": .unionCSV,
         "readingTestProgress": .readingLadder,
         "readingTestPlacement": .fillIfMissing,
+        "readingTestMissed": .unionObjects(identity: ["id", "tier"], stamp: "last", newestFirst: true, cap: 60),
+        "readingTestSpeedBest": .maxNumber,
+        // The Tajweed Test's ladder, the same shape as the Reading Test's.
+        "tajweedTestProgress": .readingLadder,
+        "tajweedTestPlacement": .fillIfMissing,
+        "tajweedTestMissed": .unionObjects(identity: ["id", "tier"], stamp: "last", newestFirst: true, cap: 60),
+        "tajweedTestSpeedBest": .maxNumber,
         "tajweedLessonsDone": .unionScalars(cap: nil),
         "letterQuizBestStreak": .maxNumber,
         "duaSessionProgressData": .maxPerKey,

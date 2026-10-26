@@ -161,6 +161,8 @@ struct MutashabihatRows: View {
                         .lineLimit(nil)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                        .environment(\.layoutDirection, .leftToRight)
 
                     Text(Self.summary(phrase))
                         .font(.caption)
@@ -173,10 +175,10 @@ struct MutashabihatRows: View {
     }
 
     static func summary(_ phrase: MutashabihatStore.Phrase) -> String {
-        let times = phrase.count == 1 ? "once" : "\(phrase.count) times"
-        let ayahs = phrase.ayahCount == 1 ? "1 ayah" : "\(phrase.ayahCount) ayahs"
-        let surahs = phrase.surahCount == 1 ? "1 surah" : "\(phrase.surahCount) surahs"
-        return "Repeated \(times) in \(ayahs) across \(surahs)"
+        let times = phrase.count == 1 ? String(localized: "once") : String(localized: "\(phrase.count) times")
+        let ayahs = phrase.ayahCount == 1 ? String(localized: "1 ayah") : String(localized: "\(phrase.ayahCount) ayahs")
+        let surahs = phrase.surahCount == 1 ? String(localized: "1 surah") : String(localized: "\(phrase.surahCount) surahs")
+        return String(localized: "Repeated \(times) in \(ayahs) across \(surahs)")
     }
 }
 
@@ -246,6 +248,8 @@ struct PhraseOccurrencesView: View {
                         .lineLimit(nil)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                        .environment(\.layoutDirection, .leftToRight)
 
                     Text(MutashabihatRows.summary(phrase))
                         .font(.caption)
@@ -255,7 +259,7 @@ struct PhraseOccurrencesView: View {
                 .padding(.vertical, 4)
             }
 
-            Section(header: SectionPillHeader(title: "OCCURRENCES", count: list.count)) {
+            Section(header: SectionPillHeader(title: String(localized: "OCCURRENCES"), count: list.count)) {
                 ForEach(list) { row in
                     WordOccurrenceRow(surah: row.surah, ayah: row.ayah, tokens: row.tokens,
                                       isOrigin: row.key == (originKey ?? phrase.sourceKey), contrastTokens: row.contrast)

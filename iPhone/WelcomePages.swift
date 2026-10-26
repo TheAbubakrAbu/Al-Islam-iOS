@@ -54,7 +54,7 @@ struct WelcomeActionBar: View {
             if secondaryTitle != nil || backAction != nil {
                 HStack(spacing: 0) {
                     if let backAction {
-                        secondaryButton("Back", systemImage: "chevron.backward", identifier: "welcomeBack", action: backAction)
+                        secondaryButton(String(localized: "Back"), systemImage: "chevron.backward", identifier: "welcomeBack", action: backAction)
                     }
                     if let secondaryTitle {
                         secondaryButton(secondaryTitle, identifier: secondaryIdentifier, action: secondaryAction)
@@ -157,10 +157,10 @@ struct WelcomePermissionsPage: View {
             }
 
             WelcomeActionBar(
-                primaryTitle: "Continue",
+                primaryTitle: String(localized: "Continue"),
                 primaryEnabled: !asker.anythingUndetermined,
                 primaryAction: onFinished,
-                secondaryTitle: "Skip",
+                secondaryTitle: String(localized: "Skip"),
                 secondaryIdentifier: "welcomeSkip",
                 secondaryAction: {
                     asker.snoozeUnanswered()
@@ -225,9 +225,9 @@ struct WelcomeDiscoverPage: View {
                     .padding(.leading, 4)
                     .accessibilityAddTraits(.isHeader)
 
-                modeCard(simple: true, title: "Simple", text: simpleModeSummary,
+                modeCard(simple: true, title: String(localized: "Simple"), text: simpleModeSummary,
                          systemImage: "rectangle.compress.vertical")
-                modeCard(simple: false, title: "Full", text: "Every tool, shortcut and detail, right on screen.",
+                modeCard(simple: false, title: String(localized: "Full"), text: String(localized: "Every tool, shortcut and detail, right on screen."),
                          systemImage: "rectangle.expand.vertical")
             }
 
@@ -238,7 +238,7 @@ struct WelcomeDiscoverPage: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .sheet(isPresented: $showTour) {
-            TipsTourView(area: .app, tips: TipCatalog.spotlight, title: "Only in \(AppIdentifiers.appName)")
+            TipsTourView(area: .app, tips: TipCatalog.spotlight, title: String(localized: "Only in \(AppIdentifiers.displayName)"))
                 .smallMediumSheetPresentation()
         }
     }
@@ -246,14 +246,16 @@ struct WelcomeDiscoverPage: View {
     /// Named after the Settings tab's own spotlight cards, so each app names what it really has.
     private var pitch: String {
         let highlights = TipCatalog.spotlight.prefix(3).compactMap { $0.card?.title }
-        let examples = highlights.isEmpty ? "" : ", like \(Self.listed(highlights))"
-        return "\(AppIdentifiers.appName) does things no other app does\(examples). It can feel like a lot at first. Browse the Tips & Tricks whenever you like, or start with Simple Mode and bring the extras in when you want them."
+        let lead = highlights.isEmpty
+            ? String(localized: "\(AppIdentifiers.displayName) does things no other app does.")
+            : String(localized: "\(AppIdentifiers.displayName) does things no other app does, like \(Self.listed(highlights)).")
+        return String(localized: "\(lead) It can feel like a lot at first. Browse the Tips & Tricks whenever you like, or start with Simple Mode and bring the extras in when you want them.")
     }
 
     /// "A, B and C".
     static func listed(_ items: [String]) -> String {
         guard items.count > 1, let last = items.last else { return items.first ?? "" }
-        return items.dropLast().joined(separator: ", ") + " and " + last
+        return String(localized: "\(items.dropLast().joined(separator: ", ")) and \(last)")
     }
 
     private var tipCount: Int {
@@ -282,7 +284,7 @@ struct WelcomeDiscoverPage: View {
                     Text("Tips & Tricks")
                         .font(.headline)
                         .foregroundColor(.primary)
-                    Text("\(tipCount) things that are easy to miss, each with where to find it. Every settings page opens with its own list, and this short tour shows what only \(AppIdentifiers.appName) does.")
+                    Text("\(tipCount) things that are easy to miss, each with where to find it. Every settings page opens with its own list, and this short tour shows what only \(AppIdentifiers.displayName) does.")
                         .font(.footnote)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.leading)
@@ -291,7 +293,7 @@ struct WelcomeDiscoverPage: View {
 
                 Spacer(minLength: 8)
 
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.forward")
                     .font(.footnote.weight(.semibold))
                     .foregroundColor(Color.secondary.opacity(0.6))
                     .accessibilityHidden(true)
@@ -319,11 +321,11 @@ struct WelcomeDiscoverPage: View {
     /// times, Al-Adhan no Quran reader).
     private var simpleModeSummary: String {
         #if HAS_ADHAN && HAS_QURAN
-        return "Prayer times, the Quran and the essentials, with the extras tucked away until you want them."
+        return String(localized: "Prayer times, the Quran and the essentials, with the extras tucked away until you want them.")
         #elseif HAS_ADHAN
-        return "Prayer times and the essentials, with the extras tucked away until you want them."
+        return String(localized: "Prayer times and the essentials, with the extras tucked away until you want them.")
         #else
-        return "The Quran and the essentials, with the extras tucked away until you want them."
+        return String(localized: "The Quran and the essentials, with the extras tucked away until you want them.")
         #endif
     }
 

@@ -178,6 +178,29 @@ enum TypedAmount {
     }
 }
 
+// MARK: - Lists inside a sentence
+
+/// How a list of phrases joins inside a sentence: "a and b" or "a or b".
+enum SentenceListType {
+    case and, or
+}
+
+extension Array where Element == String {
+    /// These phrases as one list inside a sentence. In English the list reads exactly as the sentence
+    /// always wrote it (`english`: some lists are commas only, some end on "and" with no serial comma).
+    /// In Arabic it takes the language's own list format ("أ وب وج"), never Arabic phrases strung on a
+    /// Latin ", ". The formatter isolates only a phrase in another script ("Apple Watch"), so a list of
+    /// Arabic phrases comes back as plain Arabic text.
+    func sentenceList(_ type: SentenceListType = .and, english: ([String]) -> String) -> String {
+        guard AppLanguage.isArabic else { return english(self) }
+        let locale = Locale(identifier: AppLanguage.code)
+        switch type {
+        case .and: return formatted(.list(type: .and).locale(locale))
+        case .or: return formatted(.list(type: .or).locale(locale))
+        }
+    }
+}
+
 // MARK: - The dotless rasm
 
 /// The ONE table behind Hide Arabic Dots: the string transform (`String.removingArabicDots`) and the
@@ -221,6 +244,9 @@ enum ArabicRasm {
 enum AppIdentifiers {
     static let appFullName = "Al-Islam | Islamic Pillars"
     static let appName = "Al-Islam"
+    /// The app's name as the interface shows it: الإسلام in Arabic, "Al-Islam" in English. For display only
+    /// (`appName` is the identifier, the asset name and the file-name prefix).
+    static var displayName: String { appName.localizedDisplay }
     
     static let mainColor = AccentColor.green
     static let mainColorString = "green"
@@ -449,7 +475,21 @@ enum AccentColor: String, CaseIterable, Identifiable {
     case red, orange, yellow, green, blue, indigo, cyan, teal, mint, purple, pink, brown, custom
 
     var displayName: String {
-        rawValue.capitalized
+        switch self {
+        case .red: return String(localized: "Red")
+        case .orange: return String(localized: "Orange")
+        case .yellow: return String(localized: "Yellow")
+        case .green: return String(localized: "Green")
+        case .blue: return String(localized: "Blue")
+        case .indigo: return String(localized: "Indigo")
+        case .cyan: return String(localized: "Cyan")
+        case .teal: return String(localized: "Teal")
+        case .mint: return String(localized: "Mint")
+        case .purple: return String(localized: "Purple")
+        case .pink: return String(localized: "Pink")
+        case .brown: return String(localized: "Brown")
+        case .custom: return String(localized: "Custom")
+        }
     }
 
     /// The accent as the app paints it: text, icons, controls and tints alike, ~1,000 call sites.
@@ -1006,18 +1046,18 @@ struct HijriMonth: Identifiable {
 }
 
 let hijriMonths: [HijriMonth] = [
-    HijriMonth(number: 1,  english: "Muharram",       arabic: "مُحَرَّم",        isSacred: true,  note: "A sacred month. The Day of Ashura falls on the 10th."),
-    HijriMonth(number: 2,  english: "Safar",          arabic: "صَفَر",           isSacred: false, note: "No worship is tied to this month, and there is no bad omen in it."),
-    HijriMonth(number: 3,  english: "Rabi al-Awwal",  arabic: "رَبِيع الأَوَّل",  isSacred: false, note: "The month the Prophet ﷺ migrated to Madinah."),
-    HijriMonth(number: 4,  english: "Rabi al-Thani",  arabic: "رَبِيع الثَّانِي", isSacred: false, note: "The second of the two Rabi months."),
-    HijriMonth(number: 5,  english: "Jumada al-Ula",  arabic: "جُمَادَى الأُولَى", isSacred: false, note: "The first of the two Jumada months."),
-    HijriMonth(number: 6,  english: "Jumada al-Thani", arabic: "جُمَادَى الآخِرَة", isSacred: false, note: "The second of the two Jumada months."),
-    HijriMonth(number: 7,  english: "Rajab",          arabic: "رَجَب",           isSacred: true,  note: "A sacred month, standing alone between the others."),
-    HijriMonth(number: 8,  english: "Sha'ban",        arabic: "شَعبَان",         isSacred: false, note: "The Prophet ﷺ fasted more in Sha'ban than in any month but Ramadan."),
-    HijriMonth(number: 9,  english: "Ramadan",        arabic: "رَمَضَان",        isSacred: false, note: "The month of the obligatory fast, and the month the Quran was sent down."),
-    HijriMonth(number: 10, english: "Shawwal",        arabic: "شَوَّال",         isSacred: false, note: "Eid al-Fitr is on the 1st, followed by the six recommended fasts."),
-    HijriMonth(number: 11, english: "Dhul Qi'dah",    arabic: "ذُو القَعدَة",     isSacred: true,  note: "A sacred month, and one of the months of Hajj."),
-    HijriMonth(number: 12, english: "Dhul Hijjah",    arabic: "ذُو الحِجَّة",     isSacred: true,  note: "A sacred month. Hajj is performed, and Eid al-Adha is on the 10th."),
+    HijriMonth(number: 1,  english: "Muharram",       arabic: "مُحَرَّم",        isSacred: true,  note: String(localized: "A sacred month. The Day of Ashura falls on the 10th.")),
+    HijriMonth(number: 2,  english: "Safar",          arabic: "صَفَر",           isSacred: false, note: String(localized: "No worship is tied to this month, and there is no bad omen in it.")),
+    HijriMonth(number: 3,  english: "Rabi al-Awwal",  arabic: "رَبِيع الأَوَّل",  isSacred: false, note: String(localized: "The month the Prophet ﷺ migrated to Madinah.")),
+    HijriMonth(number: 4,  english: "Rabi al-Thani",  arabic: "رَبِيع الثَّانِي", isSacred: false, note: String(localized: "The second of the two Rabi months.")),
+    HijriMonth(number: 5,  english: "Jumada al-Ula",  arabic: "جُمَادَى الأُولَى", isSacred: false, note: String(localized: "The first of the two Jumada months.")),
+    HijriMonth(number: 6,  english: "Jumada al-Thani", arabic: "جُمَادَى الآخِرَة", isSacred: false, note: String(localized: "The second of the two Jumada months.")),
+    HijriMonth(number: 7,  english: "Rajab",          arabic: "رَجَب",           isSacred: true,  note: String(localized: "A sacred month, standing alone between the others.")),
+    HijriMonth(number: 8,  english: "Sha'ban",        arabic: "شَعبَان",         isSacred: false, note: String(localized: "The Prophet ﷺ fasted more in Sha'ban than in any month but Ramadan.")),
+    HijriMonth(number: 9,  english: "Ramadan",        arabic: "رَمَضَان",        isSacred: false, note: String(localized: "The month of the obligatory fast, and the month the Quran was sent down.")),
+    HijriMonth(number: 10, english: "Shawwal",        arabic: "شَوَّال",         isSacred: false, note: String(localized: "Eid al-Fitr is on the 1st, followed by the six recommended fasts.")),
+    HijriMonth(number: 11, english: "Dhul Qi'dah",    arabic: "ذُو القَعدَة",     isSacred: true,  note: String(localized: "A sacred month, and one of the months of Hajj.")),
+    HijriMonth(number: 12, english: "Dhul Hijjah",    arabic: "ذُو الحِجَّة",     isSacred: true,  note: String(localized: "A sacred month. Hajj is performed, and Eid al-Adha is on the 10th.")),
 ]
 
 func arabicNumberString(from number: Int) -> String {
@@ -1754,11 +1794,11 @@ enum MushafPageLanguage: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .arabic:          return "Arabic"
-        case .pdf:             return "Printed Mushaf"
-        case .transliteration: return "Transliteration (English)"
-        case .clearQuran:      return "The Clear Quran (English)"
-        case .saheeh:          return "Saheeh International (English)"
+        case .arabic:          return String(localized: "Arabic")
+        case .pdf:             return String(localized: "Printed Mushaf")
+        case .transliteration: return String(localized: "Transliteration (English)")
+        case .clearQuran:      return String(localized: "The Clear Quran (English)")
+        case .saheeh:          return String(localized: "Saheeh International (English)")
         }
     }
 }
@@ -1775,9 +1815,9 @@ enum MushafPDFAppearance: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .auto:  return "Automatic"
-        case .light: return "Light"
-        case .night: return "Dark"
+        case .auto:  return String(localized: "Automatic")
+        case .light: return String(localized: "Light")
+        case .night: return String(localized: "Dark")
         }
     }
 

@@ -27,11 +27,11 @@ enum ShareBackdrop: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .classic: return "Classic"
-        case .frosted: return "Frosted"
-        case .nature: return "Nature"
-        case .editorial: return "Editorial"
-        case .geometric: return "Geometric"
+        case .classic: return String(localized: "Classic")
+        case .frosted: return String(localized: "Frosted")
+        case .nature: return String(localized: "Nature")
+        case .editorial: return String(localized: "Editorial")
+        case .geometric: return String(localized: "Geometric")
         }
     }
 

@@ -32,10 +32,10 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
 
         var title: String {
             switch self {
-            case .silents: return "Sukn (Silent)"
-            case .ghunnah: return "Ghunnah (Nasal)"
-            case .sifaat: return "Sifaat (Articulation)"
-            case .madd: return "Madd (Elongation)"
+            case .silents: return String(localized: "Sukn (Silent)")
+            case .ghunnah: return String(localized: "Ghunnah (Nasal)")
+            case .sifaat: return String(localized: "Sifaat (Articulation)")
+            case .madd: return String(localized: "Madd (Elongation)")
             }
         }
     }
@@ -44,26 +44,26 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
 
     var englishTitle: String {
         switch self {
-        case .lamShamsiyah: return "Solar Lam"
-        case .droppedLetter: return "Written but Not Pronounced"
-        case .hamzatWaslSilent: return "Joining Hamzah"
-        case .idghamBilaGhunnah: return "Merge Without Ghunnah"
+        case .lamShamsiyah: return String(localized: "Solar Lam")
+        case .droppedLetter: return String(localized: "Written but Not Pronounced")
+        case .hamzatWaslSilent: return String(localized: "Joining Hamzah")
+        case .idghamBilaGhunnah: return String(localized: "Merge Without Ghunnah")
             
-        case .idghamGhunnah: return "Merge with Ghunnah"
-        case .generalGhunnah: return "Shaddah Ghunnah"
-        case .ikhfaaLight: return "Hidden Letter (Light)"
-        case .ikhfaaHeavy: return "Hidden Letter (Heavy)"
-        case .iqlaab: return "Noon into Meem"
+        case .idghamGhunnah: return String(localized: "Merge with Ghunnah")
+        case .generalGhunnah: return String(localized: "Shaddah Ghunnah")
+        case .ikhfaaLight: return String(localized: "Hidden Letter (Light)")
+        case .ikhfaaHeavy: return String(localized: "Hidden Letter (Heavy)")
+        case .iqlaab: return String(localized: "Noon into Meem")
             
-        case .qalqalah: return "Bounce Letter"
-        case .tafkhim: return "Heavy Letter"
+        case .qalqalah: return String(localized: "Bounce Letter")
+        case .tafkhim: return String(localized: "Heavy Letter")
             
-        case .maddNatural: return "Madd Letters (2 Counts)"
-        case .maddNaturalMiniature: return "Tiny Madd Marks"
-        case .maddSukoon: return "Ending Madd"
-        case .maddSeparated: return "Madd Munfasil"
-        case .maddConnected: return "Madd Muttasil"
-        case .maddNecessary: return "Madd Lazim"
+        case .maddNatural: return String(localized: "Madd Letters (2 Counts)")
+        case .maddNaturalMiniature: return String(localized: "Tiny Madd Marks")
+        case .maddSukoon: return String(localized: "Ending Madd")
+        case .maddSeparated: return String(localized: "Madd Munfasil")
+        case .maddConnected: return String(localized: "Madd Muttasil")
+        case .maddNecessary: return String(localized: "Madd Lazim")
             
         @unknown default: return rawValue
         }
@@ -128,26 +128,26 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
 
     var exactEnglishTranslation: String {
         switch self {
-        case .lamShamsiyah: return "Solar Lam"
-        case .droppedLetter: return "Unpronounced letter"
-        case .hamzatWaslSilent: return "Connecting Hamzah"
-        case .idghamBilaGhunnah: return "Merging without nasal"
+        case .lamShamsiyah: return String(localized: "Solar Lam")
+        case .droppedLetter: return String(localized: "Unpronounced letter")
+        case .hamzatWaslSilent: return String(localized: "Connecting Hamzah")
+        case .idghamBilaGhunnah: return String(localized: "Merging without nasal")
             
-        case .idghamGhunnah: return "Merging with nasal"
-        case .generalGhunnah: return "Shaddah nasalization"
-        case .ikhfaaLight: return "Light Concealment"
-        case .ikhfaaHeavy: return "Heavy Concealment"
-        case .iqlaab: return "Conversion"
+        case .idghamGhunnah: return String(localized: "Merging with nasal")
+        case .generalGhunnah: return String(localized: "Shaddah nasalization")
+        case .ikhfaaLight: return String(localized: "Light Concealment")
+        case .ikhfaaHeavy: return String(localized: "Heavy Concealment")
+        case .iqlaab: return String(localized: "Conversion")
             
-        case .qalqalah: return "Echoing bounce"
-        case .tafkhim: return "Heavy articulation"
+        case .qalqalah: return String(localized: "Echoing bounce")
+        case .tafkhim: return String(localized: "Heavy articulation")
             
-        case .maddNatural: return "Natural elongation letters"
-        case .maddNaturalMiniature: return "Tiny natural elongation marks"
-        case .maddSukoon: return "Elongation due to end"
-        case .maddSeparated: return "Separated elongation"
-        case .maddConnected: return "Connected elongation"
-        case .maddNecessary: return "Necessary elongation"
+        case .maddNatural: return String(localized: "Natural elongation letters")
+        case .maddNaturalMiniature: return String(localized: "Tiny natural elongation marks")
+        case .maddSukoon: return String(localized: "Elongation due to end")
+        case .maddSeparated: return String(localized: "Separated elongation")
+        case .maddConnected: return String(localized: "Connected elongation")
+        case .maddNecessary: return String(localized: "Necessary elongation")
             
         @unknown default: return rawValue
         }
@@ -156,60 +156,60 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
     var englishMeaning: String {
         switch self {
         case .lamShamsiyah:
-            return "Solar lam: the lam in al- is absorbed into the following sun letter, so that next letter is emphasized."
+            return String(localized: "Solar lam: the lam in al- is absorbed into the following sun letter, so that next letter is emphasized.")
         case .droppedLetter:
-            return "A letter is written in the mushaf but not fully pronounced in recitation."
+            return String(localized: "A letter is written in the mushaf but not fully pronounced in recitation.")
         case .hamzatWaslSilent:
-            return "Hamzat al-wasl is heard only when starting a word and dropped when reading continuously from before it."
+            return String(localized: "Hamzat al-wasl is heard only when starting a word and dropped when reading continuously from before it.")
         case .idghamBilaGhunnah:
-            return "Idgham bilaa ghunnah merges noon/tanween directly into the next letter without nasalization. The same grey marks a noon or tanween merged WITH ghunnah into م، ي، و: the noon itself is not heard, and its ghunnah is colored on the next letter."
+            return String(localized: "Idgham bilaa ghunnah merges noon/tanween directly into the next letter without nasalization. The same grey marks a noon or tanween merged WITH ghunnah into م، ي، و: the noon itself is not heard, and its ghunnah is colored on the next letter.")
             
         case .idghamGhunnah:
-            return "Idgham with ghunnah merges noon or tanween into the next letter with a nasal sound."
+            return String(localized: "Idgham with ghunnah merges noon or tanween into the next letter with a nasal sound.")
         case .generalGhunnah:
-            return "This is the two-count nasal sound on noon or meem with shaddah, also used for linked helper highlights where the nasal target needs to stay clear."
+            return String(localized: "This is the two-count nasal sound on noon or meem with shaddah, also used for linked helper highlights where the nasal target needs to stay clear.")
         case .ikhfaaLight:
-            return "Light Ikhfaa partially hides noon or tanween before certain letters with a lighter nasal ghunnah."
+            return String(localized: "Light Ikhfaa partially hides noon or tanween before certain letters with a lighter nasal ghunnah.")
         case .ikhfaaHeavy:
-            return "Heavy Ikhfaa partially hides noon or tanween before heavy letters with a stronger, fuller nasal ghunnah."
+            return String(localized: "Heavy Ikhfaa partially hides noon or tanween before heavy letters with a stronger, fuller nasal ghunnah.")
         case .iqlaab:
-            return "Iqlaab changes noon/tanween to a meem-like sound before baa, with ghunnah. The same color marks a meem sakin hidden before baa (ikhfaa shafawi), the same lip-closed nasal."
+            return String(localized: "Iqlaab changes noon/tanween to a meem-like sound before baa, with ghunnah. The same color marks a meem sakin hidden before baa (ikhfaa shafawi), the same lip-closed nasal.")
             
         case .qalqalah:
-            return "Qalqalah is a brief bounce on the Qutb Jad letters when they are sakin or when stopping on them."
+            return String(localized: "Qalqalah is a brief bounce on the Qutb Jad letters when they are sakin or when stopping on them.")
         case .tafkhim:
-            return "Tafkhim is a heavy, fuller articulation where the sound is pronounced with depth and thickness. The seven isti'la letters are always heavy; raa and the laam of the name of Allah are heavy or light depending on the vowel before them."
+            return String(localized: "Tafkhim is a heavy, fuller articulation where the sound is pronounced with depth and thickness. The seven isti'la letters are always heavy; raa and the laam of the name of Allah are heavy or light depending on the vowel before them.")
             
         case .maddNatural:
-            return "Madd tabi'i is the baseline natural stretch of 2 counts on alif, waw, or ya after matching vowels."
+            return String(localized: "Madd tabi'i is the baseline natural stretch of 2 counts on alif, waw, or ya after matching vowels.")
         case .maddNaturalMiniature:
-            return "Tiny madd marks such as small alif, small waw, and small ya indicate a natural two-count vowel sound written as miniature tashkeel."
+            return String(localized: "Tiny madd marks such as small alif, small waw, and small ya indicate a natural two-count vowel sound written as miniature tashkeel.")
         case .maddSukoon:
-            return "Ending madd covers stop-based madd, including madd aarid lis-sukoon and madd leen. It is read as 2, 4, or 6 counts when stopping."
+            return String(localized: "Ending madd covers stop-based madd, including madd aarid lis-sukoon and madd leen. It is read as 2, 4, or 6 counts when stopping.")
         case .maddSeparated:
-            return "Madd munfasil is when a word ends with madd and the next word begins with hamzah, so the stretch carries across words."
+            return String(localized: "Madd munfasil is when a word ends with madd and the next word begins with hamzah, so the stretch carries across words.")
         case .maddConnected:
-            return "Madd muttasil is when a madd letter is followed by hamzah in the same word, so it is lengthened beyond natural madd."
+            return String(localized: "Madd muttasil is when a madd letter is followed by hamzah in the same word, so it is lengthened beyond natural madd.")
         case .maddNecessary:
-            return "Madd lazim is an obligatory fixed stretch of 6 counts due to a shaddah after madd."
+            return String(localized: "Madd lazim is an obligatory fixed stretch of 6 counts due to a shaddah after madd.")
 
         @unknown default:
-            return "Tajweed rule meaning"
+            return String(localized: "Tajweed rule meaning")
         }
     }
 
     var countLabel: String? {
         switch self {
         case .maddNatural, .maddNaturalMiniature, .idghamGhunnah, .generalGhunnah, .ikhfaaLight, .ikhfaaHeavy, .iqlaab:
-            return "2 counts"
+            return String(localized: "2 counts")
         case .maddSukoon:
-            return "2, 4, or 6 counts"
+            return String(localized: "2, 4, or 6 counts")
         case .maddSeparated:
-            return "2, 4, or 5 counts"
+            return String(localized: "2, 4, or 5 counts")
         case .maddConnected:
-            return "4 or 5 counts"
+            return String(localized: "4 or 5 counts")
         case .maddNecessary:
-            return "6 counts"
+            return String(localized: "6 counts")
         default:
             return nil
         }
@@ -218,36 +218,36 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
     var applicableLettersDetail: String? {
         switch self {
         case .idghamBilaGhunnah:
-            return "When noon (ن) or tanween comes before: ل، ر. Also the noon or tanween before م، ي، و, a merge with ghunnah whose ghunnah is colored on the next letter"
+            return String(localized: "When noon (ن) or tanween comes before: ل، ر. Also the noon or tanween before م، ي، و, a merge with ghunnah whose ghunnah is colored on the next letter")
             
         case .idghamGhunnah:
-            return "When a noon sound (ن or tanween) comes before: ي، ن، م، و"
+            return String(localized: "When a noon sound (ن or tanween) comes before: ي، ن، م، و")
         case .generalGhunnah:
-            return "Noon or meem with shaddah; also used on selected nasal merge targets"
+            return String(localized: "Noon or meem with shaddah; also used on selected nasal merge targets")
         case .ikhfaaLight:
-            return "When a noon sound (ن or tanween) comes before lighter letters: ت، ث، ج، د، ذ، ز، س، ش، ف، ك"
+            return String(localized: "When a noon sound (ن or tanween) comes before lighter letters: ت، ث، ج، د، ذ، ز، س، ش، ف، ك")
         case .ikhfaaHeavy:
-            return "When a noon sound (ن or tanween) comes before heavier letters: ص، ض، ط، ظ، ق"
+            return String(localized: "When a noon sound (ن or tanween) comes before heavier letters: ص، ض، ط، ظ، ق")
         case .iqlaab:
-            return "When noon (ن) or tanween comes before: ب (changes to meem sound). Also meem sakin before ب (ikhfaa shafawi)"
+            return String(localized: "When noon (ن) or tanween comes before: ب (changes to meem sound). Also meem sakin before ب (ikhfaa shafawi)")
             
         case .qalqalah:
-            return "Letters that bounce when they have sukoon or are stopped on: ق، ط، ب، ج، د"
+            return String(localized: "Letters that bounce when they have sukoon or are stopped on: ق، ط، ب، ج، د")
         case .tafkhim:
-            return "Letters pronounced heavily (elevated tongue): خ، ص، ض، غ، ط، ق، ظ. Also raa, and the laam of ٱللَّه after a fatha or damma (ٱللَّهُ) - it is light after a kasra (بِٱللَّهِ)"
+            return String(localized: "Letters pronounced heavily (elevated tongue): خ، ص، ض، غ، ط، ق، ظ. Also raa, and the laam of ٱللَّه after a fatha or damma (ٱللَّهُ) - it is light after a kasra (بِٱللَّهِ)")
             
         case .maddNatural:
-            return "Occurs on madd letters: ا، و، ي (normal 2-count elongation)"
+            return String(localized: "Occurs on madd letters: ا، و، ي (normal 2-count elongation)")
         case .maddNaturalMiniature:
-            return "Occurs on miniature madd marks: alif sagheerah, waw sagheerah, ya sagheerah"
+            return String(localized: "Occurs on miniature madd marks: alif sagheerah, waw sagheerah, ya sagheerah")
         case .maddSukoon:
-            return "When stopping creates madd aarid lis-sukoon after ا، و، ي, or madd leen after َ + وۡ / َ + يۡ"
+            return String(localized: "When stopping creates madd aarid lis-sukoon after ا، و، ي, or madd leen after َ + وۡ / َ + يۡ")
         case .maddSeparated:
-            return "When madd letters (ا، و، ي) are followed by hamzah in the next word"
+            return String(localized: "When madd letters (ا، و، ي) are followed by hamzah in the next word")
         case .maddConnected:
-            return "When madd letters (ا، و، ي) are followed by hamzah in the same word"
+            return String(localized: "When madd letters (ا، و، ي) are followed by hamzah in the same word")
         case .maddNecessary:
-            return "When madd letters (ا، و، ي) are followed by a permanent sukoon or shaddah"
+            return String(localized: "When madd letters (ا، و، ي) are followed by a permanent sukoon or shaddah")
             
         default:
             return nil
@@ -330,90 +330,90 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
     var shortDescription: String {
         switch self {
         case .lamShamsiyah:
-            return "Lam of al- is silent before sun letters."
+            return String(localized: "Lam of al- is silent before sun letters.")
         case .droppedLetter:
-            return "Letter written in the script but dropped in recitation."
+            return String(localized: "Letter written in the script but dropped in recitation.")
         case .hamzatWaslSilent:
-            return "Start-only hamzah; dropped when connecting."
+            return String(localized: "Start-only hamzah; dropped when connecting.")
         case .idghamBilaGhunnah:
-            return "Silent-style merge into next without nasal sound."
+            return String(localized: "Silent-style merge into next without nasal sound.")
             
         case .idghamGhunnah:
-            return "Merge into the next letter with nasal."
+            return String(localized: "Merge into the next letter with nasal.")
         case .generalGhunnah:
-            return "Noon/meem with shaddah nasal sound."
+            return String(localized: "Noon/meem with shaddah nasal sound.")
         case .ikhfaaLight:
-            return "Lightly hide noon or tanween with nasal."
+            return String(localized: "Lightly hide noon or tanween with nasal.")
         case .ikhfaaHeavy:
-            return "Heavily hide noon or tanween with nasal."
+            return String(localized: "Heavily hide noon or tanween with nasal.")
         case .iqlaab:
-            return "Noon/tanween turns to meem before baa."
+            return String(localized: "Noon/tanween turns to meem before baa.")
             
         case .qalqalah:
-            return "Qutb jad letters bounce on sukoon/stop."
+            return String(localized: "Qutb jad letters bounce on sukoon/stop.")
         case .tafkhim:
-            return "Heavy, full-mouth pronunciation."
+            return String(localized: "Heavy, full-mouth pronunciation.")
             
         case .maddNatural:
-            return "From full vowel letters: alif, waw, or yaa."
+            return String(localized: "From full vowel letters: alif, waw, or yaa.")
         case .maddNaturalMiniature:
-            return "From tiny vowel diacritics: small alif, waw, or yaa."
+            return String(localized: "From tiny vowel diacritics: small alif, waw, or yaa.")
         case .maddSukoon:
-            return "Stop-based madd, including aarid and leen."
+            return String(localized: "Stop-based madd, including aarid and leen.")
         case .maddSeparated:
-            return "Madd at word end before next hamzah."
+            return String(localized: "Madd at word end before next hamzah.")
         case .maddConnected:
-            return "Madd letter + hamzah in one word."
+            return String(localized: "Madd letter + hamzah in one word.")
         case .maddNecessary:
-            return "Fixed required madd due to shaddah after madd."
+            return String(localized: "Fixed required madd due to shaddah after madd.")
             
         @unknown default:
-            return "Tajweed rule"
+            return String(localized: "Tajweed rule")
         }
     }
 
     var longDescription: String {
         switch self {
         case .lamShamsiyah:
-            return "In connected recitation, this appears most clearly in words beginning with al- followed by sun letters (like ta, daal, seen, sheen). The lam remains in writing but is absorbed into the next consonant, which is heard with emphasis/doubling."
+            return String(localized: "In connected recitation, this appears most clearly in words beginning with al- followed by sun letters (like ta, daal, seen, sheen). The lam remains in writing but is absorbed into the next consonant, which is heard with emphasis/doubling.")
         case .droppedLetter:
-            return "This is a practical reading aid for orthographic letters preserved in the Uthmani script while the transmitted recitation does not fully sound them. Examples can include dropped alif, dropped yaa, or similar written forms that remain visible for script fidelity."
+            return String(localized: "This is a practical reading aid for orthographic letters preserved in the Uthmani script while the transmitted recitation does not fully sound them. Examples can include dropped alif, dropped yaa, or similar written forms that remain visible for script fidelity.")
         case .hamzatWaslSilent:
-            return "Its role is to allow smooth word-initial pronunciation when starting, but to avoid extra breaks mid-flow when linking words. In practice, students should test both states: start from the word (hear hamzah), then connect from before it (hamzah drops)."
+            return String(localized: "Its role is to allow smooth word-initial pronunciation when starting, but to avoid extra breaks mid-flow when linking words. In practice, students should test both states: start from the word (hear hamzah), then connect from before it (hamzah drops).")
         case .idghamBilaGhunnah:
-            return "Unlike ghunnah-based merges, no nasal hold is maintained here; the sound moves straight into the target letter. This makes timing cleaner and shorter, so avoid adding extra nasal color by habit."
+            return String(localized: "Unlike ghunnah-based merges, no nasal hold is maintained here; the sound moves straight into the target letter. This makes timing cleaner and shorter, so avoid adding extra nasal color by habit.")
             
         case .idghamGhunnah:
-            return "This uses merging into the next letter with a gentle nasal ghunnah. The sound flows smoothly, with the noon or tanween fully blending into the following letter while maintaining clear timing and resonance. It also overlaps with shafawi-style merging behavior in meem-linked contexts."
+            return String(localized: "This uses merging into the next letter with a gentle nasal ghunnah. The sound flows smoothly, with the noon or tanween fully blending into the following letter while maintaining clear timing and resonance. It also overlaps with shafawi-style merging behavior in meem-linked contexts.")
         case .generalGhunnah:
-            return "Use this for explicit noon or meem with shaddah. It is also reused for a few helper target highlights in idgham-style nasal merges, so those targets stay visually connected to the same ghunnah family."
+            return String(localized: "Use this for explicit noon or meem with shaddah. It is also reused for a few helper target highlights in idgham-style nasal merges, so those targets stay visually connected to the same ghunnah family.")
         case .ikhfaaLight:
-            return "This is a light concealment, where the noon or tanween is partially hidden with a soft nasal ghunnah. The sound remains subtle, balancing clarity and smooth transition without fully merging. A meem sakin before baa (ikhfaa shafawi) is hidden in a similar way; it takes iqlab's color, the same lip-closed nasal."
+            return String(localized: "This is a light concealment, where the noon or tanween is partially hidden with a soft nasal ghunnah. The sound remains subtle, balancing clarity and smooth transition without fully merging. A meem sakin before baa (ikhfaa shafawi) is hidden in a similar way; it takes iqlab's color, the same lip-closed nasal.")
         case .ikhfaaHeavy:
-            return "This is a heavier concealment, where the noon or tanween is partially hidden with a stronger nasal ghunnah. The tongue prepares for the next letter while the ghunnah carries the sound, requiring careful control and balance."
+            return String(localized: "This is a heavier concealment, where the noon or tanween is partially hidden with a stronger nasal ghunnah. The tongue prepares for the next letter while the ghunnah carries the sound, requiring careful control and balance.")
         case .iqlaab:
-            return "The practical cue is the following baa: articulation shifts toward the lips with a meem-quality nasal sound before entering baa. Done correctly, the transition sounds natural and connected rather than abrupt."
+            return String(localized: "The practical cue is the following baa: articulation shifts toward the lips with a meem-quality nasal sound before entering baa. Done correctly, the transition sounds natural and connected rather than abrupt.")
             
         case .qalqalah:
-            return "The effect is a quick release, not an added harakah and not a long vowel. Strength can vary by position, but the principle stays the same: keep it crisp and brief so the consonant remains clear without over-bouncing."
+            return String(localized: "The effect is a quick release, not an added harakah and not a long vowel. Strength can vary by position, but the principle stays the same: keep it crisp and brief so the consonant remains clear without over-bouncing.")
         case .tafkhim:
-            return "A useful way to hear it is contrast: read the same syllable lightly, then with tafkhim, and notice the darker resonance. It is strongest on isti'la letters and should stay controlled so heaviness does not spread into nearby vowels or letters."
+            return String(localized: "A useful way to hear it is contrast: read the same syllable lightly, then with tafkhim, and notice the darker resonance. It is strongest on isti'la letters and should stay controlled so heaviness does not spread into nearby vowels or letters.")
         
         case .maddNatural:
-            return "Because it is the reference madd length, mastering its steady two-count rhythm helps calibrate all longer madd forms. The stretch should sound even and relaxed, not clipped and not drifting longer than intended."
+            return String(localized: "Because it is the reference madd length, mastering its steady two-count rhythm helps calibrate all longer madd forms. The stretch should sound even and relaxed, not clipped and not drifting longer than intended.")
         case .maddNaturalMiniature:
-            return "These tiny written signs carry the same two-count natural vowel sound but are controlled separately so you can hide or show miniature Uthmani madd marks independently from normal madd letters."
+            return String(localized: "These tiny written signs carry the same two-count natural vowel sound but are controlled separately so you can hide or show miniature Uthmani madd marks independently from normal madd letters.")
         case .maddSukoon:
-            return "The key condition is pausing at the word ending. This includes madd aarid lis-sukoon, where the final letter becomes temporarily sakin after a normal madd letter, and madd leen, where a sakin waaw or yaa follows a fathah and is stretched softly when stopping. Use 2, 4, or 6 counts consistently, and keep madd leen no longer than the madd aarid length chosen in the same recitation."
+            return String(localized: "The key condition is pausing at the word ending. This includes madd aarid lis-sukoon, where the final letter becomes temporarily sakin after a normal madd letter, and madd leen, where a sakin waaw or yaa follows a fathah and is stretched softly when stopping. Use 2, 4, or 6 counts consistently, and keep madd leen no longer than the madd aarid length chosen in the same recitation.")
         case .maddSeparated:
-            return "Because the hamzah is in the following word, scholars classify this separately from muttasil. Allowed lengths vary by riwayah, so learners should follow one taught pattern and avoid switching counts randomly in the same recitation. This color also marks Madd Munfasil Hukmi (\"ruled\" separated). In a handful of words, the vocative يَٰٓ (\"O…\") and demonstrative هَٰٓ (\"these…\") particles are written joined to a following hamzah, such as يَٰٓأَيُّهَا and هَٰٓؤُلَآءِ; there, only that superscript-particle sequence is treated as separated even though it sits inside one written word."
+            return String(localized: "Because the hamzah is in the following word, scholars classify this separately from muttasil. Allowed lengths vary by riwayah, so learners should follow one taught pattern and avoid switching counts randomly in the same recitation. This color also marks Madd Munfasil Hukmi (\"ruled\" separated). In a handful of words, the vocative يَٰٓ (\"O…\") and demonstrative هَٰٓ (\"these…\") particles are written joined to a following hamzah, such as يَٰٓأَيُّهَا and هَٰٓؤُلَآءِ; there, only that superscript-particle sequence is treated as separated even though it sits inside one written word.")
         case .maddConnected:
-            return "Since both elements occur inside one word, this is treated as a stronger extension than natural madd. Keep the elongation measured and stable according to your riwayah so the hamzah after it remains clear and not swallowed. Note one exception: in the يَٰٓ/هَٰٓ particle words (e.g. يَٰٓأَيُّهَا, هَٰٓؤُلَآءِ) the superscript madd before the hamzah is recited as Madd Munfasil Hukmi instead, but any real madd letter + hamzah elsewhere in those same words (e.g. لَآءِ in هَٰٓؤُلَآءِ) stays muttasil."
+            return String(localized: "Since both elements occur inside one word, this is treated as a stronger extension than natural madd. Keep the elongation measured and stable according to your riwayah so the hamzah after it remains clear and not swallowed. Note one exception: in the يَٰٓ/هَٰٓ particle words (e.g. يَٰٓأَيُّهَا, هَٰٓؤُلَآءِ) the superscript madd before the hamzah is recited as Madd Munfasil Hukmi instead, but any real madd letter + hamzah elsewhere in those same words (e.g. لَآءِ in هَٰٓؤُلَآءِ) stays muttasil.")
         case .maddNecessary:
-            return "This category is fixed and not flexible like optional madd forms, so it should be given its full required length whenever encountered. Its consistency is one of the easiest ways to stabilize rhythm and accuracy in longer passages."
+            return String(localized: "This category is fixed and not flexible like optional madd forms, so it should be given its full required length whenever encountered. Its consistency is one of the easiest ways to stabilize rhythm and accuracy in longer passages.")
             
         @unknown default:
-            return "Tajweed rule"
+            return String(localized: "Tajweed rule")
         }
     }
 }
@@ -434,7 +434,7 @@ enum TajweedRuleAlias: String, CaseIterable {
     var englishTitle: String {
         switch self {
         case .idghamWithGhunnah: return TajweedLegendCategory.idghamGhunnah.englishTitle
-        case .ikhfaaShafawi: return "Hidden Meem"
+        case .ikhfaaShafawi: return String(localized: "Hidden Meem")
         }
     }
 

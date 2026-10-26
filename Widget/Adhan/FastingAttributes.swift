@@ -20,8 +20,8 @@ struct FastingAttributes: ActivityAttributes {
 
         var title: String {
             switch self {
-            case .suhoor: return "Suhoor"
-            case .iftar:  return "Iftar"
+            case .suhoor: return String(localized: "Suhoor")
+            case .iftar:  return String(localized: "Iftar")
             }
         }
 

@@ -27,15 +27,15 @@ enum AskAIEngineKind: String, Codable, CaseIterable {
 
     var title: String {
         switch self {
-        case .onDevice: return "On device"
-        case .privateCloud: return "Private Cloud Compute"
+        case .onDevice: return String(localized: "On device")
+        case .privateCloud: return String(localized: "Private Cloud Compute")
         }
     }
 
     var badge: String {
         switch self {
-        case .onDevice: return "On device"
-        case .privateCloud: return "Private Cloud"
+        case .onDevice: return String(localized: "On device")
+        case .privateCloud: return String(localized: "Private Cloud")
         }
     }
 }
@@ -199,7 +199,7 @@ enum AskAIEngine {
     // MARK: Failures
 
     static func classify(_ error: Error) -> Failure {
-        if error is CloudUnavailable { return .cloudUnavailable("Private Cloud Compute is not available right now") }
+        if error is CloudUnavailable { return .cloudUnavailable(String(localized: "Private Cloud Compute is not available right now")) }
         if let generation = error as? LanguageModelSession.GenerationError {
             switch generation {
             case .exceededContextWindowSize: return .contextOverflow
@@ -224,16 +224,16 @@ enum AskAIEngine {
                 case .unsupportedLanguageOrLocale: return .unsupportedLanguage
                 case .rateLimited: return .busy
                 case .refusal: return .refusal
-                case .timeout: return .other("The model took too long to answer.")
+                case .timeout: return .other(String(localized: "The model took too long to answer."))
                 default: return .other(nil)
                 }
             }
             if let cloud = error as? PrivateCloudComputeLanguageModel.Error {
                 switch cloud {
-                case .networkFailure: return .cloudUnavailable("no connection")
-                case .quotaLimitReached: return .cloudUnavailable("the daily Private Cloud Compute limit was reached")
-                case .serviceUnavailable: return .cloudUnavailable("Private Cloud Compute is unavailable right now")
-                @unknown default: return .cloudUnavailable("Private Cloud Compute could not answer")
+                case .networkFailure: return .cloudUnavailable(String(localized: "no connection"))
+                case .quotaLimitReached: return .cloudUnavailable(String(localized: "the daily Private Cloud Compute limit was reached"))
+                case .serviceUnavailable: return .cloudUnavailable(String(localized: "Private Cloud Compute is unavailable right now"))
+                @unknown default: return .cloudUnavailable(String(localized: "Private Cloud Compute could not answer"))
                 }
             }
         }
@@ -245,19 +245,19 @@ enum AskAIEngine {
     static func message(for failure: Failure) -> String? {
         switch failure {
         case .guardrail:
-            return "Apple Intelligence declined to answer this one. Try rephrasing the question, or asking about it in a different way."
+            return String(localized: "Apple Intelligence declined to answer this one. Try rephrasing the question, or asking about it in a different way.")
         case .refusal:
-            return "Apple Intelligence declined to answer this one. Try asking in a different way."
+            return String(localized: "Apple Intelligence declined to answer this one. Try asking in a different way.")
         case .unsupportedLanguage:
-            return "Apple Intelligence can\u{2019}t work in that language yet. Try asking in English."
+            return String(localized: "Apple Intelligence can\u{2019}t work in that language yet. Try asking in English.")
         case .busy:
-            return "Apple Intelligence is busy right now. Try again in a moment."
+            return String(localized: "Apple Intelligence is busy right now. Try again in a moment.")
         case .contextOverflow:
-            return "This turn was longer than the model can read in one go. Try a shorter question, or start a new conversation."
+            return String(localized: "This turn was longer than the model can read in one go. Try a shorter question, or start a new conversation.")
         case .modelUnavailable:
-            return "Apple Intelligence\u{2019}s model isn\u{2019}t ready on this device right now. If Apple Intelligence was just turned on, its model may still be downloading; try again in a little while."
+            return String(localized: "Apple Intelligence\u{2019}s model isn\u{2019}t ready on this device right now. If Apple Intelligence was just turned on, its model may still be downloading; try again in a little while.")
         case .cloudUnavailable(let reason):
-            return "Private Cloud Compute could not answer (\(reason))."
+            return String(localized: "Private Cloud Compute could not answer (\(reason)).")
         case .other(let text):
             return text
         }
@@ -440,8 +440,8 @@ enum AskAIPrompt {
 
 enum AskAIEngineKind: String, Codable, CaseIterable {
     case onDevice, privateCloud
-    var title: String { self == .onDevice ? "On device" : "Private Cloud Compute" }
-    var badge: String { self == .onDevice ? "On device" : "Private Cloud" }
+    var title: String { self == .onDevice ? String(localized: "On device") : String(localized: "Private Cloud Compute") }
+    var badge: String { self == .onDevice ? String(localized: "On device") : String(localized: "Private Cloud") }
 }
 
 struct AskAIProfile {

@@ -180,7 +180,7 @@ struct PropheciesView: View {
         }
         // NO `article:` here: that adds the per-page "Search this article" bar, and this screen
         // is an INDEX with its own library search below - two stacked search bars.
-        .selectableArticleList()
+        .englishArticle().selectableArticleList()
         .aboutSignsDestination($openDoor)
         #if DEBUG
         // `-prophecy <id>`: push that article on appear - a tap cannot be driven headlessly.
@@ -219,6 +219,14 @@ struct PropheciesView: View {
 /// One prophecy: what was said, the narration itself, and what happened.
 struct ProphecyArticleView: View {
     let entry: PropheciesView.Entry
+    /// The page's sections as its search bar scans them: the corpus has no row for a generated page.
+    /// Folded once here, not per body pass.
+    private let searchArticle: IslamArticle
+
+    init(entry: PropheciesView.Entry) {
+        self.entry = entry
+        searchArticle = .generated(id: "Prophecy-\(entry.id)", title: entry.title, sections: entry.sections)
+    }
 
     var body: some View {
         List {
@@ -227,7 +235,7 @@ struct ProphecyArticleView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "Prophecy-\(entry.id)")
+        .englishArticle().selectableArticleList(article: searchArticle.id, fallback: searchArticle)
         .navigationTitle(entry.title)
         .navigationBarTitleDisplayMode(.inline)
     }

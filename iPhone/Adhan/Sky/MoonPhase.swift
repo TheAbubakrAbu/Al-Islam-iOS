@@ -15,11 +15,11 @@ struct MoonPhase: Equatable {
     /// The eight conventional phase names, chosen by illumination and direction.
     var name: String {
         switch illumination {
-        case ..<0.04: return "New Moon"
-        case ..<0.46: return isWaxing ? "Waxing Crescent" : "Waning Crescent"
-        case ..<0.54: return isWaxing ? "First Quarter" : "Last Quarter"
-        case ..<0.96: return isWaxing ? "Waxing Gibbous" : "Waning Gibbous"
-        default:      return "Full Moon"
+        case ..<0.04: return String(localized: "New Moon")
+        case ..<0.46: return isWaxing ? String(localized: "Waxing Crescent") : String(localized: "Waning Crescent")
+        case ..<0.54: return isWaxing ? String(localized: "First Quarter") : String(localized: "Last Quarter")
+        case ..<0.96: return isWaxing ? String(localized: "Waxing Gibbous") : String(localized: "Waning Gibbous")
+        default:      return String(localized: "Full Moon")
         }
     }
 

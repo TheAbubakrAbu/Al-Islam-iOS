@@ -21,9 +21,9 @@ struct WordSegment: Equatable, Identifiable {
 
         var title: String {
             switch self {
-            case .prefix: return "Prefix"
-            case .stem: return "Stem"
-            case .suffix: return "Suffix"
+            case .prefix: return String(localized: "Prefix")
+            case .stem: return String(localized: "Stem")
+            case .suffix: return String(localized: "Suffix")
             }
         }
     }
@@ -234,76 +234,76 @@ final class WordGrammarStore: @unchecked Sendable {
 
 enum WordGrammarLabels {
     static let pos: [String: String] = [
-        "N": "Noun", "PN": "Proper noun", "ADJ": "Adjective", "PRON": "Pronoun", "V": "Verb",
-        "P": "Preposition", "CONJ": "Conjunction", "DET": "Definite article", "REL": "Relative pronoun",
-        "DEM": "Demonstrative", "T": "Time adverb", "LOC": "Location adverb", "NEG": "Negative particle",
-        "ACC": "Accusative particle", "EMPH": "Emphatic particle", "COND": "Conditional particle",
-        "INTG": "Question particle", "SUB": "Subordinating conjunction", "RES": "Restriction particle",
-        "CERT": "Particle of certainty", "VOC": "Vocative particle", "RSLT": "Result particle",
-        "PRO": "Prohibition particle", "PRP": "Purpose particle", "CIRC": "Circumstantial particle",
-        "SUP": "Supplemental particle", "PREV": "Preventive particle", "FUT": "Future particle",
-        "RET": "Retraction particle", "EXP": "Exception particle", "INC": "Inceptive particle",
-        "CAUS": "Particle of cause", "IMPV": "Imperative particle", "EXL": "Explanation particle",
-        "AMD": "Amendment particle", "INT": "Interpretive particle", "EXH": "Exhortation particle",
-        "ANS": "Answer particle", "SUR": "Surprise particle", "AVR": "Aversion particle",
-        "INL": "Quranic initials", "EQ": "Equalization particle", "COM": "Comitative particle",
-        "IMPN": "Imperative verbal noun", "REM": "Resumption particle",
+        "N": String(localized: "Noun"), "PN": String(localized: "Proper noun"), "ADJ": String(localized: "Adjective"), "PRON": String(localized: "Pronoun"), "V": String(localized: "Verb"),
+        "P": String(localized: "Preposition"), "CONJ": String(localized: "Conjunction"), "DET": String(localized: "Definite article"), "REL": String(localized: "Relative pronoun"),
+        "DEM": String(localized: "Demonstrative"), "T": String(localized: "Time adverb"), "LOC": String(localized: "Location adverb"), "NEG": String(localized: "Negative particle"),
+        "ACC": String(localized: "Accusative particle"), "EMPH": String(localized: "Emphatic particle"), "COND": String(localized: "Conditional particle"),
+        "INTG": String(localized: "Question particle"), "SUB": String(localized: "Subordinating conjunction"), "RES": String(localized: "Restriction particle"),
+        "CERT": String(localized: "Particle of certainty"), "VOC": String(localized: "Vocative particle"), "RSLT": String(localized: "Result particle"),
+        "PRO": String(localized: "Prohibition particle"), "PRP": String(localized: "Purpose particle"), "CIRC": String(localized: "Circumstantial particle"),
+        "SUP": String(localized: "Supplemental particle"), "PREV": String(localized: "Preventive particle"), "FUT": String(localized: "Future particle"),
+        "RET": String(localized: "Retraction particle"), "EXP": String(localized: "Exception particle"), "INC": String(localized: "Inceptive particle"),
+        "CAUS": String(localized: "Particle of cause"), "IMPV": String(localized: "Imperative particle"), "EXL": String(localized: "Explanation particle"),
+        "AMD": String(localized: "Amendment particle"), "INT": String(localized: "Interpretive particle"), "EXH": String(localized: "Exhortation particle"),
+        "ANS": String(localized: "Answer particle"), "SUR": String(localized: "Surprise particle"), "AVR": String(localized: "Aversion particle"),
+        "INL": String(localized: "Quranic initials"), "EQ": String(localized: "Equalization particle"), "COM": String(localized: "Comitative particle"),
+        "IMPN": String(localized: "Imperative verbal noun"), "REM": String(localized: "Resumption particle"),
     ]
 
     static let prefix: [String: String] = [
-        "Al+": "the", "bi+": "with, by, in", "l:P+": "for, to", "l:EMPH+": "indeed, surely",
-        "l:PRP+": "so that, in order to", "l:IMPV+": "let, so command", "w:CONJ+": "and",
-        "w:REM+": "and, resuming", "w:CIRC+": "while", "w:SUP+": "and, supplemental", "w:P+": "by, an oath",
-        "w:COM+": "together with", "f:CONJ+": "and then", "f:REM+": "so, then", "f:RSLT+": "then, as a result",
-        "f:SUP+": "then, supplemental", "f:CAUS+": "so, because of that", "ka+": "like, as", "sa+": "will, soon",
-        "ya+": "O, calling", "A:INTG+": "is it? a question", "A:EQ+": "whether", "ha+": "behold",
-        "ta+": "by, an oath",
+        "Al+": String(localized: "the"), "bi+": String(localized: "with, by, in"), "l:P+": String(localized: "for, to"), "l:EMPH+": String(localized: "indeed, surely"),
+        "l:PRP+": String(localized: "so that, in order to"), "l:IMPV+": String(localized: "let, so command"), "w:CONJ+": String(localized: "and"),
+        "w:REM+": String(localized: "and, resuming"), "w:CIRC+": String(localized: "while"), "w:SUP+": String(localized: "and, supplemental"), "w:P+": String(localized: "by, an oath"),
+        "w:COM+": String(localized: "together with"), "f:CONJ+": String(localized: "and then"), "f:REM+": String(localized: "so, then"), "f:RSLT+": String(localized: "then, as a result"),
+        "f:SUP+": String(localized: "then, supplemental"), "f:CAUS+": String(localized: "so, because of that"), "ka+": String(localized: "like, as"), "sa+": String(localized: "will, soon"),
+        "ya+": String(localized: "O, calling"), "A:INTG+": String(localized: "is it? a question"), "A:EQ+": String(localized: "whether"), "ha+": String(localized: "behold"),
+        "ta+": String(localized: "by, an oath"),
     ]
 
     static let feature: [String: String] = [
-        "PERF": "past tense", "IMPF": "present tense", "IMPV": "command", "ACT": "active", "PASS": "passive",
-        "VN": "verbal noun", "PCPL:ACT": "active participle", "PCPL:PASS": "passive participle",
-        "PCPL": "participle", "INDEF": "indefinite", "DEF": "definite", "NOM": "nominative",
-        "ACC": "accusative", "GEN": "genitive", "MOOD:IND": "indicative", "MOOD:SUBJ": "subjunctive",
-        "MOOD:JUS": "jussive", "MOOD:ENG": "energetic", "SP:kaAn": "kāna and its sisters",
-        "SP:<in~": "inna and its sisters", "SP:kaAd": "kāda and its sisters", "+n:EMPH": "emphatic nun",
-        "+VOC": "vocative ending",
+        "PERF": String(localized: "past tense"), "IMPF": String(localized: "present tense"), "IMPV": String(localized: "command"), "ACT": String(localized: "active"), "PASS": String(localized: "passive"),
+        "VN": String(localized: "verbal noun"), "PCPL:ACT": String(localized: "active participle"), "PCPL:PASS": String(localized: "passive participle"),
+        "PCPL": String(localized: "participle"), "INDEF": String(localized: "indefinite"), "DEF": String(localized: "definite"), "NOM": String(localized: "nominative"),
+        "ACC": String(localized: "accusative"), "GEN": String(localized: "genitive"), "MOOD:IND": String(localized: "indicative"), "MOOD:SUBJ": String(localized: "subjunctive"),
+        "MOOD:JUS": String(localized: "jussive"), "MOOD:ENG": String(localized: "energetic"), "SP:kaAn": String(localized: "kāna and its sisters"),
+        "SP:<in~": String(localized: "inna and its sisters"), "SP:kaAd": String(localized: "kāda and its sisters"), "+n:EMPH": String(localized: "emphatic nun"),
+        "+VOC": String(localized: "vocative ending"),
     ]
 
     static let verbForm: [String: String] = [
-        "(I)": "Form I (فَعَلَ)", "(II)": "Form II (فَعَّلَ)", "(III)": "Form III (فَاعَلَ)",
-        "(IV)": "Form IV (أَفْعَلَ)", "(V)": "Form V (تَفَعَّلَ)", "(VI)": "Form VI (تَفَاعَلَ)",
-        "(VII)": "Form VII (اِنْفَعَلَ)", "(VIII)": "Form VIII (اِفْتَعَلَ)", "(IX)": "Form IX (اِفْعَلَّ)",
-        "(X)": "Form X (اِسْتَفْعَلَ)", "(XI)": "Form XI (اِفْعَالَّ)", "(XII)": "Form XII (اِفْعَوْعَلَ)",
+        "(I)": String(localized: "Form I (فَعَلَ)"), "(II)": String(localized: "Form II (فَعَّلَ)"), "(III)": String(localized: "Form III (فَاعَلَ)"),
+        "(IV)": String(localized: "Form IV (أَفْعَلَ)"), "(V)": String(localized: "Form V (تَفَعَّلَ)"), "(VI)": String(localized: "Form VI (تَفَاعَلَ)"),
+        "(VII)": String(localized: "Form VII (اِنْفَعَلَ)"), "(VIII)": String(localized: "Form VIII (اِفْتَعَلَ)"), "(IX)": String(localized: "Form IX (اِفْعَلَّ)"),
+        "(X)": String(localized: "Form X (اِسْتَفْعَلَ)"), "(XI)": String(localized: "Form XI (اِفْعَالَّ)"), "(XII)": String(localized: "Form XII (اِفْعَوْعَلَ)"),
     ]
 
-    static let person: [String: String] = ["1": "first person", "2": "second person", "3": "third person"]
-    static let gender: [String: String] = ["M": "masculine", "F": "feminine"]
-    static let number: [String: String] = ["S": "singular", "D": "dual", "P": "plural"]
+    static let person: [String: String] = ["1": String(localized: "first person"), "2": String(localized: "second person"), "3": String(localized: "third person")]
+    static let gender: [String: String] = ["M": String(localized: "masculine"), "F": String(localized: "feminine")]
+    static let number: [String: String] = ["S": String(localized: "singular"), "D": String(localized: "dual"), "P": String(localized: "plural")]
 
     static let pronoun: [String: String] = [
-        "1S": "I, me, my", "1P": "we, us, our", "2MS": "you (one man)", "2FS": "you (one woman)",
-        "2D": "you two", "2MD": "you two", "2FD": "you two", "2MP": "you (all)", "2FP": "you (all, women)",
-        "3MS": "he, him, his", "3FS": "she, her", "3D": "they two", "3MD": "they two", "3FD": "they two",
-        "3MP": "they, them, their", "3FP": "they (women)",
+        "1S": String(localized: "I, me, my"), "1P": String(localized: "we, us, our"), "2MS": String(localized: "you (one man)"), "2FS": String(localized: "you (one woman)"),
+        "2D": String(localized: "you two"), "2MD": String(localized: "you two"), "2FD": String(localized: "you two"), "2MP": String(localized: "you (all)"), "2FP": String(localized: "you (all, women)"),
+        "3MS": String(localized: "he, him, his"), "3FS": String(localized: "she, her"), "3D": String(localized: "they two"), "3MD": String(localized: "they two"), "3FD": String(localized: "they two"),
+        "3MP": String(localized: "they, them, their"), "3FP": String(localized: "they (women)"),
     ]
 
     /// One plain sentence under a few analysis values, for a reader who has never met the term.
-    static let explainer: [String: String] = [
-        "nominative": "The subject's case; the word usually ends in -u.",
-        "accusative": "The object's case; the word usually ends in -a.",
-        "genitive": "After a preposition, or the owner in a possessive; the word usually ends in -i.",
-        "past tense": "A completed action.",
-        "present tense": "An action going on, or still to come.",
-        "command": "An order or a request.",
-        "indefinite": "Without al-: \u{201C}a\u{201D} or \u{201C}an\u{201D}.",
-        "definite": "With al-: \u{201C}the\u{201D}.",
-        "active participle": "The doer: one who does the action.",
-        "passive participle": "The one the action is done to.",
-        "verbal noun": "The action itself as a noun.",
-        "jussive": "A verb after لَمْ, لَا of forbidding, or a condition.",
-        "subjunctive": "A verb after أَنْ, لَنْ, كَيْ and similar particles.",
-    ]
+    static let explainer: [String: String] = Dictionary([
+        (String(localized: "nominative"), String(localized: "The subject's case; the word usually ends in -u.")),
+        (String(localized: "accusative"), String(localized: "The object's case; the word usually ends in -a.")),
+        (String(localized: "genitive"), String(localized: "After a preposition, or the owner in a possessive; the word usually ends in -i.")),
+        (String(localized: "past tense"), String(localized: "A completed action.")),
+        (String(localized: "present tense"), String(localized: "An action going on, or still to come.")),
+        (String(localized: "command"), String(localized: "An order or a request.")),
+        (String(localized: "indefinite"), String(localized: "Without al-: \u{201C}a\u{201D} or \u{201C}an\u{201D}.")),
+        (String(localized: "definite"), String(localized: "With al-: \u{201C}the\u{201D}.")),
+        (String(localized: "active participle"), String(localized: "The doer: one who does the action.")),
+        (String(localized: "passive participle"), String(localized: "The one the action is done to.")),
+        (String(localized: "verbal noun"), String(localized: "The action itself as a noun.")),
+        (String(localized: "jussive"), String(localized: "A verb after لَمْ, لَا of forbidding, or a condition.")),
+        (String(localized: "subjunctive"), String(localized: "A verb after أَنْ, لَنْ, كَيْ and similar particles.")),
+    ], uniquingKeysWith: { first, _ in first })
 }
 
 // MARK: - Sentences
@@ -399,19 +399,19 @@ enum WordGrammarText {
         func has(_ token: String) -> Bool { stem.features.contains(token) }
         func label(_ token: String) -> String { WordGrammarLabels.feature[token] ?? "" }
 
-        add("Part of speech", WordGrammarLabels.pos[stem.tag] ?? "")
-        if let root { add("Root", root, arabic: true) }
-        if let lemma { add("Dictionary form", lemma, arabic: true) }
+        add(String(localized: "Part of speech"), WordGrammarLabels.pos[stem.tag] ?? "")
+        if let root { add(String(localized: "Root"), root, arabic: true) }
+        if let lemma { add(String(localized: "Dictionary form"), lemma, arabic: true) }
         if let form = stem.features.first(where: { WordGrammarLabels.verbForm[$0] != nil }) {
-            add("Verb form", WordGrammarLabels.verbForm[form] ?? "")
+            add(String(localized: "Verb form"), WordGrammarLabels.verbForm[form] ?? "")
         }
         if stem.tag == "V" {
-            add("Tense", has("PERF") ? label("PERF") : has("IMPF") ? label("IMPF") : has("IMPV") ? label("IMPV") : "")
-            if let mood = stem.features.first(where: { $0.hasPrefix("MOOD:") }) { add("Mood", label(mood)) }
-            add("Voice", has("PASS") ? label("PASS") : label("ACT"))
+            add(String(localized: "Tense"), has("PERF") ? label("PERF") : has("IMPF") ? label("IMPF") : has("IMPV") ? label("IMPV") : "")
+            if let mood = stem.features.first(where: { $0.hasPrefix("MOOD:") }) { add(String(localized: "Mood"), label(mood)) }
+            add(String(localized: "Voice"), has("PASS") ? label("PASS") : label("ACT"))
         } else {
-            if has("VN") { add("Derivation", label("VN")) }
-            if has("PCPL") { add("Derivation", label(has("PASS") ? "PCPL:PASS" : "PCPL:ACT")) }
+            if has("VN") { add(String(localized: "Derivation"), label("VN")) }
+            if has("PCPL") { add(String(localized: "Derivation"), label(has("PASS") ? "PCPL:PASS" : "PCPL:ACT")) }
         }
         if let personToken = stem.features.first(where: { personCode($0) != nil }) {
             let code = personCode(personToken)
@@ -419,18 +419,18 @@ enum WordGrammarText {
             let pronoun = (stem.tag == "V" || stem.tag == "PRON") ? (WordGrammarLabels.pronoun[personToken] ?? "") : ""
             // A noun has a gender and a number but no person: "masculine singular" is not an answer
             // to "who is speaking".
-            add(code?.person != nil ? "Person and number" : "Gender and number", phrase,
+            add(code?.person != nil ? String(localized: "Person and number") : String(localized: "Gender and number"), phrase,
                 detail: !pronoun.isEmpty && pronoun != phrase ? "\u{201C}\(pronoun)\u{201D}" : nil)
         }
         if let caseToken = stem.features.first(where: { ["NOM", "ACC", "GEN"].contains($0) }) {
-            add("Case", label(caseToken))
+            add(String(localized: "Case"), label(caseToken))
         }
         if has("INDEF") {
-            add("Definiteness", label("INDEF"))
+            add(String(localized: "Definiteness"), label("INDEF"))
         } else if grammar.segments.contains(where: { $0.kind == .prefix && $0.features.contains("Al+") }) {
-            add("Definiteness", label("DEF"))
+            add(String(localized: "Definiteness"), label("DEF"))
         }
-        if let group = stem.features.first(where: { $0.hasPrefix("SP:") }) { add("Group", label(group)) }
+        if let group = stem.features.first(where: { $0.hasPrefix("SP:") }) { add(String(localized: "Group"), label(group)) }
         return facts
     }
 
@@ -439,7 +439,7 @@ enum WordGrammarText {
         guard let stem = grammar.stem else { return (nil, nil) }
         let form = stem.features.first { WordGrammarLabels.verbForm[$0] != nil }
             .map { String($0.dropFirst().dropLast()) }
-            .map { "Form \($0)" }
+            .map { String(localized: "Form \($0)") }
         return (WordGrammarLabels.pos[stem.tag], form)
     }
 }
@@ -467,14 +467,14 @@ struct WordGrammarPage: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                emptyCard("No grammar annotation is available for this word.")
+                emptyCard(String(localized: "No grammar annotation is available for this word."))
             }
         }
     }
 
     private func breakdownCard(_ grammar: WordGrammar) -> some View {
         let current = selected ?? grammar.stem?.index ?? 0
-        return StudyCard(title: "WORD BREAKDOWN") {
+        return StudyCard(title: String(localized: "WORD BREAKDOWN")) {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Tap a part to light it in the word above.")
                     .font(.caption)
@@ -534,7 +534,7 @@ struct WordGrammarPage: View {
 
     private func analysisCard(_ grammar: WordGrammar) -> some View {
         let facts = WordGrammarText.facts(grammar, root: root, lemma: lemma)
-        return StudyCard(title: "ANALYSIS") {
+        return StudyCard(title: String(localized: "ANALYSIS")) {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(facts.enumerated()), id: \.element.id) { index, fact in
                     if index > 0 { Divider() }
@@ -603,14 +603,16 @@ struct WordRootPage: View {
                 occurrencesCard(occurrences)
                 siblingsCard(rootID: rootInfo.id, occurrences: occurrences, current: lemmaInfo?.id)
             } else {
-                emptyCard("No root is recorded for this word. Particles and some names have no root entry.")
+                emptyCard(String(localized: "No root is recorded for this word. Particles and some names have no root entry."))
                 if let lemmaInfo {
-                    StudyCard(title: "DICTIONARY FORM") {
+                    StudyCard(title: String(localized: "DICTIONARY FORM")) {
                         Text(lemmaInfo.lemma.text)
                             .font(.custom(fontName, size: 30))
                             .arabicFontDesign(custom: true)
                             .foregroundColor(appearance.accent)
                             .frame(maxWidth: .infinity, alignment: .trailing)
+                            // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                            .environment(\.layoutDirection, .leftToRight)
                     }
                 }
             }
@@ -620,15 +622,15 @@ struct WordRootPage: View {
 
     private func rootCard(_ root: MorphologyStore.Root, lemma: (id: Int, lemma: MorphologyStore.Lemma)?,
                           count: Int, occurrences: [WordLocation], rootID: Int) -> some View {
-        StudyCard(title: "ROOT") {
+        StudyCard(title: String(localized: "ROOT")) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(count == 1 ? "1 word in the Quran" : "\(count) words in the Quran")
+                        Text(count == 1 ? String(localized: "1 word in the Quran") : String(localized: "\(count) words in the Quran"))
                             .font(.subheadline.weight(.semibold))
                         if let lemma {
                             let lemmaCount = MorphologyStore.shared.occurrences(ofLemma: lemma.id).count
-                            Text("This form: \(lemmaCount == 1 ? "once" : "\(lemmaCount) times")")
+                            Text(lemmaCount == 1 ? String(localized: "This form: once") : String(localized: "This form: \(lemmaCount) times"))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -642,7 +644,7 @@ struct WordRootPage: View {
 
                 NavigationLink {
                     LazyDestination {
-                        RootOccurrencesView(title: "Root \(root.letters)", locations: occurrences, highlight: location)
+                        RootOccurrencesView(title: String(localized: "Root \(root.letters)"), locations: occurrences, highlight: location)
                     }
                 } label: {
                     HStack(spacing: 8) {
@@ -650,7 +652,7 @@ struct WordRootPage: View {
                         Text("Every Ayah With This Root")
                             .fontWeight(.medium)
                         Spacer()
-                        Image(systemName: "chevron.right")
+                        Image(systemName: "chevron.forward")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.tertiary)
                     }
@@ -670,7 +672,7 @@ struct WordRootPage: View {
 
     private func occurrencesCard(_ occurrences: [WordLocation]) -> some View {
         let page = Array(occurrences.prefix(shown))
-        return StudyCard(title: "WORDS FROM THIS ROOT") {
+        return StudyCard(title: String(localized: "WORDS FROM THIS ROOT")) {
             VStack(alignment: .leading, spacing: 0) {
                 Text("In mushaf order. Tap one to study it here.")
                     .font(.caption)
@@ -706,7 +708,7 @@ struct WordRootPage: View {
     private func siblingsCard(rootID: Int, occurrences: [WordLocation], current: Int?) -> some View {
         let siblings = Self.siblings(occurrences: occurrences, excluding: current)
         if !siblings.isEmpty {
-            StudyCard(title: "OTHER WORDS FROM THIS ROOT") {
+            StudyCard(title: String(localized: "OTHER WORDS FROM THIS ROOT")) {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(siblings.enumerated()), id: \.element.id) { index, sibling in
                         if index > 0 { Divider() }
@@ -720,7 +722,9 @@ struct WordRootPage: View {
                                         .font(.subheadline)
                                         .foregroundStyle(.primary)
                                         .lineLimit(2)
-                                    Text(sibling.count == 1 ? "once in the Quran" : "\(sibling.count) times in the Quran")
+                                        // The English gloss keeps its own direction in the Arabic interface.
+                                        .leftToRightContent()
+                                    Text(sibling.count == 1 ? String(localized: "once in the Quran") : String(localized: "\(sibling.count) times in the Quran"))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -729,7 +733,7 @@ struct WordRootPage: View {
                                     .font(.custom(fontName, size: 22))
                                     .arabicFontDesign(custom: true)
                                     .foregroundColor(appearance.accent)
-                                Image(systemName: "chevron.right")
+                                Image(systemName: "chevron.forward")
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.tertiary)
                             }
@@ -788,7 +792,7 @@ private struct OccurrenceLine: View {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text("\(QuranData.shared.surah(location.surah)?.nameTransliteration ?? "") \(location.surah):\(location.ayah)")
+                        Text("\(QuranData.shared.surah(location.surah)?.displayName ?? "") \(location.surah):\(location.ayah)")
                             .font(.caption.weight(.semibold).monospacedDigit())
                             .foregroundStyle(.secondary)
                         if isCurrent {
@@ -804,6 +808,7 @@ private struct OccurrenceLine: View {
                         .font(.subheadline)
                         .foregroundStyle(.primary)
                         .lineLimit(2)
+                        .leftToRightContent()
                 }
                 Spacer(minLength: 8)
                 Text(word)

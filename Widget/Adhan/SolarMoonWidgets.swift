@@ -217,7 +217,7 @@ struct SolarArcEntryView: View {
                     Image(systemName: current.image)
                         .font(.subheadline)
 
-                    Text(current.displayName)
+                    Text(current.displayName.localizedDisplay)
                         .font(.headline)
 
                     Spacer(minLength: 4)
@@ -311,7 +311,10 @@ struct MoonEntryView: View {
                     // The widget's one prayer slot names the prayer you're IN, with the time left in it -
                     // the same current-first framing every other Adhan widget uses.
                     if let current = entry.currentPrayer, let next = entry.nextPrayer {
-                        Text("\(current.displayName) \(Text(next.time, style: .timer))")
+                        // Led right to left in Arabic (`Text.rightToLeftLine`): two arguments and a space set
+                        // no direction of their own, and the timer drew before the prayer's name.
+                        Text("\(current.displayName.localizedDisplay) \(Text(next.time, style: .timer))")
+                            .rightToLeftLine()
                             .font(.caption2)
                             .foregroundColor(skyStyle ? .white.opacity(0.9) : .primary)
                             .lineLimit(1)
@@ -375,7 +378,7 @@ struct SolarMoonBoardEntryView: View {
                     Image(systemName: current.image)
                         .font(.subheadline)
 
-                    Text(current.displayName)
+                    Text(current.displayName.localizedDisplay)
                         .font(.headline)
 
                     Spacer(minLength: 4)
@@ -422,7 +425,7 @@ struct SolarMoonBoardEntryView: View {
                     ForEach(Array(entry.prayers.enumerated()), id: \.element.id) { index, prayer in
                         if index > 0 { Spacer(minLength: 4) }
                         VStack(spacing: 3) {
-                            Text(prayer.displayName)
+                            Text(prayer.displayName.localizedDisplay)
                                 .font(.caption2.weight(.semibold))
 
                             Text(prayer.time, style: .time)

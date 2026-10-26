@@ -29,37 +29,43 @@ quran-page-collapsed|8|-launchTabQuran -quranPageMode -lastRead 55:1 -mushafColl
 quran-page-picker|8|-launchTabQuran -quranPageMode -lastRead 1:1 -openSurahPicker
 quran-page-sheet-range|9|-launchTabQuran -quranPageMode -lastRead 2:1 -openPageSheet customRange
 quran-row-sheet-range|9|-launchTabQuran -quranListMode -lastRead 2:1 -openRowSheet customRange
-quran-row-sheet-word|9|-launchTabQuran -quranListMode -lastRead 2:1 -openRowSheet word -wordIndex 1
+quran-row-sheet-word|9|-launchTabQuran -quranListMode -lastRead 2:2 -openRowSheet word -wordIndex 1
 quran-search|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "mercy"
 quran-search-arabic|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "الرحمن"
 quran-search-ref|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "2:255"
-quran-surah-search|8|-launchTabQuran -quranListMode -noAutoOpenMushaf -surahSearch "yaseen"
+quran-surah-search|9|-launchTabQuran -quranListMode -lastRead 36:1 -surahSearch "yaseen"
 quran-search-seatless|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "شيئا"
 quran-search-maa|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "ماء"
 quran-search-salah|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "الصلاة"
 quran-search-ref-words|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "baqarah 255"
-quran-settings|8|-launchQuranSettings
+quran-settings|8|-launchTabQuran -launchQuranSettings
 quran-reader-settings|9|-launchTabQuran -quranListMode -lastRead 2:1 -launchReaderSettings
-quran-history|8|-openQuranHistory
-quran-themes|8|-openThemes
+quran-history|8|-launchTabQuran -openQuranHistory
+quran-themes|8|-launchTabQuran -openThemes
 quran-surah-info|9|-launchTabQuran -quranListMode -lastRead 2:1 -openSurahInfo
-quran-word-of-day|8|-openWordOfDay
+quran-word-of-day|8|-launchTabQuran -openWordOfDay
 quran-play|12|-launchTabQuran -quranListMode -lastRead 1:1 -playSurah 1:1
-quran-qiraat-analysis|9|-launchTabQuran -quranListMode -lastRead 2:1 -showQiraatAnalysis
+islam-qiraat-analysis|9|-launchTabIslam -islamDestination tajweedFoundations -showQiraatAnalysis
 quran-comparison|9|-launchTabQuran -quranListMode -lastRead 2:1 -qiraatComparisonMode
-quran-custom-range|8|-showCustomRangeSheet
+quran-custom-range|8|-launchTabQuran -quranListMode -lastRead 2:1 -showCustomRangeSheet
 hadith|8|-launchTabHadith
 hadith-book|9|-launchTabHadith -launchHadithBook bukhari
 hadith-open|9|-launchTabHadith -launchHadithOpen bukhari:1
 hadith-search|9|-launchTabHadith -hadithSearch "patience"
 hadith-search-ref|9|-launchTabHadith -hadithSearch "1:4"
 hadith-search-arabic|9|-launchTabHadith -hadithSearch "الصبر"
-hadith-topics|8|-launchHadithTopics
-hadith-enc|8|-launchHadithEncyclopedia
-hadith-history|8|-launchHadithHistory
+hadith-topics|8|-launchTabHadith -launchHadithTopics
+hadith-enc|8|-launchTabHadith -launchHadithEncyclopedia
+hadith-history|8|-launchTabHadith -launchHadithHistory
 hadith-settings|8|-launchHadithSettings
 islam|8|-launchTabIslam
 islam-arabicAlphabet|8|-launchTabIslam -islamDestination arabicAlphabet
+islam-readingTest|9|-launchTabIslam -islamDestination arabicAlphabet -arabicTopic readingTest -readingTestSeed 7
+islam-readingTier|9|-launchTabIslam -islamDestination arabicAlphabet -arabicTopic readingTest -readingTier tanween
+islam-readingGap|10|-launchTabIslam -islamDestination arabicAlphabet -arabicTopic readingTest -readingTier long -readingStart gap
+islam-readingMatch|10|-launchTabIslam -islamDestination arabicAlphabet -arabicTopic readingTest -readingTier vowels -readingStart match
+islam-readingOdd|10|-launchTabIslam -islamDestination arabicAlphabet -arabicTopic readingTest -readingTier shaddah -readingStart odd
+islam-readingSpeed|10|-launchTabIslam -islamDestination arabicAlphabet -arabicTopic readingTest -readingSpeed
 islam-tajweedFoundations|8|-launchTabIslam -islamDestination tajweedFoundations
 islam-namesOfAllah|8|-launchTabIslam -islamDestination namesOfAllah
 islam-commonAdhkar|8|-launchTabIslam -islamDestination commonAdhkar
@@ -95,9 +101,17 @@ settings-appearanceLook|8|-launchTabSettings -settingsOpen appearanceLook
 settings-tips|8|-launchTabSettings -settingsOpen tips
 settings-cloudBackup|8|-launchTabSettings -settingsOpen cloudBackup
 settings-aboutYou|8|-showAboutYou
-settings-credits|8|-showCredits
+settings-credits|8|-launchTabSettings -showCredits
 settings-widget-gallery|8|-widgetGallery
-settings-profile|8|-openProfile
-settings-daily-hub|8|-openDailyHub
-settings-learn-more|8|-openLearnMore
+settings-profile|8|-launchTabSettings -openProfile
+settings-daily-hub|8|-launchTabQuran -openDailyHub
+settings-learn-more|8|-launchTabIslam -islamScrollToApps -openLearnMore
 settings-cloud-offer|8|-showCloudOffer
+islam-tajweedCourse|8|-launchTabIslam -islamDestination tajweedCourse
+islam-tajweedLesson|9|-launchTabIslam -islamDestination tajweedCourse -openTajweedLesson madd-tabii
+islam-tajweedTest|10|-launchTabIslam -islamDestination tajweedCourse -tajweedTest -tajweedTestSeed 3
+islam-tajweedTestTier|10|-launchTabIslam -islamDestination tajweedCourse -tajweedTest -tajweedTestTier nun-sakin
+islam-tajweedTestSpot|12|-launchTabIslam -islamDestination tajweedCourse -tajweedTest -tajweedTestTier nun-sakin -tajweedTestStart spot
+islam-tajweedTestRound|12|-launchTabIslam -islamDestination tajweedCourse -tajweedTest -tajweedTestTier madd -tajweedTestStart test
+islam-tajweedTopic|9|-launchTabIslam -islamDestination tajweedFoundations -tajweedTopic madd
+islam-article|9|-launchTabIslam -islamOpenArticle WudhuView

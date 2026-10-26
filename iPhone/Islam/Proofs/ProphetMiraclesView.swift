@@ -183,7 +183,7 @@ struct ProphetMiraclesView: View {
         }
         // NO `article:` here: that adds the per-page "Search this article" bar, and this screen
         // is an INDEX with its own library search below - two stacked search bars.
-        .selectableArticleList()
+        .englishArticle().selectableArticleList()
         .aboutSignsDestination($openDoor)
         #if DEBUG
         // `-prophetMiracle <id>`: push that article on appear - a tap cannot be driven headlessly.
@@ -214,10 +214,18 @@ struct ProphetMiracleArticleView: View {
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @ObservedObject private var systemSettings = SystemSettings.shared
     let entry: ProphetMiraclesView.Entry
+    /// The page's sections as its search bar scans them: the corpus has no row for a generated page.
+    /// Folded once here, not per body pass.
+    private let searchArticle: IslamArticle
 
     /// The door to a prophet's full story. One `@State` + one destination on the List: the stories
     /// section is a single List row, and two NavigationLinks in one row both fire on any tap.
     @State private var openStory: ProphetSigns?
+
+    init(entry: ProphetMiraclesView.Entry) {
+        self.entry = entry
+        searchArticle = .generated(id: "ProphetMiracle-\(entry.id)", title: entry.title, sections: entry.sections)
+    }
 
     private var prophets: [ProphetSigns] { ProphetSignsIndex.forEntry(entry.id) }
 
@@ -231,7 +239,7 @@ struct ProphetMiracleArticleView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetMiracle-\(entry.id)")
+        .englishArticle().selectableArticleList(article: searchArticle.id, fallback: searchArticle)
         .pushDestination(isPresented: Binding(
             get: { openStory != nil },
             set: { if !$0 { openStory = nil } }
@@ -283,7 +291,7 @@ struct ProphetMiracleArticleView: View {
                                 .font(.body)
                                 .foregroundColor(settings.accentColor.color)
 
-                            Image(systemName: "chevron.right")
+                            Image(systemName: "chevron.forward")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.tertiary)
                         }

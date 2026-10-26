@@ -41,7 +41,7 @@ struct HadithReferenceView: View {
     }
 
     /// The number as the user asked for it - base plus any variant letter ("8a").
-    private var requestedNumber: String { "\(introduction ? "Introduction " : "")\(hadith)\(suffix ?? "")" }
+    private var requestedNumber: String { "\(introduction ? String(localized: "Introduction") + " " : "")\(hadith)\(suffix ?? "")" }
 
     var body: some View {
         Group {
@@ -71,8 +71,8 @@ struct HadithReferenceView: View {
                             .font(.largeTitle)
                             .foregroundStyle(.secondary)
 
-                        Text(chapter.map { "No hadith \(hadith) in chapter \($0) of \(book.englishTitle)." }
-                             ?? "No hadith numbered \(requestedNumber) in \(book.englishTitle).")
+                        Text(chapter.map { "No hadith \(hadith) in chapter \($0) of \(book.displayTitle)." }
+                             ?? "No hadith numbered \(HadithCatalogBook.displayNumber(requestedNumber)) in \(book.displayTitle).")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -86,7 +86,7 @@ struct HadithReferenceView: View {
                         .font(.largeTitle)
                         .foregroundStyle(.secondary)
 
-                    Text("\(book.englishTitle) could not be opened.")
+                    Text("\(book.displayTitle) could not be opened.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -94,7 +94,7 @@ struct HadithReferenceView: View {
                 .padding()
             }
         }
-        .navigationTitle(chapter.map { "\(book.englishTitle) \($0):\(hadith)" } ?? "\(book.englishTitle) \(requestedNumber)")
+        .navigationTitle(book.displayReference(chapter.map { "\($0):\(hadith)" } ?? requestedNumber))
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -175,6 +175,7 @@ struct HadithGradeLine: View {
     /// distinction drawn is term-vs-name.
     private var line: Text {
         var result = Text("Grade: ").foregroundColor(.secondary)
+        if let isolate = Self.verdictRunIsolate { result = result + Text(verbatim: isolate.open) }
         for (index, entry) in grades.enumerated() {
             if index > 0 {
                 result = result + Text(" · ").foregroundColor(.secondary)
@@ -184,7 +185,16 @@ struct HadithGradeLine: View {
                 result = result + Text(" (\(entry.name))").foregroundColor(.secondary)
             }
         }
+        if let isolate = Self.verdictRunIsolate { result = result + Text(verbatim: isolate.close) }
         return result
+    }
+
+    /// The verdicts are sunnah.com's English, so a right-to-left interface keeps them as ONE left-to-right
+    /// run after its translated label (Unicode isolates LRI ... PDI): left to the paragraph's direction,
+    /// the verdicts, separators and parentheses were reordered around one another. Nil in a left-to-right
+    /// interface, whose line is unchanged. Shared with the share card, which draws the same line.
+    static var verdictRunIsolate: (open: String, close: String)? {
+        AppLanguage.isRightToLeft ? ("\u{2066}", "\u{2069}") : nil
     }
 
     var body: some View {
@@ -194,6 +204,24 @@ struct HadithGradeLine: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+}
+
+/// A hadith number ("1", "3:12") in the digits the interface draws its numbers with: `Text("\(n)")`
+/// formats a number for the locale ("١" in an Arabic-Indic locale) while a citation string is drawn
+/// verbatim, so the pill read "Sahih al-Bukhari 1 - ١". Western digits (and English) are unchanged.
+enum HadithDigits {
+    /// A citation's variant letter ("1849a") in Arabic, in abjad order (أ ب ج د ه و ز ح), so a Latin letter
+    /// never trails Arabic-Indic digits.
+    private static let variantLetters: [Character: Character] = [
+        "a": "أ", "b": "ب", "c": "ج", "d": "د", "e": "ه", "f": "و", "g": "ز", "h": "ح"
+    ]
+
+    static func display(_ ascii: String) -> String {
+        let digits = ascii.localizedDigits
+        guard AppLanguage.isArabic, let last = digits.last, let letter = variantLetters[last],
+              digits.dropLast().last?.isNumber == true else { return digits }
+        return String(digits.dropLast()) + String(letter)
     }
 }
 
@@ -287,6 +315,12 @@ struct HadithRow: View, Equatable {
         "\(book.englishTitle) \(hadith.displayNumber)"
     }
 
+    /// `reference` as the reader sees it ("صَحِيح البُخارِي ١" in the Arabic interface). The model's
+    /// prompt keeps `reference`.
+    private var displayReference: String {
+        book.displayReference(hadith.displayNumber)
+    }
+
     #if os(iOS) && canImport(FoundationModels)
     /// What "Summarize with AI" hands the model: the citation, the narrator, then the narration.
     ///
@@ -312,7 +346,7 @@ struct HadithRow: View, Equatable {
     /// The note the sheet shows about what it could not read, or nil once the model gains Arabic.
     private var summarizeExcludedNote: String? {
         OnDeviceAsk.supportsArabic ? nil
-            : "The narration\u{2019}s Arabic is left out: Apple Intelligence can\u{2019}t read Arabic on this device yet."
+            : String(localized: "The narration\u{2019}s Arabic is left out: Apple Intelligence can\u{2019}t read Arabic on this device yet.")
     }
 
     /// Whether there is anything the model can actually read. A few collections ship no English at
@@ -501,10 +535,10 @@ struct HadithRow: View, Equatable {
                             .opacity(0.55)
                     }
 
-                    Text(hadith.displayNumber)
+                    Text(HadithCatalogBook.displayNumber(hadith.displayNumber))
                         .font((compact ? Font.caption2 : .subheadline).monospacedDigit().weight(.semibold))
 
-                    Text(book.englishTitle)
+                    Text(book.displayTitle)
                         .font((compact ? Font.caption2 : .caption).weight(.semibold))
                 }
                 .foregroundColor(settings.accentColor.color)
@@ -547,12 +581,12 @@ struct HadithRow: View, Equatable {
                 // sizing (icon in a glass square matching the pill's height). Always the ellipsis:
                 // bookmark state lives on the pill (tint + corner badge), the Quran rows' grammar.
                 ShortcutMenu(
-                    doubleTap: MenuShortcut("Copy Hadith") {
+                    doubleTap: MenuShortcut(String(localized: "Copy Hadith")) {
                         settings.hapticFeedback()
                         UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
                         CopyConfirmation.shared.show()
                     },
-                    hold: MenuShortcut("Share Hadith") {
+                    hold: MenuShortcut(String(localized: "Share Hadith")) {
                         settings.hapticFeedback()
                         showShareSheet = true
                     }
@@ -611,6 +645,9 @@ struct HadithRow: View, Equatable {
                 .multilineTextAlignment(.trailing)
                 .lineSpacing(compact ? 0 : 6)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                // `.trailing` is the RIGHT edge only left to right: the Arabic hugs the right edge in
+                // the Arabic interface too.
+                .environment(\.layoutDirection, .leftToRight)
                 }
                 }
                 .fixedSize(horizontal: false, vertical: true)
@@ -638,6 +675,9 @@ struct HadithRow: View, Equatable {
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
+                    // The English narrator line and narration read left to right in the Arabic
+                    // interface too.
+                    .leftToRightContent()
                 }
 
                 if !text.text.isEmpty {
@@ -653,6 +693,7 @@ struct HadithRow: View, Equatable {
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
+                    .leftToRightContent()
                 }
             }
 
@@ -723,6 +764,7 @@ struct HadithRow: View, Equatable {
             // narration, which is what keeps the answers about THIS hadith.
             SummarizeSheet(
                 title: reference,
+                displayTitle: displayReference,
                 sourceText: summarizeSource,
                 excludedNote: summarizeExcludedNote
             )
@@ -731,7 +773,7 @@ struct HadithRow: View, Equatable {
         .sheet(isPresented: $showNoteSheet) {
             // The ayah note editor, for a hadith: same sheet, same respect check, saved onto the bookmark.
             NoteEditorSheet(
-                title: "Note for \(reference)",
+                title: String(localized: "Note for \(displayReference)"),
                 text: $noteDraft,
                 onAttemptSave: { text in
                     if textContainsProfanity(text) {
@@ -758,7 +800,7 @@ struct HadithRow: View, Equatable {
     /// One menu, two entrances: the long-press context menu and the row's ellipsis button.
     @ViewBuilder
     private var menuContent: some View {
-        Text(reference)
+        Text(displayReference)
             .foregroundStyle(.secondary)
 
         // The AyahRow menu's exact grammar: Bookmark, then the note actions, a divider, then Copy and
@@ -872,6 +914,16 @@ struct HadithRecentSearches: View {
 }
 
 // MARK: - Search-result snippets
+
+extension Array where Element == HadithRankedSearch.Correction {
+    /// One side of the corrections (`\.to`, what was searched; `\.from`, what was typed) for the
+    /// "Showing results for ... instead of ..." line: curly quotes and commas in English, guillemets
+    /// in the Arabic list format in Arabic.
+    func quotedWords(_ side: KeyPath<HadithRankedSearch.Correction, String>) -> String {
+        let quoted = map { AppLanguage.isArabic ? "\u{00AB}\($0[keyPath: side])\u{00BB}" : "\u{201C}\($0[keyPath: side])\u{201D}" }
+        return quoted.sentenceList { $0.joined(separator: ", ") }
+    }
+}
 
 /// The stretch of a narration a compact search row shows: about `length` UTF-16 units around the
 /// first match, opened at the sentence the match is in when that sentence starts close by, closed at
@@ -1175,6 +1227,9 @@ struct HadithArabicText: View {
                 .fixedSize(horizontal: false, vertical: true)
             }
         }
+        // `.trailing` is the RIGHT edge only left to right: the Arabic hugs the right edge in the Arabic
+        // interface too.
+        .environment(\.layoutDirection, .leftToRight)
     }
 }
 
@@ -1213,6 +1268,9 @@ struct HadithArabicPreview: View {
         .arabicFontDesign(custom: settings.hadithArabicWantsCustomFace)
         .multilineTextAlignment(.trailing)
         .frame(maxWidth: .infinity, alignment: .trailing)
+        // `.trailing` is the RIGHT edge only left to right: the Arabic hugs the right edge in the Arabic
+        // interface too.
+        .environment(\.layoutDirection, .leftToRight)
     }
 }
 
@@ -1278,7 +1336,7 @@ struct HadithBookmarkMenu: ViewModifier {
     private var menuItems: some View {
         // HadithRow's menu grammar exactly - reference, bookmark, note actions, a divider,
         // then Copy and Share - so a bookmarked hadith's menu reads like every hadith's menu.
-        Text(bookmark.reference)
+        Text(bookmark.displayReference)
             .foregroundStyle(.secondary)
 
         Button(role: .destructive) {
@@ -1345,7 +1403,7 @@ struct HadithBookmarkMenu: ViewModifier {
         }
         .sheet(isPresented: $showNoteSheet) {
             NoteEditorSheet(
-                title: "Note for \(bookmark.reference)",
+                title: String(localized: "Note for \(bookmark.displayReference)"),
                 text: $noteDraft,
                 onAttemptSave: { text in
                     if textContainsProfanity(text) {
@@ -1443,7 +1501,7 @@ struct HadithBookmarkRow: View, Equatable {
                     // with - and, like theirs, the filled bookmark sits in its corner and tapping the
                     // badge removes the bookmark (after the confirmation every removal asks for).
                     ZStack(alignment: .topTrailing) {
-                        Text(bookmark.displayNumber)
+                        Text(HadithCatalogBook.displayNumber(bookmark.displayNumber))
                             .font(.subheadline.monospacedDigit().weight(.semibold))
                             .foregroundColor(settings.accentColor.color)
                             .padding(5)
@@ -1469,7 +1527,7 @@ struct HadithBookmarkRow: View, Equatable {
                     }
 
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(bookmark.reference)
+                        Text(bookmark.displayReference)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(settings.accentColor.color)
                             .lineLimit(1)
@@ -1494,6 +1552,10 @@ struct HadithBookmarkRow: View, Equatable {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .reservedLineLimit(2)
+                                // English keeps the left edge in the Arabic interface; a legacy
+                                // preview in Arabic follows the interface.
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .leftToRightContent(!english.isEmpty || !bookmark.preview.containsArabicScript)
                         } else if bookmark.arabicPreview == nil {
                             // English hidden and nothing else stored: the legacy combined preview is all
                             // this bookmark has, so it shows anyway rather than leaving a blank row.
@@ -1501,6 +1563,8 @@ struct HadithBookmarkRow: View, Equatable {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .reservedLineLimit(2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .leftToRightContent(!bookmark.preview.containsArabicScript)
                         }
 
                         // The bookmark's note - the Quran bookmark rows' quiet one-liner.
@@ -1615,7 +1679,7 @@ struct HadithBookmarkGridTile: View, Equatable {
     private var tile: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                Text(bookmark.reference)
+                Text(bookmark.displayReference)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(settings.accentColor.color)
                         .lineLimit(1)
@@ -1651,6 +1715,9 @@ struct HadithBookmarkGridTile: View, Equatable {
                         .font(.caption2)
                         .foregroundColor(.secondary)
                         .reservedLineLimit(2)
+                        // `english` never holds Arabic (the legacy preview is routed by script above).
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent()
                 }
             }
             // Hug the content - the old fixed 78pt frame left a band of dead space whenever the
@@ -1715,12 +1782,24 @@ struct HadithImmersiveView: View {
 
 extension FocusItem {
     static func hadithBook(_ book: HadithCatalogBook) -> FocusItem {
-        FocusItem(
+        // The Arabic interface: the Arabic title is the hero, so the caption under it names the
+        // compiler and the date instead of repeating the title in English.
+        if AppLanguage.isArabic {
+            return FocusItem(
+                id: "hadith-book-\(book.slug)",
+                arabic: book.arabicTitle,
+                title: book.displayAuthor,
+                subtitle: book.eraDisplay,
+                shareLabel: String(localized: "Share Book"),
+                shareText: "\(book.displayTitle)\n\(book.displayAuthor)\n\(book.eraDisplay)"
+            )
+        }
+        return FocusItem(
             id: "hadith-book-\(book.slug)",
             arabic: book.arabicTitle,
             title: "\(book.number) · \(book.englishTitle)",
-            subtitle: "\(book.authorEnglish) - \(book.era)",
-            shareLabel: "Share Book",
+            subtitle: "\(book.authorEnglish) - \(book.eraDisplay)",
+            shareLabel: String(localized: "Share Book"),
             shareText: """
             \(book.englishTitle) (\(book.arabicTitle))
             \(book.authorEnglish) - \(book.era)
@@ -1729,13 +1808,28 @@ extension FocusItem {
     }
 
     static func hadithChapter(book: HadithCatalogBook, chapter: HadithBookData.Chapter, ordinal: Int, rangeText: String?) -> FocusItem {
-        FocusItem(
+        // The Arabic interface: the Arabic name is the hero, so the caption under it gives the
+        // chapter's number and the book's Arabic title instead of the English names.
+        if AppLanguage.isArabic {
+            let number = ordinal == 0 ? String(localized: "Introduction") : String(localized: "Chapter \(ordinal)")
+            let name = chapter.displayTitle(in: book)
+            return FocusItem(
+                id: "hadith-chapter-\(book.slug)-\(chapter.id)",
+                arabic: chapter.arabic.isEmpty ? book.arabicTitle : chapter.arabic,
+                title: number,
+                subtitle: chapter.arabic.isEmpty && !chapter.english.isEmpty ? chapter.english : book.displayTitle,
+                footnote: rangeText,
+                shareLabel: String(localized: "Share Chapter"),
+                shareText: "\(book.displayTitle)\n\(name)\(rangeText.map { "\n\($0)" } ?? "")"
+            )
+        }
+        return FocusItem(
             id: "hadith-chapter-\(book.slug)-\(chapter.id)",
             arabic: chapter.arabic.isEmpty ? book.arabicTitle : chapter.arabic,
             title: "\(ordinal) · \(chapter.english.isEmpty ? book.englishTitle : chapter.english)",
             subtitle: book.englishTitle,
             footnote: rangeText,
-            shareLabel: "Share Chapter",
+            shareLabel: String(localized: "Share Chapter"),
             shareText: """
             \(book.englishTitle) - \(chapter.english)\(chapter.arabic.isEmpty ? "" : " (\(chapter.arabic))")\(rangeText.map { "\n\($0)" } ?? "")
             """
@@ -1871,16 +1965,19 @@ struct HadithShareSheet: View {
             let block = english.joined(separator: "\n\n")
             parts.append(includeReference ? "\(englishReference(book: book, hadith: hadith))\n\(block)" : block)
         } else if includeReference, !includeArabic {
-            // The reference alone (every text part off): the bare English citation, as before.
-            parts.append(englishReference(book: book, hadith: hadith))
+            // The reference alone (every text part off): the bare English citation, as before; the
+            // Arabic one in the Arabic interface.
+            parts.append(AppLanguage.isArabic
+                ? arabicReference(book: book, hadith: hadith, hideTashkeel: hideTashkeel)
+                : englishReference(book: book, hadith: hadith))
         }
         // ALWAYS, with no option gating it: whoever receives a hadith must be able to tell sahih from
         // da'if, so the grading is not something a share can drop.
         let grades = hadith.grades
-        if !grades.isEmpty { parts.append("Grade: \(HadithGradeLine.joined(grades))") }
+        if !grades.isEmpty { parts.append(String(localized: "Grade: \(HadithGradeLine.joined(grades))")) }
         if flag("shareHadithIncludeNote"),
            let note = HadithStore.shared.note(slug: book.slug, idInBook: hadith.idInBook) {
-            parts.append("Note: \(note)")
+            parts.append(String(localized: "Note: \(note)"))
         }
         return parts.joined(separator: "\n\n")
     }
@@ -1960,6 +2057,9 @@ struct HadithShareSheet: View {
                                 .textSelection(.enabled)
                                 .lineLimit(nil)
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                                // With the English in it the preview reads left to right in the Arabic
+                                // interface too, as the shared text does; Arabic alone follows the interface.
+                                .leftToRightContent(includeEnglish && (!text.text.isEmpty || !text.narrator.isEmpty))
                                 .padding()
                         }
                         .background(Color.black)
@@ -2024,11 +2124,11 @@ struct HadithShareSheet: View {
                 .padding(.vertical, 4)
 
                 HStack(spacing: 12) {
-                    actionButton("Copy") {
+                    actionButton(String(localized: "Copy")) {
                         performCopyOrGenerate()
                     }
 
-                    actionButton("Share", isAnimating: isSharing) {
+                    actionButton(String(localized: "Share"), isAnimating: isSharing) {
                         performShareOrGenerate()
                     }
                 }
@@ -2045,7 +2145,7 @@ struct HadithShareSheet: View {
                     }
                 }
             }
-            .navigationTitle("\(book.englishTitle) \(hadith.displayNumber)")
+            .navigationTitle(book.displayReference(hadith.displayNumber))
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
             // Full-size before the wash so the background always covers the whole sheet.
@@ -2389,7 +2489,8 @@ struct HadithShareSheet: View {
         // accent color, the grader's name secondary. No ranking, no per-verdict color-coding.
         if !input.grades.isEmpty {
             sepIfNeeded()
-            append("Grade: ", captionAttr, highlightAllah: false)
+            append(String(localized: "Grade: "), captionAttr, highlightAllah: false)
+            if let isolate = HadithGradeLine.verdictRunIsolate { append(isolate.open, captionAttr, highlightAllah: false) }
             for (index, entry) in input.grades.enumerated() {
                 if index > 0 { append(" · ", captionAttr, highlightAllah: false) }
                 append(entry.grade, captionAccentAttr, highlightAllah: false)
@@ -2397,11 +2498,12 @@ struct HadithShareSheet: View {
                     append(" (\(entry.name))", captionAttr, highlightAllah: false)
                 }
             }
+            if let isolate = HadithGradeLine.verdictRunIsolate { append(isolate.close, captionAttr, highlightAllah: false) }
         }
 
         if let note = input.note {
             sepIfNeeded()
-            append("- Note", captionAttr, highlightAllah: false)
+            append(String(localized: "- Note"), captionAttr, highlightAllah: false)
             append("\n", bodyAttr, highlightAllah: false)
             append(note, bodyAttr)
         }
@@ -2445,7 +2547,7 @@ struct HadithShareSheet: View {
             let shown = layout.characterRange(forGlyphRange: layout.glyphRange(for: container), actualGlyphRange: nil)
             if shown.length > 0, shown.length < text.length {
                 text.deleteCharacters(in: NSRange(location: shown.length, length: text.length - shown.length))
-                text.append(NSAttributedString(string: "\n\nThe narration continues in the app.", attributes: captionAttr))
+                text.append(NSAttributedString(string: "\n\n" + String(localized: "The narration continues in the app."), attributes: captionAttr))
                 textRect = text.boundingRect(with: constraint, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).integral
             }
         }
@@ -2501,7 +2603,7 @@ struct SelectHadithTextSheet: View {
 
     @State private var copiedLabel: String?
 
-    private var reference: String { "\(book.englishTitle) \(hadith.displayNumber)" }
+    private var reference: String { book.displayReference(hadith.displayNumber) }
 
     private var arabicFont: UIFont {
         let size = CGFloat(settings.hadithArabicFontSize)
@@ -2519,15 +2621,15 @@ struct SelectHadithTextSheet: View {
             List {
                 Group {
                     if !text.arabic.isEmpty {
-                        selectableBlock(title: "ARABIC", text: text.arabic, font: arabicFont, isArabic: true)
+                        selectableBlock(title: String(localized: "ARABIC"), text: text.arabic, font: arabicFont, isArabic: true)
                     }
 
                     if !text.narrator.isEmpty {
-                        selectableBlock(title: "NARRATOR", text: text.narrator, font: englishFont, isArabic: false)
+                        selectableBlock(title: String(localized: "NARRATOR"), text: text.narrator, font: englishFont, isArabic: false)
                     }
 
                     if !text.text.isEmpty {
-                        selectableBlock(title: "ENGLISH", text: text.text, font: englishFont, isArabic: false)
+                        selectableBlock(title: String(localized: "ENGLISH"), text: text.text, font: englishFont, isArabic: false)
                     }
 
                     Section {
@@ -2554,6 +2656,8 @@ struct SelectHadithTextSheet: View {
             // on `SelectableTextView` in Helpers/SelectableText.swift for why the modifier can't do
             // this job inside a List.
             SelectableTextView(text: text, font: font, isArabic: isArabic, lineSpacing: isArabic ? 8 : 2)
+                // The narrator line and the English read left to right in the Arabic interface.
+                .leftToRightContent(!isArabic)
                 .padding(.vertical, 4)
         } header: {
             HStack {

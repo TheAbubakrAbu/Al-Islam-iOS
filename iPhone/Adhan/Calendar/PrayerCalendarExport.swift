@@ -17,9 +17,12 @@ enum PrayerCalendarExport {
 
     static func writeCSV(months: [MonthModel], columns: [String], titles: [String], city: String) -> URL? {
         let dateFormatter = DateFormatter()
+        // A spreadsheet's date in every interface language: ISO digits, Gregorian ("٢٠٢٦-١٠-٢٥" reads as text).
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
         dateFormatter.dateFormat = "yyyy-MM-dd"
 
-        var lines = ["Date," + titles.map(escapeCSV).joined(separator: ",")]
+        var lines = [String(localized: "Date") + "," + titles.map(escapeCSV).joined(separator: ",")]
         for month in months {
             for day in month.days {
                 let cells = columns.map { day.times[$0] ?? "" }
@@ -62,25 +65,25 @@ enum PrayerCalendarExport {
 
                 draw(month.title, at: CGPoint(x: margin, y: y), font: .boldSystemFont(ofSize: 13))
                 if !city.isEmpty {
-                    let subtitle = city
+                    let subtitle = city.cityDisplay.localizedDigits
                     let size = subtitle.size(withAttributes: [.font: UIFont.systemFont(ofSize: 9)])
                     draw(subtitle, at: CGPoint(x: pageSize.width - margin - size.width, y: y + 3),
                          font: .systemFont(ofSize: 9), color: .gray)
                 }
                 y += headerHeight
 
-                drawRow(["Date"] + titles, y: y, font: .boldSystemFont(ofSize: 8.5), color: .darkGray)
+                drawRow([String(localized: "Date")] + titles, y: y, font: .boldSystemFont(ofSize: 8.5), color: .darkGray)
                 y += headerHeight
                 drawSeparator(at: y - 4)
 
                 for day in month.days {
                     if y + rowHeight > pageSize.height - margin {
                         newPage()
-                        drawRow(["Date"] + titles, y: y, font: .boldSystemFont(ofSize: 8.5), color: .darkGray)
+                        drawRow([String(localized: "Date")] + titles, y: y, font: .boldSystemFont(ofSize: 8.5), color: .darkGray)
                         y += headerHeight
                         drawSeparator(at: y - 4)
                     }
-                    let cells = [String(day.dayOfMonth)] + columns.map { day.times[$0] ?? "- " }
+                    let cells = [String(day.dayOfMonth).localizedDigits] + columns.map { day.times[$0] ?? "- " }
                     drawRow(cells, y: y,
                             font: day.isToday ? .boldSystemFont(ofSize: 9) : .systemFont(ofSize: 9),
                             color: .black)

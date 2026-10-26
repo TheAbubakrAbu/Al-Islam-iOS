@@ -1270,7 +1270,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         // The Reading Test's ladder: which tiers are passed, and where Find My Level placed the
         // learner. Weeks of work, not a preference. The tajweed course's ticks and the letter
         // quiz's best streak are the same kind of thing.
-        "readingTestProgress", "readingTestPlacement", "tajweedLessonsDone", "letterQuizBestStreak",
+        "readingTestProgress", "readingTestPlacement", "readingTestMissed", "readingTestSpeedBest",
+        "tajweedTestProgress", "tajweedTestPlacement", "tajweedTestMissed", "tajweedTestSpeedBest",
+        "tajweedLessonsDone", "letterQuizBestStreak",
         // Where each dua collection was left, the Islam tab's favorites, and the reminders the user
         // wrote (the Sunnah presets' switches are preferences; a custom reminder is authored).
         "duaSessionProgressData", "favoriteIslamResources", "customReminders",
@@ -1300,6 +1302,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         // Location, and everything computed from it (standard defaults and the app group).
         "currentLocation", "homeLocationData", "favoriteLocations", "prayersData", "currentPrayerData",
         "nextPrayerData", "currentCountryCode", "lastLocationFixAt", "cityAnchorLatitude", "cityAnchorLongitude",
+        "currentLocationLabelLanguage", "homeLocationLabelLanguage",
         "travelingMode", "travelTurnOffAutomatic", "travelTurnOnAutomatic",
         "calculationAutoAnsweredCountryCode", "calculationAutoAnsweredMethod", "calculationAutoChanged",
         "calculationAutoDetectedCountryCode", "calculationAutoDetectedMethod", "calculationAutoPreviousMethod",
@@ -1812,22 +1815,70 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// date it is listed under, which is where its reminder has to be anchored.
     static let nightEventTitles: Set<String> = ["Last 10 Nights of Ramadan", "27th Night of Ramadan"]
 
+    /// An event's title as the reader sees it. The title itself stays English: it is matched here and
+    /// in the reminder's identifier.
+    static func specialEventDisplayTitle(_ title: String) -> String {
+        switch title {
+        case "Islamic New Year": return String(localized: "Islamic New Year")
+        case "Day Before Ashura": return String(localized: "Day Before Ashura")
+        case "Day of Ashura": return String(localized: "Day of Ashura")
+        case "First Day of Ramadan": return String(localized: "First Day of Ramadan")
+        case "Last 10 Nights of Ramadan": return String(localized: "Last 10 Nights of Ramadan")
+        case "27th Night of Ramadan": return String(localized: "27th Night of Ramadan")
+        case "Eid Al-Fitr": return String(localized: "Eid Al-Fitr")
+        case "First 10 Days of Dhul-Hijjah": return String(localized: "First 10 Days of Dhul-Hijjah")
+        case "Beginning of Hajj": return String(localized: "Beginning of Hajj")
+        case "Day of Arafah": return String(localized: "Day of Arafah")
+        case "Eid Al-Adha": return String(localized: "Eid Al-Adha")
+        case "End of Eid Al-Adha": return String(localized: "End of Eid Al-Adha")
+        default: return title
+        }
+    }
+
+    /// The year's dates, each with a one-line note (also the reminder's body) and a short description
+    /// for the Hijri calendar. Reviewed 2026-10-25 against the Sunni (Salafi) positions: only what the
+    /// Prophet ﷺ and his Companions observed is prescribed (fasting, the two Eids and what they carry,
+    /// the ten days, the last ten nights), and the days that carry no act of worship say so.
     static func specialEvents(inHijriYear currentHijriYear: Int) -> [(String, DateComponents, String, String)] {
         return [
-            ("Islamic New Year", DateComponents(year: currentHijriYear, month: 1, day: 1), "Start of Hijri year", "The first day of the Islamic calendar; no special acts of worship or celebration are prescribed."),
-            ("Day Before Ashura", DateComponents(year: currentHijriYear, month: 1, day: 9), "Recommended to fast", "The Prophet ﷺ intended to fast the 9th to differ from the Jews, making it Sunnah to do so before Ashura."),
-            ("Day of Ashura", DateComponents(year: currentHijriYear, month: 1, day: 10), "Recommended to fast", "Ashura marks the day Allah saved Musa (Moses) and the Israelites from Pharaoh; fasting expiates sins of the previous year."),
+            ("Islamic New Year", DateComponents(year: currentHijriYear, month: 1, day: 1),
+             String(localized: "Start of the Hijri year"),
+             String(localized: "The Hijri year begins with Muharram, counted from the Prophet's ﷺ migration to Madinah. No act of worship or celebration is prescribed for the day itself; Muharram is a sacred month, and fasting in it is the best fasting after Ramadan.")),
+            ("Day Before Ashura", DateComponents(year: currentHijriYear, month: 1, day: 9),
+             String(localized: "Recommended to fast"),
+             String(localized: "The ninth of Muharram (Tasu'a). The Prophet ﷺ said that if he lived to the next year he would fast the ninth as well, to differ from the Jews, so it is Sunnah to fast it together with Ashura.")),
+            ("Day of Ashura", DateComponents(year: currentHijriYear, month: 1, day: 10),
+             String(localized: "Recommended to fast"),
+             String(localized: "The tenth of Muharram, the day Allah saved Musa, peace be upon him, and his people from Pharaoh. The Prophet ﷺ fasted it and said its fast expiates the sins of the past year. It is observed by fasting alone, with no mourning and no celebration.")),
 
-            ("First Day of Ramadan", DateComponents(year: currentHijriYear, month: 9, day: 1), "Begin obligatory fast", "The month of fasting begins; all Muslims must fast from Fajr (dawn) to Maghrib (sunset)."),
-            ("Last 10 Nights of Ramadan", DateComponents(year: currentHijriYear, month: 9, day: 21), "Seek Laylatul Qadr", "The most virtuous nights of the year; increase worship as these nights are beloved to Allah and contain Laylatul Qadr."),
-            ("27th Night of Ramadan", DateComponents(year: currentHijriYear, month: 9, day: 27), "Likely Laylatul Qadr", "A strong possibility for Laylatul Qadr, the Night of Decree when the Qur’an was sent down, though not confirmed."),
-            ("Eid Al-Fitr", DateComponents(year: currentHijriYear, month: 10, day: 1), "Celebration of ending the fast", "Celebration marking the end of Ramadan; fasting is prohibited on this day; encouraged to fast 6 days in Shawwal."),
+            ("First Day of Ramadan", DateComponents(year: currentHijriYear, month: 9, day: 1),
+             String(localized: "The obligatory fast begins"),
+             String(localized: "The month of fasting begins: every able Muslim fasts from true dawn (Fajr) to sunset (Maghrib), and the nights are revived with Taraweeh and the Quran. The sick and the traveler are excused and make up the days later.")),
+            ("Last 10 Nights of Ramadan", DateComponents(year: currentHijriYear, month: 9, day: 21),
+             String(localized: "Seek Laylatul Qadr"),
+             String(localized: "The most virtuous nights of the year, holding Laylatul Qadr. The Prophet ﷺ strove in worship in them more than at any other time, kept his nights alive, woke his family and observed i'tikaf. Seek the Night especially on the odd nights.")),
+            ("27th Night of Ramadan", DateComponents(year: currentHijriYear, month: 9, day: 27),
+             String(localized: "Likely Laylatul Qadr"),
+             String(localized: "The night many Companions and scholars held most likely to be Laylatul Qadr, the Night of Decree, which is better than a thousand months. It is not fixed: it moves among the odd nights of the last ten from year to year, so worship on all of them.")),
+            ("Eid Al-Fitr", DateComponents(year: currentHijriYear, month: 10, day: 1),
+             String(localized: "Festival of breaking the fast"),
+             String(localized: "The festival that ends Ramadan. Zakat al-Fitr is paid before the Eid prayer, fasting is forbidden on this day, and fasting six days of Shawwal afterwards is like fasting the whole year.")),
 
-            ("First 10 Days of Dhul-Hijjah", DateComponents(year: currentHijriYear, month: 12, day: 1), "Most beloved days", "The best days for righteous deeds; fasting the first nine days and dhikr are highly encouraged (the 10th is Eid al-Adha, on which fasting is not permitted)."),
-            ("Beginning of Hajj", DateComponents(year: currentHijriYear, month: 12, day: 8), "Pilgrimage begins", "Pilgrims begin the rites of Hajj, heading to Mina to start the sacred journey."),
-            ("Day of Arafah", DateComponents(year: currentHijriYear, month: 12, day: 9), "Recommended to fast", "Fasting for non-pilgrims expiates sins of the past and coming year."),
-            ("Eid Al-Adha", DateComponents(year: currentHijriYear, month: 12, day: 10), "Celebration of sacrifice during Hajj", "The day of sacrifice; fasting is not allowed and sacrifice of an animal is offered."),
-            ("End of Eid Al-Adha", DateComponents(year: currentHijriYear, month: 12, day: 13), "Hajj and Eid end", "Final day of Eid Al-Adha; pilgrims and non-pilgrims return to daily life."),
+            ("First 10 Days of Dhul-Hijjah", DateComponents(year: currentHijriYear, month: 12, day: 1),
+             String(localized: "Most beloved days for good deeds"),
+             String(localized: "No days are more beloved to Allah for righteous deeds than these ten: fast (the first nine; the tenth is Eid), say takbir, tahlil and tahmid abundantly, and give charity. Whoever intends to sacrifice does not cut hair or nails until it is offered.")),
+            ("Beginning of Hajj", DateComponents(year: currentHijriYear, month: 12, day: 8),
+             String(localized: "Pilgrims set out for Mina"),
+             String(localized: "The Day of Tarwiyah, the eighth of Dhul-Hijjah: pilgrims enter ihram for Hajj and go to Mina, where they pray and spend the night before standing at Arafah.")),
+            ("Day of Arafah", DateComponents(year: currentHijriYear, month: 12, day: 9),
+             String(localized: "Recommended to fast"),
+             String(localized: "The day the pilgrims stand at Arafah, the heart of Hajj. For those not on Hajj, fasting it expiates the sins of the past year and the year to come; the pilgrims themselves do not fast. The best supplication is that of the Day of Arafah.")),
+            ("Eid Al-Adha", DateComponents(year: currentHijriYear, month: 12, day: 10),
+             String(localized: "Festival of sacrifice"),
+             String(localized: "The Day of Sacrifice, the greatest day of the year: the Eid prayer, then the udhiyah in the way of Ibrahim, peace be upon him. Fasting is forbidden, and the takbir after the prayers continues through the days of Tashreeq.")),
+            ("End of Eid Al-Adha", DateComponents(year: currentHijriYear, month: 12, day: 13),
+             String(localized: "Last day of Tashreeq"),
+             String(localized: "The last of the three days of Tashreeq (the 11th to the 13th), days of eating, drinking and remembering Allah, on which fasting is forbidden. The sacrifice may still be offered until sunset of this day, and the takbir ends after Asr.")),
         ]
     }
 
@@ -2935,13 +2986,13 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     @Setting("acceptedBetaQiraatNotice") var acceptedBetaQiraatNotice: Bool = false
 
     /// One wording for the beta warning, shown by the toggle and every selection dialog.
-    static let betaQiraatNotice = """
+    static let betaQiraatNotice = String(localized: """
         These twelve riwayat were digitized by machine from a printed mushaf and have \
         not yet been checked word by word. Their ayah numbering and surah divisions are \
         verified, but individual marks or letters may still be wrong. Please do not rely \
         on them for memorization or recitation; use Hafs or another verified riwayah \
         for that.
-        """
+        """)
 
     /// Shared expand/collapse state for qiraah details in Quran settings and reciter lists.
     var showQiraahDetails: Bool {
@@ -3065,6 +3116,17 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// be there cause I plan on doing something else with it"). Off keeps the old swap, which is the
     /// lighter feel on a small screen; on stacks them, so dismissing the second returns to the first.
     @Setting("keepAyahSheetOpen") var keepAyahSheetOpen: Bool = false
+
+    /// Play This Ayah, Play From Ayah and Repeat Ayah start the recitation WITHOUT closing the ayah's
+    /// actions sheet (Abu, 2026-10-25: "sometimes when its playing i want to read the big sheet"). Off by
+    /// default, which keeps the old close: the reader is where the highlight moves. Play Custom Range is
+    /// deliberately not one of them; its own sheet plays the range and closes as it always has.
+    @Setting("keepAyahSheetOpenOnPlay") var keepAyahSheetOpenOnPlay: Bool = false
+
+    /// Holds the display awake while the ayah's actions sheet is on screen (Abu, 2026-10-25: "if that
+    /// ayah screen is there dont turn off screen"). Off by default. Counted with the reader's own
+    /// recitation hold, see `ScreenWakeLock`.
+    @Setting("ayahSheetKeepsScreenOn") var ayahSheetKeepsScreenOn: Bool = false
 
     /// The Arabic size of the ayah preview card inside a sheet, as a MULTIPLIER of the reader's own
     /// size, remembered across launches (Abu, 2026-09-19: "+/- button next to plain text that is app
@@ -3252,8 +3314,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         set { gridModeIslamRaw = newValue ? 1 : 0 }
     }
 
-    /// The Islam tab's resources split into subject sections (Learn, Remembrance, Tools, Faith & Practice,
-    /// Signs & Proofs, Ask AI), or all of them in one ISLAMIC RESOURCES section, the default (Abu,
+    /// The Islam tab's resources split into subject sections (Learn, Remembrance, Tools, Faith & Proofs,
+    /// Ask AI), or all of them in one ISLAMIC RESOURCES section, the default (Abu,
     /// 2026-10-18: "add an option to not group for islamic resources ... make that default where it is
     /// one section"). The ⋯ More menu switches it.
     @Setting("islamGroupResources") var islamGroupResources: Bool = false
@@ -3343,22 +3405,22 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         var historyCaption: String {
             switch self {
             case .uthmani:
-                return "Uthmani is the Naskh of the Madinah Mushaf, the hand of the calligrapher Uthman Taha as digitized by the King Fahd Complex. Naskh was systematized in Baghdad by Ibn Muqla in the 4th century AH (10th century CE), became the main script of the mushaf from about the 5th century AH (11th century CE), and was perfected by the Ottoman masters of Istanbul; nearly every printed mushaf today, from Cairo to Madinah, uses it."
+                return String(localized: "Uthmani is the Naskh of the Madinah Mushaf, the hand of the calligrapher Uthman Taha as digitized by the King Fahd Complex. Naskh was systematized in Baghdad by Ibn Muqla in the 4th century AH (10th century CE), became the main script of the mushaf from about the 5th century AH (11th century CE), and was perfected by the Ottoman masters of Istanbul; nearly every printed mushaf today, from Cairo to Madinah, uses it.")
             case .indopak:
-                return "Indopak is the mushaf hand of the Indian subcontinent: a Naskh shaped by Nastaliq, the Persian script developed in Iran in the 8th and 9th centuries AH (14th and 15th centuries CE) and credited to Mir Ali Tabrizi. It came east with the Mughals and became the standard printed mushaf of India, Pakistan and Bangladesh, and of South Asian communities everywhere."
+                return String(localized: "Indopak is the mushaf hand of the Indian subcontinent: a Naskh shaped by Nastaliq, the Persian script developed in Iran in the 8th and 9th centuries AH (14th and 15th centuries CE) and credited to Mir Ali Tabrizi. It came east with the Mughals and became the standard printed mushaf of India, Pakistan and Bangladesh, and of South Asian communities everywhere.")
             case .hijazi:
-                return "Hijazi is the hand of the earliest mushafs, written in the Hijaz (Makkah and Madinah) in the 1st century AH (7th century CE) by the generation of the Companions, most likely including Uthman's own copies. Tall alifs leaning to the right, no dots or vowels, and words that run on across lines: the Birmingham and Sanaa manuscripts are written in it. Kufi overtook it within about a century."
+                return String(localized: "Hijazi is the hand of the earliest mushafs, written in the Hijaz (Makkah and Madinah) in the 1st century AH (7th century CE) by the generation of the Companions, most likely including Uthman's own copies. Tall alifs leaning to the right, no dots or vowels, and words that run on across lines: the Birmingham and Sanaa manuscripts are written in it. Kufi overtook it within about a century.")
             case .kufi:
-                return "Kufi is the angular script named after Kufa in Iraq (founded 17 AH, 638 CE). It grew out of Hijazi late in the 1st century AH (7th century CE), spells out the mosaics of the Dome of the Rock (72 AH, 691 CE), and was the script of the Quran for some three centuries across the Abbasid world, from Baghdad to Cairo and Qayrawan: wide parchment pages, vowels as coloured dots. When Naskh took over the text in the 5th century AH (11th century CE) it lived on in headings and inscriptions. This face is a modern digitization, Noto Kufi Arabic."
+                return String(localized: "Kufi is the angular script named after Kufa in Iraq (founded 17 AH, 638 CE). It grew out of Hijazi late in the 1st century AH (7th century CE), spells out the mosaics of the Dome of the Rock (72 AH, 691 CE), and was the script of the Quran for some three centuries across the Abbasid world, from Baghdad to Cairo and Qayrawan: wide parchment pages, vowels as coloured dots. When Naskh took over the text in the 5th century AH (11th century CE) it lived on in headings and inscriptions. This face is a modern digitization, Noto Kufi Arabic.")
             case .basic:
-                return "Basic is Apple's standard Arabic system font (SF Arabic) in the app's rounded design: a modern screen face with no historical script behind it, the same look as the rest of iOS."
+                return String(localized: "Basic is Apple's standard Arabic system font (SF Arabic) in the app's rounded design: a modern screen face with no historical script behind it, the same look as the rest of iOS.")
             }
         }
     }
 
     /// The one thing every Arabic face shares, shown under each face's caption: the letters are the
     /// Uthmani rasm whichever hand writes them.
-    static let uthmaniRasmCaption = "Every face writes the same Uthmani rasm: the consonantal text compiled within a year or two of the death of the Prophet (peace be upon him), under Abu Bakr in 12 AH (633 CE), and standardized by Uthman in the copies he sent to the main cities around 25 AH (645 CE), which is why it is called the Uthmani rasm. Only the hand the letters are written in changes."
+    static let uthmaniRasmCaption = String(localized: "Every face writes the same Uthmani rasm: the consonantal text compiled within a year or two of the death of the Prophet (peace be upon him), under Abu Bakr in 12 AH (633 CE), and standardized by Uthman in the copies he sent to the main cities around 25 AH (645 CE), which is why it is called the Uthmani rasm. Only the hand the letters are written in changes.")
 
     /// Raw storage for `islamArabicFace`. Empty means "not chosen yet" - the legacy two-way
     /// Quranic-vs-Basic toggle (`useFontArabic`) seeds the richer choice on first read.
@@ -3395,6 +3457,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     // MARK: - [Islam tab] Arabic Alphabet screen size
     
     static let randomReciterName = "Random Reciter"
+    /// What the reader sees for `randomReciterName`, which stays English because it is stored and compared.
+    static var randomReciterDisplayName: String { String(localized: "Random Reciter") }
     static let hafsUthmaniFontName = "KFGQPCHAFSUthmanicScript-Regula"
 
     #if canImport(UIKit)
@@ -3459,9 +3523,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
 
         var label: String {
             switch self {
-            case .light: return "Light Marks"
-            case .bold: return "Bold Marks"
-            case .dots: return "Dot Vowels"
+            case .light: return String(localized: "Light Marks")
+            case .bold: return String(localized: "Bold Marks")
+            case .dots: return String(localized: "Dot Vowels")
             }
         }
     }

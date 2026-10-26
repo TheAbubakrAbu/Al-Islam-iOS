@@ -52,6 +52,7 @@ struct GuidesView: View {
                 }
                 .themedListRowBackground()
             }
+            .englishArticle()
             .applyConditionalListStyle()
             .autoOpenArticle(openArticle, home: .guides)
             .pushDestination(isPresented: Binding(
@@ -81,6 +82,7 @@ struct GuidesView: View {
             IslamArticleIndexSections(groups: IslamArticleCatalog.guidesGroups)
                 .themedListRowBackground()
         }
+        .englishArticle()
         .applyConditionalListStyle()
         .navigationTitle("How-To Guides")
         #endif
@@ -239,7 +241,7 @@ struct HowToPrayView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "HowToPrayView")
+        .englishArticle().selectableArticleList(article: "HowToPrayView")
         .navigationTitle("How to Pray")
     }
 }
@@ -306,7 +308,7 @@ struct HowToFastView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "HowToFastView")
+        .englishArticle().selectableArticleList(article: "HowToFastView")
         .navigationTitle("How to Fast")
     }
 }
@@ -354,7 +356,7 @@ struct HowToZakahView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "HowToZakahView")
+        .englishArticle().selectableArticleList(article: "HowToZakahView")
         .navigationTitle("How to Give Zakah")
     }
 }
@@ -406,7 +408,7 @@ struct HowToHajjView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "HowToHajjView")
+        .englishArticle().selectableArticleList(article: "HowToHajjView")
         .navigationTitle("How to Perform Hajj")
     }
 }
@@ -455,7 +457,7 @@ struct HowToUmrahView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "HowToUmrahView")
+        .englishArticle().selectableArticleList(article: "HowToUmrahView")
         .navigationTitle("How to Perform Umrah")
     }
 }
@@ -512,7 +514,7 @@ struct TayammumView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "TayammumView")
+        .englishArticle().selectableArticleList(article: "TayammumView")
         .navigationTitle("How to Make Tayammum")
     }
 }
@@ -573,7 +575,7 @@ struct RawatibView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "RawatibView")
+        .englishArticle().selectableArticleList(article: "RawatibView")
         .navigationTitle("How to Pray the Sunnah Prayers")
     }
 }
@@ -635,7 +637,7 @@ struct WitrView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "WitrView")
+        .englishArticle().selectableArticleList(article: "WitrView")
         .navigationTitle("How to Pray Witr")
     }
 }
@@ -697,7 +699,7 @@ struct TahajjudView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "TahajjudView")
+        .englishArticle().selectableArticleList(article: "TahajjudView")
         .navigationTitle("How to Pray Tahajjud")
     }
 }
@@ -746,7 +748,7 @@ struct DuhaView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "DuhaView")
+        .englishArticle().selectableArticleList(article: "DuhaView")
         .navigationTitle("How to Pray Duha")
     }
 }
@@ -798,7 +800,7 @@ struct TaraweehView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "TaraweehView")
+        .englishArticle().selectableArticleList(article: "TaraweehView")
         .navigationTitle("How to Pray Taraweeh")
     }
 }
@@ -866,7 +868,7 @@ struct JanazahView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "JanazahView")
+        .englishArticle().selectableArticleList(article: "JanazahView")
         .navigationTitle("How to Pray the Funeral Prayer")
     }
 }
@@ -923,7 +925,7 @@ struct IstikharahView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "IstikharahView")
+        .englishArticle().selectableArticleList(article: "IstikharahView")
         .navigationTitle("How to Pray Istikharah")
     }
 }
@@ -982,7 +984,7 @@ struct IstikharahDuaView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "IstikharahDuaView")
+        .englishArticle().selectableArticleList(article: "IstikharahDuaView")
         .navigationTitle("The Dua of Istikharah")
     }
 }
@@ -1044,7 +1046,7 @@ struct TravelPrayerView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "TravelPrayerView")
+        .englishArticle().selectableArticleList(article: "TravelPrayerView")
         .navigationTitle("How to Pray While Traveling")
     }
 }
@@ -1105,7 +1107,7 @@ struct SickPrayerView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "SickPrayerView")
+        .englishArticle().selectableArticleList(article: "SickPrayerView")
         .navigationTitle("How to Pray When Sick")
     }
 }
@@ -1160,7 +1162,7 @@ struct MissedPrayerView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "MissedPrayerView")
+        .englishArticle().selectableArticleList(article: "MissedPrayerView")
         .navigationTitle("How to Make Up Missed Prayers")
     }
 }
@@ -1212,7 +1214,7 @@ struct SujudSahwView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "SujudSahwView")
+        .englishArticle().selectableArticleList(article: "SujudSahwView")
         .navigationTitle("How to Perform Sujud as-Sahw")
     }
 }
@@ -1282,7 +1284,7 @@ struct VoluntaryFastsView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "VoluntaryFastsView")
+        .englishArticle().selectableArticleList(article: "VoluntaryFastsView")
         .navigationTitle("How to Fast Voluntary Fasts")
     }
 }
@@ -1336,7 +1338,7 @@ struct ItikafView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ItikafView")
+        .englishArticle().selectableArticleList(article: "ItikafView")
         .navigationTitle("How to Perform I'tikaf")
     }
 }
@@ -1382,7 +1384,7 @@ struct ZakatFitrView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ZakatFitrView")
+        .englishArticle().selectableArticleList(article: "ZakatFitrView")
         .navigationTitle("How to Give Zakat al-Fitr")
     }
 }
@@ -1450,7 +1452,7 @@ struct UdhiyahView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "UdhiyahView")
+        .englishArticle().selectableArticleList(article: "UdhiyahView")
         .navigationTitle("How to Offer the Eid Sacrifice")
     }
 }
@@ -1529,7 +1531,7 @@ struct BecomeMuslimView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "BecomeMuslimView")
+        .englishArticle().selectableArticleList(article: "BecomeMuslimView")
         .navigationTitle("How to Become a Muslim")
     }
 }
@@ -1598,7 +1600,7 @@ struct TawbahView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "TawbahView")
+        .englishArticle().selectableArticleList(article: "TawbahView")
         .navigationTitle("How to Repent")
     }
 }
@@ -1666,7 +1668,7 @@ struct MakeDuaView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "MakeDuaView")
+        .englishArticle().selectableArticleList(article: "MakeDuaView")
         .navigationTitle("How to Make Dua")
     }
 }

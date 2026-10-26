@@ -116,13 +116,13 @@ final class CloudBackupManager: ObservableObject {
         var line: String {
             switch self {
             case .idle: return ""
-            case .saving: return "Backing up..."
-            case .saved: return "Backed up"
-            case .noAccount: return "Not backed up: sign in to iCloud in Settings"
-            case .offline: return "Not backed up yet: no connection"
-            case .quotaExceeded: return "Not backed up: iCloud storage is full"
-            case .takenOver: return "Another device now backs up to this profile. Choose a profile to continue on this device."
-            case .failed(let message): return "Not backed up: \(message)"
+            case .saving: return String(localized: "Backing up...")
+            case .saved: return String(localized: "Backed up")
+            case .noAccount: return String(localized: "Not backed up: sign in to iCloud in Settings")
+            case .offline: return String(localized: "Not backed up yet: no connection")
+            case .quotaExceeded: return String(localized: "Not backed up: iCloud storage is full")
+            case .takenOver: return String(localized: "Another device now backs up to this profile. Choose a profile to continue on this device.")
+            case .failed(let message): return String(localized: "Not backed up: \(message)")
             }
         }
     }
@@ -189,14 +189,14 @@ final class CloudBackupManager: ObservableObject {
 
         var errorDescription: String? {
             switch self {
-            case .noAccount: return "Sign in to iCloud in the Settings app to back up."
-            case .offline: return "No connection. Try again when you are online."
-            case .quotaExceeded: return "Your iCloud storage is full."
-            case .takenOver: return "Another device now backs up to this profile."
-            case .profileLimit: return "You already have \(CloudBackupManager.maxProfiles) profiles. Delete one to add another."
-            case .notEnabled: return "iCloud Backup is off on this device."
-            case .notFound: return "That profile is no longer in iCloud."
-            case .schemaNotDeployed: return "iCloud is not ready for this version of the app yet: its backup format has not been published. Nothing is lost, and everything stays on this device. Try again later."
+            case .noAccount: return String(localized: "Sign in to iCloud in the Settings app to back up.")
+            case .offline: return String(localized: "No connection. Try again when you are online.")
+            case .quotaExceeded: return String(localized: "Your iCloud storage is full.")
+            case .takenOver: return String(localized: "Another device now backs up to this profile.")
+            case .profileLimit: return String(localized: "You already have \(CloudBackupManager.maxProfiles) profiles. Delete one to add another.")
+            case .notEnabled: return String(localized: "iCloud Backup is off on this device.")
+            case .notFound: return String(localized: "That profile is no longer in iCloud.")
+            case .schemaNotDeployed: return String(localized: "iCloud is not ready for this version of the app yet: its backup format has not been published. Nothing is lost, and everything stays on this device. Try again later.")
             case .other(let message): return message
             }
         }
@@ -287,7 +287,7 @@ final class CloudBackupManager: ObservableObject {
         deviceID = UUID().uuidString
         defaults.set(deviceID, forKey: Key.deviceID)
         if wasEnabled {
-            record(.erased, "Erased everything on this \(CloudDevice.kind); it no longer backs up to \u{201C}\(name)\u{201D}. The profile stays in iCloud.")
+            record(.erased, String(localized: "Erased everything on this \(CloudDevice.kind); it no longer backs up to \u{201C}\(name)\u{201D}. The profile stays in iCloud."))
         }
     }
 
@@ -370,7 +370,7 @@ final class CloudBackupManager: ObservableObject {
             clearClaim()
             throw error
         }
-        record(.started, "Started backing up as \u{201C}\(name)\u{201D}")
+        record(.started, String(localized: "Started backing up as \u{201C}\(name)\u{201D}"))
     }
 
     /// The backup behind a profile, downloaded and decoded but not applied: the restore sheet shows
@@ -406,9 +406,9 @@ final class CloudBackupManager: ObservableObject {
     func restore(_ snapshot: CloudSnapshot, from profile: ProfileSummary, mode: CloudSnapshot.RestoreMode, claim: Bool) async throws {
         if claim { try await ensureZone() }
         snapshot.apply(mode)
-        let how = mode == .replace ? "Replace" : "Merge"
+        let how = mode == .replace ? String(localized: "Replace") : String(localized: "Merge")
         guard claim else {
-            record(.restored, "Restored \u{201C}\(profile.nickname)\u{201D} with \(how)")
+            record(.restored, String(localized: "Restored \u{201C}\(profile.nickname)\u{201D} with \(how)"))
             return
         }
         setClaim(profileID: profile.id, nickname: profile.nickname)
@@ -419,14 +419,14 @@ final class CloudBackupManager: ObservableObject {
         // (which, after the restore, includes the profile's). `force` because the digest we last
         // saved is not this profile's.
         try await save(force: true, creating: false, automatic: false, expectOwner: profile.ownerDeviceID)
-        record(.switched, "Restored \u{201C}\(profile.nickname)\u{201D} with \(how) and switched to it")
+        record(.switched, String(localized: "Restored \u{201C}\(profile.nickname)\u{201D} with \(how) and switched to it"))
     }
 
     /// Restores a backup file (`importFile`) onto this device. Never claims anything: a file has no
     /// profile behind it.
     func restore(file snapshot: CloudSnapshot, named name: String, mode: CloudSnapshot.RestoreMode) {
         snapshot.apply(mode)
-        record(.restored, "Restored the file \u{201C}\(name)\u{201D} with \(mode == .replace ? "Replace" : "Merge")")
+        record(.restored, String(localized: "Restored the file \u{201C}\(name)\u{201D} with \(mode == .replace ? String(localized: "Replace") : String(localized: "Merge"))"))
     }
 
     /// Stops backing up from this device. The profile stays in iCloud for a restore later.
@@ -434,7 +434,7 @@ final class CloudBackupManager: ObservableObject {
         let name = nickname
         clearClaim()
         status = .idle
-        record(.stopped, "Stopped backing up to \u{201C}\(name)\u{201D} from this \(CloudDevice.kind)")
+        record(.stopped, String(localized: "Stopped backing up to \u{201C}\(name)\u{201D} from this \(CloudDevice.kind)"))
     }
 
     func rename(_ rawNickname: String) async throws {
@@ -449,7 +449,7 @@ final class CloudBackupManager: ObservableObject {
         if let index = profiles.firstIndex(where: { $0.id == profileID }) {
             profiles[index] = summary(of: record) ?? profiles[index]
         }
-        self.record(.renamed, "Renamed \u{201C}\(previous)\u{201D} to \u{201C}\(name)\u{201D}")
+        self.record(.renamed, String(localized: "Renamed \u{201C}\(previous)\u{201D} to \u{201C}\(name)\u{201D}"))
     }
 
     /// Deletes a profile from iCloud, for good. Deleting this device's own profile also turns the
@@ -466,7 +466,7 @@ final class CloudBackupManager: ObservableObject {
             clearClaim()
             status = .idle
         }
-        record(.deleted, "Deleted \u{201C}\(profile.nickname)\u{201D} from iCloud" + (own ? "; this \(CloudDevice.kind) stopped backing up" : ""))
+        record(.deleted, own ? String(localized: "Deleted \u{201C}\(profile.nickname)\u{201D} from iCloud; this \(CloudDevice.kind) stopped backing up") : String(localized: "Deleted \u{201C}\(profile.nickname)\u{201D} from iCloud"))
     }
 
     // MARK: The backup file
@@ -477,14 +477,14 @@ final class CloudBackupManager: ObservableObject {
         let data = try snapshot.encoded()
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(CloudSnapshot.fileName(), isDirectory: false)
         try data.write(to: url, options: .atomic)
-        record(.exported, "Exported a backup file, \(ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file))")
+        record(.exported, String(localized: "Exported a backup file, \(ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file))"))
         return url
     }
 
     /// A picked file that was not a backup: one history line, so "I tried to restore and nothing
     /// happened" has an answer.
     func noteRefusedFile(_ name: String, reason: String) {
-        record(.failed, "Could not restore \u{201C}\(name)\u{201D}: \(reason)")
+        record(.failed, String(localized: "Could not restore \u{201C}\(name)\u{201D}: \(reason)"))
     }
 
     /// Reads a backup file the user picked. Security-scoped: the Files picker hands out URLs the
@@ -501,7 +501,7 @@ final class CloudBackupManager: ObservableObject {
         do {
             data = try Data(contentsOf: url)
         } catch {
-            throw Failure.other("The file could not be opened.")
+            throw Failure.other(String(localized: "The file could not be opened."))
         }
         return (try CloudSnapshot.decode(data), data.count)
     }
@@ -592,7 +592,7 @@ final class CloudBackupManager: ObservableObject {
             guard await refreshAccountStatus() else { throw Failure.noAccount }
             if !force, digest == defaults.string(forKey: Key.lastSavedDigest) {
                 markSaved(digest: digest, bytes: lastSavedBytes, automatic: automatic)
-                record(.unchanged, "Checked, nothing new since the last backup")
+                record(.unchanged, String(localized: "Checked, nothing new since the last backup"))
                 return
             }
             try await ensureZone()
@@ -621,7 +621,7 @@ final class CloudBackupManager: ObservableObject {
             let saved = try await modify(record, policy: .ifServerRecordUnchanged)
             markSaved(digest: digest, bytes: payload.count, automatic: automatic)
             let size = ByteCountFormatter.string(fromByteCount: Int64(payload.count), countStyle: .file)
-            self.record(.backedUp, automatic ? "Backed up automatically, \(size)" : "Backed up with Back Up Now, \(size)")
+            self.record(.backedUp, automatic ? String(localized: "Backed up automatically, \(size)") : String(localized: "Backed up with Back Up Now, \(size)"))
             if let summary = summary(of: saved) {
                 if let index = profiles.firstIndex(where: { $0.id == summary.id }) { profiles[index] = summary } else { profiles.append(summary) }
             }
@@ -630,9 +630,9 @@ final class CloudBackupManager: ObservableObject {
             status = Self.status(for: failure)
             if case .takenOver = failure {
                 defaults.set(true, forKey: Key.takenOver)
-                self.record(.takenOver, "Another device took over \u{201C}\(nickname)\u{201D}; this \(CloudDevice.kind) stopped saving to it")
+                self.record(.takenOver, String(localized: "Another device took over \u{201C}\(nickname)\u{201D}; this \(CloudDevice.kind) stopped saving to it"))
             } else {
-                self.record(.failed, "Backup failed: \(Self.shortReason(failure))")
+                self.record(.failed, String(localized: "Backup failed: \(Self.shortReason(failure))"))
             }
             throw failure
         }
@@ -655,14 +655,14 @@ final class CloudBackupManager: ObservableObject {
     /// A failure as a few words for a history line ("no connection", "iCloud storage is full").
     private static func shortReason(_ failure: Failure) -> String {
         switch failure {
-        case .noAccount: return "not signed in to iCloud"
-        case .offline: return "no connection"
-        case .quotaExceeded: return "iCloud storage is full"
-        case .takenOver: return "another device took the profile over"
-        case .profileLimit: return "too many profiles"
-        case .notEnabled: return "backup is off"
-        case .notFound: return "the profile is no longer in iCloud"
-        case .schemaNotDeployed(let serverLine): return "iCloud is not ready for this version yet, its backup format is not published (\(serverLine))"
+        case .noAccount: return String(localized: "not signed in to iCloud")
+        case .offline: return String(localized: "no connection")
+        case .quotaExceeded: return String(localized: "iCloud storage is full")
+        case .takenOver: return String(localized: "another device took the profile over")
+        case .profileLimit: return String(localized: "too many profiles")
+        case .notEnabled: return String(localized: "backup is off")
+        case .notFound: return String(localized: "the profile is no longer in iCloud")
+        case .schemaNotDeployed(let serverLine): return String(localized: "iCloud is not ready for this version yet, its backup format is not published (\(serverLine))")
         case .other(let message): return message
         }
     }
@@ -727,7 +727,7 @@ final class CloudBackupManager: ObservableObject {
     private func modify(_ record: CKRecord, policy: CKModifyRecordsOperation.RecordSavePolicy) async throws -> CKRecord {
         do {
             let result = try await database.modifyRecords(saving: [record], deleting: [], savePolicy: policy, atomically: true)
-            guard let saved = result.saveResults[record.recordID] else { throw Failure.other("iCloud returned no record.") }
+            guard let saved = result.saveResults[record.recordID] else { throw Failure.other(String(localized: "iCloud returned no record.")) }
             return try saved.get()
         } catch let error as CKError where error.code == .serverRecordChanged {
             // Someone else wrote this profile since we read it. Ours if the owner is still us (a
@@ -769,7 +769,8 @@ final class CloudBackupManager: ObservableObject {
         record[Field.payload] = CKAsset(fileURL: url)
         record[Field.payloadBytes] = NSNumber(value: payload.count)
         record[Field.payloadDigest] = digest as NSString
-        record[Field.summary] = snapshot.summaryLine as NSString
+        // English on the record: other devices (and older versions) show it as stored.
+        record[Field.summary] = snapshot.storedSummaryLine as NSString
         return url
     }
 
@@ -777,7 +778,7 @@ final class CloudBackupManager: ObservableObject {
         guard record.recordType == Self.recordType else { return nil }
         return ProfileSummary(
             id: record.recordID.recordName,
-            nickname: record[Field.nickname] as? String ?? "Profile",
+            nickname: record[Field.nickname] as? String ?? String(localized: "Profile"),
             deviceKind: record[Field.deviceKind] as? String ?? "",
             ownerDeviceID: record[Field.ownerDeviceID] as? String ?? "",
             updatedAt: record[Field.updatedAt] as? Date ?? record.modificationDate ?? Date(timeIntervalSince1970: 0),
@@ -832,7 +833,7 @@ final class CloudBackupManager: ObservableObject {
         case .quotaExceeded: return .quotaExceeded
         case .unknownItem: return .notFound
         case .badContainer, .missingEntitlement:
-            return .other("This copy of the app cannot reach its iCloud container (\(containerIdentifier)). Update the app and try again.")
+            return .other(String(localized: "This copy of the app cannot reach its iCloud container (\(containerIdentifier)). Update the app and try again."))
         case .zoneNotFound, .userDeletedZone:
             UserDefaults.standard.set(false, forKey: Key.zoneReady)
             return .offline

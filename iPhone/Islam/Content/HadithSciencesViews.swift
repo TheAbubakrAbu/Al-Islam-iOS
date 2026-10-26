@@ -24,8 +24,8 @@ struct HadithSciencesView: View {
             }
             .themedListRowBackground()
         }
-        .navigationTitle("The Sciences of Hadith")
-        .selectableArticleList(article: "HadithSciencesView")
+        .navigationTitle(AppLanguage.article("The Sciences of Hadith"))
+        .englishArticle().selectableArticleList(article: "HadithSciencesView")
     }
 
     static let sections: [ArticleSection] = [
@@ -200,8 +200,8 @@ struct HadithPreservationView: View {
             }
             .themedListRowBackground()
         }
-        .navigationTitle("How the Hadith Were Preserved")
-        .selectableArticleList(article: "HadithPreservationView")
+        .navigationTitle(AppLanguage.article("How the Hadith Were Preserved"))
+        .englishArticle().selectableArticleList(article: "HadithPreservationView")
     }
 
     static let sections: [ArticleSection] = [
@@ -355,8 +355,8 @@ struct HadithRejectorsView: View {
             }
             .themedListRowBackground()
         }
-        .navigationTitle("Answering the Hadith Rejectors")
-        .selectableArticleList(article: "HadithRejectorsView")
+        .navigationTitle(AppLanguage.article("Answering the Hadith Rejectors"))
+        .englishArticle().selectableArticleList(article: "HadithRejectorsView")
     }
 
     static let sections: [ArticleSection] = [

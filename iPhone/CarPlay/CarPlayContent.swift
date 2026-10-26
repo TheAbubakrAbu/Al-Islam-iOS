@@ -70,8 +70,14 @@ struct CarPlaySection: Equatable {
 struct CarPlaySurah: Equatable {
     let number: Int
     let name: String
+    /// Empty in the Arabic interface, where `name` is already the Arabic name.
     let meaning: String
     let ayahCount: Int
+
+    /// "The Opening · 7 ayahs", or just the count when there is no meaning to show.
+    var detail: String {
+        meaning.isEmpty ? String(localized: "\(ayahCount) ayahs") : String(localized: "\(meaning) · \(ayahCount) ayahs")
+    }
 }
 
 /// Which surah is sounding right now, for the rows' now-playing bars.
@@ -153,9 +159,10 @@ enum CarPlayContent {
         if let last = lastSurah, let surah = surahs[last.surahNumber] {
             var detail = last.reciter.displayNameWithEnglishQiraah
             if last.currentDuration > 1 {
+                // The hand-built clocks in the locale's digits; the reciter's name before them is left as is.
                 detail += " · " + (last.fullDuration > 0
-                    ? "\(formatMMSS(last.currentDuration)) of \(formatMMSS(last.fullDuration))"
-                    : formatMMSS(last.currentDuration))
+                    ? String(localized: "\(formatMMSS(last.currentDuration).localizedDigits) of \(formatMMSS(last.fullDuration).localizedDigits)")
+                    : formatMMSS(last.currentDuration).localizedDigits)
             }
             resume.append(CarPlayRow(
                 text: surah.name,
@@ -167,17 +174,17 @@ enum CarPlayContent {
         }
         if let last = lastAyah, let surah = surahs[last.surahNumber] {
             resume.append(CarPlayRow(
-                text: "\(surah.name), Ayah \(last.ayahNumber)",
-                detail: "Plays on through the surah",
+                text: String(localized: "\(surah.name), Ayah \(last.ayahNumber)"),
+                detail: String(localized: "Plays on through the surah"),
                 artwork: .number(surah.number),
                 action: .resumeLastAyah
             ))
         }
-        var start = [CarPlayRow(text: "Random Surah", artwork: .symbol("shuffle"), action: .playRandomSurah)]
+        var start = [CarPlayRow(text: String(localized: "Random Surah"), artwork: .symbol("shuffle"), action: .playRandomSurah)]
         if showsSunnah {
             start.append(CarPlayRow(
-                text: "Sunnah Recitations",
-                detail: "Al-Kahf on Friday, al-Mulk before sleep",
+                text: String(localized: "Sunnah Recitations"),
+                detail: String(localized: "Al-Kahf on Friday, al-Mulk before sleep"),
                 artwork: .symbol("moon.stars"),
                 accessory: .disclosure,
                 action: .openSunnah
@@ -185,11 +192,11 @@ enum CarPlayContent {
         }
         sections.append(resume.isEmpty
             ? CarPlaySection(rows: start)
-            : CarPlaySection(header: "Continue Listening", rows: resume + start))
+            : CarPlaySection(header: String(localized: "Continue Listening"), rows: resume + start))
 
         let favoriteRows = favorites.compactMap { surahs[$0] }.prefix(favoriteLimit).map { surahRow($0, playback: playback) }
         if !favoriteRows.isEmpty {
-            sections.append(CarPlaySection(header: "Favorite Surahs", rows: Array(favoriteRows)))
+            sections.append(CarPlaySection(header: String(localized: "Favorite Surahs"), rows: Array(favoriteRows)))
         }
 
         let bookmarkRows: [CarPlayRow] = bookmarks.prefix(bookmarkLimit).compactMap { bookmark in
@@ -198,14 +205,14 @@ enum CarPlayContent {
                 .split(whereSeparator: \.isNewline).first
                 .map { $0.trimmingCharacters(in: .whitespaces) }
             return CarPlayRow(
-                text: "\(surah.name) \(bookmark.surah):\(bookmark.ayah)",
+                text: "\(surah.name) \("\(bookmark.surah):\(bookmark.ayah)".localizedDigits)",
                 detail: (note?.isEmpty ?? true) ? nil : note,
                 artwork: .symbol("bookmark.fill"),
                 action: .playAyah(surah: bookmark.surah, ayah: bookmark.ayah)
             )
         }
         if !bookmarkRows.isEmpty {
-            sections.append(CarPlaySection(header: "Bookmarks", rows: bookmarkRows))
+            sections.append(CarPlaySection(header: String(localized: "Bookmarks"), rows: bookmarkRows))
         }
 
         // History never repeats the Last Listened row above it (same surah, same reciter).
@@ -219,12 +226,12 @@ enum CarPlayContent {
                 guard let surah = surahs[item.surahNumber] else { return nil }
                 var detail = item.reciter.displayNameWithEnglishQiraah
                 if let position = item.currentDuration, position > 1 {
-                    detail += " · \(formatMMSS(position))"
+                    detail += " · \(formatMMSS(position).localizedDigits)"
                 }
                 return CarPlayRow(text: surah.name, detail: detail, artwork: .number(surah.number), action: .resumeHistory(item.id))
             }
         if !recentRows.isEmpty {
-            sections.append(CarPlaySection(header: "Recently Played", rows: recentRows))
+            sections.append(CarPlaySection(header: String(localized: "Recently Played"), rows: recentRows))
         }
 
         return clipped(sections, maxItems: maxItems, maxSections: maxSections)
@@ -257,7 +264,7 @@ enum CarPlayContent {
                     result[index] = CarPlaySunnahRecitation(
                         id: result[index].id,
                         title: "Al-Mu'awwidhat",
-                        detail: "Al-Ikhlas, al-Falaq and an-Nas, morning and evening",
+                        detail: String(localized: "Al-Ikhlas, al-Falaq and an-Nas, morning and evening"),
                         symbol: "sun.max",
                         start: start,
                         followedBy: result[index].followedBy
@@ -303,13 +310,13 @@ enum CarPlayContent {
     }
 
     static func groupTitle(_ range: ClosedRange<Int>) -> String {
-        "Surahs \(range.lowerBound)–\(range.upperBound)"
+        String(localized: "Surahs \(range.lowerBound)–\(range.upperBound)")
     }
 
     static func surahRow(_ surah: CarPlaySurah, playback: CarPlayPlayback) -> CarPlayRow {
         CarPlayRow(
             text: surah.name,
-            detail: "\(surah.meaning) · \(surah.ayahCount) ayahs",
+            detail: surah.detail,
             artwork: .number(surah.number),
             isPlaying: playback.isPlaying(surah.number),
             action: .playSurah(surah.number)
@@ -320,11 +327,11 @@ enum CarPlayContent {
     static func surahIndexSections(surahs: [Int: CarPlaySurah], playback: CarPlayPlayback) -> [CarPlaySection] {
         guard !surahs.isEmpty else { return [] }
         let rows = surahGroups().map { range in
-            let first = surahs[range.lowerBound]?.name ?? "Surah \(range.lowerBound)"
-            let last = surahs[range.upperBound]?.name ?? "Surah \(range.upperBound)"
+            let first = surahs[range.lowerBound]?.name ?? String(localized: "Surah \(range.lowerBound)")
+            let last = surahs[range.upperBound]?.name ?? String(localized: "Surah \(range.upperBound)")
             return CarPlayRow(
                 text: groupTitle(range),
-                detail: "\(first) to \(last)",
+                detail: String(localized: "\(first) to \(last)"),
                 accessory: .disclosure,
                 isPlaying: playback.isPlaying && playback.surah.map { range.contains($0) } == true,
                 action: .openSurahGroup(range)
@@ -345,14 +352,14 @@ enum CarPlayContent {
             let surah = surahs[item.surahNumber]
             return CarPlayRow(
                 text: surah?.name ?? item.surahName,
-                detail: surah.map { "\($0.meaning) · \($0.ayahCount) ayahs" },
+                detail: surah.map(\.detail),
                 artwork: .number(item.surahNumber),
                 action: .playQueued(item.id)
             )
         }
         return [
             CarPlaySection(rows: rows),
-            CarPlaySection(rows: [CarPlayRow(text: "Clear Up Next", artwork: .symbol("xmark.circle"), action: .clearQueue)]),
+            CarPlaySection(rows: [CarPlayRow(text: String(localized: "Clear Up Next"), artwork: .symbol("xmark.circle"), action: .clearQueue)]),
         ]
     }
 
@@ -362,9 +369,9 @@ enum CarPlayContent {
     /// every riwayah's own reciters when the user has turned the other riwayat on.
     static func reciterGroups(includeRiwayat: Bool) -> [CarPlayReciterGroup] {
         var groups = [
-            CarPlayReciterGroup(id: "murattal", title: "Normal (Murattal)", reciters: recitersMurattal, isRiwayah: false),
-            CarPlayReciterGroup(id: "mujawwad", title: "Slow & Melodic (Mujawwad)", reciters: recitersMujawwad, isRiwayah: false),
-            CarPlayReciterGroup(id: "muallim", title: "Teaching (Muallim)", reciters: recitersMuallim, isRiwayah: false),
+            CarPlayReciterGroup(id: "murattal", title: String(localized: "Normal (Murattal)"), reciters: recitersMurattal, isRiwayah: false),
+            CarPlayReciterGroup(id: "mujawwad", title: String(localized: "Slow & Melodic (Mujawwad)"), reciters: recitersMujawwad, isRiwayah: false),
+            CarPlayReciterGroup(id: "muallim", title: String(localized: "Teaching (Muallim)"), reciters: recitersMuallim, isRiwayah: false),
         ]
         guard includeRiwayat else { return groups }
         let riwayat: [[Reciter]] = [
@@ -403,33 +410,33 @@ enum CarPlayContent {
         let selectedID = isRandom ? nil : selected?.id
 
         if isRandom {
-            sections.append(CarPlaySection(header: "Selected Reciter", rows: [
-                CarPlayRow(text: Settings.randomReciterName, detail: "A new reciter for each surah", artwork: .symbol("shuffle"), accessory: .checkmark)
+            sections.append(CarPlaySection(header: String(localized: "Selected Reciter"), rows: [
+                CarPlayRow(text: Settings.randomReciterName.localizedDisplay, detail: String(localized: "A new reciter for each surah"), artwork: .symbol("shuffle"), accessory: .checkmark)
             ]))
         } else if let selected {
-            sections.append(CarPlaySection(header: "Selected Reciter", rows: [
+            sections.append(CarPlaySection(header: String(localized: "Selected Reciter"), rows: [
                 CarPlayRow(text: selected.displayNameWithEnglishQiraah, accessory: .checkmark)
             ]))
         }
 
         if !favorites.isEmpty {
-            sections.append(CarPlaySection(header: "Favorites", rows: favorites.map { reciterRow($0, selectedID: selectedID) }))
+            sections.append(CarPlaySection(header: String(localized: "Favorites"), rows: favorites.map { reciterRow($0, selectedID: selectedID) }))
         }
 
         if !downloaded.isEmpty {
-            sections.append(CarPlaySection(header: "Downloaded", rows: downloaded.map { entry in
+            sections.append(CarPlaySection(header: String(localized: "Downloaded"), rows: downloaded.map { entry in
                 let carried = entry.reciter.carriedSurahCount
                 let detail = entry.isDownloading
-                    ? "Downloading, \(entry.completedSurahs) of \(carried) surahs"
+                    ? String(localized: "Downloading, \(entry.completedSurahs) of \(carried) surahs")
                     : entry.completedSurahs >= carried
-                        ? "All \(carried) surahs on this iPhone"
-                        : "\(entry.completedSurahs) of \(carried) surahs on this iPhone"
+                        ? String(localized: "All \(carried) surahs on this iPhone")
+                        : String(localized: "\(entry.completedSurahs) of \(carried) surahs on this iPhone")
                 return reciterRow(entry.reciter, selectedID: selectedID, detail: detail)
             }))
         }
 
         var browse = [CarPlayRow(
-            text: Settings.randomReciterName,
+            text: Settings.randomReciterName.localizedDisplay,
             artwork: .symbol("shuffle"),
             accessory: isRandom ? .checkmark : .none,
             action: .selectRandomReciter
@@ -437,16 +444,16 @@ enum CarPlayContent {
         for group in groups where !group.isRiwayah {
             browse.append(CarPlayRow(
                 text: group.title,
-                detail: "\(group.reciters.count) reciters",
+                detail: String(localized: "\(group.reciters.count) reciters"),
                 accessory: .disclosure,
                 action: .openReciterGroup(id: group.id, page: nil)
             ))
         }
         let riwayatCount = groups.filter(\.isRiwayah).count
         if riwayatCount > 0 {
-            browse.append(CarPlayRow(text: "Other Riwayat", detail: "\(riwayatCount) riwayat", accessory: .disclosure, action: .openRiwayat))
+            browse.append(CarPlayRow(text: String(localized: "Other Riwayat"), detail: String(localized: "\(riwayatCount) riwayat"), accessory: .disclosure, action: .openRiwayat))
         }
-        sections.append(CarPlaySection(header: "All Reciters", rows: browse))
+        sections.append(CarPlaySection(header: String(localized: "All Reciters"), rows: browse))
 
         // Clip from the top sections down, but never lose the browse rows: they reach every reciter.
         let head = clipped(Array(sections.dropLast()), maxItems: max(0, maxItems - browse.count), maxSections: max(0, maxSections - 1))
@@ -457,7 +464,7 @@ enum CarPlayContent {
         [CarPlaySection(rows: groups.filter(\.isRiwayah).map { group in
             CarPlayRow(
                 text: group.title,
-                detail: group.reciters.count == 1 ? "1 reciter" : "\(group.reciters.count) reciters",
+                detail: group.reciters.count == 1 ? String(localized: "1 reciter") : String(localized: "\(group.reciters.count) reciters"),
                 accessory: .disclosure,
                 action: .openReciterGroup(id: group.id, page: nil)
             )
@@ -490,8 +497,8 @@ enum CarPlayContent {
         }
         return [CarPlaySection(rows: pages.enumerated().map { index, slice in
             CarPlayRow(
-                text: "\(slice[0].name) to \(slice[slice.count - 1].name)",
-                detail: "\(slice.count) reciters",
+                text: String(localized: "\(slice[0].name) to \(slice[slice.count - 1].name)"),
+                detail: String(localized: "\(slice.count) reciters"),
                 accessory: .disclosure,
                 action: .openReciterGroup(id: group.id, page: index)
             )
@@ -542,10 +549,10 @@ enum CarPlayContent {
             return CarPlayRow(text: prayer.displayName, detail: detail, artwork: .symbol(prayer.image))
         }
 
-        let header = city.map { $0.isEmpty ? "Today" : "Today in \($0)" } ?? "Today"
+        let header = city.map { $0.isEmpty ? String(localized: "Today") : String(localized: "Today in \($0)") } ?? String(localized: "Today")
         var sections = [CarPlaySection(header: header, rows: today.map { row($0, isNext: $0.id == next?.id) })]
         if next == nil, let tomorrowFirst {
-            sections.append(CarPlaySection(header: "Tomorrow", rows: [row(tomorrowFirst, isNext: true)]))
+            sections.append(CarPlaySection(header: String(localized: "Tomorrow"), rows: [row(tomorrowFirst, isNext: true)]))
         }
         return sections
     }
@@ -553,11 +560,11 @@ enum CarPlayContent {
     /// "in 1 hr 5 min", rounded up to the minute so it never reads "in 0 min" before the time.
     static func countdown(to date: Date, from now: Date) -> String {
         let minutes = Int((date.timeIntervalSince(now) / 60).rounded(.up))
-        guard minutes > 0 else { return "now" }
+        guard minutes > 0 else { return String(localized: "now") }
         let hours = minutes / 60
         let rest = minutes % 60
-        if hours == 0 { return "in \(rest) min" }
-        return rest == 0 ? "in \(hours) hr" : "in \(hours) hr \(rest) min"
+        if hours == 0 { return String(localized: "in \(rest) min") }
+        return rest == 0 ? String(localized: "in \(hours) hr") : String(localized: "in \(hours) hr \(rest) min")
     }
     #endif
 

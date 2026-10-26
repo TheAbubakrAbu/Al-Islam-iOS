@@ -177,7 +177,7 @@ struct AboutSignsSection: View {
                     .buttonStyle(.plain)
                 }
 
-                Text("Learn more under Al-Islam \u{2192} Pillars and Beliefs.")
+                Text(verbatim: AppLanguage.article("Learn more under Al-Islam \u{2192} Pillars and Beliefs."))
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
@@ -225,6 +225,28 @@ struct SignSection {
     init(_ heading: String, _ blocks: [SignBlock]) {
         self.heading = heading
         self.blocks = blocks
+    }
+}
+
+extension IslamArticle {
+    /// A generated page (a prophecy, a prophet's sign) in the shape its own search bar scans: one
+    /// section per `ArticleHeader`, its paragraphs joined, folded once. The corpus is lifted from
+    /// SwiftUI prose and never carries these pages, so `selectableArticleList(article:fallback:)`
+    /// takes this in place of the corpus article. Same prose as the index's `searchKey`: the text
+    /// blocks, not the quoted ayat and narrations.
+    static func generated(id: String, title: String, sections: [SignSection]) -> IslamArticle {
+        IslamArticle(
+            id: id,
+            title: title,
+            sections: sections.map { section -> IslamArticle.Section in
+                let text = section.blocks.compactMap { block -> String? in
+                    if case .text(let text) = block { return text }
+                    return nil
+                }.joined(separator: "\n")
+                return IslamArticle.Section(heading: section.heading, text: text, folded: IslamArticles.fold(text))
+            },
+            foldedTitle: IslamArticles.fold(title)
+        )
     }
 }
 
@@ -415,7 +437,7 @@ struct StrongestSection<Item: Identifiable, Row: View>: View {
                         withAnimation(.easeInOut) { showAll.toggle() }
                     } label: {
                         HStack {
-                            Text(showAll ? "Show fewer" : "Show \(items.count - Self.collapsedCount) more")
+                            (showAll ? Text(verbatim: AppLanguage.article("Show fewer")) : Text("Show \(items.count - Self.collapsedCount) more"))
                                 .font(.subheadline.weight(.medium))
                             Spacer()
                             Image(systemName: showAll ? "chevron.up" : "chevron.down")
@@ -583,7 +605,7 @@ struct ProphetMiraclesLink: View {
 
                             Spacer(minLength: 8)
 
-                            Image(systemName: "chevron.right")
+                            Image(systemName: "chevron.forward")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.tertiary)
                         }

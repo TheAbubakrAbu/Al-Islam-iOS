@@ -40,24 +40,24 @@ struct WeatherDetailSheet: View {
                         }
 
                         Section(header: Text("CONDITIONS")) {
-                            row("UV Index", systemImage: "sun.max.trianglebadge.exclamationmark",
-                                value: "\(weather.uvIndex)", detail: weather.uvCategory)
-                            row("Humidity", systemImage: "humidity.fill", value: weather.humidityText,
-                                detail: "Dew point \(weather.dewPointText)")
-                            row("Wind", systemImage: "wind", value: weather.windText)
-                            row("Cloud Cover", systemImage: "cloud.fill", value: weather.cloudCoverText)
-                            row("Precipitation", systemImage: "drop.fill",
+                            row(String(localized: "UV Index"), systemImage: "sun.max.trianglebadge.exclamationmark",
+                                value: weather.uvIndex.formatted(), detail: weather.uvCategory)
+                            row(String(localized: "Humidity"), systemImage: "humidity.fill", value: weather.humidityText,
+                                detail: String(localized: "Dew point \(weather.dewPointText)"))
+                            row(String(localized: "Wind"), systemImage: "wind", value: weather.windText)
+                            row(String(localized: "Cloud Cover"), systemImage: "cloud.fill", value: weather.cloudCoverText)
+                            row(String(localized: "Precipitation"), systemImage: "drop.fill",
                                 value: weather.precipitationChanceText ?? weather.precipitationText,
                                 detail: precipitationDetail(weather))
-                            row("Visibility", systemImage: "eye.fill", value: weather.visibilityText)
-                            row("Pressure", systemImage: "gauge.with.dots.needle.33percent", value: weather.pressureText,
+                            row(String(localized: "Visibility"), systemImage: "eye.fill", value: weather.visibilityText)
+                            row(String(localized: "Pressure"), systemImage: "gauge.with.dots.needle.33percent", value: weather.pressureText,
                                 detail: weather.pressureTrend)
                         }
 
                         if let sunrise = prayerTime("Shurooq"), let sunset = prayerTime("Maghrib") {
                             Section(header: Text("SUN")) {
-                                row("Sunrise", systemImage: "sunrise.fill", value: settings.formatDate(sunrise))
-                                row("Sunset", systemImage: "sunset.fill", value: settings.formatDate(sunset))
+                                row(String(localized: "Sunrise"), systemImage: "sunrise.fill", value: settings.formatDate(sunrise))
+                                row(String(localized: "Sunset"), systemImage: "sunset.fill", value: settings.formatDate(sunset))
                             }
                         }
 
@@ -99,8 +99,8 @@ struct WeatherDetailSheet: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(store.isFetching ? "Checking the sky..." : "No weather yet")
                                     .font(.headline)
-                                Text(store.lastError.map { "Apple Weather did not answer: \($0)" }
-                                     ?? "The sky asks Apple Weather for your location the next time the Adhan tab is in front.")
+                                Text((store.lastError.map { String(localized: "Apple Weather did not answer: \($0)") }
+                                     ?? String(localized: "The sky asks Apple Weather for your location the next time the Adhan tab is in front.")).localizedDigits)
                                     .font(.footnote)
                                     .foregroundColor(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -188,7 +188,7 @@ struct WeatherDetailSheet: View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    conditionChip(title: "Now", systemImage: weather.symbolName, selected: store.preview == nil, id: "now") {
+                    conditionChip(title: String(localized: "Now"), systemImage: weather.symbolName, selected: store.preview == nil, id: "now") {
                         store.preview = nil
                     }
                     ForEach(SkyWeatherCondition.all) { condition in
@@ -286,7 +286,7 @@ struct WeatherDetailSheet: View {
     /// as a typo). Nothing when the chance itself is missing and the amount is the value.
     private func precipitationDetail(_ weather: SkyWeather) -> String? {
         guard weather.precipitationChanceText != nil else { return nil }
-        return weather.precipitationMm > 0.05 ? "\(weather.precipitationText) this hour" : "None expected this hour"
+        return weather.precipitationMm > 0.05 ? String(localized: "\(weather.precipitationText) this hour") : String(localized: "None expected this hour")
     }
 
     private func prayerTime(_ name: String) -> Date? {

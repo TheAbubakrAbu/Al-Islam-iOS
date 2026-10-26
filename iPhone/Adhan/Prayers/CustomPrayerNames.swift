@@ -48,12 +48,12 @@ struct CustomPrayerNamesSection: View {
 
     private func row(for prayer: String) -> some View {
         HStack {
-            Text(prayer)
+            Text(prayer.localizedDisplay)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .frame(width: 84, alignment: .leading)
 
-            TextField(prayer, text: draft(for: prayer))
+            TextField(prayer.localizedDisplay, text: draft(for: prayer))
                 .font(.subheadline)
                 .multilineTextAlignment(.trailing)
                 .autocorrectionDisabled()
@@ -85,7 +85,7 @@ struct CustomPrayerNamesSection: View {
         // A name identical to the default, or an empty one, is stored as "no custom name" rather than as a
         // redundant entry - that keeps `hasAnyCustomName` and the reset button honest.
         var names = settings.customPrayerNames
-        if trimmed.isEmpty || trimmed == prayer {
+        if trimmed.isEmpty || trimmed == prayer || trimmed == prayer.localizedDisplay {
             guard names[prayer] != nil else { return }
             names.removeValue(forKey: prayer)
         } else {

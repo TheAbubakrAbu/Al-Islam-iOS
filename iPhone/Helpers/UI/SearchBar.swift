@@ -20,7 +20,7 @@ struct SearchBar: View {
     var focusRequestID: Int = 0
     /// Field placeholder. Screens that search one specific thing say so ("Search tafsir"),
     /// which is what the `.searchable` prompts used to carry.
-    var placeholder: String = "Search"
+    var placeholder: String = String(localized: "Search")
     var onSearchButtonClicked: (() -> Void)?
     var onFocusChanged: ((Bool) -> Void)?
 
@@ -34,7 +34,7 @@ struct SearchBar: View {
     init(
         text: Binding<String>,
         focusRequestID: Int = 0,
-        placeholder: String = "Search",
+        placeholder: String = String(localized: "Search"),
         onSearchButtonClicked: (() -> Void)? = nil,
         onFocusChanged: ((Bool) -> Void)? = nil
     ) {
@@ -248,6 +248,7 @@ private struct SystemSearchField: UIViewRepresentable {
             if (!field.isFirstResponder || !context.coordinator.recentlySentTexts.contains(text)),
                field.markedTextRange == nil {
                 field.text = text
+                Self.alignForContent(field)
             }
         }
 
@@ -266,8 +267,28 @@ private struct SystemSearchField: UIViewRepresentable {
             context.coordinator.lastCancelToken = cancelToken
             context.coordinator.rememberSentText("")
             field.text = ""
+            Self.alignForContent(field)
             DispatchQueue.main.async { field.resignFirstResponder() }
         }
+    }
+
+    /// A query with no right-to-left letter in it ("2:255", "baqarah 255") sits on the LEFT edge,
+    /// stated outright. Left to `.natural`, a query of digits and punctuation alone has no strong
+    /// direction to resolve by, and in the Arabic interface the field drew nothing at all for "2:255"
+    /// (the clear button and the caret, no text), while "baqarah 255" took the left edge on its own.
+    /// Empty (the placeholder) and Arabic queries keep `.natural`. In English this is what `.natural`
+    /// already resolved to, so nothing changes there. Never mid-composition (see `updateUIView`).
+    static func alignForContent(_ field: UITextField) {
+        guard field.markedTextRange == nil else { return }
+        let value = field.text ?? ""
+        let hasRightToLeftLetter = value.unicodeScalars.contains { scalar in
+            switch scalar.value {
+            case 0x0590...0x08FF, 0xFB1D...0xFDFF, 0xFE70...0xFEFF: return true
+            default: return false
+            }
+        }
+        let wanted: NSTextAlignment = value.isEmpty || hasRightToLeftLetter ? .natural : .left
+        if field.textAlignment != wanted { field.textAlignment = wanted }
     }
 
     final class Coordinator: NSObject, UITextFieldDelegate {
@@ -305,6 +326,7 @@ private struct SystemSearchField: UIViewRepresentable {
             let value = field.text ?? ""
             rememberSentText(value)
             text = value
+            SystemSearchField.alignForContent(field)
         }
 
         @objc func editingBegan() { onFocusChanged?(true) }
@@ -350,7 +372,7 @@ struct LoadMoreControls: View {
                     }
                 }
             } label: {
-                row("Load more \(label)")
+                row(String(localized: "Load more \(label)"))
             }
 
             Divider()
@@ -360,7 +382,7 @@ struct LoadMoreControls: View {
                 Settings.shared.hapticFeedback()
                 onLoadAll()
             } label: {
-                row("Load all \(label)")
+                row(String(localized: "Load all \(label)"))
             }
             .buttonStyle(.plain)
         }
@@ -390,10 +412,11 @@ struct RecentSearchChips: View {
     @Environment(\.appearance) private var appearance
 
     let queries: [String]
-    /// "RECENT" for history; the example row under it says "TRY".
-    var title: String = "RECENT"
+    /// "RECENT" for history, the only row any search shows now (the Quran card's TRY row of example
+    /// queries was removed 2026-10-25).
+    var title: String = String(localized: "RECENT")
     let onPick: (String) -> Void
-    /// Nil for chips that are not the reader's to forget (the examples): no ✕ is drawn.
+    /// Nil for chips that are not the reader's to forget: no ✕ is drawn.
     let onRemove: ((String) -> Void)?
     /// The host card's inner padding: the row scrolls edge to edge of the CARD, not of the padded
     /// content, so a chip slides under the card's edge instead of being chopped at the padding line.

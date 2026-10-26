@@ -23,6 +23,9 @@ struct FocusItem: Identifiable, Equatable {
     /// An asset name. When set, the hero is that image - pinch/double-tap to zoom - instead of Arabic text,
     /// and the caption sits under it. This is what makes every diagram in the app openable full screen.
     let imageName: String?
+    /// Parts of the image picked out (`ImageMarksOverlay`), as fractions of it: the rest is dimmed and
+    /// each part ringed, full screen and in what Copy and Share send. Empty for a plain image.
+    let imageMarks: [CGRect]
     /// One of the 99 Names, when the overlay was opened from a grid tile: the overlay then shows what
     /// the LIST row shows when it expands - Other Names, the description, and the two doors under it
     /// (Abu, 2026-09-23: "when I click on a name I want it to do the same thing that list mode does").
@@ -40,6 +43,7 @@ struct FocusItem: Identifiable, Equatable {
         shareText: String,
         allowsQuranicFont: Bool = true,
         imageName: String? = nil,
+        imageMarks: [CGRect] = [],
         nameDetail: NameOfAllah? = nil
     ) {
         self.id = id
@@ -52,7 +56,25 @@ struct FocusItem: Identifiable, Equatable {
         self.shareText = shareText
         self.allowsQuranicFont = allowsQuranicFont
         self.imageName = imageName
+        self.imageMarks = imageMarks
         self.nameDetail = nameDetail
+    }
+
+    /// The image as Copy and Share send it: the asset itself, or with its marks drawn in.
+    @MainActor
+    var shareImage: UIImage? {
+        guard let imageName, let asset = UIImage(named: imageName) else { return nil }
+        // ImageRenderer is iOS 16; the siblings that share this file still build for 15, where the
+        // plain picture goes out instead.
+        guard !imageMarks.isEmpty, #available(iOS 16.0, *) else { return asset }
+        let renderer = ImageRenderer(content:
+            Image(uiImage: asset)
+                .resizable()
+                .overlay(ImageMarksOverlay(marks: imageMarks))
+                .frame(width: asset.size.width, height: asset.size.height)
+        )
+        renderer.scale = asset.scale
+        return renderer.uiImage ?? asset
     }
 }
 
@@ -110,8 +132,10 @@ struct FocusNameDetails: View {
                         .font(.caption2.weight(.bold))
                         .tracking(0.8)
                         .foregroundColor(settings.accentColor.color)
+                        .keepsFocusOverlayOpen()
 
                     otherNames
+                        .keepsFocusOverlayOpen()
                 }
             }
 
@@ -132,6 +156,7 @@ struct FocusNameDetails: View {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .strokeBorder(settings.accentColor.color.opacity(0.18), lineWidth: 1)
                 )
+                .keepsFocusOverlayOpen()
 
             doors
         }
@@ -184,7 +209,7 @@ struct FocusNameDetails: View {
                         settings.hapticFeedback()
                         showsDetail = true
                     } label: {
-                        detailLabel("More about this name", systemImage: "text.book.closed")
+                        detailLabel(String(localized: "More about this name"), systemImage: "text.book.closed")
                     }
                     .buttonStyle(.plain)
                 }
@@ -198,7 +223,7 @@ struct FocusNameDetails: View {
                         FocusOverlayPresenter.shared.dismiss()
                         AppNavigation.shared.pendingQuran = .ayah(firstFound.surah, firstFound.ayah)
                     } label: {
-                        detailLabel("View First Found", systemImage: "book")
+                        detailLabel(String(localized: "View First Found"), systemImage: "book")
                     }
                     .buttonStyle(.plain)
                 }
@@ -299,7 +324,6 @@ struct FocusOverlayHost: View {
                 Rectangle()
                     .fill(.ultraThinMaterial)
                     .ignoresSafeArea()
-                    .onTapGesture { presenter.dismiss() }
 
                 VStack(spacing: 0) {
                     closeRow
@@ -327,6 +351,15 @@ struct FocusOverlayHost: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
             }
+            // A tap ANYWHERE that is not text, a picture or a button closes the overlay (Abu, 2026-10-23,
+            // the 99 Names: "exit outside of a name ... by touching anywhere that doesn't have text"):
+            // the glass around the hero, the gaps between the blocks, the blank room in the details
+            // scroller. The scrim alone used to take the tap, and nearly all of a Name's screen is the
+            // hero card and the scroller, so most "outside" taps did nothing. Text and the picture swallow
+            // their own taps (`keepsFocusOverlayOpen`): a tap while reading, or the first of a double tap
+            // on the image, must not close the page. Buttons win over this gesture on their own.
+            .contentShape(Rectangle())
+            .onTapGesture { presenter.dismiss() }
             .transition(.opacity)
             // The hero is already at the largest size the screen fits; letting Dynamic Type scale it again
             // just overflows and clips the glyph.
@@ -359,7 +392,7 @@ struct FocusOverlayHost: View {
     @ViewBuilder
     private func hero(_ item: FocusItem) -> some View {
         if let imageName = item.imageName {
-            ZoomableImage(imageName: imageName)
+            ZoomableImage(imageName: imageName, marks: item.imageMarks)
         } else {
             textHero(item)
         }
@@ -376,6 +409,7 @@ struct FocusOverlayHost: View {
                 .minimumScaleFactor(0.15)
                 .lineLimit(3)
                 .textSelection(.enabled)
+                .keepsFocusOverlayOpen()
 
             if let secondaryArabic = item.secondaryArabic {
                 Text(secondaryArabic)
@@ -385,6 +419,7 @@ struct FocusOverlayHost: View {
                     .multilineTextAlignment(.center)
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
+                    .keepsFocusOverlayOpen()
             }
         }
         .frame(maxWidth: .infinity)
@@ -414,6 +449,7 @@ struct FocusOverlayHost: View {
                     .multilineTextAlignment(.center)
             }
         }
+        .keepsFocusOverlayOpen()
         .padding(.top, 24)
         .padding(.bottom, 20)
     }
@@ -423,7 +459,7 @@ struct FocusOverlayHost: View {
             Button {
                 settings.hapticFeedback()
                 // An image copies as an image; everything else copies its Arabic.
-                if let imageName = item.imageName, let image = UIImage(named: imageName) {
+                if let image = item.shareImage {
                     UIPasteboard.general.image = image
                 } else {
                     UIPasteboard.general.string = item.arabic
@@ -453,10 +489,19 @@ struct FocusOverlayHost: View {
 
     /// What the share sheet sends: the image itself for an image item, the text otherwise.
     private func shareItems(_ item: FocusItem) -> [Any] {
-        if let imageName = item.imageName, let image = UIImage(named: imageName) {
+        if let image = item.shareImage {
             return [image]
         }
         return [item.shareText]
+    }
+}
+
+private extension View {
+    /// Text and pictures inside the focus overlay keep it open: a tap on them is a tap on the CONTENT
+    /// (reading, a selection about to start, a picture's double-tap zoom), not a request to leave. The
+    /// empty gesture claims the tap before the overlay's own tap-to-close (`FocusOverlayHost`) sees it.
+    func keepsFocusOverlayOpen() -> some View {
+        onTapGesture {}
     }
 }
 
@@ -466,6 +511,7 @@ struct FocusOverlayHost: View {
 /// the image can't be shrunk away or blown up past legibility, and it springs back to fit when zoomed out.
 struct ZoomableImage: View {
     let imageName: String
+    var marks: [CGRect] = []
 
     @State private var scale: CGFloat = 1
     @State private var lastScale: CGFloat = 1
@@ -479,6 +525,7 @@ struct ZoomableImage: View {
         Image(imageName)
             .resizable()
             .scaledToFit()
+            .overlay(ImageMarksOverlay(marks: marks))
             .scaleEffect(scale)
             .offset(offset)
             .gesture(
@@ -514,6 +561,9 @@ struct ZoomableImage: View {
                     }
                 }
             }
+            // After the double tap, so a pair of taps still zooms: a lone tap on the picture does
+            // nothing, instead of reaching the overlay's tap-to-close behind it.
+            .keepsFocusOverlayOpen()
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .frame(maxWidth: .infinity)
     }
@@ -523,6 +573,43 @@ struct ZoomableImage: View {
         lastScale = 1
         offset = .zero
         lastOffset = .zero
+    }
+}
+
+// MARK: - Image marks
+
+/// Picks parts of an image out: everything else under a dark veil, each part ringed in teal edged in
+/// black (the Makhaarij picture's own label colour). `marks` are fractions of the image (0 to 1 on
+/// each axis), so one set fits the image inline, full screen, and at its own pixel size for sharing.
+struct ImageMarksOverlay: View {
+    let marks: [CGRect]
+    var tint = Color(red: 0.29, green: 0.94, blue: 0.80)
+
+    var body: some View {
+        Canvas { context, size in
+            guard !marks.isEmpty, size.width > 0 else { return }
+            // Padding and line widths follow the drawn width, so a mark reads the same at every size.
+            let pad = max(2.5, size.width * 0.008)
+            let line = max(1, size.width * 0.003)
+            let shapes = marks.map { mark -> Path in
+                let rect = CGRect(x: mark.minX * size.width, y: mark.minY * size.height,
+                                  width: mark.width * size.width, height: mark.height * size.height)
+                    .insetBy(dx: -pad, dy: -pad)
+                return Path(roundedRect: rect, cornerRadius: min(rect.width, rect.height) * 0.3, style: .continuous)
+            }
+            // The veil, with the marks cut out of it. Cleared rather than even-odd filled, so two marks
+            // that overlap stay open where they meet.
+            context.drawLayer { veil in
+                veil.fill(Path(CGRect(origin: .zero, size: size)), with: .color(.black.opacity(0.45)))
+                veil.blendMode = .clear
+                for shape in shapes { veil.fill(shape, with: .color(.black)) }
+            }
+            for shape in shapes {
+                context.stroke(shape, with: .color(.black), lineWidth: line * 2.6)
+                context.stroke(shape, with: .color(tint), lineWidth: line * 1.4)
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
 
@@ -578,26 +665,30 @@ extension FocusItem {
             arabic: data.letter,
             title: data.transliteration,
             subtitle: data.name,
-            footnote: data.weightRule,
+            footnote: data.weightRule?.localizedDisplay,
             // `forms` is [final, medial, initial]; reversed so this RTL-rendered text puts the initial form on the right.
-            secondaryArabic: data.forms.prefix(3).reversed().joined(separator: "   "),
-            shareLabel: "Share Letter",
+            secondaryArabic: data.writtenForms.reversed().joined(separator: "   "),
+            shareLabel: String(localized: "Share Letter"),
             // Always share as "English - Arabic", e.g. "Baa - ب".
             shareText: "\(data.transliteration) - \(data.letter)",
             allowsQuranicFont: !data.isNonArabicScriptLetter
         )
     }
 
-    /// Any asset image, blown up full screen and zoomable.
-    static func image(_ assetName: String, title: String, subtitle: String? = nil) -> FocusItem {
-        FocusItem(
-            id: "image-\(assetName)",
+    /// Any asset image, blown up full screen and zoomable, with `marks` picked out on it.
+    static func image(_ assetName: String, title: String, subtitle: String? = nil, marks: [CGRect] = []) -> FocusItem {
+        // The marks are part of the identity: the same picture with another letter picked out is
+        // another item, so the overlay swaps rather than keeping the first one's marks.
+        let markKey = marks.map { String(format: "%.4f,%.4f,%.4f,%.4f", $0.minX, $0.minY, $0.width, $0.height) }.joined(separator: ";")
+        return FocusItem(
+            id: marks.isEmpty ? "image-\(assetName)" : "image-\(assetName)-\(markKey)",
             arabic: "",
             title: title,
             subtitle: subtitle,
-            shareLabel: "Share Image",
+            shareLabel: String(localized: "Share Image"),
             shareText: title,
-            imageName: assetName
+            imageName: assetName,
+            imageMarks: marks
         )
     }
 
@@ -608,9 +699,9 @@ extension FocusItem {
             arabic: data.number,
             title: data.transliteration,
             subtitle: data.name,
-            footnote: "Number \(data.englishNumber)",
+            footnote: String(localized: "Number \(data.englishNumber)"),
             secondaryArabic: data.englishNumber,
-            shareLabel: "Share Number",
+            shareLabel: String(localized: "Share Number"),
             shareText: "\(data.transliteration) - \(data.number)",
             // The Hafs face draws Arabic-Indic digits as ayah medallions (a dot in a ring), so a
             // numeral is always set in the system face.
@@ -628,9 +719,9 @@ extension FocusItem {
             arabic: name.displayArabicName,
             title: name.transliteration,
             subtitle: name.meaning,
-            footnote: "First found: \(name.firstFoundShort)",
+            footnote: String(localized: "First found: \(name.firstFoundShort)"),
             secondaryArabic: name.numberArabic,
-            shareLabel: "Share Name",
+            shareLabel: String(localized: "Share Name"),
             // Always share as "English - Arabic", e.g. "Ar-Rahman - الرحمن".
             shareText: "\(name.transliteration) - \(name.name.removeDiacriticsFromLastLetter())",
             nameDetail: withDetails ? name : nil
@@ -653,12 +744,12 @@ extension View {
     /// The whole image is the hit target, so it's easy to hit - the diagrams in Pillars and Tajweed are far too
     /// small to read inline, and this is the way out of that.
     @ViewBuilder
-    func focusableImage(_ assetName: String, title: String, subtitle: String? = nil) -> some View {
+    func focusableImage(_ assetName: String, title: String, subtitle: String? = nil, marks: [CGRect] = []) -> some View {
         #if os(iOS)
         contentShape(Rectangle())
             .onTapGesture {
                 Settings.shared.hapticFeedback()
-                FocusOverlayPresenter.shared.present(.image(assetName, title: title, subtitle: subtitle))
+                FocusOverlayPresenter.shared.present(.image(assetName, title: title, subtitle: subtitle, marks: marks))
             }
             .accessibilityAddTraits(.isButton)
             .accessibilityLabel("\(title). Open full screen")

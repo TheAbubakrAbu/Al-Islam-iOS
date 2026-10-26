@@ -26,6 +26,9 @@ struct HadeethEncCategory: Identifiable, Hashable {
     /// Narrations filed directly under this topic, and under it and every topic beneath it.
     let direct: Int
     let total: Int
+
+    /// The topic's name as a title: its Arabic name in the Arabic interface, the English one otherwise.
+    var displayName: String { AppLanguage.isArabic && !arabic.isEmpty ? arabic : english }
 }
 
 /// One narration as the lists show it: the header's light row (the English title, intro, grade and
@@ -65,10 +68,10 @@ struct HadeethEncHadith: Identifiable {
         if !english.body.isEmpty { parts.append(english.body) }
         let grading = [english.attribution, english.grade].filter { !$0.isEmpty }.joined(separator: " · ")
         if !grading.isEmpty { parts.append(grading) }
-        if !english.explanation.isEmpty { parts.append("Explanation\n" + english.explanation) }
-        if !english.benefits.isEmpty { parts.append("Benefits\n" + english.benefits.map { "• " + $0 }.joined(separator: "\n")) }
+        if !english.explanation.isEmpty { parts.append(String(localized: "Explanation") + "\n" + english.explanation) }
+        if !english.benefits.isEmpty { parts.append(String(localized: "Benefits") + "\n" + english.benefits.map { "• " + $0 }.joined(separator: "\n")) }
         if !arabic.reference.isEmpty { parts.append(arabic.reference) }
-        parts.append("Hadith Encyclopedia (hadeethenc.com), via \(AppIdentifiers.appName)")
+        parts.append(String(localized: "Hadith Encyclopedia (hadeethenc.com), via \(AppIdentifiers.displayName)"))
         return parts.joined(separator: "\n\n")
     }
 }
@@ -652,14 +655,14 @@ struct HadeethEncView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Hadith explained")
                                 .font(.headline)
-                            Text("\(library.entries.count.formatted()) narrations from the Hadith Encyclopedia, each with its meaning laid out by scholars, the lessons drawn from it, its grading and its sources, in Arabic and English. Browse by topic or search the texts.")
+                            Text("\(library.entries.count) narrations from the Hadith Encyclopedia, each with its meaning laid out by scholars, the lessons drawn from it, its grading and its sources, in Arabic and English. Browse by topic or search the texts.")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.vertical, 2)
                     }
 
-                    Section(header: SectionPillHeader(title: "TOPICS", count: library.roots.count)) {
+                    Section(header: SectionPillHeader(title: String(localized: "TOPICS"), count: library.roots.count)) {
                         ForEach(library.roots) { root in
                             NavigationLink(destination: LazyDestination {
                                 HadeethEncCategoryView(category: root)
@@ -678,7 +681,7 @@ struct HadeethEncView: View {
                                 .foregroundStyle(.secondary)
                         }
                     } else {
-                        Section(header: SectionPillHeader(title: "MATCHING HADITHS", count: results.count)) {
+                        Section(header: SectionPillHeader(title: String(localized: "MATCHING HADITHS"), count: results.count)) {
                             ForEach(results) { entry in
                                 NavigationLink(destination: LazyDestination {
                                     HadeethEncHadithView(entry: entry)
@@ -706,7 +709,7 @@ struct HadeethEncView: View {
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
-                      placeholder: "Search the encyclopedia")
+                      placeholder: String(localized: "Search the encyclopedia"))
                 .minimizedBarStyle(barsCollapsed)
                 .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
                 .padding(.horizontal, 24)
@@ -779,16 +782,20 @@ private struct HadeethEncCategoryRow: View {
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(category.english)
+                // In the Arabic interface the Arabic name IS the title, so the accent line under it
+                // (the same name again) is left out.
+                Text(category.displayName)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(2)
-                Text(category.arabic)
-                    .font(appearance.useFontArabic
-                          ? Font.arabic(appearance.islamArabicFontName, size: UIFont.preferredFont(forTextStyle: .caption1).pointSize + 2)
-                          : .caption)
-                    .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
-                    .foregroundStyle(appearance.accent)
-                    .lineLimit(1)
+                if !AppLanguage.isArabic {
+                    Text(category.arabic)
+                        .font(appearance.useFontArabic
+                              ? Font.arabic(appearance.islamArabicFontName, size: UIFont.preferredFont(forTextStyle: .caption1).pointSize + 2)
+                              : .caption)
+                        .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                        .foregroundStyle(appearance.accent)
+                        .lineLimit(1)
+                }
             }
             Spacer(minLength: 8)
             CountPill(count: category.total)
@@ -809,7 +816,7 @@ struct HadeethEncCategoryView: View {
         List {
             if loaded {
                 if !children.isEmpty {
-                    Section(header: SectionPillHeader(title: "SUBTOPICS", count: children.count)) {
+                    Section(header: SectionPillHeader(title: String(localized: "SUBTOPICS"), count: children.count)) {
                         ForEach(children) { child in
                             NavigationLink(destination: LazyDestination {
                                 HadeethEncCategoryView(category: child)
@@ -820,7 +827,7 @@ struct HadeethEncCategoryView: View {
                     }
                 }
                 if !hadiths.isEmpty {
-                    Section(header: SectionPillHeader(title: children.isEmpty ? "HADITHS" : "HADITHS IN THIS TOPIC", count: hadiths.count)) {
+                    Section(header: SectionPillHeader(title: children.isEmpty ? String(localized: "HADITHS") : String(localized: "HADITHS IN THIS TOPIC"), count: hadiths.count)) {
                         ForEach(hadiths) { entry in
                             // A hadith lists its topics, including the one you arrived from, so the
                             // pair loops. Keyed by ID: only the hadith you came FROM greys out, never
@@ -847,7 +854,7 @@ struct HadeethEncCategoryView: View {
             }
         }
         .applyConditionalListStyle()
-        .navigationTitle(category.english)
+        .navigationTitle(category.displayName)
         .openScreen(.hadeethEncCategory, id: category.id)
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -887,6 +894,8 @@ struct HadeethEncHadithRow: View, Equatable {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
+            // The narration's English title and opening are English content: the left edge in the
+            // Arabic interface too. The grade and attribution below follow the interface.
             HighlightedSnippet(
                 source: entry.title,
                 term: query,
@@ -895,11 +904,15 @@ struct HadeethEncHadithRow: View, Equatable {
                 fg: .primary,
                 lineLimit: 3
             )
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .leftToRightContent()
             if !entry.intro.isEmpty {
                 Text(entry.intro)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
             }
             HStack(spacing: 6) {
                 if !entry.grade.isEmpty {
@@ -959,6 +972,8 @@ struct HadeethEncHadithView: View {
                             .font(.headline)
                             .lineLimit(nil)
                             .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .leftToRightContent()
                         HStack(spacing: 8) {
                             if !entry.grade.isEmpty {
                                 Text(entry.grade)
@@ -988,6 +1003,10 @@ struct HadeethEncHadithView: View {
                             .lineLimit(nil)
                             .fixedSize(horizontal: false, vertical: true)
                             .textSelection(.enabled)
+                            // The English narration and explanation read left to right in the Arabic
+                            // interface too.
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .leftToRightContent()
                     }
 
                     if !hadith.english.explanation.isEmpty || !hadith.arabic.explanation.isEmpty {
@@ -998,6 +1017,8 @@ struct HadeethEncHadithView: View {
                                         .font(.system(size: CGFloat(appearance.englishFontSize)))
                                         .lineLimit(nil)
                                         .fixedSize(horizontal: false, vertical: true)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .leftToRightContent()
                                 }
                             }
                             if !hadith.arabic.explanation.isEmpty {
@@ -1019,6 +1040,8 @@ struct HadeethEncHadithView: View {
                                             .frame(maxWidth: .infinity, alignment: .trailing)
                                             .lineLimit(nil)
                                             .fixedSize(horizontal: false, vertical: true)
+                                            // The right edge in the Arabic interface too.
+                                            .environment(\.layoutDirection, .leftToRight)
                                     }
                                 }
                             }
@@ -1028,7 +1051,7 @@ struct HadeethEncHadithView: View {
                     let benefits = hadith.english.benefits.isEmpty ? hadith.arabic.benefits : hadith.english.benefits
                     if !benefits.isEmpty {
                         let arabicBenefits = hadith.english.benefits.isEmpty
-                        Section(header: SectionPillHeader(title: "BENEFITS", count: benefits.count)) {
+                        Section(header: SectionPillHeader(title: String(localized: "BENEFITS"), count: benefits.count)) {
                             ForEach(Array(benefits.enumerated()), id: \.offset) { index, benefit in
                                 HStack(alignment: .top, spacing: 10) {
                                     if arabicBenefits {
@@ -1051,6 +1074,10 @@ struct HadeethEncHadithView: View {
                                             .fixedSize(horizontal: false, vertical: true)
                                     }
                                 }
+                                // Both branches are laid out left to right on purpose (the number
+                                // before an English benefit, after an Arabic one, whose `.trailing` is
+                                // the right edge), so the pair keeps that layout in the Arabic interface.
+                                .leftToRightContent()
                                 .padding(.vertical, 2)
                             }
                         }
@@ -1067,6 +1094,8 @@ struct HadeethEncHadithView: View {
                                     .frame(maxWidth: .infinity, alignment: .trailing)
                                     .lineLimit(nil)
                                     .fixedSize(horizontal: false, vertical: true)
+                                    // The right edge in the Arabic interface too.
+                                    .environment(\.layoutDirection, .leftToRight)
                             }
                         }
                     }
@@ -1102,14 +1131,14 @@ struct HadeethEncHadithView: View {
             .themedListRowBackground()
         }
         .applyConditionalListStyle()
-        .navigationTitle("Hadith \(entry.id)")
+        .navigationTitle("Hadith \(entry.id.localizedDigits)")
         .openScreen(.hadeethEncHadith, id: entry.id)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 ShortcutMenu(
-                    doubleTap: MenuShortcut("Copy Hadith", action: copyHadith),
-                    hold: MenuShortcut("Share Hadith", action: shareHadith)
+                    doubleTap: MenuShortcut(String(localized: "Copy Hadith"), action: copyHadith),
+                    hold: MenuShortcut(String(localized: "Share Hadith"), action: shareHadith)
                 ) {
                     Button {
                         copyHadith()

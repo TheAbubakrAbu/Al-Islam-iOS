@@ -100,9 +100,9 @@ struct ProphetAdamView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetAdamView")
+        .englishArticle().selectableArticleList(article: "ProphetAdamView")
         .prophetMiraclesHost()
-        .navigationTitle("Adam")
+        .navigationTitle(AppLanguage.article("Adam"))
     }
 }
 
@@ -148,7 +148,7 @@ struct ProphetIdrisView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetIdrisView")
+        .englishArticle().selectableArticleList(article: "ProphetIdrisView")
         .prophetMiraclesHost()
         .navigationTitle("Idris")
     }
@@ -217,9 +217,9 @@ struct ProphetNuhView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetNuhView")
+        .englishArticle().selectableArticleList(article: "ProphetNuhView")
         .prophetMiraclesHost()
-        .navigationTitle("Nuh")
+        .navigationTitle(AppLanguage.article("Nuh"))
     }
 }
 
@@ -274,7 +274,7 @@ struct ProphetHudView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetHudView")
+        .englishArticle().selectableArticleList(article: "ProphetHudView")
         .prophetMiraclesHost()
         .navigationTitle("Hud")
     }
@@ -333,7 +333,7 @@ struct ProphetSalihView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetSalihView")
+        .englishArticle().selectableArticleList(article: "ProphetSalihView")
         .prophetMiraclesHost()
         .navigationTitle("Salih")
     }
@@ -411,9 +411,9 @@ struct ProphetIbrahimView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetIbrahimView")
+        .englishArticle().selectableArticleList(article: "ProphetIbrahimView")
         .prophetMiraclesHost()
-        .navigationTitle("Ibrahim")
+        .navigationTitle(AppLanguage.article("Ibrahim"))
     }
 }
 
@@ -470,9 +470,9 @@ struct ProphetLutView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetLutView")
+        .englishArticle().selectableArticleList(article: "ProphetLutView")
         .prophetMiraclesHost()
-        .navigationTitle("Lut")
+        .navigationTitle(AppLanguage.article("Lut"))
     }
 }
 
@@ -529,7 +529,7 @@ struct ProphetIsmailView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetIsmailView")
+        .englishArticle().selectableArticleList(article: "ProphetIsmailView")
         .prophetMiraclesHost()
         .navigationTitle("Ismail")
     }
@@ -576,7 +576,7 @@ struct ProphetIshaqView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetIshaqView")
+        .englishArticle().selectableArticleList(article: "ProphetIshaqView")
         .prophetMiraclesHost()
         .navigationTitle("Ishaq")
     }
@@ -635,7 +635,7 @@ struct ProphetYaqubView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetYaqubView")
+        .englishArticle().selectableArticleList(article: "ProphetYaqubView")
         .prophetMiraclesHost()
         .navigationTitle("Yaqub")
     }
@@ -697,9 +697,9 @@ struct ProphetYusufView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetYusufView")
+        .englishArticle().selectableArticleList(article: "ProphetYusufView")
         .prophetMiraclesHost()
-        .navigationTitle("Yusuf")
+        .navigationTitle(AppLanguage.article("Yusuf"))
     }
 }
 
@@ -751,7 +751,7 @@ struct ProphetAyyubView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetAyyubView")
+        .englishArticle().selectableArticleList(article: "ProphetAyyubView")
         .prophetMiraclesHost()
         .navigationTitle("Ayyub")
     }
@@ -803,7 +803,7 @@ struct ProphetShuaybView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetShuaybView")
+        .englishArticle().selectableArticleList(article: "ProphetShuaybView")
         .prophetMiraclesHost()
         .navigationTitle("Shu'ayb")
     }
@@ -885,9 +885,9 @@ struct ProphetMusaView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetMusaView")
+        .englishArticle().selectableArticleList(article: "ProphetMusaView")
         .prophetMiraclesHost()
-        .navigationTitle("Musa")
+        .navigationTitle(AppLanguage.article("Musa"))
     }
 }
 
@@ -944,7 +944,7 @@ struct ProphetHarunView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetHarunView")
+        .englishArticle().selectableArticleList(article: "ProphetHarunView")
         .prophetMiraclesHost()
         .navigationTitle("Harun")
     }
@@ -992,7 +992,7 @@ struct ProphetDhulKiflView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetDhulKiflView")
+        .englishArticle().selectableArticleList(article: "ProphetDhulKiflView")
         .prophetMiraclesHost()
         .navigationTitle("Dhul-Kifl")
     }
@@ -1053,7 +1053,7 @@ struct ProphetDawudView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetDawudView")
+        .englishArticle().selectableArticleList(article: "ProphetDawudView")
         .prophetMiraclesHost()
         .navigationTitle("Dawud")
     }
@@ -1123,7 +1123,7 @@ struct ProphetSulaymanView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetSulaymanView")
+        .englishArticle().selectableArticleList(article: "ProphetSulaymanView")
         .prophetMiraclesHost()
         .navigationTitle("Sulayman")
     }
@@ -1169,7 +1169,7 @@ struct ProphetIlyasView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetIlyasView")
+        .englishArticle().selectableArticleList(article: "ProphetIlyasView")
         .prophetMiraclesHost()
         .navigationTitle("Ilyas")
     }
@@ -1214,7 +1214,7 @@ struct ProphetAlyasaView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetAlyasaView")
+        .englishArticle().selectableArticleList(article: "ProphetAlyasaView")
         .prophetMiraclesHost()
         .navigationTitle("Alyasa")
     }
@@ -1277,7 +1277,7 @@ struct ProphetYunusView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetYunusView")
+        .englishArticle().selectableArticleList(article: "ProphetYunusView")
         .prophetMiraclesHost()
         .navigationTitle("Yunus")
     }
@@ -1334,7 +1334,7 @@ struct ProphetZakariyaView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetZakariyaView")
+        .englishArticle().selectableArticleList(article: "ProphetZakariyaView")
         .prophetMiraclesHost()
         .navigationTitle("Zakariya")
     }
@@ -1387,7 +1387,7 @@ struct ProphetYahyaView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetYahyaView")
+        .englishArticle().selectableArticleList(article: "ProphetYahyaView")
         .prophetMiraclesHost()
         .navigationTitle("Yahya")
     }
@@ -1465,9 +1465,9 @@ struct ProphetIsaView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetIsaView")
+        .englishArticle().selectableArticleList(article: "ProphetIsaView")
         .prophetMiraclesHost()
-        .navigationTitle("Isa")
+        .navigationTitle(AppLanguage.article("Isa"))
     }
 }
 
@@ -1537,7 +1537,7 @@ struct ProphetMuhammadView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetMuhammadView")
+        .englishArticle().selectableArticleList(article: "ProphetMuhammadView")
         .prophetMiraclesHost()
         .navigationTitle("Muhammad")
     }

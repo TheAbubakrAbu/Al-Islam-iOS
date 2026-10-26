@@ -143,13 +143,13 @@ struct SettingsHadithView: View {
                 // The Quran tab's "Show Ayah of the Day", for the Hadith tab's tile (2026-09-21). This
                 // is also where the tile's "Delete Forever" sends you to bring it back.
                 Section(header: Text("HADITH TAB")) {
-                    SettingsToggle("Show Hadith of the Day", isOn: $hadithSettings.showHadithOfTheDay)
+                    SettingsToggle(String(localized: "Show Hadith of the Day"), isOn: $hadithSettings.showHadithOfTheDay)
                 }
 
                 // In Reading View - not under Arabic Text - because it colors the name in BOTH scripts:
                 // the Arabic الله and "Allah" in the English translation and narrator lines, like the Quran.
                 Section {
-                    SettingsToggle("Highlight Allah", caption: "Colors the majestic and glorious name اللَّه (Allah) in red throughout the hadith texts, in both Arabic and English.", isOn: $hadithSettings.highlightAllahNamesHadith)
+                    SettingsToggle(String(localized: "Highlight Allah"), caption: String(localized: "Colors the majestic and glorious name اللَّه (Allah) in red throughout the hadith texts, in both Arabic and English."), isOn: $hadithSettings.highlightAllahNamesHadith)
                 }
             }
             .themedListRowBackground()
@@ -162,7 +162,7 @@ struct SettingsHadithView: View {
         List {
             Group {
                 Section {
-                    SettingsToggle("Show Arabic", isOn: Binding(
+                    SettingsToggle(String(localized: "Show Arabic"), isOn: Binding(
                         get: { settings.showHadithArabic },
                         set: { newValue in
                             settings.showHadithArabic = newValue
@@ -176,18 +176,18 @@ struct SettingsHadithView: View {
 
                 if settings.showHadithArabic {
                     // The footer is the chosen face's own story (same captions as the Quran font picker).
-                    Section(header: Text("ARABIC FONT"), footer: Text(settings.islamArabicFace.historyCaption)) {
+                    Section(header: Text("ARABIC FONT"), footer: Text(settings.islamArabicFace.historyCaption.localizedDigits)) {
                         IslamArabicFontPicker()
 
                         // The Quran settings' font controls, one for one: the size slider with its
                         // sample, then the system-size switch.
                         VStack(alignment: .leading, spacing: 12) {
-                            FontSizeSlider("Arabic Font Size", value: $hadithSettings.hadithArabicFontSize, in: 15...40,
+                            FontSizeSlider(String(localized: "Arabic Font Size"), value: $hadithSettings.hadithArabicFontSize, in: 15...40,
                                            sample: Settings.hadithArabicSizeSample,
                                            fontName: settings.hadithArabicWantsCustomFace ? settings.nonQuranArabicFontName : nil,
                                            glyph: "ب")
 
-                            SettingsToggle("Use System Font Size", isOn: useSystemArabicFontSize)
+                            SettingsToggle(String(localized: "Use System Font Size"), isOn: useSystemArabicFontSize)
                         }
                     }
                 }
@@ -204,7 +204,7 @@ struct SettingsHadithView: View {
                 // No separate narrator toggle: the narrator is part of the English text and
                 // simply shows whenever English does - one less switch to reason about.
                 Section {
-                    SettingsToggle("Show English", isOn: Binding(
+                    SettingsToggle(String(localized: "Show English"), isOn: Binding(
                         get: { settings.showHadithEnglish },
                         set: { newValue in
                             settings.showHadithEnglish = newValue
@@ -218,10 +218,10 @@ struct SettingsHadithView: View {
                 if settings.showHadithEnglish {
                     Section(header: Text("ENGLISH FONT")) {
                         VStack(alignment: .leading, spacing: 12) {
-                            FontSizeSlider("English Font Size", value: $hadithSettings.hadithEnglishFontSize, in: 10...32,
+                            FontSizeSlider(String(localized: "English Font Size"), value: $hadithSettings.hadithEnglishFontSize, in: 10...32,
                                            sample: Settings.hadithEnglishSizeSample)
 
-                            SettingsToggle("Use System Font Size", isOn: useSystemEnglishFontSize)
+                            SettingsToggle(String(localized: "Use System Font Size"), isOn: useSystemEnglishFontSize)
                         }
                     }
                 }

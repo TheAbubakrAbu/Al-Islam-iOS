@@ -23,7 +23,7 @@ struct HadithTrailingToolbar: ViewModifier {
         if let moreMenuItems {
             content.toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    TabMoreMenu(doubleTap: MenuShortcut(hadithGridMode && !listForJump.wrappedValue ? "Show as List" : "Show as Grid") {
+                    TabMoreMenu(doubleTap: MenuShortcut(hadithGridMode && !listForJump.wrappedValue ? String(localized: "Show as List") : String(localized: "Show as Grid")) {
                         Settings.shared.hapticFeedback()
                         withAnimation {
                             if listForJump.wrappedValue { listForJump.wrappedValue = false } else { hadithGridMode.toggle() }
@@ -440,7 +440,7 @@ struct HadithView: View {
                 if !hadithSearchHelpCollapsed {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("• Books, chapters or hadith text, in English or Arabic")
-                        Text("• A reference: 'bukhari 5103' or 'muslim 3:12'")
+                        Text(String(localized: "• A reference: 'bukhari 5103' or 'muslim 3:12'").localizedDigits)
                         Text("• By meaning: 'controlling anger', or ask a question")
                         Text("• The buttons above narrow it by book and grade")
                     }
@@ -661,7 +661,7 @@ struct HadithView: View {
                             [$0.englishTitle, $0.arabicTitle]
                         }
                         if !results.isEmpty {
-                            boxed(bookSection(title: "MATCHING BOOKS", books: results, icon: "magnifyingglass", shuffle: false))
+                            boxed(bookSection(title: String(localized: "MATCHING BOOKS"), books: results, icon: "magnifyingglass", shuffle: false))
                         } else if referenceResult == nil, numberQuery == nil,
                                   globalChapterResults.isEmpty, globalHadithResults.isEmpty,
                                   globalRankedHits.isEmpty, globalAIResults.isEmpty {
@@ -670,7 +670,7 @@ struct HadithView: View {
                             // A bare number never matches a book title - the numbered chapter/hadith
                             // sections below are the answer, so skip the "no books" noise for it.
                             boxed(
-                                Section(header: SectionPillHeader(title: "MATCHING BOOKS", count: 0, icon: "magnifyingglass")) {
+                                Section(header: SectionPillHeader(title: String(localized: "MATCHING BOOKS"), count: 0, icon: "magnifyingglass")) {
                                     Text("No books match your search.")
                                         .font(.subheadline)
                                         .foregroundStyle(.secondary)
@@ -691,7 +691,7 @@ struct HadithView: View {
                         let favorites = filteredFavorites
                         if !favorites.isEmpty {
                             boxed(bookSection(
-                                title: "FAVORITES",
+                                title: String(localized: "FAVORITES"),
                                 books: favorites,
                                 icon: "star.fill",
                                 accentTitle: true,
@@ -702,7 +702,7 @@ struct HadithView: View {
                         ForEach(HadithCatalogBook.Group.allCases, id: \.self) { group in
                             let books = filteredBooks(in: group)
                             if !books.isEmpty {
-                                boxed(bookSection(title: group.rawValue, books: books, icon: group.systemImage))
+                                boxed(bookSection(title: group.rawValue.localizedDisplay, books: books, icon: group.systemImage))
                             }
                         }
                     }
@@ -1007,7 +1007,7 @@ struct HadithView: View {
                     // reference pill. The compact tiles stay clean.
                     historyTimestampLabel(entry.date)
 
-                    Text(entry.reference)
+                    Text(HadithCatalogBook.displayReference(stored: entry.reference, slug: entry.slug))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(settings.accentColor.color)
 
@@ -1028,6 +1028,9 @@ struct HadithView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .reservedLineLimit(2)
+                            // English content keeps the left edge in the Arabic interface.
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .leftToRightContent()
                     }
                 }
                 .contentShape(Rectangle())
@@ -1115,9 +1118,9 @@ struct HadithView: View {
                             dailyMenuItems(dailyHadith)
                         } label: {
                             summaryTileLabel(
-                                title: "Hadith of the Day",
+                                title: String(localized: "Hadith of the Day"),
                                 icon: "sparkles",
-                                reference: "\(dailyHadith.book.englishTitle) \(dailyHadith.hadith.displayNumber)",
+                                reference: dailyHadith.book.displayReference(dailyHadith.hadith.displayNumber),
                                 // The previews were captured when the pick was made - the tile never touches a pack.
                                 arabic: settings.showHadithArabic ? dailyHadith.arabicPreview : "",
                                 english: settings.showHadithEnglish ? dailyHadith.englishPreview : ""
@@ -1136,9 +1139,9 @@ struct HadithView: View {
 
                     if let lastRead = store.lastRead {
                         summaryTile(
-                            title: "Last Read Hadith",
+                            title: String(localized: "Last Read Hadith"),
                             icon: "book",
-                            reference: lastRead.reference,
+                            reference: lastRead.displayReference,
                             arabic: settings.showHadithArabic ? lastRead.arabicPreview : "",
                             english: settings.showHadithEnglish ? lastRead.englishPreview : ""
                         ) {
@@ -1181,7 +1184,7 @@ struct HadithView: View {
     /// (destructive, then a divider), then the shuffle the today row already offers, and the bookmark.
     @ViewBuilder
     private func dailyMenuItems(_ pick: HadithStore.DailyPick) -> some View {
-        Text("\(pick.book.englishTitle) \(pick.hadith.displayNumber)")
+        Text(pick.book.displayReference(pick.hadith.displayNumber))
             .foregroundStyle(.secondary)
 
         Button(role: .destructive) {
@@ -1255,6 +1258,10 @@ struct HadithView: View {
                         .font(.caption)
                         .foregroundColor(.secondaryOnGlass)
                         .reservedLineLimit(1)
+                        // The narration's English keeps the left edge in the Arabic interface, like
+                        // the Quran tab's ayah tile.
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent()
                 }
             }
             // Hug the content - stretching to fill the row's height (maxHeight + a Spacer) parked
@@ -1320,19 +1327,19 @@ struct HadithView: View {
     /// grid. Each item raises its door through the one guard.
     @ViewBuilder
     var moreMenuItems: some View {
-        menuDoor(.daily, title: "Today", systemImage: "sun.horizon.fill")
+        menuDoor(.daily, title: String(localized: "Today"), systemImage: "sun.horizon.fill")
         if HadithTopicsStore.isBundled {
-            menuDoor(.topics, title: "Topics", systemImage: "tag.fill")
+            menuDoor(.topics, title: String(localized: "Topics"), systemImage: "tag.fill")
         }
         if HadeethEncStore.isBundled {
-            menuDoor(.encyclopedia, title: "Encyclopedia", systemImage: "books.vertical.fill")
+            menuDoor(.encyclopedia, title: String(localized: "Encyclopedia"), systemImage: "books.vertical.fill")
         }
-        menuDoor(.history, title: "History", systemImage: "clock.arrow.circlepath")
+        menuDoor(.history, title: String(localized: "History"), systemImage: "clock.arrow.circlepath")
 
         Divider()
 
         let showsGrid = hadithGridMode && !listForJump
-        TabMoreMenuItem(showsGrid ? "Show as List" : "Show as Grid", systemImage: showsGrid ? "list.bullet" : "square.grid.2x2") {
+        TabMoreMenuItem(showsGrid ? String(localized: "Show as List") : String(localized: "Show as Grid"), systemImage: showsGrid ? "list.bullet" : "square.grid.2x2") {
             settings.hapticFeedback()
             withAnimation {
                 if listForJump { listForJump = false } else { hadithGridMode.toggle() }
@@ -1386,15 +1393,15 @@ struct HadithView: View {
                 // BUTTONS: both cards are in ONE List row (this VStack is the whole section's row),
                 // and two NavigationLinks in a row activate together - tapping either pushed both
                 // pillar screens (2026-09-19 audit).
-                aboutDoorButton("What is the Sunnah?", door: .sunnah)
+                aboutDoorButton(String(localized: "What is the Sunnah?"), door: .sunnah)
 
-                aboutDoorButton("What are Hadiths?", door: .hadithPillar)
+                aboutDoorButton(String(localized: "What are Hadiths?"), door: .hadithPillar)
 
-                aboutDoorButton("The Sciences of Hadith", door: .hadithSciences)
+                aboutDoorButton(String(localized: "The Sciences of Hadith"), door: .hadithSciences)
 
-                aboutDoorButton("How the Hadith Were Preserved", door: .hadithPreservation)
+                aboutDoorButton(String(localized: "How the Hadith Were Preserved"), door: .hadithPreservation)
 
-                aboutDoorButton("Answering the Hadith Rejectors", door: .hadithRejectors)
+                aboutDoorButton(String(localized: "Answering the Hadith Rejectors"), door: .hadithRejectors)
 
                 Text("Learn more under Al-Islam → Pillars and Beliefs.")
                     .font(.caption2)
@@ -1460,13 +1467,16 @@ struct HadithView: View {
                             .foregroundStyle(settings.accentColor.color)
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(reference.chapter.map { "\(reference.book.englishTitle) - Chapter \($0), Hadith \(reference.hadith)" }
-                                 ?? "\(reference.book.englishTitle) - \(reference.introduction ? "Introduction " : "Hadith ")\(reference.hadith)\(reference.suffix ?? "")")
+                            Text(reference.chapter.map { "\(reference.book.displayTitle) - Chapter \($0), Hadith \(reference.hadith)" }
+                                 ?? "\(reference.book.displayTitle) - \(reference.introduction ? String(localized: "Introduction") + " " : String(localized: "Hadith") + " ")\(reference.hadith)\(reference.suffix ?? "")")
                                 .font(.subheadline.weight(.semibold))
 
-                            Text(reference.book.arabicTitle)
-                                .font(.caption)
-                                .foregroundColor(settings.accentColor.color)
+                            // The Arabic interface names the book once, in the line above.
+                            if !AppLanguage.isArabic {
+                                Text(reference.book.arabicTitle)
+                                    .font(.caption)
+                                    .foregroundColor(settings.accentColor.color)
+                            }
                         }
                     }
                     .padding(.vertical, 2)
@@ -1498,7 +1508,7 @@ struct HadithView: View {
             let citedLabel = "\(number)\(citation.suffix ?? "")"
             // Chapters numbered N - one flat section (each `globalChapterRow` names its own book).
             if !globalNumberChapters.isEmpty {
-                Section(header: SectionPillHeader(title: "CHAPTER \(number)", count: globalNumberChapters.count, icon: "book.closed")) {
+                Section(header: SectionPillHeader(title: String(localized: "CHAPTER \(number)"), count: globalNumberChapters.count, icon: "book.closed")) {
                     ForEach(globalNumberChapters) { hit in
                         NavigationLink {
                             LazyDestination {
@@ -1514,7 +1524,7 @@ struct HadithView: View {
             // Hadiths cited N - one flat section; each compact `HadithRow` shows its own "10 <book>"
             // citation, so no per-book grouping is needed.
             if !globalNumberHadiths.isEmpty {
-                Section(header: SectionPillHeader(title: "HADITH \(citedLabel)", count: globalNumberHadiths.count, icon: "number")) {
+                Section(header: SectionPillHeader(title: String(localized: "HADITH \(HadithDigits.display(citedLabel))"), count: globalNumberHadiths.count, icon: "number")) {
                     ForEach(globalNumberHadiths) { hit in
                         NavigationLink {
                             LazyDestination {
@@ -1545,7 +1555,7 @@ struct HadithView: View {
             if !isNumberSearching, numberSearchRanFor == number,
                globalNumberChapters.isEmpty, globalNumberHadiths.isEmpty {
                 Section(footer: Text("Searches every collection in the app.")) {
-                    Text("No chapter or hadith is numbered \(citedLabel) in any collection.")
+                    Text("No chapter or hadith is numbered \(HadithDigits.display(citedLabel)) in any collection.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -1575,7 +1585,7 @@ struct HadithView: View {
             // Matching chapters sit ABOVE the AI/keyword switch, the Quran search's surah-list rule:
             // they are navigation, not a competing result kind, so they show in both modes.
             if !globalChapterResults.isEmpty {
-                Section(header: SectionPillHeader(title: "MATCHING CHAPTERS", count: globalChapterResults.count, icon: "magnifyingglass", overflow: globalHasMoreChapters)) {
+                Section(header: SectionPillHeader(title: String(localized: "MATCHING CHAPTERS"), count: globalChapterResults.count, icon: "magnifyingglass", overflow: globalHasMoreChapters)) {
                     ForEach(globalChapterResults) { hit in
                         NavigationLink {
                             LazyDestination {
@@ -1586,7 +1596,7 @@ struct HadithView: View {
                         }
                     }
 
-                    HadithLoadMoreControls(label: "chapter matches", hasMore: globalHasMoreChapters, limit: Binding(
+                    HadithLoadMoreControls(label: String(localized: "chapter matches"), hasMore: globalHasMoreChapters, limit: Binding(
                         get: { globalChapterLimit },
                         set: { newValue in
                             globalChapterLimit = newValue
@@ -1617,7 +1627,7 @@ struct HadithView: View {
                 // The keyword matches' grammar for the semantic list too: the sparkles TOTAL pill up
                 // top, then one section per book with its own count - AI matches from different books
                 // never read as one undifferentiated list.
-                Section(header: SectionPillHeader(title: "AI MATCHES", count: globalAIResults.count, icon: "sparkles")) {
+                Section(header: SectionPillHeader(title: String(localized: "AI MATCHES"), count: globalAIResults.count, icon: "sparkles")) {
                     EmptyView()
                 }
                 .padding(.bottom, -12)
@@ -1662,7 +1672,7 @@ struct HadithView: View {
             if keywordVisible, !rankedRows.isEmpty {
                 // The pill counts what can be reached (the engine keeps its best forty), with a + when
                 // more matched than that: it used to print the whole tally over forty rows.
-                Section(header: SectionPillHeader(title: bestMatch ? "HADITHS BY BEST MATCH" : "TOP HADITH RESULTS",
+                Section(header: SectionPillHeader(title: bestMatch ? String(localized: "HADITHS BY BEST MATCH") : String(localized: "TOP HADITH RESULTS"),
                                                   count: rankedRows.count, icon: "magnifyingglass",
                                                   overflow: globalRankedTotal > rankedRows.count)) {
                     rankedHadithNotice
@@ -1701,7 +1711,7 @@ struct HadithView: View {
             if keywordVisible, !bestMatch, !globalHadithResults.isEmpty {
                 // The Quran search's grammar: the TOTAL pill up top, then one section per book with its
                 // own count - so results from different books never read as one undifferentiated list.
-                Section(header: SectionPillHeader(title: "MATCHING HADITHS", count: globalHadithResults.count, icon: "magnifyingglass", overflow: globalHasMoreHadiths)) {
+                Section(header: SectionPillHeader(title: String(localized: "MATCHING HADITHS"), count: globalHadithResults.count, icon: "magnifyingglass", overflow: globalHasMoreHadiths)) {
                     EmptyView()
                 }
                 .padding(.bottom, -12)
@@ -1726,7 +1736,7 @@ struct HadithView: View {
                 }
 
                 Section {
-                    HadithLoadMoreControls(label: "hadith matches", hasMore: globalHasMoreHadiths, limit: Binding(
+                    HadithLoadMoreControls(label: String(localized: "hadith matches"), hasMore: globalHasMoreHadiths, limit: Binding(
                         get: { globalHadithLimit },
                         set: { newValue in
                             globalHadithLimit = newValue
@@ -1776,7 +1786,7 @@ struct HadithView: View {
 
                 Spacer()
 
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.forward")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
@@ -1805,8 +1815,8 @@ struct HadithView: View {
     @ViewBuilder
     private var rankedHadithNotice: some View {
         if !globalRankedCorrections.isEmpty {
-            let to = globalRankedCorrections.map { "\u{201C}\($0.to)\u{201D}" }.joined(separator: ", ")
-            let from = globalRankedCorrections.map { "\u{201C}\($0.from)\u{201D}" }.joined(separator: ", ")
+            let to = globalRankedCorrections.quotedWords(\.to)
+            let from = globalRankedCorrections.quotedWords(\.from)
             Text("Showing results for \(to) instead of \(from).")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -1848,10 +1858,15 @@ struct HadithView: View {
     /// "SAHIH AL-BUKHARI - <arabic>  [count]" - the Quran's per-surah search header, for a book.
     private func bookSearchSectionHeader(book: HadithCatalogBook, matchCount: Int) -> some View {
         HStack(spacing: 6) {
-            Text(book.englishTitle.uppercased())
+            // The Arabic interface names the book once, by its Arabic title (Arabic has no case).
+            if AppLanguage.isArabic {
+                Text(book.displayTitle)
+            } else {
+                Text(book.englishTitle.uppercased())
 
-            Text(book.arabicTitle)
-                .font(.caption)
+                Text(book.arabicTitle)
+                    .font(.caption)
+            }
 
             Spacer()
 
@@ -1864,8 +1879,10 @@ struct HadithView: View {
     /// chapter rows' Arabic trailing.
     private func globalChapterRow(_ hit: GlobalChapterHit) -> some View {
         VStack(alignment: .leading, spacing: 3) {
+            // In the Arabic interface the Arabic name IS the headline, so the trailing Arabic (the
+            // same name again) is left out.
             HighlightedSnippet(
-                source: hit.chapter.english,
+                source: hit.chapter.displayTitle,
                 term: searchText,
                 font: .subheadline.weight(.semibold),
                 accent: settings.accentColor.color,
@@ -1874,7 +1891,7 @@ struct HadithView: View {
             )
 
             HStack(alignment: .firstTextBaseline) {
-                Text(hit.book.englishTitle)
+                Text(hit.book.displayTitle)
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
@@ -1882,7 +1899,7 @@ struct HadithView: View {
 
                 Spacer(minLength: 8)
 
-                if !hit.chapter.arabic.isEmpty {
+                if !AppLanguage.isArabic, !hit.chapter.arabic.isEmpty {
                     HighlightedSnippet(
                         source: hit.chapter.arabic,
                         term: searchText,
@@ -2322,7 +2339,7 @@ struct HadithView: View {
 
     private var bookmarksSection: some View {
         Section(header: SectionPillHeader(
-            title: "BOOKMARKS",
+            title: String(localized: "BOOKMARKS"),
             count: store.bookmarks.count,
             icon: "bookmark.fill",
             accentTitle: true,
@@ -2341,16 +2358,17 @@ struct HadithView: View {
                     // Chunked non-lazy rows (`tileGridChunk`): a lazy grid in a List row can answer a
                     // different height on each self-sizing pass, which iOS 26 traps on.
                     let bookmarks = store.bookmarks
-                    ForEach(Array(stride(from: 0, to: bookmarks.count, by: tileGridChunk)), id: \.self) { start in
+                    let chunk = tileGridChunk(columns: gridColumns.count)
+                    ForEach(Array(stride(from: 0, to: bookmarks.count, by: chunk)), id: \.self) { start in
                         SummaryTileGrid(columns: gridColumns.count) {
-                            ForEach(bookmarks[start..<min(start + tileGridChunk, bookmarks.count)]) { bookmark in
+                            ForEach(bookmarks[start..<min(start + chunk, bookmarks.count)]) { bookmark in
                                 HadithBookmarkGridTile(bookmark: bookmark, ringsReading: usesColumnNavigation) {
                                     pushedReference = bookmark
                                 }
                                 .equatable()
                             }
                         }
-                        .tileGridChunkRow(start: start, count: bookmarks.count)
+                        .tileGridChunkRow(start: start, count: bookmarks.count, chunk: chunk)
                     }
                 } else {
                     ForEach(store.bookmarks) { bookmark in
@@ -2457,7 +2475,7 @@ struct HadithView: View {
 
     @ViewBuilder
     private func bookContextMenu(_ book: HadithCatalogBook) -> some View {
-        Text(book.englishTitle)
+        Text(book.displayTitle)
             .foregroundStyle(.secondary)
 
         Button {
@@ -2497,15 +2515,21 @@ struct HadithView: View {
     /// Sharing a BOOK sends its identity and story, not megabytes of text.
     private func bookShareText(_ book: HadithCatalogBook) -> String {
         let name = book.name
+        // The Arabic interface shares the book in Arabic: its title, compiler and full title once,
+        // without the English meaning and transliteration lines.
+        if AppLanguage.isArabic {
+            return "\(book.displayTitle)\n\n\(book.displayAuthor)\n\(book.eraDisplay)\n\n"
+                + String(localized: "Full title: \(name.fullArabic)") + "\n\n\(book.longDescription)"
+        }
         return "\(book.englishTitle) (\(book.arabicTitle)): “\(name.meaning)”\n\n\(book.authorEnglish) - \(book.era)\n\n"
-            + "Full title: \(name.fullArabic)\n\(name.fullTransliteration)\n“\(name.fullMeaning)”\n\n\(book.longDescription)"
+            + String(localized: "Full title: \(name.fullArabic)") + "\n\(name.fullTransliteration)\n“\(name.fullMeaning)”\n\n\(book.longDescription)"
     }
 
     /// "97 Ch • 7,277 Ha" - the book's SHAPE (chapters and hadiths). The surah rows lead with ayah
     /// counts; books do the same. Chapters, then hadiths - the one order every hadith surface uses.
     private func bookShapeText(_ book: HadithCatalogBook) -> String {
         guard let counts = store.counts(for: book) else { return "" }
-        return "\(counts.chapters) Ch • \(counts.hadiths.formatted()) Ha"
+        return String(localized: "\(counts.chapters) Ch • \(counts.hadiths.formatted()) Ha")
     }
 
     /// When the book was compiled, dated the classical way by its compiler's death ("d. 256 AH /
@@ -2514,7 +2538,7 @@ struct HadithView: View {
         HStack(spacing: 3) {
             Image(systemName: "calendar")
                 .imageScale(.small)
-            Text(book.era)
+            Text(book.eraDisplay)
                 .monospacedDigit()
         }
         .font(.caption2)
@@ -2571,7 +2595,7 @@ struct HadithView: View {
                     settings.hapticFeedback()
                     withAnimation(.easeInOut) { store.toggleFavoriteOrConfirm(book) }
                 }
-                .accessibilityLabel("Book \(book.number)\(isLastRead ? ", last read" : "")")
+                .accessibilityLabel("Book \(book.number)\(isLastRead ? String(localized: ", last read") : "")")
 
             if favorite {
                 Image(systemName: "star.fill")
@@ -2599,8 +2623,10 @@ struct HadithView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 // Two lines reserved for the title, so "Forty Hadith Qudsi" never stacks a word per line.
+                // The Arabic interface titles the row by its Arabic name and drops the trailing Arabic
+                // column below (the same name twice).
                 HighlightedSnippet(
-                    source: book.englishTitle,
+                    source: book.displayTitle,
                     term: searchText,
                     font: .subheadline.weight(.semibold),
                     accent: settings.accentColor.color,
@@ -2616,8 +2642,8 @@ struct HadithView: View {
                 if !settings.hides(.bookStats) {
                     HStack(spacing: 4) {
                         if let counts = store.counts(for: book) {
-                            statChip("\(counts.chapters) Ch")
-                            statChip("\(counts.hadiths.formatted()) Ha")
+                            statChip(String(localized: "\(counts.chapters) Ch"))
+                            statChip(String(localized: "\(counts.hadiths) Ha"))
                         }
                     }
                     .lineLimit(1)
@@ -2629,20 +2655,22 @@ struct HadithView: View {
             .layoutPriority(1)
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            HStack(spacing: 6) {
-                HighlightedSnippet(
-                    source: book.arabicTitle,
-                    term: searchText,
-                    font: arabicTitleFont(.subheadline, bump: 2),
-                    accent: settings.accentColor.color,
-                    fg: settings.accentColor.color,
-                    lineLimit: 2
-                )
-                .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
-                .multilineTextAlignment(.trailing)
+            if !AppLanguage.isArabic {
+                HStack(spacing: 6) {
+                    HighlightedSnippet(
+                        source: book.arabicTitle,
+                        term: searchText,
+                        font: arabicTitleFont(.subheadline, bump: 2),
+                        accent: settings.accentColor.color,
+                        fg: settings.accentColor.color,
+                        lineLimit: 2
+                    )
+                    .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                    .multilineTextAlignment(.trailing)
+                }
+                .minimumScaleFactor(0.5)
+                .padding(.leading, 8)
             }
-            .minimumScaleFactor(0.5)
-            .padding(.leading, 8)
         }
         .contentShape(Rectangle())
     }
@@ -2668,16 +2696,18 @@ struct HadithView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
 
-                HighlightedSnippet(
-                    source: book.englishTitle,
-                    term: searchText,
-                    font: .caption.weight(.semibold),
-                    accent: settings.accentColor.color,
-                    fg: .primary
-                )
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .minimumScaleFactor(0.55)
+                if !AppLanguage.isArabic {
+                    HighlightedSnippet(
+                        source: book.englishTitle,
+                        term: searchText,
+                        font: .caption.weight(.semibold),
+                        accent: settings.accentColor.color,
+                        fg: .primary
+                    )
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.55)
+                }
 
                 // Simple Mode leaves the number, the counts and the era to the book's own screen, and
                 // the tile shrinks to what it still holds.
@@ -2721,7 +2751,7 @@ struct HadithView: View {
         .gridFavoriteStar(
             isFavorite: store.isFavorite(book.slug),
             accent: settings.accentColor.color,
-            accessibilityName: book.englishTitle
+            accessibilityName: book.displayTitle
         ) {
             store.toggleFavoriteOrConfirm(book)
         }

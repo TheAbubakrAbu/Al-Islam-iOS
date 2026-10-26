@@ -20,7 +20,7 @@ struct ProvingCaseView: View {
             .themedListRowBackground()
         }
         .navigationTitle("How the Case Works")
-        .selectableArticleList(article: "ProvingCaseView")
+        .englishArticle().selectableArticleList(article: "ProvingCaseView")
     }
 
     static let sections: [ArticleSection] = [
@@ -137,7 +137,7 @@ struct ProvingFingerprintView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The Human Fingerprint Test")
-        .selectableArticleList(article: "ProvingFingerprintView")
+        .englishArticle().selectableArticleList(article: "ProvingFingerprintView")
     }
 
     static let sections: [ArticleSection] = [
@@ -243,7 +243,7 @@ struct ProvingProphetView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The Prophet’s Character")
-        .selectableArticleList(article: "ProvingProphetView")
+        .englishArticle().selectableArticleList(article: "ProvingProphetView")
     }
 
     static let sections: [ArticleSection] = [
@@ -412,7 +412,7 @@ struct ProvingContinuationView: View {
             .themedListRowBackground()
         }
         .navigationTitle("One Message, Many Messengers")
-        .selectableArticleList(article: "ProvingContinuationView")
+        .englishArticle().selectableArticleList(article: "ProvingContinuationView")
     }
 
     static let sections: [ArticleSection] = [
@@ -569,7 +569,7 @@ struct ProvingStylometryView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Two Voices: Quran and Hadith")
-        .selectableArticleList(article: "ProvingStylometryView")
+        .englishArticle().selectableArticleList(article: "ProvingStylometryView")
     }
 
     static let sections: [ArticleSection] = [
@@ -667,7 +667,7 @@ struct ProvingPreservationView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Preserved as Promised")
-        .selectableArticleList(article: "ProvingPreservationView")
+        .englishArticle().selectableArticleList(article: "ProvingPreservationView")
     }
 
     static let sections: [ArticleSection] = [
@@ -780,7 +780,7 @@ struct ProvingIjazView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The Unmatched Quran")
-        .selectableArticleList(article: "ProvingIjazView")
+        .englishArticle().selectableArticleList(article: "ProvingIjazView")
     }
 
     static let sections: [ArticleSection] = [
@@ -901,7 +901,7 @@ struct ProvingScienceView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The Errors It Did Not Make")
-        .selectableArticleList(article: "ProvingScienceView")
+        .englishArticle().selectableArticleList(article: "ProvingScienceView")
     }
 
     static let sections: [ArticleSection] = [
@@ -1031,7 +1031,7 @@ struct ProvingProphecyView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Foretold, and Fulfilled")
-        .selectableArticleList(article: "ProvingProphecyView")
+        .englishArticle().selectableArticleList(article: "ProvingProphecyView")
     }
 
     static let sections: [ArticleSection] = [
@@ -1234,7 +1234,7 @@ struct ProvingSourcesView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Where Could He Have Learned It?")
-        .selectableArticleList(article: "ProvingSourcesView")
+        .englishArticle().selectableArticleList(article: "ProvingSourcesView")
     }
 
     static let sections: [ArticleSection] = [
@@ -1380,7 +1380,7 @@ struct ProvingBibleView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The Bible Points Ahead")
-        .selectableArticleList(article: "ProvingBibleView")
+        .englishArticle().selectableArticleList(article: "ProvingBibleView")
     }
 
     static let sections: [ArticleSection] = [
@@ -1514,7 +1514,7 @@ struct ProvingScriptureView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The Quran and Earlier Scripture")
-        .selectableArticleList(article: "ProvingScriptureView")
+        .englishArticle().selectableArticleList(article: "ProvingScriptureView")
     }
 
     static let sections: [ArticleSection] = [
@@ -1636,7 +1636,7 @@ struct ProvingEthicsView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Justice Beyond the Tribe")
-        .selectableArticleList(article: "ProvingEthicsView")
+        .englishArticle().selectableArticleList(article: "ProvingEthicsView")
     }
 
     static let sections: [ArticleSection] = [
@@ -1749,7 +1749,7 @@ struct ProvingJesusView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Jesus in the Gospels")
-        .selectableArticleList(article: "ProvingJesusView")
+        .englishArticle().selectableArticleList(article: "ProvingJesusView")
     }
 
     static let sections: [ArticleSection] = [
@@ -1890,7 +1890,7 @@ struct ProvingGodView: View {
             .themedListRowBackground()
         }
         .navigationTitle("God: The Prior Question")
-        .selectableArticleList(article: "ProvingGodView")
+        .englishArticle().selectableArticleList(article: "ProvingGodView")
     }
 
     static let sections: [ArticleSection] = [
@@ -2026,7 +2026,7 @@ struct ProvingQuestionsView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Six Hard Questions")
-        .selectableArticleList(article: "ProvingQuestionsView")
+        .englishArticle().selectableArticleList(article: "ProvingQuestionsView")
     }
 
     static let sections: [ArticleSection] = [
@@ -2141,7 +2141,7 @@ struct ProvingClosingView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The Converging Case")
-        .selectableArticleList(article: "ProvingClosingView")
+        .englishArticle().selectableArticleList(article: "ProvingClosingView")
     }
 
     static let sections: [ArticleSection] = [

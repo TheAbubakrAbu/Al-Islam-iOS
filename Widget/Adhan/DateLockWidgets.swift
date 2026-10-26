@@ -9,8 +9,9 @@ import WidgetKit
 //
 // Arabic is one kind per layout rather than a setting: a lock-screen widget can't be configured without an
 // App Intent, and a separate kind puts both languages in the gallery at once. Only the Hijri-alone widget
-// has an Arabic twin. The two-calendar and next-prayer layouts mix the date with English lines, and a
-// half-Arabic tile reads worse than either language whole.
+// has an Arabic twin. The two-calendar and next-prayer layouts follow the interface's language instead
+// (`Language.interface`): their other lines (the weekday, the Gregorian date, the next prayer) are already
+// in it, and a half-English tile in an Arabic interface read worse than either language whole.
 
 // MARK: - Hijri date alone
 
@@ -127,7 +128,7 @@ struct DualCalendarLockView: View {
     var entry: PrayersProvider.Entry
 
     var body: some View {
-        let hijri = AdhanWidgetDateFormatting.hijriParts(for: entry, language: .english)
+        let hijri = AdhanWidgetDateFormatting.hijriParts(for: entry, language: .interface)
 
         if widgetFamily == .accessoryInline {
             // The Hijri date ALONE, and no symbol. The inline slot does not stand on its own: it sits
@@ -188,7 +189,7 @@ struct NextPrayerDateLockView: View {
 
     var body: some View {
         if let next = entry.nextPrayer {
-            let headline = "Next: \(next.displayName) at \(AdhanWidgetDateFormatting.shortTimeFormatter.string(from: next.time))"
+            let headline = String(localized: "Next: \(next.displayName.localizedDisplay) at \(AdhanWidgetDateFormatting.shortTimeFormatter.string(from: next.time))")
 
             if widgetFamily == .accessoryInline {
                 Label(headline, systemImage: next.image)
@@ -202,7 +203,7 @@ struct NextPrayerDateLockView: View {
                             .font(.headline)
                     }
 
-                    Text(AdhanWidgetDateFormatting.hijriParts(for: entry, language: .english).dayMonthYear)
+                    Text(AdhanWidgetDateFormatting.hijriParts(for: entry, language: .interface).dayMonthYear)
                         .font(.footnote)
 
                     // The city a size under caption2, so the date above can be a size bigger (Abu,

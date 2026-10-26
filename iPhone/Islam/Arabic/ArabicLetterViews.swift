@@ -77,9 +77,11 @@ struct TashkeelLettersView: View {
     private var useQuranicFont: Bool { settings.useFontArabic }
 
     /// "Sukuun 1" / "Sukuun 2" are how the mark table distinguishes the two scripts; to the reader they are both
-    /// just the sukoon, and the script is a choice made below the grid.
+    /// just the sukoon, and the script is a choice made below the grid. `english` is the table's key, so
+    /// it is shown through the catalog.
     private func displayName(_ mark: Tashkeel) -> String {
-        (mark.english == Self.plainSukoonName || mark.english == Self.quranicSukoonName) ? "Sukoon" : mark.english
+        (mark.english == Self.plainSukoonName || mark.english == Self.quranicSukoonName)
+            ? String(localized: "Sukoon") : mark.english.localizedDisplay
     }
 
     /// The hamza has no consonant sound of its own in the table, so it gets the glottal stop.
@@ -167,14 +169,14 @@ struct TashkeelLettersView: View {
     /// 2026-09-20: make the page look better). Anything the table gains later and no family claims still
     /// shows, under "Other", so a new mark can never silently vanish from this screen.
     private static let markFamilies: [(title: String, names: [String])] = [
-        ("Short vowels", ["Fatha", "Kasra", "Damma"]),
-        ("Long vowels", ["Alif", "Yaa", "Waaw"]),
-        ("Tanween", ["Fathatayn", "Kasratayn", "Dammatayn"]),
-        ("Small vowel letters", ["Dagger Alif", "Miniature Yaa", "Miniature Waaw"]),
-        ("Madd", ["Alif Madd", "Yaa Madd", "Waaw Madd"]),
-        ("Small madd", ["Small Alif Madd", "Small Yaa Madd", "Small Waaw Madd"]),
-        ("Alif maqSoorah", ["Alif MaqSuurah", "Alif MaqSuurah 2", "Alif MaqSuurah Madd"]),
-        ("Sukoon and shaddah", [plainSukoonName, "Shaddah"]),
+        (String(localized: "Short vowels"), ["Fatha", "Kasra", "Damma"]),
+        (String(localized: "Long vowels"), ["Alif", "Yaa", "Waaw"]),
+        (String(localized: "Tanween"), ["Fathatayn", "Kasratayn", "Dammatayn"]),
+        (String(localized: "Small vowel letters"), ["Dagger Alif", "Miniature Yaa", "Miniature Waaw"]),
+        (String(localized: "Madd"), ["Alif Madd", "Yaa Madd", "Waaw Madd"]),
+        (String(localized: "Small madd"), ["Small Alif Madd", "Small Yaa Madd", "Small Waaw Madd"]),
+        (String(localized: "Alif maqSoorah"), ["Alif MaqSuurah", "Alif MaqSuurah 2", "Alif MaqSuurah Madd"]),
+        (String(localized: "Sukoon and shaddah"), [plainSukoonName, "Shaddah"]),
     ]
 
     private var groupedMarks: [(title: String, marks: [Tashkeel])] {
@@ -184,7 +186,7 @@ struct TashkeelLettersView: View {
         }
         let claimed = Set(Self.markFamilies.flatMap(\.names))
         let unclaimed = all.filter { !claimed.contains($0.english) }
-        if !unclaimed.isEmpty { groups.append((title: "Other", marks: unclaimed)) }
+        if !unclaimed.isEmpty { groups.append((title: String(localized: "Other"), marks: unclaimed)) }
         return groups.filter { !$0.marks.isEmpty }
     }
 
@@ -219,7 +221,7 @@ struct TashkeelLettersView: View {
                     )
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(displayName(mark) + (vowel.map { " + \($0.english)" } ?? ""))
+                    Text(displayName(mark) + (vowel.map { " + \($0.english.localizedDisplay)" } ?? ""))
                         .font(.headline)
 
                     Text(mark.arabic)
@@ -228,12 +230,13 @@ struct TashkeelLettersView: View {
                         .foregroundColor(.secondary)
 
                     if !settings.hideEnglishInArabicLetters {
-                        Text("Reads \u{201C}\(reading)\u{201D}" + (mark.length.map { ", \($0)" } ?? ""))
+                        Text(mark.length.map { String(localized: "Reads \u{201C}\(reading)\u{201D}, \($0.localizedDisplay)") }
+                             ?? String(localized: "Reads \u{201C}\(reading)\u{201D}"))
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     } else if let length = mark.length {
-                        Text(length)
+                        Text(length.localizedDisplay)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -306,7 +309,7 @@ struct TashkeelLettersView: View {
                 Picker("Shaddah vowel", selection: $shaddahVowelName) {
                     Text("Shaddah").tag(String?.none)
                     ForEach(shaddahVowels, id: \.english) { vowel in
-                        Text("+ \(vowel.english)").tag(String?.some(vowel.english))
+                        Text(verbatim: "+ \(vowel.english.localizedDisplay)").tag(String?.some(vowel.english))
                     }
                 }
                 #if !os(watchOS)
@@ -381,7 +384,7 @@ struct TashkeelLettersView: View {
     }
 
     private var lettersSection: some View {
-        Section(selectedMark.map { "LETTERS WITH \(displayName($0).uppercased())" } ?? "LETTERS") {
+        Section(selectedMark.map { String(localized: "LETTERS WITH \(displayName($0).uppercased())") } ?? String(localized: "LETTERS")) {
             // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
             // each self-sizing pass, which iOS 26 traps on.
             SummaryTileGrid(adaptiveMinimum: 60, spacing: 6) {
@@ -449,8 +452,8 @@ struct TashkeelLettersView: View {
             } label: {
                 ArabicTopicLinkLabel(
                     specimen: "\u{0628}\u{064A}",
-                    title: "Default Tashkeel",
-                    caption: "The marks you assume when a word is printed with none",
+                    title: String(localized: "Default Tashkeel"),
+                    caption: String(localized: "The marks you assume when a word is printed with none"),
                     preview: "با \u{2190} بَا    بي \u{2190} بِي    بو \u{2190} بُو",
                     face: .plain
                 )
@@ -524,7 +527,9 @@ struct TashkeelLettersView: View {
             withAnimation(.easeInOut) { selection.toggle(id) }
         }
         .accessibilityAddTraits(.isButton)
-        .accessibilityLabel("\(letter.transliteration) with every mark\(isSelected ? ", selected" : "")")
+        .accessibilityLabel(isSelected
+            ? String(localized: "\(letter.displayName) with every mark, selected")
+            : String(localized: "\(letter.displayName) with every mark"))
     }
 
     /// Sized to the glyph, not to the Quranic face's (very tall) line box - but it grows with the size slider,
@@ -594,7 +599,7 @@ struct TashkeelLettersView: View {
                             }
 
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Shaddah + \(vowel.english)")
+                                Text("Shaddah + \(vowel.english.localizedDisplay)")
                                     .font(.subheadline.weight(.semibold))
 
                                 // The mark's NAME stays (it's what the row is about); only the reading -
@@ -629,7 +634,7 @@ struct TashkeelLettersView: View {
                         .padding(.vertical, 2)
                     }
                 } header: {
-                    Text("\(letter.transliteration.uppercased()) WITH SHADDAH")
+                    Text("\(letter.displayName.uppercased()) WITH SHADDAH")
                 } footer: {
                     Text("A shaddah doubles the letter: the first is silent (sukoon) and the second carries the vowel. It never appears at the start of a word. Press the chevron to see the doubling written out beneath: the letter with sukoon, then the letter with its vowel.")
                 }
@@ -637,7 +642,7 @@ struct TashkeelLettersView: View {
             .themedListRowBackground()
         }
         .applyConditionalListStyle()
-        .navigationTitle(letter.transliteration.capitalized)
+        .navigationTitle(AppLanguage.isArabic ? letter.name : letter.transliteration.capitalized)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -677,7 +682,7 @@ struct HideEnglishToolbarButton: View {
         } label: {
             Image(systemName: settings.hideEnglishInArabicLetters ? "eye.slash" : "eye")
         }
-        .accessibilityLabel(settings.hideEnglishInArabicLetters ? "Show English" : "Hide English")
+        .accessibilityLabel(settings.hideEnglishInArabicLetters ? String(localized: "Show English") : String(localized: "Hide English"))
         .tint(settings.accentColor.accent2)
     }
 }
@@ -794,7 +799,12 @@ struct ArabicLetterPage: View {
     private var vowelLetterRows: [VowelCombinationRow.Partner] { [.alif, .yaa, .waaw, .unmarked] }
 
     /// `forms` is ordered [final, medial, initial]; these name them in that order.
-    private static let formNames = ["End", "Middle", "Start"]
+    private static let formNames = [String(localized: "End"), String(localized: "Middle"), String(localized: "Start")]
+
+    /// The same three positions as VoiceOver says them, whole phrases in the same order.
+    private static let formAccessibilityNames = [
+        String(localized: "End of a word"), String(localized: "Middle of a word"), String(localized: "Start of a word"),
+    ]
 
     /// The six letters that never join the letter after them.
     private static let nonConnectors: Set<String> = ["ا", "د", "ذ", "ر", "ز", "و"]
@@ -810,18 +820,18 @@ struct ArabicLetterPage: View {
         let name = letterData.transliteration.prefix(1).uppercased() + letterData.transliteration.dropFirst()
         switch letterData.letter {
         case "\u{0621}":
-            return "Hamza on its own sits on the line and joins nothing: neither the letter before it nor the one after. On a seat (\u{0623} \u{0625} \u{0626} \u{0624}) it joins the way that seat does."
+            return String(localized: "Hamza on its own sits on the line and joins nothing: neither the letter before it nor the one after. On a seat (\u{0623} \u{0625} \u{0626} \u{0624}) it joins the way that seat does.")
         case "\u{0629}":
-            return "Taa marbuuTah only ever ends a word: joined to the letter before it (\u{0640}\u{0629}), or standing alone after a letter that does not join (\u{0629}). It never joins a letter after it."
+            return String(localized: "Taa marbuuTah only ever ends a word: joined to the letter before it (\u{0640}\u{0629}), or standing alone after a letter that does not join (\u{0629}). It never joins a letter after it.")
         case "\u{0649}":
-            return "Alif maqSoorah only ever ends a word: joined to the letter before it (\u{0640}\u{0649}), or standing alone after a letter that does not join (\u{0649}). It never joins a letter after it."
+            return String(localized: "Alif maqSoorah only ever ends a word: joined to the letter before it (\u{0640}\u{0649}), or standing alone after a letter that does not join (\u{0649}). It never joins a letter after it.")
         case "\u{0671}":
-            return "Hamzatul waSl only ever begins a word, and like every alif it never joins the letter after it."
+            return String(localized: "Hamzatul waSl only ever begins a word, and like every alif it never joins the letter after it.")
         case "\u{0644} \u{0627} - \u{0644}\u{0627}":
-            return "The laam joins from before and the alif closes the shape, so nothing joins after a laam alif."
+            return String(localized: "The laam joins from before and the alif closes the shape, so nothing joins after a laam alif.")
         default:
             if Self.nonConnectors.contains(letterData.letter) || Self.nonConnectingSpecials.contains(letterData.letter) {
-                return "\(name) never joins the letter after it, so the letter that follows always starts fresh."
+                return String(localized: "\(name) never joins the letter after it, so the letter that follows always starts fresh.")
             }
             return nil
         }
@@ -843,10 +853,10 @@ struct ArabicLetterPage: View {
         guard let letter = profileLetter else { return [] }
         var facts: [(text: String, systemImage: String, tint: Color?)] = []
         if let weight = LetterTraits.family(of: letter, on: .weight) {
-            facts.append((weight.meaning, weight.systemImage, weight.legendColor))
+            facts.append((weight.displayMeaning, weight.systemImage, weight.legendColor))
         }
         if let zone = LetterTraits.makharij(of: letter).last.flatMap({ LetterTraits.family(id: $0.zoneID) }) {
-            facts.append((zone.meaning, "mouth", nil))
+            facts.append((zone.displayMeaning, "mouth", nil))
         }
         // Named in Arabic as well as English: "Ease" alone says nothing, "Leen (Ease)" is the term
         // the reader will meet again further down the page and in every tajweed book.
@@ -854,13 +864,15 @@ struct ArabicLetterPage: View {
             facts.append((family.title, family.systemImage, family.legendColor))
         }
         if let lam = LetterTraits.family(of: letter, on: .lamOfAl) {
-            facts.append((lam.meaning.replacingOccurrences(of: "Letters", with: "Letter"), lam.systemImage, nil))
+            // The family is named for its letters ("Sun Letters"); the chip names this one.
+            let single = lam == LetterTraits.sunLetters ? String(localized: "Sun Letter") : String(localized: "Moon Letter")
+            facts.append((single, lam.systemImage, nil))
         }
         if LetterTraits.maddLetters.contains(letter) {
-            facts.append(("Long Vowel", LetterTraits.maddLetters.systemImage, nil))
+            facts.append((String(localized: "Long Vowel"), LetterTraits.maddLetters.systemImage, nil))
         }
         if LetterTraits.family(of: letter, on: .openers) != nil {
-            facts.append(("Opening Letter", "book", nil))
+            facts.append((String(localized: "Opening Letter"), "book", nil))
         }
         return facts
     }
@@ -954,9 +966,9 @@ struct ArabicLetterPage: View {
         let name = letterData.transliteration.capitalized
         switch weight {
         case .light:
-            return "\(name) is always pronounced as a light letter, in every position."
+            return String(localized: "\(name) is always pronounced as a light letter, in every position.")
         case .heavy:
-            return "\(name) is always pronounced as a heavy letter, in every position. It is one of the letters of isti'la (elevation)."
+            return String(localized: "\(name) is always pronounced as a heavy letter, in every position. It is one of the letters of isti'la (elevation).")
         case .conditional, .followsPrevious:
             return nil
         }
@@ -980,10 +992,16 @@ struct ArabicLetterPage: View {
             letterList
                 // "-scrollToVowelPairs": the WITH YAA AND WAAW section sits well below the fold and a
                 // simulator screenshot cannot scroll, so this is how it gets verified headlessly.
+                // "-scrollToMakhraj" does the same for the makhraj pictures in the tajweed profile, and
+                // "-scrollToMakhrajCharts" for the Makhaarij page's pictures under them.
                 .onAppear {
-                    guard ProcessInfo.processInfo.arguments.contains("-scrollToVowelPairs") else { return }
+                    let arguments = ProcessInfo.processInfo.arguments
+                    let target = arguments.contains("-scrollToVowelPairs") ? "vowelPairs"
+                        : arguments.contains("-scrollToMakhrajCharts") ? "makhrajCharts"
+                        : arguments.contains("-scrollToMakhraj") ? "makhrajPictures" : nil
+                    guard let target else { return }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        withAnimation { proxy.scrollTo("vowelPairs", anchor: .top) }
+                        withAnimation { proxy.scrollTo(target, anchor: .top) }
                     }
                 }
         }
@@ -1010,7 +1028,7 @@ struct ArabicLetterPage: View {
                 // it just as the transliteration does, so it goes with the rest of the English.
                 if let englishSound = letterData.englishSound, showsReadings {
                     Label {
-                        Text(englishSound)
+                        Text(englishSound.localizedDisplay)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -1054,10 +1072,10 @@ struct ArabicLetterPage: View {
                             // The letter itself is described, so the masculine adjective (mufakhkham /
                             // muraqqaq) is what applies - not the feminine noun for the act (tafkhim's
                             // "mufakhkhamah").
-                            Text(weight == .heavy ? "Heavy letter (Mufakhkham)"
-                                : weight == .light ? "Light letter (Muraqqaq)"
-                             : weight == .conditional ? "Conditional letter"
-                             : "Follows previous letter")
+                            Text(weight == .heavy ? String(localized: "Heavy letter (Mufakhkham)")
+                                : weight == .light ? String(localized: "Light letter (Muraqqaq)")
+                             : weight == .conditional ? String(localized: "Conditional letter")
+                             : String(localized: "Follows previous letter"))
                             .font(.headline)
 
                         // A plain light/heavy letter carries no rule of its own, and used to show nothing
@@ -1065,7 +1083,8 @@ struct ArabicLetterPage: View {
                         // "pronounced as a light letter in all positions") look special. They aren't; they
                         // were simply the only ones that said so. Every unconditional letter now says it, in
                         // the same words.
-                        if let rule = letterData.weightRule ?? Self.alwaysWeightRule(for: weight, letterData: letterData) {
+                        // `weightRule` is English data (the search and its semantic corpus read it).
+                        if let rule = letterData.weightRule?.localizedDisplay ?? Self.alwaysWeightRule(for: weight, letterData: letterData) {
                             // Laam's rule names Allah ("Heavy only in the Name of Allah...").
                             Text.islamText(rule, highlightAllah: settings.highlightAllahNamesIslam)
                                 .font(.body)
@@ -1109,9 +1128,10 @@ struct ArabicLetterPage: View {
             Section {
                 // `forms` is ordered [final, medial, initial], so laid out left-to-right the initial form
                 // lands on the right - the correct right-to-left reading order for Arabic. Each is named,
-                // because three unlabelled shapes left a beginner guessing which was which.
+                // because three unlabelled shapes left a beginner guessing which was which. Pinned left to
+                // right, so a right-to-left interface does not mirror the order back to start-on-the-left.
                 HStack(alignment: .top, spacing: 8) {
-                    ForEach(0..<min(3, letterData.forms.count), id: \.self) { index in
+                    ForEach(letterData.writtenFormIndices, id: \.self) { index in
                         VStack(spacing: 4) {
                             Text(letterData.forms[index])
                                 .font(
@@ -1135,9 +1155,10 @@ struct ArabicLetterPage: View {
                                 .fill(settings.accentColor.color.opacity(0.08))
                         )
                         .accessibilityElement(children: .ignore)
-                        .accessibilityLabel("\(Self.formNames[index]) of a word")
+                        .accessibilityLabel(Self.formAccessibilityNames[index])
                     }
                 }
+                .environment(\.layoutDirection, .leftToRight)
                 .padding(.vertical, 4)
             } header: {
                 Text("DIFFERENT FORMS")
@@ -1167,24 +1188,24 @@ struct ArabicLetterPage: View {
 
                 // The opening line is the section's article lead and the "- **Waw**" lines are article
                 // bullets (2026-10-03); the madd paragraphs stay prose.
-                Section(header: Text(isAlif ? "ALIF IS ALWAYS A VOWEL" : "SPECIAL ROLE OF VOWEL LETTERS")) {
+                Section(header: Text(isAlif ? String(localized: "ALIF IS ALWAYS A VOWEL") : String(localized: "SPECIAL ROLE OF VOWEL LETTERS"))) {
                     if isAlif {
-                        ArticleLead("Alif is always a vowel letter. Unlike Waw and Yaa, it never acts as a consonant.")
+                        ArticleLead(String(localized: "Alif is always a vowel letter. Unlike Waw and Yaa, it never acts as a consonant."), eyebrow: String(localized: "IN SHORT"))
 
-                        ArticleBullet("- **Alif (ا)**: The long vowel \"aa\", used after a letter with a fatha. For example, كِتَاب (kitaab, book).")
+                        ArticleBullet(String(localized: "- **Alif (ا)**: The long vowel \"aa\", used after a letter with a fatha. For example, كِتَاب (kitaab, book)."))
 
                         Text("Do not confuse Alif with Hamza on Alif (أ or إ). The hamzah is the consonant there; the alif is only its seat.")
                             .font(.body)
                     } else {
-                        ArticleLead("Two letters (Waw and Yaa) have a dual role, acting as a vowel in some words and a consonant in others:")
+                        ArticleLead(String(localized: "Two letters (Waw and Yaa) have a dual role, acting as a vowel in some words and a consonant in others:"), eyebrow: String(localized: "IN SHORT"))
                     }
 
                     if letterData.transliteration == "waaw" {
-                        ArticleBullet("- **Waw (و)**: As a **vowel** it is the long \"uu\" (also written \"oo\", and shortened to \"u\"), used after a letter with a damma, like in رَسُول (rasool, messenger). As a **consonant** it makes the \"w\" sound, like in وَقَفَ (waqafa, stood).")
+                        ArticleBullet(String(localized: "- **Waw (و)**: As a **vowel** it is the long \"uu\" (also written \"oo\", and shortened to \"u\"), used after a letter with a damma, like in رَسُول (rasool, messenger). As a **consonant** it makes the \"w\" sound, like in وَقَفَ (waqafa, stood)."))
                     }
 
                     if letterData.transliteration == "yaa" {
-                        ArticleBullet("- **Yaa (ي)**: As a **vowel** it is the long \"ee\" (also written \"ii\", and shortened to \"i\"), used after a letter with a kasra, like in كِتَابِي (kitaabi, my book). As a **consonant** it makes the \"y\" sound, like in يَد (yad, hand).")
+                        ArticleBullet(String(localized: "- **Yaa (ي)**: As a **vowel** it is the long \"ee\" (also written \"ii\", and shortened to \"i\"), used after a letter with a kasra, like in كِتَابِي (kitaabi, my book). As a **consonant** it makes the \"y\" sound, like in يَد (yad, hand)."))
                     }
 
                     Text("When these letters have no tashkeel, or have sukoon, and the letter before them has the matching harakah, they are treated as Madd Tabee (مَدّ طَبِيعِيّ), or natural Madd: Alif after fatha, Waw after damma, and Yaa after kasra. This is held for 2 harakaat (2 counts).")
@@ -1312,8 +1333,14 @@ struct ArabicLetterPage: View {
 
             if (!letterData.showTashkeel && letterData.transliteration != "alif")
                 || letterData.transliteration == "yaa" {
-                Section(header: Text(letterData.isNonArabicScriptLetter ? "WHERE IT IS USED" : "PURPOSE")) {
+                Section(header: Text(letterData.isNonArabicScriptLetter ? String(localized: "WHERE IT IS USED") : String(localized: "PURPOSE"))) {
                     purposeSection(for: letterData)
+
+                    // Yaa's purpose line is the dotless final yaa, which is exactly where it is
+                    // mistaken for alif maqSoorah. Its own List row (one link per row).
+                    if letterData.transliteration == "yaa" {
+                        MaqsurahOrYaaLink()
+                    }
                 }
             }
 
@@ -1327,9 +1354,9 @@ struct ArabicLetterPage: View {
                 // (2026-10-03).
                 Section {
                     ArticleCallout(paragraphs: [
-                        "In modern Arabic outside of the Quran, Alif Madd usually does not mean a 4, 5, or 6 count Tajweed elongation by itself. It normally represents ءا, so آ is a shortened spelling of ءا.",
-                        "For example, قُرۡءَان is how it is spelled in the Quran, while outside the Quran it is commonly shortened to قُرآن. Likewise, ءَامِين is commonly written آمِين.",
-                    ], title: "Outside of the Quran", systemImage: "info.circle.fill")
+                        String(localized: "In modern Arabic outside of the Quran, Alif Madd usually does not mean a 4, 5, or 6 count Tajweed elongation by itself. It normally represents ءا, so آ is a shortened spelling of ءا."),
+                        String(localized: "For example, قُرۡءَان is how it is spelled in the Quran, while outside the Quran it is commonly shortened to قُرآن. Likewise, ءَامِين is commonly written آمِين."),
+                    ], title: String(localized: "Outside of the Quran"), systemImage: "info.circle.fill")
                     .articleCardRow()
                 }
             }
@@ -1349,11 +1376,11 @@ struct ArabicLetterPage: View {
             // keeps its own in-list section, having no Settings page to move it to.
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
                 HStack(spacing: 8) {
-                    stepButton(to: previous, systemImage: "chevron.left", label: "Previous letter")
+                    stepButton(to: previous, systemImage: "chevron.backward", label: String(localized: "Previous letter"))
 
                     ArabicSizeSlider()
 
-                    stepButton(to: next, systemImage: "chevron.right", label: "Next letter")
+                    stepButton(to: next, systemImage: "chevron.forward", label: String(localized: "Next letter"))
                 }
             }
             .minimizedBarStyle(barsCollapsed)
@@ -1394,39 +1421,78 @@ struct ArabicLetterPage: View {
     /// one in the middle and one at the end, each cut from the Reading Test's verified bank
     /// (`LetterWordExamples`), with the letter tinted where it sits. The rows follow the sukoon
     /// choice and the Hide English flag like every other practice row.
+    ///
+    /// Yaa and waaw get it twice (Abu, 2026-10-24): once as the consonant, at the start, in the middle
+    /// and at the end, and once as the long vowel, in the middle and at the end only, because a word
+    /// never opens on a vowel letter. One mixed set left the reader guessing which sound each tinted
+    /// letter made.
     @ViewBuilder
     private var quranWordsSection: some View {
-        let examples = LetterWordExamples.examples(for: letterData.letter)
+        let name = letterData.transliteration.prefix(1).uppercased() + letterData.transliteration.dropFirst()
+        if LetterWordExamples.hasTwoRoles(letterData.letter) {
+            let isYaa = letterData.transliteration == "yaa"
+            wordExamplesSection(
+                LetterWordExamples.examples(for: letterData.letter, role: .consonant),
+                header: String(localized: "SEE IT IN WORDS: CONSONANT"),
+                footer: isYaa
+                    ? String(localized: "\(name) as a consonant, the \u{201C}y\u{201D} of \u{201C}yes\u{201D}: it carries its own vowel. At the start, in the middle and at the end of a word, tinted where it sits. Tap a word to select it, then press play to hear it.")
+                    : String(localized: "\(name) as a consonant, the \u{201C}w\u{201D} of \u{201C}water\u{201D}: it carries its own vowel. At the start, in the middle and at the end of a word, tinted where it sits. Tap a word to select it, then press play to hear it.")
+            )
+            wordExamplesSection(
+                LetterWordExamples.examples(for: letterData.letter, role: .vowel),
+                header: String(localized: "SEE IT IN WORDS: VOWEL"),
+                footer: isYaa
+                    ? String(localized: "\(name) as the long vowel \u{201C}ee\u{201D}: no mark of its own, after a kasra, it stretches that kasra to 2 counts. A word never begins with a vowel letter, so it is only ever in the middle or at the end.")
+                    : String(localized: "\(name) as the long vowel \u{201C}oo\u{201D}: no mark of its own, after a damma, it stretches that damma to 2 counts. A word never begins with a vowel letter, so it is only ever in the middle or at the end.")
+            )
+        } else {
+            let examples = LetterWordExamples.examples(for: letterData.letter)
+            wordExamplesSection(
+                examples,
+                header: String(localized: "SEE IT IN WORDS"),
+                footer: examples.count == 3
+                    ? String(localized: "\(name) in three words from the Quran: at the start, in the middle and at the end of a word, tinted where it sits. Tap a word to select it, then press play to hear it.")
+                    : String(localized: "\(name) in words from the Quran, tinted where it sits. Tap a word to select it, then press play to hear it.")
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func wordExamplesSection(_ examples: [LetterWordExamples.Example], header: String, footer: String) -> some View {
         if !examples.isEmpty {
-            let name = letterData.transliteration.prefix(1).uppercased() + letterData.transliteration.dropFirst()
             Section {
                 ForEach(examples, id: \.position) { example in
                     ArabicExampleRow(
                         arabic: ReadingTestText.display(example.item.arabic, mushafMarks: settings.quranicSukoonInLetterPractice),
                         transliteration: example.item.reading,
                         note: Self.wordNote(example),
-                        highlightLetter: letterData.letter
+                        highlightLetter: letterData.letter,
+                        highlightIndex: example.letterIndex
                     )
                 }
             } header: {
-                Text("SEE IT IN WORDS")
+                Text(header)
             } footer: {
-                Text(examples.count == 3
-                     ? "\(name) in three words from the Quran: at the start, in the middle and at the end of a word, tinted where it sits. Tap a word to select it, then press play to hear it."
-                     : "\(name) in words from the Quran, tinted where it sits. Tap a word to select it, then press play to hear it.")
+                Text(footer)
             }
         }
     }
 
+    /// Whole sentences, so a translation orders the position, the gloss and the reference itself.
     private static func wordNote(_ example: LetterWordExamples.Example) -> String {
-        var note = example.position.title
-        if let gloss = example.item.gloss, !gloss.isEmpty {
-            note += ": \u{201C}\(gloss)\u{201D}"
+        let position = example.position.title
+        let gloss = example.item.gloss.flatMap { $0.isEmpty ? nil : $0 }
+        let reference = example.item.reference.flatMap { $0.isEmpty ? nil : $0.localizedDigits }
+        switch (gloss, reference) {
+        case let (gloss?, reference?):
+            return String(localized: "\(position): \u{201C}\(gloss)\u{201D} (Quran \(reference))")
+        case let (gloss?, nil):
+            return String(localized: "\(position): \u{201C}\(gloss)\u{201D}")
+        case let (nil, reference?):
+            return String(localized: "\(position) (Quran \(reference))")
+        case (nil, nil):
+            return position
         }
-        if let reference = example.item.reference, !reference.isEmpty {
-            note += " (Quran \(reference))"
-        }
-        return note
     }
     #endif
 
@@ -1440,22 +1506,22 @@ struct ArabicLetterPage: View {
             ArabicExampleRow(
                 arabic: "ٱلۡجَنَّة",
                 transliteration: "al-jannah",
-                note: "Paradise"
+                note: String(localized: "Paradise")
             )
             ArabicExampleRow(
                 arabic: "رَحۡمَة",
                 transliteration: "rahmah",
-                note: "Mercy"
+                note: String(localized: "Mercy")
             )
             ArabicExampleRow(
                 arabic: "صَلَاة",
                 transliteration: "salah",
-                note: "Prayer"
+                note: String(localized: "Prayer")
             )
             ArabicExampleRow(
                 arabic: "مَدۡرَسَة",
                 transliteration: "madrasah",
-                note: "School"
+                note: String(localized: "School")
             )
         } header: {
             Text("STOPPING ON IT: SOUNDS LIKE HAA")
@@ -1467,17 +1533,17 @@ struct ArabicLetterPage: View {
             ArabicExampleRow(
                 arabic: "رَحۡمَةُ ٱللَّهِ",
                 transliteration: "rahmatu-llahi",
-                note: "The mercy of Allah"
+                note: String(localized: "The mercy of Allah")
             )
             ArabicExampleRow(
                 arabic: "سُورَةُ ٱلۡبَقَرَة",
                 transliteration: "suratu-l-baqarah",
-                note: "Surah al-Baqarah: the first ة is read \"t\", and the last is stopped on as \"h\""
+                note: String(localized: "Surah al-Baqarah: the first ة is read \"t\", and the last is stopped on as \"h\"")
             )
             ArabicExampleRow(
                 arabic: "مَدِينَةُ ٱلنَّبِيِّ",
                 transliteration: "madinatu-n-nabiyy",
-                note: "The city of the Prophet"
+                note: String(localized: "The city of the Prophet")
             )
         } header: {
             Text("CONTINUING THROUGH: SOUNDS LIKE TAA")
@@ -1489,22 +1555,22 @@ struct ArabicLetterPage: View {
             ArabicExampleRow(
                 arabic: "مُسۡلِمَة \u{2190} مُسۡلِمَتَانِ",
                 transliteration: "muslimah \u{2192} muslimataan(i)",
-                note: "One Muslim woman \u{2192} two: the ة opens into ت"
+                note: String(localized: "One Muslim woman \u{2192} two: the ة opens into ت")
             )
             ArabicExampleRow(
                 arabic: "مُسۡلِمَات",
                 transliteration: "muslimaat",
-                note: "Muslim women: ـات replaces the ة"
+                note: String(localized: "Muslim women: ـات replaces the ة")
             )
             ArabicExampleRow(
                 arabic: "شَجَرَة \u{2190} شَجَرَتَانِ",
                 transliteration: "shajarah \u{2192} shajarataan(i)",
-                note: "One tree \u{2192} two trees"
+                note: String(localized: "One tree \u{2192} two trees")
             )
             ArabicExampleRow(
                 arabic: "صَلَاة \u{2190} صَلَوَات",
                 transliteration: "salah \u{2192} salawaat",
-                note: "Prayer \u{2192} prayers: this plural brings out a waaw"
+                note: String(localized: "Prayer \u{2192} prayers: this plural brings out a waaw")
             )
         } header: {
             Text("UNKNOTTING INTO AN OPEN TAA")
@@ -1523,22 +1589,22 @@ struct ArabicLetterPage: View {
             ArabicExampleRow(
                 arabic: "عَلَىٰ",
                 transliteration: "'alaa",
-                note: "Upon: the dagger alif above the ى writes the long \"aa\""
+                note: String(localized: "Upon: the dagger alif above the ى writes the long \"aa\"")
             )
             ArabicExampleRow(
                 arabic: "إِلَىٰ",
                 transliteration: "ilaa",
-                note: "To / toward"
+                note: String(localized: "To / toward")
             )
             ArabicExampleRow(
                 arabic: "مُوسَىٰ",
                 transliteration: "Musaa",
-                note: "Musa (Moses): names ending in the \"aa\" sound use it too"
+                note: String(localized: "Musa (Moses): names ending in the \"aa\" sound use it too")
             )
             ArabicExampleRow(
                 arabic: "هُدٗى",
                 transliteration: "hudan",
-                note: "Guidance: with tanween the maqsurah still looks the same"
+                note: String(localized: "Guidance: with tanween the maqsurah still looks the same")
             )
         } header: {
             Text("WITH THE DAGGER ALIF")
@@ -1550,18 +1616,20 @@ struct ArabicLetterPage: View {
             ArabicExampleRow(
                 arabic: "ٱهۡتَدَىٰ",
                 transliteration: "ihtadaa",
-                note: "FATHA before it \u{2192} alif maqSoorah, read \"aa\""
+                note: String(localized: "FATHA before it \u{2192} alif maqSoorah, read \"aa\"")
             )
             ArabicExampleRow(
                 arabic: "فِي",
                 transliteration: "fee",
-                note: "KASRA before it \u{2192} a yaa, read \"ee\", dotless in the mushaf"
+                note: String(localized: "KASRA before it \u{2192} a yaa, read \"ee\", dotless in the mushaf")
             )
             ArabicExampleRow(
                 arabic: "ٱلَّذِي",
                 transliteration: "alladhee",
-                note: "Kasra before \u{2192} yaa again, even though it looks identical"
+                note: String(localized: "Kasra before \u{2192} yaa again, even though it looks identical")
             )
+
+            MaqsurahOrYaaLink()
         } header: {
             Text("MAQSURAH OR YAA? THE VOWEL BEFORE TELLS YOU")
         } footer: {
@@ -1604,10 +1672,11 @@ struct ArabicLetterPage: View {
             Group {
                 // Which languages, by name - "non-Arabic languages" told the reader nothing (user rule).
                 if let origin = nonArabicLetterOrigins[data.transliteration] {
-                    ArticleLead("Used in \(origin.languages), for \(origin.sound).")
+                    ArticleLead(String(localized: "Used in \(origin.languages.localizedDisplay), for \(origin.sound.localizedDisplay)."),
+                                eyebrow: String(localized: "IN SHORT"))
                     Text("It is not one of the 28 Arabic letters: those languages added it to the Arabic script for a sound Arabic lacks, so it never appears in the Quran.")
                 } else {
-                    ArticleLead("This letter is used in non-Arabic languages that use Arabic script.")
+                    ArticleLead(String(localized: "This letter is used in non-Arabic languages that use Arabic script."), eyebrow: String(localized: "IN SHORT"))
                     Text("It is not one of the 28 standard Arabic alphabet letters.")
                 }
             }
@@ -1619,7 +1688,7 @@ struct ArabicLetterPage: View {
                     .font(.body)
             case "taa marbuuTah":
                 Group {
-                    ArticleLead("\"Taa marbuuTah\" means \"tied/knotted taa.\" It is written as a haa (ه) with the two dots of taa (ت) above it, and it is used to indicate the feminine gender in Arabic.")
+                    ArticleLead(String(localized: "\"Taa marbuuTah\" means \"tied/knotted taa.\" It is written as a haa (ه) with the two dots of taa (ت) above it, and it is used to indicate the feminine gender in Arabic."), eyebrow: String(localized: "IN SHORT"))
                     Text("It is typically added to the end of a noun to show that the noun is feminine. For example, the Arabic word for teacher is \"مُعَلِّم\" (mu'allim) for a male and \"مُعَلِّمَة\" (mu'allimah) for a female.")
                     Text("Its pronunciation depends on whether you stop or keep going: if you continue reading past the word, it is pronounced as a taa (\"t\"), as in \"مُعَلِّمَةُ ٱلۡفَصۡلِ\" (mu'allimatul-faSl). If you stop on the word, it is pronounced as a haa (\"h\"), as in \"mu'allimah.\"")
                     Text("When a singular feminine word is made plural, the taa marbuuTah is unknotted: it is removed and an alif and a regular taa (ـات) are added in its place. For example, \"مُعَلِّمَة\" (mu'allimah) becomes \"مُعَلِّمَات\" (mu'allimaat).")
@@ -1628,7 +1697,7 @@ struct ArabicLetterPage: View {
                 .font(.body)
             case "hamzatul waSl":
                 Group {
-                    ArticleLead("The term \"hamzatul waSl\" translates to \"connecting hamza\" or \"hamza of connection.\"")
+                    ArticleLead(String(localized: "The term \"hamzatul waSl\" translates to \"connecting hamza\" or \"hamza of connection.\""), eyebrow: String(localized: "IN SHORT"))
                     Text("Hamzatul waSl is always written as an Alif (ا) and is pronounced only if it begins a word at the start of speech. When the word follows another in a sentence, the hamzatul waSl is not pronounced, creating a smooth connection between words.")
                     Text("If a word starts with hamzatul waSl, its pronunciation depends on the third letter of the word. For verbs: if the third letter has a damma, pronounce it with a damma (أُ); if it has a kasra or fatha, pronounce it with a kasra (إِ).")
                     Text("In the Quran, there are seven nouns that start with hamzatul waSl. These nouns always begin with a kasra when pronounced in isolation.")
@@ -1638,31 +1707,31 @@ struct ArabicLetterPage: View {
             default:
                 if data.transliteration.contains("hamza") {
                     Group {
-                        ArticleLead("The letter Hamza has multiple forms, depending on its position and the surrounding vowels or diacritics (tashkeel):")
+                        ArticleLead(String(localized: "The letter Hamza has multiple forms, depending on its position and the surrounding vowels or diacritics (tashkeel):"), eyebrow: String(localized: "IN SHORT"))
                         VStack(alignment: .leading, spacing: 6) {
-                            ArticleBullet("Hamza on its own (ء): Used when Hamza appears in the middle or end of a word without a preceding vowel.")
-                            ArticleBullet("Hamza on an Alif (أ or إ): When Hamza begins a word, it is written on an Alif. A fatha or damma places it above (أ), while a kasra places it below (إ).")
-                            ArticleBullet("Hamza on a Waw (ؤ): Appears after a damma or following a Waw.")
-                            ArticleBullet("Hamza on a Yaa (ئ): Appears after a kasra or following a Yaa.")
+                            ArticleBullet(String(localized: "Hamza on its own (ء): Used when Hamza appears in the middle or end of a word without a preceding vowel."))
+                            ArticleBullet(String(localized: "Hamza on an Alif (أ or إ): When Hamza begins a word, it is written on an Alif. A fatha or damma places it above (أ), while a kasra places it below (إ)."))
+                            ArticleBullet(String(localized: "Hamza on a Waw (ؤ): Appears after a damma or following a Waw."))
+                            ArticleBullet(String(localized: "Hamza on a Yaa (ئ): Appears after a kasra or following a Yaa."))
                         }
                         Text("Although Hamza takes different forms, it represents the same sound ('ah'). These forms are based on Arabic orthography (spelling conventions) rather than phonetics.")
                     }
                     .font(.body)
                 } else if data.transliteration.contains("mad") {
                     Group {
-                        ArticleLead("The wavy line above a vowel letter is called \"Madd.\" In Arabic, Madd (مَدّ) means stretching or elongation. In Quranic recitation, it marks a measured elongation, not just a decorative spelling mark.")
+                        ArticleLead(String(localized: "The wavy line above a vowel letter is called \"Madd.\" In Arabic, Madd (مَدّ) means stretching or elongation. In Quranic recitation, it marks a measured elongation, not just a decorative spelling mark."), eyebrow: String(localized: "IN SHORT"))
                         Text("In the Quran, this Madd can fall under 3 main long-Madd cases from Tajweed: Madd Muttassil, Madd Munfasil, and Madd Lazim.")
                         VStack(alignment: .leading, spacing: 6) {
-                            ArticleBullet("Madd Muttassil (مَدّ مُتَّصِل) means \"connected Madd.\" Muttassil means connected because the Madd letter is followed by a hamzah in the same word, so it is lengthened 4 or 5 counts.")
-                            ArticleBullet("Madd Munfasil (مَدّ مُنفَصِل) means \"separated Madd.\" Munfasil means separated because the Madd letter comes at the end of one word and the next word begins with hamzah, so it may be read 2, 4, or 5 counts depending on the recitation style.")
-                            ArticleBullet("Madd Lazim (مَدّ لَازِم) means \"necessary Madd.\" Lazim means necessary or required because the Madd letter is followed by a permanent sukoon or shaddah, so it is lengthened 6 counts.")
+                            ArticleBullet(String(localized: "Madd Muttassil (مَدّ مُتَّصِل) means \"connected Madd.\" Muttassil means connected because the Madd letter is followed by a hamzah in the same word, so it is lengthened 4 or 5 counts."))
+                            ArticleBullet(String(localized: "Madd Munfasil (مَدّ مُنفَصِل) means \"separated Madd.\" Munfasil means separated because the Madd letter comes at the end of one word and the next word begins with hamzah, so it may be read 2, 4, or 5 counts depending on the recitation style."))
+                            ArticleBullet(String(localized: "Madd Lazim (مَدّ لَازِم) means \"necessary Madd.\" Lazim means necessary or required because the Madd letter is followed by a permanent sukoon or shaddah, so it is lengthened 6 counts."))
                         }
                         Text("These are special mudood (مُدُود), the plural of Madd. They happen when natural Madd is no longer just 2 counts because hamzah, sukoon, or shaddah changes the rule.")
                     }
                     .font(.body)
                 } else if data.transliteration == "alif maqSoorah" {
                     Group {
-                        ArticleLead("Alif maqSoorah is an alif written in the SHAPE of a dotless yaa (ى). It only ever appears at the end of a word, and it is pronounced exactly like a regular alif, a 2-count \"aa\".")
+                        ArticleLead(String(localized: "Alif maqSoorah is an alif written in the SHAPE of a dotless yaa (ى). It only ever appears at the end of a word, and it is pronounced exactly like a regular alif, a 2-count \"aa\"."), eyebrow: String(localized: "IN SHORT"))
                         Text("In the Quran it usually carries a small dagger alif above it (ىٰ), as in عَلَىٰ and مُوسَىٰ. That tiny mark IS the alif sound, written small. The examples below practise it.")
                         Text("Telling it apart from yaa: the mushaf writes the final yaa without dots too, so the shape alone cannot decide. Read the vowel before the letter: a fatha before it means alif maqSoorah (\"aa\", as in ٱهۡتَدَىٰ); a kasra before it means yaa (\"ee\", as in فِي and ٱلَّذِي).")
                     }
@@ -1671,9 +1740,9 @@ struct ArabicLetterPage: View {
                     // The case used to check "laa", which is not this letter's transliteration - so the
                     // PURPOSE section rendered empty for the one ligature letter (user report).
                     Group {
-                        ArticleLead("When laam (ل) is followed by alif (ا), the two must be written as one joined shape: لا. It is the only compulsory ligature in Arabic script (writing them side by side unjoined is considered incorrect), which is why it is taught alongside the alphabet.")
+                        ArticleLead(String(localized: "When laam (ل) is followed by alif (ا), the two must be written as one joined shape: لا. It is the only compulsory ligature in Arabic script (writing them side by side unjoined is considered incorrect), which is why it is taught alongside the alphabet."), eyebrow: String(localized: "IN SHORT"))
                         Text("The sound does not change: read it simply as laam, then the long alif. Order matters, though: the definite article ٱل is alif then laam, so no ligature forms there.")
-                        Text.islamText("You meet it constantly in the Quran, most familiarly as the word of negation لَا (\"no\" / \"not\") and in لَآ إِلَٰهَ إِلَّا ٱللَّهُ.",
+                        Text.islamText(String(localized: "You meet it constantly in the Quran, most familiarly as the word of negation لَا (\"no\" / \"not\") and in لَآ إِلَٰهَ إِلَّا ٱللَّهُ."),
                                        highlightAllah: settings.highlightAllahNamesIslam)
                     }
                     .font(.body)
@@ -1720,13 +1789,26 @@ enum ArabicLetterMatch {
 
     /// The position of the letter in `letters` (a word split into its letters with their marks).
     static func firstIndex(of letter: String, in letters: [String]) -> Int? {
-        let key = scalars(of: letter)
-        return letters.indices.first { matches(key, in: letters, at: $0) }
+        indices(of: letter, in: letters).first
     }
 
-    /// Where the letter first occurs in `word`, with the marks it carries (and, for the laam alif,
-    /// the alif). Nil when the word does not contain it.
-    static func range(of letter: String, in word: String) -> Range<String.Index>? {
+    /// Every position of the letter in `letters`, first to last.
+    static func indices(of letter: String, in letters: [String]) -> [Int] {
+        let key = scalars(of: letter)
+        return letters.indices.filter { matches(key, in: letters, at: $0) }
+    }
+
+    /// A small waaw or yaa (U+06E5, U+06E6) is a character of its own but belongs to the letter
+    /// before it, as `ReadingTestText.letters` counts.
+    private static func isSmallVowelLetter(_ text: String) -> Bool {
+        guard let first = text.unicodeScalars.first else { return false }
+        return first == "\u{06E5}" || first == "\u{06E6}"
+    }
+
+    /// Where the letter occurs in `word`, with the marks it carries (and, for the laam alif, the
+    /// alif): the occurrence at `letterIndex` when one is given and it is the letter, otherwise the
+    /// first. Nil when the word does not contain it.
+    static func range(of letter: String, in word: String, letterIndex: Int? = nil) -> Range<String.Index>? {
         let key = scalars(of: letter)
         var groups: [(range: Range<String.Index>, text: String)] = []
         var index = word.startIndex
@@ -1736,7 +1818,12 @@ enum ArabicLetterMatch {
             index = next
         }
         let letters = groups.map(\.text)
-        guard let at = letters.indices.first(where: { matches(key, in: letters, at: $0) }) else { return nil }
+        let chosen: Int? = letterIndex.flatMap { wanted in
+            let starts = groups.indices.filter { $0 == 0 || !isSmallVowelLetter(groups[$0].text) }
+            guard starts.indices.contains(wanted), matches(key, in: letters, at: starts[wanted]) else { return nil }
+            return starts[wanted]
+        }
+        guard let at = chosen ?? letters.indices.first(where: { matches(key, in: letters, at: $0) }) else { return nil }
         let end = key == laamAlif && groups.indices.contains(at + 1) ? groups[at + 1].range.upperBound : groups[at].range.upperBound
         return groups[at].range.lowerBound..<end
     }
@@ -1891,7 +1978,7 @@ struct PracticeListenButton: View {
             .buttonStyle(.plain)
             // The tables render right-to-left; the button is an icon, and must not be mirrored with them.
             .environment(\.layoutDirection, .leftToRight)
-            .accessibilityLabel(isSpeaking ? "Stop" : "Hear it")
+            .accessibilityLabel(isSpeaking ? String(localized: "Stop") : String(localized: "Hear it"))
         }
     }
 }
@@ -1920,8 +2007,8 @@ struct ShaddahExpandButton: View {
         .buttonStyle(.plain)
         .environment(\.layoutDirection, .leftToRight)
         .accessibilityLabel(isExpanded
-            ? "Write the shaddah back as one letter"
-            : "Write the shaddah out as two letters")
+            ? String(localized: "Write the shaddah back as one letter")
+            : String(localized: "Write the shaddah out as two letters"))
     }
 }
 
@@ -1979,6 +2066,16 @@ struct TashkeelRow: View {
         return baseSound   // the sukoons: the bare consonant
     }
 
+    private func cellID(_ tk: Tashkeel) -> String {
+        "tashkeel:\(letterData.letter):\(tk.english)"
+    }
+
+    /// True when any cell of this row is selected: the row then reserves the action slot in EVERY
+    /// cell, so the one selection cannot make its cell taller or wider than its neighbours.
+    private var rowHasSelection: Bool {
+        tashkeels.contains { selection.isSelected(cellID($0)) }
+    }
+
     var body: some View {
         // Deliberately the SAME layout as `HamzaPracticeRow.practiceTriplet`: reading above, glyph below, 20pt
         // between columns, and no fixed glyph box - the letter is free to grow with the size slider, and the
@@ -1995,7 +2092,7 @@ struct TashkeelRow: View {
 
             ForEach(tashkeels, id: \.english) { tk in
                 let glyph = letterData.letter + tk.tashkeelMark
-                let id = "tashkeel:\(letterData.letter):\(tk.english)"
+                let id = cellID(tk)
                 let isSelected = selection.isSelected(id)
 
                 VStack(spacing: 4) {
@@ -2004,7 +2101,6 @@ struct TashkeelRow: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .lineLimit(1)
-                            .minimumScaleFactor(0.5)
                     }
 
                     Text(glyph)
@@ -2019,8 +2115,12 @@ struct TashkeelRow: View {
                         .padding(.vertical, useQuranicFontForLetter ? 0 : 8)
 
                     // The selection's two actions: hear it, and read what the mark is. Tapping used to do
-                    // both at once, unasked - now nothing happens until one of these is pressed.
-                    if isSelected {
+                    // both at once, unasked; now nothing happens until one of these is pressed. The slot
+                    // is reserved for the WHOLE row once any cell is selected, and only the selected cell
+                    // shows its buttons: selecting a cell used to grow that cell alone, which pushed its
+                    // glyph off the row's baseline and shrank the neighbours' readings. Now the row grows
+                    // by one 28pt band and nothing reflows (Abu, 2026-10-22).
+                    if rowHasSelection {
                         HStack(spacing: 6) {
                             PracticeListenButton(text: glyph)
 
@@ -2037,10 +2137,15 @@ struct TashkeelRow: View {
                             }
                             .buttonStyle(.plain)
                             .environment(\.layoutDirection, .leftToRight)
-                            .accessibilityLabel("About \(tk.english)")
+                            .accessibilityLabel("About \(tk.english.localizedDisplay)")
                         }
+                        .frame(height: 28)
+                        .opacity(isSelected ? 1 : 0)
+                        .allowsHitTesting(isSelected)
                     }
                 }
+                // Equal thirds whatever a cell holds, so no cell's content sets the column widths.
+                .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
                 .arabicPracticeSelection(isSelected, cornerRadius: 10, hInset: -10, vInset: -10)
                 .onTapGesture {
@@ -2048,7 +2153,9 @@ struct TashkeelRow: View {
                     withAnimation(.easeInOut) { selection.toggle(id) }
                 }
                 .accessibilityAddTraits(.isButton)
-                .accessibilityLabel("\(tk.english), read \(reading(tk))\(isSelected ? ", selected" : "")")
+                .accessibilityLabel(isSelected
+                    ? String(localized: "\(tk.english.localizedDisplay), read \(reading(tk)), selected")
+                    : String(localized: "\(tk.english.localizedDisplay), read \(reading(tk))"))
             }
         }
         .environment(\.layoutDirection, .rightToLeft)
@@ -2126,10 +2233,10 @@ struct VowelCombinationRow: View {
 
         var title: String {
             switch self {
-            case .alif: return "With Alif (\u{0627})"
-            case .yaa: return "With Yaa (\u{064A})"
-            case .waaw: return "With Waaw (\u{0648})"
-            case .unmarked: return "Written Without Tashkeel"
+            case .alif: return String(localized: "With Alif (\u{0627})")
+            case .yaa: return String(localized: "With Yaa (\u{064A})")
+            case .waaw: return String(localized: "With Waaw (\u{0648})")
+            case .unmarked: return String(localized: "Written Without Tashkeel")
             }
         }
 
@@ -2138,9 +2245,9 @@ struct VowelCombinationRow: View {
         var note: String? {
             switch self {
             case .alif:
-                return "The letter before an alif always carries a fatha, so this pair has only one reading: the long \u{201C}aa\u{201D}, held for 2 counts."
+                return String(localized: "The letter before an alif always carries a fatha, so this pair has only one reading: the long \u{201C}aa\u{201D}, held for 2 counts.")
             case .unmarked:
-                return "Most Arabic outside the Quran is written with no tashkeel. When you meet a bare pair like these, assume the mark that matches the vowel letter: a fatha before alif (always), a kasra before yaa, and a damma before waaw. That matching mark is the default tashkeel."
+                return String(localized: "Most Arabic outside the Quran is written with no tashkeel. When you meet a bare pair like these, assume the mark that matches the vowel letter: a fatha before alif (always), a kasra before yaa, and a damma before waaw. That matching mark is the default tashkeel.")
             case .yaa, .waaw:
                 return nil
             }
@@ -2154,25 +2261,25 @@ struct VowelCombinationRow: View {
             switch self {
             case .alif:
                 return [
-                    Combination(mark: Self.fatha, partner: Self.alifLetter, partnerSukoon: false, suffix: "\u{0101}", kind: "long \u{201C}aa\u{201D}"),
+                    Combination(mark: Self.fatha, partner: Self.alifLetter, partnerSukoon: false, suffix: "\u{0101}", kind: String(localized: "long \u{201C}aa\u{201D}")),
                 ]
             case .yaa:
                 return [
-                    Combination(mark: Self.kasra, partner: Self.yaaLetter, partnerSukoon: false, suffix: "\u{012B}", kind: "long \u{201C}ee\u{201D}"),
-                    Combination(mark: Self.fatha, partner: Self.yaaLetter, partnerSukoon: true, suffix: "ay", kind: "glides, like \u{201C}day\u{201D}"),
-                    Combination(mark: Self.damma, partner: Self.yaaLetter, partnerSukoon: true, suffix: "uy", kind: "short u into y"),
+                    Combination(mark: Self.kasra, partner: Self.yaaLetter, partnerSukoon: false, suffix: "\u{012B}", kind: String(localized: "long \u{201C}ee\u{201D}")),
+                    Combination(mark: Self.fatha, partner: Self.yaaLetter, partnerSukoon: true, suffix: "ay", kind: String(localized: "glides, like \u{201C}day\u{201D}")),
+                    Combination(mark: Self.damma, partner: Self.yaaLetter, partnerSukoon: true, suffix: "uy", kind: String(localized: "short u into y")),
                 ]
             case .waaw:
                 return [
-                    Combination(mark: Self.damma, partner: Self.waawLetter, partnerSukoon: false, suffix: "\u{016B}", kind: "long \u{201C}oo\u{201D}"),
-                    Combination(mark: Self.fatha, partner: Self.waawLetter, partnerSukoon: true, suffix: "aw", kind: "glides, like \u{201C}cow\u{201D}"),
-                    Combination(mark: Self.kasra, partner: Self.waawLetter, partnerSukoon: true, suffix: "iw", kind: "short i into w"),
+                    Combination(mark: Self.damma, partner: Self.waawLetter, partnerSukoon: false, suffix: "\u{016B}", kind: String(localized: "long \u{201C}oo\u{201D}")),
+                    Combination(mark: Self.fatha, partner: Self.waawLetter, partnerSukoon: true, suffix: "aw", kind: String(localized: "glides, like \u{201C}cow\u{201D}")),
+                    Combination(mark: Self.kasra, partner: Self.waawLetter, partnerSukoon: true, suffix: "iw", kind: String(localized: "short i into w")),
                 ]
             case .unmarked:
                 return [
-                    Combination(mark: Self.fatha, partner: Self.alifLetter, partnerSukoon: false, suffix: "\u{0101}", kind: "fatha, always", written: false),
-                    Combination(mark: Self.kasra, partner: Self.yaaLetter, partnerSukoon: false, suffix: "\u{012B}", kind: "assume a kasra", written: false),
-                    Combination(mark: Self.damma, partner: Self.waawLetter, partnerSukoon: false, suffix: "\u{016B}", kind: "assume a damma", written: false),
+                    Combination(mark: Self.fatha, partner: Self.alifLetter, partnerSukoon: false, suffix: "\u{0101}", kind: String(localized: "fatha, always"), written: false),
+                    Combination(mark: Self.kasra, partner: Self.yaaLetter, partnerSukoon: false, suffix: "\u{012B}", kind: String(localized: "assume a kasra"), written: false),
+                    Combination(mark: Self.damma, partner: Self.waawLetter, partnerSukoon: false, suffix: "\u{016B}", kind: String(localized: "assume a damma"), written: false),
                 ]
             }
         }
@@ -2185,6 +2292,16 @@ struct VowelCombinationRow: View {
     /// The sukoon the reader has chosen to practise with: the plain one, or the Uthmani one the
     /// mushaf prints. The same setting the Hamza rows and the shaddah expansions answer to.
     private var sukoon: String { quranicSukoon ? "\u{06E1}" : "\u{0652}" }
+
+    private func cellID(_ combo: Combination) -> String {
+        "vowelpair:\(letterData.letter):\(combo.partner):\(combo.written ? "" : "bare:")\(combo.suffix)"
+    }
+
+    /// True when any cell of this row is selected: the row then reserves the listen button's slot in
+    /// EVERY cell, so the one selection cannot make its cell taller or wider than its neighbours.
+    private var rowHasSelection: Bool {
+        partner.combinations.contains { selection.isSelected(cellID($0)) }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -2240,7 +2357,7 @@ struct VowelCombinationRow: View {
         // alif maqSoorah is written: the cell would teach "bee" over a shape that reads "baa". Unmarked
         // text is ordinary print, which dots its yaa, so ordinary print is what it is shown in.
         let usesArabicFace = useQuranicFontForLetter && combo.written
-        let id = "vowelpair:\(letterData.letter):\(combo.partner):\(combo.written ? "" : "bare:")\(combo.suffix)"
+        let id = cellID(combo)
         let isSelected = selection.isSelected(id)
 
         return VStack(spacing: 4) {
@@ -2249,7 +2366,6 @@ struct VowelCombinationRow: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.5)
             }
 
             Text(glyph)
@@ -2269,13 +2385,21 @@ struct VowelCombinationRow: View {
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.6)
             }
 
-            if isSelected {
+            // The listen button's slot is reserved for the WHOLE row once any cell is selected, and
+            // only the selected cell shows the button: selecting a cell used to grow that cell alone,
+            // which pushed its glyph off the row's baseline and shrank the neighbours' readings. Now
+            // the row grows by one 28pt band and nothing reflows (Abu, 2026-10-22).
+            if rowHasSelection {
                 PracticeListenButton(text: marked)
+                    .frame(height: 28)
+                    .opacity(isSelected ? 1 : 0)
+                    .allowsHitTesting(isSelected)
             }
         }
+        // Equal thirds whatever a cell holds, so no cell's content sets the column widths.
+        .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
         .arabicPracticeSelection(isSelected, cornerRadius: 10, hInset: -10, vInset: -10, topInset: -4)
         .onTapGesture {
@@ -2283,7 +2407,9 @@ struct VowelCombinationRow: View {
             withAnimation(.easeInOut) { selection.toggle(id) }
         }
         .accessibilityAddTraits(.isButton)
-        .accessibilityLabel("\(reading), \(combo.kind)\(isSelected ? ", selected" : "")")
+        .accessibilityLabel(isSelected
+            ? String(localized: "\(reading), \(combo.kind), selected")
+            : String(localized: "\(reading), \(combo.kind)"))
     }
 }
 
@@ -2303,6 +2429,12 @@ struct TashkeelDetailSheet: View {
     let useQuranicFontForLetter: Bool
 
     private var spokenText: String { letterData.letter + tashkeel.tashkeelMark }
+
+    /// The marks whose sheet links to `MaqsurahOrYaaView`: the alif sagheerah (dagger alif) and its
+    /// madd form, and the three ways alif maqSoorah is written.
+    private static let maqsurahMarks: Set<String> = [
+        "Dagger Alif", "Small Alif Madd", "Alif MaqSuurah", "Alif MaqSuurah 2", "Alif MaqSuurah Madd",
+    ]
 
     var body: some View {
         NavigationView {
@@ -2345,7 +2477,7 @@ struct TashkeelDetailSheet: View {
                     HStack {
                         Text("Name")
                         Spacer()
-                        Text(tashkeel.english)
+                        Text(tashkeel.english.localizedDisplay)
                             .foregroundColor(.secondary)
                     }
 
@@ -2366,7 +2498,7 @@ struct TashkeelDetailSheet: View {
                         HStack {
                             Text("Length")
                             Spacer()
-                            Text(length)
+                            Text(length.localizedDisplay)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -2387,7 +2519,7 @@ struct TashkeelDetailSheet: View {
                                 .foregroundColor(settings.accentColor.color)
                         }
 
-                        Text(rootMeaning)
+                        Text(rootMeaning.localizedDisplay)
                             .font(.body)
                             .foregroundColor(.secondary)
                     }
@@ -2395,14 +2527,28 @@ struct TashkeelDetailSheet: View {
 
                 if let howTo = tashkeel.howTo {
                     Section(header: Text("HOW TO SAY IT")) {
-                        Text(howTo)
+                        Text(howTo.localizedDisplay)
                             .font(.body)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+
+                // The alif sagheerah is the mark that turns a dotless yaa shape into alif maqSoorah
+                // (Abu, 2026-10-24: "include it in alif sagheera"), so its sheet, its madd twin's and
+                // the three maqSoorah marks' all lead to the page that tells the two letters apart.
+                // The sheet has its own navigation stack, so the page pushes inside it.
+                if Self.maqsurahMarks.contains(tashkeel.english) {
+                    Section {
+                        MaqsurahOrYaaLink()
+                    } header: {
+                        Text("ALIF MAQSOORAH OR YAA")
+                    } footer: {
+                        Text("A small alif over a dotless yaa shape (\u{0649}\u{0670}) marks alif maqSoorah. The page shows its three spellings beside the final yaa, with practice.")
+                    }
+                }
             }
             .applyConditionalListStyle()
-            .navigationTitle(tashkeel.english)
+            .navigationTitle(tashkeel.english.localizedDisplay)
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
@@ -2596,7 +2742,7 @@ struct HamzaPracticeRow: View {
                     withAnimation(.easeInOut) { selection.toggle(id) }
                 }
                 .accessibilityAddTraits(.isButton)
-                .accessibilityLabel(isSelected ? "\(syllable.latin), selected" : syllable.latin)
+                .accessibilityLabel(isSelected ? String(localized: "\(syllable.latin), selected") : syllable.latin)
             }
         }
         .environment(\.layoutDirection, .rightToLeft)
@@ -2706,7 +2852,7 @@ struct NonArabicVowelPracticeRow: View {
                     withAnimation(.easeInOut) { selection.toggle(id) }
                 }
                 .accessibilityAddTraits(.isButton)
-                .accessibilityLabel(isSelected ? "\(syllable.latin), selected" : syllable.latin)
+                .accessibilityLabel(isSelected ? String(localized: "\(syllable.latin), selected") : syllable.latin)
             }
         }
         .environment(\.layoutDirection, .rightToLeft)
@@ -2738,11 +2884,15 @@ struct ArabicExampleRow: View {
     /// letter page's SEE IT IN WORDS rows show WHERE the letter sits in the word. The tint is a
     /// colour run inside one attributed string, so the joining is untouched.
     var highlightLetter: String? = nil
+    /// Which occurrence of `highlightLetter` to tint, as a letter index into the word (a yaa or waaw
+    /// can appear twice, once in each of its roles). Nil tints the first.
+    var highlightIndex: Int? = nil
 
     private var useQuranicFont: Bool { useFontArabic }
 
     private var arabicText: Text {
-        if let highlightLetter, let range = ArabicLetterMatch.range(of: highlightLetter, in: arabic) {
+        if let highlightLetter,
+           let range = ArabicLetterMatch.range(of: highlightLetter, in: arabic, letterIndex: highlightIndex) {
             var attributed = AttributedString(arabic)
             if let start = AttributedString.Index(range.lowerBound, within: attributed),
                let end = AttributedString.Index(range.upperBound, within: attributed) {
@@ -2795,7 +2945,9 @@ struct ArabicExampleRow: View {
             withAnimation(.easeInOut) { selection.toggle(id) }
         }
         .accessibilityAddTraits(.isButton)
-        .accessibilityLabel("\(transliteration), \(note)\(isSelected ? ", selected" : "")")
+        .accessibilityLabel(isSelected
+            ? String(localized: "\(transliteration), \(note), selected")
+            : String(localized: "\(transliteration), \(note)"))
     }
 }
 
@@ -2892,8 +3044,8 @@ struct ArabicLetterRow: View, Equatable {
                     }
                 )
                 .accessibilityAddTraits(.isButton)
-                .accessibilityLabel(isFavorite ? "Unfavorite \(letterData.transliteration)"
-                                               : "Favorite \(letterData.transliteration)")
+                .accessibilityLabel(isFavorite ? String(localized: "Unfavorite \(letterData.transliteration)")
+                                               : String(localized: "Favorite \(letterData.transliteration)"))
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(letterData.name)
@@ -2922,7 +3074,7 @@ struct ArabicLetterRow: View, Equatable {
 
                 // `forms` is [final, medial, initial]; reversed so this RTL-rendered text puts the initial form
                 // on the right, matching the detail view.
-                Text(letterData.forms.prefix(3).reversed().joined(separator: "\u{2002}"))
+                Text(letterData.writtenForms.reversed().joined(separator: "\u{2002}"))
                     .font(
                         (useFontArabic && !letterData.isNonArabicScriptLetter)
                             ? Font.arabic(fontArabic, size: 13, relativeTo: .caption)
@@ -3181,15 +3333,15 @@ struct QuranSignsSectionContent: View {
     var includeLearnMoreLink: Bool = true
 
     private let signs: [StopSignInfo] = [
-        StopSignInfo(title: "Make Sujood", symbol: "۩"),
-        StopSignInfo(title: "Hizb Marker", symbol: "۞"),
-        StopSignInfo(title: "Mandatory Stop", symbol: "مـ"),
-        StopSignInfo(title: "Preferred Stop", symbol: "قلى"),
-        StopSignInfo(title: "Permissible Stop", symbol: "ج"),
-        StopSignInfo(title: "Short Pause", symbol: "س"),
-        StopSignInfo(title: "Stop at One", symbol: "∴ ∴"),
-        StopSignInfo(title: "Prefer Continue", symbol: "صلى"),
-        StopSignInfo(title: "Must Continue", symbol: "لا")
+        StopSignInfo(title: String(localized: "Make Sujood"), symbol: "۩"),
+        StopSignInfo(title: String(localized: "Hizb Marker"), symbol: "۞"),
+        StopSignInfo(title: String(localized: "Mandatory Stop"), symbol: "مـ"),
+        StopSignInfo(title: String(localized: "Preferred Stop"), symbol: "قلى"),
+        StopSignInfo(title: String(localized: "Permissible Stop"), symbol: "ج"),
+        StopSignInfo(title: String(localized: "Short Pause"), symbol: "س"),
+        StopSignInfo(title: String(localized: "Stop at One"), symbol: "∴ ∴"),
+        StopSignInfo(title: String(localized: "Prefer Continue"), symbol: "صلى"),
+        StopSignInfo(title: String(localized: "Must Continue"), symbol: "لا")
     ]
 
     private var columns: [GridItem] {
@@ -3265,7 +3417,7 @@ func arabicLetterContextItems(_ letterData: LetterData, isFavorite: Bool) -> som
             settings.toggleLetterFavoriteOrConfirm(letterData: letterData)
         }
     } label: {
-        Label(isFavorite ? "Unfavorite Letter" : "Favorite Letter",
+        Label(isFavorite ? String(localized: "Unfavorite Letter") : String(localized: "Favorite Letter"),
               systemImage: isFavorite ? "star.fill" : "star")
     }
 
@@ -3298,7 +3450,7 @@ func arabicLetterContextItems(_ letterData: LetterData, isFavorite: Bool) -> som
             settings.hapticFeedback()
             // `forms` is [final, medial, initial]; reversed so the copied text reads initial-first, the way the
             // row and the detail screen show them.
-            UIPasteboard.general.string = letterData.forms.prefix(3).reversed().joined(separator: " ")
+            UIPasteboard.general.string = letterData.writtenForms.reversed().joined(separator: " ")
         } label: {
             Label("Copy Forms", systemImage: "doc.on.doc")
         }
@@ -3477,7 +3629,7 @@ struct ArabicLetterGridTile: View, Equatable {
                 // forms shrink by the same factor when the tile is tight. `forms` is [final, medial, initial];
                 // reversed here so this RTL-rendered `Text` places the initial form on the right, matching the
                 // per-letter detail view's left-to-right layout.
-                Text(letterData.forms.prefix(3).reversed().joined(separator: "\u{2002}"))
+                Text(letterData.writtenForms.reversed().joined(separator: "\u{2002}"))
                     .font(useFontArabic && !letterData.isNonArabicScriptLetter
                           ? Font.arabic(fontArabic, size: 12, relativeTo: .caption2)
                           : .caption2)
@@ -3561,7 +3713,7 @@ struct LaamAlifHamzaSections: View {
     var body: some View {
         Group {
             Section {
-                shape("\u{0671}\u{0644}\u{06E1}\u{0623}\u{064E}", caption: "alif waSl + laam + hamza with fatHah")
+                shape("\u{0671}\u{0644}\u{06E1}\u{0623}\u{064E}", caption: String(localized: "alif waSl + laam + hamza with fatHah"))
 
                 Text("The definite article on a word that begins with a hamza carrying a short fatHah: one beat, \"a\".")
                     .font(.body)
@@ -3569,14 +3721,14 @@ struct LaamAlifHamzaSections: View {
                 ArabicExampleRow(
                     arabic: "ٱلۡأَرۡضِ",
                     transliteration: "al-ardi",
-                    note: "The earth (Quran 2:11)"
+                    note: String(localized: "The earth (Quran 2:11)")
                 )
             } header: {
                 Text("AL + HAMZA WITH FATHAH")
             }
 
             Section {
-                shape("\u{0671}\u{0644}\u{06E1}\u{0623}\u{0653}", caption: "alif waSl + laam + hamza with the madd sign")
+                shape("\u{0671}\u{0644}\u{06E1}\u{0623}\u{0653}", caption: String(localized: "alif waSl + laam + hamza with the madd sign"))
 
                 Text("The same article on a word beginning with a LONG \"aa\": the madd sign (ٓ) over the hamza holds it about twice as long. This is the alif madd (آ) you already know, written the way the mushaf writes it here, as a hamza carrying the madd rather than as the single letter آ.")
                     .font(.body)
@@ -3584,7 +3736,7 @@ struct LaamAlifHamzaSections: View {
                 ArabicExampleRow(
                     arabic: "ٱلۡأٓخِرَةِ",
                     transliteration: "al-aakhirati",
-                    note: "The Hereafter (Quran 2:102)"
+                    note: String(localized: "The Hereafter (Quran 2:102)")
                 )
             } header: {
                 Text("AL + ALIF MADD")

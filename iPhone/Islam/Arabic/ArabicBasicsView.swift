@@ -54,17 +54,17 @@ struct ArabicBasicsView: View {
             ArabicExampleRow(
                 arabic: "مُسۡلِم",
                 transliteration: "muslim",
-                note: "A Muslim man: no ة"
+                note: String(localized: "A Muslim man: no ة")
             )
             ArabicExampleRow(
                 arabic: "مُسۡلِمَة",
                 transliteration: "muslimah",
-                note: "A Muslim woman: the ة marks the feminine"
+                note: String(localized: "A Muslim woman: the ة marks the feminine")
             )
             ArabicExampleRow(
                 arabic: "مُعَلِّم \u{2190} مُعَلِّمَة",
                 transliteration: "mu'allim \u{2192} mu'allimah",
-                note: "A teacher, male \u{2192} female"
+                note: String(localized: "A teacher, male \u{2192} female")
             )
         } header: {
             Text("GENDER: THE FEMININE ة")
@@ -78,17 +78,17 @@ struct ArabicBasicsView: View {
             ArabicExampleRow(
                 arabic: "كِتَاب",
                 transliteration: "kitaab",
-                note: "One book"
+                note: String(localized: "One book")
             )
             ArabicExampleRow(
                 arabic: "كِتَابَانِ",
                 transliteration: "kitaabaan(i)",
-                note: "Two books, subject form (raf'): add ـَانِ"
+                note: String(localized: "Two books, subject form (raf'): add ـَانِ")
             )
             ArabicExampleRow(
                 arabic: "كِتَابَيۡنِ",
                 transliteration: "kitaabayn(i)",
-                note: "Two books, object or after-preposition form (nasb/jarr): add ـَيۡنِ"
+                note: String(localized: "Two books, object or after-preposition form (nasb/jarr): add ـَيۡنِ")
             )
         } header: {
             Text("THE DUAL: EXACTLY TWO")
@@ -102,32 +102,32 @@ struct ArabicBasicsView: View {
             ArabicExampleRow(
                 arabic: "مُسۡلِمُونَ",
                 transliteration: "muslimuun(a)",
-                note: "Sound masculine plural, subject form: add ـُونَ"
+                note: String(localized: "Sound masculine plural, subject form: add ـُونَ")
             )
             ArabicExampleRow(
                 arabic: "مُسۡلِمِينَ",
                 transliteration: "muslimiin(a)",
-                note: "Sound masculine plural, object or after-preposition form: add ـِينَ"
+                note: String(localized: "Sound masculine plural, object or after-preposition form: add ـِينَ")
             )
             ArabicExampleRow(
                 arabic: "مُسۡلِمَات",
                 transliteration: "muslimaat",
-                note: "Sound feminine plural: the ة opens into ـَات"
+                note: String(localized: "Sound feminine plural: the ة opens into ـَات")
             )
             ArabicExampleRow(
                 arabic: "كِتَاب \u{2190} كُتُب",
                 transliteration: "kitaab \u{2192} kutub",
-                note: "Book \u{2192} books (broken plural)"
+                note: String(localized: "Book \u{2192} books (broken plural)")
             )
             ArabicExampleRow(
                 arabic: "رَجُل \u{2190} رِجَال",
                 transliteration: "rajul \u{2192} rijaal",
-                note: "Man \u{2192} men (broken plural)"
+                note: String(localized: "Man \u{2192} men (broken plural)")
             )
             ArabicExampleRow(
                 arabic: "بَيۡت \u{2190} بُيُوت",
                 transliteration: "bayt \u{2192} buyuut",
-                note: "House \u{2192} houses (broken plural)"
+                note: String(localized: "House \u{2192} houses (broken plural)")
             )
         } header: {
             Text("PLURALS")
@@ -141,17 +141,17 @@ struct ArabicBasicsView: View {
             ArabicExampleRow(
                 arabic: "جَآءَ ٱلرَّجُلُ",
                 transliteration: "jaa'a r-rajulu",
-                note: "Raf' (marfuu'): damma, the subject. \"The man came.\""
+                note: String(localized: "Raf' (marfuu'): damma, the subject. \"The man came.\"")
             )
             ArabicExampleRow(
                 arabic: "رَأَيۡتُ ٱلرَّجُلَ",
                 transliteration: "ra'aytu r-rajula",
-                note: "Nasb (mansuub): fatha, the object. \"I saw the man.\""
+                note: String(localized: "Nasb (mansuub): fatha, the object. \"I saw the man.\"")
             )
             ArabicExampleRow(
                 arabic: "فِي ٱلۡبَيۡتِ",
                 transliteration: "fi l-bayti",
-                note: "Jarr (majruur): kasra, after a preposition or in idafah. \"In the house.\""
+                note: String(localized: "Jarr (majruur): kasra, after a preposition or in idafah. \"In the house.\"")
             )
         } header: {
             Text("THE THREE CASES (I'RAAB)")
@@ -385,7 +385,7 @@ struct DefaultTashkeelView: View {
     /// Opens on the article lead (Abu, 2026-10-03: every overview "pretty like pillars and beliefs").
     private var meaningSection: some View {
         Section {
-            ArticleLead("Tashkeel is optional in written Arabic. The Quran, children's books and learner texts print every mark; almost everything else (books, news, signs, messages) prints none, and the reader supplies them from knowing the word.")
+            ArticleLead(String(localized: "Tashkeel is optional in written Arabic. The Quran, children's books and learner texts print every mark; almost everything else (books, news, signs, messages) prints none, and the reader supplies them from knowing the word."), eyebrow: String(localized: "IN SHORT"))
 
             Text("Default tashkeel is the small set of marks you can supply WITHOUT knowing the word, because the letters themselves force them. It is the first thing a reader leans on in unmarked text.")
                 .font(.body)
@@ -393,7 +393,7 @@ struct DefaultTashkeelView: View {
             ArabicExampleRow(
                 arabic: "كتب \u{2190} كَتَبَ",
                 transliteration: "ktb \u{2192} kataba",
-                note: "\"He wrote.\" Nothing here is forced: the same three letters also spell كُتُب (kutub, books). This is the part you learn word by word."
+                note: String(localized: "\"He wrote.\" Nothing here is forced: the same three letters also spell كُتُب (kutub, books). This is the part you learn word by word.")
             )
         } header: {
             Text("WHAT IT MEANS")
@@ -405,17 +405,17 @@ struct DefaultTashkeelView: View {
             ArabicExampleRow(
                 arabic: "كتاب \u{2190} كِتَاب",
                 transliteration: "kitaab",
-                note: "Book: the taa sits before an alif, so it takes a fatha and reads \"taa\""
+                note: String(localized: "Book: the taa sits before an alif, so it takes a fatha and reads \"taa\"")
             )
             ArabicExampleRow(
                 arabic: "كبير \u{2190} كَبِير",
                 transliteration: "kabeer",
-                note: "Big: the baa sits before a yaa, so assume a kasra, \"bee\""
+                note: String(localized: "Big: the baa sits before a yaa, so assume a kasra, \"bee\"")
             )
             ArabicExampleRow(
                 arabic: "نور \u{2190} نُور",
                 transliteration: "noor",
-                note: "Light: the noon sits before a waaw, so assume a damma, \"noo\""
+                note: String(localized: "Light: the noon sits before a waaw, so assume a damma, \"noo\"")
             )
         } header: {
             Text("BEFORE A VOWEL LETTER")
@@ -429,17 +429,17 @@ struct DefaultTashkeelView: View {
             ArabicExampleRow(
                 arabic: "بيت \u{2190} بَيۡت",
                 transliteration: "bayt",
-                note: "House: a fatha before the yaa, so it glides (\"ay\") instead of stretching"
+                note: String(localized: "House: a fatha before the yaa, so it glides (\"ay\") instead of stretching")
             )
             ArabicExampleRow(
                 arabic: "يوم \u{2190} يَوۡم",
                 transliteration: "yawm",
-                note: "Day: a fatha before the waaw, so it glides (\"aw\")"
+                note: String(localized: "Day: a fatha before the waaw, so it glides (\"aw\")")
             )
             ArabicExampleRow(
                 arabic: "ولد \u{2190} وَلَد",
                 transliteration: "walad",
-                note: "Boy: here the waaw is a consonant opening the word, not a vowel at all"
+                note: String(localized: "Boy: here the waaw is a consonant opening the word, not a vowel at all")
             )
         } header: {
             Text("WHEN THE DEFAULT IS WRONG")
@@ -453,22 +453,22 @@ struct DefaultTashkeelView: View {
             ArabicExampleRow(
                 arabic: "رحمة \u{2190} رَحۡمَة",
                 transliteration: "rahmah",
-                note: "Mercy: the letter before taa marbuuTah (ة) always carries a fatha"
+                note: String(localized: "Mercy: the letter before taa marbuuTah (ة) always carries a fatha")
             )
             ArabicExampleRow(
                 arabic: "على \u{2190} عَلَى",
                 transliteration: "'alaa",
-                note: "Upon: the letter before alif maqSoorah (ى) always carries a fatha"
+                note: String(localized: "Upon: the letter before alif maqSoorah (ى) always carries a fatha")
             )
             ArabicExampleRow(
                 arabic: "القمر \u{2190} ٱلۡقَمَر",
                 transliteration: "al-qamar",
-                note: "The moon: the laam of ال takes a sukoon before a moon letter"
+                note: String(localized: "The moon: the laam of ال takes a sukoon before a moon letter")
             )
             ArabicExampleRow(
                 arabic: "الشمس \u{2190} ٱلشَّمۡس",
                 transliteration: "ash-shams",
-                note: "The sun: before a sun letter the laam goes silent and that letter takes a shaddah"
+                note: String(localized: "The sun: before a sun letter the laam goes silent and that letter takes a shaddah")
             )
         } header: {
             Text("OTHER MARKS THE LETTERS FORCE")
@@ -482,22 +482,22 @@ struct DefaultTashkeelView: View {
             ArabicExampleRow(
                 arabic: "قَالَ",
                 transliteration: "qaala",
-                note: "He said: the alif is bare, so it is the long \"aa\""
+                note: String(localized: "He said: the alif is bare, so it is the long \"aa\"")
             )
             ArabicExampleRow(
                 arabic: "قِيلَ",
                 transliteration: "qeela",
-                note: "It was said: a bare yaa after a kasra, the long \"ee\""
+                note: String(localized: "It was said: a bare yaa after a kasra, the long \"ee\"")
             )
             ArabicExampleRow(
                 arabic: "يَقُولُ",
                 transliteration: "yaqoolu",
-                note: "He says: a bare waaw after a damma, the long \"oo\""
+                note: String(localized: "He says: a bare waaw after a damma, the long \"oo\"")
             )
             ArabicExampleRow(
                 arabic: "خَوۡفٌ",
                 transliteration: "khawfun",
-                note: "Fear: this waaw CARRIES a sukoon, so it glides (\"aw\")"
+                note: String(localized: "Fear: this waaw CARRIES a sukoon, so it glides (\"aw\")")
             )
         } header: {
             Text("IN THE QURAN")
@@ -603,7 +603,7 @@ struct BaaHaaShapesView: View {
         }
 
         Section {
-            ArticleLead("Five letters share the baa shape at the start of a word (ب ت ث ن ي), and three share the haa shape (ج ح خ). Join any of the first onto any of the second and you get this one outline, fifteen ways.")
+            ArticleLead(String(localized: "Five letters share the baa shape at the start of a word (ب ت ث ن ي), and three share the haa shape (ج ح خ). Join any of the first onto any of the second and you get this one outline, fifteen ways."), eyebrow: String(localized: "IN SHORT"))
 
             Text("In the mushaf's hand the first letter does not sit beside the haa on the line. It rides above it as a small hook, which is why the pair is hard to recognize from the two letters you learned separately. Only the dots tell the fifteen apart: the dots on the hook belong to the first letter, and the dot in or over the bowl belongs to the second.")
                 .font(.body)
@@ -683,37 +683,37 @@ struct BaaHaaShapesView: View {
             ArabicExampleRow(
                 arabic: "نَحۡنُ",
                 transliteration: "nahnu",
-                note: "We: noon on Haa",
+                note: String(localized: "We: noon on Haa"),
                 fontName: Settings.hafsUthmaniFontName
             )
             ArabicExampleRow(
                 arabic: "تَحۡتِهَا",
                 transliteration: "tahtihaa",
-                note: "Beneath it: taa on Haa",
+                note: String(localized: "Beneath it: taa on Haa"),
                 fontName: Settings.hafsUthmaniFontName
             )
             ArabicExampleRow(
                 arabic: "يُحِبُّ",
                 transliteration: "yuhibbu",
-                note: "He loves: yaa on Haa",
+                note: String(localized: "He loves: yaa on Haa"),
                 fontName: Settings.hafsUthmaniFontName
             )
             ArabicExampleRow(
                 arabic: "بِحَمۡدِ",
                 transliteration: "bihamdi",
-                note: "With the praise of: baa on Haa",
+                note: String(localized: "With the praise of: baa on Haa"),
                 fontName: Settings.hafsUthmaniFontName
             )
             ArabicExampleRow(
                 arabic: "تَجۡرِي",
                 transliteration: "tajree",
-                note: "Flows: taa on jeem",
+                note: String(localized: "Flows: taa on jeem"),
                 fontName: Settings.hafsUthmaniFontName
             )
             ArabicExampleRow(
                 arabic: "يَخۡرُجُ",
                 transliteration: "yakhruju",
-                note: "Comes out: yaa on khaa",
+                note: String(localized: "Comes out: yaa on khaa"),
                 fontName: Settings.hafsUthmaniFontName
             )
         } header: {
@@ -744,11 +744,11 @@ struct LaamAlifShapesView: View {
     /// The shape with each alif it can be joined to. The joined-from-before form is last: the same
     /// ligature, hanging off the letter before it.
     private static let forms: [(form: String, name: String)] = [
-        ("\u{0644}\u{0627}", "plain"),
-        ("\u{0644}\u{0623}", "hamza above"),
-        ("\u{0644}\u{0625}", "hamza below"),
-        ("\u{0644}\u{064E}\u{0627}\u{0653}", "madd sign"),
-        ("\u{0640}\u{0644}\u{0627}", "joined from before"),
+        ("\u{0644}\u{0627}", String(localized: "plain")),
+        ("\u{0644}\u{0623}", String(localized: "hamza above")),
+        ("\u{0644}\u{0625}", String(localized: "hamza below")),
+        ("\u{0644}\u{064E}\u{0627}\u{0653}", String(localized: "madd sign")),
+        ("\u{0640}\u{0644}\u{0627}", String(localized: "joined from before")),
     ]
 
     private func arabicFont(base: CGFloat, relativeTo style: Font.TextStyle) -> Font {
@@ -818,7 +818,7 @@ struct LaamAlifShapesView: View {
         }
 
         Section {
-            ArticleLead("When laam (ل) is followed by alif (ا), the two must be written as one joined shape: لا. It is the only compulsory ligature in Arabic script (writing them side by side unjoined is considered incorrect), which is why it is taught alongside the alphabet.")
+            ArticleLead(String(localized: "When laam (ل) is followed by alif (ا), the two must be written as one joined shape: لا. It is the only compulsory ligature in Arabic script (writing them side by side unjoined is considered incorrect), which is why it is taught alongside the alphabet."), eyebrow: String(localized: "IN SHORT"))
 
             Text("The sound does not change: read it as laam, then the long alif. Order matters, though: the definite article ٱل is alif then laam, so no ligature forms there. Only when the alif comes second does the laam fold over it.")
                 .font(.body)
@@ -828,7 +828,7 @@ struct LaamAlifShapesView: View {
     private var formsSection: some View {
         Section {
             HStack(alignment: .top, spacing: 0) {
-                ForEach(Self.forms, id: \.name) { item in
+                ForEach(Self.forms, id: \.form) { item in
                     VStack(spacing: 2) {
                         Text(item.form)
                             .font(arabicFont(base: 34, relativeTo: .largeTitle))
@@ -867,37 +867,37 @@ struct LaamAlifShapesView: View {
             ArabicExampleRow(
                 arabic: "لَا",
                 transliteration: "laa",
-                note: "No, not (2:2): the shape on its own"
+                note: String(localized: "No, not (2:2): the shape on its own")
             )
             ArabicExampleRow(
                 arabic: "لَآ إِلَٰهَ إِلَّا ٱللَّهُ",
                 transliteration: "laaa ilaaha illallaah",
-                note: "There is no god but Allah (37:35): the madd sign, then the shaddah, on the same shape"
+                note: String(localized: "There is no god but Allah (37:35): the madd sign, then the shaddah, on the same shape")
             )
             ArabicExampleRow(
                 arabic: "أَلَا",
                 transliteration: "alaa",
-                note: "Unquestionably (6:31): alif, then a laam alif"
+                note: String(localized: "Unquestionably (6:31): alif, then a laam alif")
             )
             ArabicExampleRow(
                 arabic: "فَلَا",
                 transliteration: "falaa",
-                note: "So not (2:22): hanging off the faa before it"
+                note: String(localized: "So not (2:22): hanging off the faa before it")
             )
             ArabicExampleRow(
                 arabic: "وَلَا",
                 transliteration: "walaa",
-                note: "And not (1:7): waaw does not join, so the shape stands alone"
+                note: String(localized: "And not (1:7): waaw does not join, so the shape stands alone")
             )
             ArabicExampleRow(
                 arabic: "ٱلۡإِنسَٰنَ",
                 transliteration: "al-insaana",
-                note: "Man (10:12): AL on a hamza below the alif"
+                note: String(localized: "Man (10:12): AL on a hamza below the alif")
             )
             ArabicExampleRow(
                 arabic: "لَأَنتُمۡ",
                 transliteration: "la-antum",
-                note: "You are indeed (59:13): the emphatic laam on a hamza above"
+                note: String(localized: "You are indeed (59:13): the emphatic laam on a hamza above")
             )
         } header: {
             Text("WORDS YOU MEET IN THE QURAN")

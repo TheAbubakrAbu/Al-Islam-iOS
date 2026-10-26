@@ -49,7 +49,7 @@ struct PrayersEntryView: View {
                     .foregroundColor(tint)
                     .padding(.trailing, -5)
 
-                Text(prayer.displayName)
+                Text(prayer.displayName.localizedDisplay)
                     .font(.subheadline)
                     .fontWeight(.bold)
                     .foregroundColor(tint)
@@ -139,7 +139,7 @@ struct PrayersEntryView: View {
                                     .frame(width: 22, height: 22)
                                     .foregroundColor(prayerTint(currentPrayer))
 
-                                Text(currentPrayer.displayName)
+                                Text(currentPrayer.displayName.localizedDisplay)
                                     .font(.title3)
                                     .foregroundColor(prayerTint(currentPrayer))
 
@@ -165,7 +165,7 @@ struct PrayersEntryView: View {
                                 Text("Starts at \(nextPrayer.time, style: .time)")
                                     .font(.caption)
 
-                                Text(nextPrayer.displayName)
+                                Text(nextPrayer.displayName.localizedDisplay)
                                     .font(.title3)
                                     .foregroundColor(prayerTint(nextPrayer))
 

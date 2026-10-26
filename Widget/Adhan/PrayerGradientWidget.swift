@@ -51,7 +51,7 @@ struct PrayerGradientEntryView: View {
                 Image(systemName: current.image)
                     .font(.subheadline)
 
-                Text(current.displayName)
+                Text(current.displayName.localizedDisplay)
                     .font(.headline)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
@@ -75,7 +75,9 @@ struct PrayerGradientEntryView: View {
             )
             .padding(.vertical, 1)
 
-            Text("\(next.displayName) \(shortTime(next.time))")
+            // Led right to left in Arabic (`SymbolNumber.rightToLeftLine`): two arguments and a space set
+            // no direction of their own, and the time drew before the prayer's name.
+            Text(SymbolNumber.rightToLeftLine(String(localized: "\(next.displayName.localizedDisplay) \(shortTime(next.time))")))
                 .font(.caption)
                 .opacity(0.9)
                 .lineLimit(1)
@@ -101,7 +103,7 @@ struct PrayerGradientEntryView: View {
                     Image(systemName: current.image)
                         .font(.headline)
 
-                    Text(current.displayName)
+                    Text(current.displayName.localizedDisplay)
                         .font(.title3.weight(.semibold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
@@ -136,7 +138,7 @@ struct PrayerGradientEntryView: View {
             // left column. It also gets a width, which it never had - three unconstrained trailing
             // labels were free to squeeze the countdown beside them.
             VStack(alignment: .trailing, spacing: 4) {
-                Text("Next: \(next.displayName)")
+                Text("Next: \(next.displayName.localizedDisplay)")
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)

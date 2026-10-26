@@ -378,18 +378,18 @@ struct ShareAyahSheet: View {
 
         // Note
         if includeNote, let note = noteText {
-            appendBlock(label: "Note", text: note)
+            appendBlock(label: String(localized: "Note"), text: note)
         }
 
         // Qiraah type (optional) - one line: Riwayah: English - Arabic
         if settings.showQiraahDetails && shareSettings.includeQiraah {
             let labels = Self.qiraahLabels(displayQiraah: shareQiraah)
-            appendBlock(label: nil, text: "Riwayah: \(labels.english) – \(labels.arabic)")
+            appendBlock(label: nil, text: String(localized: "Riwayah: \(labels.english) – \(labels.arabic)"))
         }
 
         if settings.showSurahInformation {
             if settings.showQiraahDetails && shareSettings.includeQiraah, !s.isEmpty { s += "\n" } else { sepIfNeeded() }
-            s += "\(surah.ayahCountLabel()) – \(surah.pageCountLabel) – \(surah.type.capitalized) \(surah.type == "makkan" ? "🕋" : "🕌")"
+            s += "\(surah.ayahCountLabel()) – \(surah.pageCountLabel) – \(surah.type.capitalized.localizedDisplay) \(surah.type == "makkan" ? "🕋" : "🕌")"
         }
 
         return s
@@ -421,15 +421,15 @@ struct ShareAyahSheet: View {
     /// explains the numbering drift otherwise.
     private var riwayahFooterText: String {
         if !ayahExistsInShareQiraah {
-            return "This ayah is not separate in this riwayah; its words are part of a neighboring ayah, so the Hafs text is shown."
+            return String(localized: "This ayah is not separate in this riwayah; its words are part of a neighboring ayah, so the Hafs text is shown.")
         }
         if smartAyahMatching {
             if resolvedAyahNumber != ayahNumber {
-                return "Smart Ayah Matching: these words sit at ayah \(resolvedAyahNumber) in this riwayah (ayah numbering differs between riwayat), so that ayah is shared."
+                return String(localized: "Smart Ayah Matching: these words sit at ayah \(resolvedAyahNumber) in this riwayah (ayah numbering differs between riwayat), so that ayah is shared.")
             }
-            return "Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently. Smart Ayah Matching follows the words, so the matching ayah is shared even where numbering differs."
+            return String(localized: "Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently. Smart Ayah Matching follows the words, so the matching ayah is shared even where numbering differs.")
         }
-        return "Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat). With Smart Ayah Matching off, the exact tapped number is shared as-is."
+        return String(localized: "Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat). With Smart Ayah Matching off, the exact tapped number is shared as-is.")
     }
 
     var body: some View {
@@ -463,6 +463,10 @@ struct ShareAyahSheet: View {
                         Text(shareAttributedText)
                             .font(.body)
                             .textSelection(.enabled)
+                            // With a transliteration or a translation in it the preview reads left to
+                            // right in the Arabic interface too, as the shared text does; Arabic alone
+                            // follows the interface.
+                            .leftToRightContent(shareSettings.transliteration || shareSettings.englishSaheeh || shareSettings.englishMustafa)
                             .padding()
                             .background(Color.black)
                             .cornerRadius(24)
@@ -670,11 +674,11 @@ struct ShareAyahSheet: View {
                 .padding(.vertical, 4)
 
                 HStack(spacing: 12) {
-                    actionButton("Copy") {
+                    actionButton(String(localized: "Copy")) {
                         performCopyOrGenerate()
                     }
 
-                    actionButton("Share", isAnimating: isSharing)  {
+                    actionButton(String(localized: "Share"), isAnimating: isSharing)  {
                         performShareOrGenerate()
                     }
                 }
@@ -1035,7 +1039,7 @@ extension ShareAyahSheet {
     /// and the share sheet's own copy of this label is the only other place that says which it is.
     static var copyModeLabel: String {
         let raw = UserDefaults.standard.string(forKey: copyActionModeKey) ?? ActionMode.image.rawValue
-        return (ActionMode(rawValue: raw) ?? .image) == .image ? "as image" : "as text"
+        return (ActionMode(rawValue: raw) ?? .image) == .image ? String(localized: "as image") : String(localized: "as text")
     }
 
     /// - Parameter mode: what to put on the pasteboard. Nil follows the share sheet's remembered
@@ -1164,14 +1168,14 @@ extension ShareAyahSheet {
                 s += settings.showAyahInformation ? ayah.textEnglishMustafa : "\(ayah.textEnglishMustafa) (\(ayah.id))"
             }
         }
-        if includeNote, let note = noteText { appendBlock(label: "Note", text: note) }
+        if includeNote, let note = noteText { appendBlock(label: String(localized: "Note"), text: note) }
         if shareSettings.includeQiraah {
             let labels = qiraahLabels(displayQiraah: settings.displayQiraah)
-            appendBlock(label: nil, text: "Riwayah: \(labels.english) – \(labels.arabic)")
+            appendBlock(label: nil, text: String(localized: "Riwayah: \(labels.english) – \(labels.arabic)"))
         }
         if settings.showSurahInformation {
             if shareSettings.includeQiraah, !s.isEmpty { s += "\n" } else { sepIfNeeded() }
-            s += "\(surah.ayahCountLabel()) – \(surah.pageCountLabel) – \(surah.type.capitalized) \(surah.type == "makkan" ? "🕋" : "🕌")"
+            s += "\(surah.ayahCountLabel()) – \(surah.pageCountLabel) – \(surah.type.capitalized.localizedDisplay) \(surah.type == "makkan" ? "🕋" : "🕌")"
         }
         return s
     }
@@ -1231,6 +1235,13 @@ extension ShareAyahSheet {
             shadow.shadowColor = UIColor(white: 0, alpha: 0.55)
             bodyAttr[.shadow] = shadow
         }
+        // The transliteration and the translations: an explicit left-to-right paragraph, because the
+        // default (natural) one resolves to the right edge when the interface is Arabic.
+        let englishParagraph = NSMutableParagraphStyle()
+        englishParagraph.alignment = .left
+        englishParagraph.baseWritingDirection = .leftToRight
+        var englishBodyAttr = bodyAttr
+        englishBodyAttr[.paragraphStyle] = englishParagraph
         let arAttr = [NSAttributedString.Key.font: arabicFont, .foregroundColor: arabicColor, .paragraphStyle: right] as [NSAttributedString.Key: Any]
         let arNumberAttr = [NSAttributedString.Key.font: arabicNumberFont, .foregroundColor: arabicColor, .paragraphStyle: right] as [NSAttributedString.Key: Any]
         let accentAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: accent, .paragraphStyle: left] as [NSAttributedString.Key: Any]
@@ -1296,7 +1307,7 @@ extension ShareAyahSheet {
                 append("\n", bodyAttr, highlightAllah: false)
             }
 
-            append(settings.showAyahInformation ? hafsAyah.textTransliteration : "\(hafsAyah.textTransliteration) (\(hafsAyah.id))", bodyAttr)
+            append(settings.showAyahInformation ? hafsAyah.textTransliteration : "\(hafsAyah.textTransliteration) (\(hafsAyah.id))", englishBodyAttr)
         }
 
         let wantsAnyEnglish = shareSettings.englishSaheeh || shareSettings.englishMustafa
@@ -1317,7 +1328,7 @@ extension ShareAyahSheet {
                     append("- Saheeh International", captionAttr, highlightAllah: false)
                     append("\n", bodyAttr, highlightAllah: false)
                 }
-                append(settings.showAyahInformation ? hafsAyah.textEnglishSaheeh : "\(hafsAyah.textEnglishSaheeh) (\(hafsAyah.id))", bodyAttr)
+                append(settings.showAyahInformation ? hafsAyah.textEnglishSaheeh : "\(hafsAyah.textEnglishSaheeh) (\(hafsAyah.id))", englishBodyAttr)
             }
 
             if shareSettings.englishMustafa {
@@ -1327,13 +1338,13 @@ extension ShareAyahSheet {
                     append("- Clear Quran (Mustafa Khattab)", captionAttr, highlightAllah: false)
                     append("\n", bodyAttr, highlightAllah: false)
                 }
-                append(settings.showAyahInformation ? hafsAyah.textEnglishMustafa : "\(hafsAyah.textEnglishMustafa) (\(hafsAyah.id))", bodyAttr)
+                append(settings.showAyahInformation ? hafsAyah.textEnglishMustafa : "\(hafsAyah.textEnglishMustafa) (\(hafsAyah.id))", englishBodyAttr)
             }
         }
 
         if includeNote, let note = noteText {
             sepIfNeeded()
-            append("- Note", captionAttr, highlightAllah: false)
+            append("- \(String(localized: "Note"))", captionAttr, highlightAllah: false)
             append("\n", bodyAttr, highlightAllah: false)
             append(note, bodyAttr)
         }
@@ -1341,11 +1352,11 @@ extension ShareAyahSheet {
         if shareSettings.includeQiraah {
             sepIfNeeded()
             let labels = Self.qiraahLabels(displayQiraah: qiraah)
-            append("Riwayah: \(labels.english) – \(labels.arabic)", captionCentAttr, highlightAllah: false)
+            append(String(localized: "Riwayah: \(labels.english) – \(labels.arabic)"), captionCentAttr, highlightAllah: false)
         }
         if settings.showSurahInformation {
             if shareSettings.includeQiraah { append("\n", bodyAttr, highlightAllah: false) } else { sepIfNeeded() }
-            append("\(surah.ayahCountLabel()) – \(surah.pageCountLabel) – \(surah.type.capitalized) \(surah.type == "makkan" ? "🕋" : "🕌")", captionCentAttr, highlightAllah: false)
+            append("\(surah.ayahCountLabel()) – \(surah.pageCountLabel) – \(surah.type.capitalized.localizedDisplay) \(surah.type == "makkan" ? "🕋" : "🕌")", captionCentAttr, highlightAllah: false)
         }
         // Every run on the card's ground at 3:1 or better: the tajweed colors (made for the reader's
         // white or black page) and any custom ones, which the designs' own inks already clear.

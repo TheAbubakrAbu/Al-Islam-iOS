@@ -51,7 +51,9 @@ final class SearchFoldTests: XCTestCase {
         XCTAssertEqual(settings.cleanSearch("Al-Fātiḥah"), settings.cleanSearch("Al-Fatihah"))
     }
 
-    /// The highlighter paints the accented word for a plain query, the whole word.
+    /// The highlighter finds the accented word for a plain query and paints exactly the letters that
+    /// matched: from the Ā the query's "a" folded onto, not the ʿayn mark before it (whole-word snapping
+    /// was withdrawn on 2026-10-20).
     @MainActor
     func testHighlightFindsAccentedWord() {
         XCTAssertEqual(HighlightedSnippet.normalizeForSearchText("Ṣaḥīḥ", trimWhitespace: true), "sahih")
@@ -59,7 +61,7 @@ final class SearchFoldTests: XCTestCase {
         let spans = HighlightedSnippet.matchSpans(in: source, term: "aishah", guaranteeMatch: false)
         XCTAssertEqual(spans.count, 1)
         if let span = spans.first, let range = Range(span, in: source) {
-            XCTAssertEqual(String(source[range]), "ʿĀʾishah")
+            XCTAssertEqual(String(source[range]), "Āʾishah")
         }
     }
 

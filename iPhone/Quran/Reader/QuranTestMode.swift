@@ -29,17 +29,17 @@ enum QuranTestHiding: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .recitation: return "Arabic Only"
-        case .everything: return "Everything"
+        case .recitation: return String(localized: "Arabic Only")
+        case .everything: return String(localized: "Everything")
         }
     }
 
     var caption: String {
         switch self {
         case .recitation:
-            return "Hides the Arabic and its transliteration. Translations stay, as your cue."
+            return String(localized: "Hides the Arabic and its transliteration. Translations stay, as your cue.")
         case .everything:
-            return "Hides every line of the ayah, translations included."
+            return String(localized: "Hides every line of the ayah, translations included.")
         }
     }
 }
@@ -55,8 +55,8 @@ enum QuranTestReveal: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .throughSelected: return "The Selected Ayah and Everything Before It"
-        case .selected: return "Only the Selected Ayah"
+        case .throughSelected: return String(localized: "The Selected Ayah and Everything Before It")
+        case .selected: return String(localized: "Only the Selected Ayah")
         }
     }
 }
@@ -378,8 +378,8 @@ struct QuranTestModeSettingsView: View {
         List {
             Group {
                 Section {
-                    SettingsToggle("Test Mode",
-                                   caption: "Hides the Quran's text in the list and page readers until you tap an ayah, so you can recite from memory and check yourself. In the reader, the play button's menu turns it on and off, and the button wears a small eye while it is on. While a recitation plays, hold the playing bar for the same switch. The printed mushaf (PDF) can't hide single ayahs, so it works on text pages.",
+                    SettingsToggle(String(localized: "Test Mode"),
+                                   caption: String(localized: "Hides the Quran's text in the list and page readers until you tap an ayah, so you can recite from memory and check yourself. In the reader, the play button's menu turns it on and off, and the button wears a small eye while it is on. While a recitation plays, hold the playing bar for the same switch. The printed mushaf (PDF) can't hide single ayahs, so it works on text pages."),
                                    isOn: Binding(get: { testMode.isOn }, set: { testMode.setOn($0) }))
                 }
 
@@ -420,9 +420,9 @@ struct QuranTestModeSettingsView: View {
                 }
 
                 Section {
-                    SettingsToggle("Reveal as It's Recited", caption: "While an ayah plays, it shows the way a tap would show it. Off, the highlight moves across the hidden text so you can follow the reciter without seeing the words.", isOn: $quranDisplay.quranTestModeRevealsRecited)
+                    SettingsToggle(String(localized: "Reveal as It's Recited"), caption: String(localized: "While an ayah plays, it shows the way a tap would show it. Off, the highlight moves across the hidden text so you can follow the reciter without seeing the words."), isOn: $quranDisplay.quranTestModeRevealsRecited)
 
-                    SettingsToggle("Turn Off When Leaving the Reader", caption: "On, closing the surah you are reading turns Test Mode off, so the Quran never opens with its text hidden. Off, it stays on, across launches too, until you turn it off.", isOn: $quranDisplay.quranTestModeEndsOnLeave)
+                    SettingsToggle(String(localized: "Turn Off When Leaving the Reader"), caption: String(localized: "On, closing the surah you are reading turns Test Mode off, so the Quran never opens with its text hidden. Off, it stays on, across launches too, until you turn it off."), isOn: $quranDisplay.quranTestModeEndsOnLeave)
                         .onChange(of: settings.quranTestModeEndsOnLeave) { _ in testMode.syncStoredOn() }
                 }
             }

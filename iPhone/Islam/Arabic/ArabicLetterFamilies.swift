@@ -232,7 +232,7 @@ struct LetterTileStrip: View {
                         )
                     }
                     .buttonStyle(.plain)
-                    .accessibilityHint(open ? "You are already on this letter's page" : "Opens the letter")
+                    .accessibilityHint(open ? String(localized: "You are already on this letter's page") : String(localized: "Opens the letter"))
                 }
             }
         }
@@ -269,7 +269,7 @@ private struct LettersHeader: View {
                         Settings.shared.hapticFeedback()
                         if speech.isSpeakingQueue { speech.stop() } else { speech.speakAll(names) }
                     }
-                    .accessibilityLabel(speech.isSpeakingQueue ? "Stop" : "Hear every letter's name")
+                    .accessibilityLabel(speech.isSpeakingQueue ? String(localized: "Stop") : String(localized: "Hear every letter's name"))
                     .accessibilityAddTraits(.isButton)
             }
         }
@@ -439,8 +439,13 @@ extension LetterFamily {
 struct LetterFamiliesView: View {
     @Environment(\.appearance) private var appearance
 
-    var title: String = "Letter Families"
+    var title: String = String(localized: "Letter Families")
     var axes: [LetterAxis]? = nil
+
+    @State private var searchText = ""
+    #if os(iOS)
+    @State private var barsCollapsed = false
+    #endif
 
     private var shownShelves: [LetterAxis.Shelf] {
         guard let axes else { return LetterAxis.Shelf.allCases }
@@ -451,28 +456,88 @@ struct LetterFamiliesView: View {
         shelf.axes.filter { axes?.contains($0) ?? true }
     }
 
+    /// The families on screen, in index order: every one, or the given axes' own. Each once: qalqalah
+    /// sits on two axes, and a search result listed twice is a duplicate ForEach id.
+    private var shownFamilies: [LetterFamily] {
+        var seen = Set<String>()
+        return shownShelves.flatMap { shelf in shownAxes(on: shelf).flatMap(\.families) }
+            .filter { seen.insert($0.id).inserted }
+    }
+
+    private var query: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    /// Every family's folded search key (name, Arabic, meaning, summary, keywords and its letters),
+    /// by family id, built once, never per keystroke.
+    private static let searchKeys: [String: String] = Dictionary(
+        LetterTraits.allFamilies.map { family in
+            (family.id, IslamArticles.fold(([family.name, family.arabic, family.meaning, family.summary] + family.keywords + family.letters).joined(separator: " ")))
+        },
+        uniquingKeysWith: { first, _ in first }
+    )
+
+    /// Every term has to hit, the rule the Prophecies and Miracles indexes search by; held to the
+    /// families this screen shows, so the Sifaat shelf never answers with a rule family.
+    private var results: [LetterFamily] {
+        let terms = IslamArticles.fold(query).split(separator: " ").map(String.init)
+        guard !terms.isEmpty else { return [] }
+        let matched = shownFamilies.filter { family in
+            guard let key = Self.searchKeys[family.id] else { return false }
+            return terms.allSatisfy { key.contains($0) }
+        }
+        return SearchRank.sorted(matched, by: query) { [$0.name, $0.arabic, $0.meaning] + $0.keywords }
+    }
+
     var body: some View {
         List {
             Group {
-                if axes == nil { introSection }
+                if query.isEmpty {
+                    if axes == nil { introSection }
 
-                ForEach(shownShelves) { shelf in
-                    if axes == nil || shownShelves.count > 1 {
-                        shelfHeading(shelf)
+                    ForEach(shownShelves) { shelf in
+                        if axes == nil || shownShelves.count > 1 {
+                            shelfHeading(shelf)
+                        }
+
+                        ForEach(shownAxes(on: shelf)) { axis in
+                            axisSection(axis)
+                        }
                     }
-
-                    ForEach(shownAxes(on: shelf)) { axis in
-                        axisSection(axis)
+                } else {
+                    let matches = results
+                    if matches.isEmpty {
+                        Section {
+                            Text("No families match \"\(query)\".")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Section(header: SectionPillHeader(title: String(localized: "FAMILIES"), count: matches.count)) {
+                            ForEach(matches) { familyLink($0) }
+                        }
                     }
-                }
-
-                if axes == nil || axes?.contains(.makhraj) == true {
-                    makharijSection
                 }
             }
             .themedListRowBackground()
         }
+        #if os(watchOS)
+        .searchable(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)), prompt: Text("Search"))
+        // The watch has no floating bottom bar to order against, so it is styled here.
         .applyConditionalListStyle()
+        #else
+        // Applied BEFORE the bottom bar below it: bottom safe-area insets stack outward, so the inset
+        // added first sits nearest the content and later ones go underneath it.
+        .applyConditionalListStyle()
+        .collapseBarsOnScroll($barsCollapsed)
+        .adaptiveSafeArea(edge: .bottom) {
+            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
+                      placeholder: String(localized: "Search families"))
+                .minimizedBarStyle(barsCollapsed)
+                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
+                .padding(.horizontal, 24)
+                .padding(.bottom, BottomBarCushion.standard)
+                .background(Color.white.opacity(0.00001))
+        }
+        #endif
         .navigationTitle(title)
         .openScreen(.letterFamilies)
         .onDisappear { ArabicSpeech.shared.stop() }
@@ -481,7 +546,7 @@ struct LetterFamiliesView: View {
     /// The article lead, with the how-to line under it as the section's footer (2026-10-03).
     private var introSection: some View {
         Section {
-            ArticleLead("Every letter has a place it is made (its makhraj) and qualities it is said with (its sifaat). Letters that share one are a family, and the tajweed books give every family an Arabic name.")
+            ArticleLead(String(localized: "Every letter has a place it is made (its makhraj) and qualities it is said with (its sifaat). Letters that share one are a family, and the tajweed books give every family an Arabic name."), eyebrow: String(localized: "IN SHORT"))
         } footer: {
             Text("Open a family to see its letters, how to hear what they share, and the phrase that gathers them.")
         }
@@ -511,20 +576,24 @@ struct LetterFamiliesView: View {
         }
     }
 
+    /// A family's row and its page: the axis sections and the search results share it, so a result
+    /// opens the family the way its shelf does.
+    private func familyLink(_ family: LetterFamily) -> some View {
+        LetterFamilyLink(family: family) {
+            LetterTraitRow(
+                systemImage: family.systemImage,
+                tint: family.legendColor,
+                title: family.title,
+                arabic: family.arabic,
+                caption: family.summary,
+                letters: family.letters
+            )
+        }
+    }
+
     private func axisSection(_ axis: LetterAxis) -> some View {
         Section {
-            ForEach(axis.families) { family in
-                LetterFamilyLink(family: family) {
-                    LetterTraitRow(
-                        systemImage: family.systemImage,
-                        tint: family.legendColor,
-                        title: family.title,
-                        arabic: family.arabic,
-                        caption: family.summary,
-                        letters: family.letters
-                    )
-                }
-            }
+            ForEach(axis.families) { familyLink($0) }
         } header: {
             HStack(alignment: .firstTextBaseline) {
                 Text(axis.title.uppercased())
@@ -539,60 +608,6 @@ struct LetterFamiliesView: View {
         }
     }
 
-    /// The seventeen exits in full, deepest first: the zones above are how they are taught, this is
-    /// how the books count them.
-    private var makharijSection: some View {
-        Section {
-            ForEach(LetterTraits.makharij) { makhraj in
-                HStack(alignment: .top, spacing: 12) {
-                    Text("\(makhraj.id)")
-                        .font(.caption.weight(.bold).monospacedDigit())
-                        .foregroundColor(appearance.accent)
-                        .frame(width: 26, height: 26)
-                        .background(Circle().fill(appearance.accent.opacity(0.12)))
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(makhraj.name)
-                                .font(.subheadline.weight(.semibold))
-
-                            Spacer(minLength: 4)
-
-                            TraitArabicText(text: makhraj.arabic, base: 16, style: .subheadline)
-                                .foregroundColor(appearance.accent)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.5)
-                        }
-
-                        Text(makhraj.place + ".")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        if !makhraj.letters.isEmpty {
-                            TraitArabicText(text: makhraj.letters.joined(separator: "\u{2002}"), base: 18, style: .body)
-                                .foregroundColor(appearance.accent.opacity(0.9))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .environment(\.layoutDirection, .rightToLeft)
-                        }
-                    }
-                }
-                .padding(.vertical, 2)
-                .accessibilityElement(children: .combine)
-            }
-        } header: {
-            HStack(alignment: .firstTextBaseline) {
-                Text("THE SEVENTEEN EXITS")
-
-                Spacer(minLength: 8)
-
-                Text("المَخَارِج السَّبعَة عَشَر")
-                    .textCase(nil)
-            }
-        } footer: {
-            Text("Deepest first, as Ibn al-Jazari counts them. Neighbouring exits are the letters most easily confused, because they are made a few millimetres apart.")
-        }
-    }
 }
 
 // MARK: - One family
@@ -610,6 +625,7 @@ struct LetterFamilyView: View {
         List {
             Group {
                 heroSection
+                picturesSection
                 lettersSection
                 detailSection
                 siblingsSection
@@ -620,7 +636,7 @@ struct LetterFamilyView: View {
         }
         .applyConditionalListStyle()
         .arabicDoorDestination($door)
-        .navigationTitle(family.name)
+        .navigationTitle(family.displayName)
         .openScreen(.letterFamily, id: family.id)
         .onDisappear { ArabicSpeech.shared.stop() }
     }
@@ -634,7 +650,7 @@ struct LetterFamilyView: View {
         let tint = family.legendColor ?? appearance.accent
         Section {
             ResourceHero(
-                eyebrow: (axis?.title ?? "Letter Families").uppercased(),
+                eyebrow: (axis?.title ?? String(localized: "Letter Families")).uppercased(),
                 systemImage: family.systemImage,
                 headline: family.title,
                 arabic: family.arabic,
@@ -672,6 +688,56 @@ struct LetterFamilyView: View {
         #endif
     }
 
+    /// The exits this family is about: the one, for an exit family; every exit in the zone, for a
+    /// zone (the `LetterAxis.makhraj` families); nil for a family of qualities or rules.
+    private var pictureExits: [LetterMakhraj]? {
+        if family.id.hasPrefix("exit"), let id = Int(family.id.dropFirst(4)) {
+            return LetterTraits.makharij.filter { $0.id == id }
+        }
+        if axis == .makhraj {
+            return LetterTraits.makharij.filter { $0.zoneID == family.id }
+        }
+        // The ghunnah is the one quality with a place of its own: the seventeenth exit, the nasal passage.
+        if family.id == "ghunnah" {
+            return LetterTraits.makharij.filter { $0.id == 17 }
+        }
+        return nil
+    }
+
+    private func pictureFooter(_ exits: [LetterMakhraj], isZone: Bool) -> String {
+        if exits.first?.id == 17 {
+            return String(localized: "A cut through the head, face to the left. The dot sits in the nasal passage, the brick red space above the mouth: the hum passes through it while the mouth holds the noon or meem.")
+        }
+        if isZone && exits.count > 1 {
+            return String(localized: "A cut through the head, face to the left: the mouth's open space is green, the throat blue, the nasal passage brick red. A black dot marks each of the zone's exits; the close-up shows the part of the mouth they share.")
+        }
+        return String(localized: "A cut through the head, face to the left: the mouth's open space is green, the throat blue, the nasal passage brick red. The black dot marks the exit, and the parts drawn in teal meet there. The close-up shows the organ on its own.")
+    }
+
+    /// The pictures, for the makhraj families: an exit's two, or a zone's side view with every exit
+    /// of the zone marked beside the zone's organ.
+    @ViewBuilder
+    private var picturesSection: some View {
+        #if os(iOS)
+        if let exits = pictureExits, !exits.isEmpty {
+            let isZone = axis == .makhraj
+            Section {
+                MakhrajPicturesRow(
+                    exits: exits,
+                    detail: isZone ? MakhrajDetailPicture.forZone(family.id) : nil,
+                    numbered: !isZone || exits.count == 1
+                )
+
+                MakhrajChartsRow(letters: family.letters, exits: Set(exits.map(\.id)), subject: family.title)
+            } header: {
+                Text("WHERE IT IS MADE")
+            } footer: {
+                Text(pictureFooter(exits, isZone: isZone))
+            }
+        }
+        #endif
+    }
+
     private var lettersSection: some View {
         Section {
             LetterTileStrip(letters: family.letters, tint: family.legendColor) { door = .letter($0) }
@@ -696,7 +762,7 @@ struct LetterFamilyView: View {
                 .accessibilityElement(children: .combine)
             }
         } header: {
-            LettersHeader(title: "THE LETTERS", letters: family.letters)
+            LettersHeader(title: String(localized: "THE LETTERS"), letters: family.letters)
         } footer: {
             Text("Tap a letter to open its page.")
         }
@@ -808,30 +874,78 @@ struct LetterTajweedProfile: View {
     // MARK: Where and how
 
     private func groupLine(_ makhraj: LetterMakhraj) -> String {
-        var line = makhraj.place
-        if let role = makhraj.roleNote, makharij.count > 1 { line += " (\(role))" }
-        line += "."
+        var line = makhraj.place + "."
+        if let role = makhraj.roleNote, makharij.count > 1 { line = String(localized: "\(makhraj.place) (\(role)).") }
         if let group = makhraj.groupName, let arabic = makhraj.groupArabic, makhraj.letters.count > 1 {
-            line += " One of the \(group.lowercased()) letters (\(arabic)): \(makhraj.letters.joined(separator: " "))."
+            let letters = makhraj.letters.joined(separator: " ")
+            line += " " + String(localized: "One of the \(group.lowercased()) letters (\(arabic)): \(letters).")
         }
         return line
     }
 
+    #if os(iOS)
+    /// The exit's number and short place over its two pictures. The first exit's row carries the id
+    /// the "-scrollToMakhraj" launch argument scrolls to.
+    @ViewBuilder
+    private func makhrajPictures(_ makhraj: LetterMakhraj) -> some View {
+        let row = VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("EXIT \(makhraj.id) OF 17")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(.secondary)
+
+                Spacer(minLength: 8)
+
+                Text(makhraj.displayMeaning)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+
+            MakhrajPicturesRow(exits: [makhraj], letter: letter)
+        }
+        let rowID = makhraj.id == makharij.first?.id ? "makhrajPictures" : "makhrajPictures\(makhraj.id)"
+
+        if let exitFamily = LetterTraits.family(id: "exit\(makhraj.id)") {
+            LetterFamilyLink(family: exitFamily) { row }
+                .id(rowID)
+        } else {
+            row
+                .id(rowID)
+        }
+    }
+    #endif
+
     private var profileSection: some View {
         Section {
             ForEach(makharij) { makhraj in
+                #if os(iOS)
+                // The pictures first: the exit on a cut through the head, and the organ on its own (Abu,
+                // 2026-10-22: "for each letter there is a picture/pictures explaining the makhraj").
+                // They open the exit's own family; the row under them opens the wider zone.
+                makhrajPictures(makhraj)
+                #endif
+
                 if let zone = LetterTraits.family(id: makhraj.zoneID) {
                     LetterFamilyLink(family: zone) {
                         LetterTraitRow(
                             systemImage: "mouth",
-                            lead: "Where it is made",
-                            title: zone.meaning,
+                            lead: String(localized: "Where it is made"),
+                            title: zone.displayMeaning,
                             arabic: makhraj.arabic,
                             caption: groupLine(makhraj)
                         )
                     }
                 }
             }
+
+            #if os(iOS)
+            // The Makhaarij page's two pictures as well, the letter picked out on each (Abu, 2026-10-23:
+            // "use the other main pictures too for each letter"). Its own row, not a link: a tap enlarges.
+            MakhrajChartsRow(letters: [letter], exits: MakhrajChart.exits(of: letter), subject: String(localized: "Where \(letterData.transliteration) is made"))
+                .id("makhrajCharts")
+            #endif
 
             ForEach(sifaat) { family in
                 LetterFamilyLink(family: family) {
@@ -894,7 +1008,7 @@ struct LetterTajweedProfile: View {
     private func exampleRow(_ example: LetterRuleExample?) -> some View {
         Group {
             if let example {
-                ArabicExampleRow(arabic: example.text, transliteration: "Example", note: example.citation)
+                ArabicExampleRow(arabic: example.text, transliteration: String(localized: "Example"), note: example.citation)
             }
         }
     }
@@ -903,7 +1017,9 @@ struct LetterTajweedProfile: View {
     /// line of Arabic: inside an English sentence they came out tiny and in the wrong face).
     private var openingsLine: String {
         let count = Set(LetterTraits.openings(containing: letter).flatMap(\.surahs)).count
-        return "In the openings of \(count) \(count == 1 ? "surah" : "surahs"), shown below."
+        return count == 1
+            ? String(localized: "In the openings of \(count) surah, shown below.")
+            : String(localized: "In the openings of \(count) surahs, shown below.")
     }
 
     @ViewBuilder
@@ -911,26 +1027,26 @@ struct LetterTajweedProfile: View {
         if noonRule != nil || meemRule != nil || lamRule != nil || maddRule != nil || openerRule != nil {
             Section {
                 if let noonRule {
-                    ruleRow(noonRule, lead: "After noon sakinah or tanween", tint: noonTint)
+                    ruleRow(noonRule, lead: String(localized: "After noon sakinah or tanween"), tint: noonTint)
                     exampleRow(LetterTraits.noonExamples[letter])
                 }
 
                 if let meemRule {
-                    ruleRow(meemRule, lead: "After meem sakinah")
+                    ruleRow(meemRule, lead: String(localized: "After meem sakinah"))
                     exampleRow(LetterTraits.meemExamples[letter])
                 }
 
                 if let lamRule {
-                    ruleRow(lamRule, lead: "After the definite article")
+                    ruleRow(lamRule, lead: String(localized: "After the definite article"))
                     exampleRow(LetterTraits.lamExamples[letter])
                 }
 
                 if let maddRule {
-                    ruleRow(maddRule, lead: "As a vowel")
+                    ruleRow(maddRule, lead: String(localized: "As a vowel"))
                 }
 
                 if let openerRule {
-                    ruleRow(openerRule, lead: "As an opening letter",
+                    ruleRow(openerRule, lead: String(localized: "As an opening letter"),
                             caption: openerRule.summary + " " + openingsLine,
                             letters: LetterTraits.openings(containing: letter).map(\.text))
                 }
@@ -951,9 +1067,9 @@ struct LetterTajweedProfile: View {
 
     private var rulesFooter: String {
         if letter == "ا" {
-            return "Alif only ever follows a fatha, so it never comes after a noon sakinah, a meem sakinah or the laam of \u{0671}\u{0644}. Tap an example to select it, then press play to hear it."
+            return String(localized: "Alif only ever follows a fatha, so it never comes after a noon sakinah, a meem sakinah or the laam of \u{0671}\u{0644}. Tap an example to select it, then press play to hear it.")
         }
-        return "What happens when \(letterData.transliteration) FOLLOWS each of these. Every example is from the Quran: tap one to select it, then press play to hear it."
+        return String(localized: "What happens when \(letterData.transliteration) FOLLOWS each of these. Every example is from the Quran: tap one to select it, then press play to hear it.")
     }
 
     // MARK: Sound-alikes
@@ -1068,7 +1184,7 @@ struct SoundAlikeLettersView: View {
             Group {
                 // The article lead, the advice under it as the footer (2026-10-03).
                 Section {
-                    ArticleLead("Most mistakes in recitation are one letter said as its neighbour. Each pair below shares almost everything, which is why the ear confuses them, and differs in the one or two things listed.")
+                    ArticleLead(String(localized: "Most mistakes in recitation are one letter said as its neighbour. Each pair below shares almost everything, which is why the ear confuses them, and differs in the one or two things listed."), eyebrow: String(localized: "IN SHORT"))
                 } footer: {
                     Text("Listen to a pair back to back, then say it yourself. Alternating the two is what trains the difference: drilling one letter alone only repeats what you already do.")
                 }
@@ -1127,7 +1243,7 @@ struct SoundAlikeLettersView: View {
                             Settings.shared.hapticFeedback()
                             if playing { speech.stop() } else { speech.speakAll(texts, rate: 0.3) }
                         }
-                        .accessibilityLabel(playing ? "Stop" : "Hear the pair back to back")
+                        .accessibilityLabel(playing ? String(localized: "Stop") : String(localized: "Hear the pair back to back"))
                         .accessibilityAddTraits(.isButton)
                 }
             }
@@ -1141,7 +1257,7 @@ struct SoundAlikeLettersView: View {
             let name = LetterTraits.letterData(for: glyph)?.transliteration.uppercased() ?? ""
             return "\(name) (\(glyph))"
         }
-        return names.joined(separator: "  AND  ")
+        return String(localized: "\(names[0])  AND  \(names[1])")
     }
 
     private func letterColumn(_ glyph: String) -> some View {
@@ -1184,7 +1300,7 @@ struct SoundAlikeLettersView: View {
                     .frame(width: 18)
 
                 if shared {
-                    Text(isPlace ? "Same exit: \(firstText)" : "Both: \(firstText)")
+                    Text(isPlace ? String(localized: "Same exit: \(firstText)") : String(localized: "Both: \(firstText)"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1206,7 +1322,7 @@ struct SoundAlikeLettersView: View {
         if isPlace, !shared, let makhraj = LetterTraits.makharij(of: letter).last {
             return makhraj.place
         }
-        return family?.title ?? "None"
+        return family?.title ?? String(localized: "None")
     }
 }
 
@@ -1233,21 +1349,21 @@ struct LetterQuizView: View {
 
         var title: String {
             switch self {
-            case .name: return "Name the Letter"
-            case .glyph: return "Find the Letter"
-            case .form: return "Read the Joined Form"
-            case .family: return "Which Family?"
-            case .listen: return "Listen and Pick"
+            case .name: return String(localized: "Name the Letter")
+            case .glyph: return String(localized: "Find the Letter")
+            case .form: return String(localized: "Read the Joined Form")
+            case .family: return String(localized: "Which Family?")
+            case .listen: return String(localized: "Listen and Pick")
             }
         }
 
         var caption: String {
             switch self {
-            case .name: return "See a letter, choose its name"
-            case .glyph: return "See a name, choose its letter"
-            case .form: return "A letter as it looks inside a word: whose shape is it?"
-            case .family: return "Whistling, bouncing, throat, sun and moon: place the letter"
-            case .listen: return "Hear a letter's name, choose the letter"
+            case .name: return String(localized: "See a letter, choose its name")
+            case .glyph: return String(localized: "See a name, choose its letter")
+            case .form: return String(localized: "A letter as it looks inside a word: whose shape is it?")
+            case .family: return String(localized: "Whistling, bouncing, throat, sun and moon: place the letter")
+            case .listen: return String(localized: "Hear a letter's name, choose the letter")
             }
         }
 
@@ -1308,7 +1424,7 @@ struct LetterQuizView: View {
             .themedListRowBackground()
         }
         .applyConditionalListStyle()
-        .navigationTitle(mode?.title ?? "Letter Quiz")
+        .navigationTitle(mode?.title ?? String(localized: "Letter Quiz"))
         .onDisappear { ArabicSpeech.shared.stop() }
     }
 
@@ -1338,8 +1454,8 @@ struct LetterQuizView: View {
             Text("CHOOSE A QUIZ")
         } footer: {
             Text(bestStreak > 0
-                 ? "Ten questions a round. Your best run of right answers so far: \(bestStreak)."
-                 : "Ten questions a round.")
+                 ? String(localized: "Ten questions a round. Your best run of right answers so far: \(bestStreak).")
+                 : String(localized: "Ten questions a round."))
         }
     }
 
@@ -1411,7 +1527,7 @@ struct LetterQuizView: View {
 
             if let chosen {
                 VStack(alignment: .leading, spacing: 6) {
-                    Label(chosen == question.answer ? "Right" : "Not quite",
+                    Label(chosen == question.answer ? String(localized: "Right") : String(localized: "Not quite"),
                           systemImage: chosen == question.answer ? "checkmark.circle.fill" : "xmark.circle.fill")
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(chosen == question.answer ? .green : .red)
@@ -1427,7 +1543,7 @@ struct LetterQuizView: View {
                     Settings.shared.hapticFeedback()
                     advance()
                 } label: {
-                    Text(index + 1 == questions.count ? "See Results" : "Next Question")
+                    Text(index + 1 == questions.count ? String(localized: "See Results") : String(localized: "Next Question"))
                         .font(.body.weight(.semibold))
                         .foregroundColor(appearance.accent)
                         .frame(maxWidth: .infinity)
@@ -1499,9 +1615,9 @@ struct LetterQuizView: View {
                     .font(.system(size: 44, weight: .bold, design: .rounded))
                     .foregroundColor(appearance.accent)
 
-                Text(correct == questions.count ? "Every one right."
-                     : correct * 2 >= questions.count ? "Most of it is there. Another round will settle the rest."
-                     : "Open the letters you missed, then come back for another round.")
+                Text(correct == questions.count ? String(localized: "Every one right.")
+                     : correct * 2 >= questions.count ? String(localized: "Most of it is there. Another round will settle the rest.")
+                     : String(localized: "Open the letters you missed, then come back for another round."))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -1616,7 +1732,25 @@ struct LetterQuizView: View {
         return (choices, order.firstIndex(of: right) ?? 0)
     }
 
-    private static let formPositions = ["at the end of a word", "in the middle of a word", "at the start of a word"]
+    /// The question for a letter shown as `forms[position]`, as a whole sentence: the form at the end,
+    /// in the middle, or at the start of a word.
+    private static func formAsk(_ position: Int) -> String {
+        switch position {
+        case 0: return String(localized: "This is a letter at the end of a word. Which one?")
+        case 1: return String(localized: "This is a letter in the middle of a word. Which one?")
+        default: return String(localized: "This is a letter at the start of a word. Which one?")
+        }
+    }
+
+    /// Whose form `forms[position]` is, and where in a word it sits.
+    private static func formExplanation(_ letter: LetterData, name: String, position: Int) -> String {
+        let form = letter.forms[position]
+        switch position {
+        case 0: return String(localized: "\(form) is \(name) (\(letter.letter)) at the end of a word.")
+        case 1: return String(localized: "\(form) is \(name) (\(letter.letter)) in the middle of a word.")
+        default: return String(localized: "\(form) is \(name) (\(letter.letter)) at the start of a word.")
+        }
+    }
 
     /// Families a letter can sensibly be "placed in": the named side of each pair and the small
     /// groups, not the complements ("every other letter" is not a fair question).
@@ -1641,27 +1775,27 @@ struct LetterQuizView: View {
     private static func letterQuestion(_ letter: LetterData, mode: Mode) -> Question {
         let wrong = distractors(for: letter)
         let name = letter.transliteration
-        let sound = letter.englishSound.map { " " + $0 } ?? ""
+        let sound = letter.englishSound.map { " " + $0.localizedDisplay } ?? ""
 
         switch mode {
         case .glyph:
             let (choices, answer) = shuffledChoices(right: letter, wrong: wrong, arabic: true)
-            return Question(prompt: name, promptIsArabic: false, ask: "Which letter is \(name)?",
-                            choices: choices, answer: answer, explanation: "\(letter.letter) is \(name).\(sound)")
+            return Question(prompt: name, promptIsArabic: false, ask: String(localized: "Which letter is \(name)?"),
+                            choices: choices, answer: answer, explanation: String(localized: "\(letter.letter) is \(name).") + sound)
         case .form:
             let position = Int.random(in: 0..<min(3, letter.forms.count))
             let (choices, answer) = shuffledChoices(right: letter, wrong: wrong, arabic: false)
-            return Question(prompt: letter.forms[position], ask: "This is a letter \(formPositions[position]). Which one?",
+            return Question(prompt: letter.forms[position], ask: formAsk(position),
                             choices: choices, answer: answer,
-                            explanation: "\(letter.forms[position]) is \(name) (\(letter.letter)) \(formPositions[position]).")
+                            explanation: formExplanation(letter, name: name, position: position))
         case .listen:
             let (choices, answer) = shuffledChoices(right: letter, wrong: wrong, arabic: true)
-            return Question(prompt: "", ask: "Which letter did you hear named?", choices: choices, answer: answer,
-                            explanation: "That was \(name) (\(letter.letter)).\(sound)", spoken: letter.name)
+            return Question(prompt: "", ask: String(localized: "Which letter did you hear named?"), choices: choices, answer: answer,
+                            explanation: String(localized: "That was \(name) (\(letter.letter)).") + sound, spoken: letter.name)
         default:
             let (choices, answer) = shuffledChoices(right: letter, wrong: wrong, arabic: false)
-            return Question(prompt: letter.letter, ask: "Which letter is this?", choices: choices, answer: answer,
-                            explanation: "\(letter.letter) is \(name).\(sound)")
+            return Question(prompt: letter.letter, ask: String(localized: "Which letter is this?"), choices: choices, answer: answer,
+                            explanation: String(localized: "\(letter.letter) is \(name).") + sound)
         }
     }
 
@@ -1677,7 +1811,7 @@ struct LetterQuizView: View {
         let (choices, answer) = shuffledChoices(right: right, wrong: Array(outsiders), arabic: true)
         return Question(
             prompt: family.arabic,
-            ask: "Which of these letters belongs to \(family.name) (\(family.meaning))? \(family.summary)",
+            ask: String(localized: "Which of these letters belongs to \(family.displayName) (\(family.displayMeaning))? \(family.summary)"),
             choices: choices, answer: answer,
             explanation: "\(family.title): \(family.letters.joined(separator: " "))"
         )

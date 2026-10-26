@@ -15,14 +15,14 @@ enum SettingsQuranPage: String, CaseIterable, Hashable {
 
     var title: String {
         switch self {
-        case .recitation: return "Recitation"
-        case .readingView: return "Reading View"
-        case .arabicText: return "Arabic Text"
-        case .englishText: return "English Text"
-        case .testMode: return "Test Mode"
-        case .highlightThemes: return "Highlight Themes"
-        case .sunnahReminders: return "Sunnah Reminders"
-        case .favorites: return "Favorites and Bookmarks"
+        case .recitation: return String(localized: "Recitation")
+        case .readingView: return String(localized: "Reading View")
+        case .arabicText: return String(localized: "Arabic Text")
+        case .englishText: return String(localized: "English Text")
+        case .testMode: return String(localized: "Test Mode")
+        case .highlightThemes: return String(localized: "Highlight Themes")
+        case .sunnahReminders: return String(localized: "Sunnah Reminders")
+        case .favorites: return String(localized: "Favorites and Bookmarks")
         }
     }
 
@@ -42,14 +42,14 @@ enum SettingsQuranPage: String, CaseIterable, Hashable {
     /// One line of what lives behind the row.
     var caption: String {
         switch self {
-        case .recitation: return "Reciter, recitation type, what plays next"
-        case .readingView: return "List or pages, dividers, the Quran tab"
-        case .arabicText: return "Fonts, tajweed, riwayat, word by word"
-        case .englishText: return "Translations and transliteration"
-        case .testMode: return "Hide the text and recite from memory"
-        case .highlightThemes: return "Color-coded passages and lit themes"
-        case .sunnahReminders: return "Al-Kahf on Friday, al-Mulk before sleep"
-        case .favorites: return "Edit surahs, ayahs, letters, khatm"
+        case .recitation: return String(localized: "Reciter, recitation type, what plays next")
+        case .readingView: return String(localized: "List or pages, dividers, the Quran tab")
+        case .arabicText: return String(localized: "Fonts, tajweed, riwayat, word by word")
+        case .englishText: return String(localized: "Translations and transliteration")
+        case .testMode: return String(localized: "Hide the text and recite from memory")
+        case .highlightThemes: return String(localized: "Color-coded passages and lit themes")
+        case .sunnahReminders: return String(localized: "Al-Kahf on Friday, al-Mulk before sleep")
+        case .favorites: return String(localized: "Edit surahs, ayahs, letters, khatm")
         }
     }
 }
@@ -62,13 +62,13 @@ enum SettingsAdhanPage: String, CaseIterable, Hashable {
 
     var title: String {
         switch self {
-        case .prayerCalculation: return "Prayer Calculation"
-        case .travelingMode: return "Traveling Mode"
-        case .optionalPrayers: return "Optional Prayers"
-        case .manualOffsets: return "Manual Offsets"
-        case .customPrayerNames: return "Custom Prayer Names"
-        case .sky: return "Sky"
-        case .skyColors: return "Sky Colors"
+        case .prayerCalculation: return String(localized: "Prayer Calculation")
+        case .travelingMode: return String(localized: "Traveling Mode")
+        case .optionalPrayers: return String(localized: "Optional Prayers")
+        case .manualOffsets: return String(localized: "Manual Offsets")
+        case .customPrayerNames: return String(localized: "Custom Prayer Names")
+        case .sky: return String(localized: "Sky")
+        case .skyColors: return String(localized: "Sky Colors")
         }
     }
 
@@ -86,13 +86,13 @@ enum SettingsAdhanPage: String, CaseIterable, Hashable {
 
     var caption: String {
         switch self {
-        case .prayerCalculation: return "Method, angles, madhab, high latitude"
-        case .travelingMode: return "Shorten and combine while away"
-        case .optionalPrayers: return "Duha, Islamic midnight, last third"
-        case .manualOffsets: return "Nudge each prayer and the Hijri date"
-        case .customPrayerNames: return "Call the prayers what you call them"
-        case .sky: return "Sun arc, moon and stars, skyline, colors"
-        case .skyColors: return "Two colors per prayer for the sky"
+        case .prayerCalculation: return String(localized: "Method, angles, madhab, high latitude")
+        case .travelingMode: return String(localized: "Shorten and combine while away")
+        case .optionalPrayers: return String(localized: "Duha, Islamic midnight, last third")
+        case .manualOffsets: return String(localized: "Nudge each prayer and the Hijri date")
+        case .customPrayerNames: return String(localized: "Call the prayers what you call them")
+        case .sky: return String(localized: "Sun arc, moon and stars, skyline, colors")
+        case .skyColors: return String(localized: "Two colors per prayer for the sky")
         }
     }
 }
@@ -106,10 +106,10 @@ enum SettingsNotificationsPage: String, CaseIterable, Hashable {
 
     var title: String {
         switch self {
-        case .prayerReminders: return "Prayer Notifications"
-        case .naggingMode: return "Nagging Mode"
+        case .prayerReminders: return String(localized: "Prayer Notifications")
+        case .naggingMode: return String(localized: "Nagging Mode")
         #if HAS_QURAN
-        case .sunnahReminders: return "Sunnah Reminders"
+        case .sunnahReminders: return String(localized: "Sunnah Reminders")
         #endif
         }
     }
@@ -126,10 +126,10 @@ enum SettingsNotificationsPage: String, CaseIterable, Hashable {
 
     var caption: String {
         switch self {
-        case .prayerReminders: return "Each prayer's alert, lead time and adhan"
-        case .naggingMode: return "Asks \u{201C}Did you pray?\u{201D} until you answer"
+        case .prayerReminders: return String(localized: "Each prayer's alert, lead time and adhan")
+        case .naggingMode: return String(localized: "Asks \u{201C}Did you pray?\u{201D} until you answer")
         #if HAS_QURAN
-        case .sunnahReminders: return "Al-Kahf on Friday, al-Mulk before sleep"
+        case .sunnahReminders: return String(localized: "Al-Kahf on Friday, al-Mulk before sleep")
         #endif
         }
     }
@@ -143,9 +143,9 @@ enum SettingsHadithPage: String, CaseIterable, Hashable {
 
     var title: String {
         switch self {
-        case .readingView: return "Reading View"
-        case .arabicText: return "Arabic Text"
-        case .englishText: return "English Text"
+        case .readingView: return String(localized: "Reading View")
+        case .arabicText: return String(localized: "Arabic Text")
+        case .englishText: return String(localized: "English Text")
         }
     }
 
@@ -159,9 +159,9 @@ enum SettingsHadithPage: String, CaseIterable, Hashable {
 
     var caption: String {
         switch self {
-        case .readingView: return "The name of Allah in red"
-        case .arabicText: return "Show Arabic, its face and size"
-        case .englishText: return "Show English, its size"
+        case .readingView: return String(localized: "The name of Allah in red")
+        case .arabicText: return String(localized: "Show Arabic, its face and size")
+        case .englishText: return String(localized: "Show English, its size")
         }
     }
 }
@@ -177,12 +177,12 @@ enum SettingsIslamPage: String, CaseIterable, Hashable {
 
     var title: String {
         switch self {
-        case .arabicText: return "Arabic Text"
-        case .textSize: return "Text Size"
-        case .alphabet: return "Arabic Alphabet"
-        case .libraries: return "Libraries"
+        case .arabicText: return String(localized: "Arabic Text")
+        case .textSize: return String(localized: "Text Size")
+        case .alphabet: return String(localized: "Arabic Alphabet")
+        case .libraries: return String(localized: "Libraries")
         #if HAS_QURAN
-        case .sunnahReminders: return "Sunnah Reminders"
+        case .sunnahReminders: return String(localized: "Sunnah Reminders")
         #endif
         }
     }
@@ -191,7 +191,8 @@ enum SettingsIslamPage: String, CaseIterable, Hashable {
         switch self {
         case .arabicText: return "textformat.ar"
         case .textSize: return "textformat.size"
-        case .alphabet: return "abc"
+        // An Arabic letter in both languages: "abc" drew Latin letters for the Arabic alphabet.
+        case .alphabet: return "character.ar"
         case .libraries: return "square.grid.2x2"
         #if HAS_QURAN
         case .sunnahReminders: return "bell.badge"
@@ -201,23 +202,23 @@ enum SettingsIslamPage: String, CaseIterable, Hashable {
 
     var caption: String {
         switch self {
-        case .arabicText: return "The face for duas, dhikr, names, letters; Highlight Allah"
-        case .textSize: return "How large the Islam tab's text reads"
-        case .alphabet: return "Arabic size, English readings, sukoon"
+        case .arabicText: return String(localized: "The face for duas, dhikr, names, letters; Highlight Allah")
+        case .textSize: return String(localized: "How large the Islam tab's text reads")
+        case .alphabet: return String(localized: "Arabic size, English readings, sukoon")
         #if HAS_ADHAN && HAS_QURAN
-        case .libraries: return "Grid or rows, Word of the Day, Fajr"
+        case .libraries: return String(localized: "Grid or rows, Word of the Day, Fajr")
         #elseif HAS_ADHAN
         // Word of the Day is a Quran feature (its switch on the page is HAS_QURAN), so without the
         // Quran the page holds the layout and the Fajr turnover.
-        case .libraries: return "Grid or rows, the Fajr turnover"
+        case .libraries: return String(localized: "Grid or rows, the Fajr turnover")
         #else
         // The Fajr turnover is a prayer-times switch, on this page only where prayer times ship.
-        case .libraries: return "Grid or rows, Word of the Day"
+        case .libraries: return String(localized: "Grid or rows, Word of the Day")
         #endif
         #if HAS_QURAN
         // The same words the Quran and Notifications rows carry: it is the same screen, reached
         // from a third door.
-        case .sunnahReminders: return "Al-Kahf on Friday, al-Mulk before sleep"
+        case .sunnahReminders: return String(localized: "Al-Kahf on Friday, al-Mulk before sleep")
         #endif
         }
     }
@@ -237,8 +238,8 @@ enum SettingsAppearancePage: String, CaseIterable, Hashable {
 
     var title: String {
         switch self {
-        case .customColors: return "Custom Colors"
-        case .lookAndFeel: return "Look and Feel"
+        case .customColors: return String(localized: "Custom Colors")
+        case .lookAndFeel: return String(localized: "Look and Feel")
         }
     }
 
@@ -251,8 +252,8 @@ enum SettingsAppearancePage: String, CaseIterable, Hashable {
 
     var caption: String {
         switch self {
-        case .customColors: return "Background, accent, the glow"
-        case .lookAndFeel: return Self.offersLaunchTab ? "Opening tab, Liquid Glass, haptics" : "List style, Liquid Glass, haptics"
+        case .customColors: return String(localized: "Background, accent, the glow")
+        case .lookAndFeel: return Self.offersLaunchTab ? String(localized: "Opening tab, Liquid Glass, haptics") : String(localized: "List style, Liquid Glass, haptics")
         }
     }
 }
@@ -376,40 +377,44 @@ enum SettingsSearchScope: Hashable {
     var placeholder: String {
         switch self {
         #if HAS_ADHAN
-        case .notifications: return "Search notifications"
-        case .prayer: return "Search prayer settings"
+        case .notifications: return String(localized: "Search notifications")
+        case .prayer: return String(localized: "Search prayer settings")
         #endif
         #if HAS_QURAN
-        case .quran: return "Search Quran settings"
+        case .quran: return String(localized: "Search Quran settings")
         #endif
         #if HAS_HADITH
-        case .hadith: return "Search hadith settings"
+        case .hadith: return String(localized: "Search hadith settings")
         #endif
-        case .islam: return "Search Islam settings"
-        case .appearance: return "Search appearance"
-        case .credits: return "Search credits"
-        case .general: return "Search settings"
+        case .islam: return String(localized: "Search Islam settings")
+        case .appearance: return String(localized: "Search appearance")
+        case .credits: return String(localized: "Search credits")
+        case .general: return String(localized: "Search settings")
         }
     }
 
-    /// The title of the entry that IS the page ("Quran Settings"), left out of that page's results.
+    /// The English title of the entry that IS the page ("Quran Settings"), left out of that page's
+    /// results. Compared with `SettingsSearchEntry.englishTitle`, so two titles that share a translation
+    /// can never hide each other.
     var rootTitle: String {
+        let title: String.LocalizationValue
         switch self {
         #if HAS_ADHAN
-        case .notifications: return "Notification Settings"
-        case .prayer: return "Prayer Settings"
+        case .notifications: title = "Notification Settings"
+        case .prayer: title = "Prayer Settings"
         #endif
         #if HAS_QURAN
-        case .quran: return "Quran Settings"
+        case .quran: title = "Quran Settings"
         #endif
         #if HAS_HADITH
-        case .hadith: return "Hadith Settings"
+        case .hadith: title = "Hadith Settings"
         #endif
-        case .islam: return "Islam Settings"
-        case .appearance: return "Appearance"
-        case .credits: return "Credits & Contact"
-        case .general: return "Settings"
+        case .islam: title = "Islam Settings"
+        case .appearance: title = "Appearance"
+        case .credits: title = "Credits & Contact"
+        case .general: title = "Settings"
         }
+        return InterfaceText.english(title)
     }
 
     /// The breadcrumb prefix a page's results drop, because the reader is already on that page.
@@ -531,6 +536,12 @@ extension SettingsSearchEntry {
     /// semantic matches and Ask AI's settings lane read this, since they bypass `rank`.
     static func available() -> [SettingsSearchEntry] {
         all.filter { $0.isAvailable() }
+    }
+
+    /// The entry an Ask AI transcript cites as `.setting(id:)`: by `id`, the same in every interface
+    /// language, or else by the translated title an id from a pre-release Arabic build was made of.
+    static func entry(withID id: String) -> SettingsSearchEntry? {
+        all.first { $0.id == id } ?? all.first { $0.path + $0.title == id }
     }
 
     static func entries(in scope: SettingsSearchScope) -> [SettingsSearchEntry] {
@@ -668,12 +679,37 @@ struct SettingsSearchResultRow: View {
     var dropPrefix: String? = nil
 
     private var breadcrumb: String {
+        Self.localizedTrail(englishBreadcrumb)
+    }
+
+    /// The index's paths are English data (the page prefixes below compare against them), so the trail
+    /// is worked out in English and translated one segment at a time. A right-to-left trail opens on an
+    /// RLM, so one whose first segment has no translation still reads from the right.
+    private static func localizedTrail(_ trail: String) -> String {
+        let segments = trail.components(separatedBy: " › ").map(localizedSegment)
+        return (AppLanguage.isRightToLeft ? "\u{200F}" : "") + segments.joined(separator: " › ")
+    }
+
+    /// One segment of the trail. The page roots are filed under the apps' names ("Al-Quran"), which
+    /// stay Latin in Arabic; there the trail names the section as the Settings root shows it instead.
+    private static func localizedSegment(_ segment: String) -> String {
+        guard AppLanguage.isArabic else { return segment.localizedDisplay }
+        switch segment {
+        case "Al-Islam": return String(localized: "Islam Settings")
+        case "Al-Adhan": return String(localized: "Prayer Settings")
+        case "Al-Quran": return String(localized: "Quran Settings")
+        case "Al-Hadith": return String(localized: "Hadith Settings")
+        default: return segment.localizedDisplay
+        }
+    }
+
+    private var englishBreadcrumb: String {
         let path = entry.path.replacingOccurrences(of: " → ", with: " › ")
         // "› Advanced" on a control the screen shows only with Advanced Settings on: the tap
         // turns the switch on, and the trail says so before it happens.
-        let suffix = entry.advanced && !settings.anyAdvancedSettings ? " › Advanced" : ""
+        let suffix = entry.advanced && !settings.anyAdvancedSettings ? " › " + String(localized: "Advanced") : ""
         guard let dropPrefix else { return "Settings › \(path)\(suffix)" }
-        if path == dropPrefix { return "This page" + suffix }
+        if path == dropPrefix { return String(localized: "This page") + suffix }
         if path.hasPrefix(dropPrefix + " › ") { return String(path.dropFirst(dropPrefix.count + 3)) + suffix }
         return path + suffix
     }
@@ -770,9 +806,9 @@ struct SettingsScopedSearch<Content: View>: View {
 
     @ViewBuilder
     private var resultsSection: some View {
-        let candidates = SettingsSearchEntry.entries(in: scope).filter { $0.title != scope.rootTitle }
+        let candidates = SettingsSearchEntry.entries(in: scope).filter { $0.englishTitle != scope.rootTitle }
         let results = SettingsSearchEntry.rank(candidates, query: trimmedQuery)
-        Section(header: SectionPillHeader(title: "RESULTS", count: results.count)) {
+        Section(header: SectionPillHeader(title: String(localized: "RESULTS"), count: results.count)) {
             if results.isEmpty {
                 Text("Nothing on this page matches. The Settings tab's search covers every setting.")
                     .font(.subheadline)

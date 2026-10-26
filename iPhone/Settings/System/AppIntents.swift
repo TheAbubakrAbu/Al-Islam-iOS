@@ -1,6 +1,10 @@
 import AppIntents
 
 @available(iOS 16.0, watchOS 9.0, *)
+/// The phrases below are the English ones. Every other language's phrases are their translations in
+/// Resources/<language>.lproj/AppShortcuts.strings, one per English phrase (`${applicationName}`, `${surah}`
+/// and `${prayer}` stand for the app's name and the spoken parameter): an Arabic phrase written here would
+/// only be one more ENGLISH phrase to Siri. A .strings file because AppShortcuts.xcstrings needs iOS 17.
 struct AppShortcutsRoot: AppShortcutsProvider {
     @AppShortcutsBuilder
     static var appShortcuts: [AppShortcut] {
@@ -15,8 +19,6 @@ struct AppShortcutsRoot: AppShortcutsProvider {
                 "\(.applicationName), play surah \(\.$surah)",
                 "\(.applicationName), recite surah \(\.$surah)",
                 "\(.applicationName), play \(\.$surah)",
-                "شغّل سورة \(\.$surah) في \(.applicationName)",
-                "اقرأ سورة \(\.$surah) في \(.applicationName)",
                 // Ask-back ("play surah" → Siri asks which one)
                 "Play a surah in \(.applicationName)",
                 "Recite a surah in \(.applicationName)",
@@ -26,8 +28,6 @@ struct AppShortcutsRoot: AppShortcutsProvider {
                 "\(.applicationName), recite a surah",
                 "\(.applicationName), play surah",
                 "\(.applicationName), recite surah",
-                "شغّل سورة في \(.applicationName)",
-                "اقرأ سورة في \(.applicationName)",
             ],
             shortTitle: "Play Surah",
             systemImageName: "book"
@@ -45,14 +45,12 @@ struct AppShortcutsRoot: AppShortcutsProvider {
                 "\(.applicationName), open surah \(\.$surah)",
                 "\(.applicationName), read surah \(\.$surah)",
                 "\(.applicationName), open \(\.$surah)",
-                "افتح سورة \(\.$surah) في \(.applicationName)",
                 // Ask-back ("open surah" → Siri asks which one)
                 "Open a surah in \(.applicationName)",
                 "Read a surah in \(.applicationName)",
                 "Open surah in \(.applicationName)",
                 "\(.applicationName), open a surah",
                 "\(.applicationName), open surah",
-                "افتح سورة في \(.applicationName)",
             ],
             shortTitle: "Open Surah",
             systemImageName: "text.book.closed"
@@ -96,8 +94,6 @@ struct AppShortcutsRoot: AppShortcutsProvider {
                 "\(.applicationName), recite random surah",
                 "\(.applicationName), play random",
                 "\(.applicationName), recite random",
-                "شغّل سورة عشوائية في \(.applicationName)",
-                "اقرأ سورة عشوائية في \(.applicationName)",
             ],
             shortTitle: "Random Surah",
             systemImageName: "shuffle"
@@ -126,8 +122,6 @@ struct AppShortcutsRoot: AppShortcutsProvider {
                 "\(.applicationName), recite last surah",
                 "\(.applicationName), play where I last left off",
                 "\(.applicationName), recite where I last left off",
-                "شغّل آخر سورة تم الاستماع إليها في \(.applicationName)",
-                "اقرأ آخر سورة تم الاستماع إليها في \(.applicationName)",
             ],
             shortTitle: "Last Listened Surah",
             systemImageName: "gobackward"
@@ -150,9 +144,6 @@ struct AppShortcutsRoot: AppShortcutsProvider {
                 "Time for \(\.$prayer) prayer in \(.applicationName)",
                 "Prayer time for \(\.$prayer) in \(.applicationName)",
                 "Prayer time for \(\.$prayer) prayer in \(.applicationName)",
-                "وقت \(\.$prayer) في \(.applicationName)",
-                "متى \(\.$prayer) في \(.applicationName)",
-                "ما وقت \(\.$prayer) في \(.applicationName)",
             ],
             shortTitle: "When is Prayer",
             systemImageName: "clock"
@@ -166,9 +157,6 @@ struct AppShortcutsRoot: AppShortcutsProvider {
                 "What prayer is it now in \(.applicationName)",
                 "Which prayer is now in \(.applicationName)",
                 "What prayer time is it in \(.applicationName)",
-                "ما هي الصلاة الحالية في \(.applicationName)",
-                "ما هي الصلاة الآن في \(.applicationName)",
-                "ما الصلاة الآن في \(.applicationName)",
             ],
             shortTitle: "Current Prayer",
             systemImageName: "clock.badge.checkmark"
@@ -185,10 +173,6 @@ struct AppShortcutsRoot: AppShortcutsProvider {
                 "Next prayer time in \(.applicationName)",
                 "Time of the next prayer in \(.applicationName)",
                 "Which prayer is next in \(.applicationName)",
-                "ما هي الصلاة القادمة في \(.applicationName)",
-                "متى الصلاة القادمة في \(.applicationName)",
-                "ما وقت الصلاة القادمة في \(.applicationName)",
-                "وقت الصلاة القادمة في \(.applicationName)",
             ],
             shortTitle: "Next Prayer",
             systemImageName: "forward.end"

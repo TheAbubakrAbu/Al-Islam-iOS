@@ -231,7 +231,7 @@ struct SufismAnswerView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Answering Sufism")
-        .selectableArticleList(article: "SufismAnswerView")
+        .englishArticle().selectableArticleList(article: "SufismAnswerView")
     }
 }
 
@@ -492,7 +492,7 @@ struct ShiaAnswerView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Answering the Shia")
-        .selectableArticleList(article: "ShiaAnswerView")
+        .englishArticle().selectableArticleList(article: "ShiaAnswerView")
     }
 }
 
@@ -734,7 +734,7 @@ struct ChristianityAnswerView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Answering Christianity")
-        .selectableArticleList(article: "ChristianityAnswerView")
+        .englishArticle().selectableArticleList(article: "ChristianityAnswerView")
     }
 }
 
@@ -970,7 +970,7 @@ struct JudaismAnswerView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Answering Judaism")
-        .selectableArticleList(article: "JudaismAnswerView")
+        .englishArticle().selectableArticleList(article: "JudaismAnswerView")
     }
 }
 
@@ -1194,7 +1194,7 @@ struct HinduismAnswerView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Answering Hinduism")
-        .selectableArticleList(article: "HinduismAnswerView")
+        .englishArticle().selectableArticleList(article: "HinduismAnswerView")
     }
 }
 
@@ -1415,7 +1415,7 @@ struct PaganismAnswerView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Answering Paganism")
-        .selectableArticleList(article: "PaganismAnswerView")
+        .englishArticle().selectableArticleList(article: "PaganismAnswerView")
     }
 }
 
@@ -1647,7 +1647,7 @@ struct BuddhismAnswerView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Answering Buddhism")
-        .selectableArticleList(article: "BuddhismAnswerView")
+        .englishArticle().selectableArticleList(article: "BuddhismAnswerView")
     }
 }
 
@@ -1668,7 +1668,7 @@ struct AtheismAnswerView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Answering Atheism")
-        .selectableArticleList(article: "AtheismAnswerView")
+        .englishArticle().selectableArticleList(article: "AtheismAnswerView")
     }
 
     static let sections: [ArticleSection] = [

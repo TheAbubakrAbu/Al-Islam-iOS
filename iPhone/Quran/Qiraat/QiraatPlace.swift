@@ -622,8 +622,9 @@ final class QiraatDuelPlacesCache: @unchecked Sendable {
 enum QiraatReaderNames {
     /// "Nafi, Ibn Kathir, ad-Duri": an imam where every compared narrator of his reads alike (both,
     /// when both are compared), otherwise the narrators by name, in the classical order of the ten.
-    /// `compared` is every riwayah on the screen, Hafs included.
-    static func names(_ tags: [String], compared: Set<String>) -> [String] {
+    /// `compared` is every riwayah on the screen, Hafs included. `display`: the names as the reader
+    /// sees them (through the catalog); false keeps the English data.
+    static func names(_ tags: [String], compared: Set<String>, display: Bool = false) -> [String] {
         let group = Set(tags.map(Settings.Riwayah.canonicalTag))
         let options = Settings.Riwayah.allOptions
         var out: [String] = []
@@ -632,20 +633,23 @@ enum QiraatReaderNames {
             let reading = narrators.filter { group.contains($0.tag) }
             guard !reading.isEmpty else { continue }
             if narrators.count == 2, reading.count == 2 {
-                out.append(teacher)
+                out.append(display ? teacher.localizedDisplay : teacher)
             } else {
-                out.append(contentsOf: reading.map { narratorName($0.tag, compared: compared) })
+                out.append(contentsOf: reading.map { narratorName($0.tag, compared: compared, display: display) })
             }
         }
         return out
     }
 
     /// The narrator's short name, with his imam when another compared narrator shares it (the two
-    /// ad-Duris, of Abu Amr and of al-Kisai).
-    static func narratorName(_ tag: String, compared: Set<String>) -> String {
+    /// ad-Duris, of Abu Amr and of al-Kisai). The clash is found on the English names; `display`
+    /// only changes what is returned.
+    static func narratorName(_ tag: String, compared: Set<String>, display: Bool = false) -> String {
         let name = QiraatProfiles.shortName(of: tag)
         let clash = compared.contains { $0 != tag && QiraatProfiles.shortName(of: $0) == name }
-        return clash ? "\(name) (\(Settings.Riwayah.option(for: tag).teacher))" : name
+        let teacher = Settings.Riwayah.option(for: tag).teacher
+        guard display else { return clash ? "\(name) (\(teacher))" : name }
+        return clash ? "\(name.localizedDisplay) (\(teacher.localizedDisplay))" : name.localizedDisplay
     }
 
     /// The ten in their classical order (the seven, then the three), not the menus' alphabetical one.
@@ -656,13 +660,16 @@ enum QiraatReaderNames {
         Settings.Riwayah.khalafAshirTeacher,
     ]
 
-    /// "Nafi, Ibn Kathir and ad-Duri".
+    /// "Nafi, Ibn Kathir and ad-Duri". In Arabic the language's own list ("نافع وابن كثير"), never
+    /// a Latin ", " between Arabic names.
     static func list(_ names: [String]) -> String {
-        switch names.count {
-        case 0: return ""
-        case 1: return names[0]
-        case 2: return "\(names[0]) and \(names[1])"
-        default: return names.dropLast().joined(separator: ", ") + " and " + (names.last ?? "")
+        names.sentenceList { names in
+            switch names.count {
+            case 0: return ""
+            case 1: return names[0]
+            case 2: return String(localized: "\(names[0]) and \(names[1])")
+            default: return String(localized: "\(names.dropLast().joined(separator: ", ")) and \(names.last ?? "")")
+            }
         }
     }
 }

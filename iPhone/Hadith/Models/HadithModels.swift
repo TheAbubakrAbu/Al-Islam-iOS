@@ -77,21 +77,71 @@ struct HadithCatalogBook: Identifiable, Hashable {
     /// `era` for the catalog's grid tiles and list rows (Abu, 2026-10-03: "mention the date of each
     /// hadith book for grid and list"): the same date, with the spoken form VoiceOver reads for it.
     var eraAccessibilityLabel: String {
-        era.replacingOccurrences(of: "d. c. ", with: "Compiler died about ")
-            .replacingOccurrences(of: "d. ", with: "Compiler died ")
-            .replacingOccurrences(of: " / ", with: ", ")
+        switch eraYears {
+        case let .died(hijri, ce, circa)?:
+            let hijriText = String(localized: "\(Self.year(hijri)) AH"), ceText = String(localized: "\(Self.year(ce)) CE")
+            return circa ? String(localized: "Compiler died about \(hijriText), \(ceText)")
+                : String(localized: "Compiler died \(hijriText), \(ceText)")
+        case let .compiled(ce)?:
+            return String(localized: "Compiled \(Self.year(ce)) CE")
+        case nil:
+            return era
+        }
+    }
+
+    /// `era` as the reader sees it: rebuilt from its years through the catalog, so an Arabic interface
+    /// reads "ت. ٢٥٦ هـ / ٨٧٠ م" while English reads exactly the stored `era`, which stays the data.
+    var eraDisplay: String {
+        switch eraYears {
+        case let .died(hijri, ce, circa)?:
+            let hijriText = Self.year(hijri), ceText = Self.year(ce)
+            return circa ? String(localized: "d. c. \(hijriText) AH / \(ceText) CE")
+                : String(localized: "d. \(hijriText) AH / \(ceText) CE")
+        case let .compiled(ce)?:
+            return String(localized: "Compiled \(Self.year(ce)) CE")
+        case nil:
+            return era
+        }
     }
 
     /// `era` as a hero figure: the year set large, what it dates under it. "d. 256 AH / 870 CE" ->
     /// ("256 AH", "died, 870 CE"); "d. c. 741 AH / 1340 CE" -> ("c. 741 AH", "died, 1340 CE");
     /// "Compiled 1980 CE" -> ("1980 CE", "compiled").
     var eraStat: (value: String, label: String) {
-        guard era.hasPrefix("d. ") else {
-            let parts = era.split(separator: " ", maxSplits: 1).map(String.init)
-            return parts.count == 2 ? (parts[1], parts[0].lowercased()) : (era, "")
+        switch eraYears {
+        case let .died(hijri, ce, circa)?:
+            let hijriText = Self.year(hijri), ceText = String(localized: "\(Self.year(ce)) CE")
+            return (circa ? String(localized: "c. \(hijriText) AH") : String(localized: "\(hijriText) AH"),
+                    String(localized: "died, \(ceText)"))
+        case let .compiled(ce)?:
+            return (String(localized: "\(Self.year(ce)) CE"), String(localized: "compiled"))
+        case nil:
+            return (era, "")
         }
-        let sides = era.dropFirst(3).components(separatedBy: " / ")
-        return (sides[0], sides.count > 1 ? "died, " + sides[1] : "died")
+    }
+
+    /// A year in the interface's digits with no grouping: "1340", never "1,340" (an Int interpolated
+    /// into `String(localized:)` is grouped).
+    private static func year(_ value: Int) -> String {
+        value.formatted(.number.grouping(.never))
+    }
+
+    private enum EraYears {
+        case died(hijri: Int, ce: Int, circa: Bool)
+        case compiled(ce: Int)
+    }
+
+    /// The years `era` carries, read from the table's three shapes: "d. 256 AH / 870 CE",
+    /// "d. c. 741 AH / 1340 CE" and "Compiled 1980 CE". Nil for any other shape, which shows as stored.
+    private var eraYears: EraYears? {
+        let years = era.split(whereSeparator: { !$0.isASCII || !$0.isNumber }).compactMap { Int($0) }
+        if era.hasPrefix("d. "), era.hasSuffix(" CE"), era.contains(" AH / "), years.count == 2 {
+            return .died(hijri: years[0], ce: years[1], circa: era.hasPrefix("d. c. "))
+        }
+        if era.hasPrefix("Compiled "), era.hasSuffix(" CE"), years.count == 1 {
+            return .compiled(ce: years[0])
+        }
+        return nil
     }
 
 
@@ -114,8 +164,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .six,
             authorEnglish: "Imam Muhammad ibn Ismail al-Bukhari", authorArabic: "الإِمَامُ مُحَمَّدُ بنُ إِسمَاعِيلَ البُخَارِيُّ",
             era: "d. 256 AH / 870 CE",
-            shortDescription: "The most authentic book after the Quran, sifted from hundreds of thousands of narrations.",
-            longDescription: "Compiled over sixteen years by Imam al-Bukhari (الإِمَامُ البُخَارِيُّ), who sifted its 7,277 hadiths (numbered up to 7,563 in the sunnah.com numbering this app uses, and about 2,600 without repetition) from hundreds of thousands he examined under the strictest standards of authenticity.\n\nMuslims across every generation have regarded it as the most authentic book after the Quran itself.",
+            shortDescription: String(localized: "The most authentic book after the Quran, sifted from hundreds of thousands of narrations."),
+            longDescription: String(localized: "Compiled over sixteen years by Imam al-Bukhari (الإِمَامُ البُخَارِيُّ), who sifted its 7,277 hadiths (numbered up to 7,563 in the sunnah.com numbering this app uses, and about 2,600 without repetition) from hundreds of thousands he examined under the strictest standards of authenticity.\n\nMuslims across every generation have regarded it as the most authentic book after the Quran itself."),
             aliases: ["bukhari", "bukharee", "bukhary", "albukhari", "bokhari", "buhari", "bukhaari"],
             arabicAliases: ["البخاري", "صحيح البخاري", "بخاري"],
             name: Name(
@@ -131,8 +181,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .six,
             authorEnglish: "Imam Muslim ibn al-Hajjaj", authorArabic: "الإِمَامُ مُسلِمُ بنُ الحَجَّاجِ",
             era: "d. 261 AH / 875 CE",
-            shortDescription: "The second most authentic collection, every hadith gathered with its chains side by side.",
-            longDescription: "Compiled by Imam Muslim ibn al-Hajjaj of Naysabur (الإِمَامُ مُسلِمُ بنُ الحَجَّاجِ النَّيسَابُورِيُّ), a student of Imam al-Bukhari.\n\nAlongside Sahih al-Bukhari it forms the Sahihayn, the two most authentic books of hadith, this the second of them. Scholars especially prize its arrangement: every narration of a hadith is gathered in one place with its chains compared side by side.",
+            shortDescription: String(localized: "The second most authentic collection, every hadith gathered with its chains side by side."),
+            longDescription: String(localized: "Compiled by Imam Muslim ibn al-Hajjaj of Naysabur (الإِمَامُ مُسلِمُ بنُ الحَجَّاجِ النَّيسَابُورِيُّ), a student of Imam al-Bukhari.\n\nAlongside Sahih al-Bukhari it forms the Sahihayn, the two most authentic books of hadith, this the second of them. Scholars especially prize its arrangement: every narration of a hadith is gathered in one place with its chains compared side by side."),
             aliases: ["muslim", "sahihmuslim", "muslem", "moslem"],
             arabicAliases: ["مسلم", "صحيح مسلم"],
             name: Name(
@@ -148,8 +198,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .six,
             authorEnglish: "Imam Muhammad ibn Yazid ibn Majah", authorArabic: "الإِمَامُ مُحَمَّدُ بنُ يَزِيدَ بنِ مَاجَه",
             era: "d. 273 AH / 887 CE",
-            shortDescription: "The sixth of the Six Books, preserving many hadiths found in none of the other five.",
-            longDescription: "Compiled by Imam Ibn Majah of Qazwin (الإِمَامُ ابنُ مَاجَه القَزوِينِيُّ), it completes the famous Six Books (al-Kutub as-Sittah), and its particular value is the many hadiths (the zawa’id) it preserves that appear in none of the other five.",
+            shortDescription: String(localized: "The sixth of the Six Books, preserving many hadiths found in none of the other five."),
+            longDescription: String(localized: "Compiled by Imam Ibn Majah of Qazwin (الإِمَامُ ابنُ مَاجَه القَزوِينِيُّ), it completes the famous Six Books (al-Kutub as-Sittah), and its particular value is the many hadiths (the zawa’id) it preserves that appear in none of the other five."),
             aliases: ["ibnmajah", "majah", "ibnmaja", "maja"],
             arabicAliases: ["ابن ماجه", "سنن ابن ماجه", "ماجه"],
             name: Name(
@@ -165,8 +215,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .six,
             authorEnglish: "Imam Abu Dawud as-Sijistani", authorArabic: "الإِمَامُ أَبُو دَاوُدَ السِّجِستَانِيُّ",
             era: "d. 275 AH / 889 CE",
-            shortDescription: "The Sunan of legal rulings, its hadiths chosen from 500,000 he collected.",
-            longDescription: "Imam Abu Dawud (الإِمَامُ أَبُو دَاوُدَ) selected its hadiths (4,800 by his own count; this edition carries 5,276 narrations) from the 500,000 he had collected: the Sunan of legal rulings, focused on the narrations jurists build upon.\n\nHe remarked that four hadiths of it suffice a person for their religion, among them “Actions are by intentions.”",
+            shortDescription: String(localized: "The Sunan of legal rulings, its hadiths chosen from 500,000 he collected."),
+            longDescription: String(localized: "Imam Abu Dawud (الإِمَامُ أَبُو دَاوُدَ) selected its hadiths (4,800 by his own count; this edition carries 5,276 narrations) from the 500,000 he had collected: the Sunan of legal rulings, focused on the narrations jurists build upon.\n\nHe remarked that four hadiths of it suffice a person for their religion, among them “Actions are by intentions.”"),
             aliases: ["abudawud", "abidawud", "abudaud", "abidaud", "dawud", "daud", "dawood", "abudawood", "dawoud", "daood", "abu"],
             arabicAliases: ["أبو داود", "أبي داود", "سنن أبي داود", "داود", "أبو داوود", "أبي داوود"],
             name: Name(
@@ -182,8 +232,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .six,
             authorEnglish: "Imam Muhammad ibn Isa at-Tirmidhi", authorArabic: "الإِمَامُ مُحَمَّدُ بنُ عِيسَى التِّرمِذِيُّ",
             era: "d. 279 AH / 892 CE",
-            shortDescription: "The graded collection, noting each hadith's strength and the jurists' positions.",
-            longDescription: "Also known as al-Jami’ al-Kabir, “the great comprehensive collection.” Compiled by Imam at-Tirmidhi (الإِمَامُ التِّرمِذِيُّ), a student of Imam al-Bukhari.\n\nIts distinction is method: after most hadiths he states the grading (sahih, hasan, or otherwise) and which schools of law acted upon it, as much a manual of hadith science as a collection.",
+            shortDescription: String(localized: "The graded collection, noting each hadith's strength and the jurists' positions."),
+            longDescription: String(localized: "Also known as al-Jami’ al-Kabir, “the great comprehensive collection.” Compiled by Imam at-Tirmidhi (الإِمَامُ التِّرمِذِيُّ), a student of Imam al-Bukhari.\n\nIts distinction is method: after most hadiths he states the grading (sahih, hasan, or otherwise) and which schools of law acted upon it, as much a manual of hadith science as a collection."),
             aliases: ["tirmidhi", "tirmizi", "tirmidhee", "attirmidhi", "altirmidhi", "tirmidi", "termizi", "termidhi", "tirmithi", "tirmizee"],
             arabicAliases: ["الترمذي", "جامع الترمذي", "سنن الترمذي"],
             name: Name(
@@ -199,8 +249,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .six,
             authorEnglish: "Imam Ahmad ibn Shu'ayb an-Nasa'i", authorArabic: "الإِمَامُ أَحمَدُ بنُ شُعَيبٍ النَّسَائِيُّ",
             era: "d. 303 AH / 915 CE",
-            shortDescription: "The strictest of the four Sunan in its conditions for accepting narrators.",
-            longDescription: "Also called as-Sunan as-Sughra, “the smaller Sunan”: Imam an-Nasa’i’s (الإِمَامُ النَّسَائِيُّ) own refinement of his larger Sunan, keeping the narrations he judged strongest.\n\nHis conditions for accepting narrators were the most rigorous among the authors of the four Sunan.",
+            shortDescription: String(localized: "The strictest of the four Sunan in its conditions for accepting narrators."),
+            longDescription: String(localized: "Also called as-Sunan as-Sughra, “the smaller Sunan”: Imam an-Nasa’i’s (الإِمَامُ النَّسَائِيُّ) own refinement of his larger Sunan, keeping the narrations he judged strongest.\n\nHis conditions for accepting narrators were the most rigorous among the authors of the four Sunan."),
             aliases: ["nasai", "nisai", "nasaee", "annasai", "alnasai", "annisai", "alnisai", "nasaai", "nassai", "nasayi"],
             arabicAliases: ["النسائي", "سنن النسائي"],
             name: Name(
@@ -217,8 +267,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .early,
             authorEnglish: "Imam Malik ibn Anas", authorArabic: "الإِمَامُ مَالِكُ بنُ أَنَسٍ",
             era: "d. 179 AH / 795 CE",
-            shortDescription: "The earliest collection of all, joining hadith with the practice of Madinah.",
-            longDescription: "The Muwatta of Imam Malik (الإِمَامُ مَالِكٌ), the Imam of Madinah, is the earliest collection in this library, compiled a full century before Bukhari and Muslim.\n\nIt weaves hadith together with the established practice of the people of Madinah. Imam ash-Shafi’i called it the soundest book of its time.",
+            shortDescription: String(localized: "The earliest collection of all, joining hadith with the practice of Madinah."),
+            longDescription: String(localized: "The Muwatta of Imam Malik (الإِمَامُ مَالِكٌ), the Imam of Madinah, is the earliest collection in this library, compiled a full century before Bukhari and Muslim.\n\nIt weaves hadith together with the established practice of the people of Madinah. Imam ash-Shafi’i called it the soundest book of its time."),
             aliases: ["malik", "muwatta", "muwattamalik", "almuwatta", "muatta", "mowatta", "muwata"],
             arabicAliases: ["مالك", "الموطأ", "موطأ مالك", "موطأ الإمام مالك"],
             name: Name(
@@ -234,8 +284,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .early,
             authorEnglish: "Imam Ahmad ibn Hanbal", authorArabic: "الإِمَامُ أَحمَدُ بنُ حَنبَلٍ",
             era: "d. 241 AH / 855 CE",
-            shortDescription: "The great Musnad, arranged by the Companion who narrates each hadith.",
-            longDescription: "The great Musnad of Imam Ahmad (الإِمَامُ أَحمَدُ بنُ حَنبَلٍ), founder of the Hanbali school and the towering hadith scholar of his age.\n\nUnlike the Sunan books it is arranged by the narrating Companion rather than by topic; the full Musnad spans over 27,000 narrations, of which this dataset carries a selection of 1,374.",
+            shortDescription: String(localized: "The great Musnad, arranged by the Companion who narrates each hadith."),
+            longDescription: String(localized: "The great Musnad of Imam Ahmad (الإِمَامُ أَحمَدُ بنُ حَنبَلٍ), founder of the Hanbali school and the towering hadith scholar of his age.\n\nUnlike the Sunan books it is arranged by the narrating Companion rather than by topic; the full Musnad spans over 27,000 narrations, of which this dataset carries a selection of 1,374."),
             aliases: ["ahmad", "ahmed", "musnadahmad", "musnadahmed"],
             arabicAliases: ["أحمد", "مسند أحمد", "مسند الإمام أحمد"],
             name: Name(
@@ -251,8 +301,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .early,
             authorEnglish: "Imam Abdullah ibn Abd ar-Rahman ad-Darimi", authorArabic: "الإِمَامُ عَبدُ اللَّهِ بنُ عَبدِ الرَّحمَنِ الدَّارِمِيُّ",
             era: "d. 255 AH / 869 CE",
-            shortDescription: "The early Sunan of a teacher of Muslim, Abu Dawud, and at-Tirmidhi.",
-            longDescription: "Widely known as Sunan ad-Darimi. Compiled by Imam ad-Darimi of Samarqand (الإِمَامُ الدَّارِمِيُّ), a hadith master whose students included Imam Muslim, Abu Dawud, and at-Tirmidhi.\n\nHis Sunan opens with a celebrated introduction on the Prophet’s ﷺ status and the etiquette of knowledge.",
+            shortDescription: String(localized: "The early Sunan of a teacher of Muslim, Abu Dawud, and at-Tirmidhi."),
+            longDescription: String(localized: "Widely known as Sunan ad-Darimi. Compiled by Imam ad-Darimi of Samarqand (الإِمَامُ الدَّارِمِيُّ), a hadith master whose students included Imam Muslim, Abu Dawud, and at-Tirmidhi.\n\nHis Sunan opens with a celebrated introduction on the Prophet’s ﷺ status and the etiquette of knowledge."),
             aliases: ["darimi", "daremi", "addarimi", "aldarimi"],
             arabicAliases: ["الدارمي", "سنن الدارمي", "مسند الدارمي"],
             name: Name(
@@ -271,8 +321,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             // The Ibrahim and Johnson-Davies selection this book follows, first published in Beirut
             // in 1980 (The Holy Koran Publishing House); the hadiths themselves are the Prophet's ﷺ.
             era: "Compiled 1980 CE",
-            shortDescription: "The forty sacred hadiths, their meaning from Allah in the Prophet's ﷺ wording.",
-            longDescription: "A hadith qudsi (حَدِيثٌ قُدسِيٌّ) is a narration in which the Prophet ﷺ relates words whose meaning is from Allah, expressed in the Prophet’s ﷺ own wording, distinct from the Quran, which is Allah’s speech in both word and meaning. This is a well-known selection of forty such sacred hadiths, drawn from the authentic collections.\n\nThis selection follows the widely-circulated compilation of Ezzedin Ibrahim and Denys Johnson-Davies (Abdul Wadud).",
+            shortDescription: String(localized: "The forty sacred hadiths, their meaning from Allah in the Prophet's ﷺ wording."),
+            longDescription: String(localized: "A hadith qudsi (حَدِيثٌ قُدسِيٌّ) is a narration in which the Prophet ﷺ relates words whose meaning is from Allah, expressed in the Prophet’s ﷺ own wording, distinct from the Quran, which is Allah’s speech in both word and meaning. This is a well-known selection of forty such sacred hadiths, drawn from the authentic collections.\n\nThis selection follows the widely-circulated compilation of Ezzedin Ibrahim and Denys Johnson-Davies (Abdul Wadud)."),
             aliases: ["qudsi", "qudsi40", "hadithqudsi", "kudsi", "qudsee"],
             arabicAliases: ["القدسي", "القدسية", "الحديث القدسي", "الأحاديث القدسية", "الأربعون القدسية"],
             name: Name(
@@ -288,8 +338,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .forties,
             authorEnglish: "Imam Yahya ibn Sharaf an-Nawawi", authorArabic: "الإِمَامُ يَحيَى بنُ شَرَفٍ النَّوَوِيُّ",
             era: "d. 676 AH / 1277 CE",
-            shortDescription: "The forty-two foundational hadiths, each an axis the religion turns upon.",
-            longDescription: "Imam an-Nawawi (الإِمَامُ النَّوَوِيُّ) gathered forty-two foundational hadiths (mostly from Bukhari and Muslim), each chosen because scholars described it as an axis the religion turns upon.\n\nMemorized across the Muslim world for over seven centuries, it is usually the first hadith book a student ever studies.",
+            shortDescription: String(localized: "The forty-two foundational hadiths, each an axis the religion turns upon."),
+            longDescription: String(localized: "Imam an-Nawawi (الإِمَامُ النَّوَوِيُّ) gathered forty-two foundational hadiths (mostly from Bukhari and Muslim), each chosen because scholars described it as an axis the religion turns upon.\n\nMemorized across the Muslim world for over seven centuries, it is usually the first hadith book a student ever studies."),
             aliases: ["nawawi", "nawawi40", "arbaeen", "arbain", "arbaeennawawi", "fortynawawi", "nawawee", "nawawy"],
             arabicAliases: ["النووي", "النووية", "الأربعون النووية", "الأربعين النووية"],
             name: Name(
@@ -305,8 +355,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .forties,
             authorEnglish: "Shah Waliullah ad-Dihlawi", authorArabic: "شَاه وَلِيُّ اللَّهِ الدِّهلَوِيُّ",
             era: "d. 1176 AH / 1762 CE",
-            shortDescription: "The forty concise hadiths with the shortest, most elevated chains.",
-            longDescription: "Collected by Shah Waliullah of Delhi (شَاه وَلِيُّ اللَّهِ الدِّهلَوِيُّ), the reviver of hadith studies in the Indian subcontinent.\n\nHe chose forty concise hadiths distinguished by their short, elevated chains of transmission: comprehensive words gathered in the briefest form.",
+            shortDescription: String(localized: "The forty concise hadiths with the shortest, most elevated chains."),
+            longDescription: String(localized: "Collected by Shah Waliullah of Delhi (شَاه وَلِيُّ اللَّهِ الدِّهلَوِيُّ), the reviver of hadith studies in the Indian subcontinent.\n\nHe chose forty concise hadiths distinguished by their short, elevated chains of transmission: comprehensive words gathered in the briefest form."),
             aliases: ["shahwaliullah", "waliullah", "shahwaliullah40"],
             arabicAliases: ["شاه ولي الله", "ولي الله الدهلوي", "الدهلوي"],
             name: Name(
@@ -323,8 +373,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .other,
             authorEnglish: "Imam Muhammad ibn Ismail al-Bukhari", authorArabic: "الإِمَامُ مُحَمَّدُ بنُ إِسمَاعِيلَ البُخَارِيُّ",
             era: "d. 256 AH / 870 CE",
-            shortDescription: "The book of manners, Imam al-Bukhari's own work on family and character.",
-            longDescription: "Imam al-Bukhari’s (الإِمَامُ البُخَارِيُّ) dedicated book of Islamic manners: over 1,300 narrations on treating parents, neighbors, children, and guests; on speech, anger, mercy, and the everyday character the Prophet ﷺ taught; the gentler companion to his Sahih.",
+            shortDescription: String(localized: "The book of manners, Imam al-Bukhari's own work on family and character."),
+            longDescription: String(localized: "Imam al-Bukhari’s (الإِمَامُ البُخَارِيُّ) dedicated book of Islamic manners: over 1,300 narrations on treating parents, neighbors, children, and guests; on speech, anger, mercy, and the everyday character the Prophet ﷺ taught; the gentler companion to his Sahih."),
             aliases: ["adab", "adabmufrad", "adabalmufrad", "aladabalmufrad"],
             arabicAliases: ["الأدب المفرد", "الأدب"],
             name: Name(
@@ -340,8 +390,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .other,
             authorEnglish: "Imam Muhammad ibn Isa at-Tirmidhi", authorArabic: "الإِمَامُ مُحَمَّدُ بنُ عِيسَى التِّرمِذِيُّ",
             era: "d. 279 AH / 892 CE",
-            shortDescription: "The portrait of the Prophet ﷺ, his appearance, habits, and character.",
-            longDescription: "Imam at-Tirmidhi’s (الإِمَامُ التِّرمِذِيُّ) beloved portrait of the Prophet ﷺ: around 400 narrations describing his appearance, dress, food, sleep, worship, humility, and character, gathered so that those who never saw him ﷺ could almost see him.",
+            shortDescription: String(localized: "The portrait of the Prophet ﷺ, his appearance, habits, and character."),
+            longDescription: String(localized: "Imam at-Tirmidhi’s (الإِمَامُ التِّرمِذِيُّ) beloved portrait of the Prophet ﷺ: around 400 narrations describing his appearance, dress, food, sleep, worship, humility, and character, gathered so that those who never saw him ﷺ could almost see him."),
             aliases: ["shamail", "shamaail", "shamailmuhammadiyah"],
             arabicAliases: ["الشمائل", "الشمائل المحمدية"],
             name: Name(
@@ -357,8 +407,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .other,
             authorEnglish: "Imam Yahya ibn Sharaf an-Nawawi", authorArabic: "الإِمَامُ يَحيَى بنُ شَرَفٍ النَّوَوِيُّ",
             era: "d. 676 AH / 1277 CE",
-            shortDescription: "The Gardens of the Righteous, the world's most-read book of the daily Sunnah.",
-            longDescription: "By Imam an-Nawawi (الإِمَامُ النَّوَوِيُّ): around 1,900 hadiths on worship, character, and everyday conduct, arranged under verses of the Quran.\n\nPerhaps the most widely read hadith book in the world, a practical guide to living the Sunnah day by day.",
+            shortDescription: String(localized: "The Gardens of the Righteous, the world's most-read book of the daily Sunnah."),
+            longDescription: String(localized: "By Imam an-Nawawi (الإِمَامُ النَّوَوِيُّ): around 1,900 hadiths on worship, character, and everyday conduct, arranged under verses of the Quran.\n\nPerhaps the most widely read hadith book in the world, a practical guide to living the Sunnah day by day."),
             aliases: ["riyad", "riyadh", "riyadassalihin", "riyadussalihin", "riyadsaliheen", "riyadhussaliheen", "salihin", "saliheen", "riad", "riadh"],
             arabicAliases: ["رياض الصالحين", "رياض"],
             name: Name(
@@ -374,8 +424,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .other,
             authorEnglish: "Imam al-Khatib at-Tabrizi", authorArabic: "الإِمَامُ الخَطِيبُ التِّبرِيزِيُّ",
             era: "d. c. 741 AH / 1340 CE",
-            shortDescription: "The Niche of the Lamps, a comprehensive sourced survey of the whole Sunnah.",
-            longDescription: "Al-Khatib at-Tabrizi (الخَطِيبُ التِّبرِيزِيُّ) expanded al-Baghawi’s Masabih as-Sunnah, “the lamps of the Sunnah”: he named each hadith’s source collection and added a third section to every chapter, producing one of the most comprehensive single surveys of the Sunnah ever assembled.",
+            shortDescription: String(localized: "The Niche of the Lamps, a comprehensive sourced survey of the whole Sunnah."),
+            longDescription: String(localized: "Al-Khatib at-Tabrizi (الخَطِيبُ التِّبرِيزِيُّ) expanded al-Baghawi’s Masabih as-Sunnah, “the lamps of the Sunnah”: he named each hadith’s source collection and added a third section to every chapter, producing one of the most comprehensive single surveys of the Sunnah ever assembled."),
             aliases: ["mishkat", "mishkaat", "mishkatalmasabih", "meshkat"],
             arabicAliases: ["مشكاة المصابيح", "المشكاة", "مشكاة"],
             name: Name(
@@ -391,8 +441,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .other,
             authorEnglish: "Imam Ibn Hajar al-Asqalani", authorArabic: "الإِمَامُ ابنُ حَجَرٍ العَسقَلَانِيُّ",
             era: "d. 852 AH / 1449 CE",
-            shortDescription: "The evidences of Islamic law, the hadiths behind the legal rulings of fiqh.",
-            longDescription: "By Ibn Hajar al-Asqalani (ابنُ حَجَرٍ العَسقَلَانِيُّ), the commentator of Sahih al-Bukhari: 1,767 hadiths in this edition that serve as the evidences for Islamic legal rulings, each with its source noted; studied wherever fiqh is taught.",
+            shortDescription: String(localized: "The evidences of Islamic law, the hadiths behind the legal rulings of fiqh."),
+            longDescription: String(localized: "By Ibn Hajar al-Asqalani (ابنُ حَجَرٍ العَسقَلَانِيُّ), the commentator of Sahih al-Bukhari: 1,767 hadiths in this edition that serve as the evidences for Islamic legal rulings, each with its source noted; studied wherever fiqh is taught."),
             aliases: ["bulugh", "buloogh", "bulughalmaram", "bulughmaram"],
             arabicAliases: ["بلوغ المرام", "بلوغ"],
             name: Name(
@@ -412,6 +462,52 @@ struct HadithCatalogBook: Identifiable, Hashable {
 
     static func books(in group: Group) -> [HadithCatalogBook] {
         all.filter { $0.group == group }
+    }
+}
+
+// MARK: - Display names (the Arabic interface)
+
+// What the reader SEES of a book's name. The Arabic interface shows the catalog's own Arabic
+// (`arabicTitle`, `authorArabic`); English shows exactly what it always did. DISPLAY only: the
+// reference parser, the search, the saved references ("Sahih al-Bukhari 1" in bookmarks, history and
+// last read), the on-device model and the logs all keep the English fields.
+extension HadithCatalogBook {
+    /// The book's title: `arabicTitle` in the Arabic interface, `englishTitle` otherwise.
+    var displayTitle: String {
+        AppLanguage.isArabic && !arabicTitle.isEmpty ? arabicTitle : englishTitle
+    }
+
+    /// The compiler's name: `authorArabic` in the Arabic interface, `authorEnglish` otherwise.
+    var displayAuthor: String {
+        AppLanguage.isArabic && !authorArabic.isEmpty ? authorArabic : authorEnglish
+    }
+
+    /// "Sahih al-Bukhari 1" as the reader sees it. English is the saved form exactly, "\(englishTitle)
+    /// \(number)"; Arabic reads "صَحِيح البُخارِي ١", the number in the interface's digits.
+    func displayReference(_ number: String) -> String {
+        guard AppLanguage.isArabic else { return "\(englishTitle) \(number)" }
+        return "\(displayTitle) \(Self.displayNumber(number))"
+    }
+
+    /// A hadith number ("2950", "8a", "3:12", "Introduction 9") in the interface's digits
+    /// (`HadithDigits`), and in the Arabic interface its words too ("المقدمة ٩").
+    static func displayNumber(_ number: String) -> String {
+        let introduction = "Introduction "
+        if AppLanguage.isArabic, number.hasPrefix(introduction) {
+            return String(localized: "Introduction") + " " + HadithDigits.display(String(number.dropFirst(introduction.count)))
+        }
+        return HadithDigits.display(number)
+    }
+
+    /// A SAVED reference (a bookmark's, the last read's, a history entry's), rebuilt for display: in
+    /// the Arabic interface its English title is swapped for the book's Arabic one and its number put
+    /// in the interface's digits. English, an unknown book, or a reference that does not open with
+    /// the book's title comes back exactly as stored.
+    static func displayReference(stored reference: String, slug: String) -> String {
+        guard AppLanguage.isArabic, let book = bySlug[slug] else { return reference }
+        let prefix = book.englishTitle + " "
+        guard reference.hasPrefix(prefix) else { return reference }
+        return book.displayReference(String(reference.dropFirst(prefix.count)))
     }
 }
 
@@ -459,6 +555,19 @@ struct HadithBookData: @unchecked Sendable {
         func position(ofRow row: Int) -> Int? {
             guard row >= firstRow, row < firstRow + rowCount else { return nil }
             return row - firstRow + 1
+        }
+
+        /// The chapter's name as the reader sees it: `arabic` in the Arabic interface (when the data
+        /// has one), `english` otherwise. DISPLAY only; matching keeps the folds above.
+        var displayTitle: String {
+            AppLanguage.isArabic && !arabic.isEmpty ? arabic : english
+        }
+
+        /// `displayTitle`, or the book's own title for a chapter that has no name: the fallback every
+        /// chapter header and row uses ("chapter.english.isEmpty ? book.englishTitle : ...").
+        func displayTitle(in book: HadithCatalogBook) -> String {
+            let title = displayTitle
+            return title.isEmpty ? book.displayTitle : title
         }
     }
 
@@ -1187,6 +1296,12 @@ struct HadithBookmark: Codable, Identifiable, Equatable {
         }
         return slug == "muslim" && chapterId == 0 ? "Introduction \(citation)" : citation
     }
+
+    /// `reference` as the reader sees it: rebuilt in Arabic for the Arabic interface, the saved
+    /// line exactly in English (`HadithCatalogBook.displayReference(stored:slug:)`).
+    var displayReference: String {
+        HadithCatalogBook.displayReference(stored: reference, slug: slug)
+    }
 }
 
 /// The most recently read hadith - enough to render its row and jump back without loading the book.
@@ -1200,6 +1315,11 @@ struct HadithLastRead: Codable, Equatable {
     /// The hadith's chapter, so "jump back" can land in the chapter scrolled to it without a scan.
     /// Optional: entries saved by older builds decode without it and resolve by idInBook instead.
     var chapterId: Int? = nil
+
+    /// `reference` as the reader sees it (see `HadithBookmark.displayReference`).
+    var displayReference: String {
+        HadithCatalogBook.displayReference(stored: reference, slug: slug)
+    }
 }
 
 #endif

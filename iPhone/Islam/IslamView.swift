@@ -101,26 +101,28 @@ struct IslamView: View {
         case commonAdhkar
         case commonDuas
         case tasbihCounter
+        // REMEMBRANCE's banner since 2026-10-24 (Abu: "99 Names of Allah should take up a full row in
+        // Remembrance"): calling on Allah by His names is remembrance, and the full row carries the
+        // caption a tile has no room for.
+        case namesOfAllah
         case zakahCalculator
         case inheritanceCalculator
         case hijriCalendarConverter
         case masjidLocator
         case halalFoodLocator
+        case islamicWallpapers
+        // FAITH & PROOFS, one section since 2026-10-24 (Abu: pillars, beliefs and how-to "should be
+        // with" the miracles, the prophecies and Proving Islam). Proving Islam is a TILE again so the
+        // section is two clean rows: the faith itself and the case for it, then the three miracle /
+        // prophecy screens, which are one subject and so one row.
         case pillarsAndBasics
         case howToGuides
-        // With Pillars & Beliefs and How-To since the grid was sectioned (2026-10-02): knowing Allah
-        // by His names is the first thing faith is built on, so it sits in FAITH & PRACTICE.
-        case namesOfAllah
-        case islamicWallpapers
-        // The three miracle / prophecy screens are one subject, so they are one grid row.
+        case provingIslam
         case miraclesOfQuran
         case propheciesOfProphet
         case miraclesOfProphets
-        // The case that Islam is true (Abu, 2026-09-29). A full-width banner under the grid, like Ask
-        // AI (`bannerResources`), so the grid keeps its eighteen tiles in rows of three.
-        case provingIslam
         case askAI
-        /// Simple Mode's one row standing in for the sections it folds (TOOLS, SIGNS & PROOFS, ASK AI;
+        /// Simple Mode's one row standing in for the sections it folds (TOOLS, ASK AI;
         /// Docs/Product/Simple Mode Guide.md). A destination like any resource, so a tile opened from its
         /// screen stacks on the same path; never `available`, so search, favorites and the grids
         /// never list it.
@@ -165,6 +167,34 @@ struct IslamView: View {
             }
         }
 
+        /// `title` as the reader sees it. `title` itself stays English: the search matches and ranks on it.
+        var displayTitle: String {
+            switch self {
+            case .askAI: return String(localized: "Ask AI")
+            case .moreResources: return String(localized: "More Resources")
+            case .arabicAlphabet: return String(localized: "Arabic Alphabet")
+            case .tajweedFoundations: return String(localized: "Tajweed Foundations")
+            case .tajweedCourse: return String(localized: "Tajweed Course")
+            case .commonAdhkar: return String(localized: "Dhikr & Remembrances")
+            case .commonDuas: return String(localized: "Dua & Supplications")
+            case .tasbihCounter: return String(localized: "Tasbih Counter")
+            case .zakahCalculator: return String(localized: "Zakah Calculator")
+            case .inheritanceCalculator: return String(localized: "Inheritance Calculator")
+            case .namesOfAllah: return String(localized: "99 Names of Allah")
+            case .hijriCalendarConverter: return String(localized: "Hijri Date Converter")
+            case .masjidLocator: return String(localized: "Masjid Locator")
+            case .halalFoodLocator: return String(localized: "Halal Food Locator")
+            case .islamicWallpapers: return String(localized: "Islamic Wallpapers")
+            case .pillarsAndBasics: return String(localized: "Pillars & Beliefs")
+            case .howToGuides: return String(localized: "How-To Guides")
+            case .miraclesOfQuran: return String(localized: "Miracles of the Quran")
+            case .propheciesOfProphet: return String(localized: "Prophecies of the Prophet")
+            case .miraclesOfProphets: return String(localized: "Miracles of the Prophets")
+            case .provingIslam: return String(localized: "Proving Islam")
+            case .journal: return String(localized: "Islamic Journal")
+            }
+        }
+
         var systemImage: String {
             switch self {
             case .askAI: return "sparkles"
@@ -197,7 +227,7 @@ struct IslamView: View {
             switch self {
             case .askAI: return "Ask anything about Islam, on device"
             case .moreResources:
-                return OnDeviceAsk.isAvailable ? "Tools, signs and proofs, and Ask AI" : "Tools, and signs and proofs"
+                return OnDeviceAsk.isAvailable ? "Tools and Ask AI" : "Tools"
             case .arabicAlphabet: return "Letters, forms, diacritics, and signs"
             case .tajweedFoundations: return "Every rule of tajweed, one page each"
             case .tajweedCourse: return "Lesson by lesson, with ayahs to play and a quiz in each"
@@ -221,33 +251,68 @@ struct IslamView: View {
             }
         }
 
+        /// `subtitle` as the reader sees it; the English one is what the search matches.
+        var displaySubtitle: String {
+            switch self {
+            case .askAI: return String(localized: "Ask anything about Islam, on device")
+            case .moreResources:
+                return OnDeviceAsk.isAvailable ? String(localized: "Tools and Ask AI") : String(localized: "Tools")
+            case .arabicAlphabet: return String(localized: "Letters, forms, diacritics, and signs")
+            case .tajweedFoundations: return String(localized: "Every rule of tajweed, one page each")
+            case .tajweedCourse: return String(localized: "Lesson by lesson, with ayahs to play and a quiz in each")
+            case .commonAdhkar: return String(localized: "Morning, evening, and daily remembrances")
+            case .commonDuas: return String(localized: "Authenticated supplications with sources")
+            case .tasbihCounter: return String(localized: "Count dhikr with a tap")
+            case .zakahCalculator: return String(localized: "Work out what you owe")
+            case .inheritanceCalculator: return String(localized: "Divide an estate by the Quranic shares")
+            case .namesOfAllah: return String(localized: "Asma ul-Husna with meanings")
+            case .hijriCalendarConverter: return String(localized: "Convert Hijri and Gregorian dates")
+            case .masjidLocator: return String(localized: "Find mosques near you")
+            case .halalFoodLocator: return String(localized: "Find halal food near you")
+            case .islamicWallpapers: return String(localized: "Beautiful wallpapers to save")
+            case .pillarsAndBasics: return String(localized: "The Five Pillars and Six Beliefs")
+            case .howToGuides: return String(localized: "Wudu, salah, Jumuah, and more")
+            case .miraclesOfQuran: return String(localized: "Signs in creation, science, and history")
+            case .propheciesOfProphet: return String(localized: "What he foretold, and what history did")
+            case .miraclesOfProphets: return String(localized: "The signs given to the prophets, and to him")
+            case .provingIslam: return String(localized: "The complete case that Islam is true, one line of evidence at a time")
+            case .journal: return String(localized: "Notes from khutbahs, classes, and your reading")
+            }
+        }
+
+        /// The display title and subtitle where they differ from the English (the Arabic interface), so an
+        /// Arabic query finds the screen too. Empty in English, which leaves the English matching as it was.
+        var localizedSearchNames: [String] {
+            [displayTitle, displaySubtitle].filter { $0 != title && $0 != subtitle }
+        }
+
         /// The tile title with its line break CHOSEN, not wherever truncation lands: every grid tile is
         /// exactly two lines, broken at the natural point, so a whole grid of tiles shares one height and
         /// one rhythm.
         var gridTitle: String {
             switch self {
-            case .askAI: return "Ask\nAI"
-            case .moreResources: return "More\nResources"
-            case .arabicAlphabet: return "Arabic\nAlphabet"
-            case .tajweedFoundations: return "Tajweed\nFoundations"
-            case .tajweedCourse: return "Tajweed\nCourse"
-            case .commonAdhkar: return "Dhikr &\nRemembrances"
-            case .commonDuas: return "Dua &\nSupplications"
-            case .tasbihCounter: return "Tasbih\nCounter"
-            case .zakahCalculator: return "Zakah\nCalculator"
-            case .inheritanceCalculator: return "Inheritance\nCalculator"
-            case .namesOfAllah: return "99 Names\nof Allah"
-            case .hijriCalendarConverter: return "Hijri Date\nConverter"
-            case .masjidLocator: return "Masjid\nLocator"
-            case .halalFoodLocator: return "Halal Food\nLocator"
-            case .islamicWallpapers: return "Islamic\nWallpapers"
-            case .pillarsAndBasics: return "Pillars &\nBeliefs"
-            case .howToGuides: return "How-To\nGuides"
-            case .miraclesOfQuran: return "Miracles of\nthe Quran"
-            case .propheciesOfProphet: return "Prophecies of\nthe Prophet"
-            case .miraclesOfProphets: return "Miracles of\nthe Prophets"
-            case .provingIslam: return "Proving\nIslam"
-            case .journal: return "Islamic\nJournal"
+            case .askAI: return String(localized: "Ask\nAI")
+            case .moreResources: return String(localized: "More\nResources")
+            case .arabicAlphabet: return String(localized: "Arabic\nAlphabet")
+            case .tajweedFoundations: return String(localized: "Tajweed\nFoundations")
+            case .tajweedCourse: return String(localized: "Tajweed\nCourse")
+            case .commonAdhkar: return String(localized: "Dhikr &\nRemembrances")
+            case .commonDuas: return String(localized: "Dua &\nSupplications")
+            case .tasbihCounter: return String(localized: "Tasbih\nCounter")
+            case .zakahCalculator: return String(localized: "Zakah\nCalculator")
+            case .inheritanceCalculator: return String(localized: "Inheritance\nCalculator")
+            case .namesOfAllah: return String(localized: "99 Names\nof Allah")
+            case .hijriCalendarConverter: return String(localized: "Hijri Date\nConverter")
+            case .masjidLocator: return String(localized: "Masjid\nLocator")
+            case .halalFoodLocator: return String(localized: "Halal Food\nLocator")
+            case .islamicWallpapers: return String(localized: "Islamic\nWallpapers")
+            case .pillarsAndBasics: return String(localized: "Pillars &\nBeliefs")
+            case .howToGuides: return String(localized: "How-To\nGuides")
+            case .miraclesOfQuran: return String(localized: "Miracles of\nthe Quran")
+            case .propheciesOfProphet: return String(localized: "Prophecies of\nthe Prophet")
+            case .miraclesOfProphets: return String(localized: "Miracles of\nthe Prophets")
+            case .provingIslam: return String(localized: "Proving\nIslam")
+            case .journal: return String(localized: "Islamic\nJournal")
             }
         }
 
@@ -294,7 +359,7 @@ struct IslamView: View {
         var searchBlob: String { Self.searchBlobs[self] ?? "" }
 
         private static let searchBlobs: [IslamDestination: String] = Dictionary(uniqueKeysWithValues: allCases.map {
-            ($0, IslamArticles.fold(([$0.title, $0.subtitle] + $0.searchKeywords).joined(separator: " ")))
+            ($0, IslamArticles.fold(([$0.title, $0.subtitle] + $0.searchKeywords + $0.localizedSearchNames).joined(separator: " ")))
         })
 
         /// The section the resource is listed under (`ResourceGroup`).
@@ -305,9 +370,9 @@ struct IslamView: View {
             // 2026-10-04: "islamic journal as the full row for learn ... and then tajweed foundations
             // and tajweed course"). Writing down what you studied belongs with the studying.
             case .arabicAlphabet, .tajweedFoundations, .tajweedCourse, .journal: return .learn
-            case .pillarsAndBasics, .howToGuides, .namesOfAllah: return .faith
-            case .commonAdhkar, .commonDuas, .tasbihCounter: return .remembrance
-            case .miraclesOfQuran, .propheciesOfProphet, .miraclesOfProphets, .provingIslam: return .signs
+            case .commonAdhkar, .commonDuas, .tasbihCounter, .namesOfAllah: return .remembrance
+            case .pillarsAndBasics, .howToGuides, .provingIslam,
+                 .miraclesOfQuran, .propheciesOfProphet, .miraclesOfProphets: return .faith
             case .zakahCalculator, .inheritanceCalculator, .hijriCalendarConverter, .islamicWallpapers: return .tools
             // The two location tools come with the prayer times' location (not in Al-Quran).
             #if HAS_ADHAN
@@ -325,8 +390,14 @@ struct IslamView: View {
         /// The resources the grid draws as full-width banners under its tiles, in this order.
         /// LEARN's banner is the JOURNAL, not the course (Abu, 2026-10-04): that leaves the three
         /// study resources as a full row of tiles above it, and the journal - the one you WRITE in
-        /// rather than read - reads as the thing you do with what they taught you.
-        static let bannerResources: [IslamDestination] = [.journal, .provingIslam, .askAI]
+        /// rather than read - reads as the thing you do with what they taught you. REMEMBRANCE's is the
+        /// 99 Names (2026-10-24), under its row of dhikr, dua and tasbih. Trading Proving Islam's banner
+        /// for this one keeps the one-section grid at eighteen tiles, six clean rows.
+        static let bannerResources: [IslamDestination] = [.journal, .namesOfAllah, .askAI]
+
+        /// Every tile's title (the banners are not tiles), so the iPad sidebar's grid can fit them all
+        /// to one size (`SidebarResourceGrid`).
+        static let tileTitles: [String] = allCases.filter { !bannerResources.contains($0) }.map(\.gridTitle)
 
         /// Every resource this device can show: all of them, minus Ask AI where Apple Intelligence
         /// can't run it (a row that opens onto "not available here" is worse than no row), and minus the
@@ -343,24 +414,33 @@ struct IslamView: View {
 
     /// The subjects the resources are listed under, one section each, in this order (Abu, 2026-10-02:
     /// "divide islamic resources into section that it relates to"). Each holds three or six tiles, so
-    /// no grid row is left half empty; the two banners (Proving Islam, Ask AI) close their sections.
-    /// A resource's order inside its section is still the enum's case order.
+    /// no grid row is left half empty; the banners (the Journal, the 99 Names, Ask AI) close their
+    /// sections. A resource's order inside its section is still the enum's case order.
     ///
     /// The ORDER here is the section order on screen, and it is the one Abu gave on 2026-10-05:
-    /// Learn, Remembrance, Tools, Faith & Practice, Signs & Proofs - the daily things first (study,
-    /// dhikr, the calculators and locators you open mid-errand), then the two reading libraries that
-    /// you sit down with. Ask AI stays last, alone.
+    /// Learn, Remembrance, Tools, then the reading library you sit down with (Faith & Practice and
+    /// Signs & Proofs until 2026-10-24, one Faith & Proofs since). Ask AI stays last, alone.
     private enum ResourceGroup: CaseIterable {
-        case learn, remembrance, tools, faith, signs, assistant
+        case learn, remembrance, tools, faith, assistant
 
         var title: String {
             switch self {
             case .learn: return "LEARN"
-            case .faith: return "FAITH & PRACTICE"
+            case .faith: return "FAITH & PROOFS"
             case .remembrance: return "REMEMBRANCE"
-            case .signs: return "SIGNS & PROOFS"
             case .tools: return "TOOLS"
             case .assistant: return "ASK AI"
+            }
+        }
+
+        /// The header as the reader sees it; `title` stays English as the section's id.
+        var displayTitle: String {
+            switch self {
+            case .learn: return String(localized: "LEARN")
+            case .faith: return String(localized: "FAITH & PROOFS")
+            case .remembrance: return String(localized: "REMEMBRANCE")
+            case .tools: return String(localized: "TOOLS")
+            case .assistant: return String(localized: "ASK AI")
             }
         }
 
@@ -369,7 +449,6 @@ struct IslamView: View {
             case .learn: return "graduationcap"
             case .faith: return "moon.stars"
             case .remembrance: return "heart.text.square"
-            case .signs: return "checkmark.seal"
             case .tools: return "wrench.and.screwdriver"
             case .assistant: return "sparkles"
             }
@@ -382,14 +461,18 @@ struct IslamView: View {
 
         /// Simple Mode keeps the study, remembrance and faith groups on the tab and folds these into
         /// one More Resources row (Docs/Product/Simple Mode Guide.md); search still finds every resource.
+        /// FAITH & PROOFS stays: it holds the pillars and the how-to guides a beginner needs first, so
+        /// since the merge the miracles and Proving Islam show in Simple too.
         var foldsInSimpleMode: Bool {
-            self == .tools || self == .signs || self == .assistant
+            self == .tools || self == .assistant
         }
     }
 
     /// One section of resources as drawn: a subject group, or the single ISLAMIC RESOURCES section.
     private struct ResourceSection: Identifiable {
         let id: String
+        /// The header as shown (`id` is the English one).
+        let title: String
         let systemImage: String
         let items: [IslamDestination]
     }
@@ -401,11 +484,12 @@ struct IslamView: View {
     private func resourceSections(foldsSimple: Bool) -> [ResourceSection] {
         let groups = ResourceGroup.allCases.filter { !(foldsSimple && settings.hides(.foldedGroups) && $0.foldsInSimpleMode) }
         guard !settings.islamGroupResources else {
-            return groups.map { ResourceSection(id: $0.title, systemImage: $0.systemImage, items: $0.resources) }
+            return groups.map { ResourceSection(id: $0.title, title: $0.displayTitle, systemImage: $0.systemImage, items: $0.resources) }
                 .filter { !$0.items.isEmpty }
         }
         let all = groups.flatMap(\.resources)
-        return all.isEmpty ? [] : [ResourceSection(id: "ISLAMIC RESOURCES", systemImage: "square.grid.2x2.fill", items: all)]
+        return all.isEmpty ? [] : [ResourceSection(id: "ISLAMIC RESOURCES", title: String(localized: "ISLAMIC RESOURCES"),
+                                                   systemImage: "square.grid.2x2.fill", items: all)]
     }
 
     /// Collapse state for the favorites section, same as the Quran tab's Favorite Surahs.
@@ -443,6 +527,11 @@ struct IslamView: View {
         let _ = LaunchClock.markOnce("islam root: first body")
         #endif
         navigationContainer
+            // Arabic interface (2026-10-24): this tab is translated, all but its articles, which read English
+            // (`AppLanguage.pinsArticlesEnglish`). Nothing is pinned left to right here on purpose: a whole-tab
+            // left-to-right pin (by environment or by the tab controller's trait) drew some Lists mirrored,
+            // letters backwards, and an English locale pin leaked into the translated sheets this tab opens
+            // (Settings, Learn More). English content pins its own text (`leftToRightContent()`).
             #if os(iOS)
             // Islam Settings' Text Size, for the whole tab: every resource and article opens inside
             // this container, so this one modifier sizes them all (see `islamTextSize()`).
@@ -632,7 +721,7 @@ struct IslamView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if #available(iOS 16.0, *), query.isEmpty {
-                        TabMoreMenu(doubleTap: MenuShortcut(settings.islamGridMode ? "Show as List" : "Show as Grid") {
+                        TabMoreMenu(doubleTap: MenuShortcut(settings.islamGridMode ? String(localized: "Show as List") : String(localized: "Show as Grid")) {
                             settings.hapticFeedback()
                             withAnimation { settings.islamGridMode.toggle() }
                         }) { islamMoreMenuItems }
@@ -702,8 +791,9 @@ struct IslamView: View {
             let blob = item.searchBlob
             return terms.allSatisfy { blob.contains($0) }
         }
-        // A resource NAMED for the query leads the ones that carry it as a keyword.
-        return SearchRank.sorted(matched, by: query) { [$0.title, $0.subtitle] }
+        // A resource NAMED for the query leads the ones that carry it as a keyword. The translated names
+        // come after the English ones, so an English query ranks exactly as it always did.
+        return SearchRank.sorted(matched, by: query) { [$0.title, $0.subtitle] + $0.localizedSearchNames }
     }
 
     /// The search's list: the Ask AI row, matching RESOURCES, then the article matches from both
@@ -712,10 +802,10 @@ struct IslamView: View {
     private func searchResultSections(query: String) -> some View {
         let resources = matchingResources(query)
         Group {
-            AskAISearchSection(query: query)
+            AskAISearchSection(query: query, translated: true)
 
             if !resources.isEmpty {
-                Section(header: SectionPillHeader(title: "RESOURCES", count: resources.count, icon: "magnifyingglass")) {
+                Section(header: SectionPillHeader(title: String(localized: "RESOURCES"), count: resources.count, icon: "magnifyingglass")) {
                     ForEach(resources, id: \.self) { item in
                         resourceSearchRow(item, query: query)
                     }
@@ -729,8 +819,17 @@ struct IslamView: View {
                 isSearching: articleSearch.isSearching,
                 showHome: true,
                 openViaHome: true,
+                // The headers and menus are this screen's; the rows under them are the English articles.
+                articlesTitle: String(localized: "ARTICLES"),
+                passagesTitle: String(localized: "IN THE ARTICLES"),
                 hasOtherResults: !resources.isEmpty,
-                scrollLabel: { "Scroll To \($0.home.title)" },
+                scrollLabel: { entry in
+                    switch entry.home {
+                    case .pillars: return String(localized: "Scroll To Pillars & Beliefs")
+                    case .guides: return String(localized: "Scroll To How-To Guides")
+                    case .proving: return String(localized: "Scroll To Proving Islam")
+                    }
+                },
                 onScrollTo: { entry in
                     // The article's own row is inside its resource; the nearest thing on THIS screen is
                     // the resource row, so that is where the list scrolls.
@@ -765,10 +864,10 @@ struct IslamView: View {
             AccentIconChip(systemImage: item.systemImage)
 
             VStack(alignment: .leading, spacing: 1) {
-                HighlightedSnippet(source: item.title, term: query, font: .body,
+                HighlightedSnippet(source: item.displayTitle, term: query, font: .body,
                                    accent: settings.accentColor.color, fg: .primary)
 
-                HighlightedSnippet(source: item.subtitle, term: query, font: .caption,
+                HighlightedSnippet(source: item.displaySubtitle, term: query, font: .caption,
                                    accent: settings.accentColor.color, fg: .secondary)
                     .lineLimit(1)
             }
@@ -785,7 +884,7 @@ struct IslamView: View {
 
         link
             .contextMenu {
-                Text(item.title)
+                Text(item.displayTitle)
                     .foregroundStyle(.secondary)
 
                 Button {
@@ -826,7 +925,7 @@ struct IslamView: View {
         let favorites = favoriteResources
         if !favorites.isEmpty {
             Section(header: SectionPillHeader(
-                title: "FAVORITES",
+                title: String(localized: "FAVORITES"),
                 count: favorites.count,
                 icon: "star.fill",
                 accentTitle: true,
@@ -839,7 +938,7 @@ struct IslamView: View {
         }
 
         ForEach(resourceSections(foldsSimple: true)) { section in
-            Section(header: SectionPillHeader(title: section.id, count: section.items.count, icon: section.systemImage)) {
+            Section(header: SectionPillHeader(title: section.title, count: section.items.count, icon: section.systemImage)) {
                 resourceItems(section.items)
             }
         }
@@ -867,7 +966,7 @@ struct IslamView: View {
                     settings.hapticFeedback()
                     islamPath.append(.moreResources)
                 } label: {
-                    Label("Open More Resources", systemImage: "arrow.right.circle")
+                    Label("Open More Resources", systemImage: "arrow.forward.circle")
                 }
             } label: {
                 resourceBanner(.moreResources)
@@ -878,8 +977,8 @@ struct IslamView: View {
             .listRowSeparator(.hidden)
         } else {
             NavigationLink(value: IslamDestination.moreResources) {
-                toolLabel(IslamDestination.moreResources.title, systemImage: IslamDestination.moreResources.systemImage,
-                          subtitle: IslamDestination.moreResources.subtitle)
+                toolLabel(IslamDestination.moreResources.displayTitle, systemImage: IslamDestination.moreResources.systemImage,
+                          subtitle: IslamDestination.moreResources.displaySubtitle)
             }
             .id(Self.rowID(.moreResources))
         }
@@ -893,7 +992,7 @@ struct IslamView: View {
             ForEach(ResourceGroup.allCases.filter(\.foldsInSimpleMode), id: \.self) { group in
                 let items = group.resources
                 if !items.isEmpty {
-                    Section(header: SectionPillHeader(title: group.title, count: items.count, icon: group.systemImage)) {
+                    Section(header: SectionPillHeader(title: group.displayTitle, count: items.count, icon: group.systemImage)) {
                         resourceItems(items)
                     }
                     // On the rows, not the List: `.listRowBackground` reaches the cells only from row
@@ -918,9 +1017,8 @@ struct IslamView: View {
             // you reach for when they have not answered you). As of 2026-10-04 it has a section of
             // its own at the foot of the resources, so here it is the only thing in `items` and the
             // `tiles.isEmpty` guard below draws the banner with no grid above it. Pulled OUT of
-            // `items` so it never draws twice. Proving Islam and the Tajweed Course are banners too
-            // (2026-09-29): a whole library with a sentence to say, which as a tile would leave a
-            // row of one - they still close their own sections, above the tiles' rows.
+            // `items` so it never draws twice. The Journal and the 99 Names are banners too
+            // (`bannerResources`): each closes its own section, under the tiles' rows.
             let banners = IslamDestination.bannerResources.filter { items.contains($0) }
             let tiles = items.filter { !IslamDestination.bannerResources.contains($0) }
 
@@ -974,7 +1072,7 @@ struct IslamView: View {
         } else {
             ForEach(items, id: \.self) { item in
                 NavigationLink(value: item) {
-                    toolLabel(item.title, systemImage: item.systemImage, subtitle: item.subtitle)
+                    toolLabel(item.displayTitle, systemImage: item.systemImage, subtitle: item.displaySubtitle)
                 }
                 .id(Self.rowID(item))
                 .contextMenu { favoriteToggleButton(item) }
@@ -1000,7 +1098,7 @@ struct IslamView: View {
         .tint(settings.accentColor.color)
     }
 
-    /// A full-width banner in grid mode (Proving Islam, Ask AI): the chip, the title, and the caption
+    /// A full-width banner in grid mode (`bannerResources`): the chip, the title, and the caption
     /// the one-third tile had no room for. Deliberately the same glass and favorite tinting as a tile,
     /// so it reads as the same family of control at a different size.
     @available(iOS 16.0, *)
@@ -1009,11 +1107,11 @@ struct IslamView: View {
             AccentIconChip(systemImage: item.systemImage, size: 32)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(item.title)
+                Text(item.displayTitle)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(.primary)
 
-                Text(item.subtitle)
+                Text(item.displaySubtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
@@ -1040,7 +1138,8 @@ struct IslamView: View {
             AccentIconChip(systemImage: item.systemImage, size: 32)
 
             Text(item.gridTitle)
-                .font(.caption2.weight(.medium))
+                // The caption size, or the one size the sidebar grid fits every title to.
+                .modifier(ResourceTileTitleFont())
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
                 // A third line at the accessibility sizes, where even half a row wraps the longer names.
@@ -1068,7 +1167,7 @@ struct IslamView: View {
         view.gridFavoriteStar(
             isFavorite: settings.isIslamResourceFavorite(item.rawValue),
             accent: settings.accentColor.color,
-            accessibilityName: item.title
+            accessibilityName: item.displayTitle
         ) {
             settings.toggleIslamResourceFavorite(item.rawValue)
         }
@@ -1181,7 +1280,7 @@ struct IslamView: View {
                 Text(step.title)
                     .foregroundColor(.primary)
 
-                Text(step.subtitle)
+                Text(step.subtitle.localizedDigits)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
@@ -1189,7 +1288,8 @@ struct IslamView: View {
             }
         }
         .padding(.vertical, 3)
-        .accessibilityLabel("\(step.title). \(step.subtitle)\(done ? ". Opened" : "")")
+        .accessibilityLabel(done ? String(localized: "\(step.title). \(step.subtitle). Opened")
+                                 : String(localized: "\(step.title). \(step.subtitle)"))
     }
     #endif
 
@@ -1211,7 +1311,7 @@ struct IslamView: View {
         .islamSettingsToolbar()
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                TabMoreMenu(doubleTap: MenuShortcut(settings.islamGridMode ? "Show as List" : "Show as Grid") {
+                TabMoreMenu(doubleTap: MenuShortcut(settings.islamGridMode ? String(localized: "Show as List") : String(localized: "Show as Grid")) {
                     settings.hapticFeedback()
                     withAnimation { settings.islamGridMode.toggle() }
                 }) { islamMoreMenuItems }
@@ -1225,18 +1325,18 @@ struct IslamView: View {
     private var islamMoreMenuItems: some View {
         // The Today pills on the cards hide in Simple (`.cardTodayPills`), so the Daily Hub keeps a door
         // here in both modes. It pushes through the same state the Reminder of the Day card uses.
-        TabMoreMenuItem("Today", systemImage: "sun.horizon.fill") {
+        TabMoreMenuItem(String(localized: "Today"), systemImage: "sun.horizon.fill") {
             settings.hapticFeedback()
             guard islamPath.isEmpty else { return }
             reminderDoor = .hub
         }
         Divider()
-        TabMoreMenuItem(settings.islamGridMode ? "Show as List" : "Show as Grid",
+        TabMoreMenuItem(settings.islamGridMode ? String(localized: "Show as List") : String(localized: "Show as Grid"),
                         systemImage: settings.islamGridMode ? "list.bullet" : "square.grid.2x2") {
             settings.hapticFeedback()
             withAnimation { settings.islamGridMode.toggle() }
         }
-        TabMoreMenuItem(settings.islamGroupResources ? "Show in One Section" : "Group by Subject",
+        TabMoreMenuItem(settings.islamGroupResources ? String(localized: "Show in One Section") : String(localized: "Group by Subject"),
                         systemImage: settings.islamGroupResources ? "rectangle.stack" : "rectangle.3.group") {
             settings.hapticFeedback()
             withAnimation { settings.islamGroupResources.toggle() }
@@ -1338,78 +1438,78 @@ struct IslamView: View {
     #endif
 
     private var resourcesSection: some View {
-        Section(header: SectionIconHeader("ISLAMIC RESOURCES", icon: "square.grid.2x2.fill")) {
-            resourceLink(title: "Arabic Alphabet", systemImage: "textformat.size.ar", placesOwnSettingsGear: true) {
+        Section(header: SectionIconHeader(String(localized: "ISLAMIC RESOURCES"), icon: "square.grid.2x2.fill")) {
+            resourceLink(title: String(localized: "Arabic Alphabet"), systemImage: "textformat.size.ar", placesOwnSettingsGear: true) {
                 ArabicView()
             }
 
-            resourceLink(title: "Tajweed Foundations", systemImage: "waveform") {
+            resourceLink(title: String(localized: "Tajweed Foundations"), systemImage: "waveform") {
                 TajweedFoundationsView()
             }
 
             #if HAS_QURAN
             if TajweedLessonsStore.isBundled {
-                resourceLink(title: "Tajweed Course", systemImage: "graduationcap") {
+                resourceLink(title: String(localized: "Tajweed Course"), systemImage: "graduationcap") {
                     TajweedCourseView()
                 }
             }
             #endif
 
-            resourceLink(title: "Dhikr & Remembrances", systemImage: "book.closed") {
+            resourceLink(title: String(localized: "Dhikr & Remembrances"), systemImage: "book.closed") {
                 AdhkarView()
             }
 
-            resourceLink(title: "Dua & Supplications", systemImage: "text.book.closed") {
+            resourceLink(title: String(localized: "Dua & Supplications"), systemImage: "text.book.closed") {
                 DuaView()
             }
 
-            resourceLink(title: "Tasbih Counter", systemImage: "circles.hexagonpath.fill") {
+            resourceLink(title: String(localized: "Tasbih Counter"), systemImage: "circles.hexagonpath.fill") {
                 TasbihView()
             }
 
             #if os(iOS)
-            resourceLink(title: "Zakah Calculator", systemImage: "percent") {
+            resourceLink(title: String(localized: "Zakah Calculator"), systemImage: "percent") {
                 ZakahCalculatorView()
             }
 
-            resourceLink(title: "Inheritance Calculator", systemImage: "divide.circle", placesOwnSettingsGear: true) {
+            resourceLink(title: String(localized: "Inheritance Calculator"), systemImage: "divide.circle", placesOwnSettingsGear: true) {
                 InheritanceCalculatorView()
             }
             #endif
 
-            resourceLink(title: "99 Names of Allah", systemImage: "signature", placesOwnSettingsGear: true) {
+            resourceLink(title: String(localized: "99 Names of Allah"), systemImage: "signature", placesOwnSettingsGear: true) {
                 NamesView()
             }
 
             #if os(iOS)
-            resourceLink(title: "Hijri Date Converter", systemImage: "calendar") {
+            resourceLink(title: String(localized: "Hijri Date Converter"), systemImage: "calendar") {
                 DateView()
             }
 
-            resourceLink(title: "Masjid Locator", systemImage: "mappin.and.ellipse") {
+            resourceLink(title: String(localized: "Masjid Locator"), systemImage: "mappin.and.ellipse") {
                 PlaceLocatorView(profile: .masjid)
             }
 
-            resourceLink(title: "Halal Food Locator", systemImage: "fork.knife") {
+            resourceLink(title: String(localized: "Halal Food Locator"), systemImage: "fork.knife") {
                 PlaceLocatorView(profile: .halalFood)
             }
             #endif
 
-            resourceLink(title: "Pillars & Beliefs", systemImage: "moon.stars") {
+            resourceLink(title: String(localized: "Pillars & Beliefs"), systemImage: "moon.stars") {
                 PillarsView()
             }
 
-            resourceLink(title: "How-To Guides", systemImage: "list.bullet.rectangle") {
+            resourceLink(title: String(localized: "How-To Guides"), systemImage: "list.bullet.rectangle") {
                 GuidesView()
             }
 
             #if os(iOS)
-            resourceLink(title: "Proving Islam", systemImage: "checkmark.shield") {
+            resourceLink(title: String(localized: "Proving Islam"), systemImage: "checkmark.shield") {
                 ProvingIslamView()
             }
             #endif
 
-            resourceLink(title: "Islamic Wallpapers", systemImage: "photo.on.rectangle") {
+            resourceLink(title: String(localized: "Islamic Wallpapers"), systemImage: "photo.on.rectangle") {
                 WallpaperView()
             }
         }
@@ -1430,13 +1530,13 @@ struct IslamView: View {
 
         let favorites = favoriteResources
         if !favorites.isEmpty {
-            Section(header: SectionIconHeader("FAVORITES", icon: "star.fill", accentTitle: true)) {
+            Section(header: SectionIconHeader(String(localized: "FAVORITES"), icon: "star.fill", accentTitle: true)) {
                 splitResourceItems(favorites)
             }
         }
 
         ForEach(resourceSections(foldsSimple: false)) { section in
-            Section(header: SectionIconHeader(section.id, icon: section.systemImage)) {
+            Section(header: SectionIconHeader(section.title, icon: section.systemImage)) {
                 splitResourceItems(section.items)
             }
         }
@@ -1461,11 +1561,10 @@ struct IslamView: View {
             // section's only item (Favorites).
             VStack(spacing: 8) {
                 if !tiles.isEmpty {
-                    // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
-                    // height on each self-sizing pass, which iOS 26 traps on (the sidebar's narrow rows).
-                    // Two across, whatever the text size: the sidebar's 320 pt made three 86 pt tiles that
-                    // shrank "Dhikr & Remembrances" to a different size from its neighbours (2026-10-12).
-                    SummaryTileGrid(columns: 2, spacing: 8) {
+                    // Three across, like the iPhone (Abu, 2026-10-24), with every title at one size
+                    // (`SidebarResourceGrid`): two across, the 2026-10-12 answer to one title shrinking
+                    // alone, made each tile oversized and the sidebar twice as long to scroll.
+                    SidebarResourceGrid(titles: IslamDestination.tileTitles) {
                         ForEach(tiles, id: \.self) { item in
                             resourceGridStar(item, on: GridTileMenu {
                                 selectSplitResource(item)
@@ -1517,7 +1616,7 @@ struct IslamView: View {
             // Re-tapping the selected row must still LAND - see `selectSplitResource`.
             selectSplitResource(value)
         } label: {
-            toolLabel(value.title, systemImage: value.systemImage)
+            toolLabel(value.displayTitle, systemImage: value.systemImage)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
@@ -1598,6 +1697,156 @@ struct IslamView: View {
     }
 }
 
+#if os(iOS)
+/// The iPad and Mac sidebar's resource tiles: three across, like the iPhone (Abu, 2026-10-24: "for
+/// Islamic resources on ipad/mac make it 3 per row instead of 2 like for mobile").
+///
+/// The sidebar is narrower than a phone, about 86 pt a tile, and at the caption size the longest line
+/// of any tile ("Remembrances", 81 pt in SF Rounded) does not fit one. `minimumScaleFactor` then shrank
+/// that ONE title below its neighbours, which is why the grid went to two across on 2026-10-12. Here
+/// every title takes the same size instead: the largest at which the longest line of every tile fits a
+/// third of the width actually there. If that would cut the caption by more than a quarter (the
+/// largest text sizes), the grid goes two across instead, as the iPhone does at the accessibility sizes.
+///
+/// The width is the grid's own frame, which the List row sets. The titles only change the grid's
+/// HEIGHT, so the measurement cannot feed itself (the GeometryReader loop that froze the letter page,
+/// 2026-09-27, measured a view whose width it then set).
+@available(iOS 16.0, *)
+private struct SidebarResourceGrid<Content: View>: View {
+    /// Every tile title the sidebar can show, lines split at "\n".
+    let titles: [String]
+    @ViewBuilder let content: Content
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// `.caption2` at the sidebar's own text size (it keeps the reader's size, `splitSidebarColumn`).
+    @ScaledMetric(relativeTo: .caption2) private var captionSize: CGFloat = 11
+    @State private var width: CGFloat = 0
+
+    private typealias Metrics = SidebarResourceGridMetrics
+
+    init(titles: [String], @ViewBuilder content: () -> Content) {
+        self.titles = titles
+        self.content = content()
+    }
+
+    /// The text room in one tile, `columns` across.
+    private func room(columns: Int) -> CGFloat {
+        let column = (width - Metrics.spacing * CGFloat(columns - 1)) / CGFloat(columns)
+        return column - Metrics.tilePadding * 2
+    }
+
+    /// The scale every title needs to fit `columns` across: 1 when they already fit.
+    private func scale(columns: Int) -> CGFloat {
+        guard width > 0 else { return 1 }
+        let widest = Metrics.widestLine(of: titles, size: captionSize)
+        guard widest > 0 else { return 1 }
+        return min(1, room(columns: columns) / widest)
+    }
+
+    private var columns: Int {
+        if dynamicTypeSize.isAccessibilitySize { return 2 }
+        return scale(columns: 3) >= Metrics.smallestScale ? 3 : 2
+    }
+
+    var body: some View {
+        let columns = columns
+        SummaryTileGrid(columns: columns, spacing: Metrics.spacing) { content }
+            .environment(\.resourceTileTitleSize, captionSize * scale(columns: columns))
+            .modifier(SidebarGridWidthReader { if abs($0 - width) > 0.5 { width = $0 } })
+    }
+}
+
+/// `SidebarResourceGrid`'s constants and its one measurement (a generic type cannot hold them).
+private enum SidebarResourceGridMetrics {
+    static let spacing: CGFloat = 8
+    /// `resourceGridTile`'s horizontal padding, each side.
+    static let tilePadding: CGFloat = 4
+    /// The most the shared size may give up before two columns read better than three.
+    static let smallestScale: CGFloat = 0.75
+
+    /// The widest line of `titles` in the tile's face (`ResourceTileTitleFont.face`) at `size`, with a
+    /// point to spare for the rounding of the glyph advances.
+    static func widestLine(of titles: [String], size: CGFloat) -> CGFloat {
+        let key = WidthKey(size: size, count: titles.count)
+        if let cached = widthCache[key] { return cached }
+        let font = ResourceTileTitleFont.face(size: size)
+        let widest = titles
+            .flatMap { $0.split(separator: "\n") }
+            .map { (String($0) as NSString).size(withAttributes: [.font: font]).width }
+            .max() ?? 0
+        let out = widest > 0 ? widest + 1 : 0
+        widthCache[key] = out
+        return out
+    }
+
+    private struct WidthKey: Hashable {
+        let size: CGFloat
+        let count: Int
+    }
+
+    /// Measured once per text size; the titles are constants. Read and written on the main thread
+    /// (view bodies) only.
+    nonisolated(unsafe) private static var widthCache: [WidthKey: CGFloat] = [:]
+}
+
+/// Reports the grid's width, growths and shrinks alike: `onGeometryChange` where it exists (iOS 18),
+/// a `GeometryReader` preference below it.
+@available(iOS 16.0, *)
+private struct SidebarGridWidthReader: ViewModifier {
+    let onChange: (CGFloat) -> Void
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.onGeometryChange(for: CGFloat.self) { $0.size.width } action: { onChange($0) }
+        } else {
+            content
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear.preference(key: SidebarGridWidthKey.self, value: proxy.size.width)
+                    }
+                )
+                .onPreferenceChange(SidebarGridWidthKey.self) { onChange($0) }
+        }
+    }
+}
+
+private struct SidebarGridWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+/// The size `SidebarResourceGrid` fits its titles to; nil (the iPhone grid) keeps the caption style.
+private struct ResourceTileTitleSizeKey: EnvironmentKey {
+    static let defaultValue: CGFloat? = nil
+}
+
+private extension EnvironmentValues {
+    var resourceTileTitleSize: CGFloat? {
+        get { self[ResourceTileTitleSizeKey.self] }
+        set { self[ResourceTileTitleSizeKey.self] = newValue }
+    }
+}
+
+/// A resource tile's title font: the caption style, or the sidebar grid's one shared size. A modifier
+/// so it reads the environment of the tile it is in, not of `IslamView`, which sits above the sidebar.
+private struct ResourceTileTitleFont: ViewModifier {
+    @Environment(\.resourceTileTitleSize) private var size
+
+    /// The face the sidebar grid both measures and draws in: SF Rounded medium, the face every
+    /// system font in the app resolves to. Built as a UIFont so the two can never disagree.
+    static func face(size: CGFloat) -> UIFont {
+        let plain = UIFont.systemFont(ofSize: size, weight: .medium)
+        return plain.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: size) } ?? plain
+    }
+
+    func body(content: Content) -> some View {
+        content.font(size.map { Font(Self.face(size: $0) as CTFont) } ?? .caption2.weight(.medium))
+    }
+}
+#endif
+
 /// The quote card sits between two first-accent sections (resources above, apps below), so it is the screen's
 /// second-accent section - every tint in here reads from `accent2`.
 ///
@@ -1609,17 +1858,19 @@ struct ProphetQuote: View {
     private let settings = Settings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @Environment(\.appearance) private var appearance
+    /// The sweep runs leading to trailing: right to left in Arabic, where `offset(x:)` does not mirror.
+    @Environment(\.layoutDirection) private var layoutDirection
     /// The sweep's horizontal position across the card, in points from its centre. Parked off the leading
     /// edge until the card appears, then animated once past the trailing edge.
     @State private var sweepOffset: CGFloat = -600
     @State private var rotateRing = false
 
     private let quoteText = "“O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red man over a black man, nor of a black man over a red man, except by taqwa (piety, righteousness, and God-consciousness).”"
-    private let attributionText1 = "Farewell Pilgrimage\nMusnad Ahmad 23489 (sahih, al-Albani)"
-    private let attributionText2 = "Mina, the middle day of Tashriq\n12 Dhul-Hijjah 10 AH, March 632 CE"
+    private let attributionText1 = String(localized: "Farewell Pilgrimage\nMusnad Ahmad 23489 (sahih, al-Albani)")
+    private let attributionText2 = String(localized: "Mina, the middle day of Tashriq\n12 Dhul-Hijjah 10 AH, March 632 CE")
 
     var body: some View {
-        Section(header: SectionIconHeader("PROPHET MUHAMMAD ﷺ QUOTE", icon: "quote.opening")) {
+        Section(header: SectionIconHeader(String(localized: "PROPHET MUHAMMAD ﷺ QUOTE"), icon: "quote.opening")) {
             ZStack {
                 if appearance.liquidGlass {
                     quoteCardBackground
@@ -1677,7 +1928,7 @@ struct ProphetQuote: View {
         )
         .frame(width: 140)
         .rotationEffect(.degrees(18))
-        .offset(x: sweepOffset)
+        .offset(x: layoutDirection == .rightToLeft ? -sweepOffset : sweepOffset)
         .blendMode(.plusLighter)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
@@ -1770,6 +2021,8 @@ struct ProphetQuote: View {
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.horizontal, 6)
+            // The hadith's English: its closing quote and parenthesis stay at the end of the line in Arabic.
+            .leftToRightContent()
     }
 
     /// A thin rule fading in from both edges to a small diamond - the classical divider between a
@@ -1800,11 +2053,11 @@ struct ProphetQuote: View {
 
     private var attribution: some View {
         VStack(spacing: 10) {
-            Text(attributionText1)
+            Text(attributionText1.localizedDigits)
                 .foregroundColor(.primary)
                 .font(.caption)
 
-            Text(attributionText2)
+            Text(attributionText2.localizedDigits)
                 .foregroundColor(.secondary)
                 .font(.caption2)
         }
@@ -1818,6 +2071,8 @@ struct ProphetQuote: View {
 struct AlIslamAppsSection: View {
     private let settings = Settings.shared
     @ObservedObject private var systemSettings = SystemSettings.shared
+    /// The cards fan out from the middle: the outer cards' tilts swap sides with the row in Arabic.
+    @Environment(\.layoutDirection) private var layoutDirection
     #if os(iOS)
     @State private var showLearnMoreSheet = false
     #endif
@@ -1832,7 +2087,7 @@ struct AlIslamAppsSection: View {
     #endif
 
     var body: some View {
-        Section(header: SectionIconHeader("AL-ISLAMIC APPS", icon: "apps.iphone")) {
+        Section(header: SectionIconHeader(String(localized: "AL-ISLAMIC APPS"), icon: "apps.iphone")) {
             ZStack {
                 cardBackground
 
@@ -1920,7 +2175,7 @@ struct AlIslamAppsSection: View {
                     .scaleEffect(popLeft ? 1 : 0.2)
                     .offset(y: popLeft ? 0 : 80)
                     .opacity(popLeft ? 1 : 0.35)
-                    .rotationEffect(.degrees(-6))
+                    .rotationEffect(.degrees(layoutDirection == .rightToLeft ? 6 : -6))
             }
 
             if let url = URL(string: "https://apps.apple.com/us/app/al-islam-islamic-pillars/id6449729655?platform=iphone") {
@@ -1937,7 +2192,7 @@ struct AlIslamAppsSection: View {
                     .scaleEffect(popRight ? 1 : 0.2)
                     .offset(y: popRight ? 0 : 80)
                     .opacity(popRight ? 1 : 0.35)
-                    .rotationEffect(.degrees(6))
+                    .rotationEffect(.degrees(layoutDirection == .rightToLeft ? -6 : 6))
             }
         }
         .frame(maxWidth: .infinity, alignment: .center)

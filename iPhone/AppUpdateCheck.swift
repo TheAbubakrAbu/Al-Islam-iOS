@@ -223,15 +223,15 @@ final class AppUpdateChecker {
         // question does not have and which drop the Cancel button. iPhone keeps the sheet that slides
         // up from the bottom, the app's confirmation-dialog shape.
         let alert = UIAlertController(
-            title: "Update Available",
-            message: "\(AppIdentifiers.appName) \(listing.version) is on the App Store, and you have \(installed). Updating brings the latest fixes and features.",
+            title: String(localized: "Update Available"),
+            message: String(localized: "\(AppIdentifiers.displayName) \(listing.version.localizedDigits) is on the App Store, and you have \(installed.localizedDigits). Updating brings the latest fixes and features."),
             preferredStyle: UIDevice.current.userInterfaceIdiom == .phone ? .actionSheet : .alert
         )
-        alert.addAction(UIAlertAction(title: "Update", style: .default) { _ in
+        alert.addAction(UIAlertAction(title: String(localized: "Update"), style: .default) { _ in
             settings.hapticFeedback()
             UIApplication.shared.open(listing.storeURL ?? AppIdentifiers.appStoreURL)
         })
-        alert.addAction(UIAlertAction(title: "Later", style: .cancel) { _ in
+        alert.addAction(UIAlertAction(title: String(localized: "Later"), style: .cancel) { _ in
             settings.hapticFeedback()
         })
         alert.view.tintColor = UIColor(settings.accentColor.color)

@@ -12,11 +12,11 @@ enum QuranWidgetKind {
 
     var title: String {
         switch self {
-        case .lastReadAyah: return "Last Read Ayah"
-        case .lastListenedSurah: return "Last Listened Surah"
-        case .lastListenedAyah: return "Last Listened Ayah"
-        case .ayahOfTheDay: return "Ayah of the Day"
-        case .chosenAyah: return "Chosen Ayah"
+        case .lastReadAyah: return String(localized: "Last Read Ayah")
+        case .lastListenedSurah: return String(localized: "Last Listened Surah")
+        case .lastListenedAyah: return String(localized: "Last Listened Ayah")
+        case .ayahOfTheDay: return String(localized: "Ayah of the Day")
+        case .chosenAyah: return String(localized: "Chosen Ayah")
         }
     }
 
@@ -106,9 +106,9 @@ struct QuranWidgetProvider: TimelineProvider {
                 kind: kind,
                 title: kind.title,
                 icon: kind.icon,
-                primaryText: "Al-Fatihah",
+                primaryText: AppLanguage.isArabic ? "الفاتحة" : "Al-Fatihah",
                 secondaryText: "Mishary Alafasy",
-                tertiaryText: "00:42 / 01:30",
+                tertiaryText: "00:42 / 01:30".localizedDigits,
                 accentColor: accent,
                 listenedSeconds: 42,
                 surahSeconds: 90,
@@ -121,7 +121,7 @@ struct QuranWidgetProvider: TimelineProvider {
                 title: kind.title,
                 icon: kind.icon,
                 primaryText: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
-                secondaryText: "Surah 1:1 • Al-Fatihah",
+                secondaryText: String(localized: "Surah 1:1 • Al-Fatihah").localizedDigits,
                 tertiaryText: "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
                 accentColor: accent
             )
@@ -193,7 +193,8 @@ struct QuranWidgetProvider: TimelineProvider {
             icon: kind.icon,
             primaryText: card.name,
             secondaryText: card.reciter,
-            tertiaryText: "\(formatDurationMMSS(card.current)) / \(formatDurationMMSS(card.full))",
+            // Display only (the entry is never stored or compared): the hand-built clock in the locale's digits.
+            tertiaryText: "\(formatDurationMMSS(card.current)) / \(formatDurationMMSS(card.full))".localizedDigits,
             accentColor: accent,
             listenedSeconds: card.current,
             surahSeconds: card.full,
@@ -288,14 +289,17 @@ struct QuranWidgetEntryView: View {
 
     private var inlineBody: some View {
         let translation = (entry.tertiaryText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return Text(translation.isEmpty ? entry.title : "\(entry.title) · \(translation)")
+        // The title's reference ("البقرة 2:255", built by hand) in the locale's digits; the English
+        // translation beside it is content and keeps its own.
+        let title = entry.title.localizedDigits
+        return Text(translation.isEmpty ? title : "\(title) · \(translation)")
     }
 
     private var header: some View {
         HStack(spacing: 6) {
             Image(systemName: entry.icon)
                 .font(.caption.weight(.semibold))
-            Text(entry.title)
+            Text(entry.title.localizedDigits)
                 .font(isAccessoryRectangularFamily ? .caption2.weight(.semibold) : .caption.weight(.semibold))
             Spacer(minLength: 0)
         }
@@ -313,16 +317,27 @@ struct QuranWidgetEntryView: View {
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                .environment(\.layoutDirection, .leftToRight)
                 .lineLimit(lineLimit)
                 .minimumScaleFactor(0.5)
         } else {
+            // With no Arabic to show, the Chosen Ayah widget falls back to the English translation,
+            // which keeps the left edge in the Arabic interface; its "open the app" notice and a
+            // surah's name follow the interface.
             Text(entry.primaryText)
                 .font(.headline)
                 .foregroundColor(.primary)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .leftToRightContent(entry.kind == .chosenAyah && !entry.primaryText.isMostlyArabicScript)
         }
     }
+
+    /// The tertiary line is the ayah's English translation on every kind but Last Listened Surah,
+    /// whose line is the playback time.
+    private var tertiaryIsTranslation: Bool { entry.kind != .lastListenedSurah }
 
     /// Applies tajweed color spans to the Arabic; un-colored characters keep the view's primary color.
     private static func arabicAttributed(_ text: String, runs: [QuranWidgetSnapshot.ColorRun]?) -> AttributedString {
@@ -350,6 +365,10 @@ struct QuranWidgetEntryView: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
+                    // The translation (no note, no reference above it) reads left to right in the
+                    // Arabic interface.
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent(entry.secondaryText == nil && tertiaryIsTranslation)
             }
         }
     }
@@ -371,6 +390,8 @@ struct QuranWidgetEntryView: View {
                     .font(.caption2)
                     .foregroundColor(Color(.tertiaryLabel))
                     .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent(tertiaryIsTranslation)
             }
         }
     }

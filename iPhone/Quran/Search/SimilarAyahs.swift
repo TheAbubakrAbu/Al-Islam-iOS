@@ -143,11 +143,11 @@ enum SimilarAyahFilter: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .all: return "All"
-        case .verified: return "Verified"
-        case .phrase: return "Phrase"
-        case .root: return "Roots"
-        case .theme: return "Themes"
+        case .all: return String(localized: "All")
+        case .verified: return String(localized: "Verified")
+        case .phrase: return String(localized: "Phrase")
+        case .root: return String(localized: "Roots")
+        case .theme: return String(localized: "Themes")
         }
     }
 
@@ -172,10 +172,10 @@ enum SimilarAyahFilter: String, CaseIterable, Identifiable {
 
     /// "Root ktb" -> "Root ك ت ب": the shared root spelled out in Arabic, letters spaced.
     static func displayLabel(_ label: String) -> String {
-        guard label.hasPrefix("Root ") else { return label }
+        guard label.hasPrefix("Root ") else { return label.localizedDisplay }
         let root = label.dropFirst(5).filter { $0 != " " && $0 != "-" }
         let letters = root.compactMap { buckwalter[$0] }
-        return letters.isEmpty ? label : "Root " + letters.joined(separator: " ")
+        return letters.isEmpty ? label : String(localized: "Root \(letters.joined(separator: " "))")
     }
 }
 
@@ -191,7 +191,7 @@ struct SimilarAyahsSheet: View {
     enum Tab: String, CaseIterable, Identifiable {
         case similar, phrases
         var id: String { rawValue }
-        var title: String { self == .similar ? "Similar Ayahs" : "Repeated Phrases" }
+        var title: String { self == .similar ? String(localized: "Similar Ayahs") : String(localized: "Repeated Phrases") }
     }
 
     let surahNumber: Int
@@ -215,8 +215,8 @@ struct SimilarAyahsSheet: View {
     @State private var filter: SimilarAyahFilter = .all
 
     private var sheetTitle: String {
-        let name = quranData.surah(surahNumber)?.nameTransliteration ?? "Surah \(surahNumber)"
-        return tab == .similar ? "Similar to \(name) \(surahNumber):\(ayahNumber)" : "Phrases in \(name) \(surahNumber):\(ayahNumber)"
+        let name = quranData.surah(surahNumber)?.displayName ?? String(localized: "Surah \(surahNumber)")
+        return tab == .similar ? String(localized: "Similar to \(name) \(surahNumber):\(ayahNumber)") : String(localized: "Phrases in \(name) \(surahNumber):\(ayahNumber)")
     }
 
     var body: some View {
@@ -402,7 +402,7 @@ struct SimilarAyahsSheet: View {
            let ayah = surah.ayahs.first(where: { $0.id == match.ayah }) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
-                    Text("\(surah.nameTransliteration) \(match.surah):\(match.ayah)")
+                    Text("\(surah.displayName) \(match.surah):\(match.ayah)")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundColor(settings.accentColor.color)
@@ -454,15 +454,19 @@ struct SimilarAyahsSheet: View {
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .trailing)
+                    // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                    .environment(\.layoutDirection, .leftToRight)
 
                 if settings.showEnglishSaheeh || !settings.showEnglishMustafa {
                     Text(ayah.textEnglishSaheeh)
                         .font(.system(size: CGFloat(settings.englishFontSize)))
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent()
                 } else {
                     Text(ayah.textEnglishMustafa)
                         .font(.system(size: CGFloat(settings.englishFontSize)))
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent()
                 }
             }
             .padding(.vertical, 6)

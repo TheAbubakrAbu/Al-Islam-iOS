@@ -60,6 +60,7 @@ struct PillarsView: View {
                 }
                 .themedListRowBackground()
             }
+            .englishArticle()
             .applyConditionalListStyle()
             .autoOpenArticle(openArticle, home: .pillars)
             // The hero's columns are Buttons in ONE List row writing this, with one destination on
@@ -91,6 +92,7 @@ struct PillarsView: View {
             IslamArticleIndexSections(groups: IslamArticleCatalog.pillarsGroups, unfolded: $unfoldedGroups)
                 .themedListRowBackground()
         }
+        .englishArticle()
         .applyConditionalListStyle()
         .navigationTitle("Pillars & Beliefs")
         #endif
@@ -452,6 +454,9 @@ private struct ScriptureQuoteBody: View, Equatable {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(cardBackground)
         .padding(.vertical, 3)
+        // An English rendering (scripture stays English) reads left to right on a translated page too,
+        // card and all, the Arabic original still on the right; inside an article it already does.
+        .leftToRightContent(!parts.quote.isEmpty && !parts.quote.isMostlyArabicScript)
         #if os(iOS)
         // Kept as `Text`s rather than a `SelectableProse`: the context menu below already covers
         // "copy the whole quote, citation included", which is what a quote is normally wanted for,
@@ -460,7 +465,7 @@ private struct ScriptureQuoteBody: View, Equatable {
         quote
             .textSelection(.enabled)
             .contextMenu {
-                Text("Copy")
+                Text(verbatim: AppLanguage.article("Copy"))
                     .foregroundStyle(.secondary)
 
                 Button {

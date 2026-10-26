@@ -326,10 +326,10 @@ struct TasbihStatsStrip: View {
     var body: some View {
         let streak = counts.currentStreak
         HStack(spacing: 8) {
-            stat(value: counts.todayCount, label: "Today", systemImage: "sun.max.fill")
-            stat(value: streak, label: streak == 1 ? "Day streak" : "Day streak", systemImage: "flame.fill", emphasized: streak > 0)
-            stat(value: counts.bestStreak, label: "Best", systemImage: "trophy.fill")
-            stat(value: counts.lifetimeCount, label: "Lifetime", systemImage: "infinity")
+            stat(value: counts.todayCount, label: String(localized: "Today"), systemImage: "sun.max.fill")
+            stat(value: streak, label: streak == 1 ? String(localized: "Day streak") : String(localized: "Day streak"), systemImage: "flame.fill", emphasized: streak > 0)
+            stat(value: counts.bestStreak, label: String(localized: "Best"), systemImage: "trophy.fill")
+            stat(value: counts.lifetimeCount, label: String(localized: "Lifetime"), systemImage: "infinity")
         }
         .padding(.vertical, 2)
     }
@@ -392,11 +392,11 @@ struct TasbihView: View {
             Group {
                 #if os(iOS)
                 ResourceHeroSection(ResourceHero(
-                    eyebrow: "COUNT YOUR DHIKR",
+                    eyebrow: String(localized: "COUNT YOUR DHIKR"),
                     systemImage: "circles.hexagonpath.fill",
-                    headline: "O you who have believed, remember Allah with much remembrance.",
-                    source: "Quran 33:41",
-                    message: "Choose a remembrance below and count each one you say on the card at the bottom of the screen, or name any other dhikr of your own. Your lifetime total and your day streak are kept for you."
+                    headline: String(localized: "O you who have believed, remember Allah with much remembrance."),
+                    source: String(localized: "Quran 33:41"),
+                    message: String(localized: "Choose a remembrance below and count each one you say on the card at the bottom of the screen, or name any other dhikr of your own. Your lifetime total and your day streak are kept for you.")
                 ))
                 #endif
                 statsSection
@@ -408,7 +408,7 @@ struct TasbihView: View {
 
                 // A counter counts; this says what is being counted and why (Abu, 2026-09-19).
                 #if os(iOS)
-                AboutSignsSection(heading: "About Dhikr",
+                AboutSignsSection(heading: String(localized: "About Dhikr"),
                                   systemImage: "circles.hexagonpath",
                                   doors: [.dhikrVirtue, .tawhid, .makeDua],
                                   openDoor: $aboutDoor)
@@ -605,6 +605,7 @@ struct TasbihView: View {
 /// card - TasbihView itself no longer owns the count and its List is skipped entirely.
 struct ActiveTasbihCard: View {
     private let settings = Settings.shared
+    @Environment(\.layoutDirection) private var layoutDirection
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @ObservedObject private var islamSettings = IslamSettings.shared
     @ObservedObject private var quranDisplay = QuranDisplay.shared
@@ -636,7 +637,7 @@ struct ActiveTasbihCard: View {
                 // free-count LABEL the user typed is their own text, not Arabic, so it stays in the UI face.
                 // `usesCustomArabicFace` is false when the reader picked the Basic font, in which case the
                 // rounded system face is correct and the design opt-out must not fire.
-                Text.islamArabic(selectedDhikr?.arabicText ?? (freeLabel.isEmpty ? "Other Dhikr" : freeLabel),
+                Text.islamArabic(selectedDhikr?.arabicText ?? (freeLabel.isEmpty ? String(localized: "Other Dhikr") : freeLabel),
                                  highlightAllah: settings.highlightAllahNamesIslam)
                     .font(
                         selectedDhikr != nil && usesCustomArabicFace
@@ -647,11 +648,12 @@ struct ActiveTasbihCard: View {
                     .foregroundColor(settings.accentColor.color)
                     // Trailing, not centered: a wrapped Arabic line must rag on the left like Arabic
                     // prose (a single line still sits visually centered - the text hugs its own width).
-                    .multilineTextAlignment(.trailing)
+                    // Right to left, that edge is the leading one.
+                    .multilineTextAlignment(layoutDirection == .rightToLeft ? .leading : .trailing)
                     .lineLimit(2)
                     .minimumScaleFactor(0.6)
 
-                Text(selectedDhikr?.transliteration ?? "Tap anywhere to count")
+                Text(selectedDhikr?.transliteration ?? String(localized: "Tap anywhere to count"))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -678,7 +680,7 @@ struct ActiveTasbihCard: View {
                         .foregroundStyle(.secondary)
 
                     if laps > 0 {
-                        Text(laps == 1 ? "1 round" : "\(laps) rounds")
+                        Text(laps == 1 ? String(localized: "1 round") : String(localized: "\(laps) rounds"))
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(settings.accentColor.color)
                             .padding(.top, 2)
@@ -793,6 +795,7 @@ struct CounterView: View {
 
 struct TasbihRow: View {
     private let settings = Settings.shared
+    @Environment(\.layoutDirection) private var layoutDirection
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @ObservedObject private var islamSettings = IslamSettings.shared
     @ObservedObject private var quranDisplay = QuranDisplay.shared
@@ -854,16 +857,19 @@ struct TasbihRow: View {
                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                 .foregroundColor(settings.accentColor.color)
                 // Wrapped Arabic rags on the left like Arabic prose should - never one clipped line.
-                .multilineTextAlignment(.trailing)
+                // Right to left, that edge is the leading one.
+                .multilineTextAlignment(layoutDirection == .rightToLeft ? .leading : .trailing)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(tasbih.transliteration)
                 .font(.subheadline)
                 .foregroundColor(.primary)
+                .leftToRightContent()
 
             Text(tasbih.translation)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+                .leftToRightContent()
         }
     }
 

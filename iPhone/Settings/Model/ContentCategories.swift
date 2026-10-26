@@ -31,10 +31,10 @@ struct ContentCategory: Identifiable {
         let count: Int
         let singular: String
         let plural: String
-
         /// "212 bookmarks", "1 journal entry". Zero reads as "None yet" on a page and is left out of
-        /// a summary line.
-        var phrase: String { "\(Self.formatted(count)) \(count == 1 ? singular : plural)" }
+        /// a summary line. One whole phrase per category from the catalog, never a number glued to a
+        /// noun: Arabic agrees the noun with the count (one, two, three to ten, eleven and up).
+        let phrase: String
 
         static func formatted(_ count: Int) -> String {
             NumberFormatter.localizedString(from: NSNumber(value: count), number: .decimal)
@@ -45,13 +45,13 @@ struct ContentCategory: Identifiable {
 
     static let all: [ContentCategory] = [
         ContentCategory(
-            id: "bookmarks", title: "Bookmarks", systemImage: "bookmark.fill",
+            id: "bookmarks", title: String(localized: "Bookmarks"), systemImage: "bookmark.fill",
             keys: ["bookmarkedAyahsData", "hadithBookmarks", "savedSajdahAyahIDsData", "savedBrokenLetterAyahIDsData"],
             files: [], summaryRank: 1,
             measure: { $0.counted("bookmarkedAyahsData", "hadithBookmarks", "savedSajdahAyahIDsData", "savedBrokenLetterAyahIDsData")
-                .measure("bookmark", "bookmarks") }),
+                .measure(String(localized: "bookmark"), String(localized: "bookmarks")) { $0 == 1 ? String(localized: "1 bookmark") : String(localized: "\($0) bookmarks") } }),
         ContentCategory(
-            id: "favorites", title: "Favorites", systemImage: "star.fill",
+            id: "favorites", title: String(localized: "Favorites"), systemImage: "star.fill",
             keys: ["favoriteSurahsData", "favoriteReciterIDsData", "favoriteQiraahTagsData", "favoriteEnglishTranslationIDsData",
                    "favoriteLetterData", "favoriteNameNumbersData", "favoriteIslamResources",
                    "hadithFavoriteBooks", "hadithFavoriteChapters"],
@@ -59,14 +59,14 @@ struct ContentCategory: Identifiable {
             measure: { $0.counted("favoriteSurahsData", "favoriteReciterIDsData", "favoriteQiraahTagsData", "favoriteEnglishTranslationIDsData",
                                   "favoriteLetterData", "favoriteNameNumbersData", "favoriteIslamResources",
                                   "hadithFavoriteBooks", "hadithFavoriteChapters")
-                .measure("favorite", "favorites") }),
+                .measure(String(localized: "favorite"), String(localized: "favorites")) { $0 == 1 ? String(localized: "1 favorite") : String(localized: "\($0) favorites") } }),
         ContentCategory(
-            id: "khatm", title: "Khatm and Reading Plan", systemImage: "checkmark.circle.fill",
+            id: "khatm", title: String(localized: "Khatm and Reading Plan"), systemImage: "checkmark.circle.fill",
             keys: ["khatmCompletedAyahsData", "quranPlanData", "quranRevisionPlanData", "quranRevisionRevisedData"],
             files: [], summaryRank: 3,
-            measure: { $0.counted("khatmCompletedAyahsData").measure("khatm ayah", "khatm ayahs") }),
+            measure: { $0.counted("khatmCompletedAyahsData").measure(String(localized: "khatm ayah"), String(localized: "khatm ayahs")) { $0 == 1 ? String(localized: "1 khatm ayah") : String(localized: "\($0) khatm ayahs") } }),
         ContentCategory(
-            id: "positions", title: "Reading and Listening", systemImage: "book.fill",
+            id: "positions", title: String(localized: "Reading and Listening"), systemImage: "book.fill",
             keys: ["lastReadSurah", "lastReadAyah", "lastReadTimestamp", "lastListenedAyahData", "lastListenedSurahData",
                    "quranReadingHistoryData", "quranListeningHistoryData", "quranAyahListeningHistoryData",
                    "customRangeHistoryData", "quranSearchHistoryData", "surahOpenCountsData", "surahPlayCountsData",
@@ -75,61 +75,65 @@ struct ContentCategory: Identifiable {
             measure: { snapshot in
                 let history = snapshot.counted("quranReadingHistoryData", "quranListeningHistoryData", "quranAyahListeningHistoryData",
                                                "customRangeHistoryData", "hadithViewedLog")
-                if history > 0 { return history.measure("history entry", "history entries") }
+                if history > 0 { return history.measure(String(localized: "history entry"), String(localized: "history entries")) { $0 == 1 ? String(localized: "1 history entry") : String(localized: "\($0) history entries") } }
                 // A position alone, on a device that has not built a history yet.
                 let positions = [snapshot.defaults["lastReadSurah"], snapshot.defaults["lastListenedSurahData"], snapshot.defaults["hadithLastReadByBook"]]
                     .filter { $0 != nil }.count
-                return positions.measure("saved position", "saved positions")
+                return positions.measure(String(localized: "saved position"), String(localized: "saved positions")) { $0 == 1 ? String(localized: "1 saved position") : String(localized: "\($0) saved positions") }
             }),
         ContentCategory(
-            id: "themes", title: "Highlighted Themes", systemImage: "highlighter",
+            id: "themes", title: String(localized: "Highlighted Themes"), systemImage: "highlighter",
             keys: ["themeHighlightsLit", "themeHighlightsAllSections", "themeHighlightsSections"],
             files: [], summaryRank: nil,
-            measure: { $0.counted("themeHighlightsLit", "themeHighlightsSections").measure("highlight", "highlights") }),
+            measure: { $0.counted("themeHighlightsLit", "themeHighlightsSections").measure(String(localized: "highlight"), String(localized: "highlights")) { $0 == 1 ? String(localized: "1 highlight") : String(localized: "\($0) highlights") } }),
         ContentCategory(
-            id: "tracker", title: "Prayer Tracker", systemImage: "calendar",
+            id: "tracker", title: String(localized: "Prayer Tracker"), systemImage: "calendar",
             keys: ["prayerTrackerData", "prayerTrackerExemptDaysData", "mensesPauseActive", "mensesPauseStartStamp"],
             files: [], summaryRank: 2,
-            measure: { $0.counted("prayerTrackerData").measure("prayer day", "prayer days") }),
+            measure: { $0.counted("prayerTrackerData").measure(String(localized: "prayer day"), String(localized: "prayer days")) { $0 == 1 ? String(localized: "1 prayer day") : String(localized: "\($0) prayer days") } }),
         ContentCategory(
-            id: "tasbih", title: "Tasbih", systemImage: "circle.grid.3x3.fill",
+            id: "tasbih", title: String(localized: "Tasbih"), systemImage: "circle.grid.3x3.fill",
             keys: ["tasbihFreeCount", "tasbihPresetCounts", "tasbihFreeLabel", "tasbihLifetimeCount", "tasbihCountsByDay"],
             files: [], summaryRank: 5,
-            measure: { $0.counted("tasbihLifetimeCount").measure("dhikr", "dhikr") }),
+            measure: { $0.counted("tasbihLifetimeCount").measure(String(localized: "dhikr"), String(localized: "dhikr")) { $0 == 1 ? String(localized: "1 dhikr") : String(localized: "\($0) dhikr") } }),
         ContentCategory(
-            id: "journal", title: "Journal", systemImage: "square.and.pencil",
+            id: "journal", title: String(localized: "Journal"), systemImage: "square.and.pencil",
             keys: [], files: ["journal.json"], summaryRank: 4,
-            measure: { $0.countedFiles("journal.json").measure("journal entry", "journal entries") }),
+            measure: { $0.countedFiles("journal.json").measure(String(localized: "journal entry"), String(localized: "journal entries")) { $0 == 1 ? String(localized: "1 journal entry") : String(localized: "\($0) journal entries") } }),
         ContentCategory(
-            id: "reflections", title: "Saved Reflections", systemImage: "text.quote",
+            id: "reflections", title: String(localized: "Saved Reflections"), systemImage: "text.quote",
             keys: [], files: ["reflections.json"], summaryRank: nil,
-            measure: { $0.countedFiles("reflections.json").measure("saved reflection", "saved reflections") }),
+            measure: { $0.countedFiles("reflections.json").measure(String(localized: "saved reflection"), String(localized: "saved reflections")) { $0 == 1 ? String(localized: "1 saved reflection") : String(localized: "\($0) saved reflections") } }),
         ContentCategory(
-            id: "activity", title: "Activity and Streaks", systemImage: "flame.fill",
+            id: "activity", title: String(localized: "Activity and Streaks"), systemImage: "flame.fill",
             keys: [], files: ["activity-log.json", "activity-log-watch.json"], summaryRank: nil,
-            measure: { $0.countedFiles("activity-log.json", "activity-log-watch.json").measure("active day", "active days") }),
+            measure: { $0.countedFiles("activity-log.json", "activity-log-watch.json").measure(String(localized: "active day"), String(localized: "active days")) { $0 == 1 ? String(localized: "1 active day") : String(localized: "\($0) active days") } }),
         ContentCategory(
-            id: "learning", title: "Learning Progress", systemImage: "graduationcap.fill",
-            keys: ["readingTestProgress", "readingTestPlacement", "tajweedLessonsDone", "letterQuizBestStreak", "duaSessionProgressData"],
+            id: "learning", title: String(localized: "Learning Progress"), systemImage: "graduationcap.fill",
+            keys: ["readingTestProgress", "readingTestPlacement", "readingTestMissed", "readingTestSpeedBest",
+                   "tajweedTestProgress", "tajweedTestPlacement", "tajweedTestMissed", "tajweedTestSpeedBest",
+                   "tajweedLessonsDone", "letterQuizBestStreak", "duaSessionProgressData"],
             files: [], summaryRank: 8,
             measure: { snapshot in
                 let lessons = snapshot.counted("tajweedLessonsDone")
-                let tiers = CloudJSON.dictionary(snapshot.defaults["readingTestProgress"])?.values
-                    .filter { (($0 as? [String: Any])?["mastered"] as? Bool) == true }.count ?? 0
-                return (lessons + tiers).measure("lesson passed", "lessons passed")
+                let tiers = ["readingTestProgress", "tajweedTestProgress"].reduce(0) { sum, key in
+                    sum + (CloudJSON.dictionary(snapshot.defaults[key])?.values
+                        .filter { (($0 as? [String: Any])?["mastered"] as? Bool) == true }.count ?? 0)
+                }
+                return (lessons + tiers).measure(String(localized: "lesson passed"), String(localized: "lessons passed")) { $0 == 1 ? String(localized: "1 lesson passed") : String(localized: "\($0) lessons passed") }
             }),
         ContentCategory(
-            id: "reminders", title: "Custom Reminders", systemImage: "bell.badge.fill",
+            id: "reminders", title: String(localized: "Custom Reminders"), systemImage: "bell.badge.fill",
             keys: ["customReminders"],
             files: [], summaryRank: nil,
-            measure: { $0.counted("customReminders").measure("custom reminder", "custom reminders") }),
+            measure: { $0.counted("customReminders").measure(String(localized: "custom reminder"), String(localized: "custom reminders")) { $0 == 1 ? String(localized: "1 custom reminder") : String(localized: "\($0) custom reminders") } }),
         ContentCategory(
-            id: "achievements", title: "Achievements", systemImage: "rosette",
+            id: "achievements", title: String(localized: "Achievements"), systemImage: "rosette",
             keys: ["achievementUnlockedAt", "achievementsSeeded"],
             files: [], summaryRank: 7,
-            measure: { $0.counted("achievementUnlockedAt").measure("badge", "badges") }),
+            measure: { $0.counted("achievementUnlockedAt").measure(String(localized: "badge"), String(localized: "badges")) { $0 == 1 ? String(localized: "1 badge") : String(localized: "\($0) badges") } }),
         ContentCategory(
-            id: "calculators", title: "Zakah and Inheritance Figures", systemImage: "function",
+            id: "calculators", title: String(localized: "Zakah and Inheritance Figures"), systemImage: "function",
             keys: ["zakahCash", "zakahGold", "zakahSilver", "zakahBusiness", "zakahTradeShares", "zakahLongShares",
                    "zakahOwedToYou", "zakahDebts", "zakahMetalPrice", "zakahGoldPrice", "zakahSilverPrice", "zakahNisab",
                    "zakahFitrPeople", "zakahFitrCost",
@@ -146,7 +150,7 @@ struct ContentCategory: Identifiable {
                         if let text = value as? String { return !text.isEmpty }
                         return true
                     }.count
-                return typed.measure("figure entered", "figures entered")
+                return typed.measure(String(localized: "figure entered"), String(localized: "figures entered")) { $0 == 1 ? String(localized: "1 figure entered") : String(localized: "\($0) figures entered") }
             }),
     ]
 
@@ -156,18 +160,18 @@ struct ContentCategory: Identifiable {
     static var listSentence: String {
         let names = all.map { $0.title.lowercased() }
         guard let last = names.last, names.count > 1 else { return names.first ?? "" }
-        return names.dropLast().joined(separator: ", ") + " and " + last
+        return names.sentenceList { String(localized: "\($0.dropLast().joined(separator: ", ")) and \(last)") }
     }
 
     /// What the categories never include, in the user's words, for the What's Included page and
     /// the dialogs. Location first: the permission prompt's own promise.
     static let neverIncluded: [(title: String, detail: String, systemImage: String)] = [
-        ("Your location and saved places", "Your home city, favorite locations and the prayer times computed from them are never backed up: your location goes no further than it has to. A restored device finds its own.", "location.slash.fill"),
-        ("Downloaded recitations", "Audio you downloaded can be downloaded again, so it stays out of the backup.", "arrow.down.circle"),
-        ("Notifications scheduled here", "Each device schedules its own adhans and reminders from your settings; the schedule itself is not copied.", "bell.slash.fill"),
-        ("Prompts you have answered", "Which permissions and welcome screens this device has shown. A restored device is asked again where it needs to be.", "questionmark.circle"),
-        ("Ask AI conversations", "They are never saved, on the device or anywhere else.", "sparkles"),
-        ("Your Apple Watch's own copy", "The watch keeps its settings in step with this device on its own, and its reading days are counted through this device. It is not backed up separately.", "applewatch"),
+        (String(localized: "Your location and saved places"), String(localized: "Your home city, favorite locations and the prayer times computed from them are never backed up: your location goes no further than it has to. A restored device finds its own."), "location.slash.fill"),
+        (String(localized: "Downloaded recitations"), String(localized: "Audio you downloaded can be downloaded again, so it stays out of the backup."), "arrow.down.circle"),
+        (String(localized: "Notifications scheduled here"), String(localized: "Each device schedules its own adhans and reminders from your settings; the schedule itself is not copied."), "bell.slash.fill"),
+        (String(localized: "Prompts you have answered"), String(localized: "Which permissions and welcome screens this device has shown. A restored device is asked again where it needs to be."), "questionmark.circle"),
+        (String(localized: "Ask AI conversations"), String(localized: "They are never saved, on the device or anywhere else."), "sparkles"),
+        (String(localized: "Your Apple Watch's own copy"), String(localized: "The watch keeps its settings in step with this device on its own, and its reading days are counted through this device. It is not backed up separately."), "applewatch"),
     ]
 }
 
@@ -206,16 +210,57 @@ struct ContentInventory {
     var sizeLine: String { ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file) }
 
     var settingsLine: String {
-        settingsChanged == 0 ? "No settings changed from their defaults" : "\(settingsChanged) setting\(settingsChanged == 1 ? "" : "s") changed from the default"
+        settingsChanged == 0 ? String(localized: "No settings changed from their defaults") : (settingsChanged == 1 ? String(localized: "1 setting changed from the default") : String(localized: "\(settingsChanged) settings changed from the default"))
     }
 
-    /// The profile picker's one line: the top-ranked non-empty categories, four at most.
+    /// The profile picker's one line: the top-ranked non-empty categories, four at most. DISPLAY,
+    /// in this device's language; the iCloud record stores `storedSummaryLine`.
     var summaryLine: String {
-        let ranked = rows.filter { !$0.isEmpty && $0.category.summaryRank != nil }
-            .sorted { ($0.category.summaryRank ?? 0) < ($1.category.summaryRank ?? 0) }
-        let phrases = ranked.prefix(4).map { $0.measure.phrase }
+        let phrases = summaryRows.map { $0.measure.phrase }
+        // Joined through the catalog, so Arabic reads its own comma ("،").
+        return phrases.isEmpty ? String(localized: "Settings only")
+            : phrases.dropFirst().reduce(phrases[0]) { String(localized: "\($0), \($1)") }
+    }
+
+    /// The same line in English, whatever this device's language: it is saved on the iCloud record
+    /// (`Field.summary`) and read by every other device, and by app versions that predate the Arabic
+    /// interface, so it is data and reads exactly as it always has ("212 bookmarks, 30 prayer days").
+    var storedSummaryLine: String {
+        let phrases = summaryRows.map { row -> String in
+            guard let nouns = Self.englishNouns[row.category.id] else { return row.measure.phrase }
+            let count = row.measure.count
+            let number = Self.englishNumber.string(from: NSNumber(value: count)) ?? String(count)
+            return "\(number) \(count == 1 ? nouns.singular : nouns.plural)"
+        }
         return phrases.isEmpty ? "Settings only" : phrases.joined(separator: ", ")
     }
+
+    private var summaryRows: ArraySlice<Row> {
+        rows.filter { !$0.isEmpty && $0.category.summaryRank != nil }
+            .sorted { ($0.category.summaryRank ?? 0) < ($1.category.summaryRank ?? 0) }
+            .prefix(4)
+    }
+
+    /// The English nouns of every category with a `summaryRank`, by id: the table's own nouns are
+    /// translated for display. A ranked category added later needs its pair here too.
+    private static let englishNouns: [String: (singular: String, plural: String)] = [
+        "bookmarks": ("bookmark", "bookmarks"),
+        "tracker": ("prayer day", "prayer days"),
+        "khatm": ("khatm ayah", "khatm ayahs"),
+        "journal": ("journal entry", "journal entries"),
+        "tasbih": ("dhikr", "dhikr"),
+        "favorites": ("favorite", "favorites"),
+        "achievements": ("badge", "badges"),
+        "learning": ("lesson passed", "lessons passed"),
+    ]
+
+    /// Counts in the stored line as English writes them ("1,132"), not in this device's digits.
+    private static let englishNumber: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "en_US")
+        formatter.numberStyle = .decimal
+        return formatter
+    }()
 }
 
 // MARK: - Counting, generically
@@ -230,11 +275,15 @@ extension CloudSnapshot {
     func countedFiles(_ names: String...) -> Int {
         names.reduce(0) { $0 + CloudJSON.count(files[$1]) }
     }
+
+    /// `summaryLine` in English, for the iCloud record (`ContentInventory.storedSummaryLine`).
+    var storedSummaryLine: String { ContentInventory(self, bytes: 0).storedSummaryLine }
 }
 
 extension Int {
-    fileprivate func measure(_ singular: String, _ plural: String) -> ContentCategory.Measure {
-        ContentCategory.Measure(count: self, singular: singular, plural: plural)
+    /// `phrase` builds the whole counted phrase ("212 bookmarks") from the count.
+    fileprivate func measure(_ singular: String, _ plural: String, _ phrase: (Int) -> String) -> ContentCategory.Measure {
+        ContentCategory.Measure(count: self, singular: singular, plural: plural, phrase: phrase(self))
     }
 }
 

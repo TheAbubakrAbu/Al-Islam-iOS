@@ -302,7 +302,7 @@ final class NamesViewModel: ObservableObject {
                 packProblem = NamesPack.failureDescription(url: url)
             }
         } else {
-            packProblem = "namesofallah.qpk is not in the bundle"
+            packProblem = String(localized: "namesofallah.qpk is not in the bundle")
         }
         #endif
 
@@ -324,7 +324,7 @@ final class NamesViewModel: ObservableObject {
         }
 
         guard !records.isEmpty else {
-            let reason = packProblem ?? "No copy of the names could be read."
+            let reason = packProblem ?? String(localized: "No copy of the names could be read.")
             logger.error("❌ 99 Names: no source produced any names. \(reason)")
             await MainActor.run {
                 self.failureReason = reason
@@ -572,7 +572,7 @@ struct NamesView: View {
 
                 Spacer()
 
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.forward")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
@@ -612,7 +612,7 @@ struct NamesView: View {
         if aiQueryEligible {
             if semanticEngine.isReady(Self.semanticCorpusID) {
                 if !aiHits.isEmpty {
-                    Section(header: SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles")) {
+                    Section(header: SectionPillHeader(title: String(localized: "AI MATCHES"), count: aiHits.count, icon: "sparkles")) {
                         if settings.namesGridMode {
                             // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
                             // height on each self-sizing pass, which iOS 26 traps on. Ten matches at most.
@@ -680,14 +680,15 @@ struct NamesView: View {
                     #if os(iOS)
                     if !hasActiveSearch {
                         ResourceHeroSection(ResourceHero(
-                            eyebrow: "ASMA UL-HUSNA",
+                            eyebrow: String(localized: "ASMA UL-HUSNA"),
                             systemImage: "signature",
-                            headline: "And to Allah belong the best names, so invoke Him by them.",
-                            source: "Quran 7:180",
-                            message: "Each of His names with its meaning, so that you come to know the One you worship, and call on Him by the name that answers your need.",
+                            headline: String(localized: "And to Allah belong the best names, so invoke Him by them."),
+                            source: String(localized: "Quran 7:180"),
+                            message: String(localized: "Each of His names with its meaning, so that you come to know the One you worship, and call on Him by the name that answers your need."),
                             stats: [
-                                ResourceHeroStat("99", "names"),
-                                ResourceHeroStat("\(favoriteSet.count)", favoriteSet.count == 1 ? "favorite" : "favorites"),
+                                ResourceHeroStat("99".localizedDigits, String(localized: "names")),
+                                ResourceHeroStat("\(favoriteSet.count)".localizedDigits,
+                                                 favoriteSet.count == 1 ? String(localized: "favorite") : String(localized: "favorites")),
                             ]
                         ))
                     }
@@ -722,7 +723,7 @@ struct NamesView: View {
                     #if os(iOS)
                     // The article FIRST: this screen is the names themselves, and the article is the
                     // half that explains what they are and what the hadith about them actually says.
-                    AboutSignsSection(heading: "About the Names of Allah",
+                    AboutSignsSection(heading: String(localized: "About the Names of Allah"),
                                       systemImage: "signature",
                                       doors: [.namesOfAllahArticle, .allah, .tawhid, .god],
                                       openDoor: $aboutDoor)
@@ -835,16 +836,16 @@ struct NamesView: View {
             } label: {
                 Image(systemName: settings.namesGridMode ? "list.bullet" : "square.grid.2x2")
             }
-            .accessibilityLabel(settings.namesGridMode ? "Show list" : "Show grid")
+            .accessibilityLabel(settings.namesGridMode ? String(localized: "Show list") : String(localized: "Show grid"))
             .tint(settings.accentColor.accent2)
         }
         #endif
     }
 
     private static var namesDisclaimerText: String {
-        var text = "Prophet Muhammad ﷺ said, “Allah has 99 names, and whoever believes in their meanings and acts accordingly, will enter Paradise” (Bukhari 6410). The count is established in Bukhari and Muslim; the enumerated list below is the one narrated in Tirmidhi 3507, which scholars note is an addition by a narrator rather than the Prophet's own listing. The hadith does not limit His names to ninety-nine: the Prophet ﷺ asked Allah by every name He has, including those He kept in the knowledge of the unseen with Himself (Musnad Ahmad 3712, graded sahih by al-Albani)."
+        var text = String(localized: "Prophet Muhammad ﷺ said, “Allah has 99 names, and whoever believes in their meanings and acts accordingly, will enter Paradise” (Bukhari 6410). The count is established in Bukhari and Muslim; the enumerated list below is the one narrated in Tirmidhi 3507, which scholars note is an addition by a narrator rather than the Prophet's own listing. The hadith does not limit His names to ninety-nine: the Prophet ﷺ asked Allah by every name He has, including those He kept in the knowledge of the unseen with Himself (Musnad Ahmad 3712, graded sahih by al-Albani).")
         #if HAS_QURAN
-        text += " Names marked as coming from that list do not appear as names in the Quran."
+        text += " " + String(localized: "Names marked as coming from that list do not appear as names in the Quran.")
         #endif
         return text
     }
@@ -855,7 +856,7 @@ struct NamesView: View {
             // ship the Quran, so it goes with them. Set as the screen's opening card, the article kit's
             // lead (Abu, 2026-10-03); its Highlight Allah is the same `highlightAllahNamesIslam`, read
             // off the appearance snapshot.
-            ArticleLead(Self.namesDisclaimerText)
+            ArticleLead(Self.namesDisclaimerText, eyebrow: String(localized: "IN SHORT"))
 
             // The per-row descriptions only exist in list mode, so hide the toggle in grid mode.
             if !settings.namesGridMode {
@@ -928,18 +929,18 @@ struct NamesView: View {
 
                     // The Quran tail of the paragraph, the 1:1 quote and the link into the mushaf
                     // only exist where the Quran does.
-                    Text.islamText(Self.allahIntroText, highlightAllah: settings.highlightAllahNamesIslam)
+                    Text.islamText(Self.allahIntroText.localizedDigits, highlightAllah: settings.highlightAllahNamesIslam)
                         .font(.footnote)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
                     #if HAS_QURAN
-                    Text.islamText("“In the name of Allah, the Entirely Merciful, the Especially Merciful.” (Quran 1:1)", highlightAllah: settings.highlightAllahNamesIslam)
+                    Text.islamText(String(localized: "“In the name of Allah, the Entirely Merciful, the Especially Merciful.” (Quran 1:1)").localizedDigits, highlightAllah: settings.highlightAllahNamesIslam)
                         .font(.footnote.italic())
                         .foregroundColor(.primary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text("View First Ayah (1:1)")
+                    Text(String(localized: "View First Ayah (1:1)").localizedDigits)
                         .font(.caption.weight(.semibold))
                         .foregroundColor(settings.accentColor.color)
                         .frame(maxWidth: .infinity)
@@ -958,16 +959,16 @@ struct NamesView: View {
     }
 
     private static var allahIntroText: String {
-        var text = "Allah (اللَّه) is the proper name of the One True God, His greatest name, and the one every other name describes. Unlike other words, it has no plural and no feminine form, and it was never used for anything or anyone else."
+        var text = String(localized: "Allah (اللَّه) is the proper name of the One True God, His greatest name, and the one every other name describes. Unlike other words, it has no plural and no feminine form, and it was never used for anything or anyone else.")
         #if HAS_QURAN
-        text += " It appears in the Quran more than 2,600 times, beginning with the very first ayah:"
+        text += " " + String(localized: "It appears in the Quran more than 2,600 times, beginning with the very first ayah:")
         #endif
         return text
     }
 
     private func namesHeaderSection(resultCount: Int, hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
         Section(header: SectionPillHeader(
-            title: hasActiveSearch ? "NAME SEARCH RESULTS" : "NAMES OF ALLAH",
+            title: hasActiveSearch ? String(localized: "NAME SEARCH RESULTS") : String(localized: "NAMES OF ALLAH"),
             count: resultCount,
             // Shuffle expands and scrolls to a random name - list rows only; grid tiles carry no ids.
             onShuffle: (hasActiveSearch || settings.namesGridMode) ? nil : { shuffleToRandomName(proxy: proxy) }
@@ -1035,7 +1036,7 @@ struct NamesView: View {
     private func favoriteNamesSection(_ favorites: [NameOfAllah], hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
         if !hasActiveSearch && !favorites.isEmpty {
             Section(header: SectionPillHeader(
-                title: "FAVORITES",
+                title: String(localized: "FAVORITES"),
                 count: favorites.count,
                 icon: "star.fill",
                 accentTitle: true,
@@ -1046,19 +1047,25 @@ struct NamesView: View {
                 } else if settings.namesGridMode {
                     // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
                     // height on each self-sizing pass, which iOS 26 traps on. At most 99 tiles.
-                    SummaryTileGrid(columns: nameGridColumns.count, spacing: 8) {
-                        ForEach(favorites, id: \.id) { name in
-                            NameGridTile(
-                                name: name,
-                                isFavorite: true,
-                                accentColor: settings.accentColor,
-                                useFontArabic: settings.useFontArabic,
-                                fontArabic: settings.nonQuranArabicFontName
-                            )
-                            .equatable()
+                    let chunk = tileGridChunk(columns: nameGridColumns.count)
+                    ForEach(Array(stride(from: 0, to: favorites.count, by: chunk)), id: \.self) { start in
+                        SummaryTileGrid(columns: nameGridColumns.count, spacing: 8) {
+                            ForEach(favorites[start..<min(start + chunk, favorites.count)], id: \.id) { name in
+                                NameGridTile(
+                                    name: name,
+                                    isFavorite: true,
+                                    accentColor: settings.accentColor,
+                                    useFontArabic: settings.useFontArabic,
+                                    fontArabic: settings.nonQuranArabicFontName
+                                )
+                                .equatable()
+                            }
                         }
+                        // The grid's 8 pt gaps, its tiles 8 pt inside the card (the -8 it used to pad out of the
+                        // default inset), and the default vertical air at its ends.
+                        .tileGridChunkRow(start: start, count: favorites.count, chunk: chunk, spacing: 8,
+                                          horizontalInset: 8, outerInset: listRowDefaultVerticalInset)
                     }
-                    .padding(.horizontal, -8)
                 } else {
                     ForEach(favorites, id: \.id) { name in
                         NameRow(
@@ -1088,26 +1095,32 @@ struct NamesView: View {
             Section {
                 // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
                 // height on each self-sizing pass, which iOS 26 traps on. At most 99 tiles.
-                SummaryTileGrid(columns: nameGridColumns.count, spacing: 8) {
-                    ForEach(filteredNames, id: \.id) { name in
-                        NameGridTile(
-                            name: name,
-                            isFavorite: favoriteSet.contains(name.number),
-                            accentColor: settings.accentColor,
-                            useFontArabic: settings.useFontArabic,
-                            fontArabic: settings.nonQuranArabicFontName
-                        )
-                        .equatable()
+                let chunk = tileGridChunk(columns: nameGridColumns.count)
+                ForEach(Array(stride(from: 0, to: filteredNames.count, by: chunk)), id: \.self) { start in
+                    SummaryTileGrid(columns: nameGridColumns.count, spacing: 8) {
+                        ForEach(filteredNames[start..<min(start + chunk, filteredNames.count)], id: \.id) { name in
+                            NameGridTile(
+                                name: name,
+                                isFavorite: favoriteSet.contains(name.number),
+                                accentColor: settings.accentColor,
+                                useFontArabic: settings.useFontArabic,
+                                fontArabic: settings.nonQuranArabicFontName
+                            )
+                            .equatable()
+                        }
                     }
+                    // The grid's 8 pt gaps, its tiles 8 pt inside the card (the -8 it used to pad out of the
+                    // default inset), and the default vertical air at its ends.
+                    .tileGridChunkRow(start: start, count: filteredNames.count, chunk: chunk, spacing: 8,
+                                      horizontalInset: 8, outerInset: listRowDefaultVerticalInset)
                 }
-                .padding(.horizontal, -8)
             }
         } else if filteredNames.isEmpty, hasActiveSearch {
             Section {
                 #if os(iOS)
                 Text(aiHits.isEmpty
-                     ? "No names match your search."
-                     : "No keyword matches; see the AI results above.")
+                     ? String(localized: "No names match your search.")
+                     : String(localized: "No keyword matches; see the AI results above."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 #else
@@ -1187,33 +1200,33 @@ struct NamesView: View {
         #if HAS_QURAN
         Section(header: Text("MOST BEAUTIFUL NAMES")) {
             VStack(alignment: .leading, spacing: 10) {
-                Text.islamText("Call upon Allah or call upon Ar-Rahman (The Entirely Merciful). Whichever Name you call, to Him belong the Most Beautiful Names.", highlightAllah: settings.highlightAllahNamesIslam)
+                Text.islamText(String(localized: "Call upon Allah or call upon Ar-Rahman (The Entirely Merciful). Whichever Name you call, to Him belong the Most Beautiful Names."), highlightAllah: settings.highlightAllahNamesIslam)
                     .font(.headline)
                     .foregroundStyle(.primary)
                 
-                Text("Surah Al-Isra 17:110")
+                Text(String(localized: "Surah Al-Isra 17:110").localizedDigits)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             VerseReflectionCard(
-                title: "Surah Al-Hashr 59:21",
-                contentText: "If this Quran were sent upon a mountain, it would humble and break from awe of Allah. These examples are given so people reflect."
+                title: String(localized: "Surah Al-Hashr 59:21"),
+                contentText: String(localized: "If this Quran were sent upon a mountain, it would humble and break from awe of Allah. These examples are given so people reflect.")
             )
 
             VerseReflectionCard(
-                title: "Surah Al-Hashr 59:22",
-                contentText: "He is Allah, none is worthy of worship except Him. Knower of the seen and unseen, the Most Compassionate, the Most Merciful."
+                title: String(localized: "Surah Al-Hashr 59:22"),
+                contentText: String(localized: "He is Allah, none is worthy of worship except Him. Knower of the seen and unseen, the Most Compassionate, the Most Merciful.")
             )
 
             VerseReflectionCard(
-                title: "Surah Al-Hashr 59:23",
-                contentText: "He is Allah: the King, the Most Holy, the Source of Peace, the Granter of Security, the Guardian, the Almighty, the Compeller, the Supreme. Exalted is He above all partners."
+                title: String(localized: "Surah Al-Hashr 59:23"),
+                contentText: String(localized: "He is Allah: the King, the Most Holy, the Source of Peace, the Granter of Security, the Guardian, the Almighty, the Compeller, the Supreme. Exalted is He above all partners.")
             )
 
             VerseReflectionCard(
-                title: "Surah Al-Hashr 59:24",
-                contentText: "He is Allah, the Creator, the Originator, the Fashioner. To Him belong the Most Beautiful Names; all in the heavens and earth glorify Him."
+                title: String(localized: "Surah Al-Hashr 59:24"),
+                contentText: String(localized: "He is Allah, the Creator, the Originator, the Fashioner. To Him belong the Most Beautiful Names; all in the heavens and earth glorify Him.")
             )
         }
         #endif
@@ -1224,6 +1237,7 @@ private struct NameRow: View, Equatable {
     // Deliberately NOT observing Settings: every input this body reads is passed in and folded into `==`,
     // so with `.equatable()` a Settings publish (favorite toggle, accent change elsewhere) skips every
     // row whose inputs didn't change. Actions reach Settings.shared directly - they don't need observation.
+    @Environment(\.layoutDirection) private var layoutDirection
     let name: NameOfAllah
     let firstFoundTarget: (surahID: Int, ayahID: Int)?
     let showDescription: Bool
@@ -1335,6 +1349,7 @@ private struct NameRow: View, Equatable {
                             guaranteeMatch: fieldMatches.transliteration
                         )
                             .lineLimit(1)
+                            .leftToRightContent()
 
                         HighlightedSnippet(
                             source: name.meaning,
@@ -1346,10 +1361,11 @@ private struct NameRow: View, Equatable {
                             guaranteeMatch: fieldMatches.meaning
                         )
                             .fixedSize(horizontal: false, vertical: true)
+                            .leftToRightContent()
 
                         // A Quran reference - it only exists in apps that ship the Quran.
                         #if HAS_QURAN
-                        Text("First Found: \(name.firstFoundShort)")
+                        Text("First Found: \(name.firstFoundShort.localizedDigits)")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                             .lineLimit(1)
@@ -1370,7 +1386,9 @@ private struct NameRow: View, Equatable {
                         )
                             .arabicFontDesign(custom: useFontArabic && fontArabic != Settings.systemArabicFontName)
                             .lineLimit(2)
-                            .multilineTextAlignment(.trailing)
+                            // A two-word name's lines align on the right, as Arabic does: in a
+                            // right-to-left interface that is the leading edge.
+                            .multilineTextAlignment(layoutDirection == .rightToLeft ? .leading : .trailing)
                             .fixedSize(horizontal: false, vertical: true)
 
                         // Always the Uthmani face: it renders the number as the circled-flower ornament.
@@ -1479,6 +1497,7 @@ private struct NameRowDetails: View {
                             .font(.subheadline)
                             .foregroundColor(.primary)
                             .fixedSize(horizontal: false, vertical: true)
+                            .leftToRightContent()
                     }
                     .transition(.opacity)
                 }
@@ -1486,6 +1505,7 @@ private struct NameRowDetails: View {
                 Text.islamText(name.desc, highlightAllah: settings.highlightAllahNamesIslam)
                     .font(.footnote)
                     .foregroundColor(.secondary)
+                    .leftToRightContent()
                     .transition(.opacity)
                     .padding(.top, 2)
 
@@ -1540,7 +1560,7 @@ private struct VerseReflectionCard: View {
     
     var content: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title)
+            Text(title.localizedDigits)
                 .font(.subheadline.weight(.semibold))
                 .foregroundColor(settings.accentColor.color)
 
@@ -1592,7 +1612,7 @@ func nameContextItems(_ name: NameOfAllah, isFavorite: Bool, onScrollTo: (() -> 
             Settings.shared.toggleNameFavoriteOrConfirm(number: name.number, transliteration: name.transliteration)
         }
     } label: {
-        Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.fill" : "star")
+        Label(isFavorite ? String(localized: "Unfavorite") : String(localized: "Favorite"), systemImage: isFavorite ? "star.fill" : "star")
     }
 
     // Only while searching: the row's own tap already does this, and the grid tile has no other way.

@@ -24,17 +24,17 @@ extension Settings {
 
         var title: String {
             switch self {
-            case .surah: return "Surah"
-            case .ayahs: return "Ayah Count"
-            case .juz: return "Juz"
-            case .page: return "Page Count"
-            case .pages: return "Pages"
-            case .revelation: return "Revelation"
-            case .khatm: return "Khatm"
-            case .sajdah: return "Sajdahs"
-            case .muqattaat: return "Broken Letters"
-            case .words: return "Words"
-            case .letters: return "Letters"
+            case .surah: return String(localized: "Surah")
+            case .ayahs: return String(localized: "Ayah Count")
+            case .juz: return String(localized: "Juz")
+            case .page: return String(localized: "Page Count")
+            case .pages: return String(localized: "Pages")
+            case .revelation: return String(localized: "Revelation")
+            case .khatm: return String(localized: "Khatm")
+            case .sajdah: return String(localized: "Sajdahs")
+            case .muqattaat: return String(localized: "Broken Letters")
+            case .words: return String(localized: "Words")
+            case .letters: return String(localized: "Letters")
             }
         }
 
@@ -64,17 +64,17 @@ extension Settings {
 
         var title: String {
             switch self {
-            case .surahOrder: return "Surah"
-            case .ascending: return "Asc"
-            case .descending: return "Desc"
+            case .surahOrder: return String(localized: "Surah")
+            case .ascending: return String(localized: "Asc")
+            case .descending: return String(localized: "Desc")
             }
         }
 
         var accessibilityTitle: String {
             switch self {
-            case .surahOrder: return "Surah order"
-            case .ascending: return "Ascending"
-            case .descending: return "Descending"
+            case .surahOrder: return String(localized: "Surah order")
+            case .ascending: return String(localized: "Ascending")
+            case .descending: return String(localized: "Descending")
             }
         }
     }
@@ -97,7 +97,22 @@ extension Settings {
 
             /// "d. 180 AH" - secondary text under the rawi's name in the qiraah menus.
             var narratorDetail: String? {
-                narratorDiedAH.map { "d. \($0) AH" }
+                narratorDiedAH.map { String(localized: "d. \($0) AH") }
+            }
+
+            /// The riwayah's name as the reader sees it. The Arabic interface shows the Arabic name
+            /// (Hafs with a translated "(default)"); English shows `label`, which stays the stored and
+            /// matched value either way. `omitsDefaultSuffix` drops the "(default)" in both languages.
+            func displayLabel(omitsDefaultSuffix: Bool = false) -> String {
+                let isDefault = tag == Riwayah.hafsTag
+                if AppLanguage.isArabic {
+                    guard isDefault, !omitsDefaultSuffix else { return arabic }
+                    return "\(arabic) \(String(localized: "(default)"))"
+                }
+                if omitsDefaultSuffix, label.hasSuffix(" (default)") {
+                    return String(label.dropLast(" (default)".count))
+                }
+                return label
             }
         }
 
@@ -180,7 +195,7 @@ extension Settings {
         /// "Kufa, d. 127 AH" - the qiraah submenus' secondary line for an imam.
         static func teacherDetail(_ teacher: String) -> String? {
             guard let city = teacherCity[teacher], let died = teacherDiedAH[teacher] else { return nil }
-            return "\(city), d. \(died) AH"
+            return String(localized: "\(city.localizedDisplay), d. \(died) AH")
         }
 
         static let hafsArabic = "حَفص عَن عَاصِم"
@@ -758,11 +773,11 @@ extension Settings {
     /// Four lines at `.caption` on a phone - checked, not guessed. The one Arabic sample is a bare
     /// ص: the composed اَ۬ cluster this describes does NOT survive being dropped into a Latin
     /// caption (it shapes as garbage in the system face), which is why the marks are named in words.
-    static let waslNotationNote = """
+    static let waslNotationNote = String(localized: """
         Hamzatul wasl, the silent alef a joined reading slides over, is marked two ways: a small \
         circle over a bare alef in Nafi, Abu Amr, Abu Jafar and Yaqub; a ص on the alef in Asim, \
         Ibn Kathir, Ibn Amir, Hamzah, al-Kisai and Khalaf al-Ashir.
-        """
+        """)
 
     /// Which Uthmani script the Quran draws in. `.madani` is the default - the script all but
     /// one reader has ever seen. `.automatic` follows the riwayah's own notation family (the
@@ -780,9 +795,9 @@ extension Settings {
 
         var label: String {
             switch self {
-            case .automatic: return "Automatic"
-            case .madani: return "Madani"
-            case .maghribi: return "Maghribi"
+            case .automatic: return String(localized: "Automatic")
+            case .madani: return String(localized: "Madani")
+            case .maghribi: return String(localized: "Maghribi")
             }
         }
 
@@ -791,11 +806,11 @@ extension Settings {
         /// captions describe the scripts on their own terms.
         func detail(namingRiwayat: Bool) -> String {
             switch self {
-            case .automatic: return "Each riwayah in the script its printed mushaf uses."
+            case .automatic: return String(localized: "Each riwayah in the script its printed mushaf uses.")
             case .madani:
-                return namingRiwayat ? "The Madinah mushaf script (Hafs an Asim)." : "The Madinah mushaf script."
+                return namingRiwayat ? String(localized: "The Madinah mushaf script (Hafs an Asim).") : String(localized: "The Madinah mushaf script.")
             case .maghribi:
-                return namingRiwayat ? "The North African mushaf script (Warsh an Nafi)." : "The North African mushaf script."
+                return namingRiwayat ? String(localized: "The North African mushaf script (Warsh an Nafi).") : String(localized: "The North African mushaf script.")
             }
         }
 
@@ -1740,7 +1755,7 @@ extension Settings {
             snapshot.lastListened = nil
             if let listened = lastListenedSurah {
                 snapshot.lastListened = QuranWidgetSnapshot.ListenCard(
-                    name: listened.surahName,
+                    name: listened.displaySurahName,
                     reciter: listened.reciter.displayNameForNowPlaying,
                     current: listened.currentDuration,
                     full: listened.fullDuration
@@ -1963,7 +1978,7 @@ extension Settings {
         let arabic = ayah.displayArabicText(surahId: surah.id, clean: cleanArabicText)
         return QuranWidgetSnapshot.AyahCard(
             arabic: arabic,
-            reference: "Surah \(surah.id):\(ayah.id) • \(surah.nameTransliteration)",
+            reference: String(localized: "Surah \(surah.id):\(ayah.id) • \(surah.displayName)"),
             english: ayah.textEnglishSaheeh,
             fontName: fontArabic,
             colorRuns: quranWidgetTajweedRuns(surah: surah, ayah: ayah, displayText: arabic),

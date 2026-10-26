@@ -68,24 +68,24 @@ final class PermissionAsker: ObservableObject {
 
     var locationStatusText: String {
         switch locationStatus {
-        case .notDetermined: return "Not asked"
-        case .authorizedAlways: return "Always"
-        case .authorizedWhenInUse: return "While Using"
-        case .denied: return "Denied"
-        case .restricted: return "Restricted"
-        @unknown default: return "Unknown"
+        case .notDetermined: return String(localized: "Not asked")
+        case .authorizedAlways: return String(localized: "Always")
+        case .authorizedWhenInUse: return String(localized: "While Using")
+        case .denied: return String(localized: "Denied")
+        case .restricted: return String(localized: "Restricted")
+        @unknown default: return String(localized: "Unknown")
         }
     }
 
     var notificationStatusText: String {
         switch notificationStatus {
-        case nil: return "Checking"
-        case .notDetermined?: return "Not asked"
-        case .denied?: return "Denied"
-        case .authorized?: return "Allowed"
-        case .provisional?: return "Provisional"
-        case .ephemeral?: return "Ephemeral"
-        default: return "Unknown"
+        case nil: return String(localized: "Checking")
+        case .notDetermined?: return String(localized: "Not asked")
+        case .denied?: return String(localized: "Denied")
+        case .authorized?: return String(localized: "Allowed")
+        case .provisional?: return String(localized: "Provisional")
+        case .ephemeral?: return String(localized: "Ephemeral")
+        default: return String(localized: "Unknown")
         }
     }
 
@@ -158,7 +158,7 @@ struct PermissionsIntro: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
 
-            Text("Two permissions make \(AppIdentifiers.appName) work on its own: one to find today's times, one to call you to them.")
+            Text("Two permissions make \(AppIdentifiers.displayName) work on its own: one to find today's times, one to call you to them.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -180,18 +180,18 @@ struct PermissionCards: View {
     /// The system prompt's own promise: only Apple's services ever receive the location (the city
     /// name, nearby places, and on Al-Islam the opt-in sky weather), never anyone else.
     static var footnote: String {
-        "You can change either later in the Settings app. Only \(AppIdentifiers.appName) and Apple ever see your location, and it is never shared with anyone else."
+        String(localized: "You can change either later in the Settings app. Only \(AppIdentifiers.displayName) and Apple ever see your location, and it is never shared with anyone else.")
     }
 
     var body: some View {
         VStack(spacing: 18) {
-            card(systemImage: "location.fill", title: "Location",
-                 text: "Prayer times, the Qibla and Traveling Mode all start from where you are. Always lets the times and the widgets follow you without opening the app.",
+            card(systemImage: "location.fill", title: String(localized: "Location"),
+                 text: String(localized: "Prayer times, the Qibla and Traveling Mode all start from where you are. Always lets the times and the widgets follow you without opening the app."),
                  status: asker.locationStatusText, allowed: asker.locationAllowed, denied: asker.locationDenied,
                  identifier: "permissionsAllowLocation", allow: asker.askLocation)
 
-            card(systemImage: "bell.badge.fill", title: "Notifications",
-                 text: "The adhan at each prayer, and reminders before them if you want them.",
+            card(systemImage: "bell.badge.fill", title: String(localized: "Notifications"),
+                 text: String(localized: "The adhan at each prayer, and reminders before them if you want them."),
                  status: asker.notificationStatusText, allowed: asker.notificationsAllowed, denied: asker.notificationsDenied,
                  identifier: "permissionsAllowNotifications", allow: asker.askNotifications)
         }
@@ -342,7 +342,7 @@ struct PermissionsSheet: View {
                     primaryBusy: asker.asking,
                     primaryIdentifier: "permissionsPrimary",
                     primaryAction: primaryAction,
-                    secondaryTitle: asker.anythingUndetermined ? "Not Now" : nil,
+                    secondaryTitle: asker.anythingUndetermined ? String(localized: "Not Now") : nil,
                     secondaryIdentifier: "permissionsNotNow",
                     secondaryAction: { dismiss() }
                 )
@@ -355,18 +355,17 @@ struct PermissionsSheet: View {
             .sheetDismissToolbar()
         }
         .navigationViewStyle(.stack)
-        .smallMediumSheetPresentation(startLarge: true)
-        .interactiveDismissDisabled(asker.asking)
+        .smallMediumSheetPresentation(startLarge: true, dismissDisabled: asker.asking)
         .task { await asker.refresh() }
     }
 
     private var primaryTitle: String {
         let location = asker.locationUndetermined
         let notifications = asker.notificationsUndetermined
-        if location && notifications { return "Allow Location & Notifications" }
-        if location { return "Allow Location" }
-        if notifications { return "Allow Notifications" }
-        return "Done"
+        if location && notifications { return String(localized: "Allow Location & Notifications") }
+        if location { return String(localized: "Allow Location") }
+        if notifications { return String(localized: "Allow Notifications") }
+        return String(localized: "Done")
     }
 
     /// Both in turn (location first), or whichever is left, or done.

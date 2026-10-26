@@ -18,13 +18,13 @@ struct SurahStats: Decodable {
     /// "Juz 1" / "Juz 1-3" - the coverage as the info sheet displays it.
     var juzLabel: String {
         guard let first = juz.first else { return "" }
-        guard let last = juz.last, last != first else { return "Juz \(first)" }
-        return "Juz \(first)-\(last)"
+        guard let last = juz.last, last != first else { return String(localized: "Juz \(first)") }
+        return String(localized: "Juz \(first)-\(last)")
     }
 
     /// "Makkan" / "Madinan", capitalized for display.
     var revelationLabel: String {
-        type == "makkan" ? "Makkan" : "Madinan"
+        type == "makkan" ? String(localized: "Makkan") : String(localized: "Madinan")
     }
 }
 

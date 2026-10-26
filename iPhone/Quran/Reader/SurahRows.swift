@@ -137,20 +137,20 @@ struct SurahRow: View, Equatable {
     }
 
     private var revelationName: String {
-        surah.type == "makkan" ? "Makkan" : "Madinan"
+        surah.type == "makkan" ? String(localized: "Makkan") : String(localized: "Madinan")
     }
 
     /// The row in words for VoiceOver: "Surah 1, Al-Fatihah, The Opener, Makkan, 7 ayahs", then whatever
     /// the row is showing about it (where a result starts, khatm progress, favorite, last read).
     private var spokenLabel: String {
-        var parts = ["Surah \(surah.id)", surah.nameTransliteration, surah.nameEnglish, revelationName,
-                     "\(surah.numberOfAyahs) ayahs"]
+        var parts = [String(localized: "Surah \(surah.id)"), surah.displayName, surah.displayMeaning, revelationName,
+                     String(localized: "\(surah.numberOfAyahs) ayahs")].compactMap { $0 }
         if let context = positionContextLine { parts.append(context) }
         if let khatmCompletedAyahs, let khatmTotalAyahs {
-            parts.append("\(khatmCompletedAyahs) of \(khatmTotalAyahs) ayahs read")
+            parts.append(String(localized: "\(khatmCompletedAyahs) of \(khatmTotalAyahs) ayahs read"))
         }
-        if favoriteState { parts.append("favorite") }
-        if isLastRead { parts.append("last read") } else if isLastListened { parts.append("last listened") }
+        if favoriteState { parts.append(String(localized: "favorite")) }
+        if isLastRead { parts.append(String(localized: "last read")) } else if isLastListened { parts.append(String(localized: "last listened")) }
         return parts.joined(separator: ", ")
     }
 
@@ -163,7 +163,7 @@ struct SurahRow: View, Equatable {
     }
 
     private var ayahAndRevelationLine: String {
-        "\(surah.numberOfAyahs) Ayahs \(revelationEmoji)"
+        String(localized: "\(surah.numberOfAyahs) Ayahs \(revelationEmoji)")
     }
 
     private var sortedMetricLine: String? {
@@ -173,24 +173,24 @@ struct SurahRow: View, Equatable {
         case .page:
             return pageCountLabel
         case .words:
-            return "Words: \(surah.wordCount)"
+            return String(localized: "Words: \(surah.wordCount)")
         case .letters:
-            return "Letters: \(surah.letterCount)"
+            return String(localized: "Letters: \(surah.letterCount)")
         default:
             return nil
         }
     }
 
     private var pageLine: String {
-        "Page \(startPageNumber) • \(pageCountLabel)"
+        String(localized: "Page \(startPageNumber) • \(pageCountLabel)")
     }
 
     private var positionContextLine: String? {
         guard let ayah else { return nil }
         if end != nil {
-            return "Ends at \(surah.id):\(ayah)"
+            return String(localized: "Ends at \(surah.id):\(ayah)")
         }
-        return "Starts at \(surah.id):\(ayah)"
+        return String(localized: "Starts at \(surah.id):\(ayah)")
     }
 
     private var badgeWidth: CGFloat {
@@ -251,7 +251,7 @@ struct SurahRow: View, Equatable {
                 settings.hapticFeedback()
                 settings.toggleSurahFavoriteOrConfirm(surah: surah.id)
             }
-            .accessibilityLabel("Surah \(surah.id)\(isLastRead ? ", last read" : isLastListened ? ", last listened" : "")")
+            .accessibilityLabel("Surah \(surah.id)\(isLastRead ? String(localized: ", last read") : isLastListened ? String(localized: ", last listened") : "")")
             // The favourite star keeps the RIGHT corner - that is where favouriting a surah has always
             // shown up. Reading position moves to the LEFT (user rule), so the two stop competing for one
             // corner: a favourited surah that is also where you left off now shows both badges, where the
@@ -304,20 +304,29 @@ struct SurahRow: View, Equatable {
                 // The 40 mm face splits a 140 pt line between the two names, and the Arabic lost its
                 // first letters to a leading ellipsis ("...آل عمران"); there each name takes a line of
                 // its own at full size, the Arabic on the trailing edge where the wide layout keeps it.
-                Text("\(surah.id) - \(surah.nameTransliteration)")
-                    .font(.subheadline)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                // The English name on the left and the Arabic on the right in both interfaces (in
+                // Arabic, `.leading` / `.trailing` would swap them).
+                // The Arabic interface names the surah once, in Arabic.
+                if !AppLanguage.isArabic {
+                    Text(verbatim: "\(surah.id) - \(surah.nameTransliteration)")
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .environment(\.layoutDirection, .leftToRight)
+                }
 
                 Text("\(Settings.shared.cleanedQuranArabic(surah.nameArabic)) - \(surah.idArabic)")
                     .font(.headline)
                     .foregroundColor(settings.accentColor.color)
                     .frame(maxWidth: .infinity, alignment: .trailing)
+                    .environment(\.layoutDirection, .leftToRight)
                     .minimumScaleFactor(0.9)
             } else {
                 HStack {
-                    Text("\(surah.id) - \(surah.nameTransliteration)")
-                        .font(.subheadline)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if !AppLanguage.isArabic {
+                        Text(verbatim: "\(surah.id) - \(surah.nameTransliteration)")
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
 
                     Text("\(Settings.shared.cleanedQuranArabic(surah.nameArabic)) - \(surah.idArabic)")
                         .font(.headline)
@@ -325,6 +334,8 @@ struct SurahRow: View, Equatable {
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .minimumScaleFactor(0.9)
                 }
+                // English name left, Arabic right, in both interfaces.
+                .environment(\.layoutDirection, .leftToRight)
             }
 
             Text("\(revelationEmoji) • \(surah.numberOfAyahs) Ayahs • \(pageLine)")
@@ -357,27 +368,44 @@ struct SurahRow: View, Equatable {
                         .lineLimit(1)
                 }
 
-                // `lineLimit: 1` INSIDE both snippets: HighlightedSnippet applies its own `.lineLimit`
-                // to the inner Text, so the outer clamps here were silently overridden and long names
-                // ("The Enshrouded One" + the revelation emoji) wrapped to a second line.
-                HighlightedSnippet(
-                    source: surah.nameTransliteration,
-                    term: searchQuery,
-                    font: .subheadline.weight(.semibold),
-                    accent: accentColor.color,
-                    fg: .primary,
-                    lineLimit: 1
-                )
+                if AppLanguage.isArabic {
+                    // The Arabic interface names the surah once: the Arabic name leads the column
+                    // (carrying the revelation emoji the English meaning line carries), and neither
+                    // the transliteration, the meaning nor the trailing name and number are drawn.
+                    HighlightedSnippet(
+                        source: Settings.shared.cleanedQuranArabic(surah.nameArabic),
+                        term: searchQuery,
+                        font: Font.arabic(fontArabic, size: textStyleSize(.title3)),
+                        accent: accentColor.color,
+                        fg: .primary,
+                        trailingSuffix: showInfo ? "" : " \(revelationEmoji)",
+                        trailingSuffixFont: .caption,
+                        lineLimit: 1
+                    )
+                    .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
+                } else {
+                    // `lineLimit: 1` INSIDE both snippets: HighlightedSnippet applies its own `.lineLimit`
+                    // to the inner Text, so the outer clamps here were silently overridden and long names
+                    // ("The Enshrouded One" + the revelation emoji) wrapped to a second line.
+                    HighlightedSnippet(
+                        source: surah.nameTransliteration,
+                        term: searchQuery,
+                        font: .subheadline.weight(.semibold),
+                        accent: accentColor.color,
+                        fg: .primary,
+                        lineLimit: 1
+                    )
 
-                HighlightedSnippet(
-                    source: surah.nameEnglish,
-                    term: searchQuery,
-                    font: .caption,
-                    accent: accentColor.color,
-                    fg: showInfo ? .primary : .secondaryOnGlass,
-                    trailingSuffix: showInfo ? "" : " \(revelationEmoji)",
-                    lineLimit: 1
-                )
+                    HighlightedSnippet(
+                        source: surah.nameEnglish,
+                        term: searchQuery,
+                        font: .caption,
+                        accent: accentColor.color,
+                        fg: showInfo ? .primary : .secondaryOnGlass,
+                        trailingSuffix: showInfo ? "" : " \(revelationEmoji)",
+                        lineLimit: 1
+                    )
+                }
 
                 if showInfo {
                     Text(pageLine)
@@ -406,28 +434,30 @@ struct SurahRow: View, Equatable {
             .layoutPriority(1)
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            HStack {
-                HighlightedSnippet(
-                    source: Settings.shared.cleanedQuranArabic(surah.nameArabic),
-                    term: searchQuery,
-                    font: Font.arabic(fontArabic, size: textStyleSize(.title3)),
-                    accent: accentColor.color,
-                    fg: .primary,
-                    // HighlightedSnippet applies its own `.lineLimit` to the inner Text, which would otherwise
-                    // override the row's outer `.lineLimit(1)` (the closest modifier wins) and let long Arabic
-                    // names like آل عمران wrap to two lines.
-                    lineLimit: 1
-                )
-                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
+            if !AppLanguage.isArabic {
+                HStack {
+                    HighlightedSnippet(
+                        source: Settings.shared.cleanedQuranArabic(surah.nameArabic),
+                        term: searchQuery,
+                        font: Font.arabic(fontArabic, size: textStyleSize(.title3)),
+                        accent: accentColor.color,
+                        fg: .primary,
+                        // HighlightedSnippet applies its own `.lineLimit` to the inner Text, which would otherwise
+                        // override the row's outer `.lineLimit(1)` (the closest modifier wins) and let long Arabic
+                        // names like آل عمران wrap to two lines.
+                        lineLimit: 1
+                    )
+                    .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
 
-                Text(surah.idArabic)
-                    .font(.custom(Settings.hafsUthmaniFontName, size: textStyleSize(.title1)))
-                    .arabicFontDesign(custom: true)
-                    .foregroundColor(accentColor.color)
-            }
-            .minimumScaleFactor(0.5)
+                    Text(surah.idArabic)
+                        .font(.custom(Settings.hafsUthmaniFontName, size: textStyleSize(.title1)))
+                        .arabicFontDesign(custom: true)
+                        .foregroundColor(accentColor.color)
+                }
+                .minimumScaleFactor(0.5)
             .padding(.leading, 8)
             .frame(maxWidth: .infinity, alignment: .trailing)
+            }
         }
         .lineLimit(1)
         .minimumScaleFactor(0.75)
@@ -467,6 +497,11 @@ struct SurahRow: View, Equatable {
                 )
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
 
+                // The Arabic interface has no meaning line below to carry the revelation emoji.
+                if AppLanguage.isArabic && !showInfo {
+                    Text(revelationEmoji)
+                        .font(.caption)
+                }
             }
             .lineLimit(1)
             .minimumScaleFactor(0.5)
@@ -482,34 +517,40 @@ struct SurahRow: View, Equatable {
                     .foregroundColor(.secondaryOnGlass)
             }
 
-            HStack(spacing: 4) {
-                Text("\(surah.id):")
-                    .font(.subheadline.monospacedDigit().weight(.bold))
-                    .foregroundColor(accentColor.color)
-                    .layoutPriority(1)
+            // "107: Al-Ma'un" is one piece of English content: its own digits and its own direction, or
+            // the Arabic interface turned it into ":١٠٧ Al-Ma'un". The Arabic interface draws neither it
+            // nor the English meaning: the top line already names the surah in Arabic.
+            if !AppLanguage.isArabic {
+                HStack(spacing: 4) {
+                    Text(verbatim: "\(surah.id):")
+                        .font(.subheadline.monospacedDigit().weight(.bold))
+                        .foregroundColor(accentColor.color)
+                        .layoutPriority(1)
 
-                // Inner `lineLimit: 1`, same as the list row - the outer clamp was overridden.
+                    // Inner `lineLimit: 1`, same as the list row - the outer clamp was overridden.
+                    HighlightedSnippet(
+                        source: surah.nameTransliteration,
+                        term: searchQuery,
+                        font: .subheadline.weight(.semibold),
+                        accent: accentColor.color,
+                        fg: .primary,
+                        lineLimit: 1
+                    )
+                }
+                .leftToRightContent()
+                .minimumScaleFactor(0.6)
+
                 HighlightedSnippet(
-                    source: surah.nameTransliteration,
+                    source: surah.nameEnglish,
                     term: searchQuery,
-                    font: .subheadline.weight(.semibold),
+                    font: .caption,
                     accent: accentColor.color,
-                    fg: .primary,
+                    fg: showInfo ? .primary : .secondaryOnGlass,
+                    trailingSuffix: showInfo ? "" : " \(revelationEmoji)",
                     lineLimit: 1
                 )
+            .minimumScaleFactor(0.6)
             }
-            .minimumScaleFactor(0.6)
-
-            HighlightedSnippet(
-                source: surah.nameEnglish,
-                term: searchQuery,
-                font: .caption,
-                accent: accentColor.color,
-                fg: showInfo ? .primary : .secondaryOnGlass,
-                trailingSuffix: showInfo ? "" : " \(revelationEmoji)",
-                lineLimit: 1
-            )
-            .minimumScaleFactor(0.6)
 
             if showInfo {
                 Text(pageLine)
@@ -748,7 +789,7 @@ struct SurahAyahRow: View, Equatable {
                     }
                 }
 
-                Text(surah.nameTransliteration)
+                Text(surah.displayName)
                     #if os(iOS)
                     .font(.caption)
                     #else
@@ -796,6 +837,8 @@ struct SurahAyahRow: View, Equatable {
                     )
                         .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                        .environment(\.layoutDirection, .leftToRight)
                 }
 
                 if settings.showTransliteration, settings.isHafsDisplay {
@@ -803,6 +846,7 @@ struct SurahAyahRow: View, Equatable {
                         .font(.subheadline)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .lineLimit(1)
+                        .leftToRightContent()
                 }
 
                 if settings.showEnglishSaheeh, settings.isHafsDisplay {
@@ -810,11 +854,13 @@ struct SurahAyahRow: View, Equatable {
                         .font(.subheadline)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .lineLimit(1)
+                        .leftToRightContent()
                 } else if settings.showEnglishMustafa, settings.isHafsDisplay {
                     Text(ayah.textEnglishMustafa)
                         .font(.subheadline)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .lineLimit(1)
+                        .leftToRightContent()
                 }
             }
             .foregroundColor(.primary)
@@ -832,7 +878,7 @@ struct SurahAyahRow: View, Equatable {
     /// over left-aligned prose.
     private var gridBody: some View {
         VStack(alignment: .center, spacing: 6) {
-            Text("\(surah.nameTransliteration) \(surah.id):\(ayah.id)")
+            Text("\(surah.displayName) \(surah.id):\(ayah.id)")
                 .font(.subheadline.monospacedDigit().weight(.semibold))
                 .foregroundColor(settings.accentColor.color)
                 .lineLimit(1)
@@ -977,6 +1023,8 @@ struct AyahArabicSnippet: View, Equatable {
             .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
             .multilineTextAlignment(.trailing)
             .frame(maxWidth: .infinity, alignment: .trailing)
+            // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+            .environment(\.layoutDirection, .leftToRight)
         }
     }
 }
@@ -1024,13 +1072,13 @@ struct AyahSearchResultRow: View, Equatable {
 
     private var pageJuzLine: String? {
         if let page = ayah.page, let juz = ayah.juz {
-            return "Page \(page) • Juz \(juz)"
+            return String(localized: "Page \(page) • Juz \(juz)")
         }
         if let page = ayah.page {
-            return "Page \(page)"
+            return String(localized: "Page \(page)")
         }
         if let juz = ayah.juz {
-            return "Juz \(juz)"
+            return String(localized: "Juz \(juz)")
         }
         return nil
     }
@@ -1188,19 +1236,21 @@ struct AyahSearchRow: View, Equatable {
         settings.bookmarkHighlight(surah: surah, ayah: ayah)?.color ?? settings.accentColor.color
     }
 
+    /// The reader row's pill width (`AyahRow` fixes 60pt), measured at the pill's own text style so it
+    /// tracks Dynamic Type instead.
     private var badgeWidth: CGFloat {
-        BadgeWidthCache.width(template: "10:100")
+        BadgeWidthCache.width(template: "10:100", style: .subheadline) + 4
     }
 
     private var pageJuzLine: String? {
         if let page, let juz {
-            return "Page \(page) • Juz \(juz)"
+            return String(localized: "Page \(page) • Juz \(juz)")
         }
         if let page {
-            return "Page \(page)"
+            return String(localized: "Page \(page)")
         }
         if let juz {
-            return "Juz \(juz)"
+            return String(localized: "Juz \(juz)")
         }
         return nil
     }
@@ -1221,21 +1271,24 @@ struct AyahSearchRow: View, Equatable {
         settings.toggleBookmarkOrConfirm(surah: surah, ayah: ayah)
     }
 
+    /// The reader row's pill (`AyahRow`: subheadline, 28pt tall), not a caption one. These rows had
+    /// the only small pill in the tab - the exact "S:A" match listed beside them draws `SurahAyahRow`'s
+    /// headline pill and the reader its 28pt one - and at 22pt tall it was also the smallest bookmark
+    /// target (Abu, 2026-10-22: the "X:Y" button "is sometimes too small"). The ellipsis beside it
+    /// grew to the HadithRow's 28pt pair with it (`ayahContextMenuModifier(inlineEllipsis:)`).
     @ViewBuilder
     private var ayahReferenceBadge: some View {
         ZStack(alignment: .topTrailing) {
             Text("\(surah):\(ayah)")
-                .font(.caption.weight(.semibold))
+                .font(.subheadline.monospacedDigit().weight(.semibold))
                 .foregroundColor(settings.accentColor.color)
-                .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
-                .frame(width: badgeWidth, alignment: .center)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 4)
+                .frame(width: badgeWidth, height: 28, alignment: .center)
                 .conditionalGlassEffect(
                     useColor: isBookmarked ? 0.3 : nil,
-                    customTint: isBookmarked ? bookmarkTint : nil
+                    customTint: isBookmarked ? bookmarkTint : nil,
+                    interactive: false
                 )
                 .onTapGesture {
                     settings.hapticFeedback()
@@ -1486,14 +1539,14 @@ struct AyahSearchRow: View, Equatable {
             // The HadithRow header grammar: the reference pill leading, the ellipsis actions button
             // trailing. The button itself is OVERLAID by `ayahContextMenuModifier(inlineEllipsis:)`
             // (which owns the menu items and every sheet they present) - this row just reserves its
-            // 22pt slot so the header lays out around it.
+            // 28pt slot (the pill's own height) so the header lays out around it.
             HStack(spacing: 8) {
                 ayahReferenceBadge
 
                 Spacer(minLength: 0)
 
                 Color.clear
-                    .frame(width: 22, height: 22)
+                    .frame(width: 28, height: 28)
             }
 
             if visibility.showArabicLine || !cross.arabic.isEmpty {
@@ -1511,6 +1564,8 @@ struct AyahSearchRow: View, Equatable {
                 )
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                .environment(\.layoutDirection, .leftToRight)
                 .multilineTextAlignment(.trailing)
                 .fixedSize(horizontal: false, vertical: true)
             }
@@ -1523,6 +1578,10 @@ struct AyahSearchRow: View, Equatable {
                     accent: settings.accentColor.color,
                     fg: .secondary
                 )
+                // English content: left to right with the left edge in the Arabic interface too
+                // (here and on the translation lines of both row layouts).
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .leftToRightContent()
             }
 
             // Cross-language spans FORCE the translation line visible: an Arabic hit whose aligned
@@ -1536,6 +1595,8 @@ struct AyahSearchRow: View, Equatable {
                     fg: .secondary,
                     extraHighlightRanges: cross.saheeh
                 )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .leftToRightContent()
             }
 
             if visibility.showMustafaLine || (!cross.mustafa.isEmpty && !visibility.showSaheehLine && cross.saheeh.isEmpty) {
@@ -1547,6 +1608,8 @@ struct AyahSearchRow: View, Equatable {
                     fg: .secondary,
                     extraHighlightRanges: cross.mustafa
                 )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .leftToRightContent()
             }
 
             pageJuzMetadata
@@ -1562,7 +1625,7 @@ struct AyahSearchRow: View, Equatable {
             HStack {
                 ayahReferenceBadge
 
-                Text(surahName)
+                Text(Surah.displayName(id: surah, stored: surahName))
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
             }
@@ -1585,6 +1648,8 @@ struct AyahSearchRow: View, Equatable {
                 )
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                .environment(\.layoutDirection, .leftToRight)
                 .multilineTextAlignment(.trailing)
                 .fixedSize(horizontal: false, vertical: true)
             }
@@ -1597,6 +1662,8 @@ struct AyahSearchRow: View, Equatable {
                     accent: settings.accentColor.color,
                     fg: .secondary
                 )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .leftToRightContent()
             }
 
             // Cross-language spans FORCE the translation line visible - see buildCompactSearchRow.
@@ -1609,6 +1676,8 @@ struct AyahSearchRow: View, Equatable {
                     fg: .secondary,
                     extraHighlightRanges: cross.saheeh
                 )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .leftToRightContent()
             }
 
             if visibility.showMustafaLine || (!cross.mustafa.isEmpty && !visibility.showSaheehLine && cross.saheeh.isEmpty) {
@@ -1620,6 +1689,8 @@ struct AyahSearchRow: View, Equatable {
                     fg: .secondary,
                     extraHighlightRanges: cross.mustafa
                 )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .leftToRightContent()
             }
 
             pageJuzMetadata

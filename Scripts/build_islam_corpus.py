@@ -112,7 +112,9 @@ HADITH_RE = re.compile(r"(?:ScriptureQuote\(\s*hadith:|(?<!\w)\.hadith\(|DuaItem
                        + r")((?:\s*,\s*(?:arabic|english|text|arabicText|transliteration|note):\s*(?:" + STR + r"|\d+\s*\.\.\.\s*\d+|\[[^\]]*\]))*)\s*\)", re.S)
 HADITH_ARG_RE = re.compile(r"(arabic|english|text|arabicText):\s*(" + STR + r"|\d+\s*\.\.\.\s*\d+|\[[^\]]*\])", re.S)
 RANGE_RE = re.compile(r"(\d+)\s*\.\.\.\s*(\d+)")
-TITLE_RE = re.compile(r"\.navigationTitle\((" + STR + r")\)", re.S)
+# An article's title may be wrapped in `AppLanguage.article(...)`, which keeps it English inside the Arabic
+# interface while the articles stay untranslated.
+TITLE_RE = re.compile(r"\.navigationTitle\((?:AppLanguage\.article\()?(" + STR + r")\)?\)", re.S)
 QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine/sources/Quran.json"
 REFERENCE_RE = re.compile(r"^(\d+):(\d+)(?:-(\d+))?((?:,\s*\d+(?:-\d+)?)*)$")
 

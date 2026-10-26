@@ -829,9 +829,14 @@ extension View {
     /// it puts the page's own search bar at the foot (`ArticleSearchChrome`), which finds the page's
     /// sections and scrolls to them. Pages outside the catalog (the tajweed topics, the qiraat
     /// biographies) have no searchable text and leave it nil.
-    func selectableArticleList(article: String? = nil, disableNowPlayingInset: Bool = false,
-                               topContentMargin: CGFloat = 0) -> some View {
-        modifier(SelectableArticleList(article: article, disableNowPlayingInset: disableNowPlayingInset,
+    ///
+    /// `fallback` is a generated page's own sections (`IslamArticle.generated`) for an `article` id the
+    /// corpus does not carry (a prophecy, a prophet's sign): the bar scans those instead, and a hit
+    /// scrolls to the same `ArticleHeader` heading.
+    func selectableArticleList(article: String? = nil, fallback: IslamArticle? = nil,
+                               disableNowPlayingInset: Bool = false, topContentMargin: CGFloat = 0) -> some View {
+        modifier(SelectableArticleList(article: article, fallback: fallback,
+                                       disableNowPlayingInset: disableNowPlayingInset,
                                        topContentMargin: topContentMargin))
     }
 
@@ -1450,6 +1455,8 @@ private struct SelectableArticleList: ViewModifier {
     @StateObject private var handle = ArticleScrollHandle()
 
     let article: String?
+    /// The page's own sections when the corpus has no article for `article` (see `ArticleSearchChrome`).
+    let fallback: IslamArticle?
     let disableNowPlayingInset: Bool
     let topContentMargin: CGFloat
 
@@ -1471,7 +1478,7 @@ private struct SelectableArticleList: ViewModifier {
             // The search chrome applies `articleListStyle` itself, around the page AND its results.
             content.modifier(ArticleSearchChrome(articleID: article, proxy: proxy, handle: handle,
                                                  disableNowPlayingInset: disableNowPlayingInset,
-                                                 topContentMargin: topContentMargin))
+                                                 topContentMargin: topContentMargin, fallback: fallback))
         } else {
             content.articleListStyle(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin)
         }
@@ -1679,7 +1686,7 @@ struct ExplainerButton: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             if let caption {
-                Text(caption)
+                Text(caption.localizedDigits)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1692,7 +1699,7 @@ struct ExplainerButton: View {
                 HStack(spacing: 5) {
                     Image(systemName: "info.circle")
                         .font(.caption2.weight(.semibold))
-                    Text(title)
+                    Text(title.localizedDigits)
                         .font(.caption.weight(.semibold))
                 }
                 .foregroundColor(settings.accentColor.accent1)
@@ -1704,7 +1711,7 @@ struct ExplainerButton: View {
             SheetNavigationContainer {
                 List {
                     Section {
-                        Text(body_)
+                        Text(body_.localizedDigits)
                             .font(.subheadline)
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.vertical, 2)
@@ -1758,7 +1765,7 @@ struct CalculatorResultCard<Detail: View>: View {
 /// renders as a title with a smaller grey line under it - the shape Apple's own menus use. See
 /// `ReciterCaptionedMenuLabel` for the one form that works.
 struct ChooseReciterMenuLabel: View {
-    var title: String = "Choose Reciter"
+    var title: String = String(localized: "Choose Reciter")
 
     var body: some View {
         ReciterCaptionedMenuLabel(title: title, systemImage: "headphones")
@@ -1923,15 +1930,15 @@ struct ShortcutMenu<Content: View, Label: View>: View {
     @State private var menuRequest = 0
 
     private var hint: String {
-        var parts = ["Tap for menu."]
-        if let doubleTap { parts.append("Double tap to \(doubleTap.title.lowercased()).") }
-        if let hold { parts.append("Hold to \(hold.title.lowercased()).") }
+        var parts = [String(localized: "Tap for menu.")]
+        if let doubleTap { parts.append(String(localized: "Double tap to \(doubleTap.title.lowercased()).")) }
+        if let hold { parts.append(String(localized: "Hold to \(hold.title.lowercased()).")) }
         return parts.joined(separator: " ")
     }
 
     var body: some View {
         control
-            .accessibilityHint(voiceOverOn ? "Actions are also available in the menu." : hint)
+            .accessibilityHint(voiceOverOn ? String(localized: "Actions are also available in the menu.") : hint)
             .modifier(MenuShortcutAccessibilityAction(shortcut: doubleTap))
             .modifier(MenuShortcutAccessibilityAction(shortcut: hold))
     }
@@ -2306,23 +2313,63 @@ struct HeaderLineLayout: Layout {
 /// so the laziness bought nothing. Here, with no `#if`, because the Adhan and Islam grids use it too
 /// and Al-Adhan compiles none of the Quran folder.
 ///
-/// The most tiles one List row's `SummaryTileGrid` holds where a grid can grow without bound (bookmarks):
-/// the rest go in further rows, so the List keeps virtualizing. A multiple of every column count (1, 2,
-/// 3, 4, 6), so only the last row is ever short.
-let tileGridChunk = 24
+/// The grid rows one List row holds where a grid is long (bookmarks, the 99 Names, the 604 pages):
+/// `tileGridChunk(columns:)` tiles per List row, the rest in further rows, so the List keeps
+/// virtualizing. ONE row, down from the 24 tiles of 2026-10-09: scrolling the pages sort in grid
+/// mode spent 70% of its main-thread time re-laying out the visible chunk cells, and a cell of 24
+/// ayah tiles - each with glass, a hold layer and a menu - is what every scroll frame re-laid out
+/// (Abu, 2026-10-22: "604 items and it gets really laggy"). Measured over the same six swipes on
+/// the simulator: 4349 ms of main thread with 24 tiles a row, 3644 with three rows a List row,
+/// 3424 with one, against 3078 for the plain list; the 183 ms and 110 ms hitches at the old chunk
+/// boundaries are gone. The chunk follows the column count so a row is never short; a rotation that
+/// changes the columns re-identifies the rows, which the grid rebuilds anyway (checked live).
+let tileGridRowsPerChunk = 1
+
+/// Tiles per List row of a chunked grid with `columns` columns (see `tileGridRowsPerChunk`).
+func tileGridChunk(columns: Int) -> Int { max(1, columns) * tileGridRowsPerChunk }
+
+/// A List row's default leading / trailing content inset on iOS 26 (measured: the tiles of a
+/// default-inset row start 16 pt inside the section card, in both list styles). Restated by the rows
+/// that must set `listRowInsets` themselves, since the modifier takes all four edges at once.
+let listRowDefaultInset: CGFloat = 16
+
+/// A List row's default top / bottom content inset on iOS 26 (30 pt measured between two default
+/// rows' content on the iPhone, 15 a side). See `listRowDefaultInset`.
+let listRowDefaultVerticalInset: CGFloat = 15
+
+/// The air the Quran grids keep above their first row and below their last, in place of the vertical
+/// insets their rows give up: the default inset plus the 4 pt the grid always had there.
+let tileGridOuterInset: CGFloat = listRowDefaultVerticalInset + 4
 
 extension View {
-    /// One List row of a grid chunked by `tileGridChunk`, starting at tile `start` of `count`: no
-    /// separator, the grid's 4 pt padding at its outer edges, and -10 pt where two chunks meet, which
-    /// takes back the List's own row insets there (measured: 30 pt between the rows' tiles, 10 inside
-    /// a row), so the rows read as one grid.
+    /// One List row of a grid chunked by `chunk` tiles (`tileGridChunk(columns:)`), starting at tile
+    /// `start` of `count`: no separator, and the grid's own row gap (`spacing`) drawn INSIDE the row
+    /// where two chunks meet, with the row's vertical insets at zero so the List adds nothing of its
+    /// own there. `horizontalInset` is the tiles' distance from the cell's edges (the List's default,
+    /// unless the grid used to pad out of it) and `outerInset` the air above the first row and below
+    /// the last, in place of the vertical insets the rows give up.
+    ///
+    /// It used to take the List's inter-row spacing back with -10 pt of padding on each side of the
+    /// seam (30 pt measured on the iPhone, 10 wanted). That made the tiles overflow their cells by
+    /// 10 pt, and the seam was only right while the List really did add 30: on the Mac it added
+    /// nothing, the two rows' glass tiles overlapped by 20 pt, and Liquid Glass drew the overlap as a
+    /// bright band across the tiles above every seam (Abu, 2026-10-22, tiles 23/24). A tile now never
+    /// leaves its cell, so a List that spaces its rows differently can at most widen the seam, never
+    /// collide two glass shapes. The horizontal insets are the List's default (`listRowDefaultInset`)
+    /// restated, because `listRowInsets` takes all four edges at once.
     @ViewBuilder
-    func tileGridChunkRow(start: Int, count: Int) -> some View {
+    func tileGridChunkRow(start: Int, count: Int, chunk: Int, spacing: CGFloat = 10,
+                          horizontalInset: CGFloat = listRowDefaultInset,
+                          outerInset: CGFloat = tileGridOuterInset) -> some View {
+        let first = start == 0
+        let last = start + chunk >= count
         let padded = self
-            .padding(.top, start == 0 ? 4 : -10)
-            .padding(.bottom, start + tileGridChunk >= count ? 4 : -10)
+            .padding(.top, first ? outerInset : 0)
+            .padding(.bottom, last ? outerInset : spacing)
         #if os(iOS)
-        padded.listRowSeparator(.hidden)
+        padded
+            .listRowInsets(EdgeInsets(top: 0, leading: horizontalInset, bottom: 0, trailing: horizontalInset))
+            .listRowSeparator(.hidden)
         #else
         padded
         #endif
@@ -2401,26 +2448,51 @@ struct EqualColumnsLayout: Layout {
         return subviews.map { $0.sizeThatFits(.unspecified).width }.max() ?? 0
     }
 
-    private func rowHeights(_ width: CGFloat, perRow: Int, _ subviews: Subviews) -> [CGFloat] {
-        stride(from: 0, to: subviews.count, by: perRow).map { start in
+    /// The measured row heights per column width. `sizeThatFits` and then `placeSubviews` both need
+    /// them, and each used to re-measure every tile (shaping its Arabic text through CoreText) on
+    /// its own. The cache spares the placement pass; a List's self-sizing measurement still arrives
+    /// with a fresh cache, so that pass measures once per cell. SwiftUI empties the cache
+    /// (`updateCache`) whenever the subviews change, a tile changing size included.
+    struct Cache {
+        var heightsByWidth: [CGFloat: [CGFloat]] = [:]
+        var perRow = 0
+        var count = 0
+    }
+
+    func makeCache(subviews: Subviews) -> Cache { Cache() }
+
+    func updateCache(_ cache: inout Cache, subviews: Subviews) { cache = Cache() }
+
+    private func rowHeights(_ width: CGFloat, perRow: Int, _ subviews: Subviews, cache: inout Cache) -> [CGFloat] {
+        let key = (width * 2).rounded() / 2
+        if cache.perRow == perRow, cache.count == subviews.count, let heights = cache.heightsByWidth[key] {
+            return heights
+        }
+        let heights: [CGFloat] = stride(from: 0, to: subviews.count, by: perRow).map { start in
             subviews[start..<min(start + perRow, subviews.count)]
                 .map { $0.sizeThatFits(ProposedViewSize(width: width, height: nil)).height }
                 .max() ?? 0
         }
+        if cache.perRow != perRow || cache.count != subviews.count {
+            cache = Cache(perRow: perRow, count: subviews.count)
+        }
+        if cache.heightsByWidth.count >= 8 { cache.heightsByWidth.removeAll() }
+        cache.heightsByWidth[key] = heights
+        return heights
     }
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) -> CGSize {
         let count = columnCount(proposal.width)
         let width = columnWidth(proposal.width, count: count, subviews)
-        let heights = rowHeights(width, perRow: count, subviews)
+        let heights = rowHeights(width, perRow: count, subviews, cache: &cache)
         let total = heights.reduce(0, +) + spacing * CGFloat(max(heights.count - 1, 0))
         return CGSize(width: width * CGFloat(count) + gap * CGFloat(count - 1), height: total)
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) {
         let count = columnCount(bounds.width)
         let width = columnWidth(bounds.width, count: count, subviews)
-        let heights = rowHeights(width, perRow: count, subviews)
+        let heights = rowHeights(width, perRow: count, subviews, cache: &cache)
         let top = alignment == .top
         var y = bounds.minY
         for (row, height) in heights.enumerated() {
@@ -2654,7 +2726,7 @@ private struct GridFavoriteStar: View {
             }
             .padding(.top, 1)
             .padding(.trailing, 2)
-            .accessibilityLabel(isFavorite ? "Unfavorite \(accessibilityName)" : "Favorite \(accessibilityName)")
+            .accessibilityLabel(isFavorite ? String(localized: "Unfavorite \(accessibilityName)") : String(localized: "Favorite \(accessibilityName)"))
             // A tap-gesture image: VoiceOver announced it as an image, not something to press.
             .accessibilityRemoveTraits(.isImage)
             .accessibilityAddTraits(.isButton)
@@ -2748,10 +2820,28 @@ struct CountPill: View {
 /// the right an optional shuffle button, the count pill, and an optional collapse chevron. Pass
 /// `isExpanded` to make the section collapsible (the same chevron.circle control Favorite Surahs and
 /// Bookmarked Ayahs use) and `onShuffle` for sections where jumping to a random item makes sense.
+extension String {
+    /// Interface text set CENTERED (a tile's title or read-out), as a right-to-left line in a right-to-left
+    /// interface. SwiftUI takes a line's direction from its first strong letter, not from the layout
+    /// direction, so an Arabic caption that opens on a Latin name ("iCloud ...") laid out left to right.
+    /// A RIGHT-TO-LEFT MARK in front settles it; unchanged left to right. Interface text only: English
+    /// content (a book title, a translation) keeps its own direction.
+    var interfaceParagraph: String {
+        AppLanguage.isRightToLeft && !isEmpty ? "\u{200F}" + self : self
+    }
+}
+
 /// A small accent-gradient icon chip - the iOS Settings app's row-icon grammar, tinted the app's
 /// way. Shared by the Settings hub, settings search results, and the Islam tab's resource rows.
 struct AccentIconChip: View {
     @Environment(\.appearance) private var appearance
+    @Environment(\.locale) private var locale
+
+    /// Symbols that draw LATIN letters on purpose (the English Text pages, an English reading choice).
+    /// SwiftUI draws a localized symbol in the interface's script, so under Arabic "textformat" drew
+    /// "أ" and an English Text row read as a second Arabic Text row. An English locale keeps their Latin
+    /// face in both languages; Arabic rows name their own variant ("textformat.ar").
+    static let latinScriptSymbols: Set<String> = ["textformat", "textformat.abc"]
 
     let systemImage: String
     var tint: Color? = nil
@@ -2769,6 +2859,7 @@ struct AccentIconChip: View {
         // since dimming the second half would read as a smudge rather than as a second colour.
         let colors: [Color] = secondaryTint.map { [tint, $0] } ?? [tint.opacity(0.95), tint.opacity(0.65)]
         Image(systemName: systemImage)
+            .environment(\.locale, Self.latinScriptSymbols.contains(systemImage) ? Locale(identifier: "en") : locale)
             // Scales with the chip (~footnote at the default 29pt), so mini chips stay balanced.
             .font(.system(size: size * 0.45, weight: .semibold))
             .foregroundColor(.white)
@@ -2980,7 +3071,7 @@ struct SectionPillHeader: View {
                     Settings.shared.hapticFeedback()
                     withAnimation { isExpanded.wrappedValue.toggle() }
                 }
-                .accessibilityLabel(isExpanded.wrappedValue ? "Collapse \(title.lowercased())" : "Expand \(title.lowercased())")
+                .accessibilityLabel(isExpanded.wrappedValue ? String(localized: "Collapse \(title.lowercased())") : String(localized: "Expand \(title.lowercased())"))
                 .accessibilityRemoveTraits(.isImage)
                 .accessibilityAddTraits(.isButton)
         }

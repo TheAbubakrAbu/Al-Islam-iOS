@@ -52,26 +52,26 @@ struct IsnadChain {
 enum QiraatIsnad {
     // MARK: - The people
 
-    static let prophet = IsnadNode(name: "Prophet Muhammad ﷺ", arabic: "رَسُولُ اللَّهِ ﷺ", detail: "d. 11 AH", role: .prophet)
+    static let prophet = IsnadNode(name: "Prophet Muhammad ﷺ", arabic: "رَسُولُ اللَّهِ ﷺ", detail: String(localized: "d. 11 AH"), role: .prophet)
 
     enum Companion: String, CaseIterable {
         case ubayy, zayd, uthman, ali, ibnMasud, ibnAbbas, abuHurayrah, ibnAyyash, ibnSaib, umar, abuMusa, abuDarda, husayn
 
         var node: IsnadNode {
             switch self {
-            case .ubayy: return IsnadNode(name: "Ubayy ibn Ka'b", arabic: "أُبَيُّ بنُ كَعبٍ", detail: "d. 30 AH", role: .companion)
-            case .zayd: return IsnadNode(name: "Zayd ibn Thabit", arabic: "زَيدُ بنُ ثَابِتٍ", detail: "d. 45 AH", role: .companion)
-            case .uthman: return IsnadNode(name: "Uthman ibn Affan", arabic: "عُثمَانُ بنُ عَفَّانَ", detail: "d. 35 AH", role: .companion)
-            case .ali: return IsnadNode(name: "Ali ibn Abi Talib", arabic: "عَلِيُّ بنُ أَبِي طَالِبٍ", detail: "d. 40 AH", role: .companion)
-            case .ibnMasud: return IsnadNode(name: "Abdullah ibn Mas'ud", arabic: "عَبدُ اللَّهِ بنُ مَسعُودٍ", detail: "d. 32 AH", role: .companion)
-            case .ibnAbbas: return IsnadNode(name: "Abdullah ibn Abbas", arabic: "عَبدُ اللَّهِ بنُ عَبَّاسٍ", detail: "d. 68 AH", role: .companion)
-            case .abuHurayrah: return IsnadNode(name: "Abu Hurayrah", arabic: "أَبُو هُرَيرَةَ", detail: "d. 59 AH", role: .companion)
-            case .ibnAyyash: return IsnadNode(name: "Abdullah ibn Ayyash", arabic: "عَبدُ اللَّهِ بنُ عَيَّاشٍ", detail: "d. 64 AH", role: .companion)
-            case .ibnSaib: return IsnadNode(name: "Abdullah ibn as-Sa'ib", arabic: "عَبدُ اللَّهِ بنُ السَّائِبِ", detail: "d. c. 70 AH", role: .companion)
-            case .umar: return IsnadNode(name: "Umar ibn al-Khattab", arabic: "عُمَرُ بنُ الخَطَّابِ", detail: "d. 23 AH", role: .companion)
-            case .abuMusa: return IsnadNode(name: "Abu Musa al-Ash'ari", arabic: "أَبُو مُوسَى الأَشعَرِيُّ", detail: "d. 44 AH", role: .companion)
-            case .abuDarda: return IsnadNode(name: "Abu ad-Darda", arabic: "أَبُو الدَّردَاءِ", detail: "d. 32 AH", role: .companion)
-            case .husayn: return IsnadNode(name: "al-Husayn ibn Ali", arabic: "الحُسَينُ بنُ عَلِيٍّ", detail: "d. 61 AH", role: .companion)
+            case .ubayy: return IsnadNode(name: "Ubayy ibn Ka'b", arabic: "أُبَيُّ بنُ كَعبٍ", detail: String(localized: "d. 30 AH"), role: .companion)
+            case .zayd: return IsnadNode(name: "Zayd ibn Thabit", arabic: "زَيدُ بنُ ثَابِتٍ", detail: String(localized: "d. 45 AH"), role: .companion)
+            case .uthman: return IsnadNode(name: "Uthman ibn Affan", arabic: "عُثمَانُ بنُ عَفَّانَ", detail: String(localized: "d. 35 AH"), role: .companion)
+            case .ali: return IsnadNode(name: "Ali ibn Abi Talib", arabic: "عَلِيُّ بنُ أَبِي طَالِبٍ", detail: String(localized: "d. 40 AH"), role: .companion)
+            case .ibnMasud: return IsnadNode(name: "Abdullah ibn Mas'ud", arabic: "عَبدُ اللَّهِ بنُ مَسعُودٍ", detail: String(localized: "d. 32 AH"), role: .companion)
+            case .ibnAbbas: return IsnadNode(name: "Abdullah ibn Abbas", arabic: "عَبدُ اللَّهِ بنُ عَبَّاسٍ", detail: String(localized: "d. 68 AH"), role: .companion)
+            case .abuHurayrah: return IsnadNode(name: "Abu Hurayrah", arabic: "أَبُو هُرَيرَةَ", detail: String(localized: "d. 59 AH"), role: .companion)
+            case .ibnAyyash: return IsnadNode(name: "Abdullah ibn Ayyash", arabic: "عَبدُ اللَّهِ بنُ عَيَّاشٍ", detail: String(localized: "d. 64 AH"), role: .companion)
+            case .ibnSaib: return IsnadNode(name: "Abdullah ibn as-Sa'ib", arabic: "عَبدُ اللَّهِ بنُ السَّائِبِ", detail: String(localized: "d. c. 70 AH"), role: .companion)
+            case .umar: return IsnadNode(name: "Umar ibn al-Khattab", arabic: "عُمَرُ بنُ الخَطَّابِ", detail: String(localized: "d. 23 AH"), role: .companion)
+            case .abuMusa: return IsnadNode(name: "Abu Musa al-Ash'ari", arabic: "أَبُو مُوسَى الأَشعَرِيُّ", detail: String(localized: "d. 44 AH"), role: .companion)
+            case .abuDarda: return IsnadNode(name: "Abu ad-Darda", arabic: "أَبُو الدَّردَاءِ", detail: String(localized: "d. 32 AH"), role: .companion)
+            case .husayn: return IsnadNode(name: "al-Husayn ibn Ali", arabic: "الحُسَينُ بنُ عَلِيٍّ", detail: String(localized: "d. 61 AH"), role: .companion)
             }
         }
     }
@@ -104,61 +104,61 @@ enum QiraatIsnad {
     static let imamChains: [String: ImamChain] = [
         Settings.Riwayah.nafiTeacher: ImamChain(
             teachers: [
-                successor("Abu Ja'far Yazid ibn al-Qa'qa'", "أَبُو جَعفَرٍ يَزِيدُ بنُ القَعقَاعِ", "d. 130 AH"),
-                successor("Abd ar-Rahman al-A'raj", "عَبدُ الرَّحمَنِ الأَعرَجُ", "d. 117 AH"),
-                successor("Shaybah ibn Nisah", "شَيبَةُ بنُ نِصَاحٍ", "d. 130 AH"),
-                successor("Muslim ibn Jundub", "مُسلِمُ بنُ جُندُبٍ", "d. 106 AH"),
-                successor("Yazid ibn Ruman", "يَزِيدُ بنُ رُومَانَ", "d. 130 AH"),
+                successor("Abu Ja'far Yazid ibn al-Qa'qa'", "أَبُو جَعفَرٍ يَزِيدُ بنُ القَعقَاعِ", String(localized: "d. 130 AH")),
+                successor("Abd ar-Rahman al-A'raj", "عَبدُ الرَّحمَنِ الأَعرَجُ", String(localized: "d. 117 AH")),
+                successor("Shaybah ibn Nisah", "شَيبَةُ بنُ نِصَاحٍ", String(localized: "d. 130 AH")),
+                successor("Muslim ibn Jundub", "مُسلِمُ بنُ جُندُبٍ", String(localized: "d. 106 AH")),
+                successor("Yazid ibn Ruman", "يَزِيدُ بنُ رُومَانَ", String(localized: "d. 130 AH")),
             ],
             companions: [.ubayy, .zayd, .umar, .ibnAbbas, .abuHurayrah, .ibnAyyash]
         ),
         Settings.Riwayah.ibnKathirTeacher: ImamChain(
             teachers: [
-                successor("Mujahid ibn Jabr", "مُجَاهِدُ بنُ جَبرٍ", "d. 104 AH"),
-                successor("Dirbas, mawla of Ibn Abbas", "دِربَاسٌ مَولَى ابنِ عَبَّاسٍ", "d. c. 100 AH"),
+                successor("Mujahid ibn Jabr", "مُجَاهِدُ بنُ جَبرٍ", String(localized: "d. 104 AH")),
+                successor("Dirbas, mawla of Ibn Abbas", "دِربَاسٌ مَولَى ابنِ عَبَّاسٍ", String(localized: "d. c. 100 AH")),
             ],
             companions: [.ibnSaib, .ibnAbbas, .ubayy, .zayd, .umar]
         ),
         Settings.Riwayah.abiAmrTeacher: ImamChain(
             teachers: [
-                successor("Mujahid ibn Jabr", "مُجَاهِدُ بنُ جَبرٍ", "d. 104 AH"),
-                successor("Sa'id ibn Jubayr", "سَعِيدُ بنُ جُبَيرٍ", "d. 95 AH"),
-                successor("Abu Ja'far al-Madani", "أَبُو جَعفَرٍ المَدَنِيُّ", "d. 130 AH"),
-                successor("al-Hasan al-Basri", "الحَسَنُ البَصرِيُّ", "d. 110 AH"),
-                successor("Yahya ibn Ya'mar", "يَحيَى بنُ يَعمَرَ", "d. 129 AH"),
-                successor("Nasr ibn Asim", "نَصرُ بنُ عَاصِمٍ", "d. 89 AH"),
+                successor("Mujahid ibn Jabr", "مُجَاهِدُ بنُ جَبرٍ", String(localized: "d. 104 AH")),
+                successor("Sa'id ibn Jubayr", "سَعِيدُ بنُ جُبَيرٍ", String(localized: "d. 95 AH")),
+                successor("Abu Ja'far al-Madani", "أَبُو جَعفَرٍ المَدَنِيُّ", String(localized: "d. 130 AH")),
+                successor("al-Hasan al-Basri", "الحَسَنُ البَصرِيُّ", String(localized: "d. 110 AH")),
+                successor("Yahya ibn Ya'mar", "يَحيَى بنُ يَعمَرَ", String(localized: "d. 129 AH")),
+                successor("Nasr ibn Asim", "نَصرُ بنُ عَاصِمٍ", String(localized: "d. 89 AH")),
             ],
             companions: [.umar, .uthman, .ali, .ibnMasud, .abuMusa, .ibnAbbas, .ubayy, .zayd, .abuHurayrah]
         ),
         Settings.Riwayah.ibnAmirTeacher: ImamChain(
             teachers: [
-                successor("al-Mughirah ibn Abi Shihab", "المُغِيرَةُ بنُ أَبِي شِهَابٍ", "d. 91 AH"),
+                successor("al-Mughirah ibn Abi Shihab", "المُغِيرَةُ بنُ أَبِي شِهَابٍ", String(localized: "d. 91 AH")),
             ],
             companions: [.abuDarda, .uthman]
         ),
         Settings.Riwayah.asimTeacher: ImamChain(
             teachers: [
-                successor("Abu Abd ar-Rahman as-Sulami", "أَبُو عَبدِ الرَّحمَنِ السُّلَمِيُّ", "d. 74 AH"),
-                successor("Zirr ibn Hubaysh", "زِرُّ بنُ حُبَيشٍ", "d. 82 AH"),
-                successor("Abu Amr ash-Shaybani", "أَبُو عَمرٍو الشَّيبَانِيُّ", "d. 95 AH"),
+                successor("Abu Abd ar-Rahman as-Sulami", "أَبُو عَبدِ الرَّحمَنِ السُّلَمِيُّ", String(localized: "d. 74 AH")),
+                successor("Zirr ibn Hubaysh", "زِرُّ بنُ حُبَيشٍ", String(localized: "d. 82 AH")),
+                successor("Abu Amr ash-Shaybani", "أَبُو عَمرٍو الشَّيبَانِيُّ", String(localized: "d. 95 AH")),
             ],
             companions: [.uthman, .ali, .ibnMasud, .ubayy, .zayd]
         ),
         Settings.Riwayah.hamzahTeacher: ImamChain(
             teachers: [
-                successor("Sulayman al-A'mash", "سُلَيمَانُ الأَعمَشُ", "d. 148 AH"),
-                successor("Humran ibn A'yan", "حُمرَانُ بنُ أَعيَنَ", "d. 130 AH"),
-                successor("Ibn Abi Layla", "مُحَمَّدُ بنُ أَبِي لَيلَى", "d. 148 AH"),
-                successor("Ja'far as-Sadiq", "جَعفَرٌ الصَّادِقُ", "d. 148 AH"),
+                successor("Sulayman al-A'mash", "سُلَيمَانُ الأَعمَشُ", String(localized: "d. 148 AH")),
+                successor("Humran ibn A'yan", "حُمرَانُ بنُ أَعيَنَ", String(localized: "d. 130 AH")),
+                successor("Ibn Abi Layla", "مُحَمَّدُ بنُ أَبِي لَيلَى", String(localized: "d. 148 AH")),
+                successor("Ja'far as-Sadiq", "جَعفَرٌ الصَّادِقُ", String(localized: "d. 148 AH")),
             ],
             companions: [.uthman, .ali, .ubayy, .zayd, .ibnMasud, .husayn]
         ),
         Settings.Riwayah.kisaiTeacher: ImamChain(
             teachers: [
-                successor("Hamzah az-Zayyat", "حَمزَةُ الزَّيَّاتُ", "d. 156 AH"),
-                successor("Isa ibn Umar al-Hamadani", "عِيسَى بنُ عُمَرَ الهَمَدَانِيُّ", "d. 156 AH"),
-                successor("Ibn Abi Layla", "مُحَمَّدُ بنُ أَبِي لَيلَى", "d. 148 AH"),
-                successor("Abu Bakr ibn Ayyash (Shu'bah)", "أَبُو بَكرِ بنُ عَيَّاشٍ", "d. 193 AH"),
+                successor("Hamzah az-Zayyat", "حَمزَةُ الزَّيَّاتُ", String(localized: "d. 156 AH")),
+                successor("Isa ibn Umar al-Hamadani", "عِيسَى بنُ عُمَرَ الهَمَدَانِيُّ", String(localized: "d. 156 AH")),
+                successor("Ibn Abi Layla", "مُحَمَّدُ بنُ أَبِي لَيلَى", String(localized: "d. 148 AH")),
+                successor("Abu Bakr ibn Ayyash (Shu'bah)", "أَبُو بَكرِ بنُ عَيَّاشٍ", String(localized: "d. 193 AH")),
             ],
             companions: [.umar, .uthman, .ali, .ubayy, .zayd, .ibnMasud, .ibnAbbas, .abuHurayrah, .husayn]
         ),
@@ -168,17 +168,17 @@ enum QiraatIsnad {
         ),
         Settings.Riwayah.yaqubTeacher: ImamChain(
             teachers: [
-                successor("Sallam ibn Sulayman at-Tawil", "سَلَّامُ بنُ سُلَيمَانَ الطَّوِيلُ", "d. 171 AH"),
-                successor("Shihab ibn Shurnufah", "شِهَابُ بنُ شُرنُفَةَ", "d. 162 AH"),
-                successor("Mahdi ibn Maymun", "مَهدِيُّ بنُ مَيمُونٍ", "d. 171 AH"),
+                successor("Sallam ibn Sulayman at-Tawil", "سَلَّامُ بنُ سُلَيمَانَ الطَّوِيلُ", String(localized: "d. 171 AH")),
+                successor("Shihab ibn Shurnufah", "شِهَابُ بنُ شُرنُفَةَ", String(localized: "d. 162 AH")),
+                successor("Mahdi ibn Maymun", "مَهدِيُّ بنُ مَيمُونٍ", String(localized: "d. 171 AH")),
             ],
             companions: [.umar, .uthman, .ali, .ubayy, .zayd, .ibnMasud, .abuMusa, .ibnAbbas, .abuHurayrah]
         ),
         Settings.Riwayah.khalafAshirTeacher: ImamChain(
             teachers: [
-                successor("Sulaym ibn Isa", "سُلَيمُ بنُ عِيسَى", "d. 188 AH"),
-                successor("Abu Bakr ibn Ayyash (Shu'bah)", "أَبُو بَكرِ بنُ عَيَّاشٍ", "d. 193 AH"),
-                successor("Ya'qub ibn Khalifah al-A'sha", "يَعقُوبُ بنُ خَلِيفَةَ الأَعشَى", "d. c. 200 AH"),
+                successor("Sulaym ibn Isa", "سُلَيمُ بنُ عِيسَى", String(localized: "d. 188 AH")),
+                successor("Abu Bakr ibn Ayyash (Shu'bah)", "أَبُو بَكرِ بنُ عَيَّاشٍ", String(localized: "d. 193 AH")),
+                successor("Ya'qub ibn Khalifah al-A'sha", "يَعقُوبُ بنُ خَلِيفَةَ الأَعشَى", String(localized: "d. c. 200 AH")),
             ],
             companions: [.uthman, .ali, .ibnMasud, .zayd, .ubayy, .husayn]
         ),
@@ -187,121 +187,121 @@ enum QiraatIsnad {
     static let narratorChains: [String: NarratorChain] = [
         // Asim
         Settings.Riwayah.hafsTag: NarratorChain(links: [], students: [
-            student("Ubayd ibn as-Sabbah", "عُبَيدُ بنُ الصَّبَّاحِ", "d. 235 AH"),
-            student("Amr ibn as-Sabbah", "عَمرُو بنُ الصَّبَّاحِ", "d. 221 AH"),
+            student("Ubayd ibn as-Sabbah", "عُبَيدُ بنُ الصَّبَّاحِ", String(localized: "d. 235 AH")),
+            student("Amr ibn as-Sabbah", "عَمرُو بنُ الصَّبَّاحِ", String(localized: "d. 221 AH")),
         ]),
         Settings.Riwayah.shubah: NarratorChain(links: [], students: [
-            student("Yahya ibn Adam", "يَحيَى بنُ آدَمَ", "d. 203 AH"),
-            student("Yahya al-Ulaymi", "يَحيَى العُلَيمِيُّ", "d. 243 AH"),
+            student("Yahya ibn Adam", "يَحيَى بنُ آدَمَ", String(localized: "d. 203 AH")),
+            student("Yahya al-Ulaymi", "يَحيَى العُلَيمِيُّ", String(localized: "d. 243 AH")),
         ]),
         // Nafi
         Settings.Riwayah.warsh: NarratorChain(links: [], students: [
-            student("Abu Ya'qub al-Azraq", "أَبُو يَعقُوبَ الأَزرَقُ", "d. 240 AH"),
-            student("Abu Bakr al-Asbahani", "أَبُو بَكرٍ الأَصبَهَانِيُّ", "d. 296 AH"),
+            student("Abu Ya'qub al-Azraq", "أَبُو يَعقُوبَ الأَزرَقُ", String(localized: "d. 240 AH")),
+            student("Abu Bakr al-Asbahani", "أَبُو بَكرٍ الأَصبَهَانِيُّ", String(localized: "d. 296 AH")),
         ]),
         Settings.Riwayah.qaloon: NarratorChain(links: [], students: [
-            student("Abu Nashit Muhammad ibn Harun", "أَبُو نَشِيطٍ مُحَمَّدُ بنُ هَارُونَ", "d. 258 AH"),
-            student("Ahmad al-Hulwani", "أَحمَدُ الحُلوَانِيُّ", "d. 250 AH"),
+            student("Abu Nashit Muhammad ibn Harun", "أَبُو نَشِيطٍ مُحَمَّدُ بنُ هَارُونَ", String(localized: "d. 258 AH")),
+            student("Ahmad al-Hulwani", "أَحمَدُ الحُلوَانِيُّ", String(localized: "d. 250 AH")),
         ]),
         // Ibn Kathir
         Settings.Riwayah.buzzi: NarratorChain(links: [
-            link("Ikrimah ibn Sulayman", "عِكرِمَةُ بنُ سُلَيمَانَ", "d. c. 200 AH"),
-            link("Isma'il al-Qust and Shibl ibn Abbad", "إِسمَاعِيلُ القُسطُ وَشِبلُ بنُ عَبَّادٍ", "d. 170 / 148 AH"),
+            link("Ikrimah ibn Sulayman", "عِكرِمَةُ بنُ سُلَيمَانَ", String(localized: "d. c. 200 AH")),
+            link("Isma'il al-Qust and Shibl ibn Abbad", "إِسمَاعِيلُ القُسطُ وَشِبلُ بنُ عَبَّادٍ", String(localized: "d. 170 / 148 AH")),
         ], students: [
-            student("Abu Rabi'ah Muhammad ibn Ishaq", "أَبُو رَبِيعَةَ مُحَمَّدُ بنُ إِسحَاقَ", "d. 294 AH"),
-            student("Ibn al-Habbab", "ابنُ الحُبَابِ", "d. 301 AH"),
+            student("Abu Rabi'ah Muhammad ibn Ishaq", "أَبُو رَبِيعَةَ مُحَمَّدُ بنُ إِسحَاقَ", String(localized: "d. 294 AH")),
+            student("Ibn al-Habbab", "ابنُ الحُبَابِ", String(localized: "d. 301 AH")),
         ]),
         Settings.Riwayah.qunbul: NarratorChain(links: [
-            link("Ahmad al-Qawwas", "أَحمَدُ القَوَّاسُ", "d. 240 AH"),
-            link("Abu al-Ikhrit Wahb ibn Wadih", "أَبُو الإِخرِيطِ وَهبُ بنُ وَاضِحٍ", "d. 190 AH"),
-            link("Isma'il al-Qust", "إِسمَاعِيلُ القُسطُ", "d. 170 AH"),
+            link("Ahmad al-Qawwas", "أَحمَدُ القَوَّاسُ", String(localized: "d. 240 AH")),
+            link("Abu al-Ikhrit Wahb ibn Wadih", "أَبُو الإِخرِيطِ وَهبُ بنُ وَاضِحٍ", String(localized: "d. 190 AH")),
+            link("Isma'il al-Qust", "إِسمَاعِيلُ القُسطُ", String(localized: "d. 170 AH")),
         ], students: [
-            student("Ibn Mujahid", "ابنُ مُجَاهِدٍ", "d. 324 AH"),
-            student("Ibn Shanabudh", "ابنُ شَنَبُوذَ", "d. 328 AH"),
+            student("Ibn Mujahid", "ابنُ مُجَاهِدٍ", String(localized: "d. 324 AH")),
+            student("Ibn Shanabudh", "ابنُ شَنَبُوذَ", String(localized: "d. 328 AH")),
         ]),
         // Abu Amr
         Settings.Riwayah.duri: NarratorChain(links: [
-            link("Yahya al-Yazidi", "يَحيَى اليَزِيدِيُّ", "d. 202 AH"),
+            link("Yahya al-Yazidi", "يَحيَى اليَزِيدِيُّ", String(localized: "d. 202 AH")),
         ], students: [
-            student("Abu az-Za'ra ibn Abdus", "أَبُو الزَّعرَاءِ ابنُ عَبدُوسٍ", "d. c. 280 AH"),
-            student("Abu Ja'far ibn Farah", "أَبُو جَعفَرٍ ابنُ فَرَحٍ", "d. 303 AH"),
+            student("Abu az-Za'ra ibn Abdus", "أَبُو الزَّعرَاءِ ابنُ عَبدُوسٍ", String(localized: "d. c. 280 AH")),
+            student("Abu Ja'far ibn Farah", "أَبُو جَعفَرٍ ابنُ فَرَحٍ", String(localized: "d. 303 AH")),
         ]),
         Settings.Riwayah.susi: NarratorChain(links: [
-            link("Yahya al-Yazidi", "يَحيَى اليَزِيدِيُّ", "d. 202 AH"),
+            link("Yahya al-Yazidi", "يَحيَى اليَزِيدِيُّ", String(localized: "d. 202 AH")),
         ], students: [
-            student("Abu Imran Musa ibn Jarir", "أَبُو عِمرَانَ مُوسَى بنُ جَرِيرٍ", "d. 316 AH"),
-            student("Ibn Jumhur", "ابنُ جُمهُورٍ", "d. c. 300 AH"),
+            student("Abu Imran Musa ibn Jarir", "أَبُو عِمرَانَ مُوسَى بنُ جَرِيرٍ", String(localized: "d. 316 AH")),
+            student("Ibn Jumhur", "ابنُ جُمهُورٍ", String(localized: "d. c. 300 AH")),
         ]),
         // Ibn Amir
         Settings.Riwayah.hisham: NarratorChain(links: [
-            link("Ayyub ibn Tamim", "أَيُّوبُ بنُ تَمِيمٍ", "d. 198 AH"),
-            link("Yahya adh-Dhimari", "يَحيَى الذِّمَارِيُّ", "d. 145 AH"),
+            link("Ayyub ibn Tamim", "أَيُّوبُ بنُ تَمِيمٍ", String(localized: "d. 198 AH")),
+            link("Yahya adh-Dhimari", "يَحيَى الذِّمَارِيُّ", String(localized: "d. 145 AH")),
         ], students: [
-            student("Ahmad al-Hulwani", "أَحمَدُ الحُلوَانِيُّ", "d. 250 AH"),
-            student("ad-Dajuni", "الدَّاجُونِيُّ", "d. 324 AH"),
+            student("Ahmad al-Hulwani", "أَحمَدُ الحُلوَانِيُّ", String(localized: "d. 250 AH")),
+            student("ad-Dajuni", "الدَّاجُونِيُّ", String(localized: "d. 324 AH")),
         ]),
         Settings.Riwayah.ibnDhakwan: NarratorChain(links: [
-            link("Ayyub ibn Tamim", "أَيُّوبُ بنُ تَمِيمٍ", "d. 198 AH"),
-            link("Yahya adh-Dhimari", "يَحيَى الذِّمَارِيُّ", "d. 145 AH"),
+            link("Ayyub ibn Tamim", "أَيُّوبُ بنُ تَمِيمٍ", String(localized: "d. 198 AH")),
+            link("Yahya adh-Dhimari", "يَحيَى الذِّمَارِيُّ", String(localized: "d. 145 AH")),
         ], students: [
-            student("Harun al-Akhfash", "هَارُونُ الأَخفَشُ", "d. 292 AH"),
-            student("as-Suri", "الصُّورِيُّ", "d. 307 AH"),
+            student("Harun al-Akhfash", "هَارُونُ الأَخفَشُ", String(localized: "d. 292 AH")),
+            student("as-Suri", "الصُّورِيُّ", String(localized: "d. 307 AH")),
         ]),
         // Hamzah
         Settings.Riwayah.khalaf: NarratorChain(links: [
-            link("Sulaym ibn Isa", "سُلَيمُ بنُ عِيسَى", "d. 188 AH"),
+            link("Sulaym ibn Isa", "سُلَيمُ بنُ عِيسَى", String(localized: "d. 188 AH")),
         ], students: [
-            student("Idris al-Haddad", "إِدرِيسُ الحَدَّادُ", "d. 292 AH"),
+            student("Idris al-Haddad", "إِدرِيسُ الحَدَّادُ", String(localized: "d. 292 AH")),
         ]),
         Settings.Riwayah.khallad: NarratorChain(links: [
-            link("Sulaym ibn Isa", "سُلَيمُ بنُ عِيسَى", "d. 188 AH"),
+            link("Sulaym ibn Isa", "سُلَيمُ بنُ عِيسَى", String(localized: "d. 188 AH")),
         ], students: [
-            student("Ibn Shadhan al-Jawhari", "ابنُ شَاذَانَ الجَوهَرِيُّ", "d. 286 AH"),
-            student("al-Qasim al-Wazzan", "القَاسِمُ الوَزَّانُ", "d. c. 290 AH"),
+            student("Ibn Shadhan al-Jawhari", "ابنُ شَاذَانَ الجَوهَرِيُّ", String(localized: "d. 286 AH")),
+            student("al-Qasim al-Wazzan", "القَاسِمُ الوَزَّانُ", String(localized: "d. c. 290 AH")),
         ]),
         // al-Kisai
         Settings.Riwayah.abuHarith: NarratorChain(links: [], students: [
-            student("Muhammad ibn Yahya al-Kisa'i", "مُحَمَّدُ بنُ يَحيَى الكِسَائِيُّ", "d. 288 AH"),
-            student("Salamah ibn Asim", "سَلَمَةُ بنُ عَاصِمٍ", "d. c. 270 AH"),
+            student("Muhammad ibn Yahya al-Kisa'i", "مُحَمَّدُ بنُ يَحيَى الكِسَائِيُّ", String(localized: "d. 288 AH")),
+            student("Salamah ibn Asim", "سَلَمَةُ بنُ عَاصِمٍ", String(localized: "d. c. 270 AH")),
         ]),
         Settings.Riwayah.duriKisai: NarratorChain(links: [], students: [
-            student("Ja'far an-Nasibi", "جَعفَرٌ النَّصِيبِيُّ", "d. 307 AH"),
-            student("Abu Uthman ad-Darir", "أَبُو عُثمَانَ الضَّرِيرُ", "d. c. 290 AH"),
+            student("Ja'far an-Nasibi", "جَعفَرٌ النَّصِيبِيُّ", String(localized: "d. 307 AH")),
+            student("Abu Uthman ad-Darir", "أَبُو عُثمَانَ الضَّرِيرُ", String(localized: "d. c. 290 AH")),
         ]),
         // Abu Ja'far
         Settings.Riwayah.ibnWardan: NarratorChain(links: [], students: [
-            student("al-Fadl ibn Shadhan", "الفَضلُ بنُ شَاذَانَ", "d. c. 290 AH"),
-            student("Hibat Allah ibn Ja'far", "هِبَةُ اللَّهِ بنُ جَعفَرٍ", "d. 350 AH"),
+            student("al-Fadl ibn Shadhan", "الفَضلُ بنُ شَاذَانَ", String(localized: "d. c. 290 AH")),
+            student("Hibat Allah ibn Ja'far", "هِبَةُ اللَّهِ بنُ جَعفَرٍ", String(localized: "d. 350 AH")),
         ]),
         Settings.Riwayah.ibnJammaz: NarratorChain(links: [], students: [
-            student("al-Hashimi", "الهَاشِمِيُّ", "d. c. 250 AH"),
-            student("Hafs ad-Duri", "حَفصٌ الدُّورِيُّ", "d. 246 AH"),
+            student("al-Hashimi", "الهَاشِمِيُّ", String(localized: "d. c. 250 AH")),
+            student("Hafs ad-Duri", "حَفصٌ الدُّورِيُّ", String(localized: "d. 246 AH")),
         ]),
         // Ya'qub
         Settings.Riwayah.ruways: NarratorChain(links: [], students: [
-            student("at-Tammar", "التَّمَّارُ", "d. c. 310 AH"),
+            student("at-Tammar", "التَّمَّارُ", String(localized: "d. c. 310 AH")),
         ]),
         Settings.Riwayah.rawh: NarratorChain(links: [], students: [
-            student("Ibn Wahb", "ابنُ وَهبٍ", "d. c. 300 AH"),
-            student("az-Zubayri", "الزُّبَيرِيُّ", "d. c. 300 AH"),
+            student("Ibn Wahb", "ابنُ وَهبٍ", String(localized: "d. c. 300 AH")),
+            student("az-Zubayri", "الزُّبَيرِيُّ", String(localized: "d. c. 300 AH")),
         ]),
         // Khalaf al-Ashir
         Settings.Riwayah.ishaq: NarratorChain(links: [], students: []),
         Settings.Riwayah.idris: NarratorChain(links: [], students: [
-            student("ash-Shatti", "الشَّطِّيُّ", "d. 370 AH"),
-            student("al-Mutawwi'i", "المُطَّوِّعِيُّ", "d. 371 AH"),
-            student("al-Qati'i", "القَطِيعِيُّ", "d. 368 AH"),
+            student("ash-Shatti", "الشَّطِّيُّ", String(localized: "d. 370 AH")),
+            student("al-Mutawwi'i", "المُطَّوِّعِيُّ", String(localized: "d. 371 AH")),
+            student("al-Qati'i", "القَطِيعِيُّ", String(localized: "d. 368 AH")),
         ]),
     ]
 
     // MARK: - The chains as layers
 
     private static func imamNode(_ master: QiraahMasterProfile) -> IsnadNode {
-        IsnadNode(name: master.id, arabic: master.arabic, detail: "\(master.city) · d. \(master.diedAH) AH", role: .imam)
+        IsnadNode(name: master.id, arabic: master.arabic, detail: String(localized: "\(master.city.localizedDisplay) · d. \(String(master.diedAH).localizedDigits) AH"), role: .imam)
     }
 
     private static func narratorNode(_ narrator: RiwayahNarratorProfile, highlighted: Bool) -> IsnadNode {
-        IsnadNode(name: narrator.name, arabic: narrator.arabic, detail: "\(narrator.city) · d. \(narrator.diedAH) AH",
+        IsnadNode(name: narrator.name, arabic: narrator.arabic, detail: String(localized: "\(narrator.city.localizedDisplay) · d. \(String(narrator.diedAH).localizedDigits) AH"),
                   role: highlighted ? .narrator : .student)
     }
 
@@ -309,13 +309,13 @@ enum QiraatIsnad {
     private static func topLayers(master: QiraahMasterProfile) -> [IsnadLayer] {
         guard let chain = imamChains[master.id] else { return [] }
         var layers = [
-            IsnadLayer(title: "THE PROPHET ﷺ", nodes: [prophet]),
-            IsnadLayer(title: "THE COMPANIONS", nodes: chain.companions.map(\.node)),
+            IsnadLayer(title: String(localized: "THE PROPHET ﷺ"), nodes: [prophet]),
+            IsnadLayer(title: String(localized: "THE COMPANIONS"), nodes: chain.companions.map(\.node)),
         ]
         if !chain.teachers.isEmpty {
-            layers.append(IsnadLayer(title: "THE IMAM'S TEACHERS", nodes: chain.teachers))
+            layers.append(IsnadLayer(title: String(localized: "THE IMAM'S TEACHERS"), nodes: chain.teachers))
         }
-        layers.append(IsnadLayer(title: "THE IMAM", nodes: [imamNode(master)]))
+        layers.append(IsnadLayer(title: String(localized: "THE IMAM"), nodes: [imamNode(master)]))
         return layers
     }
 
@@ -339,12 +339,12 @@ enum QiraatIsnad {
             if !road.links.isEmpty {
                 // Stored narrator-side first ("through A and then B"); a column reads top-down, from
                 // the imam, so it runs the other way.
-                layers.append(IsnadLayer(title: road.links.count == 1 ? "THE LINK" : "THE LINKS",
+                layers.append(IsnadLayer(title: road.links.count == 1 ? String(localized: "THE LINK") : String(localized: "THE LINKS"),
                                          nodes: road.links.reversed()))
             }
-            layers.append(IsnadLayer(title: "THE NARRATOR", nodes: [narratorNode(narrator, highlighted: highlighted)]))
+            layers.append(IsnadLayer(title: String(localized: "THE NARRATOR"), nodes: [narratorNode(narrator, highlighted: highlighted)]))
             if !road.students.isEmpty {
-                layers.append(IsnadLayer(title: "HIS STUDENTS", nodes: road.students))
+                layers.append(IsnadLayer(title: String(localized: "HIS STUDENTS"), nodes: road.students))
             }
             return IsnadBranch(id: canonical, highlighted: highlighted, layers: layers)
         }
@@ -360,21 +360,27 @@ enum QiraatIsnad {
         }
         let links = narrators.map { (narratorChains[Settings.Riwayah.canonicalTag($0.id)]?.links ?? []).map(\.name) }
         func path(_ names: [String]) -> String {
-            names.count == 1 ? names[0] : names.dropLast().joined(separator: ", ") + " and then " + names.last!
+            let shown = names.map(\.localizedDisplay)
+            // Arabic lists take its own comma ("، "), never the Latin one.
+            let comma = AppLanguage.isArabic ? "\u{060C} " : ", "
+            return shown.count == 1 ? shown[0] : String(localized: "\(shown.dropLast().joined(separator: comma)) and then \(shown.last!)")
         }
-        let above = " Above \(master.id) the chain is one, running through his teachers to the Companions and to the Prophet ﷺ."
-        let names = narrators.map(\.name).joined(separator: " and ")
+        let above = " " + String(localized: "Above \(master.id.localizedDisplay) the chain is one, running through his teachers to the Companions and to the Prophet ﷺ.")
+        let names = narrators.count == 2
+            ? String(localized: "\(narrators[0].name.localizedDisplay) and \(narrators[1].name.localizedDisplay)")
+            : narrators.map { $0.name.localizedDisplay }.sentenceList { $0.joined(separator: " and ") }
         // The same road twice reads as a stutter: Ibn Amir's two narrators both received it through
         // Ayyub ibn Tamim and Yahya adh-Dhimari, so say it once.
         if narrators.count == 2, links[0] == links[1] {
-            if links[0].isEmpty { return "Both of its narrators, \(names), read on \(master.id) himself." + above }
-            return "Neither of its narrators met \(master.id): \(names) both received the reading through \(path(links[0]))." + above
+            if links[0].isEmpty { return String(localized: "Both of its narrators, \(names), read on \(master.id.localizedDisplay) himself.") + above }
+            return String(localized: "Neither of its narrators met \(master.id.localizedDisplay): \(names) both received the reading through \(path(links[0])).") + above
         }
         let roads = zip(narrators, links).map { narrator, names -> String in
-            names.isEmpty ? "\(narrator.name) read on \(master.id) himself"
-                : "\(narrator.name) did not meet him, and received it through \(path(names))"
+            names.isEmpty ? String(localized: "\(narrator.name.localizedDisplay) read on \(master.id.localizedDisplay) himself")
+                : String(localized: "\(narrator.name.localizedDisplay) did not meet him, and received it through \(path(names))")
         }
-        return "The reading of \(master.id) reached its two narrators by two roads: " + roads.joined(separator: "; ") + "." + above
+        let roadList = roads.joined(separator: AppLanguage.isArabic ? "\u{061B} " : "; ")
+        return String(localized: "The reading of \(master.id.localizedDisplay) reached its two narrators by two roads: \(roadList).") + above
     }
 
     /// Whether a narrator read on the imam himself (no link between them).
@@ -654,7 +660,7 @@ struct QiraatIsnadShareCard: View {
 
             QiraatIsnadDiagram(chain: chain, forImage: true)
 
-            Text("\(AppIdentifiers.appName) · The Ten Qiraat")
+            Text("\(AppIdentifiers.displayName) · The Ten Qiraat")
                 .font(.caption2.weight(.semibold))
                 .foregroundColor(Color.black.opacity(0.45))
         }
@@ -668,6 +674,7 @@ struct QiraatIsnadShareCard: View {
 /// share it as an image (iOS 16+, rendered on demand).
 struct QiraatIsnadSection: View {
     @Environment(\.appearance) private var appearance
+    @Environment(\.layoutDirection) private var layoutDirection
 
     let title: String
     let subtitle: String
@@ -735,6 +742,9 @@ struct QiraatIsnadSection: View {
         rendering = true
         let card = QiraatIsnadShareCard(title: title, subtitle: subtitle, chain: chain)
             .environment(\.injectedAppearance, appearance)
+            // The renderer starts from a default environment: without this the image would lay the two
+            // narrators' columns out left to right while the page beside it reads right to left.
+            .environment(\.layoutDirection, layoutDirection)
         let renderer = ImageRenderer(content: card)
         renderer.scale = 3
         renderer.proposedSize = ProposedViewSize(width: 560, height: nil)
@@ -758,17 +768,17 @@ struct QiraatIsnadIndexView: View {
                 }
 
                 ForEach(QiraatProfiles.masters(in: QiraatProfiles.sevenIDs + QiraatProfiles.threeIDs)) { master in
-                    Section(header: Text("\(master.id.uppercased()) · \(master.arabic)")) {
+                    Section(header: Text("\(master.id.localizedDisplay.uppercased()) · \(master.arabic)")) {
                         NavigationLink(destination: LazyDestination { QiraatIsnadPage(masterID: master.id) }) {
-                            QiraatProfileRow(title: "The reading of \(master.id)", arabic: master.arabic,
-                                             detail: "\(master.city) · d. \(master.diedAH) AH", ordinal: nil, systemImage: "point.3.connected.trianglepath.dotted")
+                            QiraatProfileRow(title: String(localized: "The reading of \(master.id.localizedDisplay)"), arabic: master.arabic,
+                                             detail: String(localized: "\(master.city.localizedDisplay) · d. \(String(master.diedAH).localizedDigits) AH"), ordinal: nil, systemImage: "point.3.connected.trianglepath.dotted")
                         }
                         ForEach(QiraatProfiles.narrators(ofMaster: master.id)) { narrator in
                             NavigationLink(destination: LazyDestination { QiraatIsnadPage(narratorTag: narrator.id) }) {
-                                QiraatProfileRow(title: "\(narrator.name) an \(master.id)", arabic: narrator.arabic,
+                                QiraatProfileRow(title: String(localized: "\(narrator.name.localizedDisplay) an \(master.id.localizedDisplay)"), arabic: narrator.arabic,
                                                  detail: QiraatIsnad.readsDirectly(narrator: narrator.id)
-                                                     ? "Read on \(master.id) himself · d. \(narrator.diedAH) AH"
-                                                     : "Through the students of \(master.id) · d. \(narrator.diedAH) AH",
+                                                     ? String(localized: "Read on \(master.id.localizedDisplay) himself · d. \(String(narrator.diedAH).localizedDigits) AH")
+                                                     : String(localized: "Through the students of \(master.id.localizedDisplay) · d. \(String(narrator.diedAH).localizedDigits) AH"),
                                                  ordinal: nil, systemImage: "link")
                             }
                         }
@@ -793,18 +803,18 @@ struct QiraatIsnadPage: View {
     private var title: String {
         if let narratorTag, let narrator = QiraatProfiles.narrator(tag: narratorTag),
            let master = QiraatProfiles.master(id: narrator.masterID) {
-            return "\(narrator.name) an \(master.id)"
+            return String(localized: "\(narrator.name.localizedDisplay) an \(master.id.localizedDisplay)")
         }
-        if let masterID { return "The reading of \(masterID)" }
-        return "Chain"
+        if let masterID { return String(localized: "The reading of \(masterID.localizedDisplay)") }
+        return String(localized: "Chain")
     }
 
     private var subtitle: String {
         if let narratorTag, let narrator = QiraatProfiles.narrator(tag: narratorTag) {
-            return "\(narrator.arabic) · the chain of the narration to the Prophet ﷺ"
+            return String(localized: "\(narrator.arabic) · the chain of the narration to the Prophet ﷺ")
         }
         if let masterID, let master = QiraatProfiles.master(id: masterID) {
-            return "\(master.arabic) · the chain of the reading to the Prophet ﷺ"
+            return String(localized: "\(master.arabic) · the chain of the reading to the Prophet ﷺ")
         }
         return ""
     }

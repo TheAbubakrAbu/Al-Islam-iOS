@@ -150,7 +150,7 @@ enum TajweedTopic: String, CaseIterable, Identifiable {
         case .sifaat:
             // The qualities shelf of the alphabet's Letter Families: the five opposing pairs and the
             // qualities with no opposite, every one named in Arabic and English (Abu, 2026-09-20).
-            LetterFamiliesView(title: "Sifaat", axes: LetterAxis.Shelf.qualities.axes)
+            LetterFamiliesView(title: String(localized: "Sifaat"), axes: LetterAxis.Shelf.qualities.axes)
                 .openScreen(.letterFamilies, id: "sifaat")
         case .heavyLight: TajweedHeavyLightView()
         case .shamsQamar: TajweedShamsQamarView()
@@ -171,12 +171,43 @@ enum TajweedTopic: String, CaseIterable, Identifiable {
 struct TajweedFoundationsView: View {
     @Environment(\.appearance) private var appearance
 
+    @State private var searchText = ""
+
     #if os(iOS)
     @State private var showTajweedLegend = false
+    @State private var barsCollapsed = false
     /// The page a color in the hero opened. The chips are Buttons in ONE List row writing this, with
     /// one destination on the List (two NavigationLinks in one row both fire on any tap).
     @State private var heroTopic: TajweedTopic?
     #endif
+
+    private var query: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    /// Every page with its folded search key (title, caption, Arabic name and the section it sits
+    /// in), built once, never per keystroke.
+    private static let searchIndex: [(topic: TajweedTopic, key: String)] = TajweedTopic.allCases.map { topic in
+        let english = [topic.title, topic.caption, topic.arabic, topic.group.title]
+        // The titles as a translated interface shows them, after the English, where they differ.
+        let shown = [topic.title, topic.caption, topic.group.title].map(\.localizedDisplay).filter { !english.contains($0) }
+        return (topic: topic, key: IslamArticles.fold((english + shown).joined(separator: " ")))
+    }
+
+    /// Every term has to hit, the rule the Prophecies and Miracles indexes search by.
+    private var results: [TajweedTopic] {
+        let terms = IslamArticles.fold(query).split(separator: " ").map(String.init)
+        guard !terms.isEmpty else { return [] }
+        let matched = Self.searchIndex.filter { item in terms.allSatisfy { item.key.contains($0) } }.map(\.topic)
+        return SearchRank.sorted(matched, by: query) { topic in
+            [topic.title, topic.arabic] + [topic.title.localizedDisplay].filter { $0 != topic.title }
+        }
+    }
+
+    /// A page's row and its destination: the sections and the search results share it.
+    private func topicLink(_ topic: TajweedTopic) -> some View {
+        NavigationLink(destination: LazyDestination { topic.destination }) {
+            TajweedTopicRow(topic: topic)
+        }
+    }
 
     #if DEBUG
     /// `-tajweedTopic <rawValue>`: that page pushed as the index appears, for screenshots.
@@ -191,41 +222,73 @@ struct TajweedFoundationsView: View {
     var body: some View {
         List {
             Group {
-                #if os(iOS)
-                Section {
-                    TajweedFoundationsHero(open: $heroTopic)
-                        .articleCardRow()
-                }
-                #endif
+                if query.isEmpty {
+                    #if os(iOS)
+                    Section {
+                        TajweedFoundationsHero(open: $heroTopic)
+                            .articleCardRow()
+                    }
+                    #endif
 
-                ForEach(TajweedTopic.Group.allCases, id: \.self) { group in
-                    Section(header: Text(group.title)) {
-                        ForEach(group.topics) { topic in
-                            NavigationLink(destination: LazyDestination { topic.destination }) {
-                                TajweedTopicRow(topic: topic)
-                            }
+                    ForEach(TajweedTopic.Group.allCases, id: \.self) { group in
+                        // The titles stay English: the search index folds them.
+                        Section(header: Text(group.title.localizedDisplay)) {
+                            ForEach(group.topics) { topicLink($0) }
+                        }
+                    }
+
+                    referenceSection
+
+                    #if HAS_QURAN
+                    if TajweedLessonsStore.isBundled {
+                        courseSection
+                    }
+                    #endif
+
+                    learnMoreSection
+
+                    Section(footer:
+                        Text("Every page is for Hafs an Asim, the riwayah of most printed mushafs. Other riwayat apply some of these rules differently.")
+                            .font(.caption2)
+                    ) { EmptyView() }
+                } else {
+                    // The pages only: the links beside them (the legend, the course, the articles)
+                    // are not what a search of this reference is for.
+                    let matches = results
+                    if matches.isEmpty {
+                        Section {
+                            Text("No tajweed pages match \"\(query)\".")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Section(header: SectionPillHeader(title: String(localized: "PAGES"), count: matches.count)) {
+                            ForEach(matches) { topicLink($0) }
                         }
                     }
                 }
-
-                referenceSection
-
-                #if HAS_QURAN
-                if TajweedLessonsStore.isBundled {
-                    courseSection
-                }
-                #endif
-
-                learnMoreSection
-
-                Section(footer:
-                    Text("Every page is for Hafs an Asim, the riwayah of most printed mushafs. Other riwayat apply some of these rules differently.")
-                        .font(.caption2)
-                ) { EmptyView() }
             }
             .themedListRowBackground()
         }
+        #if os(watchOS)
+        .searchable(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)), prompt: Text("Search"))
+        // The watch has no floating bottom bar to order against, so it is styled here.
         .applyConditionalListStyle()
+        #else
+        // Applied BEFORE the bottom bar below it: bottom safe-area insets stack outward, so the inset
+        // added first sits nearest the content and later ones go underneath it.
+        .applyConditionalListStyle()
+        .collapseBarsOnScroll($barsCollapsed)
+        .adaptiveSafeArea(edge: .bottom) {
+            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
+                      placeholder: String(localized: "Search tajweed"))
+                .minimizedBarStyle(barsCollapsed)
+                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
+                .padding(.horizontal, 24)
+                .padding(.bottom, BottomBarCushion.standard)
+                .background(Color.white.opacity(0.00001))
+        }
+        #endif
         .navigationTitle("Tajweed Foundations")
         .openScreen(.tajweedFoundations)
         #if os(iOS)
@@ -270,8 +333,8 @@ struct TajweedFoundationsView: View {
                 showTajweedLegend = true
             } label: {
                 HStack(spacing: 12) {
-                    TajweedLinkLabel(systemImage: "paintpalette.fill", title: "Tajweed Legend",
-                                     caption: "Every rule the Quran reader colors, for Hafs an Asim")
+                    TajweedLinkLabel(systemImage: "paintpalette.fill", title: String(localized: "Tajweed Legend"),
+                                     caption: String(localized: "Every rule the Quran reader colors, for Hafs an Asim"))
                     Spacer(minLength: 8)
                 }
                 .contentShape(Rectangle())
@@ -280,13 +343,13 @@ struct TajweedFoundationsView: View {
             #endif
 
             NavigationLink(destination: LazyDestination { LetterFamiliesView() }) {
-                TajweedLinkLabel(systemImage: "square.grid.3x3", title: "Letter Families",
-                                 caption: "Every letter by makhraj, sifaat and rule, in Arabic and English")
+                TajweedLinkLabel(systemImage: "square.grid.3x3", title: String(localized: "Letter Families"),
+                                 caption: String(localized: "Every letter by makhraj, sifaat and rule, in Arabic and English"))
             }
 
             NavigationLink(destination: LazyDestination { SoundAlikeLettersView() }) {
-                TajweedLinkLabel(systemImage: "ear", title: "Sound-Alike Letters",
-                                 caption: "The pairs people mix up, side by side, with what separates them")
+                TajweedLinkLabel(systemImage: "ear", title: String(localized: "Sound-Alike Letters"),
+                                 caption: String(localized: "The pairs people mix up, side by side, with what separates them"))
             }
         }
     }
@@ -313,8 +376,8 @@ struct TajweedFoundationsView: View {
     }
 
     private var courseLabel: some View {
-        TajweedLinkLabel(systemImage: "graduationcap.fill", title: "Tajweed Course",
-                         caption: "The same rules taught in order, lesson by lesson, with ayahs to play and a quiz in each")
+        TajweedLinkLabel(systemImage: "graduationcap.fill", title: String(localized: "Tajweed Course"),
+                         caption: String(localized: "The same rules taught in order, lesson by lesson, with ayahs to play and a quiz in each"))
     }
     #endif
 
@@ -323,8 +386,8 @@ struct TajweedFoundationsView: View {
     private var learnMoreSection: some View {
         Section(header: Text("LEARN MORE"), footer: Text("Also in Al-Islam, under Pillars & Beliefs.")) {
             NavigationLink(destination: LazyDestination { QuranPillarView() }) {
-                TajweedLinkLabel(systemImage: "book.closed", title: "What is the Quran?",
-                                 caption: "Its revelation, preservation and names")
+                TajweedLinkLabel(systemImage: "book.closed", title: String(localized: "What is the Quran?"),
+                                 caption: String(localized: "Its revelation, preservation and names"))
             }
 
             // The article links back here, so the pair is a corridor; `OpenScreenLink` greys the row
@@ -342,20 +405,20 @@ struct TajweedFoundationsView: View {
             #endif
 
             NavigationLink(destination: LazyDestination { AhrufView() }) {
-                TajweedLinkLabel(systemImage: "7.circle", title: "What are the 7 Ahruf?",
-                                 caption: "The seven modes the Quran was revealed in")
+                TajweedLinkLabel(systemImage: "7.circle", title: String(localized: "What are the 7 Ahruf?"),
+                                 caption: String(localized: "The seven modes the Quran was revealed in"))
             }
 
             NavigationLink(destination: LazyDestination { QiraatView() }) {
-                TajweedLinkLabel(systemImage: "10.circle", title: "What are the 10 Qiraat?",
-                                 caption: "The ten readings and their riwayat")
+                TajweedLinkLabel(systemImage: "10.circle", title: String(localized: "What are the 10 Qiraat?"),
+                                 caption: String(localized: "The ten readings and their riwayat"))
             }
         }
     }
 
     private var tajweedArticleLabel: some View {
-        TajweedLinkLabel(systemImage: "doc.text", title: "What is Tajweed?",
-                         caption: "The article, with its sources")
+        TajweedLinkLabel(systemImage: "doc.text", title: String(localized: "What is Tajweed?"),
+                         caption: String(localized: "The article, with its sources"))
     }
 }
 
@@ -374,7 +437,7 @@ private struct TajweedTopicRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .center, spacing: 8) {
-                    Text(topic.title)
+                    Text(topic.title.localizedDisplay)
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(.primary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -392,7 +455,7 @@ private struct TajweedTopicRow: View {
                     }
                 }
 
-                Text(topic.caption)
+                Text(topic.caption.localizedDisplay)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -445,23 +508,23 @@ private struct TajweedFoundationsHero: View {
     }
 
     private static let marks: [Mark] = [
-        Mark(topic: .noonSakinah, legend: .ikhfaaLight, name: "Noon Sakinah", arabic: "النُّون"),
-        Mark(topic: .meemSakinah, legend: .generalGhunnah, name: "Meem Sakinah", arabic: "المِيم"),
-        Mark(topic: .madd, legend: .maddConnected, name: "Madd", arabic: "المَدّ"),
-        Mark(topic: .qalqalah, legend: .qalqalah, name: "Qalqalah", arabic: "القَلقَلَة"),
-        Mark(topic: .heavyLight, legend: .tafkhim, name: "Heavy Letters", arabic: "التَّفخِيم"),
-        Mark(topic: .shamsQamar, legend: .lamShamsiyah, name: "Solar Laam", arabic: "الشَّمسِيَّة"),
-        Mark(topic: .hamzatulWasl, legend: .hamzatWaslSilent, name: "Joining Hamzah", arabic: "الوَصل"),
-        Mark(topic: .sukoon, legend: .droppedLetter, name: "Silent Letters", arabic: "السُّكُون"),
+        Mark(topic: .noonSakinah, legend: .ikhfaaLight, name: String(localized: "Noon Sakinah"), arabic: "النُّون"),
+        Mark(topic: .meemSakinah, legend: .generalGhunnah, name: String(localized: "Meem Sakinah"), arabic: "المِيم"),
+        Mark(topic: .madd, legend: .maddConnected, name: String(localized: "Madd"), arabic: "المَدّ"),
+        Mark(topic: .qalqalah, legend: .qalqalah, name: String(localized: "Qalqalah"), arabic: "القَلقَلَة"),
+        Mark(topic: .heavyLight, legend: .tafkhim, name: String(localized: "Heavy Letters"), arabic: "التَّفخِيم"),
+        Mark(topic: .shamsQamar, legend: .lamShamsiyah, name: String(localized: "Solar Laam"), arabic: "الشَّمسِيَّة"),
+        Mark(topic: .hamzatulWasl, legend: .hamzatWaslSilent, name: String(localized: "Joining Hamzah"), arabic: "الوَصل"),
+        Mark(topic: .sukoon, legend: .droppedLetter, name: String(localized: "Silent Letters"), arabic: "السُّكُون"),
     ]
 
     var body: some View {
         ResourceHero(
-            eyebrow: "EVERY RULE, ONE PAGE EACH",
+            eyebrow: String(localized: "EVERY RULE, ONE PAGE EACH"),
             systemImage: "waveform",
-            headline: "Those to whom We have given the Book recite it with its true recital.",
-            source: "Quran 2:121",
-            message: "The rules of Hafs an Asim, one topic to a page: where each letter is made and how it sounds, the rules that change it, and how to read them straight off the mushaf. Tap a color to open the rule it marks."
+            headline: String(localized: "Those to whom We have given the Book recite it with its true recital."),
+            source: String(localized: "Quran 2:121"),
+            message: String(localized: "The rules of Hafs an Asim, one topic to a page: where each letter is made and how it sounds, the rules that change it, and how to read them straight off the mushaf. Tap a color to open the rule it marks.")
         ) {
             colors
         }
@@ -486,7 +549,7 @@ private struct TajweedFoundationsHero: View {
                         chip(mark, accent: accent)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(mark.name). Opens \(mark.topic.title).")
+                    .accessibilityLabel("\(mark.name). Opens \(mark.topic.title.localizedDisplay).")
                 }
             }
         }
@@ -537,71 +600,71 @@ struct TajweedOverviewView: View {
     var body: some View {
         List {
             Group {
-                Section(header: ArticleHeader("WHAT TAJWEED IS")) {
-                    ArticleLead("Tajweed (تَجوِيد) refers to the science and practice of reciting the Quran correctly and beautifully, by giving each letter its proper articulation and characteristics.")
+                Section(header: ArticleHeader(String(localized: "WHAT TAJWEED IS"))) {
+                    ArticleLead(String(localized: "Tajweed (تَجوِيد) refers to the science and practice of reciting the Quran correctly and beautifully, by giving each letter its proper articulation and characteristics."), eyebrow: String(localized: "IN SHORT"))
 
-                    ArticleTermCard("Tajweed", arabic: "تَجوِيد",
-                                    meaning: "Linguistically, the word tajweed comes from the Arabic root ج-و-د (j-w-d), meaning \"to improve,\" \"to make excellent,\" or \"to perfect.\" In the context of the Quran, it means reciting the words of Allah as they were revealed precisely, clearly, and with care.")
+                    ArticleTermCard(String(localized: "Tajweed"), arabic: "تَجوِيد",
+                                    meaning: String(localized: "Linguistically, the word tajweed comes from the Arabic root ج-و-د (j-w-d), meaning \"to improve,\" \"to make excellent,\" or \"to perfect.\" In the context of the Quran, it means reciting the words of Allah as they were revealed precisely, clearly, and with care."))
 
-                    ArticleCallout("This guide applies specifically to riwayat Hafs an Asim, which is the most widely recited qiraah in the world today and the standard riwayah used in the majority of printed mushafs.",
-                                   title: "Hafs an Asim", systemImage: "book.closed.fill")
+                    ArticleCallout(String(localized: "This guide applies specifically to riwayat Hafs an Asim, which is the most widely recited qiraah in the world today and the standard riwayah used in the majority of printed mushafs."),
+                                   title: String(localized: "Hafs an Asim"), systemImage: "book.closed.fill")
                 }
 
-                Section(header: ArticleHeader("RECITATION AND PRONUNCIATION")) {
-                    ArticleParagraph(verbatim: "Recitation (قِرَاءَة qiraah or تِلَاوَة tilawah) refers to the act of reading the Quran. While qiraah simply means \"reading,\" tilawah carries a deeper meaning of reciting with attentiveness, reflection, and adherence to proper method. Quranic recitation is not just reading text; it is the transmission of a preserved oral tradition passed down from the Prophet ﷺ through generations.")
+                Section(header: ArticleHeader(String(localized: "RECITATION AND PRONUNCIATION"))) {
+                    ArticleParagraph(verbatim: String(localized: "Recitation (قِرَاءَة qiraah or تِلَاوَة tilawah) refers to the act of reading the Quran. While qiraah simply means \"reading,\" tilawah carries a deeper meaning of reciting with attentiveness, reflection, and adherence to proper method. Quranic recitation is not just reading text; it is the transmission of a preserved oral tradition passed down from the Prophet ﷺ through generations."))
 
-                    ArticleParagraph(verbatim: "Pronunciation in Quranic recitation is governed by two key components:")
+                    ArticleParagraph(verbatim: String(localized: "Pronunciation in Quranic recitation is governed by two key components:"))
 
                     ArticleVersus(
-                        .init("Makharij", arabic: "مَخَارِجُ الحُرُوفِ",
-                              caption: "The points of articulation: where each letter originates in the mouth or throat."),
-                        .init("Sifat", arabic: "صِفَاتُ الحُرُوفِ",
-                              caption: "The characteristics of those letters, such as heaviness (tafkhim), lightness (tarqiq), or echoing (qalqalah)."),
+                        .init(String(localized: "Makharij"), arabic: "مَخَارِجُ الحُرُوفِ",
+                              caption: String(localized: "The points of articulation: where each letter originates in the mouth or throat.")),
+                        .init(String(localized: "Sifat"), arabic: "صِفَاتُ الحُرُوفِ",
+                              caption: String(localized: "The characteristics of those letters, such as heaviness (tafkhim), lightness (tarqiq), or echoing (qalqalah).")),
                         quranic: false
                     )
 
-                    ArticleParagraph(verbatim: "Together, they ensure that each letter is pronounced distinctly and correctly.")
+                    ArticleParagraph(verbatim: String(localized: "Together, they ensure that each letter is pronounced distinctly and correctly."))
 
-                    ArticleParagraph(verbatim: "These elements are essential because even slight changes in pronunciation can alter meanings. Tajweed preserves not only the beauty of the Quran, but also its accuracy and integrity. The Quran was revealed to be recited, and Allah commands:")
+                    ArticleParagraph(verbatim: String(localized: "These elements are essential because even slight changes in pronunciation can alter meanings. Tajweed preserves not only the beauty of the Quran, but also its accuracy and integrity. The Quran was revealed to be recited, and Allah commands:"))
 
                     ScriptureQuote(quran: "73:4", words: 3...5)
                 }
 
-                Section(header: ArticleHeader("WHY LEARN TAJWEED?")) {
-                    ArticleStep("1. **Honoring the Quran:** The Quran is the final revelation from Allah. Reciting it with care and precision is a form of respect and reverence for the sacred text. By learning Tajweed, you follow the Prophet ﷺ who recited with the utmost clarity and eloquence.")
+                Section(header: ArticleHeader(String(localized: "WHY LEARN TAJWEED?"))) {
+                    ArticleStep(String(localized: "1. **Honoring the Quran:** The Quran is the final revelation from Allah. Reciting it with care and precision is a form of respect and reverence for the sacred text. By learning Tajweed, you follow the Prophet ﷺ who recited with the utmost clarity and eloquence."))
 
-                    ArticleStep("2. **Preventing Misunderstandings:** By applying Tajweed rules, you avoid mistakes that may alter the meaning of verses. In some cases, even changing a single sound or stretching a vowel can result in an entirely different meaning.")
+                    ArticleStep(String(localized: "2. **Preventing Misunderstandings:** By applying Tajweed rules, you avoid mistakes that may alter the meaning of verses. In some cases, even changing a single sound or stretching a vowel can result in an entirely different meaning."))
 
-                    ArticleStep("3. **Enhancing Spiritual Connection:** Many Muslims find that reciting the Quran with Tajweed enhances their spiritual experience. The attention to detail required encourages mindfulness and deeper reflection on the meaning of the verses, making your recitation more immersive and meaningful.")
+                    ArticleStep(String(localized: "3. **Enhancing Spiritual Connection:** Many Muslims find that reciting the Quran with Tajweed enhances their spiritual experience. The attention to detail required encourages mindfulness and deeper reflection on the meaning of the verses, making your recitation more immersive and meaningful."))
 
-                    ArticleStep("4. **Following the Sunnah:** The Prophet Muhammad ﷺ encouraged reciting the Quran beautifully. By learning Tajweed, you honor his teachings and example.")
+                    ArticleStep(String(localized: "4. **Following the Sunnah:** The Prophet Muhammad ﷺ encouraged reciting the Quran beautifully. By learning Tajweed, you honor his teachings and example."))
 
                     ScriptureQuote(text: "“Whoever does not recite Qur'an in a nice voice is not from us.” (Sahih al-Bukhari 7527)",
                                    arabic: "لَيْسَ مِنَّا مَنْ لَمْ يَتَغَنَّ بِالْقُرْآنِ", dimmed: true)
                 }
 
-                Section(header: ArticleHeader("HOW TO START LEARNING")) {
-                    ArticleParagraph(verbatim: "Learning Tajweed might seem challenging at first, but there are many resources available today to make the process easier. Traditionally, learning Tajweed was done with a teacher who could guide you through the articulation points and characteristics of each letter.")
+                Section(header: ArticleHeader(String(localized: "HOW TO START LEARNING"))) {
+                    ArticleParagraph(verbatim: String(localized: "Learning Tajweed might seem challenging at first, but there are many resources available today to make the process easier. Traditionally, learning Tajweed was done with a teacher who could guide you through the articulation points and characteristics of each letter."))
 
-                    ArticleParagraph(verbatim: "Now, in addition to teachers, there are online platforms, videos, and books that provide step-by-step lessons. For those starting out, focus on mastering the basic rules first and gradually build your skills over time. Practicing consistently is key; recording your recitation can help you catch mistakes and improve pronunciation.")
+                    ArticleParagraph(verbatim: String(localized: "Now, in addition to teachers, there are online platforms, videos, and books that provide step-by-step lessons. For those starting out, focus on mastering the basic rules first and gradually build your skills over time. Practicing consistently is key; recording your recitation can help you catch mistakes and improve pronunciation."))
 
-                    ArticleParagraph(verbatim: "Many learners find benefit in joining Tajweed classes or study groups, where they can receive feedback and support from others on the same journey.")
+                    ArticleParagraph(verbatim: String(localized: "Many learners find benefit in joining Tajweed classes or study groups, where they can receive feedback and support from others on the same journey."))
                 }
 
-                Section(header: ArticleHeader("APPLICABILITY TO QIRAAT")) {
+                Section(header: ArticleHeader(String(localized: "APPLICABILITY TO QIRAAT"))) {
                     ArticleCallout(paragraphs: [
-                        "Other riwayat, such as Warsh an Nafi, Khalaf an Hamzah, and others, may differ slightly in their application of tajweed rules, including elongations (madd), treatment of hamzah, and certain pronunciation details. These differences stem from authentic variations rooted in classical Arabic dialects and were transmitted through reliable chains of recitation.",
-                        "As a result, some rules explained in this guide may not apply identically to other riwayat. These variations in tajweed application and pronunciation reflect the dialects of the Arabs in which Allah revealed the Quran: the Prophet ﷺ recited and taught them, saying of two different readings, \"It was revealed in this way\" (Sahih al-Bukhari 2419), and have been preserved exactly through continuous transmission. They highlight the richness, flexibility, and authenticity of the Quranic recitation tradition.",
-                    ], title: "Other Riwayat", systemImage: "books.vertical.fill")
+                        String(localized: "Other riwayat, such as Warsh an Nafi, Khalaf an Hamzah, and others, may differ slightly in their application of tajweed rules, including elongations (madd), treatment of hamzah, and certain pronunciation details. These differences stem from authentic variations rooted in classical Arabic dialects and were transmitted through reliable chains of recitation."),
+                        String(localized: "As a result, some rules explained in this guide may not apply identically to other riwayat. These variations in tajweed application and pronunciation reflect the dialects of the Arabs in which Allah revealed the Quran: the Prophet ﷺ recited and taught them, saying of two different readings, \"It was revealed in this way\" (Sahih al-Bukhari 2419), and have been preserved exactly through continuous transmission. They highlight the richness, flexibility, and authenticity of the Quranic recitation tradition."),
+                    ], title: String(localized: "Other Riwayat"), systemImage: "books.vertical.fill")
                 }
 
-                Section(header: ArticleHeader("IN SUMMARY")) {
-                    ArticleClosing("For this reason, learning and applying tajweed is a means of preserving the exact words of the Quran as they were revealed and recited by the Prophet ﷺ, ensuring that its message remains unchanged across generations.")
+                Section(header: ArticleHeader(String(localized: "IN SUMMARY"))) {
+                    ArticleClosing(String(localized: "For this reason, learning and applying tajweed is a means of preserving the exact words of the Quran as they were revealed and recited by the Prophet ﷺ, ensuring that its message remains unchanged across generations."))
                 }
 
                 TajweedCourseLessons([
-                    TajweedCourseLesson(id: "what-is-tajweed", title: "What Tajweed Is"),
-                    TajweedCourseLesson(id: "tajweed-principles-errors", title: "Every Letter's Two Dues"),
+                    TajweedCourseLesson(id: "what-is-tajweed", title: String(localized: "What Tajweed Is")),
+                    TajweedCourseLesson(id: "tajweed-principles-errors", title: String(localized: "Every Letter's Two Dues")),
                 ])
             }
             .themedListRowBackground()
@@ -640,7 +703,7 @@ struct TajweedWordCard: View {
     var stacked: Bool = false
     var size: CGFloat = 26
 
-    init(_ title: String = "Examples", note: String? = nil, words: [TajweedWord], stacked: Bool = false,
+    init(_ title: String = String(localized: "Examples"), note: String? = nil, words: [TajweedWord], stacked: Bool = false,
          size: CGFloat = 26) {
         self.title = title
         self.note = note
@@ -670,6 +733,8 @@ struct TajweedWordCard: View {
                     VStack(alignment: .leading, spacing: 4) {
                         arabic(word.arabic)
                             .frame(maxWidth: .infinity, alignment: .trailing)
+                            // On the right, as Arabic sits, in either interface.
+                            .environment(\.layoutDirection, .leftToRight)
                         reading(word)
                     }
                 } else {
@@ -695,6 +760,7 @@ struct TajweedWordCard: View {
             .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
             .foregroundColor(.primary)
             .multilineTextAlignment(.trailing)
+            .environment(\.layoutDirection, .leftToRight)
             // The mushaf faces carry a very tall line box; trim it so a list of words reads as a list.
             .padding(.vertical, appearance.quranUsesCustomArabicFace ? -5 : 0)
     }
@@ -703,6 +769,8 @@ struct TajweedWordCard: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(word.reading)
                 .font(.subheadline)
+                // A transliteration keeps its own direction; a reading written in words follows the interface.
+                .leftToRightContent(!word.reading.containsArabicScript)
                 .foregroundColor(.primary)
                 .fixedSize(horizontal: false, vertical: true)
             if !word.note.isEmpty {
@@ -807,8 +875,8 @@ struct TajweedFix: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            line("Instead of", wrong, color: .red, weight: .regular)
-            line("Do this", right, color: .green, weight: .semibold)
+            line(String(localized: "Instead of"), wrong, color: .red, weight: .regular)
+            line(String(localized: "Do this"), right, color: .green, weight: .semibold)
         }
         .padding(.vertical, 4)
     }
@@ -959,11 +1027,11 @@ struct TajweedCourseLessons: View {
 
     var body: some View {
         if TajweedLessonsStore.isBundled, !lessons.isEmpty {
-            Section(header: ArticleHeader("IN THE TAJWEED COURSE")) {
+            Section(header: ArticleHeader(String(localized: "IN THE TAJWEED COURSE"))) {
                 ForEach(lessons, id: \.self) { lesson in
                     TajweedLessonLink(lessonID: lesson.id) {
                         TajweedLinkLabel(systemImage: "graduationcap.fill", title: lesson.title,
-                                         caption: "Practise it lesson by lesson")
+                                         caption: String(localized: "Practise it lesson by lesson"))
                     }
                 }
             }

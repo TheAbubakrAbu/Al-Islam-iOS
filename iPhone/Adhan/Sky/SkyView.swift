@@ -628,7 +628,7 @@ struct SkyCard: View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 8) {
                 SkyPrayerColumn(
-                    title: "CURRENT",
+                    title: String(localized: "CURRENT"),
                     displayName: live.currentPrayer?.displayName,
                     image: live.currentPrayer?.image,
                     timeText: live.currentPrayer.map { settings.formatDate($0.time) },
@@ -637,7 +637,7 @@ struct SkyCard: View {
                 .equatable()
                 Spacer(minLength: 0)
                 SkyPrayerColumn(
-                    title: "UPCOMING",
+                    title: String(localized: "UPCOMING"),
                     displayName: live.nextPrayer?.displayName,
                     image: live.nextPrayer?.image,
                     timeText: live.nextPrayer.map { settings.formatDate($0.time) },
@@ -709,7 +709,7 @@ struct SkyCard: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
 
-                    Text("\(trailing ? "Starts at" : "Started at") \(timeText)")
+                    Text(trailing ? String(localized: "Starts at \(timeText)") : String(localized: "Started at \(timeText)"))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.white)
                         .lineLimit(1)
@@ -728,9 +728,9 @@ struct SkyCard: View {
         }
 
         private var accessibilityText: String {
-            let role = trailing ? "Upcoming prayer" : "Current prayer"
+            let role = trailing ? String(localized: "Upcoming prayer") : String(localized: "Current prayer")
             guard let displayName, let timeText else { return role }
-            return "\(role), \(displayName), \(trailing ? "starts at" : "started at") \(timeText)"
+            return trailing ? String(localized: "\(role), \(displayName), starts at \(timeText)") : String(localized: "\(role), \(displayName), started at \(timeText)")
         }
     }
 
@@ -746,10 +746,10 @@ struct SkyCard: View {
     @ViewBuilder
     private var footer: some View {
         if let playingPrayerName = adhanPlayer.playingPrayerName {
-            adhanStopButton(prayerName: playingPrayerName)
+            adhanStopButton(prayerName: playingPrayerName.localizedDisplay)
                 .frame(maxWidth: .infinity)
         } else if let pendingPrayerName = adhanPlayer.pendingPrayerName {
-            adhanPlayButton(prayerName: pendingPrayerName)
+            adhanPlayButton(prayerName: pendingPrayerName.localizedDisplay)
                 .frame(maxWidth: .infinity)
         } else {
             HStack(spacing: 6) {
@@ -814,7 +814,7 @@ struct SkyCard: View {
 
     private var moonAccessibilityLabel: String {
         let phase = MoonPhase.on(moonDate)
-        return "Moon, \(phase.name), \(phase.illuminationPercent) percent illuminated"
+        return String(localized: "Moon, \(phase.name), \(phase.illuminationPercent) percent illuminated")
     }
 
     /// The moment the moon is drawn for (the footer's glyph and, at night, the one on the arc): the
@@ -1073,7 +1073,7 @@ struct SkyCard: View {
             return [scrubber.previewPrayer?.displayName, settings.formatDate(date)]
                 .compactMap { $0 }.joined(separator: ", ")
         }
-        return ["Now", settings.formatDate(now), live.currentPrayer?.displayName]
+        return [String(localized: "Now"), settings.formatDate(now), live.currentPrayer?.displayName]
             .compactMap { $0 }.joined(separator: ", ")
     }
 

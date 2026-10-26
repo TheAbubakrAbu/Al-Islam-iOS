@@ -714,6 +714,15 @@ enum MushafChromeJump: CaseIterable {
 private let mushafChromeFadeOut: Double = 0.14
 private let mushafChromeFadeIn: Double = 0.2
 
+/// The page pill's percentages in the Arabic interface ("٧٪"): the locale's digits and sign, where a
+/// "7%" glued to Arabic text read as "%7".
+private let mushafPercentFormatter: NumberFormatter = {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .percent
+    formatter.maximumFractionDigits = 0
+    return formatter
+}()
+
 /// No animation at all, for the one-step half of a chrome change: the pager and every page in it take
 /// the new band at once, whatever transaction the tap that caused it was in.
 private var mushafStillTransaction: Transaction {
@@ -866,6 +875,9 @@ struct SurahPageReader<Controls: View>: View {
     /// the page being turned TO, so the mounted set does not change inside the animated transaction
     /// (an insertion there renders as a crossfade, not a slide). Cleared once the slide has finished.
     @State private var windowAnchors: Set<Int> = []
+    /// A programmatic turn whose target's ring has just been mounted (`windowAnchors` written) and
+    /// whose selection write waits for that update to land. See `turnPage`.
+    @State private var pendingTurnTarget: Int?
     /// The page the last turn LEFT, so the ring can be ordered ahead of the direction of travel.
     @State private var previousPageIndex = -1
     /// The surah named by the pinned header at the top of the reader, and the ONLY thing that decides when
@@ -1188,9 +1200,17 @@ struct SurahPageReader<Controls: View>: View {
         mushafWindowWidth()
     }
 
-    /// The spread rule on a measured band (see `spreadActive`): wider than it is tall.
+    /// The spread rule on a measured band (see `spreadActive`): wider than it is tall, in a window that
+    /// is itself wider than tall. The window clause is from 2026-10-23: on a portrait 17 Pro the find bar
+    /// took the band from 526 to 402 pt, exactly square, and the Now Playing bar under it to 280, so
+    /// searching while listening opened the two-page book on a 402 pt wide screen (Abu: "makes it two
+    /// pages on mobile and its just annoying"). "Horizontal" means the reader is turned sideways, never
+    /// a page squeezed short by its own chrome. Inside a landscape window the band still decides, so a
+    /// narrow split-view column stays one page.
     private static func spreadRule(_ band: CGSize) -> Bool {
-        band.height > 0 && band.width > band.height
+        guard band.height > 0, band.width > band.height else { return false }
+        guard let window = mushafKeyWindow()?.bounds, window.height > 0 else { return true }
+        return window.width > window.height
     }
 
     /// The first page of the spread holding `index`: the ODD page, which sits on the right the way
@@ -1727,7 +1747,12 @@ struct SurahPageReader<Controls: View>: View {
                     // Iterating `indices.reversed()` (a lazy range) instead of `Array(enumerated()).reversed()`
                     // keeps this body from materializing a fresh 604-tuple array on every swipe (and on every
                     // player tick while audio runs) just so the diff can walk it.
-                    ForEach(pageWindow(in: pages).reversed(), id: \.self) { index in
+                    //
+                    // In a right-to-left interface (Arabic) UIKit already starts the pager on the right, so the
+                    // data goes in as it is: reversed there too, the next page slid in from the right (seen on
+                    // a recorded turn, 2026-10-24).
+                    let window = pageWindow(in: pages)
+                    ForEach(AppLanguage.isRightToLeft ? window : window.reversed(), id: \.self) { index in
                         Group {
                             if spreadActive {
                                 // The open book. `index` is the spread's leading (odd) page, which
@@ -2034,7 +2059,15 @@ struct SurahPageReader<Controls: View>: View {
         // with the view value of the pass that installed it, not the pass that fired it: a Choose Surah
         // pick of 2:255 from al-Kahf re-seeded once as (18, ayah 10) and once as (2, no ayah), and
         // landed on al-Baqarah's first page instead of Ayat al-Kursi's (logged).
+        // A programmatic turn's selection write, once the ring it mounted has been applied (see
+        // `turnPage`). The release of the anchors (to `[]`) has nothing pending and does nothing.
+        .onChange(of: windowAnchors) { _ in
+            performPendingTurnIfAny()
+        }
         .onChange(of: ReseedKey(surahID: surah.id, ayahID: initialAyah, token: jumpToken)) { key in
+            #if DEBUG
+            MushafPagerProbe.trace("reseed key surah=\(key.surahID) ayah=\(key.ayahID ?? 0) token=\(key.token) pages=\(pages.count) idx=\(pageIndex)")
+            #endif
             reseedToStartingPage(in: pages, surahID: key.surahID, ayahID: key.ayahID)
         }
         .onChange(of: pageIndex) { index in
@@ -2222,6 +2255,9 @@ struct SurahPageReader<Controls: View>: View {
     /// starting playback on an ayah that lives on another page - so the reader turns the page and reading
     /// carries on, instead of the page being swapped out from under the reciter.
     private func turnPage(to target: Int, in pages: [MushafPage], suppressClear: Bool = true) {
+        #if DEBUG
+        MushafPagerProbe.trace("turn to=\(target) from=\(pageIndex) spread=\(spreadActive ? 1 : 0)")
+        #endif
         guard pages.indices.contains(target), target != pageIndex else { return }
         // The other page of the spread already open: nothing turns, the reader's position just moves
         // onto it (footer, last read). Same latch contract as a real turn.
@@ -2239,6 +2275,9 @@ struct SurahPageReader<Controls: View>: View {
         // the moment its fit lands, or after 0.4 s regardless, so a slow fit degrades to the old
         // behaviour (the spinner, briefly) rather than to a jump that never comes.
         MushafPageRenderCache.whenRendered(page: pages[target], within: 0.4) {
+            #if DEBUG
+            MushafPagerProbe.trace("turn fired to=\(target) idx=\(pageIndex)")
+            #endif
             // The reader may have moved on while the fit ran (a swipe, a newer jump).
             guard pages.indices.contains(target), target != pageIndex else { return }
             // A follow/seed is not a user page turn - it must not wipe the mark or the selections. A
@@ -2253,7 +2292,6 @@ struct SurahPageReader<Controls: View>: View {
             // Released after the turn has settled, again outside any animation.
             let departure = pageIndex
             let anchors: Set<Int> = [departure, target]
-            windowAnchors = anchors
             // Released once the slide has settled - and only while the pager rests, so the release
             // can never land under a swipe that started right after the turn (see `recentreWindow`).
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
@@ -2261,15 +2299,55 @@ struct SurahPageReader<Controls: View>: View {
                     if windowAnchors == anchors { windowAnchors = [] }
                 }
             }
-            // Deferred one runloop tick, deliberately: this is called from `.onChange` handlers running
-            // INSIDE the player publish's own update pass, and a selection write made there reached the
-            // UIPageViewController without the animated transaction - the page SNAPPED instead of sliding
-            // (verified frame-by-frame: one giant scene step, zero intermediates). Hopping to the next
-            // tick puts the write in a fresh transaction whose animation the pager honors.
+            // The selection write waits for the ring to be MOUNTED: a SwiftUI update with the new
+            // anchors applied, then a fresh transaction. `whenRendered` calls back synchronously on a
+            // cache hit (inside the handler's own update, so the anchors' update ran before the
+            // deferred write), but from a main-actor task on its timeout - and a `main.async` queued
+            // from there ran BEFORE SwiftUI's next update, so the pager got the new children and the
+            // new selection in ONE update. Over the printed facsimile (which never renders composed
+            // text, so every far turn times out) it wrote its current page straight back and SwiftUI
+            // spun in a layout loop: the title said al-Hadid, the page stayed on al-Mujadilah, 100% of
+            // the main thread for good (Abu, 2026-10-25). The anchors' `onChange` runs after the
+            // update that mounted them, whichever way the callback arrived.
+            // A tick later, outside whichever update this callback arrived in: over the facsimile
+            // any PDFKit view still holding first responder is resigned first, since the mount's
+            // batch update would otherwise resign it mid-update and cycle (see
+            // `FitFlooredPDFView.releaseFirstResponder`).
             DispatchQueue.main.async {
-                withAnimation(.easeInOut(duration: 0.35)) { pageIndex = target }
+                if facsimileDocument != nil { MushafFacsimileFocus.release() }
+                if windowAnchors == anchors {
+                    scheduleTurnWrite(to: target)
+                } else {
+                    pendingTurnTarget = target
+                    windowAnchors = anchors
+                }
             }
         }
+    }
+
+    /// The animated selection write of a programmatic turn, one run-loop tick later. Deferred
+    /// deliberately: `turnPage` is called from `.onChange` handlers running INSIDE the player
+    /// publish's own update pass, and a selection write made there reached the UIPageViewController
+    /// without the animated transaction - the page SNAPPED instead of sliding (verified
+    /// frame-by-frame: one giant scene step, zero intermediates). Hopping to the next tick puts the
+    /// write in a fresh transaction whose animation the pager honors.
+    private func scheduleTurnWrite(to target: Int) {
+        DispatchQueue.main.async {
+            // The reader may have moved on meanwhile (a swipe, a newer jump).
+            guard target != pageIndex else { return }
+            withAnimation(.easeInOut(duration: 0.35)) { pageIndex = target }
+            #if DEBUG
+            MushafPagerProbe.trace("turn wrote to=\(target) idx=\(pageIndex)")
+            #endif
+        }
+    }
+
+    /// The write a mounted ring was waiting for (see `turnPage`): consumed on the anchors' change,
+    /// so it runs after the update that applied them.
+    private func performPendingTurnIfAny() {
+        guard let target = pendingTurnTarget else { return }
+        pendingTurnTarget = nil
+        scheduleTurnWrite(to: target)
     }
 
     /// Left and right arrow keys turn the page (Abu, 2026-10-02: "allow me to use arrow keys left and
@@ -2314,6 +2392,9 @@ struct SurahPageReader<Controls: View>: View {
     private func reseedToStartingPage(in pages: [MushafPage], surahID: Int, ayahID: Int?) {
         let landing = startingLanding(in: pages, surahID: surahID, ayahID: ayahID)
         let target = landing.pageIndex
+        #if DEBUG
+        MushafPagerProbe.trace("reseed target=\(target) idx=\(pageIndex) landing=\(landing.surahID):\(landing.ayahID ?? 0)")
+        #endif
         if target != pageIndex {
             pendingLanding = landing
             turnPage(to: target, in: pages)
@@ -2531,79 +2612,67 @@ struct SurahPageReader<Controls: View>: View {
         // row goes, and the scope buttons join the field's row, so the bar is one row there.
         let compact = verticalSizeClass == .compact
 
-        return VStack(spacing: 5) {
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
+        // ONE row of room: the field, its counter and arrows, and the X (the scope buttons join it in
+        // compact height). The filter chips and the scope row used to be two more rows of the bar
+        // itself, and the bar's room comes out of the page: on the 17 Pro the band went from 526 to
+        // 402 pt, so the page refitted to three quarters of its size the moment Search was tapped, and
+        // with the Now Playing bar up it went squatter than wide (Abu, 2026-10-23: "Searching quran
+        // mushaf page is messy"). Those rows now HANG below the bar, over the page, while the field is
+        // focused (`findHangingRows`), the keyboard covering the page's lower half anyway; once it goes,
+        // this row alone stays and the page has its height back. The room is still one fixed height,
+        // so the page never refits as the keyboard comes and goes.
+        return HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
 
-                TextField(searchingSurah ? "Search this surah" : "Search this page", text: $pageSearchText)
-                    .textFieldStyle(.plain)
-                    .autocorrectionDisabled()
-                    .focused($pageSearchFocused)
-                    .submitLabel(.search)
-                    // One height, focused or not: an editing field is a point taller (125.67 against
-                    // 126.67 for the bar, measured), and the page's band followed it, so every time the
-                    // keyboard came or went the page refitted by a point.
-                    .frame(height: findFieldHeight)
+            TextField(searchingSurah ? "Search this surah" : "Search this page", text: $pageSearchText)
+                .textFieldStyle(.plain)
+                .autocorrectionDisabled()
+                .focused($pageSearchFocused)
+                .submitLabel(.search)
+                // One height, focused or not: an editing field is a point taller (125.67 against
+                // 126.67 for the bar, measured), and the page's band followed it, so every time the
+                // keyboard came or went the page refitted by a point.
+                .frame(height: findFieldHeight)
 
-                if hasQuery {
-                    Text(matches.isEmpty ? "0/0" : "\(currentMatchIndex + 1)/\(matches.count)")
-                        .font(.subheadline.weight(.semibold))
-                        .monospacedDigit()
-                        .foregroundStyle(matches.isEmpty ? .secondary : .primary)
+            if hasQuery {
+                Text("\(matches.isEmpty ? 0 : currentMatchIndex + 1)/\(matches.count)")
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(matches.isEmpty ? .secondary : .primary)
 
-                    Button { goToMatch(-1, pages: pages) } label: {
-                        Image(systemName: "chevron.up").font(.body.weight(.semibold))
-                    }
-                    .disabled(matches.isEmpty)
-
-                    Button { goToMatch(1, pages: pages) } label: {
-                        Image(systemName: "chevron.down").font(.body.weight(.semibold))
-                    }
-                    .disabled(matches.isEmpty)
+                Button { goToMatch(-1, pages: pages) } label: {
+                    Image(systemName: "chevron.up").font(.body.weight(.semibold))
                 }
+                .disabled(matches.isEmpty)
 
-                if compact {
-                    findScopeButtons(pages: pages, scopeSurah: scopeSurah, searchingSurah: searchingSurah,
-                                     maxWidth: 200)
+                Button { goToMatch(1, pages: pages) } label: {
+                    Image(systemName: "chevron.down").font(.body.weight(.semibold))
                 }
-
-                Button {
-                    settings.hapticFeedback()
-                    // The keyboard goes first, outside the close's animation (see `searchActive`'s
-                    // onChange): dropped inside it, the chips below slid out of their row and over
-                    // the page as the keyboard went.
-                    pageSearchFocused = false
-                    withAnimation(.easeInOut) { searchActive = false }
-                } label: {
-                    Image(systemName: "xmark").font(.body.weight(.semibold))
-                }
-                .accessibilityLabel("Close search")
+                .disabled(matches.isEmpty)
             }
-            .foregroundStyle(settings.accentColor.color)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .conditionalGlassEffect(rectangle: true)
 
-            if !compact {
-                // The same buttons as the reader's search bar, bled to the screen edges so the row scrolls
-                // under the find bar's own side padding.
-                QuranSearchFilterBar(filters: $findFilters, surahs: [], inReader: true) {
-                    showFindFilterSheet = true
-                }
-                .padding(.horizontal, -(settings.defaultView ? 20 : 16))
-                .padding(.vertical, -4)
-
-                // The scope row. The first button is a TOGGLE that always names where it will take you - "Search
-                // this Surah" while the find is on this page, "Search this Page" once it has been widened - so
-                // the label is the action, never a status line you can't act on. In Full Mode the whole-Quran
-                // button beside it hands the query off to the global search; Simple shows this toggle alone.
-                HStack(spacing: 6) {
-                    findScopeButtons(pages: pages, scopeSurah: scopeSurah, searchingSurah: searchingSurah,
-                                     maxWidth: .infinity)
-                }
+            if compact {
+                findScopeButtons(pages: pages, scopeSurah: scopeSurah, searchingSurah: searchingSurah,
+                                 maxWidth: 200)
             }
+
+            Button {
+                settings.hapticFeedback()
+                // The keyboard goes first, outside the close's animation (see `searchActive`'s
+                // onChange): dropped inside it, the chips below slid out of their row and over
+                // the page as the keyboard went.
+                pageSearchFocused = false
+                withAnimation(.easeInOut) { searchActive = false }
+            } label: {
+                Image(systemName: "xmark").font(.body.weight(.semibold))
+            }
+            .accessibilityLabel("Close search")
         }
+        .foregroundStyle(settings.accentColor.color)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .conditionalGlassEffect(rectangle: true)
         .padding(.horizontal, settings.defaultView ? 20 : 16)
         // SYMMETRIC air (user rule, after a round each way: 2pt read as glued to the title, 10pt
         // as "too much at the top" with none below): the same cushion above the pill and below the
@@ -2616,21 +2685,60 @@ struct SurahPageReader<Controls: View>: View {
         // The room is given back for exactly that state (the field focused = the keyboard up); it
         // costs the page nothing it can use, the keyboard covering most of it anyway.
         .padding(.top, compact && pageSearchFocused ? 40 : 0)
-        // What comes and goes as you type (the "Go to" rows, the no-matches note) HANGS below the bar,
-        // over the page, instead of growing it: grown, each keystroke that added or removed a row moved
-        // the page's band and refitted the page under the keyboard (402, 331, 366 pt typing "2:255",
-        // 2026-09-25). The bar's own room is one fixed height, the page-mode rule for anything
-        // transient (`jumpPickerOverlay` is the other).
+        // What comes and goes (the chips and scope rows with the keyboard, the "Go to" rows and the
+        // no-matches note as you type) HANGS below the bar, over the page, instead of growing it: grown,
+        // each keystroke that added or removed a row moved the page's band and refitted the page under
+        // the keyboard (402, 331, 366 pt typing "2:255", 2026-09-25). The bar's own room is one fixed
+        // height, the page-mode rule for anything transient (`jumpPickerOverlay` is the other).
         .overlay(alignment: .bottom) {
-            findResultRows(pages: pages, targets: refTargets,
-                           showsNoMatches: hasQuery && matches.isEmpty && refTargets.isEmpty,
-                           searchingSurah: searchingSurah)
+            findHangingRows(pages: pages, scopeSurah: scopeSurah, searchingSurah: searchingSurah,
+                            targets: refTargets,
+                            showsNoMatches: hasQuery && matches.isEmpty && refTargets.isEmpty,
+                            compact: compact)
                 .alignmentGuide(.bottom) { $0[.top] }
         }
         .sheet(isPresented: $showFindFilterSheet) {
             QuranSearchFilterSheet(filters: $findFilters, surahs: [], inReader: true)
                 .smallMediumSheetPresentation()
         }
+    }
+
+    /// Everything that hangs below the find bar, over the page, never growing the bar's room. While the
+    /// field is focused: the filter chips and the scope row (the page / surah toggle, the whole-Quran
+    /// hand-off), the typing-time choices. Always: the typed-reference "Go to" rows and the no-matches
+    /// note (`findResultRows`). In compact height the scope buttons ride in the field's row and the chips
+    /// are not offered, as before.
+    @ViewBuilder
+    private func findHangingRows(pages: [MushafPage], scopeSurah: Surah?, searchingSurah: Bool,
+                                 targets: [(surah: Surah, ayahID: Int?)], showsNoMatches: Bool,
+                                 compact: Bool) -> some View {
+        VStack(spacing: 5) {
+            if !compact, pageSearchFocused {
+                // The same buttons as the reader's search bar, edge to edge (the overlay is as wide as
+                // the bar, side padding included), so the row scrolls under the bar's side padding.
+                QuranSearchFilterBar(filters: $findFilters, surahs: [], inReader: true) {
+                    showFindFilterSheet = true
+                }
+                .padding(.vertical, -4)
+
+                // The scope row. The first button is a TOGGLE that always names where it will take you - "Search
+                // this Surah" while the find is on this page, "Search this Page" once it has been widened - so
+                // the label is the action, never a status line you can't act on. In Full Mode the whole-Quran
+                // button beside it hands the query off to the global search; Simple shows this toggle alone.
+                HStack(spacing: 6) {
+                    findScopeButtons(pages: pages, scopeSurah: scopeSurah, searchingSurah: searchingSurah,
+                                     maxWidth: .infinity)
+                }
+                .padding(.horizontal, settings.defaultView ? 20 : 16)
+            }
+
+            findResultRows(pages: pages, targets: targets, showsNoMatches: showsNoMatches,
+                           searchingSurah: searchingSurah)
+        }
+        // The rows come and go with the keyboard on a fade of their own: the focus writes around them
+        // run in the reader's still transaction (no animation), right for the band and wrong for a row
+        // appearing over the page.
+        .animation(.easeInOut(duration: 0.15), value: pageSearchFocused)
     }
 
     /// The find bar's transient rows, hung below it (`pageFindBar`). The typed-reference rows: "2:255" /
@@ -2649,8 +2757,8 @@ struct SurahPageReader<Controls: View>: View {
                         jumpToReference(target, pages: pages)
                     } label: {
                         scopeButtonLabel(
-                            target.ayahID.map { "Go to \(target.surah.nameTransliteration) \(target.surah.id):\($0)" }
-                                ?? "Go to Surah \(target.surah.nameTransliteration)",
+                            target.ayahID.map { String(localized: "Go to \(target.surah.displayName) \(target.surah.id):\($0)") }
+                                ?? String(localized: "Go to Surah \(target.surah.displayName)"),
                             systemImage: "arrow.turn.down.right",
                             color: settings.accentColor.color
                         )
@@ -2686,7 +2794,7 @@ struct SurahPageReader<Controls: View>: View {
                 syncMatch(pages: pages, resetIndex: true)
             } label: {
                 scopeButtonLabel(
-                    searchingSurah ? "Search this Page" : "Search this Surah",
+                    searchingSurah ? String(localized: "Search this Page") : String(localized: "Search this Surah"),
                     systemImage: searchingSurah ? "doc.text.magnifyingglass" : "book.closed",
                     color: settings.accentColor.accent1,
                     maxWidth: maxWidth
@@ -2705,7 +2813,7 @@ struct SurahPageReader<Controls: View>: View {
                 withAnimation(.easeInOut) { searchActive = false }
                 QuranSearchHandoff.shared.request(query)
             } label: {
-                scopeButtonLabel("Search the whole Quran",
+                scopeButtonLabel(String(localized: "Search the whole Quran"),
                                  systemImage: "text.magnifyingglass",
                                  color: settings.accentColor.color,
                                  maxWidth: maxWidth)
@@ -2750,6 +2858,9 @@ struct SurahPageReader<Controls: View>: View {
     /// (surah, ayah) as the anchor.
     private func reportPosition(on index: Int, in pages: [MushafPage], landing: MushafPageLanding?) {
         guard let position = readingPosition(on: index, in: pages, landing: landing) else { return }
+        #if DEBUG
+        MushafPagerProbe.trace("report idx=\(index) page=\(pages[index].page) position=\(position.surah.id):\(position.ayah.id) landing=\(landing.map { "\($0.pageIndex)/\($0.surahID):\($0.ayahID ?? 0)" } ?? "none") first=\(pages[index].firstSurah?.id ?? 0):\(pages[index].firstAyah?.id ?? 0)")
+        #endif
         reportSurah(position.surah)
         reportAnchor(surah: position.surah, ayah: position.ayah, page: pages[index])
     }
@@ -3128,12 +3239,22 @@ struct SurahPageReader<Controls: View>: View {
     }
 
     /// "Page 5", or "Pages 5–6" while both are on screen as a spread.
+    /// The footer's page line: "Page 42 / 604  7%", or "Pages 42–43 / 604  7%" for an open spread.
+    private func pageLine(for page: MushafPage, in pages: [MushafPage]) -> String {
+        let share = percent(page.page, of: pages.count)
+        let onScreen = visiblePageIndices(around: pageIndex, in: pages)
+        guard onScreen.count == 2, let first = onScreen.first, let last = onScreen.last else {
+            return String(localized: "Page \(page.page) / \(pages.count)  \(share)")
+        }
+        return String(localized: "Pages \(pages[first].page)–\(pages[last].page) / \(pages.count)  \(share)")
+    }
+
     private func pageLabel(for page: MushafPage, in pages: [MushafPage]) -> String {
         let onScreen = visiblePageIndices(around: pageIndex, in: pages)
         guard onScreen.count == 2, let first = onScreen.first, let last = onScreen.last else {
-            return "Page \(page.page)"
+            return String(localized: "Page \(page.page)")
         }
-        return "Pages \(pages[first].page)–\(pages[last].page)"
+        return String(localized: "Pages \(pages[first].page)–\(pages[last].page)")
     }
 
     /// The footer row's height. The info panel and the play control both take it, so the two read as one bar
@@ -3178,7 +3299,7 @@ struct SurahPageReader<Controls: View>: View {
                     )
 
                     jumpButton(
-                        title: "Juz \(page.juz ?? 1)",
+                        title: String(localized: "Juz \(page.juz ?? 1)"),
                         target: .juz,
                         color: settings.accentColor.accent2,
                         prominent: true,
@@ -3194,11 +3315,11 @@ struct SurahPageReader<Controls: View>: View {
                     VStack(alignment: .leading, spacing: 4 * footerScale) {
                         // Plain "Surah", deliberately (user rule: names run too long here); the row
                         // above names it.
-                        meter(label: "Surah", position: surahPosition, total: surahTotal,
+                        meter(label: String(localized: "Surah"), position: surahPosition, total: surahTotal,
                               color: settings.accentColor.accent1)
 
                         if juzTotal > 0 {
-                            meter(label: "Juz", position: juzPosition, total: juzTotal,
+                            meter(label: String(localized: "Juz"), position: juzPosition, total: juzTotal,
                                   color: settings.accentColor.accent2)
                         }
                     }
@@ -3207,7 +3328,9 @@ struct SurahPageReader<Controls: View>: View {
 
                     VStack(alignment: .trailing, spacing: 4 * footerScale) {
                         jumpButton(
-                            title: "\(pageLabel(for: page, in: pages)) / \(pages.count)  \(percent(page.page, of: pages.count))",
+                            // One sentence for the catalog with the numbers as numbers, like the juz line below:
+                            // nesting the page label as an argument left Arabic nothing to order the parts by.
+                            title: pageLine(for: page, in: pages),
                             target: .page,
                             color: settings.accentColor.accent1,
                             seed: {
@@ -3218,7 +3341,7 @@ struct SurahPageReader<Controls: View>: View {
                         )
 
                         jumpButton(
-                            title: "Juz \(page.juz ?? 1) / 30  \(percent(page.juz ?? 1, of: 30))",
+                            title: String(localized: "Juz \(page.juz ?? 1) / 30  \(percent(page.juz ?? 1, of: 30))"),
                             target: .juz,
                             color: settings.accentColor.accent2,
                             seed: {
@@ -3266,7 +3389,11 @@ struct SurahPageReader<Controls: View>: View {
     /// "43%" - how far through the mushaf (or through the 30 juz) this page sits.
     private func percent(_ position: Int, of total: Int) -> String {
         guard total > 0 else { return "" }
-        return "\(Int((Double(position) / Double(total) * 100).rounded()))%"
+        let whole = Int((Double(position) / Double(total) * 100).rounded())
+        if AppLanguage.isArabic, let localized = mushafPercentFormatter.string(from: NSNumber(value: Double(whole) / 100)) {
+            return localized
+        }
+        return "\(whole)%"
     }
 
     /// "Surah 12/48" with its own little bar - the two positions the reader actually cares about.
@@ -3317,7 +3444,7 @@ struct SurahPageReader<Controls: View>: View {
             }
         } label: {
             HStack(spacing: 3 * footerScale) {
-                Text(title)
+                Text(title.localizedDigits)
                 Image(systemName: isOpen ? "chevron.down" : "chevron.up.chevron.down")
                     .font(.system(size: size * 0.6 * footerScale))
             }
@@ -3440,7 +3567,7 @@ struct SurahPageReader<Controls: View>: View {
         // deliberately ignores the keyboard inset - see the note on `showTypedJump`). The TextField only
         // renders inside alerts on iOS 16+, which is why the keyboard button that raises this is gated.
         .alert(target == .page ? "Go to Page" : "Go to Juz", isPresented: $showTypedJump) {
-            TextField(target == .page ? "1 – \(pages.last?.page ?? pages.count)" : "1 – 30", text: $typedJumpText)
+            TextField((target == .page ? "1 – \(pages.last?.page ?? pages.count)" : "1 – 30").localizedDigits, text: $typedJumpText)
                 .keyboardType(.numberPad)
             Button("Go") { commitTypedJump(target: target, pages: pages) }
             Button("Cancel", role: .cancel) {}
@@ -3450,7 +3577,7 @@ struct SurahPageReader<Controls: View>: View {
     /// Jump from a typed number. Page numbers are what the footer displays (`pages[i].page`), not indices;
     /// out-of-range input clamps to the nearest end rather than being dropped.
     private func commitTypedJump(target: PickerTarget, pages: [MushafPage]) {
-        guard let n = Int(typedJumpText.trimmingCharacters(in: .whitespaces)), !pages.isEmpty else { return }
+        guard let n = Int(typedJumpText.normalizingArabicIndicDigitsToWestern.trimmingCharacters(in: .whitespaces)), !pages.isEmpty else { return }
         switch target {
         case .page:
             // `max(n, 1) - 1`, not `n - 1`: a typed "-9223372036854775808" (Mac or iPad keyboard) overflowed.
@@ -3481,7 +3608,7 @@ struct SurahPageReader<Controls: View>: View {
 
     /// A surah row in the "which surah" lists: the number and name, as the surah grid writes them.
     private static func surahChoiceTitle(_ surah: Surah) -> String {
-        "\(surah.id): \(surah.nameTransliteration)"
+        "\(surah.id): \(surah.displayName)"
     }
 
     /// The list reader's play menu, verbatim (user rule: "take the SurahView play menu exactly and put it in
@@ -3500,17 +3627,17 @@ struct SurahPageReader<Controls: View>: View {
         return Group {
             if idle {
                 ShortcutMenu(
-                    doubleTap: MenuShortcut("Play Surah") {
+                    doubleTap: MenuShortcut(String(localized: "Play Surah")) {
                         settings.hapticFeedback()
                         quranPlayer.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
                     },
                     hold: settings.isHafsDisplay && onPlayCustomRange != nil
-                        ? MenuShortcut("Play Custom Range") {
+                        ? MenuShortcut(String(localized: "Play Custom Range")) {
                             settings.hapticFeedback()
                             onPlayCustomRange?()
                         }
                         : onChooseReciter.map { choose in
-                            MenuShortcut("Choose Reciter") {
+                            MenuShortcut(String(localized: "Choose Reciter")) {
                                 settings.hapticFeedback()
                                 choose()
                             }
@@ -3633,7 +3760,7 @@ struct SurahPageReader<Controls: View>: View {
                                         settings.hapticFeedback()
                                         quranPlayer.playAyah(surahNumber: candidate.id, ayahNumber: 1, continueRecitation: true)
                                     } label: {
-                                        Text(Self.surahChoiceTitle(candidate))
+                                        Text(Self.surahChoiceTitle(candidate).localizedDigits)
                                     }
                                 }
                             } label: {
@@ -3669,7 +3796,7 @@ struct SurahPageReader<Controls: View>: View {
                                     settings.hapticFeedback()
                                     quranPlayer.playSurah(surahNumber: candidate.id, surahName: candidate.nameTransliteration)
                                 } label: {
-                                    Text(Self.surahChoiceTitle(candidate))
+                                    Text(Self.surahChoiceTitle(candidate).localizedDigits)
                                 }
                             }
                         } label: {
@@ -5078,9 +5205,17 @@ struct MushafPageComposer {
                     ))
                 }
             } else if i > 0 {
+                // The Arabic interface names the continuing surah in Arabic on the Arabic page, cleaned
+                // through the config snapshot like the opening heading (the composer runs off-main).
+                var continuingName = segment.surah.nameTransliteration
+                if !isEnglish && AppLanguage.isArabic {
+                    continuingName = segment.surah.nameArabic
+                    if config.cleanArabicText { continuingName = continuingName.removingArabicDiacriticsAndSigns }
+                    if config.removeArabicDots { continuingName = continuingName.removingArabicDots }
+                }
                 let name = isEnglish
                     ? "\n\(segment.surah.id). \(segment.surah.nameTransliteration)\n"
-                    : "\n﴿ \(segment.surah.nameTransliteration) ﴾\n"
+                    : "\n﴿ \(continuingName) ﴾\n"
                 let headingStart = result.length
                 result.append(NSAttributedString(string: name, attributes: [
                     .font: UIFont.systemFont(ofSize: max(size * 0.5, 12), weight: .semibold),

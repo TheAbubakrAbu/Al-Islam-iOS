@@ -18,15 +18,56 @@ import SwiftUI
 struct TajweedCourseView: View {
     @Environment(\.appearance) private var appearance
     @ObservedObject private var progress = TajweedLessonProgress.shared
+    @ObservedObject private var testProgress = TajweedTestProgress.shared
 
     /// The course, parsed off the main thread in the task below (500 KB); a spinner stands in until
     /// it lands.
     @State private var course: TajweedLessonsStore.Course? = TajweedLessonsStore.shared.courseIfLoaded
     @State private var showTajweedLegend = false
+    @State private var searchText = ""
+    @State private var barsCollapsed = false
+
+    private var query: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    /// Each lesson's folded search key (both titles, the transliteration, the summary, the key points
+    /// and the rule code), by lesson id. The lessons come off a pack parsed after the screen appears,
+    /// so there is no static index to build at launch: a key is folded the first time its lesson is
+    /// searched and kept, so a keystroke pays for 58 dictionary lookups, never 58 folds. The store
+    /// parses the course once and keeps it, so the keys never go stale. Locked the way
+    /// `SettingsSearch.foldedByID` is.
+    private static let searchKeysLock = NSLock()
+    nonisolated(unsafe) private static var searchKeys: [String: String] = [:]
+
+    private static func searchKey(for lesson: TajweedLesson) -> String {
+        searchKeysLock.lock()
+        if let key = searchKeys[lesson.id] { searchKeysLock.unlock(); return key }
+        searchKeysLock.unlock()
+        let english = [lesson.titleEn, lesson.titleAr, lesson.translit, lesson.summary, lesson.ruleCode ?? ""] + lesson.keyPoints
+        // The title and summary as a translated interface shows them, after the English, where they differ.
+        let shown = [lesson.titleEn.localizedDisplay, lesson.summary.localizedDisplay].filter { !english.contains($0) }
+        let key = IslamArticles.fold((english + shown).joined(separator: " "))
+        searchKeysLock.lock(); searchKeys[lesson.id] = key; searchKeysLock.unlock()
+        return key
+    }
+
+    /// Every term has to hit, the rule the Prophecies and Miracles indexes search by.
+    private func results(in lessons: [TajweedLesson]) -> [TajweedLesson] {
+        let terms = IslamArticles.fold(query).split(separator: " ").map(String.init)
+        guard !terms.isEmpty else { return [] }
+        let matched = lessons.filter { lesson in
+            let key = Self.searchKey(for: lesson)
+            return terms.allSatisfy { key.contains($0) }
+        }
+        return SearchRank.sorted(matched, by: query) { lesson in
+            [lesson.titleEn, lesson.titleAr, lesson.translit] + [lesson.titleEn.localizedDisplay].filter { $0 != lesson.titleEn }
+        }
+    }
 
     #if DEBUG
     /// `-openTajweedLesson <id>`: that lesson pushed as the course appears, for screenshots.
     @State private var debugOpenLesson = false
+    /// `-tajweedTest`: the Tajweed Test ladder pushed as the course appears.
+    @State private var debugOpenTest = false
     private static var debugLessonID: String? {
         guard let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-openTajweedLesson"),
               ProcessInfo.processInfo.arguments.indices.contains(idx + 1) else { return nil }
@@ -61,48 +102,72 @@ struct TajweedCourseView: View {
 
         List {
             Group {
-                if shows("overview") { overviewSection(lessons: lessons) }
+                if query.isEmpty {
+                    if shows("overview") { overviewSection(lessons: lessons) }
 
-                if course == nil, TajweedLessonsStore.isBundled {
-                    Section {
-                        HStack {
-                            Spacer()
-                            ProgressView()
-                            Spacer()
+                    if course != nil, shows("test") { testSection }
+
+                    if course == nil, TajweedLessonsStore.isBundled { loadingSection }
+
+                    if shows("reference") { referenceSection }
+
+                    if let course, shows("stages") {
+                        ForEach(Array(course.stages.enumerated()), id: \.element.id) { stageIndex, stage in
+                            let chapters = course.chapters.filter { $0.stage == stage.id }
+                            ForEach(Array(chapters.enumerated()), id: \.element.id) { chapterIndex, chapter in
+                                chapterSection(chapter, numbers: numbers,
+                                               stage: chapterIndex == 0 ? (stage: stage, number: stageIndex + 1) : nil)
+                            }
+                        }
+
+                        // Chapters whose stage the pack does not name still list.
+                        let known = Set(course.stages.map(\.id))
+                        ForEach(course.chapters.filter { !known.contains($0.stage) }) { chapter in
+                            chapterSection(chapter, numbers: numbers, stage: nil)
+                        }
+                    }
+
+                    if shows("learnmore") { learnMoreSection }
+
+                    Section(footer:
+                        Text("Curriculum by Jamil Hammoudeh for Tilawa, used with permission, merged lesson by lesson with Al-Islam's Tajweed Foundations. Hafs an Asim, by the way of ash-Shatibiyyah. Example ayahs play in your chosen reciter.")
+                            .font(.caption2)
+                    ) { EmptyView() }
+                } else if course == nil, TajweedLessonsStore.isBundled {
+                    // Typed before the pack landed: the spinner, not "no lessons match".
+                    loadingSection
+                } else {
+                    let matches = results(in: lessons)
+                    if matches.isEmpty {
+                        Section {
+                            Text("No lessons match \"\(query)\".")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Section(header: SectionPillHeader(title: String(localized: "LESSONS"), count: matches.count)) {
+                            ForEach(matches) { lessonLink($0, number: numbers[$0.id]) }
                         }
                     }
                 }
-
-                if shows("reference") { referenceSection }
-
-                if let course, shows("stages") {
-                    ForEach(Array(course.stages.enumerated()), id: \.element.id) { stageIndex, stage in
-                        let chapters = course.chapters.filter { $0.stage == stage.id }
-                        ForEach(Array(chapters.enumerated()), id: \.element.id) { chapterIndex, chapter in
-                            chapterSection(chapter, numbers: numbers,
-                                           stage: chapterIndex == 0 ? (stage: stage, number: stageIndex + 1) : nil)
-                        }
-                    }
-
-                    // Chapters whose stage the pack does not name still list.
-                    let known = Set(course.stages.map(\.id))
-                    ForEach(course.chapters.filter { !known.contains($0.stage) }) { chapter in
-                        chapterSection(chapter, numbers: numbers, stage: nil)
-                    }
-                }
-
-                if shows("learnmore") { learnMoreSection }
-
-                Section(footer:
-                    Text("Curriculum by Jamil Hammoudeh for Tilawa, used with permission, merged lesson by lesson with Al-Islam's Tajweed Foundations. Hafs an Asim, by the way of ash-Shatibiyyah. Example ayahs play in your chosen reciter.")
-                        .font(.caption2)
-                ) { EmptyView() }
             }
             .themedListRowBackground()
         }
+        // NO `article:` here: that adds the per-page "Search this article" bar, and this screen is an
+        // INDEX with its own lesson search below (two stacked search bars).
         .selectableArticleList()
         .navigationTitle("Tajweed Course")
         .openScreen(.tajweedCourse)
+        .collapseBarsOnScroll($barsCollapsed)
+        .adaptiveSafeArea(edge: .bottom) {
+            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
+                      placeholder: String(localized: "Search lessons"))
+                .minimizedBarStyle(barsCollapsed)
+                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
+                .padding(.horizontal, 24)
+                .padding(.bottom, BottomBarCushion.standard)
+                .background(Color.white.opacity(0.00001))
+        }
         // Same off-main parse the lessons do: parsing the pack in the body stalled first open.
         .task {
             guard course == nil, TajweedLessonsStore.isBundled else { return }
@@ -123,9 +188,14 @@ struct TajweedCourseView: View {
                 TajweedLessonScreen(lessonID: id)
             }
         }
+        .debugPushDestination(isPresented: $debugOpenTest) {
+            TajweedTestView()
+        }
         .onAppear {
             if Self.debugLessonID != nil {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { debugOpenLesson = true }
+            } else if ProcessInfo.processInfo.arguments.contains("-tajweedTest") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { debugOpenTest = true }
             }
         }
         #endif
@@ -142,15 +212,15 @@ struct TajweedCourseView: View {
         let next = doneCount > 0 ? lessons.first(where: { !progress.isDone($0.id) }) : nil
 
         ResourceHeroSection(ResourceHero(
-            eyebrow: "LEARN TAJWEED",
+            eyebrow: String(localized: "LEARN TAJWEED"),
             systemImage: "graduationcap.fill",
-            headline: "Recite the Qur\u{2019}an with measured recitation.",
-            source: "Quran 73:4",
-            message: "One course for all of tajweed, Hafs an Asim by the way of ash-Shatibiyyah, taught in the classical order: read the letters, shape them, apply the rules, then read the mushaf. Every lesson explains its rule, shows it in real ayahs you can play, gives you words and patterns to practise, and ends with a self-check.",
+            headline: String(localized: "Recite the Qur\u{2019}an with measured recitation."),
+            source: String(localized: "Quran 73:4"),
+            message: String(localized: "One course for all of tajweed, Hafs an Asim by the way of ash-Shatibiyyah, taught in the classical order: read the letters, shape them, apply the rules, then read the mushaf. Every lesson explains its rule, shows it in real ayahs you can play, gives you words and patterns to practise, and ends with a self-check."),
             stats: lessons.isEmpty ? [] : [
-                ResourceHeroStat("\(lessons.count)", "lessons"),
-                ResourceHeroStat("\(course?.chapters.count ?? 0)", "chapters"),
-                ResourceHeroStat(Self.duration(minutes), "in all"),
+                ResourceHeroStat(lessons.count.formatted(), String(localized: "lessons")),
+                ResourceHeroStat((course?.chapters.count ?? 0).formatted(), String(localized: "chapters")),
+                ResourceHeroStat(Self.duration(minutes), String(localized: "in all")),
             ]
         ) {
             if doneCount > 0, !lessons.isEmpty {
@@ -176,7 +246,7 @@ struct TajweedCourseView: View {
                                 .font(.caption2.weight(.heavy))
                                 .tracking(0.7)
                                 .foregroundStyle(.secondary)
-                            Text(next.titleEn)
+                            Text(next.titleEn.localizedDisplay)
                                 .font(.subheadline.weight(.semibold))
                         }
                     }
@@ -187,9 +257,43 @@ struct TajweedCourseView: View {
     }
 
     private static func duration(_ minutes: Int) -> String {
-        guard minutes >= 90 else { return "\(minutes) minutes" }
+        guard minutes >= 90 else { return String(localized: "\(minutes) minutes") }
         let hours = (Double(minutes) / 60).rounded()
-        return "\(Int(hours)) hours"
+        return String(localized: "\(Int(hours)) hours")
+    }
+
+    // MARK: Test yourself
+
+    /// The Tajweed Test (TajweedTestViews.swift): one scored test per chapter, built from the lessons.
+    /// Its row shows the ladder's progress once there is some.
+    @ViewBuilder
+    private var testSection: some View {
+        let tiers = course.map(TajweedTestLadder.tiers(in:)) ?? []
+        let passed = testProgress.passedCount(in: tiers)
+        Section(header: Text("TEST YOURSELF")) {
+            NavigationLink(destination: LazyDestination { TajweedTestView() }) {
+                HStack(spacing: 12) {
+                    AccentIconChip(systemImage: "checkmark.seal.fill", size: 30)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Tajweed Test")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                        Text(passed > 0 ? String(localized: "\(passed) of \(tiers.count) chapters passed")
+                             : String(localized: "A scored test for every chapter, built from its lessons"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    if passed > 0 {
+                        Text("\(passed)/\(tiers.count)")
+                            .font(.caption.weight(.bold))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+        }
     }
 
     // MARK: Quick reference
@@ -241,8 +345,8 @@ struct TajweedCourseView: View {
             NavigationLink(destination: LazyDestination { LetterFamiliesView() }) {
                 ArabicTopicLinkLabel(
                     specimen: "ص",
-                    title: "Letter Families",
-                    caption: "Every letter by makhraj, sifaat and rule, in Arabic and English",
+                    title: String(localized: "Letter Families"),
+                    caption: String(localized: "Every letter by makhraj, sifaat and rule, in Arabic and English"),
                     preview: "الهَمس  الصَّفِير  القَلقَلَة  الغُنَّة"
                 )
             }
@@ -250,8 +354,8 @@ struct TajweedCourseView: View {
             NavigationLink(destination: LazyDestination { SoundAlikeLettersView() }) {
                 ArabicTopicLinkLabel(
                     specimen: "ذظ",
-                    title: "Sound-Alike Letters",
-                    caption: "The pairs people mix up, side by side, with what separates them"
+                    title: String(localized: "Sound-Alike Letters"),
+                    caption: String(localized: "The pairs people mix up, side by side, with what separates them")
                 )
             }
         }
@@ -266,16 +370,16 @@ struct TajweedCourseView: View {
         Section(header: stageHeader(stage)) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text(chapter.title)
+                    Text(chapter.title.localizedDisplay)
                         .font(.headline.weight(.heavy))
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 8)
-                    Text(chapter.lessons.count == 1 ? "1 lesson" : "\(chapter.lessons.count) lessons")
+                    Text(chapter.lessons.count == 1 ? String(localized: "1 lesson") : String(localized: "\(chapter.lessons.count) lessons"))
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(.secondary)
                 }
                 if !chapter.subtitle.isEmpty {
-                    Text(chapter.subtitle)
+                    Text(chapter.subtitle.localizedDisplay)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -284,9 +388,26 @@ struct TajweedCourseView: View {
             .padding(.vertical, 4)
 
             ForEach(chapter.lessons) { lesson in
-                NavigationLink(destination: LazyDestination { TajweedLessonDetailView(lesson: lesson) }) {
-                    lessonRow(lesson, number: numbers[lesson.id])
-                }
+                lessonLink(lesson, number: numbers[lesson.id])
+            }
+        }
+    }
+
+    /// A lesson's row and its page: the chapter cards and the search results share it, so a result
+    /// opens the lesson the way its chapter does.
+    private func lessonLink(_ lesson: TajweedLesson, number: Int?) -> some View {
+        NavigationLink(destination: LazyDestination { TajweedLessonDetailView(lesson: lesson) }) {
+            lessonRow(lesson, number: number)
+        }
+    }
+
+    /// The spinner that stands in for the course until the pack is parsed.
+    private var loadingSection: some View {
+        Section {
+            HStack {
+                Spacer()
+                ProgressView()
+                Spacer()
             }
         }
     }
@@ -300,7 +421,7 @@ struct TajweedCourseView: View {
                     .tracking(0.7)
                     .foregroundColor(Color(.secondaryLabel))
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(stage.stage.titleEn)
+                    Text(stage.stage.titleEn.localizedDisplay)
                         .font(.title3.weight(.heavy))
                         .foregroundColor(.primary)
                     Spacer(minLength: 8)
@@ -310,7 +431,7 @@ struct TajweedCourseView: View {
                         .foregroundColor(accent)
                 }
                 if !stage.stage.blurb.isEmpty {
-                    Text(stage.stage.blurb)
+                    Text(stage.stage.blurb.localizedDisplay)
                         .font(.footnote)
                         .foregroundColor(Color(.secondaryLabel))
                         .fixedSize(horizontal: false, vertical: true)
@@ -332,7 +453,7 @@ struct TajweedCourseView: View {
                         .font(.subheadline)
                         .foregroundColor(lesson.accent(fallback: accent))
                 } else {
-                    Text(number.map(String.init) ?? "")
+                    Text(number.map { String($0).localizedDigits } ?? "")
                         .font(.caption.weight(.bold))
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
@@ -342,7 +463,7 @@ struct TajweedCourseView: View {
 
             // The English title is what the row is for: it takes the width first, and the Arabic name
             // shrinks beside it rather than pushing it onto a second line.
-            Text(lesson.titleEn)
+            Text(lesson.titleEn.localizedDisplay)
                 .font(.subheadline.weight(.semibold))
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -362,7 +483,7 @@ struct TajweedCourseView: View {
         }
         .padding(.vertical, 3)
         .accessibilityElement(children: .combine)
-        .accessibilityValue(done ? "Done" : "")
+        .accessibilityValue(done ? String(localized: "Done") : "")
     }
 
     // MARK: Learn more
@@ -390,7 +511,7 @@ struct TajweedCourseView: View {
                 ForEach(course.stages) { stage in
                     let chapters = course.chapters.filter { $0.stage == stage.id }
                     if !chapters.isEmpty {
-                        Section(header: Text(stage.titleEn)) {
+                        Section(header: Text(stage.titleEn.localizedDisplay)) {
                             ForEach(chapters) { chapter in
                                 ForEach(chapter.lessons) { lesson in
                                     NavigationLink(destination: LazyDestination { TajweedLessonWatchView(lesson: lesson) }) {
@@ -401,10 +522,10 @@ struct TajweedCourseView: View {
                                                         .font(.caption2)
                                                         .foregroundColor(.accentColor)
                                                 }
-                                                Text(lesson.titleEn)
+                                                Text(lesson.titleEn.localizedDisplay)
                                                     .font(.footnote.weight(.semibold))
                                             }
-                                            Text(chapter.title)
+                                            Text(chapter.title.localizedDisplay)
                                                 .font(.caption2)
                                                 .foregroundColor(.secondary)
                                         }
@@ -440,7 +561,7 @@ struct TajweedLessonWatchView: View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(lesson.titleEn)
+                    Text(lesson.titleEn.localizedDisplay)
                         .font(.headline)
                     if !lesson.titleAr.isEmpty {
                         Text(lesson.titleAr)
@@ -448,7 +569,7 @@ struct TajweedLessonWatchView: View {
                             .foregroundColor(.secondary)
                     }
                     if !lesson.summary.isEmpty {
-                        Text(lesson.summary)
+                        Text(lesson.summary.localizedDisplay)
                             .font(.footnote)
                             .foregroundColor(.secondary)
                     }
@@ -460,26 +581,29 @@ struct TajweedLessonWatchView: View {
                     Text(definition.termAr)
                         .font(.title3)
                         .frame(maxWidth: .infinity, alignment: .trailing)
-                    if !definition.literal.isEmpty { Text("Literally: \(definition.literal)").font(.footnote) }
-                    if !definition.technical.isEmpty { Text(definition.technical).font(.footnote) }
+                        // On the right, as Arabic sits, in either interface.
+                        .environment(\.layoutDirection, .leftToRight)
+                    if !definition.literal.isEmpty { Text("Literally: \(definition.literal.localizedDisplay)").font(.footnote) }
+                    if !definition.technical.isEmpty { Text(definition.technical.localizedDisplay).font(.footnote) }
                 }
             }
 
             if let card = lesson.ruleCard {
                 Section(header: Text("The Rule")) {
-                    if !card.trigger.isEmpty { Text("When: \(card.trigger)").font(.footnote) }
-                    if !card.action.isEmpty { Text("Do: \(card.action)").font(.footnote) }
-                    if !card.hold.isEmpty { Text("Hold: \(card.hold)").font(.footnote) }
+                    if !card.trigger.isEmpty { Text("When: \(card.trigger.localizedDisplay)").font(.footnote) }
+                    if !card.action.isEmpty { Text("Do: \(card.action.localizedDisplay)").font(.footnote) }
+                    if !card.hold.isEmpty { Text("Hold: \(card.hold.localizedDisplay)").font(.footnote) }
                 }
             }
 
             ForEach(lesson.letterSets) { set in
-                Section(header: Text(set.label)) {
+                Section(header: Text(set.label.localizedDisplay)) {
                     Text(set.letters.joined(separator: "  "))
                         .font(.title3)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        .environment(\.layoutDirection, .leftToRight)
                     if !set.note.isEmpty {
-                        Text(set.note)
+                        Text(set.note.localizedDisplay)
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
@@ -488,13 +612,13 @@ struct TajweedLessonWatchView: View {
 
             Section(header: Text("Explanation")) {
                 ForEach(Array(lesson.body.enumerated()), id: \.offset) { _, paragraph in
-                    Text(paragraph)
+                    Text(paragraph.localizedDisplay)
                         .font(.footnote)
                 }
             }
 
             ForEach(lesson.words) { group in
-                Section(header: Text(group.label)) {
+                Section(header: Text(group.label.localizedDisplay)) {
                     ForEach(group.items) { word in
                         VStack(alignment: .trailing, spacing: 2) {
                             Text(word.arabic(in: quranData))
@@ -504,6 +628,7 @@ struct TajweedLessonWatchView: View {
                                 .foregroundColor(.secondary)
                         }
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        .environment(\.layoutDirection, .leftToRight)
                     }
                 }
             }
@@ -511,7 +636,7 @@ struct TajweedLessonWatchView: View {
             if !lesson.keyPoints.isEmpty {
                 Section(header: Text("Worth Remembering")) {
                     ForEach(Array(lesson.keyPoints.enumerated()), id: \.offset) { _, point in
-                        Text(point)
+                        Text(point.localizedDisplay)
                             .font(.footnote)
                     }
                 }
@@ -521,10 +646,10 @@ struct TajweedLessonWatchView: View {
                 Section(header: Text("Common Mistakes")) {
                     ForEach(lesson.mistakes) { mistake in
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(mistake.wrong)
+                            Text(mistake.wrong.localizedDisplay)
                                 .font(.footnote)
                                 .foregroundColor(.red)
-                            Text(mistake.right)
+                            Text(mistake.right.localizedDisplay)
                                 .font(.footnote.weight(.semibold))
                                 .foregroundColor(.green)
                         }
@@ -536,12 +661,12 @@ struct TajweedLessonWatchView: View {
                 Button {
                     progress.toggle(lesson.id)
                 } label: {
-                    Label(progress.isDone(lesson.id) ? "Marked as Done" : "Mark as Done",
+                    Label(progress.isDone(lesson.id) ? String(localized: "Marked as Done") : String(localized: "Mark as Done"),
                           systemImage: progress.isDone(lesson.id) ? "checkmark.circle.fill" : "circle")
                 }
             }
         }
-        .navigationTitle(lesson.titleEn)
+        .navigationTitle(lesson.titleEn.localizedDisplay)
     }
 }
 #endif

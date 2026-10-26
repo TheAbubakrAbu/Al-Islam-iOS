@@ -574,7 +574,8 @@ enum AskAIText {
             for digits in digitsRegex.matches(in: group as String, range: NSRange(location: 0, length: group.length)) {
                 numbers.append(group.substring(with: digits.range))
             }
-            result.append(NSAttributedString(string: numbers.joined(separator: "\u{2009}"), attributes: marker))
+            // In the interface's digits, like the numbered source cards the marks point to.
+            result.append(NSAttributedString(string: numbers.joined(separator: "\u{2009}").localizedDigits, attributes: marker))
             cursor = match.range.location + match.range.length
         }
         if cursor < ns.length {
@@ -601,7 +602,7 @@ enum AskAIText {
             }
         }
         if !cited.isEmpty {
-            text += "\n\nSources:\n" + cited.map { source in
+            text += "\n\n" + String(localized: "Sources:") + "\n" + cited.map { source in
                 var line = "\u{2022} \(source.reference)"
                 if !source.provenanceLine.isEmpty { line += " (\(source.provenanceLine))" }
                 line += ": \u{201C}\(AskAISource.clip(source.text, to: 240))\u{201D}"

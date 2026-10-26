@@ -41,9 +41,9 @@ final class QuranTopicsStore: @unchecked Sendable {
 
         var footnote: String {
             switch self {
-            case .thematic: return "Thematic topics from The Clear Quran (Dr. Mustafa Khattab), via the Quranic Universal Library."
-            case .ontology: return "Concepts from the Quranic Arabic Corpus ontology (Kais Dukes), via the Quranic Universal Library."
-            case .index: return "General index from the Quranic Universal Library."
+            case .thematic: return String(localized: "Thematic topics from The Clear Quran (Dr. Mustafa Khattab), via the Quranic Universal Library.")
+            case .ontology: return String(localized: "Concepts from the Quranic Arabic Corpus ontology (Kais Dukes), via the Quranic Universal Library.")
+            case .index: return String(localized: "General index from the Quranic Universal Library.")
             }
         }
     }
@@ -80,7 +80,7 @@ final class QuranTopicsStore: @unchecked Sendable {
         /// The QSAC-shaped value the shared topic screens render.
         func asThemeTopic(parentName: String?) -> ThemeTopic {
             ThemeTopic(id: "qul-\(id)", name: name, description: description,
-                       domain: family.title, category: parentName ?? "", ayahs: ayahs)
+                       domain: family.title, category: parentName ?? "", ayahs: ayahs, arabicName: arabic)
         }
     }
 
@@ -383,10 +383,13 @@ final class AyahThemesStore: @unchecked Sendable {
     }
 
     /// The surah's passages as an outline, in the markdown the About this Surah sheet renders.
-    /// Memoized per surah (Phase 10.8): the sheet read it several times per body pass.
-    func outlineMarkdown(surah: Int) -> String? {
+    /// `localized`: the headings and the credit in the interface's language, for the copy the sheet
+    /// DRAWS; false keeps them English, for the copy the on-device model reads.
+    /// Memoized per surah and language (Phase 10.8): the sheet read it several times per body pass.
+    func outlineMarkdown(surah: Int, localized: Bool) -> String? {
+        let key = OutlineKey(surah: surah, localized: localized)
         lock.lock()
-        if let cached = outlineCache[surah] { lock.unlock(); return cached }
+        if let cached = outlineCache[key] { lock.unlock(); return cached }
         lock.unlock()
         let rows = themes(surah: surah)
         let built: String?
@@ -395,20 +398,32 @@ final class AyahThemesStore: @unchecked Sendable {
         } else {
             var lines: [String] = []
             for theme in rows {
-                let range = theme.start == theme.end ? "Ayah \(theme.start)" : "Ayahs \(theme.start)-\(theme.end)"
+                let range: String
+                if localized {
+                    range = theme.start == theme.end ? String(localized: "Ayah \(theme.start)") : String(localized: "Ayahs \(theme.start)-\(theme.end)")
+                } else {
+                    range = theme.start == theme.end ? "Ayah \(theme.start)" : "Ayahs \(theme.start)-\(theme.end)"
+                }
                 lines.append("**\(range)**: \(theme.title)")
             }
             lines.append("")
-            lines.append("_Passage themes from the Quranic Universal Library._")
+            lines.append(localized
+                         ? "_\(String(localized: "Passage themes from the Quranic Universal Library."))_"
+                         : "_Passage themes from the Quranic Universal Library._")
             built = lines.joined(separator: "\n\n")
         }
-        lock.lock(); outlineCache[surah] = .some(built); lock.unlock()
+        lock.lock(); outlineCache[key] = .some(built); lock.unlock()
         return built
+    }
+
+    private struct OutlineKey: Hashable {
+        let surah: Int
+        let localized: Bool
     }
 
     private var foldedTitles: [Int: [String]]?
     private var searchMemo: (folded: String, limit: Int, hits: [Theme])?
-    private var outlineCache: [Int: String?] = [:]
+    private var outlineCache: [OutlineKey: String?] = [:]
 
     func unload() {
         lock.lock(); defer { lock.unlock() }
@@ -472,9 +487,9 @@ enum QuranMetadata {
 
         var title: String {
             switch self {
-            case .hizb: return "Hizb"
-            case .ruku: return "Ruku"
-            case .manzil: return "Manzil"
+            case .hizb: return String(localized: "Hizb")
+            case .ruku: return String(localized: "Ruku")
+            case .manzil: return String(localized: "Manzil")
             }
         }
     }
@@ -514,11 +529,11 @@ enum QuranMetadata {
     /// "Juz 1 · Hizb 1 · Ruku 1 · Manzil 1 · Page 1" for one ayah, from what is known about it.
     static func caption(for ayah: Ayah, surah: Int) -> String {
         var parts: [String] = []
-        if let juz = ayah.juz { parts.append("Juz \(juz)") }
-        if let hizb = number(of: .hizb, surah: surah, ayah: ayah.id) { parts.append("Hizb \(hizb)") }
-        if let ruku = number(of: .ruku, surah: surah, ayah: ayah.id) { parts.append("Ruku \(ruku)") }
-        if let manzil = number(of: .manzil, surah: surah, ayah: ayah.id) { parts.append("Manzil \(manzil)") }
-        if let page = ayah.page { parts.append("Page \(page)") }
+        if let juz = ayah.juz { parts.append(String(localized: "Juz \(juz)")) }
+        if let hizb = number(of: .hizb, surah: surah, ayah: ayah.id) { parts.append(String(localized: "Hizb \(hizb)")) }
+        if let ruku = number(of: .ruku, surah: surah, ayah: ayah.id) { parts.append(String(localized: "Ruku \(ruku)")) }
+        if let manzil = number(of: .manzil, surah: surah, ayah: ayah.id) { parts.append(String(localized: "Manzil \(manzil)")) }
+        if let page = ayah.page { parts.append(String(localized: "Page \(page)")) }
         return parts.joined(separator: " · ")
     }
 
@@ -580,7 +595,7 @@ struct AyahInsightsCard: View {
                             Text("PASSAGE")
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(.secondary)
-                            Text(passage.rangeLabel)
+                            Text(passage.rangeLabel.localizedDigits)
                                 .font(.caption2.weight(.semibold).monospacedDigit())
                                 .foregroundColor(settings.accentColor.color)
                             if passage.ayahCount > 1 {

@@ -1,6 +1,71 @@
 import SwiftUI
 
 #if os(iOS)
+/// Interface text that is DATA as well: a tip, a settings search title. It is written once, as the
+/// `String.LocalizationValue` literal `String(localized:)` takes (the same catalog key, extracted by the
+/// compiler the same way), and resolved twice. A screen shows `display`, in the interface language, as it
+/// always has; Ask AI (what a question is matched against, what the model reads, the settings corpus) and
+/// anything saved (`SettingsSearchEntry.id`, which Ask AI transcripts keep) read `english`, which no
+/// language changes. A String.LocalizationValue rather than a LocalizedStringResource: the companion apps
+/// compile these files on iOS 15.
+struct InterfaceText {
+    /// Which of the two strings a piece of composed text stands for (`init(_ compose:)`).
+    enum Language { case display, english }
+
+    let display: String
+    let english: String
+
+    init(_ value: String.LocalizationValue) {
+        display = String(localized: value)
+        english = Self.english(value)
+    }
+
+    /// Text resolved elsewhere, one string per language: the app's name is الإسلام on an Arabic screen
+    /// and Al-Islam to the model.
+    init(display: String, english: String) {
+        self.display = display
+        self.english = english
+    }
+
+    /// A sentence that interpolates other interface text, `InterfaceText { "\(lead[$0]) A single tap
+    /// still opens the whole menu." }`: written once and called once per language, with the pieces in that
+    /// language, so its catalog key is the one `String(localized:)` gave it (a %@ for each piece).
+    init(_ compose: (Language) -> String.LocalizationValue) {
+        display = String(localized: compose(.display))
+        english = Self.english(compose(.english))
+    }
+
+    subscript(language: Language) -> String {
+        language == .english ? english : display
+    }
+
+    /// The parts joined with `separator` in each language, an empty part left out.
+    static func joined(_ parts: [InterfaceText], separator: String) -> InterfaceText {
+        InterfaceText(display: parts.map(\.display).filter { !$0.isEmpty }.joined(separator: separator),
+                      english: parts.map(\.english).filter { !$0.isEmpty }.joined(separator: separator))
+    }
+
+    /// `value` in English in every interface language. It is looked up in the English table alone, which
+    /// holds only the keys whose English differs from the key ("weather.clear"), so every other key comes
+    /// back as itself: the English it was written in. Arguments are formatted the POSIX way, as a Swift
+    /// interpolation writes them ("1000", never "1,000" or "١٬٠٠٠").
+    static func english(_ value: String.LocalizationValue) -> String {
+        String(localized: value, table: englishLookup.table, bundle: englishLookup.bundle, locale: englishLocale)
+    }
+
+    private static let englishLocale = Locale(identifier: "en_US_POSIX")
+
+    /// en.lproj as a bundle of its own, so no other language can answer. A build without an English
+    /// table (a companion app before its catalog) asks the main bundle for a table no language carries,
+    /// which also returns every key as itself, never a translation.
+    private static let englishLookup: (bundle: Bundle, table: String?) = {
+        if let path = Bundle.main.path(forResource: "en", ofType: "lproj"), let bundle = Bundle(path: path) {
+            return (bundle, nil)
+        }
+        return (.main, "EnglishSourceOnly")
+    }()
+}
+
 /// One row of the Settings tab's search index. Each entry deep-links to the SCREEN that owns the
 /// setting; the path caption shows where the row will land, so "highlight allah" finds both the Quran
 /// and the Hadith toggles.
@@ -11,7 +76,11 @@ import SwiftUI
 /// SettingsAdhanView.swift). Adding or removing a setting means editing the list in the SAME file as
 /// the control - there is no central registry to remember.
 struct SettingsSearchEntry: Identifiable {
+    /// The title the screens show and search, in the interface language.
     let title: String
+    /// The same title in English in every language (`InterfaceText`): what Ask AI matches and quotes,
+    /// the semantic corpus, and `id`.
+    let englishTitle: String
     let path: String
     let keywords: String
     let destination: Destination
@@ -24,7 +93,38 @@ struct SettingsSearchEntry: Identifiable {
     /// `rank` drops an unavailable entry from every result list.
     var isAvailable: () -> Bool = { true }
 
-    var id: String { path + title }
+    /// The same in every interface language: Ask AI's saved transcripts keep it (`.setting(id:)`), and
+    /// every one saved before the Arabic interface holds an English title.
+    var id: String { path + englishTitle }
+
+    /// The entry the per-screen lists write: `title` is the literal `String(localized:)` would take.
+    init(title: String.LocalizationValue, path: String, keywords: String, destination: Destination,
+         advanced: Bool = false, isAvailable: @escaping () -> Bool = { true }) {
+        let text = InterfaceText(title)
+        self.init(display: text.display, english: text.english, path: path, keywords: keywords,
+                  destination: destination, advanced: advanced, isAvailable: isAvailable)
+    }
+
+    /// A title already resolved elsewhere (a credit's `CreditItem.title`), which serves as its own
+    /// English. Disfavored, as SwiftUI's `Text` does it, so a bare literal always takes the localized
+    /// init above rather than this one.
+    @_disfavoredOverload
+    init<Title: StringProtocol>(title: Title, path: String, keywords: String, destination: Destination,
+                                advanced: Bool = false, isAvailable: @escaping () -> Bool = { true }) {
+        self.init(display: String(title), english: String(title), path: path, keywords: keywords,
+                  destination: destination, advanced: advanced, isAvailable: isAvailable)
+    }
+
+    private init(display: String, english: String, path: String, keywords: String, destination: Destination,
+                 advanced: Bool, isAvailable: @escaping () -> Bool) {
+        self.title = display
+        self.englishTitle = english
+        self.path = path
+        self.keywords = keywords
+        self.destination = destination
+        self.advanced = advanced
+        self.isAvailable = isAvailable
+    }
 
     /// Each app's own areas: Al-Adhan and Al-Quran share this file.
     enum Destination {
@@ -246,11 +346,11 @@ struct SettingsView: View {
     @ViewBuilder
     private var settingsMoreMenu: some View {
         if Self.canPushProgrammatically, settingsSearchText.isEmpty {
-            TabMoreMenu(doubleTap: MenuShortcut(settings.settingsGridMode ? "Show as List" : "Show as Grid") {
+            TabMoreMenu(doubleTap: MenuShortcut(settings.settingsGridMode ? String(localized: "Show as List") : String(localized: "Show as Grid")) {
                 settings.hapticFeedback()
                 withAnimation { settings.settingsGridMode.toggle() }
             }) {
-                TabMoreMenuItem(settings.settingsGridMode ? "Show as List" : "Show as Grid",
+                TabMoreMenuItem(settings.settingsGridMode ? String(localized: "Show as List") : String(localized: "Show as Grid"),
                                 systemImage: settings.settingsGridMode ? "list.bullet" : "square.grid.2x2") {
                     settings.hapticFeedback()
                     withAnimation { settings.settingsGridMode.toggle() }
@@ -286,7 +386,9 @@ struct SettingsView: View {
 
     private func prepareSettingsSemanticCorpus() {
         guard SemanticSearchEngine.isSupported, !semanticEngine.isReady(Self.settingsSemanticCorpusID) else { return }
-        let texts = SettingsSearchEntry.all.map { "\($0.title) \($0.path) \($0.keywords)" }
+        // English in every interface language (`englishTitle`, and the `id` built from it): the corpus is
+        // one English index whatever the interface shows, so it keeps the version it always had.
+        let texts = SettingsSearchEntry.all.map { "\($0.englishTitle) \($0.path) \($0.keywords)" }
         let keys = SettingsSearchEntry.all.map(\.id)
         semanticEngine.prepare(corpusID: Self.settingsSemanticCorpusID, version: "v1-\(texts.count)", texts: texts, keys: keys)
     }
@@ -511,6 +613,13 @@ struct SettingsView: View {
             .debugPushDestination(isPresented: $debugOpenSettingsPage) {
                 if let destination = Self.debugSettingsPage { searchDestinationView(destination) }
             }
+            // `-showCredits`: the Credits sheet, presented from the root. The tap's own sheet hangs off
+            // the CREDITS row, which the lazy list has not built at launch, so setting its flag showed
+            // nothing.
+            .sheet(isPresented: $debugShowCredits) {
+                CreditsView()
+                    .smallMediumSheetPresentation()
+            }
             .onAppear {
                 // `-settingsSearch <query>` seeds the search a moment after the tab appears; `-showCredits`
                 // presents the Credits sheet. Typing and tapping are not scriptable in the simulator.
@@ -518,7 +627,7 @@ struct SettingsView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { settingsSearchText = seeded }
                 }
                 if ProcessInfo.processInfo.arguments.contains("-showCredits") {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { showingCredits = true }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { debugShowCredits = true }
                 }
                 if Self.debugCreditID != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { debugOpenCredit = true }
@@ -535,6 +644,7 @@ struct SettingsView: View {
 
     #if DEBUG
     @State private var debugOpenCredit = false
+    @State private var debugShowCredits = false
     @State private var debugOpenProfile = false
     @State private var debugOpenSettingsPage = false
 
@@ -783,16 +893,16 @@ struct SettingsView: View {
         let aiOnly = settingsAIHits.filter { !keywordIDs.contains($0.id) }
 
         if !aiOnly.isEmpty {
-            Section(header: SectionPillHeader(title: "AI MATCHES", count: aiOnly.count, icon: "sparkles")) {
+            Section(header: SectionPillHeader(title: String(localized: "AI MATCHES"), count: aiOnly.count, icon: "sparkles")) {
                 ForEach(aiOnly) { entry in
                     settingsSearchResultRow(entry)
                 }
             }
         }
 
-        Section(header: SectionPillHeader(title: "SETTING RESULTS", count: results.count, icon: "magnifyingglass")) {
+        Section(header: SectionPillHeader(title: String(localized: "SETTING RESULTS"), count: results.count, icon: "magnifyingglass")) {
             if results.isEmpty {
-                Text(aiOnly.isEmpty ? "No settings match your search." : "No keyword matches. See the AI results above.")
+                Text(aiOnly.isEmpty ? String(localized: "No settings match your search.") : String(localized: "No keyword matches. See the AI results above."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -905,34 +1015,34 @@ struct SettingsView: View {
     /// the iOS Settings app's grammar. Every page behind these rows carries its own search bar.
     @ViewBuilder
     private var settingsHubSection: some View {
-        Section(header: SectionIconHeader("SETTINGS", icon: "gearshape.fill")) {
+        Section(header: SectionIconHeader(String(localized: "SETTINGS"), icon: "gearshape.fill")) {
             #if HAS_ADHAN
-            resourceLink(title: "Notifications", systemImage: "bell.badge.fill",
-                         subtitle: "Prayer alerts, adhan sounds, reminders", tint: SettingsTint.notifications) {
+            resourceLink(title: String(localized: "Notifications"), systemImage: "bell.badge.fill",
+                         subtitle: String(localized: "Prayer alerts, adhan sounds, reminders"), tint: SettingsTint.notifications) {
                 NotificationView()
             }
-            resourceLink(title: "Prayer Settings", systemImage: "safari.fill",
-                         subtitle: "Calculation, offsets, travel, sky", tint: SettingsTint.prayer) {
+            resourceLink(title: String(localized: "Prayer Settings"), systemImage: "safari.fill",
+                         subtitle: String(localized: "Calculation, offsets, travel, sky"), tint: SettingsTint.prayer) {
                 SettingsAdhanView(showNotifications: false)
             }
             #endif
             #if HAS_QURAN
-            resourceLink(title: "Quran Settings", systemImage: "character.book.closed.ar",
-                         subtitle: "Fonts, tajweed, reciters, themes", tint: SettingsTint.quran) {
+            resourceLink(title: String(localized: "Quran Settings"), systemImage: "character.book.closed.ar",
+                         subtitle: String(localized: "Fonts, tajweed, reciters, themes"), tint: SettingsTint.quran) {
                 SettingsQuranView()
             }
             #endif
             #if os(iOS)
             #if HAS_HADITH
-            resourceLink(title: "Hadith Settings", systemImage: "text.book.closed.fill",
-                         subtitle: "Arabic and English, reading view", tint: SettingsTint.hadith) {
+            resourceLink(title: String(localized: "Hadith Settings"), systemImage: "text.book.closed.fill",
+                         subtitle: String(localized: "Arabic and English, reading view"), tint: SettingsTint.hadith) {
                 SettingsHadithView(presentedAsSheet: false)
             }
             #endif
             // The fourth area, for what belongs to none of the three above. It wears BOTH brand
             // colours rather than one of its own, because it is not one tab (see `SettingsTint.islam`).
-            resourceLink(title: "Islam Settings", systemImage: "moon.stars.fill",
-                         subtitle: "Arabic font, libraries, reminders",
+            resourceLink(title: String(localized: "Islam Settings"), systemImage: "moon.stars.fill",
+                         subtitle: String(localized: "Arabic font, libraries, reminders"),
                          tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary) {
                 SettingsIslamView()
             }
@@ -947,11 +1057,11 @@ struct SettingsView: View {
     /// The captions are short enough for a tile's one line at its 0.75 scale floor (Abu, 2026-10-11:
     /// "line limit 1 looks chopped so shorten the actual text"); the rows say the same words.
     private var settingsHubGridSection: some View {
-        Section(header: SectionIconHeader("SETTINGS", icon: "gearshape.fill")) {
+        Section(header: SectionIconHeader(String(localized: "SETTINGS"), icon: "gearshape.fill")) {
             VStack(spacing: 8) {
                 #if HAS_ADHAN
-                SettingsGridBanner(title: "Notifications", systemImage: "bell.badge.fill",
-                                   caption: "Prayer alerts, adhan sounds, reminders",
+                SettingsGridBanner(title: String(localized: "Notifications"), systemImage: "bell.badge.fill",
+                                   caption: String(localized: "Prayer alerts, adhan sounds, reminders"),
                                    tint: SettingsTint.notifications) { openGrid(.notifications) }
                 #endif
 
@@ -962,8 +1072,8 @@ struct SettingsView: View {
                 }
 
                 SettingsGridTileRow {
-                    SettingsGridTile(title: "Hadith Settings", systemImage: "text.book.closed.fill",
-                                     caption: "Arabic and English, reading view",
+                    SettingsGridTile(title: String(localized: "Hadith Settings"), systemImage: "text.book.closed.fill",
+                                     caption: String(localized: "Arabic and English, reading view"),
                                      tint: SettingsTint.hadith, prominent: true) { openGrid(.hadith) }
                     islamGridTile
                 }
@@ -986,24 +1096,24 @@ struct SettingsView: View {
 
     #if HAS_ADHAN
     private var prayerGridTile: some View {
-        SettingsGridTile(title: "Prayer Settings", systemImage: "safari.fill",
-                         caption: "Calculation, offsets, travel, sky",
+        SettingsGridTile(title: String(localized: "Prayer Settings"), systemImage: "safari.fill",
+                         caption: String(localized: "Calculation, offsets, travel, sky"),
                          tint: SettingsTint.prayer, prominent: true) { openGrid(.prayer) }
     }
     #endif
 
     #if HAS_QURAN
     private var quranGridTile: some View {
-        SettingsGridTile(title: "Quran Settings", systemImage: "character.book.closed.ar",
-                         caption: "Fonts, tajweed, reciters, themes",
+        SettingsGridTile(title: String(localized: "Quran Settings"), systemImage: "character.book.closed.ar",
+                         caption: String(localized: "Fonts, tajweed, reciters, themes"),
                          tint: SettingsTint.quran, prominent: true) { openGrid(.quran) }
     }
     #endif
 
     /// Both brand colours, as on its row (see `SettingsTint.islam`).
     private var islamGridTile: some View {
-        SettingsGridTile(title: "Islam Settings", systemImage: "moon.stars.fill",
-                         caption: "Arabic font, libraries, reminders",
+        SettingsGridTile(title: String(localized: "Islam Settings"), systemImage: "moon.stars.fill",
+                         caption: String(localized: "Arabic font, libraries, reminders"),
                          tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary,
                          prominent: true) { openGrid(.islam) }
     }
@@ -1012,23 +1122,23 @@ struct SettingsView: View {
     @available(iOS 16.0, *)
     @ViewBuilder
     private var settingsHubSectionSplit: some View {
-        Section(header: SectionIconHeader("SETTINGS", icon: "gearshape.fill")) {
+        Section(header: SectionIconHeader(String(localized: "SETTINGS"), icon: "gearshape.fill")) {
             #if HAS_ADHAN
-            splitResourceLink(title: "Notifications", systemImage: "bell.badge.fill",
-                              subtitle: "Prayer alerts, adhan sounds, reminders", tint: SettingsTint.notifications, value: .notification)
-            splitResourceLink(title: "Prayer Settings", systemImage: "safari.fill",
-                              subtitle: "Calculation, offsets, travel, sky", tint: SettingsTint.prayer, value: .prayerSettings)
+            splitResourceLink(title: String(localized: "Notifications"), systemImage: "bell.badge.fill",
+                              subtitle: String(localized: "Prayer alerts, adhan sounds, reminders"), tint: SettingsTint.notifications, value: .notification)
+            splitResourceLink(title: String(localized: "Prayer Settings"), systemImage: "safari.fill",
+                              subtitle: String(localized: "Calculation, offsets, travel, sky"), tint: SettingsTint.prayer, value: .prayerSettings)
             #endif
             #if HAS_QURAN
-            splitResourceLink(title: "Quran Settings", systemImage: "character.book.closed.ar",
-                              subtitle: "Fonts, tajweed, reciters, themes", tint: SettingsTint.quran, value: .quranSettings)
+            splitResourceLink(title: String(localized: "Quran Settings"), systemImage: "character.book.closed.ar",
+                              subtitle: String(localized: "Fonts, tajweed, reciters, themes"), tint: SettingsTint.quran, value: .quranSettings)
             #endif
             #if HAS_HADITH
-            splitResourceLink(title: "Hadith Settings", systemImage: "text.book.closed.fill",
-                              subtitle: "Arabic and English, reading view", tint: SettingsTint.hadith, value: .hadithSettings)
+            splitResourceLink(title: String(localized: "Hadith Settings"), systemImage: "text.book.closed.fill",
+                              subtitle: String(localized: "Arabic and English, reading view"), tint: SettingsTint.hadith, value: .hadithSettings)
             #endif
-            splitResourceLink(title: "Islam Settings", systemImage: "moon.stars.fill",
-                              subtitle: "Arabic font, libraries, reminders",
+            splitResourceLink(title: String(localized: "Islam Settings"), systemImage: "moon.stars.fill",
+                              subtitle: String(localized: "Arabic font, libraries, reminders"),
                               tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary, value: .islamSettings)
         }
     }
@@ -1036,12 +1146,12 @@ struct SettingsView: View {
     @ViewBuilder
     private var resetSection: some View {
         #if os(iOS)
-        Section(header: SectionIconHeader("RESET", icon: "arrow.counterclockwise")) {
+        Section(header: SectionIconHeader(String(localized: "RESET"), icon: "arrow.counterclockwise")) {
             Button(role: .destructive) {
                 settings.hapticFeedback()
                 showResetConfirmation = true
             } label: {
-                toolLabel("Reset All Settings", systemImage: "arrow.counterclockwise", chipTint: .red)
+                toolLabel(String(localized: "Reset All Settings"), systemImage: "arrow.counterclockwise", chipTint: .red)
             }
             // Two very different things, so they're two buttons rather than one that quietly picks for you:
             // the everyday "put the options back" and the "make it as if I'd never installed this".
@@ -1100,23 +1210,44 @@ struct SettingsView: View {
 
     /// `grid`: the two appearance pages as tiles under the theme and accent controls (which stay).
     private func appearanceSection(grid: Bool) -> some View {
-        Section(header: SectionIconHeader("APPEARANCE", icon: "paintpalette.fill")) {
+        Section(header: SectionIconHeader(String(localized: "APPEARANCE"), icon: "paintpalette.fill")) {
             #if os(iOS)
             if grid {
                 SettingsAppearanceView(openPage: { openGrid(.appearance($0)) })
             } else {
                 SettingsAppearanceView()
             }
+            languageRow
             #else
             SettingsAppearanceView()
             #endif
         }
     }
 
+    #if os(iOS)
+    /// The interface language (Arabic, 2026-10-24). iOS keeps the per-app choice in its own Settings
+    /// (Settings > Al-Islam > Language), so this row names the current language and opens that page.
+    private var languageRow: some View {
+        Button {
+            settings.hapticFeedback()
+            openAppSettings()
+        } label: {
+            SettingsRowLabel(
+                title: String(localized: "Language"),
+                systemImage: "globe",
+                subtitle: String(localized: "Chosen in the Settings app"),
+                value: Locale(identifier: AppLanguage.code).localizedString(forLanguageCode: AppLanguage.code)?
+                    .localizedCapitalized
+            )
+        }
+        .foregroundStyle(.primary)
+    }
+    #endif
+
     /// `grid`: the three actions as one row of tiles, the profile row's three-across grammar. The
     /// website and email lines stay rows: they are text to read and copy, not buttons.
     private func creditsSection(grid: Bool) -> some View {
-        Section(header: SectionIconHeader("CREDITS", icon: "scroll.fill")) {
+        Section(header: SectionIconHeader(String(localized: "CREDITS"), icon: "scroll.fill")) {
             creditsIntro
             #if os(iOS)
             if grid {
@@ -1142,14 +1273,14 @@ struct SettingsView: View {
     #if os(iOS)
     private var creditsTiles: some View {
         SettingsGridTileRow {
-            SettingsGridTile(title: "View Credits", systemImage: "scroll.fill", tint: SettingsTint.credits) {
+            SettingsGridTile(title: String(localized: "View Credits"), systemImage: "scroll.fill", tint: SettingsTint.credits) {
                 showingCredits = true
             }
-            SettingsGridTile(title: "Open App Settings", systemImage: "gearshape.fill", tint: SettingsTint.credits,
+            SettingsGridTile(title: String(localized: "Open App Settings"), systemImage: "gearshape.fill", tint: SettingsTint.credits,
                              haptic: false) {
                 openAppSettings()
             }
-            SettingsGridTile(title: "Leave a Review", systemImage: "star.bubble.fill", haptic: false) {
+            SettingsGridTile(title: String(localized: "Leave a Review"), systemImage: "star.bubble.fill", haptic: false) {
                 leaveReview()
             }
         }
@@ -1163,7 +1294,7 @@ struct SettingsView: View {
     #endif
 
     private var creditsIntro: some View {
-        Text("Made by Abubakr Elmallah, who was a 17-year-old high school student when this app was made.\n\nSpecial thanks to my parents and to Mr. Joe Silvey, my English teacher and Muslim Student Association Advisor.")
+        Text(String(localized: "Made by Abubakr Elmallah, who was a 17-year-old high school student when this app was made.\n\nSpecial thanks to my parents and to Mr. Joe Silvey, my English teacher and Muslim Student Association Advisor.").localizedDigits)
             .font(.footnote)
             .foregroundColor(.primary)
     }
@@ -1175,7 +1306,7 @@ struct SettingsView: View {
             settings.hapticFeedback()
             showingCredits = true
         } label: {
-            toolLabel("View Credits", systemImage: "scroll.fill", chipTint: SettingsTint.credits)
+            toolLabel(String(localized: "View Credits"), systemImage: "scroll.fill", chipTint: SettingsTint.credits)
         }
         .sheet(isPresented: $showingCredits) {
             CreditsView()
@@ -1190,7 +1321,7 @@ struct SettingsView: View {
         Button {
             leaveReview()
         } label: {
-            toolLabel("Leave a Review", systemImage: "star.bubble.fill")
+            toolLabel(String(localized: "Leave a Review"), systemImage: "star.bubble.fill")
         }
         .contextMenu {
             Text("Review")
@@ -1216,7 +1347,7 @@ struct SettingsView: View {
             settings.hapticFeedback()
             openAppSettings()
         } label: {
-            toolLabel("Open App Settings", systemImage: "gearshape.fill", chipTint: SettingsTint.credits)
+            toolLabel(String(localized: "Open App Settings"), systemImage: "gearshape.fill", chipTint: SettingsTint.credits)
         }
         #endif
     }
@@ -1334,7 +1465,7 @@ struct SettingsView: View {
     }
 
     private var glyphWidth: CGFloat {
-        columnWidth(for: .subheadline, extra: 0, sample: "Contact: ")
+        columnWidth(for: .subheadline, extra: 0, sample: String(localized: "Contact: "))
     }
 }
 
@@ -1357,11 +1488,12 @@ struct AppearanceSettingsScreen: View {
 
 extension SettingsSearchEntry {
     static let appearanceEntries: [SettingsSearchEntry] = appearanceControlEntries.filter { entry in
-        LaunchTab.isOffered || entry.title != "Open the App On"
+        LaunchTab.isOffered || entry.englishTitle != "Open the App On"
     }
 
     private static let appearanceControlEntries: [SettingsSearchEntry] = [
         .init(title: "Accent Color", path: "Appearance", keywords: "green color swatch tint theme", destination: .appearance),
+        .init(title: "Language", path: "Appearance", keywords: "language arabic english interface translate عربي العربية", destination: .appearance),
         .init(title: "App Theme (Light / Dark / Sepia / Gray)", path: "Appearance", keywords: "dark mode light mode night reading sepia gray paper background", destination: .appearance),
         .init(title: "Custom Background Color", path: "Appearance → Custom Colors", keywords: "custom color background hex picker theme", destination: .appearancePage(.customColors)),
         .init(title: "Custom Accent Color", path: "Appearance → Custom Colors", keywords: "custom color accent hex picker tint own", destination: .appearancePage(.customColors)),
@@ -1389,10 +1521,10 @@ enum LaunchTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .adhan: return "Adhan"
-        case .quran: return "Quran"
-        case .hadith: return "Hadith"
-        case .islam: return "Islam"
+        case .adhan: return String(localized: "Adhan")
+        case .quran: return String(localized: "Quran")
+        case .hadith: return String(localized: "Hadith")
+        case .islam: return String(localized: "Islam")
         }
     }
 }
@@ -1533,7 +1665,7 @@ struct AppearancePageView: View {
     private var customColorsSections: some View {
         Section {
             VStack(alignment: .leading) {
-                colorRow("Custom Background", color: customBackgroundColorBinding, enabled: customBackgroundEnabledBinding,
+                colorRow(String(localized: "Custom Background"), color: customBackgroundColorBinding, enabled: customBackgroundEnabledBinding,
                          tint: Color(hex: settings.customBackgroundColorHex) ?? .gray)
                     .onChange(of: settings.colorSchemeString) { _ in settings.hapticFeedback() }
 
@@ -1545,7 +1677,7 @@ struct AppearancePageView: View {
             }
 
             VStack(alignment: .leading) {
-                colorRow("Custom Color", color: customAccentColorBinding, enabled: customColorEnabledBinding,
+                colorRow(String(localized: "Custom Color"), color: customAccentColorBinding, enabled: customColorEnabledBinding,
                          tint: Color(hex: settings.customAccentColorHex) ?? .green)
                     .onChange(of: settings.accentColor) { _ in settings.hapticFeedback() }
 
@@ -1561,10 +1693,10 @@ struct AppearancePageView: View {
 
         Section {
             VStack(alignment: .leading) {
-                SettingsToggle("Top Accent Glow", caption: "A soft wash of your accent color at the top of each screen. Turn it off for a flat background.", isOn: $appearanceSettings.showAccentGlow)
+                SettingsToggle(String(localized: "Top Accent Glow"), caption: String(localized: "A soft wash of your accent color at the top of each screen. Turn it off for a flat background."), isOn: $appearanceSettings.showAccentGlow)
 
                 if settings.showAccentGlow {
-                    SettingsToggle("Al-Islam Glow", caption: "Color the glow with Al-Islam's yellow and green (yellow from the left, green from the right) instead of your accent color.", isOn: $appearanceSettings.alIslamGlow)
+                    SettingsToggle(String(localized: "Al-Islam Glow"), caption: String(localized: "Color the glow with Al-Islam's yellow and green (yellow from the left, green from the right) instead of your accent color."), isOn: $appearanceSettings.alIslamGlow)
                     .settingsDependent()
                 }
             }
@@ -1586,14 +1718,14 @@ struct AppearancePageView: View {
         }
 
         Section {
-            SettingsToggle("Default List View", caption: "Apple's standard list look, as in Notes. Screens already open switch the next time they open.", isOn: $appearanceSettings.defaultView)
+            SettingsToggle(String(localized: "Default List View"), caption: String(localized: "Apple's standard list look, as in Notes. Screens already open switch the next time they open."), isOn: $appearanceSettings.defaultView)
 
             if #available(iOS 26.0, *) {
                 VStack(alignment: .leading) {
-                    SettingsToggle("Show Liquid Glass", caption: "Off is the Classic Look from before iOS 26: faster and easier on the battery. iOS's own bars, sheets and search field keep Liquid Glass either way.", isOn: $appearanceSettings.showLiquidGlass)
+                    SettingsToggle(String(localized: "Show Liquid Glass"), caption: String(localized: "Off is the Classic Look from before iOS 26: faster and easier on the battery. iOS's own bars, sheets and search field keep Liquid Glass either way."), isOn: $appearanceSettings.showLiquidGlass)
 
                     if settings.showLiquidGlass {
-                        SettingsToggle("Automatically in Low Power Mode", caption: "Turns Liquid Glass off while Low Power Mode is on and brings it back when Low Power Mode is off.", isOn: $appearanceSettings.classicLookInLowPower)
+                        SettingsToggle(String(localized: "Automatically in Low Power Mode"), caption: String(localized: "Turns Liquid Glass off while Low Power Mode is on and brings it back when Low Power Mode is off."), isOn: $appearanceSettings.classicLookInLowPower)
                         .settingsDependent()
                     }
                 }
@@ -1603,7 +1735,7 @@ struct AppearancePageView: View {
         }
 
         Section {
-            SettingsToggle("Haptic Feedback", isOn: $systemSettings.hapticOn)
+            SettingsToggle(String(localized: "Haptic Feedback"), isOn: $systemSettings.hapticOn)
         } header: {
             Text("HOW IT FEELS")
         }
@@ -1611,7 +1743,7 @@ struct AppearancePageView: View {
         // The Need a Hand? questions on every tab (HelpDoors.swift), all four at once. Each tab's own
         // switch is on its settings page, beside the list of that tab's questions.
         Section {
-            SettingsToggle("Show on Every Tab", caption: helpShortcutsCaption, isOn: helpShortcutsBinding)
+            SettingsToggle(String(localized: "Show on Every Tab"), caption: helpShortcutsCaption, isOn: helpShortcutsBinding)
         } header: {
             Text("NEED A HAND?")
         }
@@ -1633,19 +1765,18 @@ struct AppearancePageView: View {
     /// question about a tab the reader does not have would send them looking for it.
     private var helpShortcutsCaption: String {
         #if HAS_ADHAN && HAS_QURAN
-        let examples = ": Need Help Praying? on the prayer times opens Nagging Mode, and Need Help Reading? on the Quran answers with Arabic Beginner Mode."
+        let intro = String(localized: "A few questions on each tab, each with the setting that answers it: Need Help Praying? on the prayer times opens Nagging Mode, and Need Help Reading? on the Quran answers with Arabic Beginner Mode. Each tab also has its own switch, on its settings page.")
         #elseif HAS_ADHAN
-        let examples = ": Need Help Praying? on the prayer times opens Nagging Mode."
+        let intro = String(localized: "A few questions on each tab, each with the setting that answers it: Need Help Praying? on the prayer times opens Nagging Mode. Each tab also has its own switch, on its settings page.")
         #elseif HAS_QURAN
-        let examples = ": Need Help Reading? on the Quran answers with Arabic Beginner Mode."
+        let intro = String(localized: "A few questions on each tab, each with the setting that answers it: Need Help Reading? on the Quran answers with Arabic Beginner Mode. Each tab also has its own switch, on its settings page.")
         #else
-        let examples = "."
+        let intro = String(localized: "A few questions on each tab, each with the setting that answers it. Each tab also has its own switch, on its settings page.")
         #endif
-        let intro = "A few questions on each tab, each with the setting that answers it" + examples + " Each tab also has its own switch, on its settings page."
         let hidden = settings.hiddenHelpDoorTabs
         guard !hidden.isEmpty, hidden.count < HelpDoorArea.allCases.count else { return intro }
-        let names = hidden.count == 1 ? hidden[0] : hidden.dropLast().joined(separator: ", ") + " and " + hidden.last!
-        return intro + " Hidden now on the \(names) tab\(hidden.count == 1 ? "" : "s")."
+        let names = hidden.count == 1 ? hidden[0] : hidden.sentenceList { String(localized: "\($0.dropLast().joined(separator: ", ")) and \($0.last!)") }
+        return hidden.count == 1 ? String(localized: "\(intro) Hidden now on the \(names) tab.") : String(localized: "\(intro) Hidden now on the \(names) tabs.")
     }
 }
 #endif
@@ -1666,7 +1797,7 @@ struct SettingsAppearanceView: View {
     /// showed as "Syst..." there (2026-09-06 iPad pass); iPads say "Auto". Keyed on the idiom, not
     /// the size class: a split view's sidebar column reports `.compact` even on a 13-inch iPad.
     private var systemThemeLabel: String {
-        UIDevice.current.userInterfaceIdiom != .phone ? "Auto" : "System"
+        UIDevice.current.userInterfaceIdiom != .phone ? String(localized: "Auto") : String(localized: "System")
     }
     #endif
 
@@ -1783,7 +1914,7 @@ struct SettingsAppearanceView: View {
             }
         }
         #else
-        SettingsToggle("Haptic Feedback", isOn: $systemSettings.hapticOn)
+        SettingsToggle(String(localized: "Haptic Feedback"), isOn: $systemSettings.hapticOn)
         #endif
     }
 }
@@ -1825,7 +1956,7 @@ struct SettingsGridTile: View {
             VStack(spacing: 6) {
                 AccentIconChip(systemImage: systemImage, tint: tint, secondaryTint: secondaryTint, size: 32)
 
-                Text(title)
+                Text(title.interfaceParagraph)
                     .font(prominent ? .footnote.weight(.semibold) : .caption2.weight(.medium))
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
@@ -1838,7 +1969,7 @@ struct SettingsGridTile: View {
                     // and the captions are written short enough never to (same day: "looks chopped so
                     // shorten the actual text"). The accessibility sizes keep wrapping: the tiles stack
                     // one per row there, and a one-line clamp cut every caption short.
-                    Text(caption)
+                    Text(caption.interfaceParagraph)
                         .font(.caption2)
                         .foregroundColor(.secondaryOnGlass)
                         .multilineTextAlignment(.center)
@@ -1996,36 +2127,36 @@ struct ProfileTilesSection: View {
         #endif
         #if HAS_ADHAN
         if stats.prayer.currentStreak > 0 {
-            return "\(stats.prayer.currentStreak)-day streak"
+            return String(localized: "\(stats.prayer.currentStreak)-day streak")
         }
         #endif
         #if HAS_QURAN
         if stats.khatmCompleted > 0 {
-            return "\(Int((stats.khatmFraction * 100).rounded()))% read"
+            return String(localized: "\(Int((stats.khatmFraction * 100).rounded()))% read")
         }
         #endif
         let earned = achievements.unlockedCount(stats)
         if earned > 0 {
-            return "\(earned) badge\(earned == 1 ? "" : "s")"
+            return earned == 1 ? String(localized: "1 badge") : String(localized: "\(earned) badges")
         }
-        return "Nothing yet"
+        return String(localized: "Nothing yet")
     }
 
     private var tiles: [Tile] {
         var list = [
-            Tile(door: .progress, title: "Your Progress", systemImage: "person.crop.circle.fill",
+            Tile(door: .progress, title: String(localized: "Your Progress"), systemImage: "person.crop.circle.fill",
                  value: progressValue, tint: nil,
-                 rowSubtitle: "Your prayers, reading, and badges"),
-            Tile(door: .aboutYou, title: "About You", systemImage: "sparkles",
-                 value: settings.userBackground?.title ?? "Not set",
+                 rowSubtitle: String(localized: "Your prayers, reading, and badges")),
+            Tile(door: .aboutYou, title: String(localized: "About You"), systemImage: "sparkles",
+                 value: settings.userBackground?.title ?? String(localized: "Not set"),
                  tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary,
-                 rowSubtitle: "Start Here, welcome tutorial"),
+                 rowSubtitle: String(localized: "Start Here, welcome tutorial")),
         ]
         // iCloud Backup is Al-Islam's alone: a companion app shows the first two tiles.
         #if HAS_ICLOUD_BACKUP
-        list.append(Tile(door: .cloudBackup, title: "iCloud Backup", systemImage: "icloud.fill",
-                         value: cloud.isEnabled ? "On" : "Off", tint: SettingsTint.hadith,
-                         rowSubtitle: "Profiles, restore, what's included, backup file"))
+        list.append(Tile(door: .cloudBackup, title: String(localized: "iCloud Backup"), systemImage: "icloud.fill",
+                         value: cloud.isEnabled ? String(localized: "On") : String(localized: "Off"), tint: SettingsTint.hadith,
+                         rowSubtitle: String(localized: "Profiles, restore, what's included, backup file")))
         #endif
         return list
     }
@@ -2066,15 +2197,18 @@ struct ProfileTilesSection: View {
                 AccentIconChip(systemImage: tile.systemImage, tint: tile.tint,
                                secondaryTint: tile.secondaryTint, size: 32)
 
-                Text(tile.title)
+                Text(tile.title.interfaceParagraph)
                     .font(.caption.weight(.semibold))
                     .foregroundColor(.primary)
-                    .lineLimit(1)
+                    // Arabic gets a second line: "النسخ الاحتياطي على iCloud" on one line shrank to
+                    // 60%. The English titles fit one line.
+                    .multilineTextAlignment(.center)
+                    .lineLimit(AppLanguage.isArabic ? 2 : 1)
                     .minimumScaleFactor(0.6)
 
                 // Two lines, unlike the Explore tiles' one: "Just getting started" is an answer the
                 // reader gave, and shrinking it to a single scaled-down line made it unreadable.
-                Text(tile.value)
+                Text(tile.value.interfaceParagraph)
                     .font(.caption2)
                     .foregroundColor(.secondaryOnGlass)
                     .multilineTextAlignment(.center)
@@ -2124,12 +2258,12 @@ struct SimpleModeSection: View {
     var splitCatalogRow: AnyView? = nil
 
     /// The row's title and symbol (the design's section 7), shared with the split root's copy.
-    static let catalogRowTitle = "What Moves Where"
+    static let catalogRowTitle = String(localized: "What Moves Where")
     static let catalogRowImage = "list.bullet.rectangle"
 
     var body: some View {
-        Section(header: SectionIconHeader("SIMPLE MODE", icon: "rectangle.compress.vertical")) {
-            SettingsToggle("Simple Mode", caption: caption, isOn: $systemSettings.simpleMode)
+        Section(header: SectionIconHeader(String(localized: "SIMPLE MODE"), icon: "rectangle.compress.vertical")) {
+            SettingsToggle(String(localized: "Simple Mode"), caption: caption, isOn: $systemSettings.simpleMode)
 
             // Its own row, one link per row: inside the switch's row, a tap anywhere there would push.
             if showsCatalogRow {
@@ -2152,11 +2286,11 @@ struct SimpleModeSection: View {
         if settings.simpleMode {
             // The page itself has no row under the switch, so its caption points at the list below.
             if !showsCatalogRow {
-                return "Each tab keeps to its essentials. Nothing is turned off; the list below says where everything went."
+                return String(localized: "Each tab keeps to its essentials. Nothing is turned off; the list below says where everything went.")
             }
-            return "Each tab keeps to its essentials. Nothing is turned off; What Moves Where says where everything went."
+            return String(localized: "Each tab keeps to its essentials. Nothing is turned off; What Moves Where says where everything went.")
         }
-        return "Keeps each tab to its essentials: shortcuts move into the ⋯ menu at the top or into Settings, and the extras step aside. Nothing is turned off."
+        return String(localized: "Keeps each tab to its essentials: shortcuts move into the ⋯ menu at the top or into Settings, and the extras step aside. Nothing is turned off.")
     }
 }
 
@@ -2175,7 +2309,7 @@ struct SimpleModeSettingsView: View {
                     Section(header: SectionIconHeader(group.surface.title.uppercased(), icon: group.surface.systemImage)) {
                         ForEach(group.entries) { entry in
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(entry.title)
+                                Text(entry.title.localizedDigits)
                                     .font(.subheadline)
 
                                 Text(entry.door.text)
@@ -2239,8 +2373,8 @@ struct AdvancedSettingsSection: View {
     }
 
     private var section: some View {
-        Section(header: SectionIconHeader("ADVANCED", icon: "slider.horizontal.3")) {
-            SettingsToggle("Show Advanced Settings", caption: caption, isOn: settings.advancedBinding(screen))
+        Section(header: SectionIconHeader(String(localized: "ADVANCED"), icon: "slider.horizontal.3")) {
+            SettingsToggle(String(localized: "Show Advanced Settings"), caption: caption, isOn: settings.advancedBinding(screen))
         }
     }
 
@@ -2248,13 +2382,13 @@ struct AdvancedSettingsSection: View {
         // One line where there were three (Abu, 2026-10-19): the switch is on nine screens, and
         // every one of them ended in the same paragraph.
         if settings.advanced(screen) {
-            return "Everything this screen has is shown. Off keeps it to the essentials; what is set here still applies."
+            return String(localized: "Everything this screen has is shown. Off keeps it to the essentials; what is set here still applies.")
         }
-        let hidden = hides.map { "Also here, with this on: \($0)." } ?? "Shows every option this screen has."
+        let hidden = hides.map { String(localized: "Also here, with this on: \($0).") } ?? String(localized: "Shows every option this screen has.")
         // Rule 9: Simple Mode folded this switch off when it was turned on, so the caption adds one
         // sentence saying so, after the list of what the switch keeps out of sight (design 6.6).
         if settings.simpleModeFoldsAdvanced {
-            return hidden + " Simple Mode turned this off; turn it on to see every option here."
+            return String(localized: "\(hidden) Simple Mode turned this off; turn it on to see every option here.")
         }
         return hidden
     }
@@ -2298,7 +2432,7 @@ struct VersionNumber: View {
                 Text("Version")
             }
 
-            Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
+            Text((Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0").localizedDigits)
                 .foregroundColor(settings.accentColor.color)
                 .padding(.leading, -4)
         }

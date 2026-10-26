@@ -21,6 +21,12 @@ struct Juz: Codable, Identifiable, Equatable {
     let startAyah: Int
     let endSurah: Int
     let endAyah: Int
+
+    /// The name a reader sees: the Arabic name in an Arabic interface (cleaned like the juz headers
+    /// draw it), the transliteration otherwise. Display only, like `Surah.displayName`.
+    var displayName: String {
+        AppLanguage.isArabic ? Surah.arabicLabel(nameArabic) : nameTransliteration
+    }
 }
 
 /// The highlighter's palette. Six hues, chosen to echo the system highlight colors and to read on both
@@ -38,12 +44,12 @@ enum AyahHighlightColor: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .yellow: return "Yellow"
-        case .green:  return "Green"
-        case .blue:   return "Blue"
-        case .pink:   return "Pink"
-        case .orange: return "Orange"
-        case .purple: return "Purple"
+        case .yellow: return String(localized: "Yellow")
+        case .green:  return String(localized: "Green")
+        case .blue:   return String(localized: "Blue")
+        case .pink:   return String(localized: "Pink")
+        case .orange: return String(localized: "Orange")
+        case .purple: return String(localized: "Purple")
         }
     }
 
@@ -183,6 +189,15 @@ func mushafPageLabel(forAbsolutePage page: Int, in surah: Surah?) -> String {
         return "Page \(page) (\(relative)/\(max(surah.pageCount, relative)))"
     }
     return "Page \(page)"
+}
+
+/// `mushafPageLabel` in the reader's language, for a label that is only shown. The reader's page dividers
+/// parse and match the English label, so they keep `mushafPageLabel`.
+func mushafPageDisplayLabel(forAbsolutePage page: Int, in surah: Surah?) -> String {
+    if let surah, let relative = surah.pageWithinSurah(page) {
+        return String(localized: "Page \(page) (\(relative)/\(max(surah.pageCount, relative)))")
+    }
+    return String(localized: "Page \(page)")
 }
 
 struct SurahBoundaryModel: Codable, Equatable {
@@ -608,6 +623,14 @@ struct AyahListeningHistoryItem: Identifiable, Codable {
     let reciter: Reciter
     var timestamp: Date = Date()
 }
+
+/// The records above store the transliteration (`surahName`); a row shows the name of the interface,
+/// looked up by number (`Surah.displayName(id:stored:)`).
+extension LastListenedSurah { var displaySurahName: String { Surah.displayName(id: surahNumber, stored: surahName) } }
+extension LastListenedAyah { var displaySurahName: String { Surah.displayName(id: surahNumber, stored: surahName) } }
+extension ListeningHistoryItem { var displaySurahName: String { Surah.displayName(id: surahNumber, stored: surahName) } }
+extension ReadingHistoryItem { var displaySurahName: String { Surah.displayName(id: surahNumber, stored: surahName) } }
+extension AyahListeningHistoryItem { var displaySurahName: String { Surah.displayName(id: surahNumber, stored: surahName) } }
 
 struct ShareSettings: Equatable {
     var arabic = false

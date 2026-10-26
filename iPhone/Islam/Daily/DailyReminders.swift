@@ -23,12 +23,12 @@ struct DailyReminderEntry: Identifiable, Equatable {
 
         var label: String {
             switch self {
-            case .ayah: return "Verse of the day"
-            case .hadith: return "Hadith of the day"
-            case .sunnah: return "Sunnah of the day"
-            case .dua: return "Dua of the day"
-            case .dhikr: return "Dhikr of the day"
-            case .name: return "Name of Allah"
+            case .ayah: return String(localized: "Verse of the day")
+            case .hadith: return String(localized: "Hadith of the day")
+            case .sunnah: return String(localized: "Sunnah of the day")
+            case .dua: return String(localized: "Dua of the day")
+            case .dhikr: return String(localized: "Dhikr of the day")
+            case .name: return String(localized: "Name of Allah")
             }
         }
 
@@ -159,14 +159,14 @@ enum DailyReminderTarget: Equatable {
     var buttonLabel: String {
         switch self {
         #if HAS_QURAN
-        case .ayah: return "Read in the Quran"
+        case .ayah: return String(localized: "Read in the Quran")
         #endif
         #if HAS_QURAN || HAS_HADITH
-        case .hadithTab: return "Open Hadith"
+        case .hadithTab: return String(localized: "Open Hadith")
         #endif
-        case .duas: return "Open Duas"
-        case .adhkar: return "Open Dhikr"
-        case .names: return "Open the 99 Names"
+        case .duas: return String(localized: "Open Duas")
+        case .adhkar: return String(localized: "Open Dhikr")
+        case .names: return String(localized: "Open the 99 Names")
         }
     }
 
@@ -375,7 +375,7 @@ final class DailyReminderStore: ObservableObject {
             id: entry.id, kind: entry.kind.rawValue, kindLabel: entry.kind.label,
             arabic: texts.arabic, english: texts.english,
             short: Self.headline(for: entry, english: texts.english),
-            source: entry.source, fontName: entry.kind == .ayah ? quranFace : nil)
+            source: entry.displaySource, fontName: entry.kind == .ayah ? quranFace : nil)
     }
 
     /// The widget's copy of the resolved card (`DailyReminderResolver`): today's day index and the
@@ -434,7 +434,8 @@ final class DailyReminderStore: ObservableObject {
             let settings = Settings.shared
             let entries = self.entries
             let today = settings.dailyDayKey()
-            let stamp = today + "|" + String(entries.count)
+            // The cards carry their kind label in the interface's language, so a language change rewrites them.
+            let stamp = today + "|" + String(entries.count) + "|" + AppLanguage.code
             guard force || UserDefaults.standard.string(forKey: Self.widgetsWrittenKey) != stamp else { return }
             guard !QuranData.shared.quran.isEmpty, !entries.isEmpty else { return }
 
@@ -975,6 +976,57 @@ struct SavedReflection: Codable, Identifiable, Equatable {
     var kindLabel: String {
         DailyReminderEntry.Kind(rawValue: kind)?.label ?? kind.capitalized
     }
+
+    /// `source` as the reader sees it (`ReminderSource.display`). DISPLAY only.
+    var displaySource: String {
+        ReminderSource.display(source, kind: kind, surah: surah, ayah: ayah, hadithSlug: hadithSlug, target: target)
+    }
+}
+
+/// A card's `source` is English data, written the way it always was ("Qur'an 2:255 · Al-Baqarah",
+/// "Sahih al-Bukhari 1", "Name 7 of 99 · Mercy"): a kept card saves it to reflections.json, which the
+/// iCloud backup merges and the Saved Reflections search reads. This is the line the reader sees,
+/// rebuilt in the interface's language from what the card knows: the surah by its number, the book
+/// by its slug, the Name by its target, the Fortress chapter by its English label.
+enum ReminderSource {
+    static func display(_ stored: String, kind: String, surah: Int?, ayah: Int?, hadithSlug: String?, target: String?) -> String {
+        switch DailyReminderEntry.Kind(rawValue: kind) {
+        case .ayah:
+            #if HAS_QURAN
+            if let surah, let ayah {
+                let prefix = "Qur'an \(surah):\(ayah) · "
+                if stored.hasPrefix(prefix) {
+                    let name = Surah.displayName(id: surah, stored: String(stored.dropFirst(prefix.count)))
+                    return String(localized: "Qur'an \(surah):\(ayah) · \(name)")
+                }
+            }
+            #endif
+            break
+        case .hadith:
+            #if HAS_HADITH
+            if let hadithSlug { return HadithCatalogBook.displayReference(stored: stored, slug: hadithSlug) }
+            #endif
+            break
+        case .name:
+            if let target, target.hasPrefix("names:"), let number = Int(target.dropFirst("names:".count)) {
+                let prefix = "Name \(number) of 99"
+                if stored.hasPrefix(prefix) {
+                    let rest = stored.dropFirst(prefix.count).components(separatedBy: " · ").filter { !$0.isEmpty }
+                    return ([String(localized: "Name \(number) of 99")] + rest.map(\.localizedDisplay)).joined(separator: " · ")
+                }
+            }
+        case .dua:
+            // The Fortress chapter by its English label, once the pack is in memory; any other part
+            // (the reference, a title) through the catalog, itself when the catalog has no entry.
+            let chapters = HisnDuasStore.shared.libraryIfLoaded?.categories ?? []
+            return stored.components(separatedBy: " · ").map { part in
+                chapters.first { $0.label == part }?.displayLabel ?? part.localizedDisplay
+            }.joined(separator: " · ")
+        default:
+            break
+        }
+        return stored.localizedDisplay
+    }
 }
 
 final class SavedReflectionsStore: ObservableObject {
@@ -1051,6 +1103,12 @@ final class SavedReflectionsStore: ObservableObject {
 
 extension DailyReminderEntry {
     var reflectionKey: String { SavedReflection.key(kind: kind.rawValue, sourceID: id) }
+
+    /// `source` as the reader sees it (`ReminderSource.display`). DISPLAY only: the kept copy and
+    /// the logs keep `source`.
+    var displaySource: String {
+        ReminderSource.display(source, kind: kind.rawValue, surah: surah, ayah: ayah, hadithSlug: hadith?.slug, target: target)
+    }
 
     func reflectionDraft(arabic: String, english: String) -> SavedReflection {
         SavedReflection(id: UUID().uuidString, key: reflectionKey, kind: kind.rawValue,
@@ -1134,12 +1192,16 @@ struct ReminderOfTheDayCard: View {
                     .font(.caption.italic())
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
             }
 
             if !texts.english.isEmpty {
                 Text(texts.english)
                     .font(.footnote)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
             }
 
             HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -1153,7 +1215,7 @@ struct ReminderOfTheDayCard: View {
                 }
                 // Never clipped: the Fortress's references run to a paragraph, and the grading at
                 // the end of it is the part worth reading (Abu, 2026-09-16: "the grading is cut off").
-                Text(entry.source)
+                Text(entry.displaySource.articleDisplayDigits)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1194,7 +1256,7 @@ struct ReminderOfTheDayCard: View {
                     Settings.shared.hapticFeedback()
                     reflections.toggle(entry.reflectionDraft(arabic: texts.arabic, english: texts.english))
                 } label: {
-                    Label(kept ? "Saved" : "Save", systemImage: kept ? "bookmark.fill" : "bookmark")
+                    Label(kept ? String(localized: "Saved") : String(localized: "Save"), systemImage: kept ? "bookmark.fill" : "bookmark")
                 }
                 .buttonStyle(.plain)
 
@@ -1266,6 +1328,8 @@ struct DailyReminderArabicText: View {
         .lineSpacing(6)
         .frame(maxWidth: .infinity, alignment: .trailing)
         .fixedSize(horizontal: false, vertical: true)
+        // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+        .environment(\.layoutDirection, .leftToRight)
     }
 }
 
@@ -1358,10 +1422,30 @@ private struct ReminderOfTheDayHeader: View {
 
 struct SavedReflectionsView: View {
     @ObservedObject private var reflections = SavedReflectionsStore.shared
+    @State private var searchText = ""
+    @State private var barsCollapsed = false
     #if HAS_HADITH
     /// The one sheet host for the rows' "Read the hadith" doors (one host per List, the app's rule).
     @State private var hadithLink: DailyReminderEntry.HadithLink?
     #endif
+
+    private var query: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    /// Every term has to hit the kept card's Latin text (translation, transliteration, source, kind;
+    /// folded, so "dua" finds "du'a"), or the raw query its Arabic: `localizedStandardContains`
+    /// ignores the marks, which `IslamArticles.fold` would turn into word breaks. The list is
+    /// user-grown and short, so the keys are folded per search rather than indexed.
+    private var results: [SavedReflection] {
+        let terms = IslamArticles.fold(query).split(separator: " ").map(String.init)
+        guard !terms.isEmpty else { return [] }
+        let matched = reflections.items.filter { item in
+            if !item.arabic.isEmpty, item.arabic.localizedStandardContains(query) { return true }
+            let key = IslamArticles.fold([item.english, item.transliteration ?? "", item.source, item.kindLabel]
+                .joined(separator: " "))
+            return terms.allSatisfy { key.contains($0) }
+        }
+        return SearchRank.sorted(matched, by: query) { [$0.english, $0.transliteration ?? "", $0.source] }
+    }
 
     var body: some View {
         let _ = RenderCounter.hit("SavedReflectionsView")
@@ -1379,20 +1463,31 @@ struct SavedReflectionsView: View {
                     .padding(.vertical, 4)
                 }
                 .themedListRowBackground()
-            } else {
-                Section(header: SectionPillHeader(title: "SAVED REFLECTIONS", count: reflections.items.count, accentTitle: true)) {
+            } else if query.isEmpty {
+                Section(header: SectionPillHeader(title: String(localized: "SAVED REFLECTIONS"), count: reflections.items.count, accentTitle: true)) {
                     ForEach(reflections.items) { item in
-                        savedRow(item)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    reflections.remove(id: item.id)
-                                } label: {
-                                    Label("Remove", systemImage: "trash")
-                                }
-                            }
+                        keptRow(item)
                     }
                 }
                 .themedListRowBackground()
+            } else {
+                // The same rows, swipe to remove and all: a result is still the kept card.
+                let matches = results
+                if matches.isEmpty {
+                    Section {
+                        Text("No reflections match \"\(query)\".")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                    }
+                    .themedListRowBackground()
+                } else {
+                    Section(header: SectionPillHeader(title: String(localized: "REFLECTIONS"), count: matches.count)) {
+                        ForEach(matches) { item in
+                            keptRow(item)
+                        }
+                    }
+                    .themedListRowBackground()
+                }
             }
         }
         .applyConditionalListStyle()
@@ -1403,6 +1498,31 @@ struct SavedReflectionsView: View {
             ReminderHadithSheet(link: link)
         }
         #endif
+        .collapseBarsOnScroll($barsCollapsed)
+        .adaptiveSafeArea(edge: .bottom) {
+            // No bar over "Nothing kept yet": there is nothing to search.
+            if !reflections.items.isEmpty {
+                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
+                          placeholder: String(localized: "Search reflections"))
+                    .minimizedBarStyle(barsCollapsed)
+                    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, BottomBarCushion.standard)
+                    .background(Color.white.opacity(0.00001))
+            }
+        }
+    }
+
+    /// A kept card's row with its swipe to remove, shared by the full list and the search results.
+    private func keptRow(_ item: SavedReflection) -> some View {
+        savedRow(item)
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    reflections.remove(id: item.id)
+                } label: {
+                    Label("Remove", systemImage: "trash")
+                }
+            }
     }
 
     private func savedRow(_ item: SavedReflection) -> SavedReflectionRow {
@@ -1449,13 +1569,17 @@ private struct SavedReflectionRow: View {
                     .font(.caption.italic())
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
             }
             if !item.english.isEmpty {
                 Text(item.english)
                     .font(.subheadline)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
             }
-            Text(item.source)
+            Text(item.displaySource.articleDisplayDigits)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             #if HAS_HADITH
@@ -1530,7 +1654,7 @@ struct ReminderHadithSheet: View {
                 }
             }
             .applyConditionalListStyle()
-            .navigationTitle(book?.englishTitle ?? "Hadith")
+            .navigationTitle(book?.displayTitle ?? String(localized: "Hadith"))
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }

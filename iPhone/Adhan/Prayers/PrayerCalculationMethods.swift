@@ -10,8 +10,8 @@ enum IshaRule: Equatable {
 
     var summary: String {
         switch self {
-        case .angle(let deg): return "Isha: \(Self.format(deg))°"
-        case .minutesAfterMaghrib(let mins): return "Isha: \(mins) min after Maghrib"
+        case .angle(let deg): return String(localized: "Isha: \(Self.degrees(deg))")
+        case .minutesAfterMaghrib(let mins): return String(localized: "Isha: \(mins) min after Maghrib")
         }
     }
 
@@ -21,6 +21,14 @@ enum IshaRule: Equatable {
         value.isFinite && abs(value) < 1_000_000 && value == value.rounded()
             ? String(Int(value))
             : String(format: "%.1f", value)
+    }
+
+    /// `format(value)` with its degree sign ("18°", "18.5°"): one isolated run, in the locale's digits, in a
+    /// right-to-left interface, where a bare "18°" drew as "°18" (`SymbolNumber`).
+    static func degrees(_ value: Double) -> String {
+        guard AppLanguage.isRightToLeft else { return "\(format(value))°" }
+        let whole = value.isFinite && abs(value) < 1_000_000 && value == value.rounded()
+        return SymbolNumber.degrees(value, places: whole ? 0 : 1)
     }
 }
 
@@ -62,7 +70,7 @@ struct PrayerCalculationMethod: Identifiable, Equatable {
     var rounding: Rounding? = nil
 
     var angleSummary: String {
-        "Fajr: \(IshaRule.format(fajrAngle))° / \(isha.summary)"
+        String(localized: "Fajr: \(IshaRule.degrees(fajrAngle)) / \(isha.summary)")
     }
 
     /// The parameters Adhan actually computes with.
@@ -110,24 +118,24 @@ enum PrayerCalculationCatalog {
         // MARK: Global / organizational
         PrayerCalculationMethod(
             id: muslimWorldLeagueID,
-            name: "Muslim World League",
-            region: "Global default",
+            name: String(localized: "Muslim World League"),
+            region: String(localized: "Global default"),
             fajrAngle: 18, isha: .angle(17),
             countryCodes: [],
             adjustments: PrayerAdjustments(dhuhr: 1)
         ),
         PrayerCalculationMethod(
             id: "Islamic Society of North America (ISNA)",
-            name: "Islamic Society of North America (ISNA)",
-            region: "United States, Canada",
+            name: String(localized: "Islamic Society of North America (ISNA)"),
+            region: String(localized: "United States, Canada"),
             fajrAngle: 15, isha: .angle(15),
             countryCodes: ["US", "CA", "MX", "PR", "VI", "GU", "AS", "MP", "UM"],
             adjustments: PrayerAdjustments(dhuhr: 1)
         ),
         PrayerCalculationMethod(
             id: "Britain (Moonsighting Committee)",
-            name: "Moonsighting Committee Worldwide",
-            region: "United Kingdom, Ireland",
+            name: String(localized: "Moonsighting Committee Worldwide"),
+            region: String(localized: "United Kingdom, Ireland"),
             // Seasonal, not a fixed angle - the summary shows its base angles, but Adhan applies the real rule.
             fajrAngle: 18, isha: .angle(18),
             countryCodes: ["GB", "IE"],
@@ -137,15 +145,15 @@ enum PrayerCalculationCatalog {
         // MARK: Middle East
         PrayerCalculationMethod(
             id: "Saudi Arabia (Umm Al-Qura)",
-            name: "Umm Al-Qura, Makkah",
-            region: "Saudi Arabia",
+            name: String(localized: "Umm Al-Qura, Makkah"),
+            region: String(localized: "Saudi Arabia"),
             fajrAngle: 18.5, isha: .minutesAfterMaghrib(90),
             countryCodes: ["SA", "BH", "OM", "YE"]
         ),
         PrayerCalculationMethod(
             id: "UAE (General Authority of Islamic Affairs)",
-            name: "UAE General Authority of Islamic Affairs",
-            region: "United Arab Emirates",
+            name: String(localized: "UAE General Authority of Islamic Affairs"),
+            region: String(localized: "United Arab Emirates"),
             fajrAngle: 18.2, isha: .angle(18.2),
             countryCodes: ["AE"],
             // The authority's three minutes of precaution on each side of the day.
@@ -153,22 +161,22 @@ enum PrayerCalculationCatalog {
         ),
         PrayerCalculationMethod(
             id: "Kuwait",
-            name: "Kuwait",
-            region: "Kuwait",
+            name: String(localized: "Kuwait"),
+            region: String(localized: "Kuwait"),
             fajrAngle: 18, isha: .angle(17.5),
             countryCodes: ["KW"]
         ),
         PrayerCalculationMethod(
             id: "Qatar",
-            name: "Qatar",
-            region: "Qatar",
+            name: String(localized: "Qatar"),
+            region: String(localized: "Qatar"),
             fajrAngle: 18, isha: .minutesAfterMaghrib(90),
             countryCodes: ["QA"]
         ),
         PrayerCalculationMethod(
             id: "Jordan (Ministry of Awqaf)",
-            name: "Jordan, Ministry of Awqaf",
-            region: "Jordan, Palestine",
+            name: String(localized: "Jordan, Ministry of Awqaf"),
+            region: String(localized: "Jordan, Palestine"),
             // 18 and 18 with Maghrib five minutes after sunset, as the ministry's method is published
             // (Aladhan's method 23). The row said Isha 17 with no Maghrib margin until 2026-10-04.
             fajrAngle: 18, isha: .angle(18),
@@ -179,37 +187,37 @@ enum PrayerCalculationCatalog {
         // MARK: Africa
         PrayerCalculationMethod(
             id: "Egypt",
-            name: "Egyptian General Authority of Survey",
-            region: "Egypt",
+            name: String(localized: "Egyptian General Authority of Survey"),
+            region: String(localized: "Egypt"),
             fajrAngle: 19.5, isha: .angle(17.5),
             countryCodes: ["EG", "LY", "SD", "SS", "DJ", "ER", "SO", "LB", "SY", "IQ"],
             adjustments: PrayerAdjustments(dhuhr: 1)
         ),
         PrayerCalculationMethod(
             id: "Morocco (Ministry of Endowments)",
-            name: "Morocco, Ministry of Endowments",
-            region: "Morocco",
+            name: String(localized: "Morocco, Ministry of Endowments"),
+            region: String(localized: "Morocco"),
             fajrAngle: 19, isha: .angle(17),
             countryCodes: ["MA"]
         ),
         PrayerCalculationMethod(
             id: "Algeria (Ministry of Religious Affairs)",
-            name: "Algeria, Ministry of Religious Affairs",
-            region: "Algeria",
+            name: String(localized: "Algeria, Ministry of Religious Affairs"),
+            region: String(localized: "Algeria"),
             fajrAngle: 18, isha: .angle(17),
             countryCodes: ["DZ"]
         ),
         PrayerCalculationMethod(
             id: "Tunisia (Ministry of Religious Affairs)",
-            name: "Tunisia, Ministry of Religious Affairs",
-            region: "Tunisia",
+            name: String(localized: "Tunisia, Ministry of Religious Affairs"),
+            region: String(localized: "Tunisia"),
             fajrAngle: 18, isha: .angle(18),
             countryCodes: ["TN"]
         ),
         PrayerCalculationMethod(
             id: "South Africa",
-            name: "South Africa",
-            region: "South Africa",
+            name: String(localized: "South Africa"),
+            region: String(localized: "South Africa"),
             fajrAngle: 18, isha: .angle(17),
             countryCodes: ["ZA"]
         ),
@@ -217,8 +225,8 @@ enum PrayerCalculationCatalog {
         // MARK: Europe
         PrayerCalculationMethod(
             id: "Turkey (Diyanet)",
-            name: "Diyanet İşleri Başkanlığı",
-            region: "Turkey",
+            name: String(localized: "Diyanet İşleri Başkanlığı"),
+            region: String(localized: "Turkey"),
             fajrAngle: 18, isha: .angle(17),
             countryCodes: ["TR", "CY", "AL", "XK", "BA", "MK"],
             // Diyanet's temkin: sunrise seven minutes early, Dhuhr five, Asr four and Maghrib seven late.
@@ -226,22 +234,22 @@ enum PrayerCalculationCatalog {
         ),
         PrayerCalculationMethod(
             id: "France (Musulmans de France)",
-            name: "Musulmans de France (ex-UOIF)",
-            region: "France",
+            name: String(localized: "Musulmans de France (ex-UOIF)"),
+            region: String(localized: "France"),
             fajrAngle: 12, isha: .angle(12),
             countryCodes: ["FR"]
         ),
         PrayerCalculationMethod(
             id: "Belgium (Islamic Centre)",
-            name: "Belgium, Islamic Centre",
-            region: "Belgium",
+            name: String(localized: "Belgium, Islamic Centre"),
+            region: String(localized: "Belgium"),
             fajrAngle: 18, isha: .angle(17),
             countryCodes: ["BE"]
         ),
         PrayerCalculationMethod(
             id: "Russia (Spiritual Administration)",
-            name: "Russia, Spiritual Administration of Muslims",
-            region: "Russia",
+            name: String(localized: "Russia, Spiritual Administration of Muslims"),
+            region: String(localized: "Russia"),
             fajrAngle: 16, isha: .angle(15),
             countryCodes: ["RU"]
         ),
@@ -249,16 +257,16 @@ enum PrayerCalculationCatalog {
         // MARK: Asia and Oceania
         PrayerCalculationMethod(
             id: "Karachi",
-            name: "University of Islamic Sciences, Karachi",
-            region: "Pakistan, India, Bangladesh",
+            name: String(localized: "University of Islamic Sciences, Karachi"),
+            region: String(localized: "Pakistan, India, Bangladesh"),
             fajrAngle: 18, isha: .angle(18),
             countryCodes: ["PK", "IN", "BD", "AF", "NP", "LK"],
             adjustments: PrayerAdjustments(dhuhr: 1)
         ),
         PrayerCalculationMethod(
             id: "Malaysia (JAKIM)",
-            name: "JAKIM (Jabatan Kemajuan Islam Malaysia)",
-            region: "Malaysia",
+            name: String(localized: "JAKIM (Jabatan Kemajuan Islam Malaysia)"),
+            region: String(localized: "Malaysia"),
             // Subuh at 18 degrees since November 2019, when the national council moved it from 20 (the
             // states followed: Selangor's Subuh came eight minutes later that week). e-solat's Kuala Lumpur
             // timetable agrees within its zone margin (05:52 on 2026-10-05; 18 degrees gives 05:50:34, 20
@@ -268,8 +276,8 @@ enum PrayerCalculationCatalog {
         ),
         PrayerCalculationMethod(
             id: "Brunei (Ministry of Religious Affairs)",
-            name: "Brunei, Ministry of Religious Affairs",
-            region: "Brunei",
+            name: String(localized: "Brunei, Ministry of Religious Affairs"),
+            region: String(localized: "Brunei"),
             // Brunei kept Subuh at 20 degrees (Brunei-Muara on 2026-10-05: Subuh 04:50, 20 degrees gives
             // 04:49:57, 18 would give 04:58). It rode the Malaysia row until that row moved to 18.
             fajrAngle: 20, isha: .angle(18),
@@ -277,8 +285,8 @@ enum PrayerCalculationCatalog {
         ),
         PrayerCalculationMethod(
             id: "Singapore (MUIS)",
-            name: "MUIS (Majlis Ugama Islam Singapura)",
-            region: "Singapore",
+            name: String(localized: "MUIS (Majlis Ugama Islam Singapura)"),
+            region: String(localized: "Singapore"),
             fajrAngle: 20, isha: .angle(18),
             countryCodes: ["SG"],
             adjustments: PrayerAdjustments(dhuhr: 1),
@@ -286,15 +294,15 @@ enum PrayerCalculationCatalog {
         ),
         PrayerCalculationMethod(
             id: "Indonesia (Kemenag)",
-            name: "Kemenag (Kementerian Agama Indonesia)",
-            region: "Indonesia",
+            name: String(localized: "Kemenag (Kementerian Agama Indonesia)"),
+            region: String(localized: "Indonesia"),
             fajrAngle: 20, isha: .angle(18),
             countryCodes: ["ID", "TH", "PH"]
         ),
         PrayerCalculationMethod(
             id: "Australia",
-            name: "Australia",
-            region: "Australia, New Zealand",
+            name: String(localized: "Australia"),
+            region: String(localized: "Australia, New Zealand"),
             fajrAngle: 18, isha: .angle(17),
             countryCodes: ["AU", "NZ"]
         ),
@@ -304,8 +312,8 @@ enum PrayerCalculationCatalog {
     static func custom(fajrAngle: Double, ishaAngle: Double) -> PrayerCalculationMethod {
         PrayerCalculationMethod(
             id: customID,
-            name: "Custom Angles",
-            region: "Your own Fajr and Isha angles",
+            name: String(localized: "Custom Angles"),
+            region: String(localized: "Your own Fajr and Isha angles"),
             fajrAngle: fajrAngle, isha: .angle(ishaAngle),
             countryCodes: []
         )

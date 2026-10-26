@@ -25,7 +25,7 @@ struct QuranSearchFilterBar: View {
                 allFiltersChip
 
                 if filters.hasSessionFilters {
-                    chipButton(title: "Reset", systemImage: "xmark", isOn: false) {
+                    chipButton(title: String(localized: "Reset"), systemImage: "xmark", isOn: false) {
                         filters.resetSession()
                     }
                 }
@@ -48,11 +48,11 @@ struct QuranSearchFilterBar: View {
 
                 if !inReader {
                     divider
-                    chipButton(title: showsEveryButton ? "Fewer" : "More",
-                               systemImage: showsEveryButton ? "chevron.left" : "ellipsis", isOn: false) {
+                    chipButton(title: showsEveryButton ? String(localized: "Fewer") : String(localized: "More"),
+                               systemImage: showsEveryButton ? "chevron.backward" : "ellipsis", isOn: false) {
                         showsEveryButton.toggle()
                     }
-                    .accessibilityHint(showsEveryButton ? "Shows only the common filters" : "Shows every filter as a button")
+                    .accessibilityHint(showsEveryButton ? String(localized: "Shows only the common filters") : String(localized: "Shows every filter as a button"))
                 }
             }
             .padding(.horizontal, 16)
@@ -64,7 +64,7 @@ struct QuranSearchFilterBar: View {
 
     /// Always offered in the full row: the symbols that used to say "without" can no longer be typed.
     private var withoutChip: some View {
-        chipButton(title: filters.excludedWords.isEmpty ? "Without" : "Without: " + filters.excludedWords.joined(separator: ", "),
+        chipButton(title: filters.excludedWords.isEmpty ? String(localized: "Without") : String(localized: "Without: \(filters.excludedWords.joined(separator: ", "))"),
                    systemImage: "minus.circle", isOn: !filters.excludedWords.isEmpty, action: onOpenSheet)
     }
 
@@ -77,7 +77,7 @@ struct QuranSearchFilterBar: View {
         divider
         revelationChips
         divider
-        chipButton(title: "Best Match", systemImage: "arrow.up.arrow.down", isOn: filters.sort == .relevance) {
+        chipButton(title: String(localized: "Best Match"), systemImage: "arrow.up.arrow.down", isOn: filters.sort == .relevance) {
             filters.sort = filters.sort == .relevance ? .mushaf : .relevance
         }
 
@@ -174,7 +174,7 @@ struct QuranSearchFilterBar: View {
                 ForEach(QuranSearchFilters.Match.allCases) { Text($0.title).tag($0) }
             }
         } label: {
-            chipLabel(title: filters.match == .contains ? "Match" : filters.match.title,
+            chipLabel(title: filters.match == .contains ? String(localized: "Match") : filters.match.title,
                       systemImage: "character.cursor.ibeam", isOn: filters.match != .contains, isMenu: true)
         }
     }
@@ -185,7 +185,7 @@ struct QuranSearchFilterBar: View {
                 ForEach(QuranSearchFilters.Combine.allCases) { Text($0.title).tag($0) }
             }
         } label: {
-            chipLabel(title: filters.combine == .phrase ? "Words" : filters.combine.title,
+            chipLabel(title: filters.combine == .phrase ? String(localized: "Words") : filters.combine.title,
                       systemImage: "text.word.spacing", isOn: filters.combine != .phrase, isMenu: true)
         }
     }
@@ -196,7 +196,7 @@ struct QuranSearchFilterBar: View {
                 ForEach(QuranSearchFilters.Lane.allCases) { Text($0.title).tag($0) }
             }
         } label: {
-            chipLabel(title: filters.lane == .all ? "Search In" : filters.lane.title,
+            chipLabel(title: filters.lane == .all ? String(localized: "Search In") : filters.lane.title,
                       systemImage: "character.book.closed", isOn: filters.lane != .all, isMenu: true)
         }
     }
@@ -221,7 +221,7 @@ struct QuranSearchFilterBar: View {
                 }
             }
         } label: {
-            chipLabel(title: filters.goTo.map { "Go to " + $0.title } ?? "Go To",
+            chipLabel(title: filters.goTo.map { String(localized: "Go to \($0.title)") } ?? String(localized: "Go To"),
                       systemImage: "arrow.turn.down.right", isOn: filters.goTo != nil, isMenu: true)
         }
     }
@@ -239,7 +239,7 @@ struct QuranSearchFilterBar: View {
                     let picked = juzs.filter { filters.juzs.contains($0.id) }.count
                     Menu {
                         ForEach(juzs) { juz in
-                            Toggle("Juz \(juz.id) · \(juz.nameTransliteration)", isOn: Binding(
+                            Toggle("Juz \(juz.id) · \(juz.displayName)", isOn: Binding(
                                 get: { filters.juzs.contains(juz.id) },
                                 set: { isOn in
                                     if isOn { filters.juzs.insert(juz.id) } else { filters.juzs.remove(juz.id) }
@@ -249,7 +249,7 @@ struct QuranSearchFilterBar: View {
                             .toggleStyle(.automatic)
                         }
                     } label: {
-                        Label(picked > 0 ? "Juz \(first.id)–\(last.id) (\(picked))" : "Juz \(first.id)–\(last.id)",
+                        Label(picked > 0 ? String(localized: "Juz \(first.id)–\(last.id) (\(picked))") : String(localized: "Juz \(first.id)–\(last.id)"),
                               systemImage: picked > 0 ? "checkmark" : "square.stack.3d.up")
                     }
                 }
@@ -268,10 +268,14 @@ struct QuranSearchFilterBar: View {
     }
 
     static func summary(of ids: Set<Int>, noun: String) -> String {
+        let isJuz = noun == "Juz"
         switch ids.count {
-        case 0: return noun
-        case 1...3: return noun + " " + ids.sorted().map(String.init).joined(separator: ", ")
-        default: return "\(ids.count) \(noun == "Juz" ? "Juz" : "Surahs")"
+        case 0: return isJuz ? String(localized: "Juz") : String(localized: "Surah")
+        case 1...3:
+            // The locale's digits and list comma ("الجزء ١، ٢"), as the sentence around them has.
+            let list = ids.sorted().map { $0.formatted() }.joined(separator: AppLanguage.isArabic ? "، " : ", ")
+            return isJuz ? String(localized: "Juz \(list)") : String(localized: "Surah \(list)")
+        default: return isJuz ? String(localized: "\(ids.count) Juz") : String(localized: "\(ids.count) Surahs")
         }
     }
 
@@ -372,7 +376,7 @@ struct QuranSearchFilterSheet: View {
         Text(text).foregroundStyle(appearance.accent)
     }
 
-    private func optionRow(title: String, detail: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+    private func optionRow(title: String, detail: String?, isOn: Bool, action: @escaping () -> Void) -> some View {
         Button {
             Settings.shared.hapticFeedback()
             action()
@@ -381,9 +385,11 @@ struct QuranSearchFilterSheet: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .foregroundStyle(.primary)
-                    Text(detail)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if let detail {
+                        Text(detail.localizedDigits)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Spacer(minLength: 8)
                 Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
@@ -406,7 +412,7 @@ struct QuranSearchFilterSheet: View {
                 }
             }
         } header: {
-            header("SHOW")
+            header(String(localized: "SHOW"))
         } footer: {
             Text("Which kinds of result a search lists. Remembered between searches.")
         }
@@ -420,7 +426,7 @@ struct QuranSearchFilterSheet: View {
                 }
             }
         } header: {
-            header("AYAH ORDER")
+            header(String(localized: "AYAH ORDER"))
         } footer: {
             Text("Remembered between searches.")
         }
@@ -434,7 +440,7 @@ struct QuranSearchFilterSheet: View {
                 }
             }
         } header: {
-            header("MATCH")
+            header(String(localized: "MATCH"))
         }
     }
 
@@ -446,7 +452,7 @@ struct QuranSearchFilterSheet: View {
                 }
             }
         } header: {
-            header("SEVERAL WORDS")
+            header(String(localized: "SEVERAL WORDS"))
         }
     }
 
@@ -456,7 +462,7 @@ struct QuranSearchFilterSheet: View {
                 .autocorrectionDisabled(true)
                 .textInputAutocapitalization(.never)
         } header: {
-            header("WITHOUT")
+            header(String(localized: "WITHOUT"))
         } footer: {
             Text("No result carries any of these words. Separate several with spaces.")
         }
@@ -470,7 +476,7 @@ struct QuranSearchFilterSheet: View {
                 }
             }
         } header: {
-            header("SEARCH IN")
+            header(String(localized: "SEARCH IN"))
         } footer: {
             Text("For searches typed in Latin letters. Arabic script always searches the Arabic.")
         }
@@ -488,7 +494,7 @@ struct QuranSearchFilterSheet: View {
                 }
             }
         } header: {
-            header("YOUR COLLECTIONS")
+            header(String(localized: "YOUR COLLECTIONS"))
         } footer: {
             Text("With nothing typed, lists everything in them. With both on, a result may come from either.")
         }
@@ -496,19 +502,19 @@ struct QuranSearchFilterSheet: View {
 
     private var revelationSection: some View {
         Section {
-            optionRow(title: "Makki and Madani", detail: "Every surah", isOn: filters.revelation == nil) {
+            optionRow(title: String(localized: "Makki and Madani"), detail: String(localized: "Every surah"), isOn: filters.revelation == nil) {
                 filters.revelation = nil
             }
-            optionRow(title: "Makki", detail: "The 86 surahs revealed before the Hijrah. Typed: makki",
+            optionRow(title: String(localized: "Makki"), detail: String(localized: "The 86 surahs revealed before the Hijrah. Typed: makki"),
                       isOn: filters.revelation == .makkan) {
                 filters.revelation = .makkan
             }
-            optionRow(title: "Madani", detail: "The 28 surahs revealed after the Hijrah. Typed: madani",
+            optionRow(title: String(localized: "Madani"), detail: String(localized: "The 28 surahs revealed after the Hijrah. Typed: madani"),
                       isOn: filters.revelation == .madinan) {
                 filters.revelation = .madinan
             }
         } header: {
-            header("REVELATION")
+            header(String(localized: "REVELATION"))
         }
     }
 
@@ -540,10 +546,10 @@ struct QuranSearchFilterSheet: View {
             }
             .padding(.vertical, 4)
         } header: {
-            header("WITHIN JUZ")
+            header(String(localized: "WITHIN JUZ"))
         } footer: {
-            Text(filters.juzs.isEmpty ? "Tap any number of juz to search inside them only."
-                                      : "Searching inside \(QuranSearchFilterBar.summary(of: filters.juzs, noun: "Juz")).")
+            Text(filters.juzs.isEmpty ? String(localized: "Tap any number of juz to search inside them only.")
+                                      : String(localized: "Searching inside \(QuranSearchFilterBar.summary(of: filters.juzs, noun: "Juz"))."))
         }
     }
 
@@ -567,7 +573,7 @@ struct QuranSearchFilterSheet: View {
             let list = matchingSurahs
             let visible = (showAllSurahs || !surahQuery.isEmpty) ? list : list.filter { filters.surahs.contains($0.id) }
             ForEach(visible, id: \.id) { surah in
-                optionRow(title: "\(surah.id). \(surah.nameTransliteration)", detail: surah.nameEnglish,
+                optionRow(title: "\(surah.id). \(surah.displayName)".localizedDigits, detail: surah.displayMeaning,
                           isOn: filters.surahs.contains(surah.id)) {
                     if filters.surahs.contains(surah.id) {
                         filters.surahs.remove(surah.id)
@@ -577,12 +583,12 @@ struct QuranSearchFilterSheet: View {
                 }
             }
             if surahQuery.isEmpty {
-                Button(showAllSurahs ? "Show Chosen Only" : "Show All 114 Surahs") {
+                Button(showAllSurahs ? String(localized: "Show Chosen Only") : String(localized: "Show All 114 Surahs").localizedDigits) {
                     showAllSurahs.toggle()
                 }
             }
         } header: {
-            header("WITHIN SURAHS")
+            header(String(localized: "WITHIN SURAHS"))
         } footer: {
             Text("Ayah results come from the chosen surahs only.")
         }
@@ -590,31 +596,31 @@ struct QuranSearchFilterSheet: View {
 
     private var goToSection: some View {
         Section {
-            optionRow(title: "Off", detail: "A number offers its surah, page and juz together",
+            optionRow(title: String(localized: "Off"), detail: String(localized: "A number offers its surah, page and juz together"),
                       isOn: filters.goTo == nil) {
                 filters.goTo = nil
             }
             ForEach(QuranSearchFilters.GoTo.allCases) { place in
-                optionRow(title: place.title, detail: place.placeholder + ". Typed: \(place.rawValue) 5",
+                optionRow(title: place.title, detail: String(localized: "\(place.placeholder). Typed: \(place.rawValue) 5"),
                           isOn: filters.goTo == place) {
                     filters.goTo = place
                 }
             }
         } header: {
-            header("GO TO")
+            header(String(localized: "GO TO"))
         } footer: {
-            Text("Reads what you type as one kind of place. Counting from the end works everywhere: -1 is the last.")
+            Text(String(localized: "Reads what you type as one kind of place. Counting from the end works everywhere: -1 is the last.").localizedDigits)
         }
     }
 
     private var openingSection: some View {
         Section {
-            optionRow(title: "Keyword Results", detail: "The ayahs carrying your words, closest match first",
+            optionRow(title: String(localized: "Keyword Results"), detail: String(localized: "The ayahs carrying your words, closest match first"),
                       isOn: !opensOnAI) { opensOnAI = false }
-            optionRow(title: "AI Results", detail: "The ayahs closest in meaning, found on this device",
+            optionRow(title: String(localized: "AI Results"), detail: String(localized: "The ayahs closest in meaning, found on this device"),
                       isOn: opensOnAI) { opensOnAI = true }
         } header: {
-            header("OPEN ON")
+            header(String(localized: "OPEN ON"))
         } footer: {
             Text("When both answer a search, one switch chooses between them. This is the side it starts on. For the Hadith search too.")
         }
@@ -622,13 +628,13 @@ struct QuranSearchFilterSheet: View {
 
     private var barSection: some View {
         Section {
-            optionRow(title: "Every Filter as a Button",
-                      detail: "The row over the results shows all of these, not only the common ones",
+            optionRow(title: String(localized: "Every Filter as a Button"),
+                      detail: String(localized: "The row over the results shows all of these, not only the common ones"),
                       isOn: showsEveryButton) {
                 showsEveryButton.toggle()
             }
         } header: {
-            header("THE ROW OVER THE RESULTS")
+            header(String(localized: "THE ROW OVER THE RESULTS"))
         } footer: {
             Text("Off, the row keeps to your collections, Makki and Madani, and Best Match, plus any filter set here. The More button in the row does the same. For the Hadith search too.")
         }

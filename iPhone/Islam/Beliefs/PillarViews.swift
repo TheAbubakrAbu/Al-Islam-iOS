@@ -131,7 +131,7 @@ struct GodPillarView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "GodPillarView")
+        .englishArticle().selectableArticleList(article: "GodPillarView")
         .navigationTitle("Does God Exist?")
     }
 }
@@ -234,7 +234,7 @@ struct IslamPillarView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "IslamPillarView")
+        .englishArticle().selectableArticleList(article: "IslamPillarView")
         .navigationTitle("What is Islam?")
     }
 }
@@ -294,7 +294,7 @@ struct MuslimPillarView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "MuslimPillarView")
+        .englishArticle().selectableArticleList(article: "MuslimPillarView")
         .navigationTitle("What is a Muslim?")
     }
 }
@@ -370,7 +370,7 @@ struct AllahPillarView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "AllahPillarView")
+        .englishArticle().selectableArticleList(article: "AllahPillarView")
         .navigationTitle("Who is Allah?")
     }
 }
@@ -452,7 +452,7 @@ struct NamesOfAllahPillarView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "NamesOfAllahPillarView")
+        .englishArticle().selectableArticleList(article: "NamesOfAllahPillarView")
         .navigationTitle("The 99 Names of Allah")
     }
 }
@@ -528,7 +528,7 @@ struct QuranPillarView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "QuranPillarView")
+        .englishArticle().selectableArticleList(article: "QuranPillarView")
         .navigationTitle("What is the Quran?")
     }
 }
@@ -634,7 +634,7 @@ struct MuqattaatPillarView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Muqatta'at Letters")
-        .selectableArticleList(article: "MuqattaatPillarView")
+        .englishArticle().selectableArticleList(article: "MuqattaatPillarView")
     }
 
     private func muqattaatRow(_ row: MuqattaatRow) -> some View {
@@ -753,7 +753,7 @@ struct ProphetPillarView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetPillarView")
+        .englishArticle().selectableArticleList(article: "ProphetPillarView")
         .navigationTitle("Who is the Prophet?")
     }
 }
@@ -825,8 +825,8 @@ struct SunnahPillarView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "SunnahPillarView")
-        .navigationTitle("What is the Sunnah?")
+        .englishArticle().selectableArticleList(article: "SunnahPillarView")
+        .navigationTitle(AppLanguage.article("What is the Sunnah?"))
     }
 }
 
@@ -927,8 +927,8 @@ struct HadithPillarView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "HadithPillarView")
-        .navigationTitle("What are Hadiths?")
+        .englishArticle().selectableArticleList(article: "HadithPillarView")
+        .navigationTitle(AppLanguage.article("What are Hadiths?"))
     }
 }
 
@@ -1013,7 +1013,7 @@ struct ShahadahView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ShahadahView")
+        .englishArticle().selectableArticleList(article: "ShahadahView")
         .navigationTitle("Shahadah")
     }
 }
@@ -1091,7 +1091,7 @@ struct SalahView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "SalahView")
+        .englishArticle().selectableArticleList(article: "SalahView")
         .navigationTitle("Salah")
     }
 }
@@ -1161,7 +1161,7 @@ struct SawmView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "SawmView")
+        .englishArticle().selectableArticleList(article: "SawmView")
         .navigationTitle("Sawm")
     }
 }
@@ -1218,7 +1218,7 @@ struct ZakahView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ZakahView")
+        .englishArticle().selectableArticleList(article: "ZakahView")
         .navigationTitle("Zakah")
     }
 }
@@ -1286,7 +1286,7 @@ struct HajjView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "HajjView")
+        .englishArticle().selectableArticleList(article: "HajjView")
         .navigationTitle("Hajj")
     }
 }
@@ -1341,7 +1341,7 @@ struct GodView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "GodView")
+        .englishArticle().selectableArticleList(article: "GodView")
         .navigationTitle("Belief in Allah")
     }
 }
@@ -1418,7 +1418,7 @@ struct AngelsView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "AngelsView")
+        .englishArticle().selectableArticleList(article: "AngelsView")
         .navigationTitle("Belief in the Angels")
     }
 }
@@ -1483,7 +1483,7 @@ struct BooksView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "BooksView")
+        .englishArticle().selectableArticleList(article: "BooksView")
         .navigationTitle("Belief in the Books")
     }
 }
@@ -1675,7 +1675,7 @@ struct ProphetsView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "ProphetsView")
+        .englishArticle().selectableArticleList(article: "ProphetsView")
         .navigationTitle("Belief in the Prophets")
     }
 }
@@ -1744,7 +1744,7 @@ struct DayView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "DayView")
+        .englishArticle().selectableArticleList(article: "DayView")
         .navigationTitle("Belief in the Last Day")
     }
 }
@@ -1808,7 +1808,7 @@ struct QadarView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList(article: "QadarView")
+        .englishArticle().selectableArticleList(article: "QadarView")
         .navigationTitle("Belief in Al-Qadar")
     }
 }

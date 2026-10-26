@@ -280,9 +280,9 @@ final class AskAIConversation: ObservableObject {
                         kind = .onDevice
                         profile = .onDevice
                         sources = Array(sources.prefix(profile.sourceLimit))
-                        let reason = AskAIEngine.message(for: failure) ?? "Private Cloud Compute could not answer."
+                        let reason = AskAIEngine.message(for: failure) ?? String(localized: "Private Cloud Compute could not answer.")
                         updateReply { $0.sources = sources; $0.text = ""; $0.refreshCitations()
-                            $0.note = "\(reason) This answer was written on your device instead." }
+                            $0.note = String(localized: "\(reason) This answer was written on your device instead.") }
                         resetStream()
                         continue
                     default:
@@ -317,7 +317,7 @@ final class AskAIConversation: ObservableObject {
                     updateReply {
                         $0.sources = sources; $0.text = ""; $0.refreshCitations()
                         if sources.isEmpty {
-                            $0.note = "Apple Intelligence declined to read the sources the app found for this question, so this answer was written from general knowledge without them."
+                            $0.note = String(localized: "Apple Intelligence declined to read the sources the app found for this question, so this answer was written from general knowledge without them.")
                         }
                     }
                     continue
@@ -434,7 +434,7 @@ final class AskAIConversation: ObservableObject {
         // No flush may land after the reply settles (it would overwrite the settled text).
         resetStream()
         let question = currentQuestion
-        let genericFailure = "I couldn\u{2019}t answer that right now. Try rephrasing the question, or ask again in a moment."
+        let genericFailure = String(localized: "I couldn\u{2019}t answer that right now. Try rephrasing the question, or ask again in a moment.")
         updateReply { reply in
             reply.isStreaming = false
             reply.elapsed = elapsed
@@ -443,7 +443,7 @@ final class AskAIConversation: ObservableObject {
                 if reply.text.isEmpty {
                     reply.text = message ?? genericFailure
                 } else {
-                    reply.text += "\n\n(" + (message ?? "The answer stopped early. Ask again to continue.") + ")"
+                    reply.text += "\n\n(" + (message ?? String(localized: "The answer stopped early. Ask again to continue.")) + ")"
                 }
             } else {
                 let unechoed = AskAIText.droppingSourceEchoes(reply.text, sources: reply.sources)
@@ -616,7 +616,7 @@ final class AskAIConversation: ObservableObject {
         messages = store.messages.map { message in
             var settled = message
             settled.isStreaming = false
-            if settled.role == .assistant, settled.text.isEmpty { settled.failed = true; settled.text = "The answer was interrupted." }
+            if settled.role == .assistant, settled.text.isEmpty { settled.failed = true; settled.text = String(localized: "The answer was interrupted.") }
             return settled
         }
         topic = store.topic

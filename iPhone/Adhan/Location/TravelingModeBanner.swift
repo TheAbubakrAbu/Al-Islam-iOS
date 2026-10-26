@@ -52,7 +52,8 @@ struct TravelingModeBanner: View {
 
                 Spacer(minLength: 8)
 
-                Image(systemName: "chevron.right")
+                // Forward, not right: the disclosure points the way the row reads (left in Arabic).
+                Image(systemName: "chevron.forward")
                     .font(.footnote.weight(.semibold))
                     .opacity(0.8)
                     .accessibilityHidden(true)
@@ -75,28 +76,28 @@ struct TravelingModeBanner: View {
     /// "Dhuhr + Asr and Maghrib + Isha, shortened and combined · 412 mi from Los Angeles"
     private var detailLine: String {
         let what = fullPrayers
-            ? "Full times shown; you may still shorten and combine"
-            : "Dhuhr + Asr and Maghrib + Isha, shortened and combined"
-        return "\(what) · \(distanceLine)"
+            ? String(localized: "Full times shown; you may still shorten and combine")
+            : String(localized: "Dhuhr + Asr and Maghrib + Isha, shortened and combined")
+        return String(localized: "\(what) · \(distanceLine)")
     }
 
     /// "412 mi from Los Angeles", or the reason without a number when one side is unknown.
     private var distanceLine: String {
-        let homeCity = settings.homeLocation?.city.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let homeCity = settings.homeLocation?.displayCity.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard let home = settings.homeLocation,
               let here = live.currentLocation,
               here.latitude != 1000, here.longitude != 1000
         else {
-            return homeCity.isEmpty ? "away from home" : "away from \(homeCity)"
+            return homeCity.isEmpty ? String(localized: "away from home") : String(localized: "away from \(homeCity)")
         }
         let meters = CLLocation(latitude: here.latitude, longitude: here.longitude)
             .distance(from: CLLocation(latitude: home.latitude, longitude: home.longitude))
         // Inside the home city the distance is GPS noise ("0.0 mi"): traveling mode was set by hand.
         guard meters > 1_000 else {
-            return homeCity.isEmpty ? "at home, turned on by hand" : "in \(homeCity), turned on by hand"
+            return homeCity.isEmpty ? String(localized: "at home, turned on by hand") : String(localized: "in \(homeCity), turned on by hand")
         }
         let distance = Self.distanceText(meters)
-        return homeCity.isEmpty ? "\(distance) from home" : "\(distance) from \(homeCity)"
+        return homeCity.isEmpty ? String(localized: "\(distance) from home") : String(localized: "\(distance) from \(homeCity)")
     }
 
     /// Miles or kilometres as the locale measures ("412 mi" in the US, "663 km" elsewhere): one unit,

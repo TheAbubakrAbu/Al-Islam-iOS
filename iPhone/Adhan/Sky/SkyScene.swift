@@ -34,9 +34,9 @@ enum SkySceneStyle: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .pyramidsMosque: return "Pyramids & Mosque"
-        case .pyramids: return "Pyramids"
-        case .mosques: return "Mosques"
+        case .pyramidsMosque: return String(localized: "Pyramids & Mosque")
+        case .pyramids: return String(localized: "Pyramids")
+        case .mosques: return String(localized: "Mosques")
         }
     }
 }

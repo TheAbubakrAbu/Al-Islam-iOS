@@ -90,7 +90,7 @@ struct SettingsControlLabel: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(title.localizedDigits)
                     .foregroundColor(.primary)
 
                 // The caption is an iPhone luxury; the watch's rows have no room for it.
@@ -115,7 +115,7 @@ struct SettingsCaption: View {
     }
 
     var body: some View {
-        Text(text)
+        Text(text.localizedDigits)
             .font(.caption)
             .foregroundColor(.secondary)
             .fixedSize(horizontal: false, vertical: true)
@@ -189,7 +189,7 @@ struct FontSizeSlider: View {
     /// The letter at the slider's two ends.
     var glyph: String = "A"
     /// The size as the row's trailing read-out.
-    var label: (Double) -> String = { "\(Int($0.rounded())) pt" }
+    var label: (Double) -> String = { String(localized: "\(Int($0.rounded())) pt") }
     /// Every size the thumb passes, for a page that previews the size outside this control.
     var onLiveChange: ((Double) -> Void)? = nil
 
@@ -199,7 +199,7 @@ struct FontSizeSlider: View {
 
     init(_ title: String, value: Binding<Double>, in range: ClosedRange<Double>, sample: String?,
          fontName: String? = nil, glyph: String = "A",
-         label: @escaping (Double) -> String = { "\(Int($0.rounded())) pt" },
+         label: @escaping (Double) -> String = { String(localized: "\(Int($0.rounded())) pt") },
          onLiveChange: ((Double) -> Void)? = nil) {
         self.title = title
         self._value = value
@@ -290,7 +290,7 @@ struct FontSizeSlider: View {
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
-        .accessibilityLabel(delta < 0 ? "Smaller" : "Larger")
+        .accessibilityLabel(delta < 0 ? String(localized: "Smaller") : String(localized: "Larger"))
     }
     #endif
 }

@@ -146,7 +146,7 @@ struct NextPrayerValueProvider: ControlValueProvider {
     }
 
     /// What the gallery shows before the control is placed.
-    var previewValue: Value { Value(name: "Dhuhr", symbol: "sun.max.fill", time: nil) }
+    var previewValue: Value { Value(name: String(localized: "Dhuhr"), symbol: "sun.max.fill", time: nil) }
 
     func currentValue() async throws -> Value {
         // `Settings.shared` is what the prayer widgets' own provider reads in this same extension
@@ -161,9 +161,9 @@ struct NextPrayerValueProvider: ControlValueProvider {
             PrayersProvider().seedSettingsFromAppGroup()
             settings.fetchPrayerTimes()
             guard let next = settings.nextPrayer else { return nil }
-            return (next.displayName, next.image, next.time)
+            return (next.displayName.localizedDisplay, next.image, next.time)
         }
-        guard let settings else { return Value(name: "Prayer Times", symbol: "mecca", time: nil) }
+        guard let settings else { return Value(name: String(localized: "Prayer Times"), symbol: "mecca", time: nil) }
         return Value(name: settings.name, symbol: settings.symbol, time: settings.time)
     }
 }

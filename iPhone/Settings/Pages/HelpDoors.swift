@@ -49,15 +49,15 @@ enum HelpDoorArea: String, CaseIterable {
     var tabName: String {
         switch self {
         #if HAS_ADHAN
-        case .adhan: return "Adhan"
+        case .adhan: return String(localized: "Adhan")
         #endif
         #if HAS_QURAN
-        case .quran: return "Quran"
+        case .quran: return String(localized: "Quran")
         #endif
         #if HAS_HADITH
-        case .hadith: return "Hadith"
+        case .hadith: return String(localized: "Hadith")
         #endif
-        case .islam: return "Islam"
+        case .islam: return String(localized: "Islam")
         }
     }
 
@@ -65,15 +65,15 @@ enum HelpDoorArea: String, CaseIterable {
     var settingsPageName: String {
         switch self {
         #if HAS_ADHAN
-        case .adhan: return "Prayer Settings"
+        case .adhan: return String(localized: "Prayer Settings")
         #endif
         #if HAS_QURAN
-        case .quran: return "Quran Settings"
+        case .quran: return String(localized: "Quran Settings")
         #endif
         #if HAS_HADITH
-        case .hadith: return "Hadith Settings"
+        case .hadith: return String(localized: "Hadith Settings")
         #endif
-        case .islam: return "Islam Settings"
+        case .islam: return String(localized: "Islam Settings")
         }
     }
 
@@ -81,15 +81,15 @@ enum HelpDoorArea: String, CaseIterable {
     var placement: String {
         switch self {
         #if HAS_ADHAN
-        case .adhan: return "under the prayer tracker"
+        case .adhan: return String(localized: "under the prayer tracker")
         #endif
         #if HAS_QURAN
-        case .quran: return "under Your Summary"
+        case .quran: return String(localized: "under Your Summary")
         #endif
         #if HAS_HADITH
-        case .hadith: return "under Your Summary"
+        case .hadith: return String(localized: "under Your Summary")
         #endif
-        case .islam: return "under the Islamic resources"
+        case .islam: return String(localized: "under the Islamic resources")
         }
     }
 }
@@ -140,7 +140,7 @@ struct HelpDoorAction: Identifiable {
 
     /// "Turn On Arabic Beginner Mode" or "Turn Off ...", for a door that is one switch.
     static func toggle(_ name: String, isOn: Bool, systemImage: String, set: @escaping (Bool) -> Void) -> HelpDoorAction {
-        HelpDoorAction(id: "toggle", title: isOn ? "Turn Off \(name)" : "Turn On \(name)",
+        HelpDoorAction(id: "toggle", title: isOn ? String(localized: "Turn Off \(name)") : String(localized: "Turn On \(name)"),
                        systemImage: systemImage) { set(!isOn) }
     }
 }
@@ -217,7 +217,7 @@ enum HelpDoorCatalog {
         }
     }
 
-    private static func onOff(_ on: Bool) -> String { on ? "On" : "Off" }
+    private static func onOff(_ on: Bool) -> String { on ? String(localized: "On") : String(localized: "Off") }
 
     #if HAS_ADHAN
     /// Prayer times: praying on time, praying away from home, and the sky above the times (or, with
@@ -228,55 +228,55 @@ enum HelpDoorCatalog {
         // With Automatic Traveling Mode on, the switch is the location's to flip, not the reader's
         // (its page disables it the same way).
         if !settings.travelAutomatic {
-            travelActions.append(.toggle("Traveling Mode", isOn: settings.travelingMode, systemImage: "airplane") { on in
+            travelActions.append(.toggle(String(localized: "Traveling Mode"), isOn: settings.travelingMode, systemImage: "airplane") { on in
                 settings.setTravelingModeManually(on)
             })
         }
 
         var doors: [HelpDoor] = [
-            HelpDoor(id: "adhan.nagging", title: "Need Help Praying?",
-                     caption: "Asks \u{201C}Did you pray?\u{201D} until you answer.",
-                     answerName: "Nagging Mode",
+            HelpDoor(id: "adhan.nagging", title: String(localized: "Need Help Praying?"),
+                     caption: String(localized: "Asks \u{201C}Did you pray?\u{201D} until you answer."),
+                     answerName: String(localized: "Nagging Mode"),
                      systemImage: "exclamationmark.bubble.fill", tint: SettingsTint.notifications,
                      landing: .screen { AnyView(NaggingModeView()) },
-                     value: nagging, isOn: nagging == "On"),
-            HelpDoor(id: "adhan.travel", title: "Traveling?",
-                     caption: "Shorter, combined prayers away from home.",
-                     answerName: settings.travelAutomatic ? "Traveling Mode, set automatically" : "Traveling Mode",
+                     value: nagging, isOn: nagging == String(localized: "On")),
+            HelpDoor(id: "adhan.travel", title: String(localized: "Traveling?"),
+                     caption: String(localized: "Shorter, combined prayers away from home."),
+                     answerName: settings.travelAutomatic ? String(localized: "Traveling Mode, set automatically") : String(localized: "Traveling Mode"),
                      systemImage: "airplane", tint: SettingsTint.prayer,
                      landing: .page(.prayerPage(.travelingMode)),
                      value: onOff(settings.travelingMode), isOn: settings.travelingMode,
                      actions: travelActions),
         ]
         if settings.showSkyView {
-            doors.append(HelpDoor(id: "adhan.skycolors", title: "Want Your Own Sky?",
-                                  caption: "Your own two colors for every prayer's sky.",
-                                  answerName: "Sky Colors",
+            doors.append(HelpDoor(id: "adhan.skycolors", title: String(localized: "Want Your Own Sky?"),
+                                  caption: String(localized: "Your own two colors for every prayer's sky."),
+                                  answerName: String(localized: "Sky Colors"),
                                   systemImage: "paintpalette.fill", tint: SettingsTint.sky,
                                   landing: .screen { AnyView(SkyColorsView()) },
-                                  value: settings.hasCustomSkyGradients ? "Custom" : "Default",
+                                  value: settings.hasCustomSkyGradients ? String(localized: "Custom") : String(localized: "Default"),
                                   isOn: settings.hasCustomSkyGradients))
             #if HAS_WEATHER
             // The weather is opt-in (it sends the location to Apple Weather), so this is its door.
             // Al-Islam only, like iCloud Backup.
-            doors.append(HelpDoor(id: "adhan.weather", title: "Want the Weather on the Sky?",
-                                  caption: "Clouds and rain on the sky, with the temperature, UV and humidity.",
-                                  answerName: "Weather",
+            doors.append(HelpDoor(id: "adhan.weather", title: String(localized: "Want the Weather on the Sky?"),
+                                  caption: String(localized: "Clouds and rain on the sky, with the temperature, UV and humidity."),
+                                  answerName: String(localized: "Weather"),
                                   systemImage: "cloud.sun.fill", tint: SettingsTint.sky,
                                   landing: .page(.prayerPage(.sky)),
                                   value: onOff(settings.skyShowsWeather), isOn: settings.skyShowsWeather,
-                                  actions: [.toggle("Weather", isOn: settings.skyShowsWeather, systemImage: "cloud.sun.fill") { on in
+                                  actions: [.toggle(String(localized: "Weather"), isOn: settings.skyShowsWeather, systemImage: "cloud.sun.fill") { on in
                                       withAnimation(.easeInOut) { settings.skyShowsWeather = on }
                                   }]))
             #endif
         } else {
             let renamed = Settings.renameablePrayerNames.filter { settings.customPrayerName(for: $0) != nil }.count
-            doors.append(HelpDoor(id: "adhan.names", title: "Prefer Other Prayer Names?",
-                                  caption: "Call the prayers what you call them.",
-                                  answerName: "Custom Prayer Names",
+            doors.append(HelpDoor(id: "adhan.names", title: String(localized: "Prefer Other Prayer Names?"),
+                                  caption: String(localized: "Call the prayers what you call them."),
+                                  answerName: String(localized: "Custom Prayer Names"),
                                   systemImage: "character.cursor.ibeam", tint: SettingsTint.prayer,
                                   landing: .page(.prayerPage(.customPrayerNames)),
-                                  value: renamed == 0 ? "Default" : "\(renamed) renamed", isOn: renamed > 0))
+                                  value: renamed == 0 ? String(localized: "Default") : String(localized: "\(renamed) renamed"), isOn: renamed > 0))
         }
         return doors
     }
@@ -291,38 +291,38 @@ enum HelpDoorCatalog {
         let transliteration = settings.isHafsDisplay && settings.showTransliteration
         var beginnerActions: [HelpDoorAction] = []
         if settings.showArabicText {
-            beginnerActions.append(.toggle("Arabic Beginner Mode", isOn: settings.beginnerMode,
+            beginnerActions.append(.toggle(String(localized: "Arabic Beginner Mode"), isOn: settings.beginnerMode,
                                            systemImage: "text.word.spacing") { on in
                 withAnimation(.easeInOut) { settings.beginnerMode = on }
             })
         }
         var transliterationActions: [HelpDoorAction] = []
         if settings.isHafsDisplay {
-            transliterationActions.append(.toggle("Transliteration", isOn: settings.showTransliteration,
+            transliterationActions.append(.toggle(String(localized: "Transliteration"), isOn: settings.showTransliteration,
                                                   systemImage: "character.textbox") { on in
                 withAnimation(.easeInOut) { settings.showTransliteration = on }
             })
         }
 
         return [
-            HelpDoor(id: "quran.beginner", title: "Need Help Reading?",
-                     caption: "Puts a space between every Arabic letter.",
-                     answerName: "Arabic Beginner Mode",
+            HelpDoor(id: "quran.beginner", title: String(localized: "Need Help Reading?"),
+                     caption: String(localized: "Puts a space between every Arabic letter."),
+                     answerName: String(localized: "Arabic Beginner Mode"),
                      systemImage: "text.word.spacing", tint: SettingsTint.quran,
                      landing: .answer({ AnyView(BeginnerModeAnswer()) }, pages: [.quranPage(.arabicText)]),
                      value: onOff(beginner), isOn: beginner, actions: beginnerActions),
-            HelpDoor(id: "quran.transliteration", title: "Want Transliteration?",
-                     caption: "Latin letters beneath the Arabic.",
-                     answerName: "Transliteration, on English Text",
+            HelpDoor(id: "quran.transliteration", title: String(localized: "Want Transliteration?"),
+                     caption: String(localized: "Latin letters beneath the Arabic."),
+                     answerName: String(localized: "Transliteration, on English Text"),
                      systemImage: "character.textbox", tint: SettingsTint.quran,
                      landing: .page(.quranPage(.englishText)),
                      value: onOff(transliteration), isOn: transliteration, actions: transliterationActions),
-            HelpDoor(id: "quran.sunnah", title: "Want Al-Kahf Every Friday?",
-                     caption: "Al-Kahf on Friday, al-Mulk before sleep.",
-                     answerName: "Sunnah Reminders",
+            HelpDoor(id: "quran.sunnah", title: String(localized: "Want Al-Kahf Every Friday?"),
+                     caption: String(localized: "Al-Kahf on Friday, al-Mulk before sleep."),
+                     answerName: String(localized: "Sunnah Reminders"),
                      systemImage: "bell.badge", tint: SettingsTint.notifications,
                      landing: .screen { AnyView(SunnahRemindersView()) },
-                     value: sunnah.enabledCount == 0 ? "Off" : "\(sunnah.enabledCount) on",
+                     value: sunnah.enabledCount == 0 ? String(localized: "Off") : String(localized: "\(sunnah.enabledCount) on"),
                      isOn: sunnah.enabledCount > 0),
         ]
     }
@@ -333,9 +333,9 @@ enum HelpDoorCatalog {
     private static func hadith(_ settings: Settings) -> [HelpDoor] {
         let language = HadithReadingLanguage.current(settings)
         return [
-            HelpDoor(id: "hadith.language", title: "Reading in One Language?",
-                     caption: "Read only the Arabic, or only the English.",
-                     answerName: "Arabic and English, or one of them",
+            HelpDoor(id: "hadith.language", title: String(localized: "Reading in One Language?"),
+                     caption: String(localized: "Read only the Arabic, or only the English."),
+                     answerName: String(localized: "Arabic and English, or one of them"),
                      systemImage: "textformat", tint: SettingsTint.hadith,
                      landing: .answer({ AnyView(HadithLanguageAnswer()) },
                                       pages: [.hadithPage(.arabicText), .hadithPage(.englishText)]),
@@ -346,13 +346,13 @@ enum HelpDoorCatalog {
                              withAnimation(.easeInOut) { choice.apply(to: settings) }
                          }
                      }),
-            HelpDoor(id: "hadith.allah", title: "Want Allah's Name in Red?",
-                     caption: "His name in red, in Arabic and English.",
-                     answerName: "Highlight Allah, on Reading View",
+            HelpDoor(id: "hadith.allah", title: String(localized: "Want Allah's Name in Red?"),
+                     caption: String(localized: "His name in red, in Arabic and English."),
+                     answerName: String(localized: "Highlight Allah, on Reading View"),
                      systemImage: "paintbrush.fill", tint: SettingsTint.hadith,
                      landing: .page(.hadithPage(.readingView)),
                      value: onOff(settings.highlightAllahNamesHadith), isOn: settings.highlightAllahNamesHadith,
-                     actions: [.toggle("Highlight Allah", isOn: settings.highlightAllahNamesHadith,
+                     actions: [.toggle(String(localized: "Highlight Allah"), isOn: settings.highlightAllahNamesHadith,
                                        systemImage: "paintbrush.fill") { on in
                          withAnimation(.easeInOut) { settings.highlightAllahNamesHadith = on }
                      }]),
@@ -365,50 +365,50 @@ enum HelpDoorCatalog {
     private static func islam(_ settings: Settings) -> [HelpDoor] {
         var doors: [HelpDoor] = []
         if !StartHere.isShown(settings) {
-            doors.append(HelpDoor(id: "islam.aboutyou", title: "Need Help Getting Started?",
-                                  caption: "A Start Here guide, tailored to you.",
-                                  answerName: "About You",
+            doors.append(HelpDoor(id: "islam.aboutyou", title: String(localized: "Need Help Getting Started?"),
+                                  caption: String(localized: "A Start Here guide, tailored to you."),
+                                  answerName: String(localized: "About You"),
                                   systemImage: "sparkles", tint: SettingsTint.islam,
                                   secondaryTint: SettingsTint.islamSecondary,
                                   landing: .screen { AnyView(AboutYouSettingsView()) }))
         }
         // Simple Mode (Abu, 2026-10-10: "its too cluttered and too complex easy to get overwhelemd").
         // Never seen in Simple Mode itself: this whole section steps aside there.
-        doors.append(HelpDoor(id: "islam.simple", title: "Too Much on Screen?",
-                              caption: "Simple Mode keeps each tab to its essentials.",
-                              answerName: "Simple Mode",
+        doors.append(HelpDoor(id: "islam.simple", title: String(localized: "Too Much on Screen?"),
+                              caption: String(localized: "Simple Mode keeps each tab to its essentials."),
+                              answerName: String(localized: "Simple Mode"),
                               systemImage: "rectangle.compress.vertical", tint: SettingsTint.islam,
                               secondaryTint: SettingsTint.islamSecondary,
                               landing: .screen { AnyView(SimpleModeSettingsView()) },
-                              value: settings.simpleMode ? "On" : "Off", isOn: settings.simpleMode,
-                              actions: [.toggle("Simple Mode", isOn: settings.simpleMode,
+                              value: settings.simpleMode ? String(localized: "On") : String(localized: "Off"), isOn: settings.simpleMode,
+                              actions: [.toggle(String(localized: "Simple Mode"), isOn: settings.simpleMode,
                                                 systemImage: "rectangle.compress.vertical") { on in
                                   withAnimation(.easeInOut) { settings.simpleMode = on }
                               }]))
         let textSize = IslamTextSize.size(for: settings.islamTextSize)
-        doors.append(HelpDoor(id: "islam.textsize", title: "Text Too Small?",
-                              caption: "A text size just for the Al-Islam tab.",
-                              answerName: "Text Size",
+        doors.append(HelpDoor(id: "islam.textsize", title: String(localized: "Text Too Small?"),
+                              caption: String(localized: "A text size just for the Al-Islam tab."),
+                              answerName: String(localized: "Text Size"),
                               systemImage: "textformat.size", tint: SettingsTint.islam,
                               secondaryTint: SettingsTint.islamSecondary,
                               landing: .screen { AnyView(IslamTextSizeSettingsView()) },
-                              value: textSize.map(IslamTextSize.name) ?? "Device", isOn: textSize != nil))
+                              value: textSize.map(IslamTextSize.name) ?? String(localized: "Device"), isOn: textSize != nil))
         #if HAS_ADHAN
         let atFajr = settings.dailyRolloverAtFajr
-        doors.append(HelpDoor(id: "islam.fajr", title: "When Does Your Day Begin?",
-                              caption: "Daily cards turn over at Fajr, or midnight.",
-                              answerName: "Turn Over at Fajr",
+        doors.append(HelpDoor(id: "islam.fajr", title: String(localized: "When Does Your Day Begin?"),
+                              caption: String(localized: "Daily cards turn over at Fajr, or midnight."),
+                              answerName: String(localized: "Turn Over at Fajr"),
                               systemImage: "sunrise.fill", tint: SettingsTint.islam,
                               secondaryTint: SettingsTint.islamSecondary,
                               landing: .answer({ AnyView(DayBeginsAnswer()) }, pages: [.islamPage(.libraries)]),
-                              value: atFajr ? "Fajr" : "Midnight", isOn: atFajr,
+                              value: atFajr ? String(localized: "Fajr") : String(localized: "Midnight"), isOn: atFajr,
                               actions: [
-                                HelpDoorAction(id: "fajr", title: "At Fajr", systemImage: "sunrise",
+                                HelpDoorAction(id: "fajr", title: String(localized: "At Fajr"), systemImage: "sunrise",
                                                isChosen: atFajr) {
                                     withAnimation(.easeInOut) { settings.dailyRolloverAtFajr = true }
                                     settings.dailyRolloverSwitchChanged()
                                 },
-                                HelpDoorAction(id: "midnight", title: "At Midnight", systemImage: "moon",
+                                HelpDoorAction(id: "midnight", title: String(localized: "At Midnight"), systemImage: "moon",
                                                isChosen: !atFajr) {
                                     withAnimation(.easeInOut) { settings.dailyRolloverAtFajr = false }
                                     settings.dailyRolloverSwitchChanged()
@@ -438,17 +438,17 @@ enum HadithReadingLanguage: String, CaseIterable, Identifiable {
 
     var shortTitle: String {
         switch self {
-        case .both: return "Both"
-        case .arabic: return "Arabic"
-        case .english: return "English"
+        case .both: return String(localized: "Both")
+        case .arabic: return String(localized: "Arabic")
+        case .english: return String(localized: "English")
         }
     }
 
     var menuTitle: String {
         switch self {
-        case .both: return "Arabic and English"
-        case .arabic: return "Arabic Only"
-        case .english: return "English Only"
+        case .both: return String(localized: "Arabic and English")
+        case .arabic: return String(localized: "Arabic Only")
+        case .english: return String(localized: "English Only")
         }
     }
 
@@ -545,7 +545,7 @@ struct HelpDoorsSection: View {
     /// the section that is on screen while it is folded.
     private func header(count: Int) -> some View {
         // Accent title as well as icon (Abu, 2026-10-13: "NEED A HAND should be accent color").
-        SectionPillHeader(title: "NEED A HAND?", count: count, icon: "questionmark.circle.fill",
+        SectionPillHeader(title: String(localized: "NEED A HAND?"), count: count, icon: "questionmark.circle.fill",
                           accentTitle: true, isExpanded: expanded, onRemove: { confirmingRemove = true })
             .confirmationDialog("Remove Need a Hand?", isPresented: $confirmingRemove, titleVisibility: .visible) {
                 Button("Remove", role: .destructive) {
@@ -764,7 +764,7 @@ private struct HelpDoorPageLabel: View {
         case .prayerPage(let page): return (page.title, page.systemImage, page.caption)
         case .notificationsPage(let page): return (page.title, page.systemImage, page.caption)
         #endif
-        default: return ("More Settings", destination.icon, nil)
+        default: return (String(localized: "More Settings"), destination.icon, nil)
         }
     }
 }
@@ -777,10 +777,10 @@ private struct BeginnerModeAnswer: View {
     private let settings = Settings.shared
     @ObservedObject private var quranDisplay = QuranDisplay.shared
     var body: some View {
-        SettingsToggle("Enable Arabic Beginner Mode",
+        SettingsToggle(String(localized: "Enable Arabic Beginner Mode"),
                        caption: settings.showArabicText
-                           ? "Puts a space between each Arabic letter to make it easier for beginners to read the Quran."
-                           : "The Arabic is hidden, so there is nothing to space out. Arabic Text, below, shows it again.",
+                           ? String(localized: "Puts a space between each Arabic letter to make it easier for beginners to read the Quran.")
+                           : String(localized: "The Arabic is hidden, so there is nothing to space out. Arabic Text, below, shows it again."),
                        isOn: $quranDisplay.beginnerMode)
             .disabled(!settings.showArabicText)
     }
@@ -834,7 +834,7 @@ private struct DayBeginsAnswer: View {
     private let settings = Settings.shared
     @ObservedObject private var systemSettings = SystemSettings.shared
     var body: some View {
-        SettingsToggle("Turn Over at Fajr", caption: "Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight.", isOn: $systemSettings.dailyRolloverAtFajr)
+        SettingsToggle(String(localized: "Turn Over at Fajr"), caption: String(localized: "Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight."), isOn: $systemSettings.dailyRolloverAtFajr)
             .onChange(of: settings.dailyRolloverAtFajr) { _ in settings.dailyRolloverSwitchChanged() }
     }
 }
@@ -889,7 +889,7 @@ struct HelpDoorsSettingsSection: View {
         let doors = HelpDoorCatalog.doors(for: area, settings: settings)
         Section(header: Text("NEED A HAND?")) {
             VStack(alignment: .leading, spacing: 10) {
-                SettingsToggle("Show on the \(area.tabName) Tab", caption: "A few questions \(area.placement), each opening the setting that answers it. The arrow beside NEED A HAND? on the tab folds them away.", isOn: shown)
+                SettingsToggle(String(localized: "Show on the \(area.tabName) Tab"), caption: String(localized: "A few questions \(area.placement), each opening the setting that answers it. The arrow beside NEED A HAND? on the tab folds them away."), isOn: shown)
 
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(doors) { door in
@@ -916,7 +916,7 @@ struct HelpDoorsSettingsSection: View {
             }
 
             if let searchHelpShown {
-                SettingsToggle("Quick Search Help", caption: "The tips over the \(area.tabName) tab's search while you type nothing. Its trash puts them away; your recent searches stay either way.", isOn: searchHelpShown)
+                SettingsToggle(String(localized: "Quick Search Help"), caption: String(localized: "The tips over the \(area.tabName) tab's search while you type nothing. Its trash puts them away; your recent searches stay either way."), isOn: searchHelpShown)
             }
         }
         // Simple Mode keeps NEED A HAND? off every tab and draws Quick Search Help without its stored

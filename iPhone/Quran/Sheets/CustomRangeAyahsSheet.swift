@@ -87,7 +87,7 @@ struct CustomRangeAyahsSheet: View {
                             .id(ayah.id)
                     }
                 } header: {
-                    SectionIconHeader("Ayahs \(start)\u{2013}\(end)", icon: "list.number")
+                    SectionIconHeader(String(localized: "Ayahs \(start)\u{2013}\(end)"), icon: "list.number")
                 }
             }
             .applyConditionalListStyle(disableNowPlayingInset: true)
@@ -106,11 +106,14 @@ struct CustomRangeAyahsSheet: View {
     private func header(surah: Surah, start: Int, end: Int, count: Int) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
-                Text(surah.nameTransliteration)
-                    .font(.headline)
-                    .foregroundColor(.primary)
+                // The Arabic interface names the surah once, in Arabic.
+                if !AppLanguage.isArabic {
+                    Text(surah.nameTransliteration)
+                        .font(.headline)
+                        .foregroundColor(.primary)
 
-                Spacer(minLength: 8)
+                    Spacer(minLength: 8)
+                }
 
                 Text(surah.nameArabic)
                     .font(Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .headline).pointSize))
@@ -135,29 +138,29 @@ struct CustomRangeAyahsSheet: View {
 
     /// "10 ayahs · Each ayah ×2 · Section 1/∞ · Play 3 of 40": only the parts that apply.
     private func passSummary(count: Int) -> String {
-        var parts = ["\(count) \(count == 1 ? "ayah" : "ayahs")"]
+        var parts = [count == 1 ? String(localized: "\(count) ayah") : String(localized: "\(count) ayahs")]
         let perAyah = max(1, nowPlaying.customRangeRepeatPerAyah)
         if perAyah > 1 {
-            parts.append("Each ayah \u{00D7}\(perAyah)")
+            parts.append(String(localized: "Each ayah \u{00D7}\(perAyah)"))
         }
         let section = nowPlaying.customRangeRepeatSection
         let sectionIndex = nowPlaying.customRangeRepeatSectionIndex ?? 1
         if section == QuranPlayer.infiniteRepeat {
-            parts.append("Section \(sectionIndex)/\u{221E}")
+            parts.append(String(localized: "Section \(sectionIndex)/\u{221E}"))
         } else if section > 1 {
-            parts.append("Section \(sectionIndex)/\(section)")
+            parts.append(String(localized: "Section \(sectionIndex)/\(section)"))
         }
         if let total = nowPlaying.customRangeTotalItems, total > 1 {
-            parts.append("Play \(nowPlaying.customRangeCurrentIndex ?? 1) of \(total)")
+            parts.append(String(localized: "Play \(nowPlaying.customRangeCurrentIndex ?? 1) of \(total)"))
         }
         return parts.joined(separator: " \u{00B7} ")
     }
 
     private func ayahLabel(_ ayah: Ayah, surah: Surah) -> String {
         if let page = ayah.page {
-            return "Ayah \(ayah.id) \u{00B7} \(mushafPageLabel(forAbsolutePage: page, in: surah))"
+            return String(localized: "Ayah \(ayah.id) \u{00B7} \(mushafPageDisplayLabel(forAbsolutePage: page, in: surah))")
         }
-        return "Ayah \(ayah.id)"
+        return String(localized: "Ayah \(ayah.id)")
     }
 
     private func ayahRow(_ ayah: Ayah, surah: Surah, qiraah: String?, isCurrent: Bool, accent: Color) -> some View {
@@ -198,6 +201,8 @@ struct CustomRangeAyahsSheet: View {
                     // sometimes offered one line and cut a long ayah off with an ellipsis.
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .trailing)
+                    // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                    .environment(\.layoutDirection, .leftToRight)
 
                 if settings.showTransliteration {
                     Text(ayah.textTransliteration)
@@ -205,6 +210,7 @@ struct CustomRangeAyahsSheet: View {
                         .foregroundColor(.primary)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent()
                 }
 
                 if settings.showEnglishSaheeh {
@@ -213,6 +219,7 @@ struct CustomRangeAyahsSheet: View {
                         .foregroundColor(.primary)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent()
                 }
 
                 if settings.showEnglishMustafa {
@@ -221,6 +228,7 @@ struct CustomRangeAyahsSheet: View {
                         .foregroundColor(.primary)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent()
                 }
             }
             .padding(.vertical, 2)

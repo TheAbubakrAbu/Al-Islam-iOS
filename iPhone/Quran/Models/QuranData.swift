@@ -134,8 +134,34 @@ struct Surah: Codable, Identifiable, Equatable {
         self.letterCount = ayahs.reduce(0) { $0 + $1.letterCount }
     }
 
-    var wordCountLabel: String { "\(wordCount) Words" }
-    var letterCountLabel: String { "\(letterCount) Letters" }
+    var wordCountLabel: String { String(localized: "\(wordCount) Words") }
+    var letterCountLabel: String { String(localized: "\(letterCount) Letters") }
+
+    /// The name a reader sees: the Arabic name in an Arabic interface (cleaned the way the surah rows
+    /// and the reader's title pill draw it), the transliteration otherwise. Display only: search,
+    /// sorting, aliases, stored records and the on-device model keep `nameTransliteration`.
+    var displayName: String {
+        AppLanguage.isArabic ? Self.arabicLabel(nameArabic) : nameTransliteration
+    }
+
+    /// An Arabic NAME used as a label: vowel marks follow the clean-Arabic setting, but the letters keep
+    /// their dots. Hide Arabic Dots is a way of reading the Quran's text, and a dotless name was unreadable.
+    static func arabicLabel(_ name: String) -> String {
+        Settings.shared.cleanArabicText ? name.removingArabicDiacriticsAndSigns : name
+    }
+
+    /// The English meaning drawn under or beside the name ("The Cow"), or nil in an Arabic interface,
+    /// where the Arabic name already says it.
+    var displayMeaning: String? {
+        AppLanguage.isArabic ? nil : nameEnglish
+    }
+
+    /// `displayName` for a surah known only by its number (a stored record), falling back to the
+    /// stored name when the number is out of range.
+    static func displayName(id: Int, stored: String) -> String {
+        guard AppLanguage.isArabic, let surah = QuranData.shared.surah(id) else { return stored }
+        return surah.displayName
+    }
 
     var pageCount: Int {
         if let n = numberOfPages, n > 0 { return n }
@@ -169,7 +195,7 @@ struct Surah: Codable, Identifiable, Equatable {
 
     func ayahCountLabel(for displayQiraah: String? = nil) -> String {
         let count = displayQiraah == nil ? numberOfAyahs : numberOfAyahs(for: displayQiraah)
-        return count == 1 ? "1 Ayah" : "\(count) Ayahs"
+        return count == 1 ? String(localized: "1 Ayah") : String(localized: "\(count) Ayahs")
     }
 
     /// Ayah count for the given qiraah (e.g. Baqarah has 286 in Hafs but 285 in Warsh). Use for display and range selection.
@@ -198,6 +224,7 @@ enum SurahPageLength {
 
     /// "¾ Page", "1 Page", "2⅓ Pages" ("¾ Pg", "2⅓ Pgs" short, for the watch).
     static func label(twelfths: Int, short: Bool = false) -> String {
+        if AppLanguage.isArabic { return arabicLabel(twelfths: twelfths) }
         let whole = twelfths / 12
         let part: String
         switch twelfths % 12 {
@@ -209,8 +236,37 @@ enum SurahPageLength {
         default: part = ""
         }
         let amount = whole == 0 && !part.isEmpty ? part : "\(whole)\(part)"
-        let unit = twelfths > 12 ? (short ? "Pgs" : "Pages") : (short ? "Pg" : "Page")
-        return "\(amount) \(unit)"
+        if twelfths > 12 {
+            return short ? String(localized: "\(amount) Pgs") : String(localized: "\(amount) Pages")
+        }
+        return short ? String(localized: "\(amount) Pg") : String(localized: "\(amount) Page")
+    }
+
+    /// The Arabic interface counts pages in words, the way Arabic says a length: "نصف صفحة",
+    /// "صفحتان وثلث", "٤٨ صفحة". A fraction glyph glued to Arabic-Indic digits, under one noun for
+    /// every count ("٢⅓ صفحة"), read as broken. The same on the watch, where it is no longer.
+    private static func arabicLabel(twelfths: Int) -> String {
+        let whole = twelfths / 12
+        let part = twelfths % 12
+        if whole == 0 {
+            switch part {
+            case 3: return String(localized: "a quarter of a page")
+            case 4: return String(localized: "a third of a page")
+            case 6: return String(localized: "half a page")
+            case 8: return String(localized: "two thirds of a page")
+            case 9: return String(localized: "three quarters of a page")
+            default: break
+            }
+        }
+        let pages = String(localized: "\(whole) pages")
+        switch part {
+        case 3: return String(localized: "\(pages) and a quarter")
+        case 4: return String(localized: "\(pages) and a third")
+        case 6: return String(localized: "\(pages) and a half")
+        case 8: return String(localized: "\(pages) and two thirds")
+        case 9: return String(localized: "\(pages) and three quarters")
+        default: return pages
+        }
     }
 
     // BEGIN GENERATED SURAH PAGE LENGTHS

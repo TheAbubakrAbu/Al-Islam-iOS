@@ -44,6 +44,18 @@ extension TafsirAuthor {
         case .saadiArabic:     return "Tafsir as-Sa'di (Arabic)"
         }
     }
+
+    /// `summarizeSectionLabel` in the reader's language, for the summarize sheet's own title.
+    var summarizeSectionDisplayLabel: String {
+        switch self {
+        case .ibnKathir:       return String(localized: "Tafsir Ibn Kathir (English)")
+        case .maarifUlQuran:   return String(localized: "Maarif Ul Quran (English)")
+        case .tazkirulQuran:   return String(localized: "Tazkirul Quran (English)")
+        case .ibnKathirArabic: return String(localized: "Tafsir Ibn Kathir (Arabic)")
+        case .tabariArabic:    return String(localized: "Tafsir al-Tabari (Arabic)")
+        case .saadiArabic:     return String(localized: "Tafsir as-Sa'di (Arabic)")
+        }
+    }
 }
 #endif
 
@@ -155,6 +167,13 @@ struct AyahTafsirSheet: View {
                        endAyah: tafsirAyahRange.upperBound == tafsirAyahRange.lowerBound ? nil : tafsirAyahRange.upperBound)
     }
 
+    /// `tafsirRangeTitle` with the transliteration, for the titles the on-device model reads.
+    private var tafsirRangeModelTitle: String {
+        ayahSheetTitle(surahNumber: surahNumber, ayahNumber: tafsirAyahRange.lowerBound,
+                       endAyah: tafsirAyahRange.upperBound == tafsirAyahRange.lowerBound ? nil : tafsirAyahRange.upperBound,
+                       english: true)
+    }
+
     /// Compiled once (Phase 10.8): the parse ran on every body pass of the tafsir sheet, several times.
     private static let groupVerseRegex = try? NSRegularExpression(pattern: #"(\d{1,3})\s*:\s*(\d{1,3})"#)
     private func parsedAyahRange(from groupVerse: String?) -> ClosedRange<Int>? {
@@ -222,7 +241,9 @@ struct AyahTafsirSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        // A NavigationStack on iOS 16+ (`SheetNavigationContainer`): the comparison doors under the
+        // ayah card push their pages inside this sheet (Abu, 2026-10-22).
+        SheetNavigationContainer {
             // The ScrollView is ALWAYS mounted - the loading skeleton overlays it instead of replacing
             // it. A structural swap here gave the ScrollView a fresh identity whenever the state
             // flipped, which reset the reader's scroll position mid-read.
@@ -232,6 +253,7 @@ struct AyahTafsirSheet: View {
                         VStack(alignment: .leading, spacing: 16) {
                             noticeCard
                             arabicAyahsCard
+                            comparisonLinks
 
                             if let tafsirText = selectedTafsirText {
                                 VStack(alignment: selectedAuthor.isArabic ? .trailing : .leading, spacing: 12) {
@@ -250,7 +272,7 @@ struct AyahTafsirSheet: View {
                                     if OnDeviceAsk.isAvailable, !selectedAuthor.isArabic || OnDeviceAsk.supportsArabic {
                                         let author = selectedAuthor
                                         HStack(spacing: 8) {
-                                            SummarizeChip(title: author.isArabic ? "Summarize in English" : "Summarize This Tafsir") {
+                                            SummarizeChip(title: author.isArabic ? String(localized: "Summarize in English") : String(localized: "Summarize This Tafsir")) {
                                                 singleSummary = SingleTafsirSummary(author: author, language: .english)
                                             }
                                             if author.isArabic {
@@ -278,9 +300,9 @@ struct AyahTafsirSheet: View {
                                 .textSelection(.enabled)
                             } else {
                                 tafsirPlaceholder(
-                                    title: "No Tafsir Found",
+                                    title: String(localized: "No Tafsir Found"),
                                     systemImage: "text.book.closed",
-                                    message: "This edition has no tafsir for this ayah."
+                                    message: String(localized: "This edition has no tafsir for this ayah.")
                                 )
                             }
                         }
@@ -325,7 +347,7 @@ struct AyahTafsirSheet: View {
             // `spacing: 0`: the find bar stacked above carries its own cushion; pre-26 `safeAreaInset`
             // added a default 8pt on top of it that iOS 26's `safeAreaBar` does not.
             .adaptiveSafeArea(edge: .bottom, spacing: 0) {
-                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search tafsir")
+                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search tafsir"))
                     .padding(.horizontal, 24)
                     .padding(.bottom, BottomBarCushion.standard)
                     .background(Color.white.opacity(0.00001))
@@ -350,7 +372,8 @@ struct AyahTafsirSheet: View {
             .sheet(item: $singleSummary) { request in
                 // The English section label ("Tafsir Ibn Kathir (Arabic)"), not the Arabic display title:
                 // an Arabic title inside an English sentence reorders under bidi ("on 2:2 تفسير ابن كثير").
-                let title = "\(request.author.summarizeSectionLabel) on \(tafsirRangeTitle)"
+                let title = "\(request.author.summarizeSectionLabel) on \(tafsirRangeModelTitle)"
+                let displayTitle = String(localized: "\(request.author.summarizeSectionDisplayLabel) on \(tafsirRangeTitle)")
                 let content = viewModel.tafsirs.first(where: { request.author.matches($0.author) })?.content ?? ""
                 if request.author.isArabic {
                     // An Arabic edition cannot go in alone: the model rejects a prompt that is mostly
@@ -364,6 +387,7 @@ struct AyahTafsirSheet: View {
                     )
                     SummarizeSheet(
                         title: title,
+                        displayTitle: displayTitle,
                         sourceText: combined.text,
                         multiSource: true,
                         sourceTruncated: combined.truncated,
@@ -371,12 +395,13 @@ struct AyahTafsirSheet: View {
                         focus: request.author.summarizeSectionLabel
                     )
                 } else {
-                    SummarizeSheet(title: title, sourceText: content, language: request.language)
+                    SummarizeSheet(title: title, displayTitle: displayTitle, sourceText: content, language: request.language)
                 }
             }
             .sheet(isPresented: $showSummarize) {
                 SummarizeSheet(
-                    title: "\(AyahAISources.combinedTitlePrefix) of \(tafsirRangeTitle)",
+                    title: "\(AyahAISources.combinedTitlePrefix) of \(tafsirRangeModelTitle)",
+                    displayTitle: AyahAISources.combinedDisplayTitle(of: tafsirRangeTitle),
                     sourceText: "",
                     multiSource: true,
                     gatherSource: {
@@ -397,7 +422,6 @@ struct AyahTafsirSheet: View {
             }
             #endif
         }
-        .navigationViewStyle(.stack)
         // `.task`, not `.onAppear`: the sheet's first frame presents empty and the entries fill it a
         // turn later, so the lookup no longer sits inside the presentation transaction (Phase 5 step 11).
         .task {
@@ -479,9 +503,55 @@ struct AyahTafsirSheet: View {
     @ViewBuilder
     private var arabicAyahsCard: some View {
         if let surah = quranData.surah(surahNumber) {
-            AyahPreviewCard(surah: surah, ayahs: tafsirArabicAyahs)
+            // No size stepper here (Abu, 2026-10-22: "for tafsir dont have + or -"); the card keeps
+            // the scale the actions sheet's stepper remembers, so the two still look the same.
+            AyahPreviewCard(surah: surah, ayahs: tafsirArabicAyahs, showsSizeStepper: false)
                 .animation(.easeInOut, value: tafsirRangeTitle)
         }
+    }
+
+    /// The doors to the tapped ayah's two comparison pages, pushed INSIDE this sheet (Abu,
+    /// 2026-10-22: "for tafsir have a button to see english comparison within it to open another
+    /// page in it ... and show qiraah comparison too if show qiraah is true"). The same titles and
+    /// icons as the ayah menus' Study Ayah entries, and the same gate on the riwayat door.
+    private var comparisonLinks: some View {
+        HStack(spacing: 8) {
+            if settings.isHafsDisplay {
+                comparisonLink(title: String(localized: "Translation Comparison"), systemImage: "character.book.closed") {
+                    AyahEnglishComparisonSheet(surahNumber: surahNumber, ayahNumber: ayahNumber, embedded: true)
+                }
+            }
+
+            if settings.showQiraahDetails {
+                comparisonLink(title: String(localized: "Qiraah Comparison"), systemImage: "character.book.closed.fill.ar") {
+                    AyahQiraahComparisonSheet(surahNumber: surahNumber, ayahNumber: ayahNumber, embedded: true)
+                }
+            }
+        }
+    }
+
+    private func comparisonLink<Destination: View>(
+        title: String,
+        systemImage: String,
+        @ViewBuilder destination: @escaping () -> Destination
+    ) -> some View {
+        NavigationLink(destination: LazyDestination(build: destination)) {
+            Label(title, systemImage: systemImage)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundStyle(settings.accentColor.accent1)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+                .padding(.horizontal, 10)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(settings.accentColor.accent1.opacity(0.12))
+                )
+                .contentShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(TapGesture().onEnded { settings.hapticFeedback() })
     }
 
     @ViewBuilder
@@ -535,7 +605,7 @@ private struct SurahInfoSourceChips: View {
                         Button {
                             withAnimation(.easeInOut) { selection = source.name }
                         } label: {
-                            Text(source.shortName)
+                            Text(source.displayName(short: true, among: sources))
                                 .font(.subheadline.weight(.semibold))
                                 .lineLimit(1)
                                 .padding(.horizontal, 14)
@@ -569,6 +639,19 @@ private extension SurahInfoSource {
     var shortName: String {
         name.replacingOccurrences(of: #"\s*\([^)]*\)\s*$"#, with: "", options: .regularExpression)
     }
+
+    /// The name as the reader sees it (`short`: the chip's). Ibn Ashur ships twice, an English
+    /// translation and the Arabic original, and the Arabic interface translated both names to the
+    /// same "ابن عاشور": when another source would read the same, the name carries its language.
+    func displayName(short: Bool, among sources: [SurahInfoSource]) -> String {
+        let shown = (short ? shortName : name).localizedDisplay
+        let clashes = sources.contains {
+            $0.name != name && (short ? $0.shortName : $0.name).localizedDisplay == shown
+        }
+        guard clashes else { return shown }
+        let language = name.isMostlyArabicScript ? String(localized: "Arabic") : String(localized: "English")
+        return String(localized: "\(shown) (\(language))")
+    }
 }
 
 /// "About this Surah" sheet - bundled surah background, mirroring the Tafsir sheet: a source picker
@@ -584,6 +667,10 @@ struct SurahInfoSheet: View {
     let surahName: String
     let surahNumber: Int
 
+    /// `surahName` stays the transliteration (playback stores it, the model reads it); the sheet's
+    /// own titles show the interface's name.
+    private var displaySurahName: String { Surah.displayName(id: surahNumber, stored: surahName) }
+
     @State private var searchText = ""
     @State private var matchCount = 0
     @State private var currentMatchIndex = 0
@@ -594,17 +681,29 @@ struct SurahInfoSheet: View {
     #endif
     @AppStorage("quran.surahInfo.source") private var selectedSourceName = ""
 
-    private var sources: [SurahInfoSource] {
+    /// The sources as the sheet DRAWS them: the outlines' ayah headings in the interface's language.
+    private var sources: [SurahInfoSource] { sourceList(localized: true) }
+
+    /// The same sources as the on-device model reads them: the outlines' headings and credit stay
+    /// English, whatever the interface's language. Same names, same order as `sources`.
+    private var modelSources: [SurahInfoSource] { sourceList(localized: false) }
+
+    /// One source's text as the model reads it (`modelSources`), by its name.
+    private func modelContents(of source: SurahInfoSource) -> String {
+        modelSources.first(where: { $0.name == source.name })?.contents ?? source.contents
+    }
+
+    private func sourceList(localized: Bool) -> [SurahInfoSource] {
         var list = quranData.surahInfoSources(for: surahNumber)
         // Quranpedia's passage outline rides in as one more source: this sheet's picker, search,
         // and markdown handling all apply to it unchanged. Appended HERE (not in QuranData) so
         // targets that compile QuranData without the themes pack - the widget - never need the
         // store symbol.
-        if let outline = SurahSectionsStore.shared.outlineMarkdown(surah: surahNumber) {
+        if let outline = SurahSectionsStore.shared.outlineMarkdown(surah: surahNumber, localized: localized) {
             list.append(SurahInfoSource(name: "Outline (Quranpedia)", contents: outline))
         }
         // The Quranic Universal Library's passage themes, one sentence per run of ayahs, the same way.
-        if let themes = AyahThemesStore.shared.outlineMarkdown(surah: surahNumber) {
+        if let themes = AyahThemesStore.shared.outlineMarkdown(surah: surahNumber, localized: localized) {
             list.append(SurahInfoSource(name: "Passage Themes (QUL)", contents: themes))
         }
         return list
@@ -696,7 +795,7 @@ struct SurahInfoSheet: View {
                             if let source = selectedSource {
                                 let arabic = Self.isArabic(source.contents)
                                 VStack(alignment: arabic ? .trailing : .leading, spacing: 12) {
-                                    Text(source.name)
+                                    Text(source.displayName(short: false, among: sources))
                                         .font(.headline)
                                         .frame(maxWidth: .infinity, alignment: arabic ? .trailing : .leading)
 
@@ -705,12 +804,12 @@ struct SurahInfoSheet: View {
                                     #if canImport(FoundationModels)
                                     if OnDeviceAsk.isAvailable, !arabic || OnDeviceAsk.supportsArabic {
                                         HStack(spacing: 8) {
-                                            SummarizeChip(title: arabic ? "Summarize in English" : "Summarize This Source") {
-                                                singleSummary = SingleSourceSummary(name: source.name, contents: source.contents, language: .english)
+                                            SummarizeChip(title: arabic ? String(localized: "Summarize in English") : String(localized: "Summarize This Source")) {
+                                                singleSummary = SingleSourceSummary(name: source.name, contents: modelContents(of: source), language: .english)
                                             }
                                             if arabic {
                                                 SummarizeChip(title: "لَخِّص بِالعَرَبِيَّة") {
-                                                    singleSummary = SingleSourceSummary(name: source.name, contents: source.contents, language: .arabic)
+                                                    singleSummary = SingleSourceSummary(name: source.name, contents: modelContents(of: source), language: .arabic)
                                                 }
                                             }
                                         }
@@ -728,6 +827,10 @@ struct SurahInfoSheet: View {
                                     .frame(maxWidth: .infinity, alignment: arabic ? .trailing : .leading)
                                 }
                                 .frame(maxWidth: .infinity, alignment: arabic ? .trailing : .leading)
+                                // Pinned left to right like the tafsir prose above, so in the Arabic
+                                // interface an English source keeps the left edge and `.trailing` still
+                                // means the right edge for an Arabic one.
+                                .leftToRightContent()
                                 .id(source.name)
                                 .textSelection(.enabled)
                             }
@@ -762,11 +865,11 @@ struct SurahInfoSheet: View {
                     }
                 }
             }
-            .navigationTitle("Surah \(surahNumber): \(surahName)")
+            .navigationTitle("Surah \(surahNumber): \(displaySurahName)")
             .navigationBarTitleDisplayMode(.inline)
             // The app's own bottom search bar, not `.searchable` - see the tafsir sheet above.
             .adaptiveSafeArea(edge: .bottom, spacing: 0) {
-                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search info")
+                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search info"))
                     .padding(.horizontal, 24)
                     .padding(.bottom, BottomBarCushion.standard)
                     .background(Color.white.opacity(0.00001))
@@ -799,24 +902,27 @@ struct SurahInfoSheet: View {
             }
             .sheet(isPresented: $showSummarize) {
                 // Arabic sources stay out while the model has no Arabic (the prompt is rejected
-                // otherwise - see `OnDeviceAsk.supportsArabic`).
-                let readable = sources.filter { OnDeviceAsk.supportsArabic || !Self.isArabic($0.contents) }
+                // otherwise; see `OnDeviceAsk.supportsArabic`). The model reads `modelSources`:
+                // the outlines' headings in English, not as the sheet draws them.
+                let readable = modelSources.filter { OnDeviceAsk.supportsArabic || !Self.isArabic($0.contents) }
                 let combined = OnDeviceAsk.combinedSource(readable.map {
                     OnDeviceAsk.SummarizeSection(label: "\($0.name) - About this Surah", text: $0.contents)
                 })
                 SummarizeSheet(
                     title: "About Surah \(surahNumber): \(surahName)",
+                    displayTitle: String(localized: "About Surah \(surahNumber): \(displaySurahName)"),
                     sourceText: combined.text,
                     multiSource: true,
                     sourceTruncated: combined.truncated,
                     excludedNote: readable.count < sources.count
-                        ? "The Arabic sources are left out: Apple Intelligence can\u{2019}t read Arabic on this device yet."
+                        ? String(localized: "The Arabic sources are left out: Apple Intelligence can\u{2019}t read Arabic on this device yet.")
                         : nil
                 )
             }
             .sheet(item: $singleSummary) { request in
                 SummarizeSheet(
                     title: "\(request.name) - About Surah \(surahNumber): \(surahName)",
+                    displayTitle: String(localized: "\(request.name.localizedDisplay): About Surah \(surahNumber): \(displaySurahName)"),
                     sourceText: request.contents,
                     language: request.language
                 )
@@ -858,7 +964,7 @@ struct SurahInfoSheet: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(settings.accentColor.color)
 
-                    Text("Revelation order: #\(surah.revelationOrder.map(String.init) ?? "Unknown")")
+                    Text("Revelation order: #\(surah.revelationOrder.map { String($0).localizedDigits } ?? String(localized: "Unknown"))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -909,11 +1015,11 @@ struct SurahInfoSheet: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(settings.accentColor.color)
 
-                    Text("Opened: \(settings.surahOpenCount(surahNumber)) time\(settings.surahOpenCount(surahNumber) == 1 ? "" : "s")")
+                    Text(settings.surahOpenCount(surahNumber) == 1 ? String(localized: "Opened: \(settings.surahOpenCount(surahNumber)) time") : String(localized: "Opened: \(settings.surahOpenCount(surahNumber)) times"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    Text("Played: \(settings.surahPlayCount(surahNumber)) time\(settings.surahPlayCount(surahNumber) == 1 ? "" : "s")")
+                    Text(settings.surahPlayCount(surahNumber) == 1 ? String(localized: "Played: \(settings.surahPlayCount(surahNumber)) time") : String(localized: "Played: \(settings.surahPlayCount(surahNumber)) times"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -1013,7 +1119,7 @@ private struct SurahInfoPlaybackCard: View {
                     .font(.subheadline)
                     .foregroundColor(settings.accentColor.color)
 
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.forward")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.tertiary)
             }
@@ -1417,7 +1523,7 @@ private struct TafsirFindBar: View {
 
     var body: some View {
         HStack(spacing: 18) {
-            Text(total == 0 ? "0/0" : "\(current + 1)/\(total)")
+            Text("\(total == 0 ? 0 : current + 1)/\(total)")
                 .font(.subheadline.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(total == 0 ? .secondary : .primary)

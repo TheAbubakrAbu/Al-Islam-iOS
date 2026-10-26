@@ -826,25 +826,26 @@ final class QuranDisplay: ObservableObject, SettingsSlice {
     static let label = "QuranDisplay"
     static let keys: Set<String> = [
         "THEfontArabic", "acceptedBetaQiraatNotice", "automaticKhatmCompletion", "ayahPreviewCardScale",
-        "beginnerMode", "betaQiraatEnabled", "cleanArabicText", "copyAyahArabic",
-        "copyAyahEnglishMustafa", "copyAyahEnglishSaheeh", "copyAyahTransliteration", "displayQiraah",
-        "englishFontSize", "fontArabicSize", "highlightAllahNames", "keepAyahSheetOpen",
-        "khatmGroupByJuz", "mushafFitPage", "mushafHafsPDFEdition", "mushafPDFAppearance",
-        "mushafPageLanguage", "mushafTwoPageSpread", "qiraatComparisonMode", "quranArabicScriptStyle",
-        "quranPageMode", "quranSortDirection", "quranSortMode", "quranTestModeEndsOnLeave",
-        "quranTestModeHides", "quranTestModeOn", "quranTestModeReveals", "quranTestModeRevealsRecited",
-        "reciteType", "reciter", "reciterId", "removeArabicDots",
-        "riwayahTajweedHiddenRules", "saveLastListenedAyah", "saveLastListenedSurah", "saveLastReadAyah",
-        "searchForSurahs", "shareShowAyahInformation", "shareShowSurahInformation", "showArabicText",
-        "showAyahOfTheDay", "showBookmarks", "showEnglishMustafa", "showEnglishSaheeh",
-        "showFavorites", "showFullSurahRow", "showMuqattaatHelper", "showOtherQiraatReciters",
-        "showPageJuzDividers", "showTajweedBareNuunMeem", "showTajweedColors", "showTajweedGeneralGhunnah",
-        "showTajweedHamzatWaslSilent", "showTajweedIdghamBiGhunnahHeavy", "showTajweedIdghamBilaGhunnah", "showTajweedIkhfaa",
-        "showTajweedIqlab", "showTajweedLamShamsiyah", "showTajweedMadd246", "showTajweedMaddConnected",
-        "showTajweedMaddNatural2", "showTajweedMaddNaturalMiniature", "showTajweedMaddNecessary6", "showTajweedMaddSeparated",
-        "showTajweedQalqalah", "showTajweedSukoonJazm", "showTajweedTafkhim", "showTransliteration",
-        "showWordOfTheDay", "tajweedCustomColors", "useFontArabic", "wordByWordInline",
-        "wordByWordInlineTranslation", "wordByWordInlineTransliteration", "wordByWordMeanings",
+        "ayahSheetKeepsScreenOn", "beginnerMode", "betaQiraatEnabled", "cleanArabicText",
+        "copyAyahArabic", "copyAyahEnglishMustafa", "copyAyahEnglishSaheeh", "copyAyahTransliteration",
+        "displayQiraah", "englishFontSize", "fontArabicSize", "highlightAllahNames",
+        "keepAyahSheetOpen", "keepAyahSheetOpenOnPlay", "khatmGroupByJuz", "mushafFitPage",
+        "mushafHafsPDFEdition", "mushafPDFAppearance", "mushafPageLanguage", "mushafTwoPageSpread",
+        "qiraatComparisonMode", "quranArabicScriptStyle", "quranPageMode", "quranSortDirection",
+        "quranSortMode", "quranTestModeEndsOnLeave", "quranTestModeHides", "quranTestModeOn",
+        "quranTestModeReveals", "quranTestModeRevealsRecited", "reciteType", "reciter",
+        "reciterId", "removeArabicDots", "riwayahTajweedHiddenRules", "saveLastListenedAyah",
+        "saveLastListenedSurah", "saveLastReadAyah", "searchForSurahs", "shareShowAyahInformation",
+        "shareShowSurahInformation", "showArabicText", "showAyahOfTheDay", "showBookmarks",
+        "showEnglishMustafa", "showEnglishSaheeh", "showFavorites", "showFullSurahRow",
+        "showMuqattaatHelper", "showOtherQiraatReciters", "showPageJuzDividers", "showTajweedBareNuunMeem",
+        "showTajweedColors", "showTajweedGeneralGhunnah", "showTajweedHamzatWaslSilent", "showTajweedIdghamBiGhunnahHeavy",
+        "showTajweedIdghamBilaGhunnah", "showTajweedIkhfaa", "showTajweedIqlab", "showTajweedLamShamsiyah",
+        "showTajweedMadd246", "showTajweedMaddConnected", "showTajweedMaddNatural2", "showTajweedMaddNaturalMiniature",
+        "showTajweedMaddNecessary6", "showTajweedMaddSeparated", "showTajweedQalqalah", "showTajweedSukoonJazm",
+        "showTajweedTafkhim", "showTransliteration", "showWordOfTheDay", "tajweedCustomColors",
+        "useFontArabic", "wordByWordInline", "wordByWordInlineTranslation", "wordByWordInlineTransliteration",
+        "wordByWordMeanings",
     ]
 
     private init() { ObjectPublishCounter.attach(self, label: Self.label) }
@@ -871,6 +872,11 @@ final class QuranDisplay: ObservableObject, SettingsSlice {
     var ayahPreviewCardScale: Double {
         get { Settings.shared.ayahPreviewCardScale }
         set { Settings.shared.ayahPreviewCardScale = newValue }
+    }
+
+    var ayahSheetKeepsScreenOn: Bool {
+        get { Settings.shared.ayahSheetKeepsScreenOn }
+        set { Settings.shared.ayahSheetKeepsScreenOn = newValue }
     }
 
     var beginnerMode: Bool {
@@ -936,6 +942,11 @@ final class QuranDisplay: ObservableObject, SettingsSlice {
     var keepAyahSheetOpen: Bool {
         get { Settings.shared.keepAyahSheetOpen }
         set { Settings.shared.keepAyahSheetOpen = newValue }
+    }
+
+    var keepAyahSheetOpenOnPlay: Bool {
+        get { Settings.shared.keepAyahSheetOpenOnPlay }
+        set { Settings.shared.keepAyahSheetOpenOnPlay = newValue }
     }
 
     var khatmGroupByJuz: Bool {

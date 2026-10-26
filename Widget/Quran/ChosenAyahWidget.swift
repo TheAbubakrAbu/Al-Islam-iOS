@@ -44,7 +44,7 @@ struct ChosenAyahProvider: AppIntentTimelineProvider {
         QuranWidgetEntry(
             date: Date(),
             kind: .chosenAyah,
-            title: ChosenAyahCatalog.reference(surah: 1, ayah: 1),
+            title: ChosenAyahCatalog.displayReference(surah: 1, ayah: 1),
             icon: QuranWidgetKind.chosenAyah.icon,
             primaryText: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
             secondaryText: nil,
@@ -57,7 +57,7 @@ struct ChosenAyahProvider: AppIntentTimelineProvider {
         let snapshot = QuranWidgetStore.load()
         let target = configuration.resolvedAyah(bookmarks: snapshot?.bookmarks)
         let bookmark = snapshot?.bookmarks?.first { $0.surah == target.surah && $0.ayah == target.ayah }
-        let reference = ChosenAyahCatalog.reference(surah: target.surah, ayah: target.ayah)
+        let reference = ChosenAyahCatalog.displayReference(surah: target.surah, ayah: target.ayah)
 
         let card = snapshot?.chosenCard(surah: target.surah, ayah: target.ayah)
             ?? ChosenAyahText.card(surah: target.surah, ayah: target.ayah, fontName: snapshot?.arabicFontName)
@@ -68,7 +68,7 @@ struct ChosenAyahProvider: AppIntentTimelineProvider {
         // No text from any source (no pack, no card, no bookmark): say what the app will do rather
         // than draw an empty tile. The next app launch pre-renders the card and reloads this.
         let hasArabic = !arabic.isEmpty
-        let primary = hasArabic ? arabic : (english.isEmpty ? "Open \(AppIdentifiers.appName) once to load this ayah." : english)
+        let primary = hasArabic ? arabic : (english.isEmpty ? String(localized: "Open \(AppIdentifiers.displayName) once to load this ayah.") : english)
         let translation: String? = {
             guard configuration.showTranslation, hasArabic, !english.isEmpty else { return nil }
             return snippet(english)
@@ -107,7 +107,7 @@ enum ChosenAyahText {
               let text = pack.text(row: meta.firstRow + ayah - 1) else { return nil }
         return QuranWidgetSnapshot.AyahCard(
             arabic: text.arabic,
-            reference: "Surah \(surah):\(ayah) • \(meta.nameTransliteration)",
+            reference: String(localized: "Surah \(surah):\(ayah) • \(AppLanguage.isArabic ? meta.nameArabic : meta.nameTransliteration)"),
             english: text.englishSaheeh,
             // The reader's face when the app has written one; the Uthmani face (bundled with the
             // widget) until then. A face the widget does not bundle falls back to the system font.

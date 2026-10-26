@@ -87,10 +87,10 @@ final class SkyWeatherStore: ObservableObject {
     var updatedText: String? {
         guard let weather else { return nil }
         let minutes = Int(Date().timeIntervalSince(weather.fetchedAt) / 60)
-        if minutes < 1 { return "Updated just now" }
-        if minutes < 60 { return "Updated \(minutes) min ago" }
+        if minutes < 1 { return String(localized: "Updated just now") }
+        if minutes < 60 { return String(localized: "Updated \(minutes) min ago") }
         let hours = minutes / 60
-        return "Updated \(hours) \(hours == 1 ? "hour" : "hours") ago"
+        return hours == 1 ? String(localized: "Updated \(hours) hour ago") : String(localized: "Updated \(hours) hours ago")
     }
 
     /// Asks Apple for the stored location when the reading is missing, half an hour old, or for
@@ -147,7 +147,7 @@ final class SkyWeatherStore: ObservableObject {
         // Kept for the companion apps, which still deploy to iOS 15: every WeatherKit type is iOS 16+.
         guard #available(iOS 16.0, *) else {
             lastAttemptFailed = true
-            lastError = "Weather needs iOS 16."
+            lastError = String(localized: "Weather needs iOS 16.")
             return
         }
         let location = CLLocation(latitude: latitude, longitude: longitude)

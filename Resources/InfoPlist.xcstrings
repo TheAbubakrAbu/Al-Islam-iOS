@@ -1,0 +1,96 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Bundle display name: the name under the icon",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الإسلام"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Al-Islam"
+          }
+        }
+      }
+    },
+    "NSLocationAlwaysAndWhenInUseUsageDescription" : {
+      "comment" : "Privacy: Location Always and When In Use Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يستخدم تطبيق الإسلام موقعك لحساب مواقيت الصلاة واتجاه القبلة. لا يراه إلا تطبيق الإسلام وApple، ولا يُشارَك مع أي أحد آخر."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Al-Islam uses your location to calculate your prayer times and Qibla direction. Only Al-Islam and Apple ever see it, and it is never shared with anyone else."
+          }
+        }
+      }
+    },
+    "NSLocationAlwaysUsageDescription" : {
+      "comment" : "Privacy: Location Always Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يستخدم تطبيق الإسلام موقعك لحساب مواقيت الصلاة واتجاه القبلة. لا يراه إلا تطبيق الإسلام وApple، ولا يُشارَك مع أي أحد آخر."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Al-Islam uses your location to calculate your prayer times and Qibla direction. Only Al-Islam and Apple ever see it, and it is never shared with anyone else."
+          }
+        }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription" : {
+      "comment" : "Privacy: Location When In Use Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يستخدم تطبيق الإسلام موقعك لحساب مواقيت الصلاة واتجاه القبلة. لا يراه إلا تطبيق الإسلام وApple، ولا يُشارَك مع أي أحد آخر."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Al-Islam uses your location to calculate your prayer times and Qibla direction. Only Al-Islam and Apple ever see it, and it is never shared with anyone else."
+          }
+        }
+      }
+    },
+    "NSPhotoLibraryAddUsageDescription" : {
+      "comment" : "Privacy: Photo Library Additions Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لحفظ الخلفيات التي تختارها في مكتبة الصور."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Used to save wallpapers you choose to your Photo Library."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

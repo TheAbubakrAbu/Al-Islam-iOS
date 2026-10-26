@@ -79,7 +79,7 @@ struct ActivityDashboardCard: View {
                 NavigationLink(destination: LazyDestination { ActivityAnalyticsView() }) {
                     HStack(spacing: 3) {
                         Text("Analytics")
-                        Image(systemName: "chevron.right")
+                        Image(systemName: "chevron.forward")
                             .font(.caption2.weight(.semibold))
                     }
                     .font(.caption.weight(.semibold))
@@ -130,12 +130,12 @@ struct ActivityDashboardCard: View {
 
             // The streak.
             HStack(spacing: 10) {
-                streakStat("\(streak.current)", "Streak", systemImage: "flame.fill",
-                           spoken: ("Activity streak", Self.days(streak.current)))
-                streakStat("\(streak.longest)", "Longest", systemImage: "trophy.fill",
-                           spoken: ("Longest activity streak", Self.days(streak.longest)))
-                streakStat(streak.freezeUsed ? "Used" : "1", "Freeze", systemImage: "snowflake",
-                           spoken: ("Streak freeze", streak.freezeUsed ? "Used this month" : "1 left this month"))
+                streakStat("\(streak.current)".localizedDigits, String(localized: "Streak"), systemImage: "flame.fill",
+                           spoken: (String(localized: "Activity streak"), Self.days(streak.current)))
+                streakStat("\(streak.longest)".localizedDigits, String(localized: "Longest"), systemImage: "trophy.fill",
+                           spoken: (String(localized: "Longest activity streak"), Self.days(streak.longest)))
+                streakStat(streak.freezeUsed ? String(localized: "Used") : "1".localizedDigits, String(localized: "Freeze"), systemImage: "snowflake",
+                           spoken: (String(localized: "Streak freeze"), streak.freezeUsed ? String(localized: "Used this month") : String(localized: "1 left this month")))
             }
 
             WeekBars(week: summary.week, accent: accent)
@@ -158,10 +158,10 @@ struct ActivityDashboardCard: View {
             let n = today[kind] ?? 0
             return n > 0 ? kind.amount(n) : nil
         }
-        return parts.isEmpty ? "Nothing logged yet today." : "Today: " + parts.joined(separator: ", ") + "."
+        return parts.isEmpty ? String(localized: "Nothing logged yet today.") : String(localized: "Today: \(parts.sentenceList { $0.joined(separator: ", ") }).")
     }
 
-    private static func days(_ n: Int) -> String { "\(n) day\(n == 1 ? "" : "s")" }
+    private static func days(_ n: Int) -> String { n == 1 ? String(localized: "1 day") : String(localized: "\(n) days") }
 
     /// `spoken` is the stat's name and value for VoiceOver, which read the icon ("Snow Flurry") and
     /// every value in the row before any of the labels.
@@ -264,9 +264,10 @@ private struct WeekBars: View, Equatable {
                 let n = day.counts[kind] ?? 0
                 return n > 0 ? kind.amount(n) : nil
             }
-            return "\(name): " + (parts.isEmpty ? "nothing" : parts.joined(separator: ", "))
+            return "\(name): " + (parts.isEmpty ? String(localized: "nothing") : parts.sentenceList { $0.joined(separator: ", ") })
         }
-        .joined(separator: "; ")
+        // Arabic's own semicolon between the days.
+        .joined(separator: AppLanguage.isArabic ? "\u{061B} " : "; ")
     }
 }
 
@@ -326,7 +327,7 @@ private struct MilestoneLadder: View, Equatable {
                     .foregroundColor(.secondaryOnGlass)
                 Spacer()
                 if let next {
-                    Text("\(next - current) day\(next - current == 1 ? "" : "s") to \(next)")
+                    Text(next - current == 1 ? String(localized: "1 day to \(next)") : String(localized: "\(next - current) days to \(next)"))
                         .font(.caption2)
                         .foregroundColor(.secondaryOnGlass)
                 }
@@ -359,11 +360,13 @@ private struct MilestoneLadder: View, Equatable {
 
     private func spokenValue(next: Int?) -> String {
         let reached = Self.steps.filter { current >= $0 }
-        let done = reached.isEmpty ? "None reached yet"
-            : "Reached \(reached.map(String.init).joined(separator: ", ")) days"
-        guard let next else { return done + "; every milestone reached" }
+        let done = reached.isEmpty ? String(localized: "None reached yet")
+            : String(localized: "Reached \(reached.map { $0.formatted() }.sentenceList { $0.joined(separator: ", ") }) days")
+        // Arabic's own semicolon between the two halves, as in the week's spoken value.
+        let separator = AppLanguage.isArabic ? "\u{061B} " : "; "
+        guard let next else { return done + separator + String(localized: "every milestone reached") }
         let left = next - current
-        return done + "; next \(next) days, \(left) day\(left == 1 ? "" : "s") to go"
+        return done + separator + (left == 1 ? String(localized: "next \(next) days, 1 day to go") : String(localized: "next \(next) days, \(left) days to go"))
     }
 }
 
@@ -376,6 +379,16 @@ struct ActivityAnalyticsView: View {
     private enum Range: String, CaseIterable, Identifiable {
         case day = "Day", week = "Week", month = "Month", year = "Year", lifetime = "All"
         var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .day: return String(localized: "Day")
+            case .week: return String(localized: "Week")
+            case .month: return String(localized: "Month")
+            case .year: return String(localized: "Year")
+            case .lifetime: return String(localized: "All")
+            }
+        }
 
         var days: Int? {
             switch self {
@@ -423,7 +436,7 @@ struct ActivityAnalyticsView: View {
                         }
                     )) {
                         ForEach(Range.allCases) { r in
-                            Text(r.rawValue).tag(r)
+                            Text(r.title).tag(r)
                         }
                     }
                     .pickerStyle(.segmented)
@@ -434,10 +447,10 @@ struct ActivityAnalyticsView: View {
                     // height on each self-sizing pass, which iOS 26 traps on. 8 is the system's default
                     // gap between columns, which these `GridItem`s left unset.
                     SummaryTileGrid(columns: 2, spacing: 10, columnSpacing: 8) {
-                        tile("\(actions)", "Actions")
-                        tile("\(derived.activeDays)", "Active days")
-                        tile(derived.activeDays > 0 ? "\(actions / derived.activeDays)" : "0", "Per active day")
-                        tile("\(derived.best)", "Best day")
+                        tile("\(actions)".localizedDigits, String(localized: "Actions"))
+                        tile("\(derived.activeDays)".localizedDigits, String(localized: "Active days"))
+                        tile((derived.activeDays > 0 ? "\(actions / derived.activeDays)" : "0").localizedDigits, String(localized: "Per active day"))
+                        tile("\(derived.best)".localizedDigits, String(localized: "Best day"))
                     }
                     .padding(.vertical, 4)
                 }
@@ -462,7 +475,8 @@ struct ActivityAnalyticsView: View {
                             Text(kind.amount(n))
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.secondary)
-                            Text(actions > 0 ? "\(Int((Double(n) / Double(actions) * 100).rounded()))%" : "0%")
+                            // The locale's percent ("٥٢٪" in Arabic), never a number glued to "%".
+                            Text(verbatim: (actions > 0 ? Int((Double(n) / Double(actions) * 100).rounded()) : 0).formatted(.percent))
                                 .font(.caption.weight(.semibold).monospacedDigit())
                                 .foregroundColor(accent)
                                 .frame(width: 40, alignment: .trailing)
@@ -473,9 +487,9 @@ struct ActivityAnalyticsView: View {
 
                 Section(header: Text("STREAK")) {
                     HStack(spacing: 10) {
-                        tile("\(streak.current)", "Current")
-                        tile("\(streak.longest)", "Longest")
-                        tile(streak.freezeUsed ? "0" : "1", "Freeze left")
+                        tile("\(streak.current)".localizedDigits, String(localized: "Current"))
+                        tile("\(streak.longest)".localizedDigits, String(localized: "Longest"))
+                        tile((streak.freezeUsed ? "0" : "1").localizedDigits, String(localized: "Freeze left"))
                     }
                     .padding(.vertical, 4)
                 }
@@ -575,20 +589,20 @@ private struct TrendBars: View, Equatable {
 private let analyticsActionFootnote: String = {
     var actions: [String] = []
     #if HAS_QURAN
-    actions += ["one ayah marked read", "one surah played"]
+    actions += [String(localized: "one ayah marked read"), String(localized: "one surah played")]
     #endif
-    actions.append("one count of dhikr")
+    actions.append(String(localized: "one count of dhikr"))
     #if HAS_HADITH
-    actions.append("one hadith opened")
+    actions.append(String(localized: "one hadith opened"))
     #endif
     let list = actions.count > 1
-        ? actions.dropLast().joined(separator: ", ") + ", or " + actions[actions.count - 1]
+        ? actions.sentenceList(.or) { String(localized: "\($0.dropLast().joined(separator: ", ")), or \($0[$0.count - 1])") }
         : actions.joined()
     #if HAS_ADHAN
-    let turnover = "Days turn over with the daily features (at Fajr by default)."
+    let turnover = String(localized: "Days turn over with the daily features (at Fajr by default).")
     #else
-    let turnover = "Days turn over at midnight, with the daily features."
+    let turnover = String(localized: "Days turn over at midnight, with the daily features.")
     #endif
-    return "One action is \(list). \(turnover) One missed day a month is forgiven by the streak. Reading and listening on your Apple Watch count too, once it syncs."
+    return String(localized: "One action is \(list). \(turnover) One missed day a month is forgiven by the streak. Reading and listening on your Apple Watch count too, once it syncs.")
 }()
 #endif

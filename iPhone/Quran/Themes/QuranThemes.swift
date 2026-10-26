@@ -22,6 +22,15 @@ struct ThemeTopic: Identifiable {
     let category: String
     /// "surah:ayah" keys, in the corpus's order.
     let ayahs: [String]
+    /// The QUL pack's Arabic name, where it has one (empty for the English-only corpus).
+    var arabicName: String = ""
+
+    /// The name a reader sees: the Arabic one in an Arabic interface when there is one. DISPLAY only:
+    /// search, ranking and ids keep `name`.
+    var displayName: String { AppLanguage.isArabic && !arabicName.isEmpty ? arabicName : name }
+
+    /// True when `displayName` is English (the line reads left to right inside the Arabic interface).
+    var displaysEnglish: Bool { displayName == name }
 }
 
 final class ThematicTopicsStore: @unchecked Sendable {
@@ -67,7 +76,7 @@ final class ThematicTopicsStore: @unchecked Sendable {
         var order: [String] = []
         var groups: [String: [ThemeTopic]] = [:]
         for topic in topics() {
-            let domain = topic.domain.isEmpty ? "Other" : topic.domain
+            let domain = topic.domain.isEmpty ? String(localized: "Other") : topic.domain
             if groups[domain] == nil { order.append(domain) }
             groups[domain, default: []].append(topic)
         }
@@ -180,7 +189,7 @@ struct SurahSection: Identifiable, Hashable {
 
     /// "Ayahs 7-18", or "Ayah 3".
     var rangeLabel: String {
-        ayahStart == ayahEnd ? "Ayah \(ayahStart)" : "Ayahs \(ayahStart)-\(ayahEnd)"
+        ayahStart == ayahEnd ? String(localized: "Ayah \(ayahStart)") : String(localized: "Ayahs \(ayahStart)-\(ayahEnd)")
     }
 
     func contains(ayah: Int) -> Bool {
@@ -263,20 +272,29 @@ final class SurahSectionsStore: @unchecked Sendable {
 
     /// The outline for one surah as ready-to-render markdown, or nil when the surah has none.
     /// Markdown because the consumer is the About this Surah sheet's existing markdown view -
-    /// the outline behaves exactly like the bundled prose sources there.
-    func outlineMarkdown(surah: Int) -> String? {
-        // Memoized per surah (Phase 10.8): the About this Surah sheet read it several times per pass.
+    /// the outline behaves exactly like the bundled prose sources there. `localized`: the ayah
+    /// headings in the interface's language, for the copy the sheet DRAWS; false keeps them
+    /// English, for the copy the on-device model reads.
+    func outlineMarkdown(surah: Int, localized: Bool) -> String? {
+        // Memoized per surah and language (Phase 10.8): the About this Surah sheet read it several
+        // times per pass.
+        let key = OutlineKey(surah: surah, localized: localized)
         lock.lock()
-        if let cached = outlineCache[surah] { lock.unlock(); return cached }
+        if let cached = outlineCache[key] { lock.unlock(); return cached }
         lock.unlock()
-        let built = buildOutlineMarkdown(surah: surah)
-        lock.lock(); outlineCache[surah] = .some(built); lock.unlock()
+        let built = buildOutlineMarkdown(surah: surah, localized: localized)
+        lock.lock(); outlineCache[key] = .some(built); lock.unlock()
         return built
     }
 
-    private var outlineCache: [Int: String?] = [:]
+    private struct OutlineKey: Hashable {
+        let surah: Int
+        let localized: Bool
+    }
 
-    private func buildOutlineMarkdown(surah: Int) -> String? {
+    private var outlineCache: [OutlineKey: String?] = [:]
+
+    private func buildOutlineMarkdown(surah: Int, localized: Bool) -> String? {
         guard let entry = loadedTable()?["\(surah)"] as? [String: Any] else { return nil }
         let overview = (entry["overview"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let sections = entry["sections"] as? [[Any]] ?? []
@@ -290,7 +308,12 @@ final class SurahSectionsStore: @unchecked Sendable {
                   let start = row[0] as? Int, let end = row[1] as? Int else { continue }
             let english = (row[2] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             let arabic = (row[3] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            let range = start == end ? "Ayah \(start)" : "Ayahs \(start)-\(end)"
+            let range: String
+            if localized {
+                range = start == end ? String(localized: "Ayah \(start)") : String(localized: "Ayahs \(start)-\(end)")
+            } else {
+                range = start == end ? "Ayah \(start)" : "Ayahs \(start)-\(end)"
+            }
             var block = "**\(range)**"
             if !english.isEmpty { block += "\n\n\(english)" }
             if !arabic.isEmpty { block += "\n\n\(arabic)" }
@@ -374,10 +397,10 @@ enum ThemeBrowseFamily: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .themes: return "Themes"
-        case .topics: return "Topics"
-        case .concepts: return "Concepts"
-        case .index: return "Index"
+        case .themes: return String(localized: "Themes")
+        case .topics: return String(localized: "Topics")
+        case .concepts: return String(localized: "Concepts")
+        case .index: return String(localized: "Index")
         }
     }
 
@@ -391,15 +414,15 @@ enum ThemeBrowseFamily: String, CaseIterable, Identifiable {
     }
 
     var footnote: String {
-        qulFamily?.footnote ?? "Topics from the Quran Semantic Annotation Corpus (CC BY 4.0)."
+        qulFamily?.footnote ?? String(localized: "Topics from the Quran Semantic Annotation Corpus (CC BY 4.0).")
     }
 
     var searchPlaceholder: String {
         switch self {
-        case .themes: return "Search themes"
-        case .topics: return "Search topics"
-        case .concepts: return "Search concepts"
-        case .index: return "Search the index"
+        case .themes: return String(localized: "Search themes")
+        case .topics: return String(localized: "Search topics")
+        case .concepts: return String(localized: "Search concepts")
+        case .index: return String(localized: "Search the index")
         }
     }
 }
@@ -473,7 +496,7 @@ struct ThemesBrowseView: View {
             // (Abu, 2026-09-07). Hidden while searching - the results are the answer then.
             if !isSearching {
                 Section {
-                    Text(verbatim: "Ayahs grouped by what they speak about. Open a subject to read its ayahs, and light it up to see it marked in the reader as you read.")
+                    Text(verbatim: String(localized: "Ayahs grouped by what they speak about. Open a subject to read its ayahs, and light it up to see it marked in the reader as you read."))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
 
@@ -487,7 +510,7 @@ struct ThemesBrowseView: View {
                                 Text("Highlight Themes")
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundColor(.primary)
-                                Text(themeHighlights.summary == "Off" ? "Color-coded passages and what each color means" : themeHighlights.summary)
+                                Text(themeHighlights.isEmpty ? String(localized: "Color-coded passages and what each color means") : themeHighlights.summary)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
@@ -552,7 +575,7 @@ struct ThemesBrowseView: View {
             // The credits hide while searching, the app's convention for trailing footers.
             if !isSearching {
                 Section(footer:
-                    Text(family.footnote)
+                    Text(family.footnote.localizedDigits)
                         .font(.caption2)
                 ) { EmptyView() }
             }
@@ -623,8 +646,9 @@ struct ThemesBrowseView: View {
         let showsAll = isSearching || showAllDomains.contains(group.domain)
         let shown = showsAll ? group.topics : Array(group.topics.prefix(Self.topicsPerSection))
 
+        // The domain is English data (and the fold key below): only the shown title is translated.
         Section(header: SectionPillHeader(
-            title: group.domain.uppercased(),
+            title: group.domain.localizedDisplay.uppercased(),
             count: group.topics.count,
             isExpanded: isSearching ? nil : Binding(
                 get: { !collapsedDomains.contains(group.domain) },
@@ -714,8 +738,14 @@ struct ThemesBrowseView: View {
                     fg: .secondary,
                     lineLimit: 2
                 )
+                // The topic's English description keeps the left edge in the Arabic interface.
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .leftToRightContent()
             }
         }
+        // English content, dot and name included: the whole label keeps its left-to-right order in the
+        // Arabic interface, not only the description under it.
+        .leftToRightContent()
         .padding(.vertical, 2)
     }
 }
@@ -761,15 +791,19 @@ struct ThemeTopicDetailView: View {
                                 .arabicFontDesign(custom: true)
                                 .foregroundColor(settings.accentColor.color)
                                 .frame(maxWidth: .infinity, alignment: .trailing)
+                                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                                .environment(\.layoutDirection, .leftToRight)
                         }
                         if !ancestors.isEmpty {
-                            Text((["\(topic.domain)"] + ancestors.map(\.name)).joined(separator: " › "))
+                            Text((["\(topic.domain.localizedDisplay)"] + ancestors.map(\.name)).joined(separator: " › "))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                         if !topic.description.isEmpty {
                             Text(topic.description)
                                 .font(.body)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .leftToRightContent()
                         }
                         if let qul, !qul.wiki.isEmpty, let url = URL(string: qul.wiki) {
                             Link(destination: url) {
@@ -804,8 +838,8 @@ struct ThemeTopicDetailView: View {
                                 Text("Highlight in the Reader")
                                     .font(.subheadline.weight(.semibold))
                                 Text(isLit
-                                     ? "Lit in \(color.name) (\(color.meaning.lowercased())) across \(topic.ayahs.count) ayahs"
-                                     : "A faint \(color.name) wash, the color of \(color.meaning.lowercased()), on its \(topic.ayahs.count) ayahs")
+                                     ? String(localized: "Lit in \(color.name) (\(color.meaning.lowercased())) across \(topic.ayahs.count) ayahs")
+                                     : String(localized: "A faint \(color.name) wash, the color of \(color.meaning.lowercased()), on its \(topic.ayahs.count) ayahs"))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -819,7 +853,7 @@ struct ThemeTopicDetailView: View {
             }
 
             if !subtopics.isEmpty {
-                Section(header: SectionPillHeader(title: "SUBTOPICS", count: subtopics.count)) {
+                Section(header: SectionPillHeader(title: String(localized: "SUBTOPICS"), count: subtopics.count)) {
                     ForEach(subtopics) { child in
                         NavigationLink {
                             LazyDestination {
@@ -856,7 +890,7 @@ struct ThemeTopicDetailView: View {
             }
         }
         .applyConditionalListStyle(disableNowPlayingInset: true)
-        .navigationTitle(topic.name)
+        .navigationTitle(topic.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $rowSheet) { request in
             AyahRowSheetContent(
@@ -895,7 +929,7 @@ struct ThemeTopicDetailView: View {
             VStack(alignment: .leading, spacing: 6) {
                 // Which surah this is: the reader's row carries the ayah number but not the surah,
                 // and a topic list crosses all 114.
-                Text("\(surah.nameTransliteration) \(parts[0]):\(parts[1])")
+                Text("\(surah.displayName) \(parts[0]):\(parts[1])")
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(settings.accentColor.color)
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -198,8 +198,8 @@ struct AskAIChatView: View {
     private var transcriptText: String {
         chat.messages.map { message in
             switch message.role {
-            case .user: return "You: \(message.text)"
-            case .assistant: return "AI: " + AskAIText.shareText(answer: message.text, cited: message.citedSources, allSources: message.sources)
+            case .user: return String(localized: "You: \(message.text)")
+            case .assistant: return String(localized: "AI: \(AskAIText.shareText(answer: message.text, cited: message.citedSources, allSources: message.sources))")
             }
         }.joined(separator: "\n\n")
     }
@@ -249,14 +249,14 @@ struct AskAIChatView: View {
         VStack(alignment: .leading, spacing: 18) {
             // The card every Islam resource opens on (`ResourceHero`).
             ResourceHero(
-                eyebrow: "ASK AI",
+                eyebrow: String(localized: "ASK AI"),
                 systemImage: "sparkles",
-                headline: "Ask anything about Islam.",
+                headline: String(localized: "Ask anything about Islam."),
                 message: AskAICopy.heroMessage
             )
 
             VStack(alignment: .leading, spacing: 8) {
-                welcomeLabel("TRY ASKING")
+                welcomeLabel(String(localized: "TRY ASKING"))
 
                 ForEach(starters, id: \.self) { question in
                     Button {
@@ -264,7 +264,7 @@ struct AskAIChatView: View {
                         chat.ask(question)
                     } label: {
                         HStack(spacing: 8) {
-                            Text(question)
+                            Text(question.localizedDisplay)
                                 .font(.subheadline)
                                 .multilineTextAlignment(.leading)
                             Spacer(minLength: 0)
@@ -286,14 +286,14 @@ struct AskAIChatView: View {
             // How it works, in the app itself: a reader who knows where the quotes come from and
             // what the model is not allowed to do can judge what they are reading.
             VStack(alignment: .leading, spacing: 8) {
-                welcomeLabel("HOW IT WORKS")
+                welcomeLabel(String(localized: "HOW IT WORKS"))
 
                 VStack(alignment: .leading, spacing: 12) {
                     howItWorksRow(icon: "magnifyingglass", text: AskAICopy.searchedAcross)
                     howItWorksRow(icon: cloudOffered ? "icloud" : "iphone", text: cloudOffered
-                                  ? "What it finds goes to Apple Intelligence on your device, or to Apple\u{2019}s Private Cloud Compute if you choose it in the menu, which answers in its own words and cites each source by number, saying where it comes from."
-                                  : "What it finds goes to Apple Intelligence on your device, which answers in its own words and cites each source by number, saying where it comes from. Nothing leaves your phone.")
-                    howItWorksRow(icon: "checkmark.shield", text: "Every quote beneath an answer is this app\u{2019}s own text, never the model\u{2019}s memory. A citation it invents is removed, a quotation that matches nothing is marked \u{201C}wording not verified\u{201D}, and every source opens the real passage so you can check it yourself.")
+                                  ? String(localized: "What it finds goes to Apple Intelligence on your device, or to Apple\u{2019}s Private Cloud Compute if you choose it in the menu, which answers in its own words and cites each source by number, saying where it comes from.")
+                                  : String(localized: "What it finds goes to Apple Intelligence on your device, which answers in its own words and cites each source by number, saying where it comes from. Nothing leaves your phone."))
+                    howItWorksRow(icon: "checkmark.shield", text: String(localized: "Every quote beneath an answer is this app\u{2019}s own text, never the model\u{2019}s memory. A citation it invents is removed, a quotation that matches nothing is marked \u{201C}wording not verified\u{201D}, and every source opens the real passage so you can check it yourself."))
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -438,7 +438,7 @@ struct AskAIChatView: View {
                 .foregroundStyle(settings.accentColor.color)
             Text("Ask AI needs Apple Intelligence")
                 .font(.headline)
-            Text("Ask AI runs with Apple Intelligence, which needs iOS 26 on a supported iPhone with Apple Intelligence turned on in Settings.")
+            Text(String(localized: "Ask AI runs with Apple Intelligence, which needs iOS 26 on a supported iPhone with Apple Intelligence turned on in Settings.").localizedDigits)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -452,22 +452,22 @@ struct AskAIChatView: View {
 /// collections are compiled in with HAS_HADITH, so an app without them never promises them.
 private enum AskAICopy {
     #if HAS_HADITH
-    static let heroMessage = "A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own Quran, hadith, tafsir, articles and duas, with every source quoted beneath the reply and a line saying where it comes from."
-    static let searchedAcross = "Your question is understood first (a greeting, a verse, a how-to, a question about the app), then searched across this app\u{2019}s own Quran, hadith collections, tafsir, articles, duas, Names of Allah and tips."
-    static let composerPrompt = "Ask about the Quran, hadith, or Islam"
-    static let lookingThrough = "Looking through the Quran, hadith and articles\u{2026}"
+    static let heroMessage = String(localized: "A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own Quran, hadith, tafsir, articles and duas, with every source quoted beneath the reply and a line saying where it comes from.")
+    static let searchedAcross = String(localized: "Your question is understood first (a greeting, a verse, a how-to, a question about the app), then searched across this app\u{2019}s own Quran, hadith collections, tafsir, articles, duas, Names of Allah and tips.")
+    static let composerPrompt = String(localized: "Ask about the Quran, hadith, or Islam")
+    static let lookingThrough = String(localized: "Looking through the Quran, hadith and articles\u{2026}")
     #elseif HAS_QURAN
-    static let heroMessage = "A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own Quran, tafsir, articles and duas, with every source quoted beneath the reply and a line saying where it comes from."
-    static let searchedAcross = "Your question is understood first (a greeting, a verse, a how-to, a question about the app), then searched across this app\u{2019}s own Quran, tafsir, articles, duas, Names of Allah and tips."
-    static let composerPrompt = "Ask about the Quran or Islam"
-    static let lookingThrough = "Looking through the Quran and articles\u{2026}"
+    static let heroMessage = String(localized: "A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own Quran, tafsir, articles and duas, with every source quoted beneath the reply and a line saying where it comes from.")
+    static let searchedAcross = String(localized: "Your question is understood first (a greeting, a verse, a how-to, a question about the app), then searched across this app\u{2019}s own Quran, tafsir, articles, duas, Names of Allah and tips.")
+    static let composerPrompt = String(localized: "Ask about the Quran or Islam")
+    static let lookingThrough = String(localized: "Looking through the Quran and articles\u{2026}")
     #else
     // No Quran and no hadith shelf (Al-Adhan): the prayer times, the articles, the duas, the Names
     // and the tips are what AskAIRetrieval.swift searches here.
-    static let heroMessage = "A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own prayer times, articles, duas, Names of Allah and tips, with every source quoted beneath the reply and a line saying where it comes from."
-    static let searchedAcross = "Your question is understood first (a greeting, a how-to, a question about the app), then searched across this app\u{2019}s own prayer times, articles, duas, Names of Allah and tips."
-    static let composerPrompt = "Ask about prayer or Islam"
-    static let lookingThrough = "Looking through the app\u{2019}s articles\u{2026}"
+    static let heroMessage = String(localized: "A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own prayer times, articles, duas, Names of Allah and tips, with every source quoted beneath the reply and a line saying where it comes from.")
+    static let searchedAcross = String(localized: "Your question is understood first (a greeting, a how-to, a question about the app), then searched across this app\u{2019}s own prayer times, articles, duas, Names of Allah and tips.")
+    static let composerPrompt = String(localized: "Ask about prayer or Islam")
+    static let lookingThrough = String(localized: "Looking through the app\u{2019}s articles\u{2026}")
     #endif
 }
 
@@ -547,13 +547,13 @@ private struct AskAIAnswerCard: View {
                         withAnimation(.easeInOut(duration: 0.2)) { showAllSources.toggle() }
                     } label: {
                         HStack(spacing: 4) {
-                            Image(systemName: showAllSources ? "chevron.down" : "chevron.right")
+                            Image(systemName: showAllSources ? "chevron.down" : "chevron.forward")
                                 .font(.caption2.weight(.semibold))
                             Text(showAllSources
                                  ? "Hide the other \(uncited.count) the app found"
                                  : (cited.isEmpty
-                                    ? "\(uncited.count) \(uncited.count == 1 ? "source" : "sources") the app found but the answer did not cite"
-                                    : "\(uncited.count) more \(uncited.count == 1 ? "source" : "sources") the app found"))
+                                    ? (uncited.count == 1 ? "1 source the app found but the answer did not cite" : "\(uncited.count) sources the app found but the answer did not cite")
+                                    : (uncited.count == 1 ? "1 more source the app found" : "\(uncited.count) more sources the app found")))
                                 .font(.caption)
                         }
                         .foregroundStyle(settings.accentColor.color)
@@ -660,18 +660,18 @@ private struct AskAIAnswerCard: View {
     }
 
     private var statusLine: String {
-        if let intent = message.intent, !intent.retrieves { return "Thinking\u{2026}" }
+        if let intent = message.intent, !intent.retrieves { return String(localized: "Thinking\u{2026}") }
         if message.sources.isEmpty {
             switch message.intent {
-            case .appHelp: return "Looking through the app\u{2019}s tips\u{2026}"
-            case .dua: return "Looking through the duas\u{2026}"
+            case .appHelp: return String(localized: "Looking through the app\u{2019}s tips\u{2026}")
+            case .dua: return String(localized: "Looking through the duas\u{2026}")
             #if HAS_HADITH
-            case .hadith: return "Looking through the hadith collections\u{2026}"
+            case .hadith: return String(localized: "Looking through the hadith collections\u{2026}")
             #endif
             default: return AskAICopy.lookingThrough
             }
         }
-        return message.engine == .privateCloud ? "Thinking on Private Cloud Compute\u{2026}" : "Thinking\u{2026}"
+        return message.engine == .privateCloud ? String(localized: "Thinking on Private Cloud Compute\u{2026}") : String(localized: "Thinking\u{2026}")
     }
 
     private var suggestionChips: some View {
@@ -713,6 +713,9 @@ private struct AskAIAnswerProse: View {
             // this instead (the `SelectableProse` rule).
             .id(sizeCategory)
             .frame(maxWidth: .infinity, alignment: .leading)
+            // The model is told to answer in English, which then reads left to right in the Arabic
+            // interface too; an answer that came back in Arabic keeps the interface's direction.
+            .leftToRightContent(!text.isMostlyArabicScript)
     }
 }
 
@@ -758,6 +761,47 @@ private struct AskAISourceCard: View {
     }
 
     private var isLong: Bool { source.text.count > 280 || (source.arabic?.count ?? 0) > 120 }
+
+    /// The title line in the interface's language: in Arabic an ayah or a surah is named in Arabic.
+    /// `source.title` itself stays as written: the model read it and the transcript stores it.
+    private var displayTitle: String {
+        #if HAS_QURAN
+        if AppLanguage.isArabic {
+            switch source.kind {
+            case .ayah(let surahID, let ayahID):
+                if let surah = QuranData.shared.surah(surahID) { return "\(surah.displayName) \(surahID):\(ayahID)".localizedDigits }
+            case .surah(let surahID):
+                if let surah = QuranData.shared.surah(surahID) { return String(localized: "Surah \(surahID): \(surah.displayName)") }
+            default:
+                break
+            }
+        }
+        #endif
+        #if HAS_HADITH
+        // In Arabic a hadith is named by the book's Arabic title, its number in the interface's
+        // digits; English gets the stored line back unchanged.
+        if case .hadith(let slug, _) = source.kind {
+            return HadithCatalogBook.displayReference(stored: source.title, slug: slug)
+        }
+        #endif
+        // A tip or a setting is stored in English (what the model read): the card shows the title the
+        // screens show, in the interface language. In English that is the stored line itself.
+        if !AppLanguage.code.hasPrefix("en") {
+            switch source.kind {
+            case .tip(let id):
+                #if HAS_TIPS
+                if let tip = TipCatalog.all.first(where: { $0.id == id }) { return tip.title }
+                #else
+                let _ = id
+                #endif
+            case .setting(let id):
+                if let entry = SettingsSearchEntry.entry(withID: id) { return entry.title }
+            default:
+                break
+            }
+        }
+        return source.title
+    }
 
     private var arabicFont: Font {
         switch source.kind {
@@ -813,14 +857,14 @@ private struct AskAISourceCard: View {
                     }
                     Spacer(minLength: 0)
                     if opensAScreen {
-                        Image(systemName: "chevron.right")
+                        Image(systemName: "chevron.forward")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.tertiary)
                     }
                 }
                 .foregroundStyle(accent)
 
-                Text(source.title)
+                Text(displayTitle)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(.primary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -835,6 +879,9 @@ private struct AskAISourceCard: View {
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .lineLimit(expanded ? nil : 2)
                         .fixedSize(horizontal: false, vertical: true)
+                        // The right edge in the Arabic interface too (`.trailing` is right only left
+                        // to right).
+                        .environment(\.layoutDirection, .leftToRight)
                 }
 
                 Text(source.isQuotable ? "\u{201C}\(source.text)\u{201D}" : source.text)
@@ -842,6 +889,11 @@ private struct AskAISourceCard: View {
                     .foregroundColor(dimmed ? .secondary : .primary)
                     .lineLimit(expanded ? nil : 4)
                     .fixedSize(horizontal: false, vertical: true)
+                    // The source's English excerpt (a translation, a narration, a tafsir) and its
+                    // transliteration keep the left edge in the Arabic interface; an Arabic excerpt
+                    // follows the interface.
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent(!source.text.isMostlyArabicScript)
 
                 if let transliteration = source.transliteration {
                     Text(transliteration)
@@ -850,6 +902,8 @@ private struct AskAISourceCard: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(expanded ? nil : 2)
                         .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent()
                 }
 
                 if isLong {
@@ -966,7 +1020,7 @@ enum AskAISourceDestination {
             EmptyView()
             #endif
         case .setting(let id):
-            if let entry = SettingsSearchEntry.all.first(where: { $0.id == id }) {
+            if let entry = SettingsSearchEntry.entry(withID: id) {
                 SettingsSearchDestinationView.view(for: entry.destination)
             }
         case .prayer:

@@ -150,13 +150,16 @@ struct QiraatExplorerView: View {
         Settings.shared.quranDisplayUsesCustomArabicFace
     }
 
+    /// The narrator's short name as the reader sees it (the Arabic interface's own name for him).
     private func shortName(_ tag: String) -> String {
-        QiraatReaderNames.narratorName(tag, compared: comparedSet)
+        QiraatReaderNames.narratorName(tag, compared: comparedSet, display: true)
     }
 
     /// "Hafs an Asim", "Warsh an Nafi": the pickers' names without Hafs's "(default)".
     private func fullName(_ tag: String) -> String {
-        tag.isEmpty ? "Hafs an Asim" : Settings.Riwayah.option(for: tag).label
+        // The Arabic interface names it in Arabic (`displayLabel`).
+        if AppLanguage.isArabic { return Settings.Riwayah.option(for: tag).displayLabel(omitsDefaultSuffix: true) }
+        return tag.isEmpty ? "Hafs an Asim" : Settings.Riwayah.option(for: tag).label
     }
 
     // MARK: Body
@@ -284,7 +287,7 @@ struct QiraatExplorerView: View {
         switch mode {
         case .ayah:
             // Before the index is in, any lookup would parse it here, on the main thread.
-            guard indexReady else { return Band(caption: "Finding the places…") }
+            guard indexReady else { return Band(caption: String(localized: "Finding the places…")) }
             let key = "\(surahID):\(hafsAyah)|\(everyDifference ? 1 : 0)|\(enabledTags.joined(separator: ","))"
             if bandMemo.key == key, let band = bandMemo.band { return band }
             let tags = enabledTags
@@ -293,32 +296,32 @@ struct QiraatExplorerView: View {
             let places = store.variantAyahs(surah: surahID, tags: tags, everyDifference: everyDifference)
             let band = Band(previous: previous.map { QiraatPlaceRef(surah: $0.surah, ayah: $0.ayah) },
                             next: next.map { QiraatPlaceRef(surah: $0.surah, ayah: $0.ayah) },
-                            caption: caption(places: places, alike: "No riwayah differs in this surah"))
+                            caption: caption(places: places, alike: String(localized: "No riwayah differs in this surah")))
             bandMemo.key = key
             bandMemo.band = band
             return band
         case .duel:
             if QiraatProfiles.shareOneText(duelA, duelB) {
-                return Band(caption: "\(shortName(duelA)) and \(shortName(duelB)) carry one text")
+                return Band(caption: String(localized: "\(shortName(duelA)) and \(shortName(duelB)) carry one text"))
             }
             guard let duelNavigation, duelNavigation.key == duelBandKey else {
-                return Band(caption: "Finding where they differ…")
+                return Band(caption: String(localized: "Finding where they differ…"))
             }
             let caption = duelNavigation.placesInSurah.map {
-                caption(places: $0, alike: "\(shortName(duelA)) and \(shortName(duelB)) read this surah alike")
-            } ?? (duelNavigation.next == nil && duelNavigation.previous == nil ? "They read alike throughout" : "Counting the places…")
+                caption(places: $0, alike: String(localized: "\(shortName(duelA)) and \(shortName(duelB)) read this surah alike"))
+            } ?? (duelNavigation.next == nil && duelNavigation.previous == nil ? String(localized: "They read alike throughout") : String(localized: "Counting the places…"))
             return Band(previous: duelNavigation.previous, next: duelNavigation.next, caption: caption)
         }
     }
 
     private func caption(places: [Int], alike: String) -> String {
         if let index = places.firstIndex(of: hafsAyah) {
-            return "Place \(index + 1) of \(places.count) in this surah"
+            return String(localized: "Place \(index + 1) of \(places.count) in this surah")
         }
         switch places.count {
         case 0: return alike
-        case 1: return "Read alike here · 1 place in this surah"
-        default: return "Read alike here · \(places.count) places in this surah"
+        case 1: return String(localized: "Read alike here · 1 place in this surah")
+        default: return String(localized: "Read alike here · \(places.count) places in this surah")
         }
     }
 
@@ -374,7 +377,7 @@ struct QiraatExplorerView: View {
             surahID = target.surah
             hafsAyah = target.ayah
         } label: {
-            Image(systemName: forward ? "chevron.right" : "chevron.left")
+            Image(systemName: forward ? "chevron.forward" : "chevron.backward")
                 .font(.subheadline.weight(.bold))
                 .foregroundColor(enabled ? accent : .secondary)
                 .frame(width: 36, height: 36)
@@ -435,10 +438,10 @@ struct QiraatExplorerView: View {
 
             if place.sites.isEmpty {
                 Section {
-                    readAlikeRow("No riwayah reads a word of this ayah differently",
+                    readAlikeRow(String(localized: "No riwayah reads a word of this ayah differently"),
                                  detail: everyDifference
-                                    ? "Use the arrows to step to the nearest place where one does."
-                                    : "Use the arrows to step to the nearest place where one does. Every Difference (in the options) counts single dots and vowels too.")
+                                    ? String(localized: "Use the arrows to step to the nearest place where one does.")
+                                    : String(localized: "Use the arrows to step to the nearest place where one does. Every Difference (in the options) counts single dots and vowels too."))
                 }
             } else {
                 siteSections(place.sites, label: nil)
@@ -463,7 +466,7 @@ struct QiraatExplorerView: View {
         let differing = place.differingTags.count
         let available = place.sides.count - place.unavailableTags.count
         return ayahCard(text: place.hafsText, tokens: place.hafsTokens, tinted: place.hafsTinted, english: place.english,
-                        summary: differing == 0 ? "No riwayah differs" : "\(differing) of \(available) riwayat differ",
+                        summary: differing == 0 ? String(localized: "No riwayah differs") : String(localized: "\(differing) of \(available) riwayat differ"),
                         summaryTinted: differing > 0)
     }
 
@@ -494,10 +497,13 @@ struct QiraatExplorerView: View {
                 .equatable()
 
             if !english.isEmpty {
+                // The ayah's English translation keeps the left edge in the Arabic interface.
                 Text(english)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
             }
         }
         .padding(.vertical, 6)
@@ -525,14 +531,14 @@ struct QiraatExplorerView: View {
 
     private func siteHeader(_ site: QiraatSite, index: Int, of count: Int) -> String {
         let caption = site.caption?.uppercased()
-        guard count > 1 else { return caption ?? "READ DIFFERENTLY" }
-        return "\(index + 1) OF \(count)" + (caption.map { " · \($0)" } ?? "")
+        guard count > 1 else { return caption ?? String(localized: "READ DIFFERENTLY") }
+        return caption.map { String(localized: "\(index + 1) OF \(count) · \($0)") } ?? String(localized: "\(index + 1) OF \(count)")
     }
 
     @ViewBuilder
     private func siteFooter(_ site: QiraatSite) -> some View {
         // The reference's renderings carry their own quotation marks.
-        let shared = site.sharedEnglish.map { "Every reading here is rendered \($0)." }
+        let shared = site.sharedEnglish.map { String(localized: "Every reading here is rendered \($0).") }
         let parts = [shared, site.note.isEmpty ? nil : site.note].compactMap { $0 }
         if !parts.isEmpty {
             Text(parts.joined(separator: " "))
@@ -549,7 +555,7 @@ struct QiraatExplorerView: View {
 
     private func readingRow(_ reading: QiraatSiteReading, in site: QiraatSite, label: String?,
                             emphasized: Bool, stacked: Bool) -> some View {
-        let arabic = Text(reading.text.isEmpty ? "(none)" : reading.text)
+        let arabic = Text(reading.text.isEmpty ? String(localized: "(none)") : reading.text)
             .font(.custom(face(reading.fontTag), size: CGFloat(fontSize * 1.08)))
             .arabicFontDesign(custom: customFace)
             .foregroundColor(emphasized ? accent : .primary)
@@ -563,12 +569,16 @@ struct QiraatExplorerView: View {
                     .italic()
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    // The reading's transliteration and English rendering keep their own direction in
+                    // the Arabic interface; the row around them follows it.
+                    .leftToRightContent()
             }
             if site.sharedEnglish == nil, !reading.english.isEmpty {
                 Text(reading.english)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .leftToRightContent()
             }
         }
         return Group {
@@ -577,6 +587,8 @@ struct QiraatExplorerView: View {
                     arabic
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                        .environment(\.layoutDirection, .leftToRight)
                     details
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -599,7 +611,7 @@ struct QiraatExplorerView: View {
             Text(label)
                 .font(.subheadline.weight(.semibold))
         } else if reading.isHafs {
-            let others = QiraatReaderNames.names(reading.tags.filter { !$0.isEmpty }, compared: comparedSet.subtracting([""]))
+            let others = QiraatReaderNames.names(reading.tags.filter { !$0.isEmpty }, compared: comparedSet.subtracting([""]), display: true)
             Text("Hafs")
                 .font(.subheadline.weight(.semibold))
             if !others.isEmpty {
@@ -609,7 +621,7 @@ struct QiraatExplorerView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         } else {
-            Text(QiraatReaderNames.list(QiraatReaderNames.names(reading.tags, compared: comparedSet)))
+            Text(QiraatReaderNames.list(QiraatReaderNames.names(reading.tags, compared: comparedSet, display: true)))
                 .font(.subheadline.weight(.semibold))
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -804,8 +816,8 @@ struct QiraatExplorerView: View {
                 }
             } else if duel.sites.isEmpty {
                 Section {
-                    readAlikeRow("\(shortName(duel.a)) and \(shortName(duel.b)) read this ayah alike",
-                                 detail: "Use the arrows to step to the nearest place where the two part ways.")
+                    readAlikeRow(String(localized: "\(shortName(duel.a)) and \(shortName(duel.b)) read this ayah alike"),
+                                 detail: String(localized: "Use the arrows to step to the nearest place where the two part ways."))
                 }
             } else {
                 siteSections(duel.sites) { reading in
@@ -1063,6 +1075,8 @@ struct QiraatArabicText: View, Equatable {
             .multilineTextAlignment(.trailing)
             .lineSpacing(6)
             .frame(maxWidth: .infinity, alignment: .trailing)
+            // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+            .environment(\.layoutDirection, .leftToRight)
             .textSelection(.enabled)
     }
 }
@@ -1081,7 +1095,7 @@ private struct QiraatClipPairRow: View {
         if let pair = QiraatVariantAudioStore.shared.pair(tag: tag, surah: surah, ayah: ayah) {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Hafs and \(QiraatProfiles.shortName(of: tag))")
+                    Text("Hafs and \(QiraatProfiles.shortName(of: tag).localizedDisplay)")
                         .font(.subheadline.weight(.semibold))
                     Text(pair.reciter)
                         .font(.caption)
@@ -1089,8 +1103,8 @@ private struct QiraatClipPairRow: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                clipButton("Hafs", key: key("hafs"), clip: pair.hafs)
-                clipButton(QiraatProfiles.shortName(of: tag), key: key("riwayah"), clip: pair.riwayah)
+                clipButton(String(localized: "Hafs"), key: key("hafs"), clip: pair.hafs)
+                clipButton(QiraatProfiles.shortName(of: tag).localizedDisplay, key: key("riwayah"), clip: pair.riwayah)
             }
             .padding(.vertical, 2)
         }

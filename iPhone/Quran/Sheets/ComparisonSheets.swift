@@ -13,6 +13,9 @@ struct AyahQiraahComparisonSheet: View {
 
     let surahNumber: Int
     let ayahNumber: Int
+    /// Pushed inside another sheet's stack (the tafsir sheet's comparison doors, Abu, 2026-10-22)
+    /// rather than presented as a sheet of its own: no container of its own, no X.
+    var embedded: Bool = false
     @State private var searchText = ""
     // Comparing scripts is exactly when you want the text bigger; the slider only affects this sheet.
     @State private var arabicFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .title3).pointSize)
@@ -52,6 +55,11 @@ struct AyahQiraahComparisonSheet: View {
         let beta: Bool
 
         var id: String { tag.isEmpty ? "Hafs" : tag }
+
+        /// The row's name as shown. The Arabic interface names the riwayah once, in Arabic (the
+        /// caption beside it would repeat it); `label` stays English for search and the model's prompt.
+        var shownLabel: String { AppLanguage.isArabic ? arabicCaption : label }
+        var showsCaption: Bool { !AppLanguage.isArabic }
     }
 
     /// Comparison columns are pure TEXT - there is no facsimile fallback here - so
@@ -112,7 +120,16 @@ struct AyahQiraahComparisonSheet: View {
     var body: some View {
         // A NavigationStack on iOS 16+ (`SheetNavigationContainer`): the Qiraat Explorer door pushes
         // from this sheet, and `navigationDestination` needs the stack (a NavigationView drops it).
-        SheetNavigationContainer {
+        // Embedded, the enclosing sheet's stack takes the pushes.
+        if embedded {
+            comparisonContent
+        } else {
+            SheetNavigationContainer { comparisonContent }
+        }
+    }
+
+    /// The sheet's content below its container (indented as the container's closure it was).
+    private var comparisonContent: some View {
             // The pinned "current riwayah" strip rides as a safe-area inset on the List
             // rather than a VStack above it: with a VStack, the half-height (.medium)
             // sheet detent laid the header out as a blank gap until the sheet was
@@ -279,7 +296,7 @@ struct AyahQiraahComparisonSheet: View {
             .adaptiveSafeArea(edge: .bottom) {
                 // In Head-to-Head the list is hidden, so the search bar steps aside with it.
                 if !duelMode {
-                    SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search riwayat")
+                    SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search riwayat"))
                         .padding(.horizontal, 24)
                         .padding(.bottom, BottomBarCushion.standard)
                         .background(Color.white.opacity(0.00001))
@@ -297,7 +314,7 @@ struct AyahQiraahComparisonSheet: View {
             }
             .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))
             .navigationBarTitleDisplayMode(.inline)
-            .sheetDismissToolbar()
+            .sheetDismissToolbarIf(!embedded)
             // The list below washes itself; this covers the header strip above it, so the whole
             // sheet sits on the same light.
             .accentWashedBackground()
@@ -316,7 +333,8 @@ struct AyahQiraahComparisonSheet: View {
             }
             .sheet(isPresented: $showSummarize) {
                 SummarizeSheet(
-                    title: "\(AyahAISources.combinedTitlePrefix) of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))",
+                    title: "\(AyahAISources.combinedTitlePrefix) of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber, english: true))",
+                    displayTitle: AyahAISources.combinedDisplayTitle(of: ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber)),
                     sourceText: "",
                     multiSource: true,
                     gatherSource: {
@@ -337,7 +355,6 @@ struct AyahQiraahComparisonSheet: View {
                 )
             }
             #endif
-        }
     }
 
     #if canImport(FoundationModels)
@@ -369,12 +386,14 @@ struct AyahQiraahComparisonSheet: View {
 
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text(option.label)
+                Text(option.shownLabel)
                     .font(.subheadline.weight(.semibold))
 
-                Text(option.arabicCaption)
-                    .font(.caption)
-                    .foregroundColor(settings.accentColor.color)
+                if option.showsCaption {
+                    Text(option.arabicCaption)
+                        .font(.caption)
+                        .foregroundColor(settings.accentColor.color)
+                }
 
                 betaBadge(option)
 
@@ -391,7 +410,7 @@ struct AyahQiraahComparisonSheet: View {
                 if text != nil, let styled = rowStyled(for: option, resolved: resolvedText(for: option)) {
                     Text(styled)
                 } else {
-                    Text(text ?? "This ayah is not separate in this riwayah.")
+                    Text(text ?? String(localized: "This ayah is not separate in this riwayah."))
                 }
             }
                 .font(.custom(comparisonArabicFontName(for: option), size: arabicFontSize))
@@ -400,6 +419,8 @@ struct AyahQiraahComparisonSheet: View {
                 .multilineTextAlignment(.trailing)
                 .lineSpacing(6)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                .environment(\.layoutDirection, .leftToRight)
                 .textSelection(.enabled)
 
             HStack(spacing: 12) {
@@ -441,13 +462,13 @@ struct AyahQiraahComparisonSheet: View {
     /// shared Uthmani rasm emerge is the whole point of the toggles.
     private var rasmFooterText: String {
         guard compareHideTashkeel || compareHideDots else {
-            return "Strip the vowel marks (and then the dots) to compare the bare letter skeletons. All qiraat descend from the dotless Uthmani rasm of the copies Uthman ibn Affan sent out, so most differences vanish at the skeleton level."
+            return String(localized: "Strip the vowel marks (and then the dots) to compare the bare letter skeletons. All qiraat descend from the dotless Uthmani rasm of the copies Uthman ibn Affan sent out, so most differences vanish at the skeleton level.")
         }
         guard let reference = referenceText else { return "" }
         let others = options.filter { $0.id != currentOption?.id }
         let identical = others.filter { resolvedText(for: $0)?.text == reference }.count
-        let what = compareHideDots ? "letter skeleton (rasm)" : "lettering"
-        return "With these marks hidden, \(identical) of the \(others.count) other riwayat share this ayah's exact \(what) with the current riwayah. Rows tinted in the accent color still differ."
+        let what = compareHideDots ? String(localized: "letter skeleton (rasm)") : String(localized: "lettering")
+        return String(localized: "With these marks hidden, \(identical) of the \(others.count) other riwayat share this ayah's exact \(what) with the current riwayah. Rows tinted in the accent color still differ.")
     }
 
     /// The sheet's Hide Tashkeel / Hide Dots, applied inside `resolvedText` - the one choke point
@@ -612,8 +633,8 @@ struct AyahQiraahComparisonSheet: View {
             return QiraatProfiles.sharedTextExplanation
         }
         return duelTextsIdentical
-            ? "These two riwayat read this ayah with identical wording."
-            : "Pick any two riwayat and read them directly against each other. Words tinted in the accent color differ between the two."
+            ? String(localized: "These two riwayat read this ayah with identical wording.")
+            : String(localized: "Pick any two riwayat and read them directly against each other. Words tinted in the accent color differ between the two.")
     }
 
     private var duelPickerRow: some View {
@@ -663,12 +684,14 @@ struct AyahQiraahComparisonSheet: View {
 
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text(option.label)
+                Text(option.shownLabel)
                     .font(.subheadline.weight(.semibold))
 
-                Text(option.arabicCaption)
-                    .font(.caption)
-                    .foregroundColor(settings.accentColor.color)
+                if option.showsCaption {
+                    Text(option.arabicCaption)
+                        .font(.caption)
+                        .foregroundColor(settings.accentColor.color)
+                }
 
                 betaBadge(option)
 
@@ -691,7 +714,7 @@ struct AyahQiraahComparisonSheet: View {
                 if let resolved, let styled = duelStyled(for: option, resolved: resolved, against: other) {
                     Text(styled)
                 } else {
-                    Text(text ?? "This ayah is not separate in this riwayah.")
+                    Text(text ?? String(localized: "This ayah is not separate in this riwayah."))
                 }
             }
                 .font(.custom(comparisonArabicFontName(for: option), size: arabicFontSize))
@@ -700,6 +723,8 @@ struct AyahQiraahComparisonSheet: View {
                 .multilineTextAlignment(.trailing)
                 .lineSpacing(6)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                .environment(\.layoutDirection, .leftToRight)
         }
         .padding(.vertical, 4)
         .opacity(text == nil ? 0.55 : 1)
@@ -732,20 +757,22 @@ struct AyahQiraahComparisonSheet: View {
             HStack(alignment: .firstTextBaseline) {
                 HStack {
                     HighlightedSnippet(
-                        source: option.label,
+                        source: option.shownLabel,
                         term: searchText,
                         font: .subheadline.weight(.semibold),
                         accent: settings.accentColor.color,
                         fg: .primary
                     )
 
-                    HighlightedSnippet(
-                        source: option.arabicCaption,
-                        term: searchText,
-                        font: .caption,
-                        accent: settings.accentColor.color,
-                        fg: settings.accentColor.color
-                    )
+                    if option.showsCaption {
+                        HighlightedSnippet(
+                            source: option.arabicCaption,
+                            term: searchText,
+                            font: .caption,
+                            accent: settings.accentColor.color,
+                            fg: settings.accentColor.color
+                        )
+                    }
 
                     betaBadge(option)
                 }
@@ -782,13 +809,13 @@ struct AyahQiraahComparisonSheet: View {
             // Scanning the rows, one of them matches the current riwayah word for word in every
             // ayah. Name the reason on the row where it is noticed.
             if QiraatProfiles.shareOneText(option.tag, originTag) {
-                Text("Same transmitted text as \(QiraatProfiles.shortName(of: originTag)): al-Durrah reports no difference between the two narrators.")
+                Text("Same transmitted text as \(QiraatProfiles.shortName(of: originTag).localizedDisplay): al-Durrah reports no difference between the two narrators.")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(settings.accentColor.color)
             }
 
             HighlightedSnippet(
-                source: text ?? "This ayah is not separate in this riwayah.",
+                source: text ?? String(localized: "This ayah is not separate in this riwayah."),
                 term: searchText,
                 font: .custom(
                     comparisonArabicFontName(for: option),
@@ -802,6 +829,8 @@ struct AyahQiraahComparisonSheet: View {
                 .multilineTextAlignment(.trailing)
                 .lineSpacing(6)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                .environment(\.layoutDirection, .leftToRight)
 
             // Hearing the difference: the same reciter, both readings, where a pair exists.
             if text != nil, QiraatVariantAudioStore.isBundled {
@@ -930,14 +959,18 @@ struct AyahEnglishComparisonSheet: View {
 
     let surahNumber: Int
     let ayahNumber: Int
+    /// Pushed inside another sheet's stack (the tafsir sheet's comparison doors, Abu, 2026-10-22)
+    /// rather than presented as a sheet of its own: no container of its own, no X.
+    let embedded: Bool
 
     @StateObject private var viewModel: EnglishComparisonViewModel
     @State private var searchText = ""
     @State private var showSummarize = false
 
-    init(surahNumber: Int, ayahNumber: Int) {
+    init(surahNumber: Int, ayahNumber: Int, embedded: Bool = false) {
         self.surahNumber = surahNumber
         self.ayahNumber = ayahNumber
+        self.embedded = embedded
         _viewModel = StateObject(wrappedValue: EnglishComparisonViewModel(surah: surahNumber, ayah: ayahNumber))
     }
 
@@ -1012,7 +1045,15 @@ struct AyahEnglishComparisonSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        if embedded {
+            comparisonContent
+        } else {
+            SheetNavigationContainer { comparisonContent }
+        }
+    }
+
+    /// The sheet's content below its container (indented as the container's closure it was).
+    private var comparisonContent: some View {
             // The pinned "current translation" strip rides as a safe-area inset on the List rather
             // than a VStack above it - the exact structure (and reason) of the riwayah comparison's
             // header: with a VStack, the half-height (.medium) sheet detent laid the header out as a
@@ -1031,7 +1072,7 @@ struct AyahEnglishComparisonSheet: View {
             }
             .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))
             .navigationBarTitleDisplayMode(.inline)
-            .sheetDismissToolbar()
+            .sheetDismissToolbarIf(!embedded)
             // Same rule as the riwayah comparison: the list washes itself, this covers the header.
             .accentWashedBackground()
             .task(id: loadKey) {
@@ -1051,7 +1092,8 @@ struct AyahEnglishComparisonSheet: View {
             }
             .sheet(isPresented: $showSummarize) {
                 SummarizeSheet(
-                    title: "\(AyahAISources.combinedTitlePrefix) of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))",
+                    title: "\(AyahAISources.combinedTitlePrefix) of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber, english: true))",
+                    displayTitle: AyahAISources.combinedDisplayTitle(of: ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber)),
                     sourceText: "",
                     multiSource: true,
                     gatherSource: {
@@ -1075,8 +1117,6 @@ struct AyahEnglishComparisonSheet: View {
                 )
             }
             #endif
-        }
-        .navigationViewStyle(.stack)
     }
 
     /// Everything the sheet is showing, as one labeled text for the summarizer: the in-app
@@ -1113,6 +1153,7 @@ struct AyahEnglishComparisonSheet: View {
             }
 
             SelectableProse(text: text, textStyle: .subheadline)
+                .leftToRightContent()
         }
         .padding(.horizontal)
         .padding(.vertical, 10)
@@ -1124,7 +1165,7 @@ struct AyahEnglishComparisonSheet: View {
                 // The same prominent "online" card the tafsir sheet uses, so every online-backed sheet
                 // discloses its source identically.
                 Section {
-                    OnlineNoticeCard(text: "Compare this ayah across several English Qur'an translations. The online translations are fetched from alquran.cloud; the downloaded ones are built into the app.")
+                    OnlineNoticeCard(text: String(localized: "Compare this ayah across several English Qur'an translations. The online translations are fetched from alquran.cloud; the downloaded ones are built into the app."))
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
                 }
@@ -1139,7 +1180,7 @@ struct AyahEnglishComparisonSheet: View {
                         )
 
                         if settings.showTransliteration {
-                            comparisonRow(title: "Transliteration", text: ayah.textTransliteration)
+                            comparisonRow(title: String(localized: "Transliteration"), text: ayah.textTransliteration)
                         }
                     }
                 }
@@ -1178,7 +1219,7 @@ struct AyahEnglishComparisonSheet: View {
                         ForEach(filteredOnlineEditions) { edition in
                             comparisonRow(
                                 title: edition.name,
-                                text: viewModel.translations[edition.id] ?? "Unavailable",
+                                text: viewModel.translations[edition.id] ?? String(localized: "Unavailable"),
                                 editionID: edition.id
                             )
                             .opacity(viewModel.translations[edition.id] == nil ? 0.55 : 1)
@@ -1198,7 +1239,7 @@ struct AyahEnglishComparisonSheet: View {
         .compactListSectionSpacing()
         // The app's own bottom search bar, not `.searchable` - see the riwayah sheet above.
         .adaptiveSafeArea(edge: .bottom) {
-            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search translations")
+            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search translations"))
                 .padding(.horizontal, 24)
                 .padding(.bottom, BottomBarCushion.standard)
                 .background(Color.white.opacity(0.00001))
@@ -1261,6 +1302,9 @@ struct AyahEnglishComparisonSheet: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .multilineTextAlignment(isArabic ? .trailing : .leading)
                 .frame(maxWidth: .infinity, alignment: isArabic ? .trailing : .leading)
+                // An English translation or transliteration reads left to right in the Arabic interface,
+                // and Arabic keeps the right edge there (`.trailing` is the left in a right-to-left layout).
+                .leftToRightContent()
         }
         .padding(.vertical, 4)
         .textSelection(.enabled)
@@ -1385,18 +1429,25 @@ enum QiraahAyahResolver {
     }
 
     /// "Ayah 285 in this riwayah (spans 285\u{2013}286)" - the numbering note under a row's header.
-    static func numberNote(_ resolved: ResolvedQiraahText) -> String? {
+    /// `localized: false` keeps the English wording for the on-device model's source text.
+    static func numberNote(_ resolved: ResolvedQiraahText, localized: Bool = true) -> String? {
         if let split = resolved.splitSpan {
-            return "Ayahs \(split.lowerBound)\u{2013}\(split.upperBound) in this riwayah (divided there)"
+            return localized
+                ? String(localized: "Ayahs \(split.lowerBound)\u{2013}\(split.upperBound) in this riwayah (divided there)")
+                : "Ayahs \(split.lowerBound)\u{2013}\(split.upperBound) in this riwayah (divided there)"
         }
         if let own = resolved.ownNumber {
             if let span = resolved.mergedSpan {
-                return "Ayah \(own) in this riwayah (spans \(span.lowerBound)\u{2013}\(span.upperBound))"
+                return localized
+                    ? String(localized: "Ayah \(own) in this riwayah (spans \(span.lowerBound)\u{2013}\(span.upperBound))")
+                    : "Ayah \(own) in this riwayah (spans \(span.lowerBound)\u{2013}\(span.upperBound))"
             }
-            return "Ayah \(own) in this riwayah"
+            return localized ? String(localized: "Ayah \(own) in this riwayah") : "Ayah \(own) in this riwayah"
         }
         if let span = resolved.mergedSpan {
-            return "One ayah here (spans \(span.lowerBound)\u{2013}\(span.upperBound))"
+            return localized
+                ? String(localized: "One ayah here (spans \(span.lowerBound)\u{2013}\(span.upperBound))")
+                : "One ayah here (spans \(span.lowerBound)\u{2013}\(span.upperBound))"
         }
         return nil
     }
@@ -1429,10 +1480,17 @@ enum AyahAISources {
         OnDeviceAsk.supportsArabic ? "Tafsir, riwayat & translations" : "English tafsirs & translations"
     }
 
+    /// `combinedTitlePrefix` in the reader's language, for the sheet's own title (the model keeps the English).
+    static func combinedDisplayTitle(of subject: String) -> String {
+        OnDeviceAsk.supportsArabic
+            ? String(localized: "Tafsir, riwayat & translations of \(subject)")
+            : String(localized: "English tafsirs & translations of \(subject)")
+    }
+
     /// The note a summarize sheet shows when the Arabic sources were left out (see `combinedSections`).
     static var arabicExcludedNote: String? {
         OnDeviceAsk.supportsArabic ? nil
-            : "The Arabic tafsir editions and the riwayat readings are left out: Apple Intelligence can\u{2019}t read Arabic on this device yet."
+            : String(localized: "The Arabic tafsir editions and the riwayat readings are left out: Apple Intelligence can\u{2019}t read Arabic on this device yet.")
     }
 
     static func combinedSections(
@@ -1520,7 +1578,7 @@ enum AyahAISources {
             var entry = "\(option.label) (\(option.teacher))\(option.beta ? " [beta text]" : ""): "
             if let res {
                 entry += res.text
-                if let note = QiraahAyahResolver.numberNote(res) {
+                if let note = QiraahAyahResolver.numberNote(res, localized: false) {
                     entry += " [\(note)]"
                 }
                 if let referenceText {

@@ -17,7 +17,7 @@ struct LockScreen1EntryView: View {
                             .padding(.trailing, -4)
                     }
 
-                    Text(currentPrayer.displayName)
+                    Text(currentPrayer.displayName.localizedDisplay)
                         .font(.headline)
                         .lineLimit(currentPrayer.nameTransliteration.contains("/") ? 2 : 1)
                 }

@@ -93,13 +93,13 @@ struct DuaSessionStartButton: View {
                 AccentIconChip(systemImage: resuming ? "play.circle.fill" : "play.fill", size: 30)
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(resuming ? "Resume Session" : "Start Session")
+                    Text(resuming ? String(localized: "Resume Session") : String(localized: "Start Session"))
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(.primary)
 
                     Text(resuming
-                         ? "Continue at \(resumeIndex + 1) of \(collection.items.count)"
-                         : "Go through all \(collection.items.count) one at a time")
+                         ? String(localized: "Continue at \(resumeIndex + 1) of \(collection.items.count)")
+                         : String(localized: "Go through all \(collection.items.count) one at a time"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -108,7 +108,7 @@ struct DuaSessionStartButton: View {
 
                 Spacer()
 
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.forward")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
@@ -219,12 +219,12 @@ struct DuaSessionView: View {
                     // A collection with no items can't be walked; say so rather than showing a blank
                     // card with dead controls.
                     ContentUnavailableFallback(
-                        title: "Nothing to read",
-                        message: "This collection has no supplications yet."
+                        title: String(localized: "Nothing to read"),
+                        message: String(localized: "This collection has no supplications yet.")
                     )
                 }
             }
-            .navigationTitle(collection.title)
+            .navigationTitle(collection.displayTitle)
             .navigationBarTitleDisplayMode(.inline)
             // The house X on the LEFT, like every other sheet (Abu, 2026-09-18) - this one used a
             // filled `xmark.circle.fill` on the trailing side. Hand-rolled rather than
@@ -327,16 +327,19 @@ struct DuaSessionView: View {
                 .font(.subheadline.italic())
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+                .leftToRightContent()
 
             Text(item.translation)
                 .font(.body)
                 .multilineTextAlignment(.center)
+                .leftToRightContent()
 
-            if let reference = item.reference {
+            if let reference = item.displayReference {
                 Text(reference)
                     .font(.caption.weight(.medium))
                     .foregroundStyle(settings.accentColor.color)
                     .multilineTextAlignment(.center)
+                    .leftToRightContent(!reference.isMostlyArabicScript)
             }
         }
         .padding(18)
@@ -377,7 +380,7 @@ struct DuaSessionView: View {
                         .font(.system(size: 40, weight: .bold, design: .rounded).monospacedDigit())
                         .foregroundColor(.primary)
 
-                    Text(target > 1 ? "of \(target)" : "tap to count")
+                    Text(target > 1 ? String(localized: "of \(target)") : String(localized: "tap to count"))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -426,7 +429,7 @@ struct DuaSessionView: View {
                 settings.hapticFeedback()
                 goBack()
             } label: {
-                Image(systemName: "chevron.left")
+                Image(systemName: "chevron.backward")
                     .font(.body.weight(.semibold))
                     .frame(width: 46, height: 46)
                     .contentShape(Rectangle())
@@ -445,7 +448,7 @@ struct DuaSessionView: View {
                 }
             } label: {
                 let speaking = speech.currentText == item.arabicText
-                Label(speaking ? "Stop" : "Listen",
+                Label(speaking ? String(localized: "Stop") : String(localized: "Listen"),
                       systemImage: speaking ? "stop.fill" : "speaker.wave.2")
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity)
@@ -459,7 +462,7 @@ struct DuaSessionView: View {
             Button {
                 advance()
             } label: {
-                Label(isLast ? "Finish" : "Next", systemImage: isLast ? "checkmark" : "chevron.right")
+                Label(isLast ? String(localized: "Finish") : String(localized: "Next"), systemImage: isLast ? "checkmark" : "chevron.forward")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -486,7 +489,7 @@ struct DuaSessionView: View {
             Text("Session complete")
                 .font(.title3.weight(.bold))
 
-            Text("You went through all \(collection.items.count) of \(collection.title).")
+            Text("You went through all \(collection.items.count) of \(collection.displayTitle).")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

@@ -145,7 +145,7 @@ struct SettingsIslamView: View {
             Group {
                 // The footer is the chosen face's own story - the same caption the Quran and hadith
                 // font pickers show, from `IslamArabicFace.historyCaption`.
-                Section(header: Text("ARABIC FONT"), footer: Text(settings.islamArabicFace.historyCaption)) {
+                Section(header: Text("ARABIC FONT"), footer: Text(settings.islamArabicFace.historyCaption.localizedDigits)) {
                     IslamArabicFontPicker()
 
                     Text("The Arabic face used by the duas, the dhikr and remembrances, the 99 Names of Allah, and the Arabic alphabet. \(IslamSettingsCopy.ownFonts)")
@@ -158,7 +158,7 @@ struct SettingsIslamView: View {
                 // The Islam tab's own switch (Abu, 2026-09-20), beside the Quran's and the hadith
                 // books': each area of the app decides for itself.
                 Section(header: Text("HIGHLIGHTS")) {
-                    SettingsToggle("Highlight Allah", caption: "The name of Allah in red across the duas, dhikr, tasbih, 99 Names, daily cards and article quotes. \(IslamSettingsCopy.ownSwitches)", isOn: $islamSettings.highlightAllahNamesIslam)
+                    SettingsToggle(String(localized: "Highlight Allah"), caption: String(localized: "The name of Allah in red across the duas, dhikr, tasbih, 99 Names, daily cards and article quotes. \(IslamSettingsCopy.ownSwitches)"), isOn: $islamSettings.highlightAllahNamesIslam)
                 }
             }
             .themedListRowBackground()
@@ -188,13 +188,13 @@ struct SettingsIslamView: View {
 
                 if settings.advanced(.islamAlphabet) {
                 Section(header: Text("PRACTICE")) {
-                    SettingsToggle("Hide English Readings", caption: "Hides the transliterations (\"ba\", \"bi\", \"bu\") under the tashkeel glyphs, so the marks can be practised from the Arabic alone.", isOn: $islamSettings.hideEnglishInArabicLetters)
+                    SettingsToggle(String(localized: "Hide English Readings"), caption: String(localized: "Hides the transliterations (\"ba\", \"bi\", \"bu\") under the tashkeel glyphs, so the marks can be practised from the Arabic alone."), isOn: $islamSettings.hideEnglishInArabicLetters)
 
-                    SettingsToggle("Use Quranic Sukoon", caption: "Writes the practice syllables with the Uthmani sukoon (\u{06E1}) instead of the plain one (\u{0652}), the exact mark shape the mushaf prints.", isOn: $islamSettings.quranicSukoonInLetterPractice)
+                    SettingsToggle(String(localized: "Use Quranic Sukoon"), caption: String(localized: "Writes the practice syllables with the Uthmani sukoon (\u{06E1}) instead of the plain one (\u{0652}), the exact mark shape the mushaf prints."), isOn: $islamSettings.quranicSukoonInLetterPractice)
                 }
                 }
 
-                AdvancedSettingsSection(screen: .islamAlphabet, hides: "the practice options, hiding the English readings and the Quranic sukoon")
+                AdvancedSettingsSection(screen: .islamAlphabet, hides: String(localized: "the practice options, hiding the English readings and the Quranic sukoon"))
             }
             .themedListRowBackground()
         }
@@ -211,8 +211,8 @@ struct SettingsIslamView: View {
         List {
             Group {
                 Section(header: Text("LAYOUT")) {
-                    SettingsToggle("Grid Mode",
-                                   caption: "Shows the Islamic resources as tiles instead of rows. The 99 Names and the Arabic alphabet keep their own grid switches, in each screen's toolbar.",
+                    SettingsToggle(String(localized: "Grid Mode"),
+                                   caption: String(localized: "Shows the Islamic resources as tiles instead of rows. The 99 Names and the Arabic alphabet keep their own grid switches, in each screen's toolbar."),
                                    isOn: Binding(get: { settings.islamGridMode }, set: { settings.islamGridMode = $0 }))
                 }
 
@@ -236,7 +236,7 @@ struct SettingsIslamView: View {
                 #endif
 
                 #if HAS_ADHAN
-                AdvancedSettingsSection(screen: .islamLibraries, hides: "the daily features turning over at Fajr")
+                AdvancedSettingsSection(screen: .islamLibraries, hides: String(localized: "the daily features turning over at Fajr"))
                 #endif
             }
             .themedListRowBackground()
@@ -247,13 +247,13 @@ struct SettingsIslamView: View {
 
     #if HAS_QURAN
     private var wordOfTheDayToggle: some View {
-        SettingsToggle("Word of the Day", caption: "One Arabic word a day on the Al-Islam tab, with its root and where it appears in the Quran.", isOn: $quranDisplay.showWordOfTheDay)
+        SettingsToggle(String(localized: "Word of the Day"), caption: String(localized: "One Arabic word a day on the Al-Islam tab, with its root and where it appears in the Quran."), isOn: $quranDisplay.showWordOfTheDay)
     }
     #endif
 
     #if HAS_ADHAN
     private var fajrTurnoverToggle: some View {
-        SettingsToggle("Turn Over at Fajr", caption: "Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight.", isOn: $systemSettings.dailyRolloverAtFajr)
+        SettingsToggle(String(localized: "Turn Over at Fajr"), caption: String(localized: "Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight."), isOn: $systemSettings.dailyRolloverAtFajr)
             .onChange(of: settings.dailyRolloverAtFajr) { _ in settings.dailyRolloverSwitchChanged() }
     }
     #endif
@@ -278,16 +278,16 @@ enum IslamTextSize {
 
     static func name(_ size: DynamicTypeSize) -> String {
         switch size {
-        case .xSmall: return "Extra Small"
-        case .small: return "Small"
-        case .medium: return "Medium"
-        case .large: return "Default"
-        case .xLarge: return "Large"
-        case .xxLarge: return "Larger"
-        case .xxxLarge: return "Largest"
-        case .accessibility1: return "Accessibility 1"
-        case .accessibility2: return "Accessibility 2"
-        default: return "Accessibility"
+        case .xSmall: return String(localized: "Extra Small")
+        case .small: return String(localized: "Small")
+        case .medium: return String(localized: "Medium")
+        case .large: return String(localized: "Default")
+        case .xLarge: return String(localized: "Large")
+        case .xxLarge: return String(localized: "Larger")
+        case .xxxLarge: return String(localized: "Largest")
+        case .accessibility1: return String(localized: "Accessibility 1").localizedDigits
+        case .accessibility2: return String(localized: "Accessibility 2").localizedDigits
+        default: return String(localized: "Accessibility")
         }
     }
 }
@@ -349,7 +349,7 @@ struct IslamTextSizeSettingsView: View {
             Group {
                 Section(header: Text("TEXT SIZE"),
                         footer: Text("Applies to everything on the Al-Islam tab: the articles and guides, the duas and dhikr, the 99 Names and the libraries. \(IslamSettingsCopy.ownTextSizes)")) {
-                    SettingsToggle("Use Device Text Size", isOn: Binding(
+                    SettingsToggle(String(localized: "Use Device Text Size"), isOn: Binding(
                         get: { followsDevice },
                         set: { follow in
                             // Turning it off starts the slider at the size the device already uses,
@@ -359,7 +359,7 @@ struct IslamTextSizeSettingsView: View {
                     ))
 
                     if !followsDevice {
-                        FontSizeSlider("Text Size", value: indexBinding, in: 0...Double(IslamTextSize.steps.count - 1),
+                        FontSizeSlider(String(localized: "Text Size"), value: indexBinding, in: 0...Double(IslamTextSize.steps.count - 1),
                                        sample: nil,
                                        label: { IslamTextSize.name(IslamTextSize.size(for: Int($0.rounded())) ?? .large) },
                                        onLiveChange: { liveIndex = $0 })
@@ -510,13 +510,13 @@ extension SettingsSearchEntry {
 /// reader HAS_QURAN.
 enum IslamSettingsCopy {
     #if HAS_QURAN && HAS_HADITH
-    static let ownFonts = "The Quran and the hadith books keep their own fonts, in Quran Settings and Hadith Settings."
-    static let ownTextSizes = "The Quran and the hadith books keep their own text sizes, in Quran Settings and Hadith Settings."
-    static let ownSwitches = "The Quran and the hadith books have their own switches, in Quran Settings and Hadith Settings."
+    static let ownFonts = String(localized: "The Quran and the hadith books keep their own fonts, in Quran Settings and Hadith Settings.")
+    static let ownTextSizes = String(localized: "The Quran and the hadith books keep their own text sizes, in Quran Settings and Hadith Settings.")
+    static let ownSwitches = String(localized: "The Quran and the hadith books have their own switches, in Quran Settings and Hadith Settings.")
     #elseif HAS_QURAN
-    static let ownFonts = "The Quran keeps its own fonts, in Quran Settings."
-    static let ownTextSizes = "The Quran keeps its own text sizes, in Quran Settings."
-    static let ownSwitches = "The Quran has its own switch, in Quran Settings."
+    static let ownFonts = String(localized: "The Quran keeps its own fonts, in Quran Settings.")
+    static let ownTextSizes = String(localized: "The Quran keeps its own text sizes, in Quran Settings.")
+    static let ownSwitches = String(localized: "The Quran has its own switch, in Quran Settings.")
     #else
     static let ownFonts = ""
     static let ownTextSizes = ""

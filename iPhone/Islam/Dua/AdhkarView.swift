@@ -115,7 +115,7 @@ private struct AdhkarListenButton: View {
                 speech.speak(text, rate: 0.4)
             }
         } label: {
-            Label(isBeingSpoken ? "Stop" : "Listen",
+            Label(isBeingSpoken ? String(localized: "Stop") : String(localized: "Listen"),
                   systemImage: isBeingSpoken ? "stop.fill" : "speaker.wave.2")
                 .font(.caption.weight(.semibold))
                 .foregroundColor(settings.accentColor.color)
@@ -124,7 +124,7 @@ private struct AdhkarListenButton: View {
                 .conditionalGlassEffect()
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(isBeingSpoken ? "Stop the recitation" : "Hear the Arabic read aloud")
+        .accessibilityLabel(isBeingSpoken ? String(localized: "Stop the recitation") : String(localized: "Hear the Arabic read aloud"))
     }
 }
 
@@ -144,6 +144,8 @@ extension Settings {
 
 struct AdhkarRow: View, Equatable {
     @Environment(\.appearance) private var appearance
+    /// The row's own direction, not the interface's: an article lays its rows out left to right.
+    @Environment(\.layoutDirection) private var layoutDirection
     let arabicText: String
     let transliteration: String
     let translation: String
@@ -169,7 +171,7 @@ struct AdhkarRow: View, Equatable {
     /// the list, or its collection on the Duas root. Excluded from `==` (a closure; the row's CONTENT
     /// decides a redraw). Nil where the screen has nowhere to scroll to.
     var onScrollTo: (() -> Void)? = nil
-    var scrollLabel: String = "Scroll To Dhikr"
+    var scrollLabel: String = String(localized: "Scroll To Dhikr")
 
     /// The body lays out a full dhikr/dua (Arabic + transliteration + translation) and re-measures the
     /// Arabic's wrap - the expensive rows of the Adhkar and Dua screens, whose parents re-render on every
@@ -240,7 +242,9 @@ struct AdhkarRow: View, Equatable {
             guard !normalizedQuery.isEmpty else { return false }
             return Self.folded(field).contains(normalizedQuery)
         }
-        let trailing = alwaysTrailing || arabicWraps
+        // In a right-to-left interface the leading edge is already the right, where Arabic prose
+        // sits wrapped or not; `.trailing` there would push it to the left.
+        let trailing = (alwaysTrailing || arabicWraps) && layoutDirection == .leftToRight
         return VStack(alignment: .leading, spacing: 10) {
             HighlightedSnippet(
                 source: arabicText,
@@ -294,6 +298,7 @@ struct AdhkarRow: View, Equatable {
                 guaranteeMatch: matches(transliteration)
             )
             .fixedSize(horizontal: false, vertical: true)
+            .leftToRightContent()
 
             HighlightedSnippet(
                 source: translation,
@@ -305,6 +310,7 @@ struct AdhkarRow: View, Equatable {
                 guaranteeMatch: matches(translation)
             )
             .fixedSize(horizontal: false, vertical: true)
+            .leftToRightContent()
 
             // The bottom row: the citation sits leading, the Listen button trailing - one row, not two.
             // The button waits on the voice through `ArabicVoiceGate`: this row does not observe the
@@ -321,6 +327,9 @@ struct AdhkarRow: View, Equatable {
                         fg: .secondary,
                         guaranteeMatch: matches(source)
                     )
+                    // An English citation keeps its own direction; one shown in Arabic
+                    // (`DuaItem.displayReference`) takes the interface's.
+                    .leftToRightContent(!source.isMostlyArabicScript)
 
                     Spacer(minLength: 8)
 
@@ -526,7 +535,7 @@ struct AdhkarView: View {
 
                 Spacer()
 
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.forward")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
@@ -580,7 +589,7 @@ struct AdhkarView: View {
                             .spokenRowWash(dhikr.arabicText)
                         }
                     } header: {
-                        SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles")
+                        SectionPillHeader(title: String(localized: "AI MATCHES"), count: aiHits.count, icon: "sparkles")
                     }
                 }
             } else if !semanticEngine.failedCorpora.contains(Self.semanticCorpusID) {
@@ -608,11 +617,11 @@ struct AdhkarView: View {
                 #if os(iOS)
                 if !searchActive {
                     ResourceHeroSection(ResourceHero(
-                        eyebrow: "REMEMBRANCE OF ALLAH",
+                        eyebrow: String(localized: "REMEMBRANCE OF ALLAH"),
                         systemImage: "book.closed.fill",
-                        headline: "Unquestionably, by the remembrance of Allah hearts are assured.",
-                        source: "Quran 13:28",
-                        message: "Words of praise, thanks and glorification from the Quran and the Sunnah, each in Arabic with its transliteration and meaning, to keep on your tongue through the day."
+                        headline: String(localized: "Unquestionably, by the remembrance of Allah hearts are assured."),
+                        source: String(localized: "Quran 13:28"),
+                        message: String(localized: "Words of praise, thanks and glorification from the Quran and the Sunnah, each in Arabic with its transliteration and meaning, to keep on your tongue through the day.")
                     ))
                 }
                 #endif
@@ -635,7 +644,7 @@ struct AdhkarView: View {
                     SpeechQualityHint()
                 }
                 #if os(iOS)
-                AboutSignsSection(heading: "About Dhikr & Remembrance",
+                AboutSignsSection(heading: String(localized: "About Dhikr & Remembrance"),
                                   systemImage: "book.closed",
                                   doors: [.allah, .tawhid, .makeDua],
                                   openDoor: $aboutDoor)
@@ -748,11 +757,12 @@ struct AdhkarView: View {
 
             ListenAllPill(texts: commonDhikrItems.map(\.arabicText))
         }) {
-             ArticleLead("Short remembrances to keep your heart connected to Allah throughout the day.")
+             ArticleLead(String(localized: "Short remembrances to keep your heart connected to Allah throughout the day."),
+                         eyebrow: String(localized: "IN SHORT"))
 
              // The phone's hero quotes this ayah above the section (`ResourceHero`); the watch has no hero.
              #if os(watchOS)
-             Text("\"Unquestionably, by the remembrance of Allah hearts are assured.\" (Quran 13:28)")
+             Text(String(localized: "\"Unquestionably, by the remembrance of Allah hearts are assured.\" (Quran 13:28)").localizedDigits)
                  .font(.caption)
                  .foregroundColor(.secondary)
              #endif
@@ -763,8 +773,8 @@ struct AdhkarView: View {
     private var etymologySection: some View {
         Section(header: Text("ETYMOLOGY")) {
             ArticleEtymologyCard("Dhikr", arabic: "ذِكْر", root: "ذ ك ر", rootLatin: "dh-k-r",
-                                 coreMeaning: "to remember, to mention, to be mindful",
-                                 text: "Dhikr literally means remembrance or mentioning. It includes saying SubhanAllah, Alhamdulillah, Allahu Akbar, reciting the Quran, and keeping Allah always present in the heart and tongue.")
+                                 coreMeaning: String(localized: "to remember, to mention, to be mindful"),
+                                 text: String(localized: "Dhikr literally means remembrance or mentioning. It includes saying SubhanAllah, Alhamdulillah, Allahu Akbar, reciting the Quran, and keeping Allah always present in the heart and tongue."))
         }
     }
 
@@ -780,8 +790,8 @@ struct AdhkarView: View {
            !commonDhikrItems.contains(where: { matchesSearch($0) }) {
             #if os(iOS)
             Text(aiHits.isEmpty
-                 ? "No remembrances match your search."
-                 : "No keyword matches; see the AI results above.")
+                 ? String(localized: "No remembrances match your search.")
+                 : String(localized: "No keyword matches; see the AI results above."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             #else
@@ -795,32 +805,33 @@ struct AdhkarView: View {
     private var virtuesSection: some View {
         // A lead, the two quoted callouts, and a closing card: the Pillars & Beliefs page grammar.
         Section(header: Text("VIRTUES OF DHIKR")) {
-            ArticleLead("Dhikr is a continuous awareness of Allah. It revives the heart, protects the soul, and keeps a believer steady in trials.")
+            ArticleLead(String(localized: "Dhikr is a continuous awareness of Allah. It revives the heart, protects the soul, and keeps a believer steady in trials."),
+                        eyebrow: String(localized: "IN SHORT"))
 
             ArticleCallout(
                 bullets: [
-                    "So remember Me; I will remember you. And be grateful to Me and do not deny Me. (Quran 2:152)",
-                    "Unquestionably, by the remembrance of Allah hearts are assured. (Quran 13:28)",
-                    "O you who have believed, remember Allah with much remembrance. (Quran 33:41)",
-                    "Indeed, the Muslim men and Muslim women, the believing men and believing women, the obedient men and obedient women, the truthful men and truthful women, the patient men and patient women, the humble men and humble women, the charitable men and charitable women, the fasting men and fasting women, the men who guard their private parts and the women who do so, and the men who remember Allah often and the women who do so: for them Allah has prepared forgiveness and a great reward. (Quran 33:35)"
+                    String(localized: "So remember Me; I will remember you. And be grateful to Me and do not deny Me. (Quran 2:152)"),
+                    String(localized: "Unquestionably, by the remembrance of Allah hearts are assured. (Quran 13:28)"),
+                    String(localized: "O you who have believed, remember Allah with much remembrance. (Quran 33:41)"),
+                    String(localized: "Indeed, the Muslim men and Muslim women, the believing men and believing women, the obedient men and obedient women, the truthful men and truthful women, the patient men and patient women, the humble men and humble women, the charitable men and charitable women, the fasting men and fasting women, the men who guard their private parts and the women who do so, and the men who remember Allah often and the women who do so: for them Allah has prepared forgiveness and a great reward. (Quran 33:35)")
                 ],
-                title: "Quranic Reminders",
+                title: String(localized: "Quranic Reminders"),
                 systemImage: "book.closed.fill"
             )
             .articleCardRow()
 
             ArticleCallout(
                 bullets: [
-                    "The best of your deeds, and the purest with your Master, is the remembrance of Allah. (Tirmidhi 3377, sahih)",
-                    "Two words are light on the tongue, heavy on the Scale, and beloved to the Most Merciful: SubhanAllahi wa bihamdihi, SubhanAllahil Adheem. (Bukhari 6682; Muslim 2694)",
-                    "Keep your tongue moist with the remembrance of Allah. (Tirmidhi 3375, hasan)"
+                    String(localized: "The best of your deeds, and the purest with your Master, is the remembrance of Allah. (Tirmidhi 3377, sahih)"),
+                    String(localized: "Two words are light on the tongue, heavy on the Scale, and beloved to the Most Merciful: SubhanAllahi wa bihamdihi, SubhanAllahil Adheem. (Bukhari 6682; Muslim 2694)"),
+                    String(localized: "Keep your tongue moist with the remembrance of Allah. (Tirmidhi 3375, hasan)")
                 ],
-                title: "Prophetic Encouragement",
+                title: String(localized: "Prophetic Encouragement"),
                 systemImage: "quote.bubble.fill"
             )
             .articleCardRow()
 
-            ArticleClosing("Make dhikr a daily rhythm: morning, evening, after salah, before sleep, and during ordinary moments. A heart that remembers Allah does not stay empty.")
+            ArticleClosing(String(localized: "Make dhikr a daily rhythm: morning, evening, after salah, before sleep, and during ordinary moments. A heart that remembers Allah does not stay empty."))
                 .articleCardRow()
         }
     }

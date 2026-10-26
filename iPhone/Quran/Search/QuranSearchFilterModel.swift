@@ -46,11 +46,11 @@ struct QuranSearchFilters: Equatable {
 
         var title: String {
             switch self {
-            case .surahs: return "Surahs"
-            case .jumps: return "Page & Juz"
-            case .topics: return "Roots & Topics"
-            case .ai: return "AI"
-            case .ayahs: return "Ayahs"
+            case .surahs: return String(localized: "Surahs")
+            case .jumps: return String(localized: "Page & Juz")
+            case .topics: return String(localized: "Roots & Topics")
+            case .ai: return String(localized: "AI")
+            case .ayahs: return String(localized: "Ayahs")
             }
         }
 
@@ -66,11 +66,11 @@ struct QuranSearchFilters: Equatable {
 
         var detail: String {
             switch self {
-            case .surahs: return "Surah names, numbers, and size filters"
-            case .jumps: return "Page, juz, hizb, ruku and manzil jumps"
-            case .topics: return "Arabic roots, dictionary forms, topics and passages"
-            case .ai: return "Meaning matches and the Ask AI row"
-            case .ayahs: return "Ayah text in Arabic, English and transliteration"
+            case .surahs: return String(localized: "Surah names, numbers, and size filters")
+            case .jumps: return String(localized: "Page, juz, hizb, ruku and manzil jumps")
+            case .topics: return String(localized: "Arabic roots, dictionary forms, topics and passages")
+            case .ai: return String(localized: "Meaning matches and the Ask AI row")
+            case .ayahs: return String(localized: "Ayah text in Arabic, English and transliteration")
             }
         }
     }
@@ -82,21 +82,21 @@ struct QuranSearchFilters: Equatable {
 
         var title: String {
             switch self {
-            case .contains: return "Contains"
-            case .wholeWord: return "Whole Word"
-            case .startsWith: return "Starts With"
-            case .endsWith: return "Ends With"
-            case .exact: return "Exact"
+            case .contains: return String(localized: "Contains")
+            case .wholeWord: return String(localized: "Whole Word")
+            case .startsWith: return String(localized: "Starts With")
+            case .endsWith: return String(localized: "Ends With")
+            case .exact: return String(localized: "Exact")
             }
         }
 
         var detail: String {
             switch self {
-            case .contains: return "Anywhere, even inside a longer word: رب also finds ربهم"
-            case .wholeWord: return "Whole words only: رب finds the word رب, not ربهم"
-            case .startsWith: return "A word, or the ayah, begins with it"
-            case .endsWith: return "A word, or the ayah, ends with it"
-            case .exact: return "Letter for letter: tashkeel in Arabic, capitals in English"
+            case .contains: return String(localized: "Anywhere, even inside a longer word: رب also finds ربهم")
+            case .wholeWord: return String(localized: "Whole words only: رب finds the word رب, not ربهم")
+            case .startsWith: return String(localized: "A word, or the ayah, begins with it")
+            case .endsWith: return String(localized: "A word, or the ayah, ends with it")
+            case .exact: return String(localized: "Letter for letter: tashkeel in Arabic, capitals in English")
             }
         }
     }
@@ -108,17 +108,17 @@ struct QuranSearchFilters: Equatable {
 
         var title: String {
             switch self {
-            case .phrase: return "As a Phrase"
-            case .allWords: return "All Words"
-            case .anyWord: return "Any Word"
+            case .phrase: return String(localized: "As a Phrase")
+            case .allWords: return String(localized: "All Words")
+            case .anyWord: return String(localized: "Any Word")
             }
         }
 
         var detail: String {
             switch self {
-            case .phrase: return "The words together, in the order typed"
-            case .allWords: return "Every word, anywhere in the ayah, in any order"
-            case .anyWord: return "At least one of the words"
+            case .phrase: return String(localized: "The words together, in the order typed")
+            case .allWords: return String(localized: "Every word, anywhere in the ayah, in any order")
+            case .anyWord: return String(localized: "At least one of the words")
             }
         }
     }
@@ -130,23 +130,23 @@ struct QuranSearchFilters: Equatable {
 
         var title: String {
             switch self {
-            case .surah: return "Surah"
-            case .page: return "Page"
-            case .juz: return "Juz"
-            case .hizb: return "Hizb"
-            case .ruku: return "Ruku"
-            case .manzil: return "Manzil"
+            case .surah: return String(localized: "Surah")
+            case .page: return String(localized: "Page")
+            case .juz: return String(localized: "Juz")
+            case .hizb: return String(localized: "Hizb")
+            case .ruku: return String(localized: "Ruku")
+            case .manzil: return String(localized: "Manzil")
             }
         }
 
         var placeholder: String {
             switch self {
-            case .surah: return "Surah number or name (-1 is the last)"
-            case .page: return "Page number (-1 is the last)"
-            case .juz: return "Juz number or name (-1 is the last)"
-            case .hizb: return "Hizb number, 1 to 60"
-            case .ruku: return "Ruku number"
-            case .manzil: return "Manzil number, 1 to 7"
+            case .surah: return String(localized: "Surah number or name (-1 is the last)")
+            case .page: return String(localized: "Page number (-1 is the last)")
+            case .juz: return String(localized: "Juz number or name (-1 is the last)")
+            case .hizb: return String(localized: "Hizb number, 1 to 60")
+            case .ruku: return String(localized: "Ruku number")
+            case .manzil: return String(localized: "Manzil number, 1 to 7")
             }
         }
     }
@@ -154,7 +154,7 @@ struct QuranSearchFilters: Equatable {
     enum Revelation: String, CaseIterable, Identifiable {
         case makkan, madinan
         var id: String { rawValue }
-        var title: String { self == .makkan ? "Makki" : "Madani" }
+        var title: String { self == .makkan ? String(localized: "Makki") : String(localized: "Madani") }
     }
 
     /// The reader's own collections a search can be held to (Abu, 2026-10-01: "search bookmarks and
@@ -162,12 +162,12 @@ struct QuranSearchFilters: Equatable {
     enum Library: String, CaseIterable, Identifiable {
         case bookmarks, favorites
         var id: String { rawValue }
-        var title: String { self == .bookmarks ? "Bookmarks" : "Favorites" }
+        var title: String { self == .bookmarks ? String(localized: "Bookmarks") : String(localized: "Favorites") }
         var systemImage: String { self == .bookmarks ? "bookmark.fill" : "star.fill" }
         var detail: String {
             switch self {
-            case .bookmarks: return "Only your bookmarked ayahs, and the notes you wrote on them"
-            case .favorites: return "Only your favorite surahs"
+            case .bookmarks: return String(localized: "Only your bookmarked ayahs, and the notes you wrote on them")
+            case .favorites: return String(localized: "Only your favorite surahs")
             }
         }
     }
@@ -179,17 +179,17 @@ struct QuranSearchFilters: Equatable {
 
         var title: String {
             switch self {
-            case .all: return "All Text"
-            case .translation: return "Translation"
-            case .transliteration: return "Transliteration"
+            case .all: return String(localized: "All Text")
+            case .translation: return String(localized: "Translation")
+            case .transliteration: return String(localized: "Transliteration")
             }
         }
 
         var detail: String {
             switch self {
-            case .all: return "Arabic, both English translations and the transliteration"
-            case .translation: return "English meaning only, so \u{201C}min\u{201D} stops matching the transliteration"
-            case .transliteration: return "The Arabic in Latin letters only: \u{201C}rahman\u{201D}, \u{201C}alhamdu\u{201D}"
+            case .all: return String(localized: "Arabic, both English translations and the transliteration")
+            case .translation: return String(localized: "English meaning only, so \u{201C}min\u{201D} stops matching the transliteration")
+            case .transliteration: return String(localized: "The Arabic in Latin letters only: \u{201C}rahman\u{201D}, \u{201C}alhamdu\u{201D}")
             }
         }
     }
@@ -198,12 +198,12 @@ struct QuranSearchFilters: Equatable {
         case mushaf, relevance
         var id: String { rawValue }
 
-        var title: String { self == .mushaf ? "Mushaf Order" : "Best Match" }
+        var title: String { self == .mushaf ? String(localized: "Mushaf Order") : String(localized: "Best Match") }
 
         var detail: String {
             switch self {
-            case .mushaf: return "Every match from al-Fatihah to an-Nas, grouped by surah"
-            case .relevance: return "Closest matches first: whole words, short ayahs and early matches rank higher, and spelling is forgiven"
+            case .mushaf: return String(localized: "Every match from al-Fatihah to an-Nas, grouped by surah")
+            case .relevance: return String(localized: "Closest matches first: whole words, short ayahs and early matches rank higher, and spelling is forgiven")
             }
         }
     }
@@ -365,7 +365,8 @@ struct QuranSearchFilters: Equatable {
     }
 
     func compile(_ rawText: String) -> Compiled {
-        let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        // An Arabic keyboard types "٢:٢٥٥": references and counts are parsed in Western digits.
+        let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines).arabicDigitsToWestern()
         let empty = Compiled(navigation: "", exact: "", ranked: nil, semantic: "", isShaped: false)
         guard !text.isEmpty else { return empty }
 

@@ -397,7 +397,7 @@ final class SimpleModeUITests: XCTestCase {
                       "Topics from the More menu did not open the topics screen")
     }
 
-    /// The Islam tab folds TOOLS, SIGNS & PROOFS and ASK AI behind one row, and the row opens them.
+    /// The Islam tab folds TOOLS and ASK AI behind one row, and the row opens them.
     func testIslamMoreResourcesListsTools() {
         let app = launch(["-launchTabIslam", "-seedBool", "simpleMode=1"])
         let zakah = NSPredicate(format: "label CONTAINS[c] 'Zakah'")
@@ -684,27 +684,112 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Select Text"].exists, "row hold stole the button's hold")
     }
 
-    /// The ayah's play button PLAYS on a tap (from the ayah to the end of the surah), with no menu in
-    /// the way; a hold opens its playback menu (2026-10-21).
-    func testAyahPlayButtonTapStartsPlayback() {
+    /// The first ayah play button on screen. With `-lastRead 1:2` the FIRST match can be 1:1's
+    /// control scrolled off the top, so the hittable one is wanted.
+    private func hittablePlayButton(_ app: XCUIApplication) -> XCUIElement? {
+        let any = app.buttons["ayahPlayButton"].firstMatch
+        guard any.waitForExistence(timeout: 15) else { return nil }
+        return app.buttons.matching(identifier: "ayahPlayButton").allElementsBoundByIndex
+            .first(where: { $0.isHittable })
+    }
+
+    /// The ayah's play button is a MENU on a tap, plays from the ayah to the end of the surah on a
+    /// double tap, and opens Play Custom Range on a hold (2026-10-23; for two days the tap played and
+    /// the hold opened the menu).
+    func testAyahPlayButtonTapOpensPlaybackMenu() {
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
+        guard let play = hittablePlayButton(app) else { return XCTFail("no hittable play button") }
+        play.tap()
+        XCTAssertTrue(app.buttons["Play This Ayah"].waitForExistence(timeout: 5), "tap did not open the playback menu")
+        XCTAssertTrue(app.buttons["Play Custom Range"].exists)
+        // Choose Reciter leads the menu, as in the Quran tab's Play Ayah submenu (2026-10-25).
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Choose Reciter")).firstMatch.exists,
+                      "the playback menu has no Choose Reciter")
+        XCTAssertFalse(app.buttons["Stop playing"].exists, "tap also started playback")
+    }
+
+    /// The actions sheet's "Keep Screen On" switch, the one row it always has whatever the riwayah.
+    private func actionsSheetSwitch(_ app: XCUIApplication) -> XCUIElement {
+        app.switches.matching(NSPredicate(format: "label BEGINSWITH %@", "Keep Screen On")).firstMatch
+    }
+
+    private func launchActionsSheet(keepOpenOnPlay: Bool) -> XCUIApplication {
+        launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:2", "-openRowSheet", "actions", "-sheetLarge",
+                "-seedBool", "simpleMode=0,THEfirstLaunch=0,ayahSheetKeepsScreenOn=0,keepAyahSheetOpenOnPlay=\(keepOpenOnPlay ? 1 : 0)"])
+    }
+
+    /// Play This Ayah closes the actions sheet while Keep Sheet Open While Playing is off, its default.
+    func testActionsSheetPlayClosesSheetByDefault() {
+        let app = launchActionsSheet(keepOpenOnPlay: false)
+        let play = app.buttons["Play This Ayah"]
+        XCTAssertTrue(play.waitForExistence(timeout: 10), "the actions sheet has no Play This Ayah tile")
+        XCTAssertTrue(actionsSheetSwitch(app).exists, "the actions sheet has no Keep Screen On switch")
+        play.tap()
+        let closed = actionsSheetSwitch(app).waitForNonExistence(timeout: 5)
+        if !closed { attachScreenshot("Actions sheet after play, default") }
+        XCTAssertTrue(closed, "Play This Ayah left the sheet open with the switch off")
+        if app.buttons["Stop playing"].waitForExistence(timeout: 5) { app.buttons["Stop playing"].tap() }
+    }
+
+    /// With Keep Sheet Open While Playing on, Play This Ayah starts the recitation and the sheet stays.
+    func testActionsSheetPlayKeepsSheetWhenSwitchOn() {
+        let app = launchActionsSheet(keepOpenOnPlay: true)
+        let play = app.buttons["Play This Ayah"]
+        XCTAssertTrue(play.waitForExistence(timeout: 10), "the actions sheet has no Play This Ayah tile")
+        play.tap()
+        Thread.sleep(forTimeInterval: 2)
+        attachScreenshot("Actions sheet after play, kept open")
+        XCTAssertTrue(actionsSheetSwitch(app).exists, "Play This Ayah closed the sheet with the switch on")
+        XCTAssertTrue(app.buttons["Play This Ayah"].exists, "the sheet's tiles went away")
+        if app.buttons["Stop playing"].exists { app.buttons["Stop playing"].tap() }
+    }
+
+    /// The sheet's Choose Reciter row opens the reciter list ON the sheet: closing the list without a
+    /// pick lands back on the actions.
+    func testActionsSheetChooseReciterStacksOnSheet() {
+        let app = launchActionsSheet(keepOpenOnPlay: false)
+        let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Reciter:")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "the actions sheet has no reciter row")
+        row.tap()
+        let listOpened = app.navigationBars["Select Reciter"].waitForExistence(timeout: 5)
+        if !listOpened {
+            attachScreenshot("Actions sheet reciter row")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(listOpened, "the reciter row did not open the reciter list")
+        app.navigationBars["Select Reciter"].buttons["Close"].tap()
+        XCTAssertTrue(actionsSheetSwitch(app).waitForExistence(timeout: 5), "closing the reciter list also closed the actions sheet")
+    }
+
+    func testAyahPlayButtonDoubleTapStartsPlayback() {
         let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:2",
                           "-seedBool", "simpleMode=0,THEfirstLaunch=0,nowPlayingExpanded=1"])
-        let play = app.buttons["ayahPlayButton"].firstMatch
-        XCTAssertTrue(play.waitForExistence(timeout: 15))
-        play.tap()
-        XCTAssertTrue(app.buttons["Stop playing"].waitForExistence(timeout: 10), "tap did not start playback")
-        XCTAssertFalse(app.buttons["Play This Ayah"].exists, "tap also opened the playback menu")
+        guard let play = hittablePlayButton(app) else { return XCTFail("no hittable play button") }
+        play.doubleTap()
+        let started = app.buttons["Stop playing"].waitForExistence(timeout: 10)
+        if !started {
+            attachScreenshot("Ayah play double tap")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(started, "double tap did not start playback")
+        XCTAssertFalse(app.buttons["Play This Ayah"].exists, "double tap also opened the playback menu")
         app.buttons["Stop playing"].tap()
     }
 
-    func testAyahPlayButtonHoldOpensPlaybackMenu() {
+    func testAyahPlayButtonHoldOpensCustomRange() {
         let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1",
                           "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
-        let play = app.buttons["ayahPlayButton"].firstMatch
-        XCTAssertTrue(play.waitForExistence(timeout: 15))
+        guard let play = hittablePlayButton(app) else { return XCTFail("no hittable play button") }
         play.press(forDuration: 0.7)
-        XCTAssertTrue(app.buttons["Play This Ayah"].waitForExistence(timeout: 5), "hold did not open the playback menu")
-        XCTAssertTrue(app.buttons["Play Custom Range"].exists)
+        let rangeOpened = app.buttons["Play Range"].waitForExistence(timeout: 5)
+            || app.staticTexts["Play Range"].exists
+        if !rangeOpened {
+            attachScreenshot("Ayah play hold")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(rangeOpened, "hold did not open the custom range sheet")
+        XCTAssertFalse(app.buttons["Play This Ayah"].exists, "hold also opened the playback menu")
         XCTAssertFalse(app.buttons["Stop playing"].exists, "hold also started playback")
         XCTAssertFalse(app.buttons["Select Text"].exists, "row hold stole the button's hold")
     }

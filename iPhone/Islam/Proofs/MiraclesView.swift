@@ -358,11 +358,11 @@ struct MiraclesView: View {
     private var query: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     /// Every term has to hit, so "mountain root" finds the one article that "mountain" alone would bury.
-    private static func filter(_ library: MiraclesStore.Library?, query: String) -> [MiracleArticle] {
-        guard let library else { return [] }
+    /// `MiracleCategoryView` runs the same filter over one subject's articles.
+    static func filter(_ articles: [MiracleArticle], query: String) -> [MiracleArticle] {
         let terms = IslamArticles.fold(query).split(separator: " ").map(String.init)
         guard !terms.isEmpty else { return [] }
-        let matched = library.articles.filter { article in terms.allSatisfy { article.searchKey.contains($0) } }
+        let matched = articles.filter { article in terms.allSatisfy { article.searchKey.contains($0) } }
         return SearchRank.sorted(matched, by: query) { [$0.title] }
     }
 
@@ -371,7 +371,7 @@ struct MiraclesView: View {
         filterTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 150_000_000)
             guard !Task.isCancelled else { return }
-            results = Self.filter(library, query: text.trimmingCharacters(in: .whitespacesAndNewlines))
+            results = Self.filter(library?.articles ?? [], query: text.trimmingCharacters(in: .whitespacesAndNewlines))
         }
     }
 
@@ -475,6 +475,7 @@ struct MiraclesView: View {
                 }
             }
         }
+        .englishArticle()
         .applyConditionalListStyle()
         .aboutSignsDestination($openDoor)
         .navigationTitle("Miracles of the Quran")
@@ -498,7 +499,7 @@ struct MiraclesView: View {
             guard library == nil else { return }
             let loaded = await Task.detached(priority: .userInitiated) { MiraclesStore.shared.library() }.value
             library = loaded
-            results = Self.filter(loaded, query: query)
+            results = Self.filter(loaded?.articles ?? [], query: query)
             #if DEBUG
             // "-miracleArticle <slug>" pushes one article on top of the index, the only headless way in.
             let args = ProcessInfo.processInfo.arguments
@@ -519,37 +520,66 @@ struct MiracleCategoryView: View {
     let category: MiracleCategory
 
     @State private var articles: [MiracleArticle]?
+    @State private var searchText = ""
+    /// The subject's articles matching the settled query: the index's rule, from `.onChange` 150 ms
+    /// after the last keystroke and the articles' arrival, never from the body.
+    @State private var results: [MiracleArticle] = []
+    @State private var filterTask: Task<Void, Never>?
+    @State private var barsCollapsed = false
+
+    private var query: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    private func scheduleFilter(_ text: String) {
+        filterTask?.cancel()
+        filterTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard !Task.isCancelled else { return }
+            results = MiraclesView.filter(articles ?? [], query: text.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+    }
+
+    @ViewBuilder
+    private func row(_ article: MiracleArticle, query: String) -> some View {
+        NavigationLink(destination: LazyDestination {
+            MiracleArticleView(article: article)
+        }) {
+            MiracleArticleRow(article: article, showCategory: false, query: query).equatable()
+        }
+    }
 
     var body: some View {
         let _ = RenderCounter.hit("MiracleCategoryView")
         List {
             if let articles {
-                let levels = MiracleLevel.allCases.map { level in (level, articles.filter { $0.level == level }) }
-                    .filter { !$0.1.isEmpty }
-                if levels.count > 1 {
-                    ForEach(levels, id: \.0) { level, rows in
-                        Section(header: SectionPillHeader(title: level.title.uppercased(), count: rows.count)) {
-                            ForEach(rows) { article in
-                                NavigationLink(destination: LazyDestination {
-                                    MiracleArticleView(article: article)
-                                }) {
-                                    MiracleArticleRow(article: article, showCategory: false, query: "").equatable()
-                                }
+                if query.isEmpty {
+                    let levels = MiracleLevel.allCases.map { level in (level, articles.filter { $0.level == level }) }
+                        .filter { !$0.1.isEmpty }
+                    if levels.count > 1 {
+                        ForEach(levels, id: \.0) { level, rows in
+                            Section(header: SectionPillHeader(title: level.title.uppercased(), count: rows.count)) {
+                                ForEach(rows) { row($0, query: "") }
                             }
                         }
+                    } else {
+                        Section(header: SectionPillHeader(title: "ARTICLES", count: articles.count)) {
+                            ForEach(articles) { row($0, query: "") }
+                        }
                     }
+                    Section(footer: MiracleCreditFooter()) { EmptyView() }
                 } else {
-                    Section(header: SectionPillHeader(title: "ARTICLES", count: articles.count)) {
-                        ForEach(articles) { article in
-                            NavigationLink(destination: LazyDestination {
-                                MiracleArticleView(article: article)
-                            }) {
-                                MiracleArticleRow(article: article, showCategory: false, query: "").equatable()
-                            }
+                    let matches = results
+                    if matches.isEmpty {
+                        Section {
+                            Text("No \(category.title) articles match \"\(query)\". Try a different word, or search the whole library.")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Section(header: SectionPillHeader(title: "ARTICLES", count: matches.count)) {
+                            ForEach(matches) { row($0, query: query) }
                         }
                     }
                 }
-                Section(footer: MiracleCreditFooter()) { EmptyView() }
             } else {
                 Section {
                     HStack {
@@ -560,18 +590,32 @@ struct MiracleCategoryView: View {
                 }
             }
         }
+        .englishArticle()
         .applyConditionalListStyle()
         .navigationTitle(category.title)
         #if os(iOS)
         .openScreen(.miracleCategory, id: category.rawValue)
         #endif
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: searchText) { text in scheduleFilter(text) }
+        .collapseBarsOnScroll($barsCollapsed)
+        .adaptiveSafeArea(edge: .bottom) {
+            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
+                      placeholder: "Search \(category.title)")
+                .minimizedBarStyle(barsCollapsed)
+                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
+                .padding(.horizontal, 24)
+                .padding(.bottom, BottomBarCushion.standard)
+                .background(Color.white.opacity(0.00001))
+        }
         .task {
             guard articles == nil else { return }
             let category = self.category
-            articles = await Task.detached(priority: .userInitiated) {
+            let loaded = await Task.detached(priority: .userInitiated) {
                 MiraclesStore.shared.library()?.articles(in: category) ?? []
             }.value
+            articles = loaded
+            results = MiraclesView.filter(loaded, query: query)
         }
     }
 }
@@ -655,9 +699,9 @@ struct MiracleArticleView: View {
     private var siblingNavigationPair: some View {
         HStack(spacing: 10) {
             siblingNavigationButton(title: "Previous", target: siblings.previous,
-                                    endNote: "First", systemImage: "chevron.left", trailing: false)
+                                    endNote: "First", systemImage: "chevron.backward", trailing: false)
             siblingNavigationButton(title: "Next", target: siblings.next,
-                                    endNote: "Last", systemImage: "chevron.right", trailing: true)
+                                    endNote: "Last", systemImage: "chevron.forward", trailing: true)
         }
     }
 
@@ -759,7 +803,7 @@ struct MiracleArticleView: View {
         let accent = appearance.accent
         let eyebrow = HStack(spacing: 6) {
             Image(systemName: "sparkle")
-            Text("IN SHORT")
+            Text(verbatim: AppLanguage.article("IN SHORT"))
                 .tracking(1.1)
         }
         .font(.caption.weight(.bold))
@@ -838,7 +882,7 @@ struct MiracleArticleView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .englishArticle().selectableArticleList()
         #if DEBUG
         // `-miracleScrollToSiblings`: the Previous|Next pair sits under the whole article, and there
         // is no scroll tooling in the simulator, so a screenshot run needs a way to reach it.
@@ -860,7 +904,7 @@ struct MiracleArticleView: View {
                         withAnimation { copied = true }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { withAnimation { copied = false } }
                     } label: {
-                        Label(copied ? "Copied" : "Copy Article", systemImage: copied ? "checkmark" : "doc.on.doc")
+                        Label(AppLanguage.article(copied ? "Copied" : "Copy Article"), systemImage: copied ? "checkmark" : "doc.on.doc")
                     }
                     Button {
                         Settings.shared.hapticFeedback()

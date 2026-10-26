@@ -69,7 +69,7 @@ struct AdhanBannerHost: View {
             if let key = player.bannerKey,
                presenter.shouldShow(key: key, dismissed: presenter.dismissedKey),
                let prayerName = player.playingPrayerName ?? player.pendingPrayerName {
-                AdhanBannerCard(prayerName: prayerName,
+                AdhanBannerCard(prayerName: prayerName.localizedDisplay,
                                 isPlaying: player.isPlaying,
                                 reason: player.pendingReason,
                                 key: key)
@@ -103,15 +103,15 @@ private struct AdhanBannerCard: View {
     let reason: ForegroundAdhanPlayer.OfferReason?
     let key: String
 
-    private var kicker: String { isPlaying ? "ADHAN PLAYING" : "ADHAN TIME" }
+    private var kicker: String { isPlaying ? String(localized: "ADHAN PLAYING") : String(localized: "ADHAN TIME") }
 
     /// What the card says under the prayer name: how to end a playing adhan, or why an offered one
     /// did not start by itself.
     private var subtitle: String {
-        guard !isPlaying else { return "Tap Stop to end the adhan" }
+        guard !isPlaying else { return String(localized: "Tap Stop to end the adhan") }
         switch reason {
-        case .silenced: return "In Silent Mode · Tap Play to hear it"
-        case .manual, .none: return "Tap Play to hear the adhan"
+        case .silenced: return String(localized: "In Silent Mode · Tap Play to hear it")
+        case .manual, .none: return String(localized: "Tap Play to hear the adhan")
         }
     }
 

@@ -17,7 +17,7 @@ struct LockScreen2EntryView: View {
                             .padding(.trailing, -4)
                     }
 
-                    Text(currentPrayer.displayName)
+                    Text(currentPrayer.displayName.localizedDisplay)
                         .font(.headline)
 
                     Text("\(nextPrayer.time, style: .timer)")
@@ -25,7 +25,7 @@ struct LockScreen2EntryView: View {
                         .font(.footnote.monospacedDigit())
                 }
 
-                Text("Next: \(nextPrayer.displayName) at \(Text(nextPrayer.time, style: .time))")
+                Text("Next: \(nextPrayer.displayName.localizedDisplay) at \(Text(nextPrayer.time, style: .time))")
                     .font(.caption)
 
                 // How far through the current prayer's window we are, filling live from its start to

@@ -497,7 +497,7 @@ struct ListenAllPill: View {
         if speech.isAvailable {
             HStack(spacing: 4) {
                 Image(systemName: speech.isSpeakingQueue ? "stop.fill" : "play.fill")
-                Text(speech.isSpeakingQueue ? "Stop" : "Listen All")
+                Text(speech.isSpeakingQueue ? String(localized: "Stop") : String(localized: "Listen All"))
             }
             .font(.caption.weight(.semibold))
             .foregroundColor(appearance.accent)
@@ -512,7 +512,7 @@ struct ListenAllPill: View {
                     speech.speakAll(texts)
                 }
             }
-            .accessibilityLabel(speech.isSpeakingQueue ? "Stop listening" : "Listen to every item in order")
+            .accessibilityLabel(speech.isSpeakingQueue ? String(localized: "Stop listening") : String(localized: "Listen to every item in order"))
         }
     }
 }

@@ -86,7 +86,8 @@ struct WidgetGalleryView: View {
         return PrayersEntry(
             date: now,
             accentColor: settings.accentColor,
-            currentCity: city,
+            // As the provider builds it: the label as the widgets show it (`String.cityDisplay`).
+            currentCity: city.cityDisplay.localizedDigits,
             prayers: prayers?.prayers ?? [],
             fullPrayers: prayers?.fullPrayers ?? [],
             currentPrayer: settings.currentPrayer,

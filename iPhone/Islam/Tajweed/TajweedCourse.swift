@@ -34,6 +34,12 @@ struct TajweedAyahWords {
     /// A key for row ids: the same whether or not the Quran is loaded.
     var key: String { "\(surahId):\(ayahNumber):\(span.lowerBound)-\(span.upperBound)" }
 
+    init(surahId: Int, ayahNumber: Int, span: ClosedRange<Int>) {
+        self.surahId = surahId
+        self.ayahNumber = ayahNumber
+        self.span = span
+    }
+
     /// The pack's `[surah, ayahNumber, first, last]`.
     init?(pack raw: Any?) {
         guard let row = raw as? [Int], row.count == 4, row[2] >= 0, row[2] <= row[3] else { return nil }
@@ -74,6 +80,9 @@ struct TajweedLessonExample: Identifiable {
     let wordSpan: ClosedRange<Int>?
     /// What to listen for in this ayah.
     let focus: String
+    /// The ground-truth rule the span shows ("ikhfa", "madd_muttasil"), when the pack names one: the
+    /// Tajweed Test grades a Find It question against the painter by it.
+    var rule: String? = nil
 
     /// The focus too: a lesson can point at the same words twice (waqf-types, 4:43), and the List rows
     /// must never share an id.
@@ -240,29 +249,29 @@ enum TajweedLessonDoor: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .quranArticle: return "What is the Quran?"
-        case .tajweedArticle: return "What is Tajweed?"
-        case .ahrufArticle: return "What are the 7 Ahruf?"
-        case .qiraatArticle: return "What are the 10 Qiraat?"
-        case .letterFamilies: return "Letter Families"
-        case .soundAlikes: return "Sound-Alike Letters"
-        case .makharijShelf: return "The Seventeen Exits on the Alphabet"
-        case .sifaatShelf: return "Sifaat on the Alphabet"
-        case .tajweedLegend: return "Tajweed Legend"
+        case .quranArticle: return String(localized: "What is the Quran?")
+        case .tajweedArticle: return String(localized: "What is Tajweed?")
+        case .ahrufArticle: return String(localized: "What are the 7 Ahruf?")
+        case .qiraatArticle: return String(localized: "What are the 10 Qiraat?")
+        case .letterFamilies: return String(localized: "Letter Families")
+        case .soundAlikes: return String(localized: "Sound-Alike Letters")
+        case .makharijShelf: return String(localized: "The Seventeen Exits on the Alphabet")
+        case .sifaatShelf: return String(localized: "Sifaat on the Alphabet")
+        case .tajweedLegend: return String(localized: "Tajweed Legend")
         }
     }
 
     var caption: String {
         switch self {
-        case .quranArticle: return "Its revelation, preservation and names"
-        case .tajweedArticle: return "The article, with its sources"
-        case .ahrufArticle: return "The seven modes the Quran was revealed in"
-        case .qiraatArticle: return "The ten readings and their riwayat"
-        case .letterFamilies: return "Every letter by makhraj, sifaat and rule"
-        case .soundAlikes: return "The pairs people mix up, side by side"
-        case .makharijShelf: return "Every exit, with the letters made there"
-        case .sifaatShelf: return "Every quality, named in Arabic and English"
-        case .tajweedLegend: return "The reader's colors, rule by rule"
+        case .quranArticle: return String(localized: "Its revelation, preservation and names")
+        case .tajweedArticle: return String(localized: "The article, with its sources")
+        case .ahrufArticle: return String(localized: "The seven modes the Quran was revealed in")
+        case .qiraatArticle: return String(localized: "The ten readings and their riwayat")
+        case .letterFamilies: return String(localized: "Every letter by makhraj, sifaat and rule")
+        case .soundAlikes: return String(localized: "The pairs people mix up, side by side")
+        case .makharijShelf: return String(localized: "Every exit, with the letters made there")
+        case .sifaatShelf: return String(localized: "Every quality, named in Arabic and English")
+        case .tajweedLegend: return String(localized: "The reader's colors, rule by rule")
         }
     }
 
@@ -528,7 +537,8 @@ final class TajweedLessonsStore: @unchecked Sendable {
                 return pair[0]...pair[1]
             }
             return TajweedLessonExample(surahId: surah, ayahNumber: ayah, wordSpan: span,
-                                        focus: example["focus"] as? String ?? "")
+                                        focus: example["focus"] as? String ?? "",
+                                        rule: example["rule"] as? String)
         }
         let drills = (lesson["drills"] as? [[String: Any]] ?? []).compactMap { drill -> TajweedLessonDrill? in
             let ayah = TajweedAyahWords(pack: drill["ayah"])
@@ -671,7 +681,7 @@ struct TajweedLessonScreen: View {
                 // The lesson pages need the Quran's text for their ayahs (TajweedLessons.swift and
                 // TajweedView.swift ship with it), and without it the pack is not bundled either
                 // (`TajweedLessonsStore.isBundled`), so no lesson ever loads here.
-                Text(lesson.titleEn)
+                Text(lesson.titleEn.localizedDisplay)
                 #endif
             } else if missing {
                 Text("This lesson could not be loaded.")
@@ -700,7 +710,7 @@ struct TajweedLessonLink<Label: View>: View {
     @ViewBuilder let label: () -> Label
 
     var body: some View {
-        GuardedScreenLink(screen: .tajweedLesson, id: lessonID, alreadyHere: "You came here from this lesson") {
+        GuardedScreenLink(screen: .tajweedLesson, id: lessonID, alreadyHere: String(localized: "You came here from this lesson")) {
             TajweedLessonScreen(lessonID: lessonID)
         } label: {
             label()

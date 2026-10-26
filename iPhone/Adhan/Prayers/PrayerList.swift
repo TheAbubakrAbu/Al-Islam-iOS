@@ -40,6 +40,16 @@ struct PrayerList: View {
     @State private var showOptionalPrayerToggles = false
     @State private var showRakaahGuide = false
 
+    #if os(iOS)
+    /// The moment the clock-change notice is judged at: now, or the day `-adhanToday` names (DEBUG).
+    private var clockNow: Date {
+        #if DEBUG
+        if let today = AdhanDebugClock.today { return today }
+        #endif
+        return Date()
+    }
+    #endif
+
     // New storage key (V2) so every existing user is reset to the new Tiles default, regardless of what
     // they had saved under the old "prayerDisplayMode" key.
     @AppStorage("prayerDisplayModeV2") private var prayerDisplayModeRawValue: String = PrayerDisplayMode.tiles.rawValue
@@ -54,10 +64,10 @@ struct PrayerList: View {
 
         var displayName: String {
             switch self {
-            case .tiles: return "TILES"
-            case .grid: return "GRID"
-            case .list: return "LIST"
-            case .split: return "SPLIT"
+            case .tiles: return String(localized: "TILES")
+            case .grid: return String(localized: "GRID")
+            case .list: return String(localized: "LIST")
+            case .split: return String(localized: "SPLIT")
             }
         }
 
@@ -129,10 +139,10 @@ struct PrayerList: View {
         let bell: Settings.PrayerNotificationMode? = showsBell ? settings.notificationMode(for: prayer) : nil
         let isExpanded = expandedPrayerKey == expansionKey(for: prayer)
         var states: [String] = []
-        if isCurrent { states.append("current prayer") }
+        if isCurrent { states.append(String(localized: "current prayer")) }
         if let mark { states.append(Self.spokenMark(mark)) }
         if let bell { states.append(bell.spokenState) }
-        if isExpanded { states.append("expanded") }
+        if isExpanded { states.append(String(localized: "expanded")) }
         return PrayerAccessibility(
             label: "\(name), \(settings.formatDate(prayer.time))",
             value: states.joined(separator: ", "),
@@ -149,9 +159,9 @@ struct PrayerList: View {
     /// The tracker's mark in words (the dot beside the name is colour only).
     private static func spokenMark(_ mark: PrayerMark) -> String {
         switch mark {
-        case .onTime: return "prayed on time"
-        case .late: return "prayed late"
-        case .missed: return "missed"
+        case .onTime: return String(localized: "prayed on time")
+        case .late: return String(localized: "prayed late")
+        case .missed: return String(localized: "missed")
         }
     }
 
@@ -276,7 +286,7 @@ struct PrayerList: View {
     @ViewBuilder
     private var prayerContentStack: some View {
         if isShowingDifferentDay && compareToday {
-            prayerGroupHeader("TODAY")
+            prayerGroupHeader(String(localized: "TODAY"))
             prayerModeContent(prayers: todayPrayers, isComparisonBaseline: true)
                 .opacity(0.45)
 
@@ -286,6 +296,13 @@ struct PrayerList: View {
         // The selected day only highlights a "current" prayer when it is actually today; on any other
         // day the concept doesn't apply, so render its prayers in the neutral primary color.
         prayerModeContent(prayers: displayedPrayers, highlightsCurrent: !isShowingDifferentDay)
+        #if os(iOS)
+        // A clock change within the week (daylight saving), right under the times it moves: today's
+        // list only, since "today" and "tomorrow" are said from the live day (see ClockChangeNotice.swift).
+        if !isShowingDifferentDay, let change = ClockChange.next(after: clockNow) {
+            ClockChangeFooter(change: change, now: clockNow)
+        }
+        #endif
         // Simple Mode (Docs/Product/Simple Mode Guide.md): the traveling banner atop the tab already says what
         // the footer says, and other days live in the Prayer Calendar. The stepper stays while another
         // day is on screen, so the list is never left unexplained.
@@ -321,12 +338,12 @@ struct PrayerList: View {
     }
 
     private static let rakaahGuideRows: [RakaahGuideRow] = [
-        .init(name: "Fajr",    arabic: "الفَجر",   fard: "2", primary: ["2 before"],           secondary: []),
-        .init(name: "Dhuhr",   arabic: "الظُهر",   fard: "4", primary: ["4 before", "2 after"], secondary: []),
-        .init(name: "Jumuah",  arabic: "الجُمُعَة",  fard: "2", primary: ["2 after"],            secondary: []),
-        .init(name: "Asr",     arabic: "العَصر",   fard: "4", primary: [],                     secondary: ["4 before"]),
-        .init(name: "Maghrib", arabic: "المَغرِب",  fard: "3", primary: ["2 after"],            secondary: ["2 before"]),
-        .init(name: "Isha",    arabic: "العِشَاء",  fard: "4", primary: ["2 after"],            secondary: ["2 before"]),
+        .init(name: "Fajr",    arabic: "الفَجر",   fard: "2", primary: [String(localized: "2 before")],           secondary: []),
+        .init(name: "Dhuhr",   arabic: "الظُهر",   fard: "4", primary: [String(localized: "4 before"), String(localized: "2 after")], secondary: []),
+        .init(name: "Jumuah",  arabic: "الجُمُعَة",  fard: "2", primary: [String(localized: "2 after")],            secondary: []),
+        .init(name: "Asr",     arabic: "العَصر",   fard: "4", primary: [],                     secondary: [String(localized: "4 before")]),
+        .init(name: "Maghrib", arabic: "المَغرِب",  fard: "3", primary: [String(localized: "2 after")],            secondary: [String(localized: "2 before")]),
+        .init(name: "Isha",    arabic: "العِشَاء",  fard: "4", primary: [String(localized: "2 after")],            secondary: [String(localized: "2 before")]),
     ]
 
     /// The expandable rakaah guide content: every mandatory prayer with its fard count and both
@@ -376,7 +393,7 @@ struct PrayerList: View {
     private func rakaahGuideRow(_ row: RakaahGuideRow) -> some View {
         HStack(alignment: .center, spacing: 8) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(row.name)
+                Text(row.name.localizedDisplay)
                     .font(.caption.weight(.semibold))
 
                 Text(row.arabic)
@@ -385,7 +402,8 @@ struct PrayerList: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text(row.fard)
+            // Through the locale ("٢" in Arabic, beside the Arabic names); English still reads "2".
+            Text(Int(row.fard).map { $0.formatted() } ?? row.fard)
                 .font(.caption.monospacedDigit())
                 .frame(width: 34)
 
@@ -404,7 +422,7 @@ struct PrayerList: View {
                     .foregroundColor(.secondary.opacity(0.5))
             } else {
                 ForEach(lines, id: \.self) { line in
-                    Text(line)
+                    Text(line.localizedDigits)
                 }
             }
         }
@@ -431,21 +449,21 @@ struct PrayerList: View {
                 // Simple Mode keeps the Rakaah Guide (a beginner's question) and leaves Optional Times
                 // to Settings > Prayer Settings > Optional Prayers.
                 if !settings.hides(.optionalTimes) {
-                    footerActionButton("Optional Times", isExpanded: showOptionalPrayerToggles) {
+                    footerActionButton(String(localized: "Optional Times"), isExpanded: showOptionalPrayerToggles) {
                         showOptionalPrayerToggles.toggle()
                     }
                 }
 
-                footerActionButton("Rakaah Guide", isExpanded: showRakaahGuide) {
+                footerActionButton(String(localized: "Rakaah Guide"), isExpanded: showRakaahGuide) {
                     showRakaahGuide.toggle()
                 }
             }
 
             if showOptionalPrayerToggles, !settings.hides(.optionalTimes) {
                 VStack(spacing: 10) {
-                    optionalPrayerToggle("Duhaa", isOn: $adhanSettings.showDuha)
-                    optionalPrayerToggle("Islamic Midnight", isOn: $adhanSettings.showIslamicMidnight)
-                    optionalPrayerToggle("Last Third of the Night", isOn: $adhanSettings.showLastThird)
+                    optionalPrayerToggle(String(localized: "Duhaa"), isOn: $adhanSettings.showDuha)
+                    optionalPrayerToggle(String(localized: "Islamic Midnight"), isOn: $adhanSettings.showIslamicMidnight)
+                    optionalPrayerToggle(String(localized: "Last Third of the Night"), isOn: $adhanSettings.showLastThird)
                 }
 
                 Text("These extra prayer times appear in the app only, never in widgets.")
@@ -492,7 +510,7 @@ struct PrayerList: View {
     /// Settings > Prayer Settings keeps its Prayer Times Layout row.
     private var sectionHeader: some View {
         HStack {
-            SectionIconHeader("PRAYER TIMES", icon: "clock.fill")
+            SectionIconHeader(String(localized: "PRAYER TIMES"), icon: "clock.fill")
 
             #if os(iOS)
             // The combined list labels itself, so a reader who scrolled past the banner still knows why.
@@ -869,20 +887,20 @@ struct PrayerList: View {
                 travelingModeDescription
 
                 footerButtonPair {
-                    footerActionButton(fullPrayers ? "View Qasr Prayers" : "View Full Prayers") {
+                    footerActionButton(fullPrayers ? String(localized: "View Qasr Prayers") : String(localized: "View Full Prayers")) {
                         withAnimation { settings.travelingShowFullPrayers.toggle() }
                     }
 
                     // The footer explains Qasr but gave no way OUT of it: turning traveling mode off meant
                     // finding the setting by hand. This lands directly on the Traveling Mode screen.
-                    footerActionButton("Travel Settings") {
+                    footerActionButton(String(localized: "Travel Settings")) {
                         showTravelingModeSettings = true
                     }
                 }
                 #endif
 
                 #if os(watchOS)
-                footerActionButton(fullPrayers ? "View Qasr Prayers" : "View Full Prayers") {
+                footerActionButton(fullPrayers ? String(localized: "View Qasr Prayers") : String(localized: "View Full Prayers")) {
                     withAnimation { settings.travelingShowFullPrayers.toggle() }
                 }
 
@@ -908,7 +926,9 @@ struct PrayerList: View {
         VStack {
             // At the accessibility sizes the stepper alone is about a row wide, and the label beside it
             // was squeezed to one letter per line: it gets its own line above the stepper there.
-            if dynamicTypeSize.isAccessibilitySize {
+            // In Arabic too: a long date in the picker (a Hijri date) left the label beside it a column one
+            // word wide. English keeps the row below, as it always had.
+            if dynamicTypeSize.isAccessibilitySize || AppLanguage.isArabic {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Showing prayers for")
                         .fixedSize(horizontal: false, vertical: true)
@@ -930,11 +950,11 @@ struct PrayerList: View {
 
             if isShowingDifferentDay {
                 footerButtonPair {
-                    footerActionButton(compareToday ? "Hide Comparison" : "Compare Today") {
+                    footerActionButton(compareToday ? String(localized: "Hide Comparison") : String(localized: "Compare Today")) {
                         compareToday.toggle()
                     }
 
-                    footerActionButton("Back to Today") {
+                    footerActionButton(String(localized: "Back to Today")) {
                         selectedDate = Date()
                     }
                 }
@@ -948,16 +968,16 @@ struct PrayerList: View {
         // The watch has no home city and never decides traveling mode for itself, so it names
         // neither: mentioning a city it does not measure from, and cannot change, only misleads.
         // Traveling mode is set on the phone (or by hand here on a standalone watch).
-        let homeSentence = "Traveling mode is set in the iPhone app."
+        let homeSentence = String(localized: "Traveling mode is set in the iPhone app.")
         #else
         // Names the HOME CITY the 48-mile rule measures from, and points at the exact control that
         // changes it - "customize in settings" alone left the reader hunting (user rule).
-        let homeCity = settings.homeLocation?.city.trimmingCharacters(in: .whitespacesAndNewlines)
+        let homeCity = settings.homeLocation?.displayCity.trimmingCharacters(in: .whitespacesAndNewlines)
         let homeSentence = (homeCity?.isEmpty == false)
-            ? "Your home city is \(homeCity!). You can change it by tapping Travel Settings below."
-            : "You can set your home city by tapping Travel Settings below."
+            ? String(localized: "Your home city is \(homeCity!). You can change it by tapping Travel Settings below.")
+            : String(localized: "You can set your home city by tapping Travel Settings below.")
         #endif
-        return Text("Traveling mode is on. If you are traveling more than 48 mi from home, you can pray Qasr, where you shorten and combine prayers. \(homeSentence)")
+        return Text(String(localized: "Traveling mode is on. If you are traveling more than 48 mi from home, you can pray Qasr, where you shorten and combine prayers. \(homeSentence)").localizedDigits)
             .font(.caption)
             .foregroundColor(.secondary)
             .multilineTextAlignment(.leading)
@@ -1030,7 +1050,7 @@ struct PrayerList: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityValue(isExpanded.map { $0 ? "Expanded" : "Collapsed" } ?? "")
+        .accessibilityValue(isExpanded.map { $0 ? String(localized: "Expanded") : String(localized: "Collapsed") } ?? "")
     }
 
     /// Two footer pills side by side, or stacked once the text is too large for half a row each.
@@ -1116,82 +1136,82 @@ struct PrayerList: View {
         let minutes = Int(next.time.timeIntervalSince(prayer.time) / 60)
         let duration: String
         switch (minutes / 60, minutes % 60) {
-        case (0, let m):        duration = "\(m)m"
-        case (let h, 0):        duration = "\(h)h"
-        case (let h, let m):    duration = "\(h)h \(m)m"
+        case (0, let m):        duration = String(localized: "\(m)m")
+        case (let h, 0):        duration = String(localized: "\(h)h")
+        case (let h, let m):    duration = String(localized: "\(h)h \(m)m")
         }
 
-        return "Until \(next.displayName) at \(settings.formatDate(next.time)) (\(duration))"
+        return String(localized: "Until \(next.displayName) at \(settings.formatDate(next.time)) (\(duration))")
     }
 
     private func prayerReferenceText(for prayer: Prayer) -> String? {
         if prayer.nameTransliteration == "Fajr" {
-            return "Prophet Muhammad (peace be upon him) said: \"The time for Fajr prayer is from the appearance of dawn until the sun begins to rise\" (Sahih Muslim 612)."
+            return String(localized: "Prophet Muhammad (peace be upon him) said: \"The time for Fajr prayer is from the appearance of dawn until the sun begins to rise\" (Sahih Muslim 612).")
         }
 
         // The two combined (qasr) rows MUST be matched before the `contains("Dhuhr")` / `contains("Maghrib")`
         // checks below, which would otherwise swallow them and show the plain Dhuhr / Maghrib hadith - never
         // once naming Asr or Isha, even though those are exactly the prayers being joined into this row.
         if prayer.nameTransliteration == "Dhuhr/Asr" {
-            return """
+            return String(localized: """
             While traveling, Dhuhr and Asr are joined and each is shortened to 2 rak'ah (qasr). Pray Dhuhr first, then Asr immediately after it, in this one time slot.
 
             Anas (may Allah be pleased with him) said: "When the Prophet (peace be upon him) set out on a journey before the sun passed its zenith, he would delay Dhuhr until the time of Asr, then he would stop and join them" (Sahih al-Bukhari 1112).
 
             "And when you travel throughout the land, there is no blame upon you for shortening the prayer" (Quran 4:101).
-            """
+            """)
         }
         if prayer.nameTransliteration == "Maghrib/Isha" {
-            return """
+            return String(localized: """
             While traveling, Maghrib and Isha are joined. Maghrib stays 3 rak'ah (it is never shortened) and Isha is shortened to 2 rak'ah. Pray Maghrib first, then Isha immediately after it, in this one time slot.
 
             Ibn Abbas (may Allah be pleased with him) said: "The Prophet (peace be upon him) used to join Maghrib and Isha when he was traveling" (Sahih al-Bukhari 1108).
 
             "And when you travel throughout the land, there is no blame upon you for shortening the prayer" (Quran 4:101).
-            """
+            """)
         }
 
         if prayer.nameTransliteration.contains("Dhuhr") {
-            return "Prophet Muhammad (peace be upon him) said: \"The time for Dhuhr is when the sun has passed its zenith and a person’s shadow is equal in length to his height, until the time for Asr begins\" (Muslim 612)."
+            return String(localized: "Prophet Muhammad (peace be upon him) said: \"The time for Dhuhr is when the sun has passed its zenith and a person’s shadow is equal in length to his height, until the time for Asr begins\" (Muslim 612).")
         }
         if prayer.nameTransliteration == "Jumuah" {
-            return "Prophet Muhammad (peace be upon him) said: \"The Friday prayer is obligatory upon every Muslim in the time of Dhuhr, except for a child, a woman, or an ill person\" (Abu Dawood 1067)."
+            return String(localized: "Prophet Muhammad (peace be upon him) said: \"The Friday prayer is obligatory upon every Muslim in the time of Dhuhr, except for a child, a woman, or an ill person\" (Abu Dawood 1067).")
         }
         if prayer.nameTransliteration == "Asr" {
-            return "Prophet Muhammad (peace be upon him) said: \"The time for Asr prayer lasts until the sun turns yellow\" (Muslim 612)."
+            return String(localized: "Prophet Muhammad (peace be upon him) said: \"The time for Asr prayer lasts until the sun turns yellow\" (Muslim 612).")
         }
         if prayer.nameTransliteration.contains("Maghrib") {
-            return "Prophet Muhammad (peace be upon him) said: \"The time for Maghrib lasts until the twilight has faded\" (Muslim 612)."
+            return String(localized: "Prophet Muhammad (peace be upon him) said: \"The time for Maghrib lasts until the twilight has faded\" (Muslim 612).")
         }
         if prayer.nameTransliteration == "Isha" {
-            return """
+            return String(localized: """
             Prophet Muhammad (peace be upon him) said: "The time for Isha lasts until the middle of the night" (Muslim 612).
 
             WITR: the night prayer is sealed with Witr, prayed any time after Isha until Fajr. The Prophet (peace and blessings be upon him) said: "Make Witr the last of your prayer at night" (Sahih al-Bukhari 998).
 
             It is an odd number of rak'ah: one, three, five, seven, or nine. The simplest and most common are a single rak'ah, or three. How the three are prayed differs between the madhahib (three joined with one tashahhud, or two then one), and all of these are established. If you fear you will not wake, pray it before you sleep; if you expect to wake, the last third of the night is better.
-            """
+            """)
         }
         if prayer.nameTransliteration == "Duhaa" {
-            return """
+            return String(localized: """
             Duhaa is a voluntary prayer prayed after the sun has risen to the height of a spear, roughly 15 minutes after sunrise, until shortly before Dhuhr. Its best time is later in the morning, when the heat of the sun becomes stronger.
 
             "The forenoon prayer of the penitent is when young camels can feel the heat of the sun" (Muslim 784).
 
             "My friend (the Prophet (ﷺ) ) advised me to observe three things: (1) to fast three days a month; (2) to pray two rak`at of Duha prayer (forenoon prayer); and (3) to pray witr before sleeping." (Bukhari 1981).
-            """
+            """)
         }
         if prayer.nameTransliteration == "Islamic Midnight" {
-            return """
+            return String(localized: """
             Islamic Midnight is halfway between Maghrib and the next Fajr. It marks the end of Isha and is used for calculating parts of the night.
 
             Formula: Islamic Midnight = Maghrib + ((Fajr - Maghrib) / 2)
 
             "When you pray Isha, its time is until half of the night has passed" (Muslim 612a).
-            """
+            """)
         }
         if prayer.nameTransliteration == "Last Third" {
-            return """
+            return String(localized: """
             Tahajjud is commonly prayed during the last third of the night. A voluntary night prayer offered after Isha and before Fajr, its most virtuous time is during the final third of the night.
 
             The final third of the night before Fajr is a blessed time for prayer, dua, and seeking forgiveness.
@@ -1199,7 +1219,7 @@ struct PrayerList: View {
             Formula: Last third starts = Fajr - ((Fajr - Maghrib) / 3)
 
             "Allah descends every night to the lowest heaven when one-third of the first part of the night is over and says: I am the Lord; I am the Lord: who is there to supplicate Me so that I answer him? Who is there to beg of Me so that I grant him? Who is there to beg forgiveness from Me so that I forgive him? He continues like this till the day breaks" (Muslim 758b).
-            """
+            """)
         }
         return nil
     }
@@ -1302,6 +1322,9 @@ struct PrayerList: View {
 
 /// A leaf that observes nothing: the highlight colour comes in as a value from the list, which
 /// already observes `Settings`.
+#if os(iOS)
+#endif
+
 private struct PrayerListRowCard<TrailingContent: View>: View {
     let prayer: Prayer
     let displayName: String
@@ -1390,12 +1413,21 @@ private struct PrayerDetailBlock: View {
         }
     }
 
+    /// "Dhuhr (الظُهر): ". In an Arabic interface the name already IS the Arabic one ("الظهر (الظُهر)" said it
+    /// twice), so it stands alone there; a custom Latin name keeps its Arabic beside it.
+    private func componentLabel(_ component: (name: String, arabic: String, time: Date)) -> Text {
+        if AppLanguage.isArabic, component.name.isMostlyArabicScript {
+            return Text(verbatim: "\(component.name): ")
+        }
+        return Text("\(component.name) (\(component.arabic)): ")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 10) {
                 AccentIconChip(systemImage: prayer.image, tint: settings.accentColor.accent2, size: 26)
 
-                Text(isOptionalPrayer ? prayer.nameEnglish : "\(prayer.nameEnglish) - \(prayer.nameArabic)")
+                Text(isOptionalPrayer ? prayer.nameEnglish.localizedDisplay : "\(prayer.nameEnglish.localizedDisplay) - \(prayer.nameArabic)")
                     .font(.title3)
                     .foregroundColor(settings.accentColor.accent2)
                     .lineLimit(1)
@@ -1419,9 +1451,12 @@ private struct PrayerDetailBlock: View {
             if !components.isEmpty {
                 ForEach(components, id: \.name) { component in
                     (
-                        Text("\(component.name) (\(component.arabic)): ")
+                        componentLabel(component)
                             + Text(component.time, style: .time)
                     )
+                    // Led right to left in Arabic: the label key is all arguments and punctuation, so
+                    // nothing set the line's direction and the time drew before the name.
+                    .rightToLeftLine()
                     .foregroundColor(.primary)
                     .font(.footnote)
                     .lineLimit(1)
@@ -1445,19 +1480,19 @@ private struct PrayerDetailBlock: View {
                     .font(.footnote)
             } else {
                 if prayer.rakah != "0" {
-                    Text("Prayer Rakahs: \(prayer.rakah)")
+                    Text("Prayer Rakahs: \(prayer.rakah.localizedDisplay.localizedDigits)")
                         .foregroundColor(.primary)
                         .font(.body)
                 }
 
                 if prayer.sunnahBefore != "0" {
-                    Text("Sunnah Rakahs Before: \(prayer.sunnahBefore)")
+                    Text("Sunnah Rakahs Before: \(prayer.sunnahBefore.localizedDisplay.localizedDigits)")
                         .foregroundColor(.secondary)
                         .font(.footnote)
                 }
 
                 if prayer.sunnahAfter != "0" {
-                    Text("Sunnah Rakahs After: \(prayer.sunnahAfter)")
+                    Text("Sunnah Rakahs After: \(prayer.sunnahAfter.localizedDisplay.localizedDigits)")
                         .foregroundColor(.secondary)
                         .font(.footnote)
                 }
@@ -1466,7 +1501,7 @@ private struct PrayerDetailBlock: View {
             // The sunnah caveat rides on the Prayer value (today only Jumuah's masjid/home split), so
             // this block needs no per-prayer name compare and new caveats need no view change.
             if let sunnahNote = prayer.sunnahNote {
-                Text(sunnahNote)
+                Text(sunnahNote.localizedDisplay)
                     .foregroundColor(.secondary)
                     .font(.caption2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1494,7 +1529,7 @@ private struct PrayerDetailBlock: View {
             }
 
             if let referenceText {
-                Text(referenceText)
+                Text(referenceText.localizedDigits)
                     .foregroundColor(.secondary)
                     .font(.caption)
                     .lineLimit(nil)
@@ -1544,9 +1579,9 @@ private extension Settings.PrayerNotificationMode {
     /// The bell in words, for VoiceOver (the glyph alone was the only carrier).
     var spokenState: String {
         switch self {
-        case .off: return "notifications off"
-        case .atTime: return "notification on"
-        case .preNotification: return "prenotification on"
+        case .off: return String(localized: "notifications off")
+        case .atTime: return String(localized: "notification on")
+        case .preNotification: return String(localized: "prenotification on")
         }
     }
 }
@@ -1557,7 +1592,7 @@ private extension Prayer {
     }
 
     var compactDisplayName: String {
-        nameTransliteration == "Islamic Midnight" ? "Midnight" : nameTransliteration
+        nameTransliteration == "Islamic Midnight" ? String(localized: "Midnight") : nameTransliteration.localizedDisplay
     }
 }
 

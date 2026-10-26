@@ -61,7 +61,7 @@ struct CountdownEntryView: View {
                                     .font(.subheadline)
                                     .foregroundColor(prayerTint(currentPrayer))
                                 
-                                Text(currentPrayer.displayName)
+                                Text(currentPrayer.displayName.localizedDisplay)
                                     .font(.headline)
                                     .foregroundColor(prayerTint(currentPrayer))
                                 
@@ -106,7 +106,7 @@ struct CountdownEntryView: View {
                                 Image(systemName: currentPrayer.image)
                                     .font(.subheadline)
                                 
-                                Text(currentPrayer.displayName)
+                                Text(currentPrayer.displayName.localizedDisplay)
                                     .font(.headline)
                                     .padding(.leading, -2)
                             }
@@ -121,7 +121,7 @@ struct CountdownEntryView: View {
                                 Image(systemName: nextPrayer.image)
                                     .padding(.horizontal, -6)
                                 
-                                Text(nextPrayer.displayName)
+                                Text(nextPrayer.displayName.localizedDisplay)
                             }
                             .font(.caption2)
                             .foregroundColor(prayerTint(nextPrayer))
@@ -163,7 +163,7 @@ struct CountdownEntryView: View {
                                 Text("Starts at \(nextPrayer.time, style: .time)")
                                     .font(.caption)
                                 
-                                Text(nextPrayer.displayName)
+                                Text(nextPrayer.displayName.localizedDisplay)
                                     .font(.headline)
                                     .foregroundColor(prayerTint(nextPrayer))
                                 

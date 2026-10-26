@@ -1166,12 +1166,16 @@ struct WordByWordTextView: UIViewRepresentable {
     var highlightColor: Color
     /// Taps that open a word - two in the reader rows, one on the ayah preview cards (see `WordByWordText`).
     var tapsRequired: Int = 2
+    /// Press-and-drag selection of the run (UIKit's own: the loupe, the handles, Copy / Look Up on
+    /// exactly that range), the way the word card's hero word selects. The ayah preview cards ask
+    /// for it (Abu, 2026-10-22); the reader rows keep it off, their rows own the long press.
+    var selectable: Bool = false
     let onTapWord: (Int) -> Void
 
     func makeUIView(context: Context) -> ArabicInkBleedHost {
         let view = UITextView()
         view.isEditable = false
-        view.isSelectable = false
+        view.isSelectable = selectable
         view.isScrollEnabled = false
         // `clipsToBounds` frees SUBVIEWS only; the text is the view's own drawing, rasterised within its
         // bounds whatever this says. The ink that overhangs a glyph's advance (a line-initial alif
@@ -1392,6 +1396,8 @@ struct WordByWordText: View {
     /// Taps that open a word: TWO in the reader rows (Abu, 2026-09-04: single taps opened cards by
     /// accident), ONE on the ayah preview cards (Abu, 2026-09-05: the card is there to be touched).
     var tapsRequired: Int = 2
+    /// Press-and-drag selection of the run (see `WordByWordTextView.selectable`).
+    var selectable: Bool = false
     /// The word currently showing its card, lit in the accent.
     let selectedWord: WordByWordRef?
     let onSelectWord: (WordByWordRef) -> Void
@@ -1415,11 +1421,13 @@ struct WordByWordText: View {
 
     /// The multi-ayah form the preview cards use.
     init(segments: [WordByWordSegment], fontName: String?, fontSize: CGFloat, tapsRequired: Int = 2,
+         selectable: Bool = false,
          selectedWord: WordByWordRef?, onSelectWord: @escaping (WordByWordRef) -> Void) {
         self.segments = segments
         self.fontName = fontName
         self.fontSize = fontSize
         self.tapsRequired = tapsRequired
+        self.selectable = selectable
         self.selectedWord = selectedWord
         self.onSelectWord = onSelectWord
     }
@@ -1509,6 +1517,7 @@ struct WordByWordText: View {
                     selectedWord: selectedWord.flatMap { globalIndex(of: $0, in: layout) },
                     highlightColor: settings.accentColor.color,
                     tapsRequired: tapsRequired,
+                    selectable: selectable,
                     onTapWord: { index in
                         guard let ref = ref(ofGlobal: index, in: layout),
                               segments.indices.contains(ref.segment) else { return }
@@ -1548,6 +1557,8 @@ struct WordByWordText: View {
                         .arabicFontDesign(custom: true)
                         .multilineTextAlignment(.trailing)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                        .environment(\.layoutDirection, .leftToRight)
                     }
                 }
             }
@@ -1773,6 +1784,9 @@ struct WordByWordInlineText: View {
                     // lay its first word at the RIGHT edge, the mushaf's reading order.
                     .environment(\.layoutDirection, .rightToLeft)
                     .frame(maxWidth: .infinity, alignment: .trailing)
+                    // The frame's `.trailing` is the right edge only in a left-to-right layout (the
+                    // Arabic interface would push the block to the left).
+                    .environment(\.layoutDirection, .leftToRight)
             } else {
                 // Until the width is known, the plain one-Text rendering (identical content, not
                 // tappable) keeps the row from flashing an empty block while measuring.
@@ -1791,6 +1805,8 @@ struct WordByWordInlineText: View {
                 .arabicFontDesign(custom: true)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                .environment(\.layoutDirection, .leftToRight)
             }
         }
         .background(
@@ -2147,7 +2163,7 @@ private struct WordRiwayahReading: Identifiable {
     var names: String {
         options.map { option in
             let label = option.tag.isEmpty ? "Hafs an Asim" : option.label
-            return option.beta ? "\(label) (Beta)" : label
+            return option.beta ? String(localized: "\(label) (Beta)") : label
         }
         .joined(separator: " · ")
     }
@@ -2436,8 +2452,8 @@ private struct WordAcrossRiwayatSection: View {
 
     private var summary: String {
         readings.count == 1
-            ? "All \(riwayahCount) riwayat print this word the same way."
-            : "\(readings.count) spellings across \(riwayahCount) riwayat. A word in the accent color differs from Hafs an Asim."
+            ? String(localized: "All \(riwayahCount) riwayat print this word the same way.")
+            : String(localized: "\(readings.count) spellings across \(riwayahCount) riwayat. A word in the accent color differs from Hafs an Asim.")
     }
 
     var body: some View {
@@ -2584,9 +2600,9 @@ private struct WordByQiraahGrid: View {
 
     private var caption: String {
         let count = cells.count == 1
-            ? "The one qiraah with its riwayat."
-            : "Each of the \(cells.count) qiraat with its two riwayat."
-        return anyDiffersFromHafs ? count + " A word in the accent color differs from Hafs an Asim." : count
+            ? String(localized: "The one qiraah with its riwayat.")
+            : String(localized: "Each of the \(cells.count) qiraat with its two riwayat.")
+        return anyDiffersFromHafs ? String(localized: "\(count) A word in the accent color differs from Hafs an Asim.") : count
     }
 
     var body: some View {
@@ -2621,7 +2637,7 @@ private struct WordByQiraahGrid: View {
     private func cellView(_ cell: WordQiraahCell) -> some View {
         VStack(alignment: .center, spacing: 4) {
             VStack(alignment: .center, spacing: 0) {
-                Text(cell.isBeta ? "\(cell.teacher) (Beta)" : cell.teacher)
+                Text(cell.isBeta ? String(localized: "\(cell.teacher) (Beta)") : cell.teacher)
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(cell.isCurrent ? settings.accentColor.color : .primary)
                     .multilineTextAlignment(.center)
@@ -2773,12 +2789,12 @@ struct WordMeaningSheet: View {
 
         var title: String {
             switch self {
-            case .meaning: return "Meaning"
-            case .grammar: return "Grammar"
-            case .root: return "Root"
-            case .themes: return "Themes"
-            case .tajweed: return "Tajweed"
-            case .qiraat: return "Qiraat"
+            case .meaning: return String(localized: "Meaning")
+            case .grammar: return String(localized: "Grammar")
+            case .root: return String(localized: "Root")
+            case .themes: return String(localized: "Themes")
+            case .tajweed: return String(localized: "Tajweed")
+            case .qiraat: return String(localized: "Qiraat")
             }
         }
 
@@ -2916,8 +2932,9 @@ struct WordMeaningSheet: View {
                     VStack(spacing: 16) {
                         Text(word)
                             .font(.custom(hafsFontName, size: CGFloat(settings.fontArabicSize) + 16))
-                        Text(meaning.isEmpty ? "No meaning recorded for this word." : meaning)
+                        Text(meaning.isEmpty ? String(localized: "No meaning recorded for this word.") : meaning)
                             .font(.title3)
+                            .leftToRightContent(!meaning.isEmpty)
                     }
                     .padding()
                 }
@@ -2983,11 +3000,16 @@ struct WordMeaningSheet: View {
                                 .foregroundColor(settings.accentColor.color)
                                 .multilineTextAlignment(.center)
                                 .textSelection(.enabled)
+                                .leftToRightContent()
                         }
-                        Text(focus.meaning.isEmpty ? "No meaning recorded for this word." : focus.meaning)
+                        // The English gloss keeps its own direction in the Arabic interface (its
+                        // parentheses, "(of) Allah", would mirror otherwise); the empty notice follows
+                        // the interface.
+                        Text(focus.meaning.isEmpty ? String(localized: "No meaning recorded for this word.") : focus.meaning)
                             .font(.title3.weight(.semibold))
                             .foregroundColor(focus.meaning.isEmpty ? .secondary : .primary)
                             .multilineTextAlignment(.center)
+                            .leftToRightContent(!focus.meaning.isEmpty)
 
                         factChips(grammar: grammar, root: rootInfo?.root)
                         actionRow(focus)
@@ -3015,7 +3037,7 @@ struct WordMeaningSheet: View {
 
     private func heading(_ focus: Focus, place: Int, total: Int) -> some View {
         HStack(alignment: .firstTextBaseline) {
-            Text("\(focus.surah.nameTransliteration) \(focus.surah.id):\(focus.ayah.id)")
+            Text("\(focus.surah.displayName) \(focus.surah.id):\(focus.ayah.id)")
                 .font(.headline)
                 .foregroundColor(settings.accentColor.color)
             Spacer()
@@ -3036,7 +3058,7 @@ struct WordMeaningSheet: View {
                     factChip(title: pos, arabic: nil, target: .grammar)
                 }
                 if let root {
-                    factChip(title: "Root", arabic: root.letters, target: .root)
+                    factChip(title: String(localized: "Root"), arabic: root.letters, target: .root)
                 }
                 if let form = chips.form {
                     factChip(title: form, arabic: nil, target: .grammar)
@@ -3077,16 +3099,16 @@ struct WordMeaningSheet: View {
         let speaking = speech.currentText == focus.rawToken || speech.currentText == focus.shown
         return HStack(spacing: 10) {
             if speechAvailable {
-                actionButton(speaking ? "Stop" : "Listen", system: speaking ? "stop.fill" : "speaker.wave.2.fill") {
+                actionButton(speaking ? String(localized: "Stop") : String(localized: "Listen"), system: speaking ? "stop.fill" : "speaker.wave.2.fill") {
                     settings.hapticFeedback()
                     if speaking { ArabicSpeech.shared.stop() } else { ArabicSpeech.shared.speak(focus.shown) }
                 }
             }
-            actionButton("Copy", system: "doc.on.doc") {
+            actionButton(String(localized: "Copy"), system: "doc.on.doc") {
                 settings.hapticFeedback()
                 UIPasteboard.general.string = focus.meaning.isEmpty
                     ? focus.shown
-                    : "\(focus.shown): \(focus.meaning)\n\(focus.surah.nameTransliteration) \(focus.surah.id):\(focus.ayah.id)"
+                    : "\(focus.shown): \(focus.meaning)\n\(focus.surah.displayName) \(focus.surah.id):\(focus.ayah.id)"
             }
         }
     }
@@ -3235,7 +3257,7 @@ struct WordMeaningSheet: View {
     private func meaningPage(_ focus: Focus, styled: AttributedString?) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             // The whole ayah, the word lit inside it, so the word is never read out of its sentence.
-            StudyCard(title: "IN THIS AYAH") {
+            StudyCard(title: String(localized: "IN THIS AYAH")) {
                 WordOccurrenceRow(surah: focus.surah, ayah: focus.ayah, tokens: [focus.location.token])
                     .equatable()
             }
@@ -3271,7 +3293,7 @@ struct WordMeaningSheet: View {
                     Text("Browse Every Theme of the Quran")
                         .fontWeight(.medium)
                     Spacer()
-                    Image(systemName: "chevron.right")
+                    Image(systemName: "chevron.forward")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.tertiary)
                 }
@@ -3295,20 +3317,20 @@ struct WordMeaningSheet: View {
     @ViewBuilder
     private func tajweedPage(_ rules: [TajweedWordRule]) -> some View {
         if !settings.showTajweedColors || !settings.isHafsDisplay {
-            StudyCard(title: "TAJWEED IN THIS WORD") {
+            StudyCard(title: String(localized: "TAJWEED IN THIS WORD")) {
                 Text("Turn on tajweed colors in Quran Settings to see the rules on each word.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
         } else if rules.isEmpty {
-            StudyCard(title: "TAJWEED IN THIS WORD") {
+            StudyCard(title: String(localized: "TAJWEED IN THIS WORD")) {
                 Text("No tajweed rule falls on this word.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
         } else {
             // The rules this word carries, matching the colors painted on it: a per-word legend.
-            StudyCard(title: "TAJWEED IN THIS WORD") {
+            StudyCard(title: String(localized: "TAJWEED IN THIS WORD")) {
                 VStack(alignment: .leading, spacing: 10) {
                     ForEach(rules) { rule in
                         HStack(spacing: 10) {
@@ -3471,14 +3493,14 @@ struct RiwayahWordSheet: View {
                     )
                     .padding(.top, 8)
 
-                    Text("Word \(index + 1) of \(total) · \(surah.nameTransliteration) \(surah.id):\(ayah.id)")
+                    Text("Word \(index + 1) of \(total) · \(surah.displayName) \(surah.id):\(ayah.id)")
                         .font(.caption)
                         .foregroundColor(.secondary)
 
                     HStack(spacing: 12) {
                         if ArabicSpeech.shared.isAvailable {
                             actionButton(
-                                isSpeakingThis ? "Stop" : "Listen",
+                                isSpeakingThis ? String(localized: "Stop") : String(localized: "Listen"),
                                 system: isSpeakingThis ? "stop.fill" : "speaker.wave.2.fill"
                             ) {
                                 settings.hapticFeedback()
@@ -3490,9 +3512,9 @@ struct RiwayahWordSheet: View {
                             }
                         }
 
-                        actionButton("Copy", system: "doc.on.doc") {
+                        actionButton(String(localized: "Copy"), system: "doc.on.doc") {
                             settings.hapticFeedback()
-                            UIPasteboard.general.string = "\(word)\n\(surah.nameTransliteration) \(surah.id):\(ayah.id)"
+                            UIPasteboard.general.string = "\(word)\n\(surah.displayName) \(surah.id):\(ayah.id)"
                         }
                     }
                     .padding(.top, 4)

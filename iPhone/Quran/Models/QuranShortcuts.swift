@@ -5,16 +5,22 @@ import AppIntents
 @available(iOS 16.0, watchOS 9.0, *)
 struct SurahEntity: AppEntity, Identifiable {
     let id: Int
+    /// The transliteration playback records as the surah's name.
     let name: String
+    /// The name Siri shows, speaks and matches what was said against: the Arabic name in an Arabic
+    /// interface (without vowel marks, as people say and dictate it), the transliteration otherwise.
+    let spokenName: String
 
     static var typeDisplayRepresentation: TypeDisplayRepresentation { "Surah" }
-    var displayRepresentation: DisplayRepresentation { DisplayRepresentation(title: "\(id). \(name)") }
+    var displayRepresentation: DisplayRepresentation { DisplayRepresentation(title: "\(id). \(spokenName)") }
     static var defaultQuery = SurahEntityQuery()
 }
 
 @available(iOS 16.0, watchOS 9.0, *)
 struct SurahEntityQuery: EntityQuery, EntityStringQuery {
-    private func entity(_ surah: Surah) -> SurahEntity { SurahEntity(id: surah.id, name: surah.nameTransliteration) }
+    private func entity(_ surah: Surah) -> SurahEntity {
+        SurahEntity(id: surah.id, name: surah.nameTransliteration, spokenName: surah.spokenName)
+    }
 
     /// Siri can invoke these on a COLD launch, before the background Quran load has populated
     /// `quran` - resolving against the empty array made the spoken surah "not found". Wait for the
@@ -66,7 +72,7 @@ struct PlaySurahAppIntent: AppIntent {
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let didStart = await QuranPlaybackRouter.play(surahID: surah.id, name: surah.name)
         return .result(dialog: didStart
-            ? IntentDialog("Playing Surah \(surah.id): \(surah.name).")
+            ? IntentDialog("Playing Surah \(surah.id): \(surah.spokenName).")
             : IntentDialog("Sorry, there was a problem starting playback."))
     }
 }
@@ -252,7 +258,7 @@ enum QuranPlaybackRouter {
         )
 
         let didStart = await confirmStart(surahID: surah.id)
-        return (surah.id, surah.nameTransliteration, didStart)
+        return (surah.id, surah.spokenName, didStart)
     }
 
     @MainActor
@@ -264,7 +270,7 @@ enum QuranPlaybackRouter {
 
         player.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
         let didStart = await confirmStart(surahID: surah.id)
-        return (surah.id, surah.nameTransliteration, didStart)
+        return (surah.id, surah.spokenName, didStart)
     }
 
     static func matchedSurah(for normalizedQuery: String) -> Surah? {
@@ -284,5 +290,14 @@ enum QuranPlaybackRouter {
         }
         let folded = SurahSpelling.matches(normalizedQuery, in: data.quran, exactOnly: true)
         return folded.count == 1 ? folded.first : nil
+    }
+}
+
+extension Surah {
+    /// The surah's name as Siri says it back: Arabic, without vowel marks, in an Arabic interface (the
+    /// name an Arabic speaker says), the transliteration otherwise. Display only; playback and stored
+    /// records keep `nameTransliteration`.
+    var spokenName: String {
+        AppLanguage.isArabic ? nameArabic.removingArabicMarks() : nameTransliteration
     }
 }

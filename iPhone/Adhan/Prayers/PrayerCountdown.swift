@@ -137,7 +137,7 @@ struct PrayerCountdown: View {
 
     private var sectionHeader: some View {
         HStack {
-            SectionIconHeader("CURRENT", icon: "timer")
+            SectionIconHeader(String(localized: "CURRENT"), icon: "timer")
 
             Spacer()
 
@@ -329,7 +329,7 @@ struct PrayerCountdown: View {
 
     /// "until Fajr": the footer's right side, shared with the sky card.
     static func untilLabel(for prayer: Prayer) -> String {
-        "until \(countdownDisplayName(for: prayer))"
+        String(localized: "until \(countdownDisplayName(for: prayer))")
     }
 
     /// The plain card's footer: tonight's moon on the left, the prayer the countdown runs to on the right.
@@ -532,7 +532,7 @@ private struct UpcomingPrayerCell: View {
 }
 
 private func countdownDisplayName(for prayer: Prayer) -> String {
-    prayer.nameTransliteration == "Islamic Midnight" ? "Midnight" : prayer.displayName
+    prayer.nameTransliteration == "Islamic Midnight" ? String(localized: "Midnight") : prayer.displayName
 }
 
 /// Leaf styling reads the accent off the appearance environment, not `Settings`: each of these
@@ -566,14 +566,14 @@ private struct PrayerSubtitleView: View {
     private var subtitleText: String {
         if Settings.optionalPrayerNames.contains(prayer.nameTransliteration) {
             if prayer.nameTransliteration == "Islamic Midnight" {
-                return "Middle of Night"
+                return String(localized: "Middle of Night")
             }
-            return prayer.nameEnglish
+            return prayer.nameEnglish.localizedDisplay
         }
         if isCombinedTravelPrayer {
             return prayer.nameArabic
         }
-        return "\(prayer.nameEnglish) / \(prayer.nameArabic)"
+        return "\(prayer.nameEnglish.localizedDisplay) / \(prayer.nameArabic)"
     }
 
     private var subtitleColor: Color {
@@ -652,7 +652,7 @@ private struct PrayerRakahInfoView: View {
     var body: some View {
         Group {
             if prayer.rakah != "0" {
-                Text("Prayer Rakahs: \(prayer.rakah)")
+                Text("Prayer Rakahs: \(prayer.rakah.localizedDisplay.localizedDigits)")
                     #if os(iOS)
                     .font(captionFont)
                     #else
@@ -665,7 +665,7 @@ private struct PrayerRakahInfoView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(2)
             } else if isOptionalPrayer {
-                Text(prayer.nameEnglish)
+                Text(prayer.nameEnglish.localizedDisplay)
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
@@ -687,19 +687,19 @@ private struct PrayerSunnahInfoView: View {
     var body: some View {
         VStack(alignment: horizontalAlignment, spacing: 5) {
             if prayer.sunnahBefore != "0" {
-                Text("Sunnah Rakahs Before: \(prayer.sunnahBefore)")
+                Text("Sunnah Rakahs Before: \(prayer.sunnahBefore.localizedDisplay.localizedDigits)")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
             
             if prayer.sunnahAfter != "0" {
-                Text("Sunnah Rakahs After: \(prayer.sunnahAfter)")
+                Text("Sunnah Rakahs After: \(prayer.sunnahAfter.localizedDisplay.localizedDigits)")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
 
             if let sunnahNote = prayer.sunnahNote {
-                Text(sunnahNote)
+                Text(sunnahNote.localizedDisplay)
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -770,13 +770,15 @@ private struct CountdownDigits: View {
             TimelineView(.periodic(from: clockAnchor, by: isOnScreen ? 1 : 3600)) { context in
                 let parts = Self.parts(remaining: target.timeIntervalSince(context.date))
                 HStack(alignment: .lastTextBaseline, spacing: 1) {
-                    Text(parts.main)
+                    Text(parts.main.localizedDigits)
                         .font(.system(size: digitsSize, weight: .bold, design: .rounded))
-                    Text(parts.seconds)
+                    Text(parts.seconds.localizedDigits)
                         .font(.system(size: digitsSize * 15 / 26, weight: .semibold, design: .rounded))
                         .opacity(0.75)
                 }
                 .monospacedDigit()
+                // A clock reads left to right in Arabic too: mirrored, the seconds stood before the hours.
+                .environment(\.layoutDirection, .leftToRight)
                 // Read as a duration: the two Texts were spoken as "6:09" and ":35".
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Self.spoken(remaining: target.timeIntervalSince(context.date)))

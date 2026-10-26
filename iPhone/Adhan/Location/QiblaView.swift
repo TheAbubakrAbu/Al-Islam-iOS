@@ -144,29 +144,29 @@ struct QiblaView: View {
     private var qiblaTurnText: String? {
         // Checked before the heading: inside the Haram no heading can improve the answer, and
         // "Waiting for the compass" would be a stall for a direction that does not exist.
-        if isAtKaaba { return "You are at the Kaaba" }
+        if isAtKaaba { return String(localized: "You are at the Kaaba") }
         guard compass.hasHeading else {
-            guard CLLocationManager.headingAvailable() else { return "No compass on this device" }
+            guard CLLocationManager.headingAvailable() else { return String(localized: "No compass on this device") }
             // Heading samples are DROPPED while there is no usable fix (there is no bearing to
             // subtract them from), so "Waiting for the compass" named the wrong thing whenever the
             // real hold-up was location - which is the common case indoors and on a fresh install.
-            return hasUsableLocation ? "Waiting for the compass\u{2026}" : "Waiting for your location\u{2026}"
+            return hasUsableLocation ? String(localized: "Waiting for the compass\u{2026}") : String(localized: "Waiting for your location\u{2026}")
         }
-        guard !isAligned else { return "You are facing the Kaaba" }
+        guard !isAligned else { return String(localized: "You are facing the Kaaba") }
 
         let delta = shortestDelta(from: 0, to: compass.direction)
-        let direction = delta < 0 ? "left" : "right"
-        let degrees = Int(abs(delta).rounded())
-        return "Turn \(direction) \(degrees)°"
+        // "12°" as one run: in Arabic a bare "%lld°" drew its degree sign before the number (`SymbolNumber`).
+        let degrees = SymbolNumber.degrees(abs(delta).rounded(), places: 0)
+        return delta < 0 ? String(localized: "Turn left \(degrees)") : String(localized: "Turn right \(degrees)")
     }
 
     /// Shown under the turn line while the magnetometer's own error estimate is too large to claim a
     /// direction from. Names the two things that actually cause it, in the order a user can act on.
     private var calibrationHint: String? {
         // No calibration helps at the Kaaba, and the needle is not the instruction there.
-        if isAtKaaba { return "Face the Kaaba in front of you" }
+        if isAtKaaba { return String(localized: "Face the Kaaba in front of you") }
         guard compass.hasHeading, !isTrustworthy else { return nil }
-        return "Move away from metal or magnets, or wave your phone in a figure 8"
+        return String(localized: "Move away from metal or magnets, or wave your phone in a figure 8")
     }
 
     /// The reported error, always visible on the expanded compass once a sample has landed, so the
@@ -175,7 +175,9 @@ struct QiblaView: View {
         // The reading's error is beside the point when there is no direction to be in error about.
         guard !isAtKaaba else { return nil }
         guard compass.hasHeading, let accuracy = compass.accuracyDegrees, accuracy > 0 else { return nil }
-        return "±\(Int(accuracy))°"
+        guard AppLanguage.isRightToLeft else { return "±\(Int(accuracy))°" }
+        // The sign, number and degree as one left-to-right run, or the degree sign lands on the far side.
+        return SymbolNumber.isolated("±\(Int(accuracy).formatted())°")
     }
 
     /// A fix the Qibla maths can actually use: present, and not the app's (1000, 1000) "none yet"
@@ -219,10 +221,10 @@ struct QiblaView: View {
     /// accuracy and the calibration hint follow so a screen-reader user learns the reading is
     /// untrustworthy at the same moment a sighted user reads it off the card.
     private var accessibilityDescription: String {
-        var parts = ["Qibla compass"]
+        var parts = [String(localized: "Qibla compass")]
         if let qiblaTurnText { parts.append(qiblaTurnText) }
         if let accuracy = compass.accuracyDegrees, compass.hasHeading, accuracy > 0 {
-            parts.append("accurate to within \(Int(accuracy)) degrees")
+            parts.append(String(localized: "accurate to within \(Int(accuracy)) degrees"))
         }
         if let calibrationHint { parts.append(calibrationHint) }
         return parts.joined(separator: ". ")
@@ -350,10 +352,14 @@ struct QiblaView: View {
                     // "You are at the Kaaba" - so the distance drops out entirely rather than
                     // repeating it, leaving the one line that tells you what to do.
                     [isAtKaaba ? nil
-                               : distanceToKaabaMiles.map { String(format: "%.1f miles away", $0) },
+                               : distanceToKaabaMiles.map {
+                                   // The locale's digits in Arabic ("٨٬٣٥٤٫٩"); English keeps its plain "8354.9".
+                                   String(format: NSLocalizedString("%.1f miles away", comment: ""),
+                                          locale: AppLanguage.isArabic ? Locale.current : nil, $0)
+                               },
                      accuracyText]
                         .compactMap { $0 }
-                        .joined(separator: " · ")
+                        .joined(separator: JoinSeparator.dot)
                 )
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -362,7 +368,7 @@ struct QiblaView: View {
             }
 
             if let calibrationHint {
-                Text(calibrationHint)
+                Text(calibrationHint.localizedDigits)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

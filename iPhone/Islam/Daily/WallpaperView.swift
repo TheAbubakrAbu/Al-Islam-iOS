@@ -15,14 +15,14 @@ private let wallpapers: [Wallpaper] = [
     // 2026-09-16 and 2026-09-18 (a redrawn wallpaper and a "Palestine Poster" beside it); both were
     // dropped 2026-09-23 and this one restored, so there is one Palestine wallpaper again and it is
     // his. `Scripts/build_palestine_wallpaper.py`, which rendered the drawn one, went with them.
-    Wallpaper(imageName: "Palestine Wallpaper", description: "FREE PALESTINE PHONE WALLPAPER"),
+    Wallpaper(imageName: "Palestine Wallpaper", description: String(localized: "FREE PALESTINE PHONE WALLPAPER")),
     // OC Ummah's launch scene (its emerald desert night: crescent, pyramids, masjid) rendered as a
     // wallpaper, without the palms and with the pyramids grown (Abu, 2026-09-16). Above Al-Islam's
     // own wallpaper since 2026-09-18.
-    Wallpaper(imageName: "OC Ummah Wallpaper", description: "OC UMMAH PHONE WALLPAPER"),
-    Wallpaper(imageName: "Phone Wallpaper", description: "AL-ISLAM PHONE WALLPAPER"),
-    Wallpaper(imageName: "Laptop Wallpaper", description: "LAPTOP (16:9) WALLPAPER"),
-    Wallpaper(imageName: "Desktop Wallpaper", description: "DESKTOP (21:9) WALLPAPER")
+    Wallpaper(imageName: "OC Ummah Wallpaper", description: String(localized: "OC UMMAH PHONE WALLPAPER")),
+    Wallpaper(imageName: "Phone Wallpaper", description: String(localized: "AL-ISLAM PHONE WALLPAPER")),
+    Wallpaper(imageName: "Laptop Wallpaper", description: String(localized: "LAPTOP (16:9) WALLPAPER")),
+    Wallpaper(imageName: "Desktop Wallpaper", description: String(localized: "DESKTOP (21:9) WALLPAPER"))
 ]
 
 struct WallpaperView: View {
@@ -31,11 +31,11 @@ struct WallpaperView: View {
             Group {
                 #if os(iOS)
                 ResourceHeroSection(ResourceHero(
-                    eyebrow: "FOR YOUR SCREENS",
+                    eyebrow: String(localized: "FOR YOUR SCREENS"),
                     systemImage: "photo.on.rectangle.angled",
-                    headline: "Let your lock screen remind you of Allah.",
-                    message: "Islamic art and calligraphy for your phone. Press and hold any wallpaper to copy it or save it to Photos.",
-                    stats: [ResourceHeroStat("\(wallpapers.count)", "wallpapers")]
+                    headline: String(localized: "Let your lock screen remind you of Allah."),
+                    message: String(localized: "Islamic art and calligraphy for your phone. Press and hold any wallpaper to copy it or save it to Photos."),
+                    stats: [ResourceHeroStat(wallpapers.count.formatted(), String(localized: "wallpapers"))]
                 ))
                 #endif
                 wallpaperSections
@@ -61,7 +61,7 @@ private struct WallpaperCell: View {
     let wallpaper: Wallpaper
 
     var body: some View {
-        Section(header: Text(wallpaper.description)) {
+        Section(header: Text(wallpaper.description.localizedDigits)) {
             wallpaperImage
         }
     }

@@ -180,15 +180,15 @@ func prayerTierColor(for prayer: Prayer, in prayers: [Prayer], entry: PrayersPro
 /// only their first member's abbreviation.
 func prayerAbbreviation(_ prayer: Prayer) -> String {
     switch prayer.nameTransliteration {
-    case "Fajr":                    return "FJR"
-    case "Shurooq":                 return "SHQ"
-    case "Duhaa":                   return "DUH"
-    case "Dhuhr", "Dhuhr/Asr":      return "DHR"
-    case "Jumuah":                  return "JUM"
-    case "Asr":                     return "ASR"
-    case "Maghrib", "Maghrib/Isha": return "MGB"
-    case "Isha":                    return "ISH"
-    default:                        return String(prayer.displayName.prefix(3)).uppercased()
+    case "Fajr":                    return String(localized: "FJR", comment: "Three-letter prayer abbreviation")
+    case "Shurooq":                 return String(localized: "SHQ", comment: "Three-letter prayer abbreviation")
+    case "Duhaa":                   return String(localized: "DUH", comment: "Three-letter prayer abbreviation")
+    case "Dhuhr", "Dhuhr/Asr":      return String(localized: "DHR", comment: "Three-letter prayer abbreviation")
+    case "Jumuah":                  return String(localized: "JUM", comment: "Three-letter prayer abbreviation")
+    case "Asr":                     return String(localized: "ASR", comment: "Three-letter prayer abbreviation")
+    case "Maghrib", "Maghrib/Isha": return String(localized: "MGB", comment: "Three-letter prayer abbreviation")
+    case "Isha":                    return String(localized: "ISH", comment: "Three-letter prayer abbreviation")
+    default:                        return String(prayer.displayName.localizedDisplay.prefix(3)).uppercased()
     }
 }
 
@@ -257,7 +257,7 @@ struct PrayerCountdownCircularView: View {
                         .font(.system(size: 10))
                 }
 
-                Text(current.displayName)
+                Text(current.displayName.localizedDisplay)
                     .font(.caption2.weight(.semibold))
                     .lineLimit(1)
 
@@ -335,7 +335,7 @@ struct PrayerWaveView: View {
                 )
 
                 HStack {
-                    Text(current.displayName)
+                    Text(current.displayName.localizedDisplay)
                         .font(.headline)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
@@ -447,7 +447,7 @@ struct PrayerDayView: View {
                             Image(systemName: current.image)
                                 .font(.subheadline)
 
-                            Text(current.displayName)
+                            Text(current.displayName.localizedDisplay)
                                 .font(.headline)
                         }
                         .foregroundColor(tint(current))
@@ -482,7 +482,7 @@ struct PrayerDayView: View {
                     ForEach(Array(entry.prayers.enumerated()), id: \.element.id) { index, prayer in
                         if index > 0 { Spacer(minLength: 4) }
                         VStack(spacing: 3) {
-                            Text(prayer.displayName)
+                            Text(prayer.displayName.localizedDisplay)
                                 .font(.caption2.weight(isCurrent(prayer) ? .bold : .semibold))
 
                             Text(prayer.time, style: .time)
@@ -574,6 +574,11 @@ struct FastingCountdownView: View {
         return ("Suhoor ends in", PrayerMinute.suhoorEnd(forFajr: nextFajr), maghrib)
     }
 
+    /// The phase label as the reader sees it; `phase.label` stays the English key the icon matches on.
+    private func phaseLabel(_ label: String) -> String {
+        label == "Iftar in" ? String(localized: "Iftar in") : String(localized: "Suhoor ends in")
+    }
+
     /// A countdown that holds at 0:00 once the deadline passes. Suhoor ends a minute before Fajr and
     /// the timeline's next entry is at Fajr, so for that minute the suhoor entry is still on screen,
     /// and the plain `.timer` style would count back up from zero.
@@ -592,7 +597,9 @@ struct FastingCountdownView: View {
                         Image(systemName: phase.label == "Iftar in" ? "sunset.fill" : "sunrise.fill")
                             .font(.subheadline)
 
-                        Text("\(phase.label) \(countdown(to: phase.deadline))")
+                        // Led right to left in Arabic (`Text.rightToLeftLine`): the key is two arguments.
+                        Text("\(phaseLabel(phase.label)) \(countdown(to: phase.deadline))")
+                            .rightToLeftLine()
                             .font(.headline)
                     }
                     .foregroundColor(accent)
@@ -761,7 +768,7 @@ struct NextPrayerProgressView: View {
                             .padding(.trailing, -4)
                     }
 
-                    Text(current.displayName)
+                    Text(current.displayName.localizedDisplay)
                         .font(.headline)
 
                     Spacer()
@@ -778,7 +785,7 @@ struct NextPrayerProgressView: View {
                     tint: .primary
                 )
 
-                Text("Next: \(next.displayName) \(Text(next.time, style: .time))")
+                Text("Next: \(next.displayName.localizedDisplay) \(Text(next.time, style: .time))")
                     .font(.caption)
             } else {
                 Text("Open app to get prayer times")
@@ -834,7 +841,7 @@ struct PrayerListSmallView: View {
                             .font(.caption2)
                             .frame(width: 12, alignment: .center)
 
-                        Text(prayer.displayName)
+                        Text(prayer.displayName.localizedDisplay)
                             .font(.caption.weight(.semibold))
 
                         Spacer(minLength: 4)
@@ -906,7 +913,7 @@ struct NextPrayerBoardView: View {
                         Image(systemName: current.image)
                             .font(.subheadline)
 
-                        Text(current.displayName)
+                        Text(current.displayName.localizedDisplay)
                             .font(.headline)
 
                         Spacer(minLength: 4)
@@ -918,7 +925,7 @@ struct NextPrayerBoardView: View {
                     }
                     .foregroundColor(skyStyle ? .white : (current.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color))
 
-                    Text("Next: \(next.displayName) \(Text(next.time, style: .time))")
+                    Text("Next: \(next.displayName.localizedDisplay) \(Text(next.time, style: .time))")
                         .font(.caption)
                         .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
 
@@ -957,7 +964,7 @@ struct NextPrayerBoardView: View {
                                 .font(.caption2)
                                 .frame(width: 12, alignment: .center)
 
-                            Text(prayer.displayName)
+                            Text(prayer.displayName.localizedDisplay)
                                 .font(.caption2.weight(.semibold))
 
                             Spacer(minLength: 4)

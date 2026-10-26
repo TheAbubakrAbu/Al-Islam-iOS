@@ -158,6 +158,8 @@ final class ExtraRemindersStore: ObservableObject {
         struct SurahName {
             let transliteration: String
             let arabic: String
+            /// The name the notification shows: `Surah.displayName`, taken on the main actor.
+            let display: String
         }
         struct DuaCard {
             let arabic: String
@@ -186,7 +188,7 @@ final class ExtraRemindersStore: ObservableObject {
         let data = QuranData.shared
         var lastRead: (surah: Int, ayah: Int, name: String)?
         if settings.lastReadSurah > 0, let surah = data.surah(settings.lastReadSurah) {
-            lastRead = (settings.lastReadSurah, settings.lastReadAyah, surah.nameTransliteration)
+            lastRead = (settings.lastReadSurah, settings.lastReadAyah, surah.displayName)
         }
         let anchor = settings.dailyAnchor()
         let dayKey = Settings.dayKey(anchor)
@@ -197,7 +199,8 @@ final class ExtraRemindersStore: ObservableObject {
         var names: [Int: BuildInputs.SurahName] = [:]
         for reminder in custom where reminder.enabled {
             if let id = reminder.surah, names[id] == nil, let surah = data.surah(id) {
-                names[id] = BuildInputs.SurahName(transliteration: surah.nameTransliteration, arabic: surah.nameArabic)
+                names[id] = BuildInputs.SurahName(transliteration: surah.nameTransliteration, arabic: surah.nameArabic,
+                                                  display: surah.displayName)
             }
         }
         // The corpus is parsed at app init (Phase 1), so this is a cached read by the time any pass runs.
@@ -224,7 +227,11 @@ final class ExtraRemindersStore: ObservableObject {
         let configPart = "\(config.duaEnabled ? 1 : 0):\(config.duaPerDay):\(config.lastReadEnabled ? 1 : 0):\(config.lastReadMinutes):\(config.streakEnabled ? 1 : 0):\(config.streakMinutes)"
         let readPart = "\(inputs.lastRead?.surah ?? 0):\(inputs.lastRead?.ayah ?? 0):\(inputs.readToday ? 1 : 0)"
         let streakPart = "\(inputs.streak.current):\(inputs.streak.activeToday ? 1 : 0)"
-        return [inputs.dayKey, custom, configPart, readPart, streakPart].joined(separator: "|")
+        // The interface language writes the bodies: a switch re-arms. English adds nothing, so an English
+        // device keeps its armed queue across this update.
+        let language = AppLanguage.code
+        let languagePart = language.hasPrefix("en") ? [] : [language]
+        return ([inputs.dayKey, custom, configPart, readPart, streakPart] + languagePart).joined(separator: "|")
     }
 
     private static let signatureKey = "extraRemindersArmedSignature"
@@ -334,8 +341,8 @@ final class ExtraRemindersStore: ObservableObject {
                 guard let fireAt = fireDate(dayOffset: offset, minutes: config.lastReadMinutes, now: now, calendar: calendar),
                       fireAt > now.addingTimeInterval(30) else { continue }
                 let content = UNMutableNotificationContent()
-                content.title = "Pick up where you left off"
-                content.body = "You stopped at \(lastRead.name) \(lastRead.surah):\(lastRead.ayah). A few ayahs?"
+                content.title = String(localized: "Pick up where you left off")
+                content.body = String(localized: "You stopped at \(lastRead.name) \(lastRead.surah):\(lastRead.ayah). A few ayahs?")
                 content.sound = .default
                 content.threadIdentifier = threadIdentifier
                 content.userInfo = [SunnahReminderStore.targetUserInfoKey: QuranOpenTarget.ayah(lastRead.surah, max(1, lastRead.ayah)).encoded]
@@ -353,12 +360,12 @@ final class ExtraRemindersStore: ObservableObject {
                           fireAt > now.addingTimeInterval(30) else { continue }
                     let projected = streak.current + offset
                     let content = UNMutableNotificationContent()
-                    content.title = "Keep the chain going"
+                    content.title = String(localized: "Keep the chain going")
                     content.body = projected >= 30
-                        ? "Day \(projected) of your streak. Do not let it break tonight."
+                        ? String(localized: "Day \(projected) of your streak. Do not let it break tonight.")
                         : projected >= 7
-                            ? "Day \(projected) of your streak. Read one ayah to keep it alive."
-                            : "Streak day \(projected). Keep the chain going."
+                            ? String(localized: "Day \(projected) of your streak. Read one ayah to keep it alive.")
+                            : String(localized: "Streak day \(projected). Keep the chain going.")
                     content.sound = .default
                     content.threadIdentifier = threadIdentifier
                     content.userInfo = [SunnahReminderStore.targetUserInfoKey: QuranOpenTarget.tab.encoded]
@@ -398,7 +405,7 @@ final class ExtraRemindersStore: ObservableObject {
                       fireAt > now.addingTimeInterval(60) else { continue }
                 guard let dua = corpus.randomElement(using: &generator) else { continue }
                 let content = UNMutableNotificationContent()
-                content.title = dua.isDhikr ? "A dhikr from the Sunnah" : "A dua from the Sunnah"
+                content.title = dua.isDhikr ? String(localized: "A dhikr from the Sunnah") : String(localized: "A dua from the Sunnah")
                 var lines = [dua.arabic]
                 if let transliteration = dua.transliteration, !transliteration.isEmpty { lines.append(transliteration) }
                 if !dua.english.isEmpty { lines.append(dua.english) }
@@ -479,16 +486,19 @@ final class ExtraRemindersStore: ObservableObject {
         let content = UNMutableNotificationContent()
         let label = reminder.label.trimmingCharacters(in: .whitespacesAndNewlines)
         if let id = reminder.surah, let surah {
-            let name = surah.transliteration
-            content.title = label.isEmpty ? "Surat \(name) · \(surah.arabic)" : label
+            let name = surah.display
+            // In Arabic the name already IS the Arabic one: the title names it once.
+            content.title = label.isEmpty
+                ? (AppLanguage.isArabic ? String(localized: "Surat \(name)") : String(localized: "Surat \(name) · \(surah.arabic)"))
+                : label
             if let ayah = reminder.ayah {
-                content.body = label.isEmpty ? "Time to recite \(name) \(id):\(ayah)." : "\(name) \(id):\(ayah)"
+                content.body = label.isEmpty ? String(localized: "Time to recite \(name) \(id):\(ayah).") : "\(name) \(id):\(ayah)".localizedDigits
             } else {
-                content.body = label.isEmpty ? "Time to recite Surat \(name)." : "Surat \(name)"
+                content.body = label.isEmpty ? String(localized: "Time to recite Surat \(name).") : String(localized: "Surat \(name)")
             }
         } else {
-            content.title = label.isEmpty ? "Reminder" : label
-            content.body = label.isEmpty ? "Time for your Quran reminder." : "Open the Quran."
+            content.title = label.isEmpty ? String(localized: "Reminder") : label
+            content.body = label.isEmpty ? String(localized: "Time for your Quran reminder.") : String(localized: "Open the Quran.")
         }
         content.sound = .default
         content.threadIdentifier = threadIdentifier
@@ -499,7 +509,7 @@ final class ExtraRemindersStore: ObservableObject {
     /// One copy of a custom reminder, five seconds from now.
     func preview(_ reminder: CustomReminder) {
         let surah = reminder.surah.flatMap { QuranData.shared.surah($0) }
-            .map { BuildInputs.SurahName(transliteration: $0.nameTransliteration, arabic: $0.nameArabic) }
+            .map { BuildInputs.SurahName(transliteration: $0.nameTransliteration, arabic: $0.nameArabic, display: $0.displayName) }
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
         let request = UNNotificationRequest(identifier: SunnahReminderStore.previewIdentifier,
                                             content: Self.content(for: reminder, surah: surah), trigger: trigger)
@@ -511,8 +521,8 @@ final class ExtraRemindersStore: ObservableObject {
         components.hour = minutes / 60
         components.minute = minutes % 60
         let time = Calendar.current.date(from: components).map { Self.timeFormatter.string(from: $0) } ?? ""
-        if let weekday { return "Every \(SunnahReminderStore.weekdayName(weekday)) at \(time)" }
-        return "Every day at \(time)"
+        if let weekday { return String(localized: "Every \(SunnahReminderStore.weekdayName(weekday)) at \(time)") }
+        return String(localized: "Every day at \(time)")
     }
 
     private static let timeFormatter: DateFormatter = {
@@ -606,7 +616,7 @@ struct ExtraReminderSections: View {
         }
 
         Section(header: Text("DUAS THROUGH THE DAY"), footer:
-            Text("Authentic duas and adhkar from the Sunnah, with transliteration, meaning and source, at random times between 9 AM and 9 PM.")
+            Text(String(localized: "Authentic duas and adhkar from the Sunnah, with transliteration, meaning and source, at random times between 9 AM and 9 PM.").localizedDigits)
                 .font(.caption2)
         ) {
             Toggle(isOn: Binding(
@@ -623,7 +633,7 @@ struct ExtraReminderSections: View {
                     }
                 }
             )) {
-                ExtraReminderLabel(title: "Random duas", systemImage: "hands.sparkles.fill")
+                ExtraReminderLabel(title: String(localized: "Random duas"), systemImage: "hands.sparkles.fill")
             }
             if store.config.duaEnabled {
                 Picker("Each day", selection: Binding(
@@ -631,7 +641,7 @@ struct ExtraReminderSections: View {
                     set: { n in store.updateConfig { $0.duaPerDay = n } }
                 )) {
                     ForEach([1, 2, 3, 4, 6], id: \.self) { n in
-                        Text(n == 1 ? "Once" : "\(n) times").tag(n)
+                        Text(n == 1 ? String(localized: "Once") : String(localized: "\(n) times")).tag(n)
                     }
                 }
                 .pickerStyle(.menu)
@@ -643,11 +653,11 @@ struct ExtraReminderSections: View {
             Text("Pick Up Where You Left Off stays quiet on a day you have already read. Keep Your Streak only speaks while there is a streak to keep.")
                 .font(.caption2)
         ) {
-            nudgeRow(title: "Pick up where you left off", symbol: "bookmark.fill",
+            nudgeRow(title: String(localized: "Pick up where you left off"), symbol: "bookmark.fill",
                      enabled: store.config.lastReadEnabled, minutes: store.config.lastReadMinutes,
                      setEnabled: { on in store.updateConfig { $0.lastReadEnabled = on } },
                      setMinutes: { m in store.updateConfig { $0.lastReadMinutes = m } })
-            nudgeRow(title: "Keep your streak", symbol: "flame.fill",
+            nudgeRow(title: String(localized: "Keep your streak"), symbol: "flame.fill",
                      enabled: store.config.streakEnabled, minutes: store.config.streakMinutes,
                      setEnabled: { on in store.updateConfig { $0.streakEnabled = on } },
                      setMinutes: { m in store.updateConfig { $0.streakMinutes = m } })
@@ -732,10 +742,10 @@ private struct CustomReminderRow: View {
         let label = reminder.label.trimmingCharacters(in: .whitespacesAndNewlines)
         if !label.isEmpty { return label }
         if let id = reminder.surah, let surah = quranData.surah(id) {
-            if let ayah = reminder.ayah { return "\(surah.nameTransliteration) \(id):\(ayah)" }
-            return "Surat \(surah.nameTransliteration)"
+            if let ayah = reminder.ayah { return "\(surah.displayName) \(id):\(ayah)".localizedDigits }
+            return String(localized: "Surat \(surah.displayName)")
         }
-        return "Reminder"
+        return String(localized: "Reminder")
     }
 
     var body: some View {
@@ -777,7 +787,7 @@ private struct CustomReminderRow: View {
                     previewArmed = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 6) { previewArmed = false }
                 } label: {
-                    Label(previewArmed ? "Arriving in 5 s" : "Preview", systemImage: "bell")
+                    Label(previewArmed ? String(localized: "Arriving in 5 s").localizedDigits : String(localized: "Preview"), systemImage: "bell")
                 }
                 .buttonStyle(.plain)
                 .disabled(previewArmed)
@@ -833,7 +843,7 @@ private struct CustomReminderEditor: View {
                     )) {
                         Text("The Quran tab").tag(0)
                         ForEach(quranData.quran, id: \.id) { surah in
-                            Text("\(surah.id). \(surah.nameTransliteration)").tag(surah.id)
+                            Text("\(surah.id). \(surah.displayName)").tag(surah.id)
                         }
                     }
                     .pickerStyle(.menu)
@@ -844,7 +854,7 @@ private struct CustomReminderEditor: View {
                             get: { draft.ayah ?? 0 },
                             set: { draft.ayah = $0 == 0 ? nil : $0 }
                         ), in: 0...ayahCount) {
-                            Text(draft.ayah.map { "Ayah \($0)" } ?? "Whole surah")
+                            Text(draft.ayah.map { String(localized: "Ayah \($0)") } ?? String(localized: "Whole surah"))
                                 .font(.subheadline)
                         }
                     }

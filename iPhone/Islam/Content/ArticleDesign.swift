@@ -19,6 +19,12 @@ import SwiftUI
 //   * the words stay in the call site as a plain string literal, so the Ask AI corpus
 //     (Scripts/build_islam_corpus.py) reads a step or a lead exactly as it read the `Text` it replaced.
 
+extension String {
+    /// Kit text as drawn: a translated page's written-out digits follow the locale (`localizedDigits`),
+    /// while an English article keeps its own ("Quran 2:255"). DISPLAY only.
+    var articleDisplayDigits: String { isMostlyArabicScript ? localizedDigits : self }
+}
+
 // MARK: - Shared ground
 
 /// The card ground every piece here shares with `ScriptureQuoteBody`: the accent falling away corner to
@@ -50,7 +56,7 @@ private struct ArticleEyebrow: View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
                 .font(.caption.weight(.bold))
-            Text(text)
+            Text(text.articleDisplayDigits)
                 .font(.caption.weight(.bold))
                 .tracking(1.1)
         }
@@ -165,11 +171,11 @@ struct ArticleParagraph: View {
         #else
         Group {
             if markdown {
-                Text(articleMarkdown: text)
+                Text(articleMarkdown: shown)
             } else if highlightsAllah {
-                Text.islamText(text, highlightAllah: appearance.highlightAllahIslam)
+                Text.islamText(shown, highlightAllah: appearance.highlightAllahIslam)
             } else {
-                Text(verbatim: text)
+                Text(verbatim: shown)
             }
         }
         .font(Font.system(textStyle).weight(weight))
@@ -180,14 +186,17 @@ struct ArticleParagraph: View {
         #endif
     }
 
+    private var shown: String { text.articleDisplayDigits }
+
     #if os(iOS)
     private var attributed: AttributedString {
-        if markdown { return ArticleMarkdownCache.attributed(text) }
+        let drawn = shown
+        if markdown { return ArticleMarkdownCache.attributed(drawn) }
         if highlightsAllah,
-           let painted = Text.islamHighlighted(text, highlightAllah: appearance.highlightAllahIslam) {
+           let painted = Text.islamHighlighted(drawn, highlightAllah: appearance.highlightAllahIslam) {
             return painted
         }
-        return AttributedString(text)
+        return AttributedString(drawn)
     }
 
     private static func uiTextStyle(_ style: Font.TextStyle) -> UIFont.TextStyle {
@@ -233,9 +242,13 @@ struct ArticleLead: View {
 
     let text: String
     var markdown: Bool = false
+    /// The small label over the lead. The Islam tab is not translated yet, so its pages keep the English
+    /// literal; a translated screen (the hadith history) passes its own `String(localized: "IN SHORT")`.
+    var eyebrow: String = "IN SHORT"
 
-    init(_ text: String) {
+    init(_ text: String, eyebrow: String = "IN SHORT") {
         self.text = text
+        self.eyebrow = eyebrow
     }
 
     /// A lead with inline **bold** terms, the way some SUMMARY paragraphs were written.
@@ -257,7 +270,7 @@ struct ArticleLead: View {
     var body: some View {
         let accent = appearance.accent
         VStack(alignment: .leading, spacing: 8) {
-            ArticleEyebrow(text: "IN SHORT", systemImage: "sparkle", accent: accent)
+            ArticleEyebrow(text: eyebrow, systemImage: "sparkle", accent: accent)
 
             // A long lead at title size filled the screen; past ~240 characters it reads at body size.
             ArticleParagraph(display, markdown: markdown,
@@ -326,7 +339,8 @@ struct ArticleStep: View {
         let parts = Self.split(source)
         if let number = parts.number {
             HStack(alignment: .top, spacing: 12) {
-                ArticleBadge(text: number, accent: appearance.accent)
+                ArticleBadge(text: source.isMostlyArabicScript ? number.localizedDigits : number,
+                             accent: appearance.accent)
                     .padding(.top, 1)
                     .accessibilityLabel("Step \(number)")
 
@@ -472,7 +486,7 @@ struct ArticleCallout: View {
             HStack(spacing: 10) {
                 AccentIconChip(systemImage: systemImage, size: 26)
 
-                Text(title)
+                Text(title.articleDisplayDigits)
                     .font(.subheadline.weight(.bold))
                     .foregroundColor(accent)
                     .fixedSize(horizontal: false, vertical: true)
@@ -612,7 +626,7 @@ struct ArticleTermCard: View {
         let accent = appearance.accent
         VStack(alignment: .leading, spacing: 6) {
             if isPhrase {
-                Text(term)
+                Text(term.articleDisplayDigits)
                     .font(.headline)
                     .foregroundColor(.primary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -627,7 +641,7 @@ struct ArticleTermCard: View {
                     .padding(.vertical, 2)
             } else {
                 HStack(alignment: .center, spacing: 12) {
-                    Text(term)
+                    Text(term.articleDisplayDigits)
                         .font(.headline)
                         .foregroundColor(.primary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -825,7 +839,7 @@ struct ArticleChecklist: View {
     var body: some View {
         let accent = appearance.accent
         VStack(alignment: .leading, spacing: 9) {
-            Text(title)
+            Text(title.articleDisplayDigits)
                 .font(.subheadline.weight(.bold))
                 .foregroundColor(accent)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1174,7 +1188,7 @@ struct ResourceHero<Footer: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 6) {
                 Image(systemName: systemImage)
-                Text(eyebrow)
+                Text(eyebrow.articleDisplayDigits)
                     .tracking(1.3)
                     .lineLimit(2)
                     // A single word wider than the card cannot wrap: at the largest accessibility
@@ -1189,18 +1203,22 @@ struct ResourceHero<Footer: View>: View {
                 if let arabic, !arabic.isEmpty {
                     headlineWithArabic(arabic, accent: accent)
                 } else {
+                    // Often an ayah's English translation (scripture stays English): it keeps the left
+                    // edge and its own direction even on a translated page.
                     headlineText
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent(!headline.isMostlyArabicScript)
                 }
 
                 if let source {
-                    Text(source)
+                    Text(source.articleDisplayDigits)
                         .font(.caption.weight(.semibold))
                         .foregroundColor(accent)
                 }
             }
 
             if !message.isEmpty {
-                Text(message)
+                Text(message.articleDisplayDigits)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1263,12 +1281,12 @@ struct ResourceHeroStats: View {
 
     private func statChip(_ stat: ResourceHeroStat, accent: Color) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(stat.value)
+            Text(stat.value.localizedDigits)
                 .font(.system(.title3, design: .rounded).weight(.bold))
                 .foregroundColor(accent)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            Text(stat.label)
+            Text(stat.label.articleDisplayDigits)
                 .font(.caption2)
                 .foregroundColor(.secondary)
                 .lineLimit(1)

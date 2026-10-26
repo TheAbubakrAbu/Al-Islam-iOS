@@ -48,7 +48,7 @@ enum RemovalConfirmation {
             Settings.shared.hapticFeedback()
             withAnimation(.easeInOut) { onConfirm() }
         })
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
         // The app's accent on the sheet's buttons, the way SwiftUI's own confirmation dialogs get it.
         alert.view.tintColor = UIColor(Settings.shared.accentColor.color)
         // iPad requires an anchor or the popover asserts on presentation. iPhone gets none: the sheet
@@ -76,14 +76,14 @@ extension Settings {
             return
         }
 
-        let name = QuranData.shared.surah(surah)?.nameTransliteration ?? "Surah \(surah)"
+        let name = QuranData.shared.surah(surah)?.displayName ?? String(localized: "Surah \(surah)")
         let hasNote = bookmarkHasNote(surah: surah, ayah: ayah)
         RemovalConfirmation.present(
-            title: hasNote ? "Remove bookmark and delete note?" : "Remove bookmark?",
+            title: hasNote ? String(localized: "Remove bookmark and delete note?") : String(localized: "Remove bookmark?"),
             message: hasNote
-                ? "\(name) \(surah):\(ayah) will be removed from your bookmarks, and its note will be deleted."
-                : "\(name) \(surah):\(ayah) will be removed from your bookmarks.",
-            confirmTitle: "Remove Bookmark"
+                ? String(localized: "\(name) \(surah):\(ayah) will be removed from your bookmarks, and its note will be deleted.")
+                : String(localized: "\(name) \(surah):\(ayah) will be removed from your bookmarks."),
+            confirmTitle: String(localized: "Remove Bookmark")
         ) { [weak self] in
             self?.toggleBookmark(surah: surah, ayah: ayah)
         }
@@ -97,11 +97,11 @@ extension Settings {
             return
         }
 
-        let name = QuranData.shared.surah(surah)?.nameTransliteration ?? "Surah \(surah)"
+        let name = QuranData.shared.surah(surah)?.displayName ?? String(localized: "Surah \(surah)")
         RemovalConfirmation.present(
-            title: "Remove from favorites?",
-            message: "\(name) will be removed from your favorite surahs.",
-            confirmTitle: "Remove from Favorites"
+            title: String(localized: "Remove from favorites?"),
+            message: String(localized: "\(name) will be removed from your favorite surahs."),
+            confirmTitle: String(localized: "Remove from Favorites")
         ) { [weak self] in
             self?.toggleSurahFavorite(surah: surah)
         }
@@ -117,9 +117,9 @@ extension Settings {
         }
 
         RemovalConfirmation.present(
-            title: "Remove from favorites?",
-            message: "\(letterData.transliteration) (\(letterData.letter)) will be removed from your favorite letters.",
-            confirmTitle: "Remove from Favorites"
+            title: String(localized: "Remove from favorites?"),
+            message: String(localized: "\(letterData.transliteration) (\(letterData.letter)) will be removed from your favorite letters."),
+            confirmTitle: String(localized: "Remove from Favorites")
         ) { [weak self] in
             self?.toggleLetterFavorite(letterData: letterData)
         }
@@ -134,9 +134,9 @@ extension Settings {
         }
 
         RemovalConfirmation.present(
-            title: "Remove from favorites?",
-            message: "\(transliteration) will be removed from your favorite Names.",
-            confirmTitle: "Remove from Favorites"
+            title: String(localized: "Remove from favorites?"),
+            message: String(localized: "\(transliteration) will be removed from your favorite Names."),
+            confirmTitle: String(localized: "Remove from Favorites")
         ) { [weak self] in
             self?.toggleNameFavorite(number: number)
         }
@@ -157,14 +157,15 @@ extension HadithUserData {
         }
 
         let saved = bookmarks.first { $0.slug == book.slug && $0.idInBook == hadith.idInBook }
-        let name = reference ?? saved?.reference ?? "\(book.englishTitle) \(hadith.displayNumber)"
+        let name = reference.map { HadithCatalogBook.displayReference(stored: $0, slug: book.slug) }
+            ?? saved?.displayReference ?? book.displayReference(hadith.displayNumber)
         let hasNote = note(slug: book.slug, idInBook: hadith.idInBook) != nil
         RemovalConfirmation.present(
-            title: hasNote ? "Remove bookmark and delete note?" : "Remove bookmark?",
+            title: hasNote ? String(localized: "Remove bookmark and delete note?") : String(localized: "Remove bookmark?"),
             message: hasNote
-                ? "\(name) will be removed from your bookmarks, and its note will be deleted."
-                : "\(name) will be removed from your bookmarks.",
-            confirmTitle: "Remove Bookmark"
+                ? String(localized: "\(name) will be removed from your bookmarks, and its note will be deleted.")
+                : String(localized: "\(name) will be removed from your bookmarks."),
+            confirmTitle: String(localized: "Remove Bookmark")
         ) { [weak self] in
             self?.toggleBookmark(book: book, hadith: hadith)
         }
@@ -178,9 +179,9 @@ extension HadithUserData {
         }
 
         RemovalConfirmation.present(
-            title: "Remove from favorites?",
-            message: "\(book.englishTitle) will be removed from your favorite books.",
-            confirmTitle: "Remove from Favorites"
+            title: String(localized: "Remove from favorites?"),
+            message: String(localized: "\(book.displayTitle) will be removed from your favorite books."),
+            confirmTitle: String(localized: "Remove from Favorites")
         ) { [weak self] in
             self?.toggleFavorite(book.slug)
         }
@@ -193,11 +194,11 @@ extension HadithUserData {
             return
         }
 
-        let name = chapter.english.isEmpty ? "This chapter of \(book.englishTitle)" : chapter.english
+        let name = chapter.displayTitle.isEmpty ? String(localized: "This chapter of \(book.displayTitle)") : chapter.displayTitle
         RemovalConfirmation.present(
-            title: "Remove from favorites?",
-            message: "\(name) will be removed from your favorite chapters.",
-            confirmTitle: "Remove from Favorites"
+            title: String(localized: "Remove from favorites?"),
+            message: String(localized: "\(name) will be removed from your favorite chapters."),
+            confirmTitle: String(localized: "Remove from Favorites")
         ) { [weak self] in
             self?.toggleChapterFavorite(slug: book.slug, chapterId: chapter.id)
         }

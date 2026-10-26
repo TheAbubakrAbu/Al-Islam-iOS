@@ -802,6 +802,7 @@ private struct MainTabView: View {
     /// to drive the simulator's tab bar from a test harness without an XCUITest target).
     private var launchTab: AppTab {
         #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-launchTabAdhan") { return .adhan }
         if ProcessInfo.processInfo.arguments.contains("-launchTabQuran") { return .quran }
         // The Hadith settings hooks present from the Hadith tab, so they land there too: on another
         // tab the sheet's presenter is not in the window (Quality Guide G12).

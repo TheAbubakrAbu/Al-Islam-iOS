@@ -911,8 +911,10 @@ enum AskAIRetriever {
         let terms = question.searchTerms.filter { $0.count >= 3 && !["app", "setting", "settings", "change", "turn", "use", "find", "open"].contains($0) }
         guard !terms.isEmpty else { return [] }
         var scored: [(SettingsSearchEntry, Int)] = []
+        // English in every interface language (`englishTitle`): the question's terms are matched against
+        // the text the model will read.
         for entry in SettingsSearchEntry.available() {
-            let title = AskAILexicon.fold(entry.title)
+            let title = AskAILexicon.fold(entry.englishTitle)
             let path = AskAILexicon.fold(entry.path)
             let keywords = AskAILexicon.fold(entry.keywords)
             var score = 0
@@ -934,9 +936,10 @@ enum AskAIRetriever {
         let terms = question.contentWords.filter { $0.count >= 3 && !["app", "setting", "settings", "change", "turn", "use"].contains($0) }
         guard !terms.isEmpty else { return [] }
         var scored: [(AppTip, Int)] = []
+        // The tip's English (`AppTip.english`), whatever the interface shows.
         for tip in TipCatalog.all where tip.isAvailable() {
-            let title = AskAILexicon.fold(tip.title + " " + tip.group)
-            let body = AskAILexicon.fold(tip.detail + " " + tip.place)
+            let title = AskAILexicon.fold(tip.english.title + " " + tip.english.group)
+            let body = AskAILexicon.fold(tip.english.detail + " " + tip.english.place)
             var score = 0
             for term in terms {
                 if title.contains(term) { score += 3 }

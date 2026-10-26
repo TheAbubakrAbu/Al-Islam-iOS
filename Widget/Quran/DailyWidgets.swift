@@ -65,10 +65,10 @@ struct DailyReminderProvider: TimelineProvider {
     }
 
     private func sample() -> DailyReminderEntry {
-        DailyReminderEntry(date: Date(), kindLabel: "Verse of the day",
+        DailyReminderEntry(date: Date(), kindLabel: String(localized: "Verse of the day"),
                            arabic: "فَٱذۡكُرُونِيٓ أَذۡكُرۡكُمۡ وَٱشۡكُرُواْ لِي وَلَا تَكۡفُرُونِ",
                            english: "So remember Me; I will remember you. And be grateful to Me and do not deny Me.",
-                           short: "Remember Me; I will remember you.", source: "Quran 2:152",
+                           short: "Remember Me; I will remember you.", source: String(localized: "Quran 2:152"),
                            fontName: nil, accentColor: DailyWidgetShared.accent)
     }
 
@@ -120,9 +120,12 @@ struct DailyReminderWidgetView: View {
             .foregroundColor(entry.accentColor.color)
 
             if isAccessory {
+                // The reminder's English keeps the left edge in the Arabic interface (both sizes).
                 Text(entry.short)
                     .font(.caption)
                     .lineLimit(3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
             } else {
                 if !entry.arabic.isEmpty {
                     arabicText
@@ -133,7 +136,9 @@ struct DailyReminderWidgetView: View {
                     .font(.caption2)
                     .foregroundColor(.primary)
                     .lineLimit(family == .systemSmall ? 3 : 4)
-                Text(entry.source)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
+                Text(entry.source.isMostlyArabicScript ? entry.source.localizedDigits : entry.source)
                     .font(.caption2)
                     .foregroundColor(Color(.tertiaryLabel))
                     .lineLimit(1)
@@ -157,11 +162,15 @@ struct DailyReminderWidgetView: View {
                 .arabicFontDesign(custom: fontName != Settings.systemArabicFontName)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                .environment(\.layoutDirection, .leftToRight)
         } else {
             Text(entry.arabic)
                 .font(.system(size: size))
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                .environment(\.layoutDirection, .leftToRight)
         }
     }
 }
@@ -232,19 +241,25 @@ struct NameOfAllahWidgetView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     arabicText(size: 18)
                         .lineLimit(1)
+                    // The name's transliteration and English meaning are English content: the left
+                    // edge in the Arabic interface too (and in the larger sizes below).
                     Text(entry.transliteration)
                         .font(.caption.weight(.semibold))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent()
                     Text(entry.meaning)
                         .font(.caption2)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent()
                 }
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 5) {
                         Image(systemName: "signature")
                             .font(.caption2.weight(.semibold))
-                        Text("NAME OF ALLAH · \(entry.number) OF 99")
+                        Text(String(localized: "NAME OF ALLAH · \(entry.number) OF 99").localizedDigits)
                             .font(.caption2.weight(.bold))
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
@@ -257,20 +272,28 @@ struct NameOfAllahWidgetView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         .frame(maxWidth: .infinity, alignment: family == .systemSmall ? .leading : .trailing)
+                        // The same edge in the Arabic interface, beside the left-to-right transliteration.
+                        .environment(\.layoutDirection, .leftToRight)
 
                     Text(entry.transliteration)
                         .font(.subheadline.weight(.bold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent()
                     Text(entry.meaning)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(family == .systemSmall ? 2 : 1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent()
                     if family != .systemSmall, !entry.living.isEmpty {
                         Text(entry.living)
                             .font(.caption2)
                             .foregroundColor(Color(.tertiaryLabel))
                             .lineLimit(3)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .leftToRightContent()
                             .padding(.top, 2)
                     }
                     Spacer(minLength: 0)

@@ -52,7 +52,7 @@ private struct LastListenedSurahCard: View {
             HStack(spacing: 6) {
                 Image(systemName: entry.icon)
                     .font(.caption.weight(.semibold))
-                Text(roomy ? "Continue Listening" : entry.title)
+                Text(roomy ? String(localized: "Continue Listening") : entry.title)
                     .font(.caption.weight(.semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)

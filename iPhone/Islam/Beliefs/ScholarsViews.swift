@@ -175,7 +175,7 @@ struct SahabahScholarsView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Scholars of the Sahabah")
-        .selectableArticleList(article: "SahabahScholarsView")
+        .englishArticle().selectableArticleList(article: "SahabahScholarsView")
     }
 }
 
@@ -253,7 +253,7 @@ struct SalafScholarsView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The Salaf and the Imams")
-        .selectableArticleList(article: "SalafScholarsView")
+        .englishArticle().selectableArticleList(article: "SalafScholarsView")
     }
 }
 
@@ -294,7 +294,7 @@ struct TabariView: View {
             .themedListRowBackground()
         }
         .navigationTitle("At-Tabari")
-        .selectableArticleList(article: "TabariView")
+        .englishArticle().selectableArticleList(article: "TabariView")
     }
 }
 
@@ -343,7 +343,7 @@ struct IbnTaymiyyahView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Ibn Taymiyyah")
-        .selectableArticleList(article: "IbnTaymiyyahView")
+        .englishArticle().selectableArticleList(article: "IbnTaymiyyahView")
     }
 }
 
@@ -383,7 +383,7 @@ struct IbnQayyimView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Ibn al-Qayyim")
-        .selectableArticleList(article: "IbnQayyimView")
+        .englishArticle().selectableArticleList(article: "IbnQayyimView")
     }
 }
 
@@ -423,7 +423,7 @@ struct DhahabiView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Adh-Dhahabi")
-        .selectableArticleList(article: "DhahabiView")
+        .englishArticle().selectableArticleList(article: "DhahabiView")
     }
 }
 
@@ -463,7 +463,7 @@ struct IbnKathirView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Ibn Kathir")
-        .selectableArticleList(article: "IbnKathirView")
+        .englishArticle().selectableArticleList(article: "IbnKathirView")
     }
 }
 
@@ -596,6 +596,6 @@ struct LaterScholarsView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Later Scholars")
-        .selectableArticleList(article: "LaterScholarsView")
+        .englishArticle().selectableArticleList(article: "LaterScholarsView")
     }
 }

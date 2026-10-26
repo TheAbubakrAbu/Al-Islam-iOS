@@ -1150,11 +1150,14 @@ struct HighlightedSnippet: View {
 
         // A cluster that folds to nothing (a standalone tashkeel or Quranic sign written as its own grapheme)
         // belongs to the word it follows. Left outside the range, the word tints in the accent while its final
-        // mark stays in the base color - the "highlight stops one mark short" artifact on Arabic. Absorb them.
+        // mark stays in the base color (the "highlight stops one mark short" artifact on Arabic). Absorb them,
+        // and only marks and modifier letters: punctuation folds to nothing too, and "aishah" lit the colon of
+        // "ʿĀʾishah:".
         while end < source.endIndex {
             let next = source.index(after: end)
             let cluster = source[end..<next]
             guard cluster.first?.isWhitespace != true,
+                  cluster.unicodeScalars.allSatisfy(\.isStandaloneMark),
                   Self.normalizeForSearchText(String(cluster), trimWhitespace: false).isEmpty else { break }
             end = next
         }
@@ -1162,6 +1165,18 @@ struct HighlightedSnippet: View {
         return start..<end
     }
 
+}
+
+private extension Unicode.Scalar {
+    /// A mark that can stand as its own grapheme after a word: an Arabic sign, any combining mark, or a
+    /// modifier letter (the ʿ and ʾ of a transliteration, "Rabīʿ").
+    var isStandaloneMark: Bool {
+        if isArabicMarkScalar { return true }
+        switch properties.generalCategory {
+        case .nonspacingMark, .spacingMark, .enclosingMark, .modifierLetter: return true
+        default: return false
+        }
+    }
 }
 
 private extension Character {

@@ -92,28 +92,28 @@ enum FaraidHeir: String, CaseIterable, Hashable {
     /// Singular/plural handled by the caller; this is the row label.
     var title: String {
         switch self {
-        case .husband: return "Husband"
-        case .wives: return "Wives"
-        case .father: return "Father"
-        case .mother: return "Mother"
-        case .grandfather: return "Father's father"
-        case .maternalGrandmother: return "Mother's mother"
-        case .paternalGrandmother: return "Father's mother"
-        case .sons: return "Sons"
-        case .daughters: return "Daughters"
-        case .grandsons: return "Son's sons"
-        case .granddaughters: return "Son's daughters"
-        case .fullBrothers: return "Full brothers"
-        case .fullSisters: return "Full sisters"
-        case .paternalBrothers: return "Paternal half-brothers"
-        case .paternalSisters: return "Paternal half-sisters"
-        case .maternalSiblings: return "Maternal half-siblings"
-        case .fullNephews: return "Full brother's sons"
-        case .paternalNephews: return "Half-brother's sons"
-        case .fullUncles: return "Father's full brothers"
-        case .paternalUncles: return "Father's half-brothers"
-        case .fullCousins: return "Full uncle's sons"
-        case .paternalCousins: return "Half-uncle's sons"
+        case .husband: return String(localized: "Husband")
+        case .wives: return String(localized: "Wives")
+        case .father: return String(localized: "Father")
+        case .mother: return String(localized: "Mother")
+        case .grandfather: return String(localized: "Father's father")
+        case .maternalGrandmother: return String(localized: "Mother's mother")
+        case .paternalGrandmother: return String(localized: "Father's mother")
+        case .sons: return String(localized: "Sons")
+        case .daughters: return String(localized: "Daughters")
+        case .grandsons: return String(localized: "Son's sons")
+        case .granddaughters: return String(localized: "Son's daughters")
+        case .fullBrothers: return String(localized: "Full brothers")
+        case .fullSisters: return String(localized: "Full sisters")
+        case .paternalBrothers: return String(localized: "Paternal half-brothers")
+        case .paternalSisters: return String(localized: "Paternal half-sisters")
+        case .maternalSiblings: return String(localized: "Maternal half-siblings")
+        case .fullNephews: return String(localized: "Full brother's sons")
+        case .paternalNephews: return String(localized: "Half-brother's sons")
+        case .fullUncles: return String(localized: "Father's full brothers")
+        case .paternalUncles: return String(localized: "Father's half-brothers")
+        case .fullCousins: return String(localized: "Full uncle's sons")
+        case .paternalCousins: return String(localized: "Half-uncle's sons")
         }
     }
 
@@ -208,8 +208,8 @@ enum Faraid {
         var grandsons = n(.grandsons)
         var granddaughters = n(.granddaughters)
         if sons > 0 {
-            if grandsons > 0 { blocked.append((.grandsons, "blocked by the son")) }
-            if granddaughters > 0 { blocked.append((.granddaughters, "blocked by the son")) }
+            if grandsons > 0 { blocked.append((.grandsons, String(localized: "blocked by the son"))) }
+            if granddaughters > 0 { blocked.append((.granddaughters, String(localized: "blocked by the son"))) }
             grandsons = 0
             granddaughters = 0
         }
@@ -220,7 +220,7 @@ enum Faraid {
         // The grandfather inherits only in the father's absence - he is an heir by substitution.
         var hasGrandfather = n(.grandfather) > 0
         if hasGrandfather && hasFather {
-            blocked.append((.grandfather, "blocked by the father"))
+            blocked.append((.grandfather, String(localized: "blocked by the father")))
             hasGrandfather = false
         }
 
@@ -231,16 +231,16 @@ enum Faraid {
         var paternalGrandmother = n(.paternalGrandmother) > 0
         if hasMother {
             if maternalGrandmother {
-                blocked.append((.maternalGrandmother, "blocked by the mother"))
+                blocked.append((.maternalGrandmother, String(localized: "blocked by the mother")))
                 maternalGrandmother = false
             }
             if paternalGrandmother {
-                blocked.append((.paternalGrandmother, "blocked by the mother"))
+                blocked.append((.paternalGrandmother, String(localized: "blocked by the mother")))
                 paternalGrandmother = false
             }
         }
         if hasFather && paternalGrandmother {
-            blocked.append((.paternalGrandmother, "blocked by the father, her own son"))
+            blocked.append((.paternalGrandmother, String(localized: "blocked by the father, her own son")))
             paternalGrandmother = false
         }
         let grandmothers = (maternalGrandmother ? 1 : 0) + (paternalGrandmother ? 1 : 0)
@@ -266,25 +266,25 @@ enum Faraid {
         var maternalSiblings = n(.maternalSiblings)
 
         if agnaticSiblingsBlocked {
-            let reason = hasMaleDescendant ? "blocked by a male descendant" : "blocked by the father or grandfather"
+            let reason = hasMaleDescendant ? String(localized: "blocked by a male descendant") : String(localized: "blocked by the father or grandfather")
             if fullBrothers > 0 { blocked.append((.fullBrothers, reason)) }
             if fullSisters > 0 { blocked.append((.fullSisters, reason)) }
             if paternalBrothers > 0 { blocked.append((.paternalBrothers, reason)) }
             if paternalSisters > 0 { blocked.append((.paternalSisters, reason)) }
             fullBrothers = 0; fullSisters = 0; paternalBrothers = 0; paternalSisters = 0
             if hasGrandfather && !hasFather && siblingHeadCount > n(.maternalSiblings) {
-                notes.append("Siblings alongside a grandfather is a genuine difference among the Companions. Abu Bakr shut them out, and Ibn ‘Abbas, ‘A’ishah and later Ibn Taymiyyah held the same; that is the view applied here. Zayd ibn Thabit divided the estate between them instead, and Malik, ash-Shafi‘i and Ahmad followed him, so a court may well answer differently. Take an estate with both to a scholar.")
+                notes.append(String(localized: "Siblings alongside a grandfather is a genuine difference among the Companions. Abu Bakr shut them out, and Ibn ‘Abbas, ‘A’ishah and later Ibn Taymiyyah held the same; that is the view applied here. Zayd ibn Thabit divided the estate between them instead, and Malik, ash-Shafi‘i and Ahmad followed him, so a court may well answer differently. Take an estate with both to a scholar."))
             }
         }
         if maternalBlocked && maternalSiblings > 0 {
-            blocked.append((.maternalSiblings, hasDescendant ? "blocked by a descendant" : "blocked by the father or grandfather"))
+            blocked.append((.maternalSiblings, hasDescendant ? String(localized: "blocked by a descendant") : String(localized: "blocked by the father or grandfather")))
             maternalSiblings = 0
         }
 
         // A full brother shuts out the paternal siblings entirely.
         if fullBrothers > 0 {
-            if paternalBrothers > 0 { blocked.append((.paternalBrothers, "blocked by the full brother")) }
-            if paternalSisters > 0 { blocked.append((.paternalSisters, "blocked by the full brother")) }
+            if paternalBrothers > 0 { blocked.append((.paternalBrothers, String(localized: "blocked by the full brother"))) }
+            if paternalSisters > 0 { blocked.append((.paternalSisters, String(localized: "blocked by the full brother"))) }
             paternalBrothers = 0; paternalSisters = 0
         }
 
@@ -296,7 +296,7 @@ enum Faraid {
         let paternalSistersTakeResidueWithDaughters = paternalSisters > 0 && paternalBrothers == 0
             && fullSisters == 0 && (daughters > 0 || granddaughters > 0)
         if fullSistersTakeResidueWithDaughters && paternalSisters > 0 && paternalBrothers == 0 {
-            blocked.append((.paternalSisters, "blocked by the full sister, who inherits here as a residuary"))
+            blocked.append((.paternalSisters, String(localized: "blocked by the full sister, who inherits here as a residuary")))
             paternalSisters = 0
         }
 
@@ -327,16 +327,16 @@ enum Faraid {
         // paternal half-sisters beside a half-brother go with him (without one, the check above
         // already excluded them); their reason fell through the same way until 2026-09-29.
         if residuary == .fullSisters, paternalBrothers > 0 {
-            blocked.append((.paternalBrothers, "blocked by the full sister, who inherits here as a residuary alongside the daughter (‘asabah ma‘a al-ghayr)"))
+            blocked.append((.paternalBrothers, String(localized: "blocked by the full sister, who inherits here as a residuary alongside the daughter (‘asabah ma‘a al-ghayr)")))
             if paternalSisters > 0 {
-                blocked.append((.paternalSisters, "blocked by the full sister, who inherits here as a residuary alongside the daughter (‘asabah ma‘a al-ghayr)"))
+                blocked.append((.paternalSisters, String(localized: "blocked by the full sister, who inherits here as a residuary alongside the daughter (‘asabah ma‘a al-ghayr)")))
                 paternalSisters = 0
             }
         }
         if let residuary {
             for heir in FaraidHeir.residuaryOrder
             where heir != residuary && FaraidHeir.distantResiduaries.contains(heir) && n(heir) > 0 {
-                blocked.append((heir, "blocked by a nearer relative on the father's side (\(residuary.title.lowercased()))"))
+                blocked.append((heir, String(localized: "blocked by a nearer relative on the father's side (\(residuary.title.lowercased()))")))
             }
         }
 
@@ -347,27 +347,27 @@ enum Faraid {
         // Spouses - 4:12. Halved by the existence of ANY child, this marriage's or another's.
         if n(.husband) > 0 {
             fard[.husband] = hasDescendant
-                ? (Fraction(1, 4), "1/4 as husband, with a child (4:12)")
-                : (Fraction(1, 2), "1/2 as husband, no child (4:12)")
+                ? (Fraction(1, 4), String(localized: "1/4 as husband, with a child (4:12)"))
+                : (Fraction(1, 2), String(localized: "1/2 as husband, no child (4:12)"))
         }
         if n(.wives) > 0 {
             fard[.wives] = hasDescendant
-                ? (Fraction(1, 8), "1/8 shared among the wives, with a child (4:12)")
-                : (Fraction(1, 4), "1/4 shared among the wives, no child (4:12)")
+                ? (Fraction(1, 8), String(localized: "1/8 shared among the wives, with a child (4:12)"))
+                : (Fraction(1, 4), String(localized: "1/4 shared among the wives, no child (4:12)"))
         }
 
         // Mother - 4:11. A sixth if the deceased left a child or two or more siblings; a third if not.
         if hasMother {
             fard[.mother] = (hasDescendant || siblingHeadCount >= 2)
-                ? (Fraction(1, 6), hasDescendant ? "1/6 as mother, with a child (4:11)" : "1/6 as mother, with two or more siblings (4:11)")
-                : (Fraction(1, 3), "1/3 as mother, no child and fewer than two siblings (4:11)")
+                ? (Fraction(1, 6), hasDescendant ? String(localized: "1/6 as mother, with a child (4:11)") : String(localized: "1/6 as mother, with two or more siblings (4:11)"))
+                : (Fraction(1, 3), String(localized: "1/3 as mother, no child and fewer than two siblings (4:11)"))
         }
 
         if grandmothers > 0 {
             let each = Fraction(1, 6) / Fraction(grandmothers)
             let basis = grandmothers == 1
-                ? "1/6 as grandmother (by consensus: Ibn al-Mundhir, al-Ijma')"
-                : "1/6 shared between the two grandmothers (by consensus: Ibn al-Mundhir, al-Ijma')"
+                ? String(localized: "1/6 as grandmother (by consensus: Ibn al-Mundhir, al-Ijma')")
+                : String(localized: "1/6 shared between the two grandmothers (by consensus: Ibn al-Mundhir, al-Ijma')")
             if maternalGrandmother { fard[.maternalGrandmother] = (each, basis) }
             if paternalGrandmother { fard[.paternalGrandmother] = (each, basis) }
         }
@@ -375,17 +375,17 @@ enum Faraid {
         // Father - 4:11. A sixth whenever there is a child; he takes the residue on top of it when
         // that child is female, and takes it as a pure residuary when there is no child at all.
         if hasFather && hasDescendant {
-            fard[.father] = (Fraction(1, 6), hasMaleDescendant ? "1/6 as father, with a son (4:11)" : "1/6 as father, with a daughter (4:11)")
+            fard[.father] = (Fraction(1, 6), hasMaleDescendant ? String(localized: "1/6 as father, with a son (4:11)") : String(localized: "1/6 as father, with a daughter (4:11)"))
         }
         if hasGrandfather && hasDescendant {
-            fard[.grandfather] = (Fraction(1, 6), "1/6 as grandfather, standing in for the father")
+            fard[.grandfather] = (Fraction(1, 6), String(localized: "1/6 as grandfather, standing in for the father"))
         }
 
         // Daughters - 4:11. A son turns them into residuaries at two shares to her one.
         if daughters > 0 && sons == 0 {
             fard[.daughters] = daughters == 1
-                ? (Fraction(1, 2), "1/2 as the only daughter (4:11)")
-                : (Fraction(2, 3), "2/3 shared among the daughters (4:11)")
+                ? (Fraction(1, 2), String(localized: "1/2 as the only daughter (4:11)"))
+                : (Fraction(2, 3), String(localized: "2/3 shared among the daughters (4:11)"))
         }
 
         // Son's daughters. Alone they take the daughters' shares; behind a single daughter they take
@@ -394,12 +394,12 @@ enum Faraid {
         if granddaughters > 0 && grandsons == 0 && sons == 0 {
             if daughters == 0 {
                 fard[.granddaughters] = granddaughters == 1
-                    ? (Fraction(1, 2), "1/2 as the only son's daughter")
-                    : (Fraction(2, 3), "2/3 shared among the son's daughters")
+                    ? (Fraction(1, 2), String(localized: "1/2 as the only son's daughter"))
+                    : (Fraction(2, 3), String(localized: "2/3 shared among the son's daughters"))
             } else if daughters == 1 {
-                fard[.granddaughters] = (Fraction(1, 6), "1/6, completing the daughter's half to two-thirds")
+                fard[.granddaughters] = (Fraction(1, 6), String(localized: "1/6, completing the daughter's half to two-thirds"))
             } else {
-                blocked.append((.granddaughters, "the daughters already take the full two-thirds"))
+                blocked.append((.granddaughters, String(localized: "the daughters already take the full two-thirds")))
                 granddaughters = 0
             }
         }
@@ -408,29 +408,29 @@ enum Faraid {
         // where they do.
         if maternalSiblings > 0 {
             fard[.maternalSiblings] = maternalSiblings == 1
-                ? (Fraction(1, 6), "1/6 as the only maternal half-sibling (4:12)")
-                : (Fraction(1, 3), "1/3 shared equally among the maternal half-siblings (4:12)")
+                ? (Fraction(1, 6), String(localized: "1/6 as the only maternal half-sibling (4:12)"))
+                : (Fraction(1, 3), String(localized: "1/3 shared equally among the maternal half-siblings (4:12)"))
         }
 
         // Full sisters - 4:176. With a daughter or son's daughter they become residuaries instead
         // (‘asabah ma‘a al-ghayr), handled in the residue step below.
         if fullSisters > 0 && fullBrothers == 0 && !fullSistersTakeResidueWithDaughters {
             fard[.fullSisters] = fullSisters == 1
-                ? (Fraction(1, 2), "1/2 as the only full sister (4:176)")
-                : (Fraction(2, 3), "2/3 shared among the full sisters (4:176)")
+                ? (Fraction(1, 2), String(localized: "1/2 as the only full sister (4:176)"))
+                : (Fraction(2, 3), String(localized: "2/3 shared among the full sisters (4:176)"))
         }
 
         // Paternal half-sisters, behind whatever the full sisters took.
         if paternalSisters > 0 && paternalBrothers == 0 && !paternalSistersTakeResidueWithDaughters {
             if fullSisters >= 2 {
-                blocked.append((.paternalSisters, "the full sisters already take the full two-thirds"))
+                blocked.append((.paternalSisters, String(localized: "the full sisters already take the full two-thirds")))
                 paternalSisters = 0
             } else if fullSisters == 1 {
-                fard[.paternalSisters] = (Fraction(1, 6), "1/6, completing the full sister's half to two-thirds")
+                fard[.paternalSisters] = (Fraction(1, 6), String(localized: "1/6, completing the full sister's half to two-thirds"))
             } else {
                 fard[.paternalSisters] = paternalSisters == 1
-                    ? (Fraction(1, 2), "1/2 as the only paternal half-sister")
-                    : (Fraction(2, 3), "2/3 shared among the paternal half-sisters")
+                    ? (Fraction(1, 2), String(localized: "1/2 as the only paternal half-sister"))
+                    : (Fraction(2, 3), String(localized: "2/3 shared among the paternal half-sisters"))
             }
         }
 
@@ -445,13 +445,13 @@ enum Faraid {
         if onlySpouseAndParents {
             let spouseShare = (fard[.husband]?.share ?? .zero) + (fard[.wives]?.share ?? .zero)
             let remainder = Fraction.one - spouseShare
-            fard[.mother] = (remainder * Fraction(1, 3), "1/3 of what remains after the spouse (the ‘Umariyyatan)")
+            fard[.mother] = (remainder * Fraction(1, 3), String(localized: "1/3 of what remains after the spouse (the ‘Umariyyatan)"))
         }
         // The same family with the grandfather in the father's place is NOT the ‘Umariyyatan: the
         // mother takes a third of the whole estate, because the rule is about the father himself.
         if hasGrandfather && hasMother && !hasDescendant && siblingHeadCount < 2
             && (n(.husband) > 0 || n(.wives) > 0) {
-            notes.append("With the grandfather standing in the father's place the mother takes a third of the WHOLE estate, not a third of what remains after the spouse: the ‘Umariyyatan rule is about the father himself. Malik, ash-Shafi‘i and Ahmad read it that way; Abu Hanifa applied the rule to the grandfather too.")
+            notes.append(String(localized: "With the grandfather standing in the father's place the mother takes a third of the WHOLE estate, not a third of what remains after the spouse: the ‘Umariyyatan rule is about the father himself. Malik, ash-Shafi‘i and Ahmad read it that way; Abu Hanifa applied the rule to the grandfather too."))
         }
 
         // ---- 4. Residue to the nearest residuary (‘asabah) ----
@@ -465,38 +465,38 @@ enum Faraid {
             case .sons:
                 // "To the male, a portion equal to that of two females" (4:11).
                 let parts = sons * 2 + daughters
-                residueAwards[.sons] = (residue * Fraction(sons * 2, parts), daughters > 0 ? "residue, two shares to the daughter's one (4:11)" : "residue as the sons")
+                residueAwards[.sons] = (residue * Fraction(sons * 2, parts), daughters > 0 ? String(localized: "residue, two shares to the daughter's one (4:11)") : String(localized: "residue as the sons"))
                 if daughters > 0 {
-                    residueAwards[.daughters] = (residue * Fraction(daughters, parts), "residue, one share to the son's two (4:11)")
+                    residueAwards[.daughters] = (residue * Fraction(daughters, parts), String(localized: "residue, one share to the son's two (4:11)"))
                 }
             case .grandsons:
                 let parts = grandsons * 2 + granddaughters
-                residueAwards[.grandsons] = (residue * Fraction(grandsons * 2, parts), "residue as the son's sons")
+                residueAwards[.grandsons] = (residue * Fraction(grandsons * 2, parts), String(localized: "residue as the son's sons"))
                 if granddaughters > 0 {
-                    residueAwards[.granddaughters] = (residue * Fraction(granddaughters, parts), "residue, one share to the son's son's two")
+                    residueAwards[.granddaughters] = (residue * Fraction(granddaughters, parts), String(localized: "residue, one share to the son's son's two"))
                 }
             case .father:
-                residueAwards[.father] = (residue, hasDescendant ? "the residue on top of his sixth" : "the whole residue as father")
+                residueAwards[.father] = (residue, hasDescendant ? String(localized: "the residue on top of his sixth") : String(localized: "the whole residue as father"))
             case .grandfather:
-                residueAwards[.grandfather] = (residue, hasDescendant ? "the residue on top of his sixth" : "the whole residue as grandfather")
+                residueAwards[.grandfather] = (residue, hasDescendant ? String(localized: "the residue on top of his sixth") : String(localized: "the whole residue as grandfather"))
             case .fullBrothers:
                 let parts = fullBrothers * 2 + fullSisters
-                residueAwards[.fullBrothers] = (residue * Fraction(fullBrothers * 2, parts), fullSisters > 0 ? "residue, two shares to the sister's one (4:176)" : "residue as the full brothers")
+                residueAwards[.fullBrothers] = (residue * Fraction(fullBrothers * 2, parts), fullSisters > 0 ? String(localized: "residue, two shares to the sister's one (4:176)") : String(localized: "residue as the full brothers"))
                 if fullSisters > 0 {
-                    residueAwards[.fullSisters] = (residue * Fraction(fullSisters, parts), "residue, one share to the brother's two (4:176)")
+                    residueAwards[.fullSisters] = (residue * Fraction(fullSisters, parts), String(localized: "residue, one share to the brother's two (4:176)"))
                 }
             case .fullSisters:
-                residueAwards[.fullSisters] = (residue, "residue as full sisters alongside a daughter (‘asabah ma‘a al-ghayr)")
+                residueAwards[.fullSisters] = (residue, String(localized: "residue as full sisters alongside a daughter (‘asabah ma‘a al-ghayr)"))
             case .paternalBrothers:
                 let parts = paternalBrothers * 2 + paternalSisters
-                residueAwards[.paternalBrothers] = (residue * Fraction(paternalBrothers * 2, parts), "residue as the paternal half-brothers")
+                residueAwards[.paternalBrothers] = (residue * Fraction(paternalBrothers * 2, parts), String(localized: "residue as the paternal half-brothers"))
                 if paternalSisters > 0 {
-                    residueAwards[.paternalSisters] = (residue * Fraction(paternalSisters, parts), "residue, one share to the brother's two")
+                    residueAwards[.paternalSisters] = (residue * Fraction(paternalSisters, parts), String(localized: "residue, one share to the brother's two"))
                 }
             case .paternalSisters:
-                residueAwards[.paternalSisters] = (residue, "residue as paternal half-sisters alongside a daughter (‘asabah ma‘a al-ghayr)")
+                residueAwards[.paternalSisters] = (residue, String(localized: "residue as paternal half-sisters alongside a daughter (‘asabah ma‘a al-ghayr)"))
             default:
-                residueAwards[residuary] = (residue, "the residue, as the nearest surviving male relative in the father's line")
+                residueAwards[residuary] = (residue, String(localized: "the residue, as the nearest surviving male relative in the father's line"))
             }
         }
 
@@ -505,7 +505,7 @@ enum Faraid {
         // It needs a full BROTHER: he is the residuary left with nothing. Full sisters alone hold
         // fixed shares of their own, and that estate is an ordinary ‘awl, not this case.
         if maternalSiblings >= 2 && fullBrothers > 0 && !(residue > .zero) {
-            notes.append("This is the case the scholars call al-Mushtarakah. The fixed shares leave nothing for the full siblings while the maternal half-siblings take their third. ‘Umar first ruled exactly that, and Abu Hanifa and Ahmad kept it, which is what is shown here. ‘Umar later shared the third among them all, and Malik and ash-Shafi‘i followed that. Take a real case to a scholar.")
+            notes.append(String(localized: "This is the case the scholars call al-Mushtarakah. The fixed shares leave nothing for the full siblings while the maternal half-siblings take their third. ‘Umar first ruled exactly that, and Abu Hanifa and Ahmad kept it, which is what is shown here. ‘Umar later shared the third among them all, and Malik and ash-Shafi‘i followed that. Take a real case to a scholar."))
         }
 
         // ---- 5. ‘Awl and radd ----
@@ -521,10 +521,10 @@ enum Faraid {
             let scale = Fraction.one / fardTotal
             // The basis keeps naming the Quranic share and says it was cut: the share shown is 1/5
             // where the verse says 1/4, and a reader must be able to see why those are both true.
-            for (heir, value) in fard { fard[heir] = (value.share * scale, value.basis + ", reduced by ‘awl") }
+            for (heir, value) in fard { fard[heir] = (value.share * scale, String(localized: "\(value.basis), reduced by ‘awl")) }
             fardTotal = .one
             residue = .zero
-            notes.append("The fixed shares add up to more than the estate, so every share is reduced in proportion (‘awl). The shares below are the reduced ones.")
+            notes.append(String(localized: "The fixed shares add up to more than the estate, so every share is reduced in proportion (‘awl). The shares below are the reduced ones."))
         } else if residue > .zero && residueAwards.isEmpty {
             // Radd: a surplus with nobody to take it. It goes back to the fixed-share heirs in
             // proportion - except a spouse, who takes their fixed share and no more.
@@ -536,12 +536,12 @@ enum Faraid {
                 didRadd = true
                 let pot = Fraction.one - spouseShare
                 for (heir, value) in eligible {
-                    fard[heir] = (pot * (value.share / eligibleTotal), value.basis + ", increased by radd")
+                    fard[heir] = (pot * (value.share / eligibleTotal), String(localized: "\(value.basis), increased by radd"))
                 }
-                notes.append("Nobody is left to take the residue, so it returns to the fixed-share heirs in proportion to their shares (radd). A spouse does not share in the return.")
+                notes.append(String(localized: "Nobody is left to take the residue, so it returns to the fixed-share heirs in proportion to their shares (radd). A spouse does not share in the return."))
             } else {
                 unclaimed = residue
-                notes.append("No heir in this calculator can take the remaining share. In classical law it passes to the relatives who inherit by kinship (dhawu al-arham: a daughter's children, a sister's children, a maternal uncle) and, failing them, to the public treasury. Most courts today give it to the spouse when there is nobody else at all.")
+                notes.append(String(localized: "No heir in this calculator can take the remaining share. In classical law it passes to the relatives who inherit by kinship (dhawu al-arham: a daughter's children, a sister's children, a maternal uncle) and, failing them, to the public treasury. Most courts today give it to the spouse when there is nobody else at all."))
             }
         }
 
@@ -550,7 +550,7 @@ enum Faraid {
         var merged: [FaraidHeir: (share: Fraction, basis: String)] = fard
         for (heir, value) in residueAwards {
             if let existing = merged[heir] {
-                merged[heir] = (existing.share + value.share, existing.basis + ", plus " + value.basis)
+                merged[heir] = (existing.share + value.share, String(localized: "\(existing.basis), plus \(value.basis)"))
             } else {
                 merged[heir] = value
             }
@@ -571,8 +571,8 @@ enum Faraid {
         var named = Set(blocked.map { $0.heir })
         for heir in order where n(heir) > 0 && !awarded.contains(heir) && !named.contains(heir) {
             blocked.append((heir, didAwl
-                ? "nothing left: the fixed shares already overflow the estate (‘awl)"
-                : "nothing left: the fixed shares use up the whole estate"))
+                ? String(localized: "nothing left: the fixed shares already overflow the estate (‘awl)")
+                : String(localized: "nothing left: the fixed shares use up the whole estate")))
             named.insert(heir)
         }
 
@@ -678,8 +678,9 @@ struct InheritanceCalculatorView: View {
         Self.amountFormatter.string(from: NSNumber(value: value)) ?? String(format: "%.2f", value)
     }
 
+    /// "16.67%", written the way the interface writes a percentage.
     private func percent(_ fraction: Fraction) -> String {
-        String(format: "%.2f%%", fraction.doubleValue * 100)
+        fraction.doubleValue.formatted(.percent.precision(.fractionLength(2)))
     }
 
     private static let widerHeirs: [FaraidHeir] = [
@@ -717,14 +718,14 @@ struct InheritanceCalculatorView: View {
                 #if os(iOS)
                 if shows("shares") {
                     ResourceHeroSection(ResourceHero(
-                        eyebrow: "THE SHARES OF AN ESTATE",
+                        eyebrow: String(localized: "THE SHARES OF AN ESTATE"),
                         systemImage: "divide.circle.fill",
-                        headline: "[This is] an ordinance from Allah, and Allah is Knowing and Forbearing.",
-                        source: "Quran 4:12",
-                        message: "Name the heirs and the estate. The calculator applies the shares of Surah an-Nisa, works out who is excluded by whom, and adjusts when the shares come to more or less than the whole.",
+                        headline: String(localized: "[This is] an ordinance from Allah, and Allah is Knowing and Forbearing."),
+                        source: String(localized: "Quran 4:12"),
+                        message: String(localized: "Name the heirs and the estate. The calculator applies the shares of Surah an-Nisa, works out who is excluded by whom, and adjusts when the shares come to more or less than the whole."),
                         stats: [
-                            ResourceHeroStat("6", "fixed shares"),
-                            ResourceHeroStat("3", "verses of shares"),
+                            ResourceHeroStat("6".localizedDigits, String(localized: "fixed shares")),
+                            ResourceHeroStat("3".localizedDigits, String(localized: "verses of shares")),
                         ]
                     ))
                 }
@@ -732,13 +733,13 @@ struct InheritanceCalculatorView: View {
                 if shows("shares") { resultSection }
                 if shows("estate") { estateSection }
                 if shows("heirs") {
-                heirSection("SPOUSE", heirs: [.husband, .wives])
-                heirSection("PARENTS & GRANDPARENTS", heirs: [.father, .mother, .grandfather, .maternalGrandmother, .paternalGrandmother],
-                            footer: "The mother shuts out both grandmothers. The father shuts out his own mother only, never the mother's mother (the view of Malik, ash-Shafi'i and Abu Hanifa; Ahmad, in one of his two reports, let her inherit beside her son).")
-                heirSection("CHILDREN & GRANDCHILDREN", heirs: [.sons, .daughters, .grandsons, .granddaughters],
-                            footer: "Son's sons and son's daughters inherit only when there is no surviving son.")
-                heirSection("SIBLINGS", heirs: [.fullBrothers, .fullSisters, .paternalBrothers, .paternalSisters, .maternalSiblings],
-                            footer: "Maternal half-siblings are the children of the mother only. They inherit only when there is no child and no father.")
+                heirSection(String(localized: "SPOUSE"), heirs: [.husband, .wives])
+                heirSection(String(localized: "PARENTS & GRANDPARENTS"), heirs: [.father, .mother, .grandfather, .maternalGrandmother, .paternalGrandmother],
+                            footer: String(localized: "The mother shuts out both grandmothers. The father shuts out his own mother only, never the mother's mother (the view of Malik, ash-Shafi'i and Abu Hanifa; Ahmad, in one of his two reports, let her inherit beside her son)."))
+                heirSection(String(localized: "CHILDREN & GRANDCHILDREN"), heirs: [.sons, .daughters, .grandsons, .granddaughters],
+                            footer: String(localized: "Son's sons and son's daughters inherit only when there is no surviving son."))
+                heirSection(String(localized: "SIBLINGS"), heirs: [.fullBrothers, .fullSisters, .paternalBrothers, .paternalSisters, .maternalSiblings],
+                            footer: String(localized: "Maternal half-siblings are the children of the mother only. They inherit only when there is no child and no father."))
                 }
                 if shows("heirs") || shows("wider") { widerSection }
                 if shows("shares"), !result.blocked.isEmpty { blockedSection }
@@ -749,7 +750,7 @@ struct InheritanceCalculatorView: View {
                 // obligations Islam names. The calculator does the arithmetic; these say what it is
                 // arithmetic ABOUT (Abu, 2026-09-19).
                 #if os(iOS)
-                AboutSignsSection(heading: "About Inheritance in Islam",
+                AboutSignsSection(heading: String(localized: "About Inheritance in Islam"),
                                   systemImage: "divide.circle",
                                   doors: [.quran, .islam, .muslim],
                                   openDoor: $aboutDoor)
@@ -820,15 +821,15 @@ struct InheritanceCalculatorView: View {
 
     private var estateSection: some View {
         Section(header: Text("THE ESTATE (OPTIONAL)")) {
-            amountRow("Total estate", systemImage: "banknote", text: $estate)
-            amountRow("Funeral costs", systemImage: "leaf", text: $funeral)
-            amountRow("Debts owed", systemImage: "creditcard", text: $debts)
-            amountRow("Bequest (wasiyyah)", systemImage: "doc.text", text: $bequest)
+            amountRow(String(localized: "Total estate"), systemImage: "banknote", text: $estate)
+            amountRow(String(localized: "Funeral costs"), systemImage: "leaf", text: $funeral)
+            amountRow(String(localized: "Debts owed"), systemImage: "creditcard", text: $debts)
+            amountRow(String(localized: "Bequest (wasiyyah)"), systemImage: "doc.text", text: $bequest)
 
             if hasEstateFigures {
-                resultRow("After funeral and debts", value: afterDebts)
+                resultRow(String(localized: "After funeral and debts"), value: afterDebts)
                 if amount(bequest) > 0 {
-                    resultRow("Bequest applied", value: bequestApplied)
+                    resultRow(String(localized: "Bequest applied"), value: bequestApplied)
                 }
                 HStack {
                     Text("To divide among the heirs")
@@ -840,16 +841,16 @@ struct InheritanceCalculatorView: View {
                 }
 
                 if bequestOverThird {
-                    Label("A bequest above a third of the estate binds nobody unless the heirs agree to it, so only \(formattedAmount(bequestCap)) is applied here. \"A third, and a third is a lot\" (al-Bukhari 2744).", systemImage: "exclamationmark.triangle")
+                    Label(String(localized: "A bequest above a third of the estate binds nobody unless the heirs agree to it, so only \(formattedAmount(bequestCap)) is applied here. \"A third, and a third is a lot\" (al-Bukhari 2744).").localizedDigits, systemImage: "exclamationmark.triangle")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
 
             ExplainerButton(
-                title: "The order of payment",
-                body_: "The order is fixed and it is not the heirs' to change: the burial first, then every debt, then a bequest of up to a third of what is left, and only then the shares below. A bequest to somebody who already inherits is not valid unless the other heirs agree to it.\n\nLeave these fields empty to see the shares as fractions only.",
-                caption: "Burial, then debts, then a bequest up to a third, then the shares."
+                title: String(localized: "The order of payment"),
+                body_: String(localized: "The order is fixed and it is not the heirs' to change: the burial first, then every debt, then a bequest of up to a third of what is left, and only then the shares below. A bequest to somebody who already inherits is not valid unless the other heirs agree to it.\n\nLeave these fields empty to see the shares as fractions only."),
+                caption: String(localized: "Burial, then debts, then a bequest up to a third, then the shares.")
             )
         }
     }
@@ -908,9 +909,9 @@ struct InheritanceCalculatorView: View {
                 }
 
                 ExplainerButton(
-                    title: "Who counts as a wider relative",
-                    body_: "Half here always means through the father: a maternal half-brother's sons and a maternal uncle are not among these residuaries. The nearest of these takes whatever the fixed shares leave and shuts out everyone below him.\n\nA sister's children and a daughter's children are outside these rules too: they inherit as dhawu al-arham, once nobody above them survives.",
-                    caption: "Half always means through the father."
+                    title: String(localized: "Who counts as a wider relative"),
+                    body_: String(localized: "Half here always means through the father: a maternal half-brother's sons and a maternal uncle are not among these residuaries. The nearest of these takes whatever the fixed shares leave and shuts out everyone below him.\n\nA sister's children and a daughter's children are outside these rules too: they inherit as dhawu al-arham, once nobody above them survives."),
+                    caption: String(localized: "Half always means through the father.")
                 )
             }
         }
@@ -1012,17 +1013,17 @@ struct InheritanceCalculatorView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text(result.unclaimed.displayString)
+                        Text(result.unclaimed.displayString.localizedDigits)
                             .font(.subheadline.monospacedDigit())
                             .foregroundColor(.secondary)
                     }
                 }
 
                 if result.didAwl {
-                    resultBadge("Shares reduced in proportion (‘awl)", systemImage: "arrow.down.right.and.arrow.up.left")
+                    resultBadge(String(localized: "Shares reduced in proportion (‘awl)"), systemImage: "arrow.down.right.and.arrow.up.left")
                 }
                 if result.didRadd {
-                    resultBadge("Surplus returned to the heirs (radd)", systemImage: "arrow.uturn.backward")
+                    resultBadge(String(localized: "Surplus returned to the heirs (radd)"), systemImage: "arrow.uturn.backward")
                 }
             }
         }
@@ -1031,18 +1032,18 @@ struct InheritanceCalculatorView: View {
     private func awardRow(_ award: Faraid.Award) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(award.count > 1 ? "\(award.heir.title) (\(award.count))" : award.heir.title)
+                Text(award.count > 1 ? String(localized: "\(award.heir.title) (\(award.count))") : award.heir.title)
                     .font(.headline)
 
                 Spacer()
 
-                Text(award.share.displayString)
+                Text(award.share.displayString.localizedDigits)
                     .font(.headline.monospacedDigit())
                     .foregroundColor(settings.accentColor.accent2)
             }
 
             HStack {
-                Text(award.basis)
+                Text(award.basis.localizedDigits)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1056,7 +1057,7 @@ struct InheritanceCalculatorView: View {
 
             if distributable > 0 {
                 HStack {
-                    Text(award.count > 1 ? "Each of the \(award.count)" : "Amount")
+                    Text(award.count > 1 ? String(localized: "Each of the \(award.count)") : String(localized: "Amount"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
@@ -1071,8 +1072,8 @@ struct InheritanceCalculatorView: View {
             Button {
                 settings.hapticFeedback()
                 UIPasteboard.general.string = distributable > 0
-                    ? "\(award.heir.title): \(award.share.displayString) (\(formattedAmount(award.share.doubleValue * distributable)))"
-                    : "\(award.heir.title): \(award.share.displayString)"
+                    ? "\(award.heir.title): \(award.share.displayString.localizedDigits) (\(formattedAmount(award.share.doubleValue * distributable)))"
+                    : "\(award.heir.title): \(award.share.displayString.localizedDigits)"
             } label: {
                 Label("Copy Share", systemImage: "doc.on.doc")
             }
@@ -1123,26 +1124,26 @@ struct InheritanceCalculatorView: View {
     /// the old single string's, split at its paragraph breaks.
     private var scopeSection: some View {
         Section(header: Text("BEFORE YOU DIVIDE ANYTHING")) {
-            ArticleLead(Self.scopeLead)
+            ArticleLead(Self.scopeLead, eyebrow: String(localized: "IN SHORT"))
 
-            Text(verbatim: Self.scopeBarriers)
+            Text(verbatim: Self.scopeBarriers.localizedDigits)
                 .font(.body)
                 .fixedSize(horizontal: false, vertical: true)
 
-            ArticleCallout(paragraphs: [Self.scopeCaution], title: "Not a Fatwa",
+            ArticleCallout(paragraphs: [Self.scopeCaution], title: String(localized: "Not a Fatwa"),
                            systemImage: "exclamationmark.triangle.fill")
 
             ArticleClosing(Self.scopeClosing)
         }
     }
 
-    static let scopeLead = "The shares are fixed by Allah in Surah an-Nisa: 4:11, 4:12 and 4:176. يُوصِيكُمُ ٱللَّهُ فِىٓ أَولَـٰدِكُم \"Allah instructs you concerning your children\" (4:11), and the verses close with تِلكَ حُدُودُ ٱللَّهِ \"these are the limits set by Allah\" (4:13)."
+    static let scopeLead = String(localized: "The shares are fixed by Allah in Surah an-Nisa: 4:11, 4:12 and 4:176. يُوصِيكُمُ ٱللَّهُ فِىٓ أَولَـٰدِكُم \"Allah instructs you concerning your children\" (4:11), and the verses close with تِلكَ حُدُودُ ٱللَّهِ \"these are the limits set by Allah\" (4:13).")
 
-    static let scopeBarriers = "Two things stop a relative inheriting however close they are. A killer takes nothing from the one he killed, and there is no inheritance between a Muslim and a non-Muslim: \"The Muslim does not inherit from the disbeliever, nor the disbeliever from the Muslim\" (al-Bukhari 6764). An heir must also be alive when the death happens, which is why an unborn child's share is held back until the birth."
+    static let scopeBarriers = String(localized: "Two things stop a relative inheriting however close they are. A killer takes nothing from the one he killed, and there is no inheritance between a Muslim and a non-Muslim: \"The Muslim does not inherit from the disbeliever, nor the disbeliever from the Muslim\" (al-Bukhari 6764). An heir must also be alive when the death happens, which is why an unborn child's share is held back until the birth.")
 
-    static let scopeCaution = "This is a quick guide for the ordinary case, and nothing more. It is not a fatwa. It covers the Quranic heirs and the male line on the father's side down to the uncle's sons. It does NOT handle the relatives who inherit by kinship alone (a daughter's children, a sister's children, a maternal uncle), great-grandparents, a missing or unborn heir, an estate divided across countries, or the places the Companions themselves differed, such as the grandfather inheriting alongside siblings."
+    static let scopeCaution = String(localized: "This is a quick guide for the ordinary case, and nothing more. It is not a fatwa. It covers the Quranic heirs and the male line on the father's side down to the uncle's sons. It does NOT handle the relatives who inherit by kinship alone (a daughter's children, a sister's children, a maternal uncle), great-grandparents, a missing or unborn heir, an estate divided across countries, or the places the Companions themselves differed, such as the grandfather inheriting alongside siblings.")
 
-    static let scopeClosing = "Inheritance is a branch of knowledge whose shares Allah Himself set out in detail, and a real estate is somebody's wealth and somebody's grief at once. Take yours to a knowledgeable scholar of Ahl as-Sunnah wa al-Jamaʿah, and to a court where one is needed, before anything is divided on these numbers."
+    static let scopeClosing = String(localized: "Inheritance is a branch of knowledge whose shares Allah Himself set out in detail, and a real estate is somebody's wealth and somebody's grief at once. Take yours to a knowledgeable scholar of Ahl as-Sunnah wa al-Jamaʿah, and to a court where one is needed, before anything is divided on these numbers.")
 }
 
 #Preview {

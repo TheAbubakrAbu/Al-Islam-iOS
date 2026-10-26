@@ -122,7 +122,7 @@ struct CloudOfferView: View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Not signed in to iCloud", systemImage: "person.crop.circle.badge.exclamationmark")
                 .font(.headline)
-            Text("Sign in to iCloud in the Settings app, then turn on iCloud Backup in \(AppIdentifiers.appName)'s Settings whenever you like.")
+            Text("Sign in to iCloud in the Settings app, then turn on iCloud Backup in \(AppIdentifiers.displayName)'s Settings whenever you like.")
                 .font(.footnote)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -203,15 +203,15 @@ struct CloudOfferView: View {
     @ViewBuilder
     private var actions: some View {
         if manager.accountAvailable == false {
-            WelcomeActionBar(primaryTitle: "Continue", primaryAction: finish,
-                             secondaryTitle: "Skip", secondaryIdentifier: "welcomeSkip", secondaryAction: finish)
+            WelcomeActionBar(primaryTitle: String(localized: "Continue"), primaryAction: finish,
+                             secondaryTitle: String(localized: "Skip"), secondaryIdentifier: "welcomeSkip", secondaryAction: finish)
         } else {
             WelcomeActionBar(
-                primaryTitle: working ? "Saving..." : (manager.profiles.isEmpty ? "Save to iCloud" : "Start a New Backup"),
+                primaryTitle: working ? String(localized: "Saving...") : (manager.profiles.isEmpty ? String(localized: "Save to iCloud") : String(localized: "Start a New Backup")),
                 primaryEnabled: canStart || working,
                 primaryBusy: working,
                 primaryAction: start,
-                secondaryTitle: "Skip",
+                secondaryTitle: String(localized: "Skip"),
                 secondaryIdentifier: "welcomeSkip",
                 secondaryAction: finish
             )
@@ -429,10 +429,11 @@ struct CloudProfileCard: View {
     }
 
     static func detailLine(_ profile: CloudBackupManager.ProfileSummary) -> String {
-        var parts = [profile.deviceKind.isEmpty ? "Device" : profile.deviceKind]
-        parts.append("saved " + relative(profile.updatedAt))
+        var parts = [profile.deviceKind.isEmpty ? String(localized: "Device") : profile.deviceKind]
+        parts.append(String(localized: "saved \(relative(profile.updatedAt))"))
         if profile.payloadBytes > 0 { parts.append(ByteCountFormatter.string(fromByteCount: Int64(profile.payloadBytes), countStyle: .file)) }
-        return parts.joined(separator: " · ")
+        // Joined through the catalog: a middle dot beside Arabic-Indic digits reads as a zero ("٠").
+        return parts.dropFirst().reduce(parts[0]) { String(localized: "\($0) · \($1)") }
     }
 
     static func relative(_ date: Date) -> String {
@@ -484,7 +485,13 @@ struct CloudRestoreSheet: View {
     private var card: CloudBackupManager.ProfileSummary {
         switch source {
         case .profile(let profile):
-            return profile
+            // The record's summary is stored in English. Once the backup is downloaded, the line is
+            // composed here from what it holds, in this device's language.
+            guard let backup else { return profile }
+            return CloudBackupManager.ProfileSummary(
+                id: profile.id, nickname: profile.nickname, deviceKind: profile.deviceKind, ownerDeviceID: profile.ownerDeviceID,
+                updatedAt: profile.updatedAt, schemaVersion: profile.schemaVersion, appVersion: profile.appVersion,
+                payloadBytes: profile.payloadBytes, summary: backup.summaryLine)
         case .file(let name, let snapshot, let bytes):
             return CloudBackupManager.ProfileSummary(
                 id: "file", nickname: name, deviceKind: snapshot.deviceKind, ownerDeviceID: snapshot.deviceID,
@@ -510,8 +517,8 @@ struct CloudRestoreSheet: View {
                 changesSection
 
                 Section(header: Text("HOW"), footer: Text(footer)) {
-                    choice(.replace, title: "Replace", subtitle: "This \(CloudDevice.kind) becomes the backup: its content and its settings. What is here now is replaced.", systemImage: "arrow.triangle.2.circlepath")
-                    choice(.merge, title: "Merge", subtitle: "The backup's bookmarks, marks and counts are added to what is here. Your settings on this \(CloudDevice.kind) stay as they are.", systemImage: "arrow.triangle.merge")
+                    choice(.replace, title: String(localized: "Replace"), subtitle: String(localized: "This \(CloudDevice.kind) becomes the backup: its content and its settings. What is here now is replaced."), systemImage: "arrow.triangle.2.circlepath")
+                    choice(.merge, title: String(localized: "Merge"), subtitle: String(localized: "The backup's bookmarks, marks and counts are added to what is here. Your settings on this \(CloudDevice.kind) stay as they are."), systemImage: "arrow.triangle.merge")
                 }
 
                 if let errorMessage {
@@ -558,7 +565,7 @@ struct CloudRestoreSheet: View {
                     CloudComparisonRow(title: here.category.title, noun: here.measure.plural, systemImage: here.category.systemImage,
                                        here: here.measure.count, backup: there.measure.count)
                 }
-                CloudComparisonRow(title: "Settings", noun: "changed from the default", systemImage: "slider.horizontal.3",
+                CloudComparisonRow(title: String(localized: "Settings"), noun: String(localized: "changed from the default"), systemImage: "slider.horizontal.3",
                                    here: local.settingsChanged, backup: backup.settingsChanged, dimmed: mode == .merge)
             } else {
                 HStack { Spacer(); ProgressView(); Spacer() }
@@ -583,9 +590,9 @@ struct CloudRestoreSheet: View {
         guard backup != nil, local != nil else { return "" }
         switch mode {
         case .replace:
-            return "After Replace this \(CloudDevice.kind) holds the \(isFile ? "file" : "backup") column, settings included."
+            return isFile ? String(localized: "After Replace this \(CloudDevice.kind) holds the file column, settings included.") : String(localized: "After Replace this \(CloudDevice.kind) holds the backup column, settings included.")
         case .merge:
-            return "After Merge each line is at least the larger of the two: the \(isFile ? "file" : "backup")'s things are added to what is here, item by item. The settings here stay as they are."
+            return isFile ? String(localized: "After Merge each line is at least the larger of the two: the file's things are added to what is here, item by item. The settings here stay as they are.") : String(localized: "After Merge each line is at least the larger of the two: the backup's things are added to what is here, item by item. The settings here stay as they are.")
         }
     }
 
@@ -605,9 +612,9 @@ struct CloudRestoreSheet: View {
     }
 
     private var footer: String {
-        if card.isNewerThanThisApp { return "This backup was made by a newer version of \(AppIdentifiers.appName). Update the app, then restore." }
-        var text = "A Merge never removes anything from this \(CloudDevice.kind). Something you deleted here that is still in the backup comes back."
-        if claimAfterwards, !isFile { text += " Afterwards this \(CloudDevice.kind) keeps this profile up to date." }
+        if card.isNewerThanThisApp { return String(localized: "This backup was made by a newer version of \(AppIdentifiers.displayName). Update the app, then restore.") }
+        var text = String(localized: "A Merge never removes anything from this \(CloudDevice.kind). Something you deleted here that is still in the backup comes back.")
+        if claimAfterwards, !isFile { text += " " + String(localized: "Afterwards this \(CloudDevice.kind) keeps this profile up to date.") }
         return text
     }
 
@@ -699,10 +706,10 @@ struct CloudBackupSettingsRow: View {
 
     var body: some View {
         NavigationLink(destination: LazyDestination { CloudBackupSettingsView() }) {
-            SettingsRowLabel(title: "iCloud Backup", systemImage: "icloud.fill",
-                             subtitle: "Profiles, restore, what's included, backup file",
+            SettingsRowLabel(title: String(localized: "iCloud Backup"), systemImage: "icloud.fill",
+                             subtitle: String(localized: "Profiles, restore, what's included, backup file"),
                              tint: tint, secondaryTint: secondaryTint,
-                             value: manager.isEnabled ? "On" : "Off")
+                             value: manager.isEnabled ? String(localized: "On") : String(localized: "Off"))
         }
         .tint(Settings.shared.accentColor.color)
     }
@@ -776,8 +783,8 @@ struct CloudBackupSettingsView: View {
             if manager.isEnabled {
                 // The page's rows wear the Settings chips (What's Included, History), these two included.
                 HStack(spacing: 8) {
-                    SettingsRowLabel(title: "Backing Up", systemImage: "icloud.fill",
-                                     value: manager.isBusy ? nil : (manager.lastSavedAt.map(CloudProfileCard.relative) ?? "Not yet"))
+                    SettingsRowLabel(title: String(localized: "Backing Up"), systemImage: "icloud.fill",
+                                     value: manager.isBusy ? nil : (manager.lastSavedAt.map(CloudProfileCard.relative) ?? String(localized: "Not yet")))
                     if manager.isBusy {
                         Spacer(minLength: 8)
                         ProgressView()
@@ -788,7 +795,7 @@ struct CloudBackupSettingsView: View {
                     settings.hapticFeedback()
                     backUpNow()
                 } label: {
-                    actionLabel("Back Up Now", systemImage: "arrow.clockwise.icloud", enabled: canBackUp)
+                    actionLabel(String(localized: "Back Up Now"), systemImage: "arrow.clockwise.icloud", enabled: canBackUp)
                 }
                 .disabled(!canBackUp)
             } else {
@@ -796,7 +803,7 @@ struct CloudBackupSettingsView: View {
                     settings.hapticFeedback()
                     showOffer = true
                 } label: {
-                    actionLabel("Set Up iCloud Backup", systemImage: "icloud.and.arrow.up", enabled: true)
+                    actionLabel(String(localized: "Set Up iCloud Backup"), systemImage: "icloud.and.arrow.up", enabled: true)
                 }
             }
             if let errorMessage {
@@ -809,17 +816,17 @@ struct CloudBackupSettingsView: View {
         if manager.isEnabled {
             switch manager.status {
             case .idle, .saved, .saving:
-                var text = "Saved automatically when you leave the app, if something changed."
+                var text = String(localized: "Saved automatically when you leave the app, if something changed.")
                 if manager.lastSavedAt != nil, manager.lastSavedBytes > 0 {
                     let size = ByteCountFormatter.string(fromByteCount: Int64(manager.lastSavedBytes), countStyle: .file)
-                    text += " Last backup \(size), \(manager.lastSavedAutomatically ? "automatic" : "with Back Up Now")."
+                    text += " " + (manager.lastSavedAutomatically ? String(localized: "Last backup \(size), automatic.") : String(localized: "Last backup \(size), with Back Up Now."))
                 }
-                return text + " Your location is never included."
+                return text + " " + String(localized: "Your location is never included.")
             default:
                 return manager.status.line
             }
         }
-        return "Keep your bookmarks, prayer tracker, khatm, tasbih counts, journal and settings in your own iCloud. Your location is never included."
+        return String(localized: "Keep your bookmarks, prayer tracker, khatm, tasbih counts, journal and settings in your own iCloud. Your location is never included.")
     }
 
     /// An action row: the chip, and its title in the accent, the way a button reads in a list.
@@ -841,7 +848,7 @@ struct CloudBackupSettingsView: View {
                 renaming = true
             } label: {
                 HStack(spacing: 10) {
-                    SettingsRowLabel(title: "Name", systemImage: CloudDevice.symbol, value: manager.nickname)
+                    SettingsRowLabel(title: String(localized: "Name"), systemImage: CloudDevice.symbol, value: manager.nickname)
                     Image(systemName: "pencil")
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(.tertiary)
@@ -856,9 +863,9 @@ struct CloudBackupSettingsView: View {
             Button("Stop Backing Up on This \(CloudDevice.kind)", role: .destructive) {
                 settings.hapticFeedback()
                 RemovalConfirmation.present(
-                    title: "Stop backing up?",
-                    message: "This \(CloudDevice.kind) stops saving to iCloud. The profile \u{201C}\(manager.nickname)\u{201D} stays in iCloud and can be restored later.",
-                    confirmTitle: "Stop Backing Up"
+                    title: String(localized: "Stop backing up?"),
+                    message: String(localized: "This \(CloudDevice.kind) stops saving to iCloud. The profile \u{201C}\(manager.nickname)\u{201D} stays in iCloud and can be restored later."),
+                    confirmTitle: String(localized: "Stop Backing Up")
                 ) { manager.disable() }
             }
         }
@@ -870,13 +877,13 @@ struct CloudBackupSettingsView: View {
             NavigationLink(destination: LazyDestination { CloudContentsView() }) {
                 // The size leads the caption rather than sitting at the trailing edge: a long
                 // summary squeezed "6 KB" down to "6" there.
-                SettingsRowLabel(title: "What's Included", systemImage: "list.bullet.rectangle.fill",
-                                 subtitle: inventory.map { "\($0.sizeLine) \u{00B7} \($0.summaryLine)" } ?? "Everything you made, category by category")
+                SettingsRowLabel(title: String(localized: "What's Included"), systemImage: "list.bullet.rectangle.fill",
+                                 subtitle: inventory.map { String(localized: "\($0.sizeLine) · \($0.summaryLine)") } ?? String(localized: "Everything you made, category by category"))
             }
             if manager.isEnabled || !manager.history.isEmpty {
                 NavigationLink(destination: LazyDestination { CloudHistoryView() }) {
-                    SettingsRowLabel(title: "History", systemImage: "clock.arrow.circlepath",
-                                     subtitle: manager.latestEventLine ?? "Nothing yet")
+                    SettingsRowLabel(title: String(localized: "History"), systemImage: "clock.arrow.circlepath",
+                                     subtitle: manager.latestEventLine ?? String(localized: "Nothing yet"))
                 }
             }
         }
@@ -920,7 +927,7 @@ struct CloudBackupSettingsView: View {
     }
 
     private var profilesFooter: String {
-        "Up to \(CloudBackupManager.maxProfiles) profiles. Each device backs up to its own; restoring another profile's things onto this \(CloudDevice.kind) never changes that profile. Tap a profile for its options; every restore shows what changes first."
+        String(localized: "Up to \(CloudBackupManager.maxProfiles) profiles. Each device backs up to its own; restoring another profile's things onto this \(CloudDevice.kind) never changes that profile. Tap a profile for its options; every restore shows what changes first.")
     }
 
     /// The same backup as a file the user keeps: for a family member moving to an Apple ID of their
@@ -999,11 +1006,11 @@ struct CloudBackupSettingsView: View {
     private func confirmDelete(_ profile: CloudBackupManager.ProfileSummary) {
         let own = manager.isOwn(profile)
         RemovalConfirmation.present(
-            title: "Delete \u{201C}\(profile.nickname)\u{201D} from iCloud?",
-            message: (profile.summary.isEmpty ? "" : "It holds \(profile.summary). ")
-                + (own ? "This is this \(CloudDevice.kind)'s own profile; backing up here stops too. " : "")
-                + "This cannot be undone.",
-            confirmTitle: "Delete Profile"
+            title: String(localized: "Delete \u{201C}\(profile.nickname)\u{201D} from iCloud?"),
+            message: [profile.summary.isEmpty ? nil : String(localized: "It holds \(profile.summary)."),
+                      own ? String(localized: "This is this \(CloudDevice.kind)'s own profile; backing up here stops too.") : nil,
+                      String(localized: "This cannot be undone.")].compactMap { $0 }.joined(separator: " "),
+            confirmTitle: String(localized: "Delete Profile")
         ) {
             Task {
                 do { try await manager.delete(profile) } catch { errorMessage = error.localizedDescription }
@@ -1070,8 +1077,7 @@ struct CloudRenameSheet: View {
                 return false
             })
         }
-        .smallMediumSheetPresentation()
-        .interactiveDismissDisabled(saving)
+        .smallMediumSheetPresentation(dismissDisabled: saving)
         .onAppear { focused = true }
     }
 
@@ -1110,10 +1116,10 @@ struct CloudContentsView: View {
                 if let inventory {
                     ForEach(inventory.rows) { row in
                         line(row.category.title, systemImage: row.category.systemImage,
-                             value: row.isEmpty ? "None yet" : row.measure.phrase, empty: row.isEmpty)
+                             value: row.isEmpty ? String(localized: "None yet") : row.measure.phrase, empty: row.isEmpty)
                     }
-                    line("Settings", systemImage: "slider.horizontal.3",
-                         value: inventory.settingsChanged == 0 ? "All at their defaults" : "\(inventory.settingsChanged) changed",
+                    line(String(localized: "Settings"), systemImage: "slider.horizontal.3",
+                         value: inventory.settingsChanged == 0 ? String(localized: "All at their defaults") : String(localized: "\(inventory.settingsChanged) changed"),
                          empty: inventory.settingsChanged == 0)
                 } else {
                     HStack { Spacer(); ProgressView(); Spacer() }
@@ -1140,9 +1146,9 @@ struct CloudContentsView: View {
 
     private var footer: String {
         guard let inventory else { return "" }
-        var text = "Together \(inventory.sizeLine), compressed. Every backup is this whole set, saved again whenever something changed."
+        var text = String(localized: "Together \(inventory.sizeLine), compressed. Every backup is this whole set, saved again whenever something changed.")
         if inventory.settingsChanged > 0 {
-            text += " Only settings you changed are included, so a setting still at its default follows the app's default on every device."
+            text += " " + String(localized: "Only settings you changed are included, so a setting still at its default follows the app's default on every device.")
         }
         return text
     }

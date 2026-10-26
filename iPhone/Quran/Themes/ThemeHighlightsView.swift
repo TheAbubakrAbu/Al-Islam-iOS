@@ -68,8 +68,8 @@ struct ThemeHighlightsView: View {
                         Text("Highlight Every Passage")
                             .font(.subheadline.weight(.semibold))
                         Text(themeHighlights.allSectionsLit
-                             ? "All \(SurahSectionsStore.shared.allSections().count) passages, each in its meaning's color"
-                             : "Every surah, passage by passage, in the colors below")
+                             ? String(localized: "All \(SurahSectionsStore.shared.allSections().count) passages, each in its meaning's color")
+                             : String(localized: "Every surah, passage by passage, in the colors below"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -140,7 +140,7 @@ struct ThemeHighlightsView: View {
         // label lags the tap (memory "picker-no-animated-binding", Quality Guide G8).
         Picker(selection: $surahID) {
             ForEach(quranData.quran) { surah in
-                Text("\(surah.id). \(surah.nameTransliteration)").tag(surah.id)
+                Text("\(surah.id). \(surah.displayName)").tag(surah.id)
             }
         } label: {
             HStack(spacing: 12) {
@@ -149,7 +149,7 @@ struct ThemeHighlightsView: View {
                     Text("Surah")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(quranData.surah(surahID)?.nameTransliteration ?? "Surah \(surahID)")
+                    Text(quranData.surah(surahID)?.displayName ?? String(localized: "Surah \(surahID)"))
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(.primary)
                 }
@@ -204,7 +204,7 @@ struct ThemeHighlightsView: View {
                 Spacer(minLength: 8)
 
                 VStack(alignment: .trailing, spacing: 6) {
-                    Text("\(section.ayahCount) ayah\(section.ayahCount == 1 ? "" : "s")")
+                    Text(section.ayahCount == 1 ? String(localized: "\(section.ayahCount) ayah") : String(localized: "\(section.ayahCount) ayahs"))
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(lit ? color.ink : .secondary)
                         .monospacedDigit()
@@ -294,7 +294,7 @@ struct ThemeHighlightsView: View {
                             Text("Browse by Theme")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundColor(.primary)
-                            Text(themeHighlights.lit.isEmpty ? "Light a subject across the whole Quran" : "Light more subjects")
+                            Text(themeHighlights.lit.isEmpty ? String(localized: "Light a subject across the whole Quran") : String(localized: "Light more subjects"))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

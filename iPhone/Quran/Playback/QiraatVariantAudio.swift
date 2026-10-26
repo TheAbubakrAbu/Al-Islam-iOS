@@ -250,8 +250,8 @@ struct QiraatVariantAudioButtons: View {
         if let pair {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
-                    clipButton("Hafs", key: key("hafs"), clip: pair.hafs)
-                    clipButton(QiraatProfiles.shortName(of: tag), key: key("riwayah"), clip: pair.riwayah)
+                    clipButton(String(localized: "Hafs"), key: key("hafs"), clip: pair.hafs)
+                    clipButton(QiraatProfiles.shortName(of: tag).localizedDisplay, key: key("riwayah"), clip: pair.riwayah)
                     if !compact {
                         Spacer(minLength: 0)
                     }

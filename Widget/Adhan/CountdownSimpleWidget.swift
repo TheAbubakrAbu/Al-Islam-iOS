@@ -17,7 +17,7 @@ struct SimpleEntryView: View {
                     Image(systemName: currentPrayer.image)
                         .font(.subheadline)
 
-                    Text(currentPrayer.displayName)
+                    Text(currentPrayer.displayName.localizedDisplay)
                         .font(.headline)
                 }
                 .foregroundColor(skyStyle ? .white : (currentPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color))
@@ -34,7 +34,7 @@ struct SimpleEntryView: View {
                     tint: skyStyle ? .white : entry.accentColor.color
                 )
 
-                Text("Next: \(nextPrayer.displayName) at \(Text(nextPrayer.time, style: .time))")
+                Text("Next: \(nextPrayer.displayName.localizedDisplay) at \(Text(nextPrayer.time, style: .time))")
                     .font(.caption2)
                     .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
             }

@@ -115,10 +115,11 @@ struct SkyWeather: Codable, Equatable {
     var highText: String? { highC.map(Self.temperatureText(celsius:)) }
     var lowText: String? { lowC.map(Self.temperatureText(celsius:)) }
 
-    /// "45%"
-    var humidityText: String { "\(Int((humidity * 100).rounded()))%" }
+    /// "45%". Through the catalog's "%lld%%" so the number takes the locale's digits (Arabic) like the
+    /// app's other percentages; English reads exactly as before.
+    var humidityText: String { String(localized: "\(Int((humidity * 100).rounded()))%") }
     /// "40%"
-    var cloudCoverText: String { "\(Int((cloudCover * 100).rounded()))%" }
+    var cloudCoverText: String { String(localized: "\(Int((cloudCover * 100).rounded()))%") }
     /// "8 mph NW" (km/h where the region uses it).
     var windText: String {
         let speed = Measurement(value: windKph, unit: UnitSpeed.kilometersPerHour)
@@ -145,7 +146,7 @@ struct SkyWeather: Codable, Equatable {
     }
     /// "30%" or nil when the hourly forecast was not available.
     var precipitationChanceText: String? {
-        precipitationChance.map { "\(Int(($0 * 100).rounded()))%" }
+        precipitationChance.map { String(localized: "\(Int(($0 * 100).rounded()))%") }
     }
     /// "0.2 mm" (inches where the region uses them).
     var precipitationText: String {
@@ -159,7 +160,7 @@ struct SkyWeather: Codable, Equatable {
                                              numberFormatStyle: .number.precision(.fractionLength(0...1))))
     }
     /// "UV 3"
-    var uvShortText: String { "UV \(uvIndex)" }
+    var uvShortText: String { String(localized: "UV \(uvIndex)") }
 
     /// What a widget redraws for: the chip's text and the sky's look. Two readings with the same
     /// signature paint the same widget, so the app skips the reload.
@@ -623,25 +624,26 @@ struct SkyWeatherCondition: Identifiable, Equatable {
     var id: String { condition }
 
     static let all: [SkyWeatherCondition] = [
-        .init(condition: "clear", text: "Clear", symbolName: "sun.max.fill", cloudCover: 0.03),
-        .init(condition: "mostlyClear", text: "Mostly Clear", symbolName: "sun.min.fill", cloudCover: 0.2),
-        .init(condition: "partlyCloudy", text: "Partly Cloudy", symbolName: "cloud.sun.fill", cloudCover: 0.45),
-        .init(condition: "mostlyCloudy", text: "Mostly Cloudy", symbolName: "cloud.fill", cloudCover: 0.75),
-        .init(condition: "cloudy", text: "Cloudy", symbolName: "cloud.fill", cloudCover: 0.98),
-        .init(condition: "drizzle", text: "Drizzle", symbolName: "cloud.drizzle.fill", cloudCover: 0.85),
-        .init(condition: "rain", text: "Rain", symbolName: "cloud.rain.fill", cloudCover: 0.95),
-        .init(condition: "heavyRain", text: "Heavy Rain", symbolName: "cloud.heavyrain.fill", cloudCover: 1.0),
-        .init(condition: "isolatedThunderstorms", text: "Isolated Thunderstorms", symbolName: "cloud.bolt.fill", cloudCover: 0.7),
-        .init(condition: "thunderstorms", text: "Thunderstorms", symbolName: "cloud.bolt.rain.fill", cloudCover: 1.0),
-        .init(condition: "flurries", text: "Flurries", symbolName: "cloud.snow.fill", cloudCover: 0.8),
-        .init(condition: "snow", text: "Snow", symbolName: "cloud.snow.fill", cloudCover: 0.95),
-        .init(condition: "heavySnow", text: "Heavy Snow", symbolName: "snowflake", cloudCover: 1.0),
-        .init(condition: "sleet", text: "Sleet", symbolName: "cloud.sleet.fill", cloudCover: 0.95),
-        .init(condition: "hail", text: "Hail", symbolName: "cloud.hail.fill", cloudCover: 0.95),
-        .init(condition: "foggy", text: "Fog", symbolName: "cloud.fog.fill", cloudCover: 0.6),
-        .init(condition: "haze", text: "Haze", symbolName: "sun.haze.fill", cloudCover: 0.3),
-        .init(condition: "smoky", text: "Smoky", symbolName: "smoke.fill", cloudCover: 0.4),
-        .init(condition: "blowingDust", text: "Blowing Dust", symbolName: "sun.dust.fill", cloudCover: 0.3),
+        // Its own key: "Clear" alone is also a menu action ("مسح"), and the sky's "Clear" is "صافٍ".
+        .init(condition: "clear", text: String(localized: "weather.clear", defaultValue: "Clear"), symbolName: "sun.max.fill", cloudCover: 0.03),
+        .init(condition: "mostlyClear", text: String(localized: "Mostly Clear"), symbolName: "sun.min.fill", cloudCover: 0.2),
+        .init(condition: "partlyCloudy", text: String(localized: "Partly Cloudy"), symbolName: "cloud.sun.fill", cloudCover: 0.45),
+        .init(condition: "mostlyCloudy", text: String(localized: "Mostly Cloudy"), symbolName: "cloud.fill", cloudCover: 0.75),
+        .init(condition: "cloudy", text: String(localized: "Cloudy"), symbolName: "cloud.fill", cloudCover: 0.98),
+        .init(condition: "drizzle", text: String(localized: "Drizzle"), symbolName: "cloud.drizzle.fill", cloudCover: 0.85),
+        .init(condition: "rain", text: String(localized: "Rain"), symbolName: "cloud.rain.fill", cloudCover: 0.95),
+        .init(condition: "heavyRain", text: String(localized: "Heavy Rain"), symbolName: "cloud.heavyrain.fill", cloudCover: 1.0),
+        .init(condition: "isolatedThunderstorms", text: String(localized: "Isolated Thunderstorms"), symbolName: "cloud.bolt.fill", cloudCover: 0.7),
+        .init(condition: "thunderstorms", text: String(localized: "Thunderstorms"), symbolName: "cloud.bolt.rain.fill", cloudCover: 1.0),
+        .init(condition: "flurries", text: String(localized: "Flurries"), symbolName: "cloud.snow.fill", cloudCover: 0.8),
+        .init(condition: "snow", text: String(localized: "Snow"), symbolName: "cloud.snow.fill", cloudCover: 0.95),
+        .init(condition: "heavySnow", text: String(localized: "Heavy Snow"), symbolName: "snowflake", cloudCover: 1.0),
+        .init(condition: "sleet", text: String(localized: "Sleet"), symbolName: "cloud.sleet.fill", cloudCover: 0.95),
+        .init(condition: "hail", text: String(localized: "Hail"), symbolName: "cloud.hail.fill", cloudCover: 0.95),
+        .init(condition: "foggy", text: String(localized: "Fog"), symbolName: "cloud.fog.fill", cloudCover: 0.6),
+        .init(condition: "haze", text: String(localized: "Haze"), symbolName: "sun.haze.fill", cloudCover: 0.3),
+        .init(condition: "smoky", text: String(localized: "Smoky"), symbolName: "smoke.fill", cloudCover: 0.4),
+        .init(condition: "blowingDust", text: String(localized: "Blowing Dust"), symbolName: "sun.dust.fill", cloudCover: 0.3),
     ]
 
     static func named(_ condition: String) -> SkyWeatherCondition? {
@@ -689,11 +691,11 @@ extension SkyWeather {
             fetchedAt: now, latitude: latitude, longitude: longitude,
             temperatureC: temp, apparentC: temp + (humidity > 0.7 ? 1.5 : -1), highC: temp + 4, lowC: temp - 7,
             humidity: humidity, dewPointC: temp - 8, uvIndex: uv,
-            uvCategory: uv >= 8 ? "Very High" : uv >= 6 ? "High" : uv >= 3 ? "Moderate" : "Low",
+            uvCategory: uv >= 8 ? String(localized: "Very High") : uv >= 6 ? String(localized: "High") : uv >= 3 ? String(localized: "Moderate") : String(localized: "Low"),
             cloudCover: condition.cloudCover, condition: condition.condition, conditionText: condition.text,
             symbolName: condition.symbolName,
-            windKph: 14, windDirection: "NW", visibilityKm: foggy ? 0.8 : 16,
-            pressureHPa: 1013, pressureTrend: "Steady",
+            windKph: 14, windDirection: String(localized: "NW"), visibilityKm: foggy ? 0.8 : 16,
+            pressureHPa: 1013, pressureTrend: String(localized: "Steady"),
             precipitationChance: wet ? 0.8 : 0.05,
             precipitationMm: wet ? (condition.condition.contains("heavy") || condition.condition == "thunderstorms" ? 5 : 2.4) : 0,
             isDaylight: true

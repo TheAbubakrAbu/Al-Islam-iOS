@@ -242,14 +242,14 @@ enum QuranRevisionMath {
     static func scopeLabel(_ scope: QuranRevisionPlan.Scope, quran: [Surah]) -> String {
         switch scope {
         case .juzRange(let from, let to):
-            return from == to ? "Juz \(from)" : "Juz \(from) to \(to)"
+            return from == to ? String(localized: "Juz \(from)") : String(localized: "Juz \(from) to \(to)")
         case .surahs(let ids):
-            let names = quran.filter { ids.contains($0.id) }.map(\.nameTransliteration)
+            let names = quran.filter { ids.contains($0.id) }.map(\.displayName)
             switch names.count {
-            case 0: return "No surahs"
+            case 0: return String(localized: "No surahs")
             case 1: return names[0]
-            case 2: return "\(names[0]) and \(names[1])"
-            default: return "\(names.count) surahs"
+            case 2: return String(localized: "\(names[0]) and \(names[1])")
+            default: return String(localized: "\(names.count) surahs")
             }
         }
     }
@@ -289,7 +289,7 @@ enum QuranRevisionMath {
         if let start, let last {
             span = QuranPlannerMath.TodaySpan(
                 startSurahID: start.surahID, startSurahName: start.surahName, startAyah: start.ayahID, startPage: start.page,
-                endSurahName: last.surahName, endAyah: last.ayahID, endPage: last.page
+                endSurahID: last.surahID, endSurahName: last.surahName, endAyah: last.ayahID, endPage: last.page
             )
         }
         spanCache = (progressRevision, scope, count, span)
@@ -355,7 +355,8 @@ struct RevisionSurahPicker: View {
                                 .frame(width: 32, alignment: .leading)
 
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(surah.nameTransliteration)
+                                // The Arabic interface names the surah once, here, in Arabic.
+                                Text(surah.displayName)
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundColor(.primary)
                                 Text("\(surah.ayahCountLabel()) · \(surah.pageCountLabel)")
@@ -365,9 +366,11 @@ struct RevisionSurahPicker: View {
 
                             Spacer()
 
-                            Text(surah.nameArabic)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                            if !AppLanguage.isArabic {
+                                Text(surah.nameArabic)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
 
                             Image(systemName: chosen ? "checkmark.circle.fill" : "circle")
                                 .font(.title3)

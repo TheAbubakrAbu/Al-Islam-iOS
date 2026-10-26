@@ -80,9 +80,9 @@ struct GlanceCard: View {
     static func qiblaValues(latitude: Double, longitude: Double) -> (bearing: String?, distance: String?) {
         guard latitude != 1000, longitude != 1000 else { return (nil, nil) }
         let meters = CLLocation(latitude: latitude, longitude: longitude).distance(from: kaaba)
-        guard meters > atKaabaRadius else { return ("You are here", "At the Kaaba") }
+        guard meters > atKaabaRadius else { return (String(localized: "You are here"), String(localized: "At the Kaaba")) }
         let direction = Qibla(coordinates: Coordinates(latitude: latitude, longitude: longitude)).direction
-        return (String(format: "%.0f° %@", direction, compassPoint(direction)), distanceText(meters))
+        return (bearingText(direction), distanceText(meters))
     }
 
     /// The tiles that fill complete rows: everything but a trailing odd one.
@@ -125,52 +125,52 @@ struct GlanceCard: View {
         let makkah = distanceToMakkah
 
         var here: [GlanceItem] = []
-        here.append(.init(icon: "location.fill", title: "Current Location",
-                          value: live.currentLocation?.city ?? "Unavailable", action: .cityPrayerTimes))
-        here.append(.init(icon: "clock.fill", title: "Time Zone", value: timeZoneSummary, action: .cityPrayerTimes))
+        here.append(.init(icon: "location.fill", title: String(localized: "Current Location"),
+                          value: live.currentLocation?.displayCity ?? String(localized: "Unavailable"), action: .cityPrayerTimes))
+        here.append(.init(icon: "clock.fill", title: String(localized: "Time Zone"), value: timeZoneSummary, action: .cityPrayerTimes))
         if let qibla {
-            here.append(.init(icon: "location.north.line.fill", title: "Qibla", value: qibla,
+            here.append(.init(icon: "location.north.line.fill", title: String(localized: "Qibla"), value: qibla,
                               iconRotation: qiblaBearing, action: .qibla(bearing: qibla, distance: makkah)))
         }
         if let makkah {
-            here.append(.init(icon: "building.columns.fill", title: "Distance to Makkah", value: makkah,
+            here.append(.init(icon: "building.columns.fill", title: String(localized: "Distance to Makkah"), value: makkah,
                               action: .qibla(bearing: qibla, distance: makkah)))
         }
         if let home = settings.homeLocation {
-            here.append(.init(icon: "house.fill", title: "Home Location", value: home.city, action: .homeLocation))
+            here.append(.init(icon: "house.fill", title: String(localized: "Home Location"), value: home.displayCity, action: .homeLocation))
             if let travel = travelSummary {
-                here.append(.init(icon: "airplane", title: "Distance From Home", value: travel,
+                here.append(.init(icon: "airplane", title: String(localized: "Distance From Home"), value: travel,
                                   action: .travelingMode))
             }
         }
 
         var today: [GlanceItem] = []
         if let daylight = daylightSummary {
-            today.append(.init(icon: "sun.max.fill", title: "Daylight", value: daylight, action: .prayerCalendar))
+            today.append(.init(icon: "sun.max.fill", title: String(localized: "Daylight"), value: daylight, action: .prayerCalendar))
         }
         if let fast = fastingWindow {
-            today.append(.init(icon: "fork.knife", title: "Fasting Window", value: fast, action: .prayerCalendar))
+            today.append(.init(icon: "fork.knife", title: String(localized: "Fasting Window"), value: fast, action: .prayerCalendar))
         }
         if let night = nightSummary {
-            today.append(.init(icon: "moon.zzz.fill", title: "Night", value: night, action: .prayerCalendar))
+            today.append(.init(icon: "moon.zzz.fill", title: String(localized: "Night"), value: night, action: .prayerCalendar))
         }
-        today.append(.init(icon: "moon.stars.fill", title: "Moon", value: moonSummary, showsMoonPhase: true,
+        today.append(.init(icon: "moon.stars.fill", title: String(localized: "Moon"), value: moonSummary, showsMoonPhase: true,
                            action: .hijriCalendar))
         if let event = nextEventSummary {
-            today.append(.init(icon: "calendar", title: "Next Islamic Date", value: event, action: .hijriCalendar))
+            today.append(.init(icon: "calendar", title: String(localized: "Next Islamic Date"), value: event, action: .hijriCalendar))
         }
-        today.append(.init(icon: "function", title: "Prayer Calculation", value: calculationSummary,
+        today.append(.init(icon: "function", title: String(localized: "Prayer Calculation"), value: calculationSummary,
                            action: .prayerCalculation))
 
         var groups = [
-            GlanceGroup(id: GlanceGroup.here, title: "Here", tiles: here),
-            GlanceGroup(id: GlanceGroup.today, title: "Today", tiles: today)
+            GlanceGroup(id: GlanceGroup.here, title: String(localized: "Here"), tiles: here),
+            GlanceGroup(id: GlanceGroup.today, title: String(localized: "Today"), tiles: today)
         ]
         // The sky's weather, while the switch is on and the reading is fresh (SkyWeather.swift):
         // the temperature, the conditions, and the numbers under them. Every tile opens the full
         // reading. Nothing here is computed; it is the one group that comes from the network.
         if let weather = freshWeather {
-            groups.append(GlanceGroup(id: GlanceGroup.weather, title: "Weather", tiles: weatherTiles(weather)))
+            groups.append(GlanceGroup(id: GlanceGroup.weather, title: String(localized: "Weather"), tiles: weatherTiles(weather)))
         }
         return groups
     }
@@ -185,20 +185,20 @@ struct GlanceCard: View {
 
     private func weatherTiles(_ weather: SkyWeather) -> [GlanceItem] {
         var tiles: [GlanceItem] = []
-        tiles.append(.init(icon: "thermometer.medium", title: "Temperature",
-                           value: "\(weather.temperatureText)\nFeels like \(weather.apparentText)", action: .weather))
-        tiles.append(.init(icon: weather.symbolName, title: "Conditions",
-                           value: "\(weather.conditionText)\n\(weather.cloudCoverText) cloud cover", action: .weather))
-        tiles.append(.init(icon: "sun.max.trianglebadge.exclamationmark", title: "UV Index",
-                           value: "\(weather.uvIndex)\n\(weather.uvCategory)", action: .weather))
-        tiles.append(.init(icon: "humidity.fill", title: "Humidity",
-                           value: "\(weather.humidityText)\nDew point \(weather.dewPointText)", action: .weather))
-        tiles.append(.init(icon: "wind", title: "Wind", value: weather.windText, action: .weather))
+        tiles.append(.init(icon: "thermometer.medium", title: String(localized: "Temperature"),
+                           value: String(localized: "\(weather.temperatureText)\nFeels like \(weather.apparentText)"), action: .weather))
+        tiles.append(.init(icon: weather.symbolName, title: String(localized: "Conditions"),
+                           value: String(localized: "\(weather.conditionText)\n\(weather.cloudCoverText) cloud cover"), action: .weather))
+        tiles.append(.init(icon: "sun.max.trianglebadge.exclamationmark", title: String(localized: "UV Index"),
+                           value: "\(weather.uvIndex.formatted())\n\(weather.uvCategory)", action: .weather))
+        tiles.append(.init(icon: "humidity.fill", title: String(localized: "Humidity"),
+                           value: String(localized: "\(weather.humidityText)\nDew point \(weather.dewPointText)"), action: .weather))
+        tiles.append(.init(icon: "wind", title: String(localized: "Wind"), value: weather.windText, action: .weather))
         if let chance = weather.precipitationChanceText {
-            tiles.append(.init(icon: "drop.fill", title: "Precipitation",
-                               value: "\(chance)\n\(weather.precipitationText) this hour", action: .weather))
+            tiles.append(.init(icon: "drop.fill", title: String(localized: "Precipitation"),
+                               value: String(localized: "\(chance)\n\(weather.precipitationText) this hour"), action: .weather))
         } else {
-            tiles.append(.init(icon: "eye.fill", title: "Visibility", value: weather.visibilityText, action: .weather))
+            tiles.append(.init(icon: "eye.fill", title: String(localized: "Visibility"), value: weather.visibilityText, action: .weather))
         }
         return tiles
     }
@@ -206,13 +206,13 @@ struct GlanceCard: View {
     // MARK: - Values
 
     private var calculationSummary: String {
-        var lines = [settings.prayerCalculation]
+        var lines = [settings.prayerCalculation.localizedDisplay]
         var qualifiers: [String] = []
-        if settings.hanafiMadhab { qualifiers.append("Hanafi Asr") }
+        if settings.hanafiMadhab { qualifiers.append(String(localized: "Hanafi Asr")) }
         if settings.highLatitudeRule != Settings.automaticHighLatitudeRule {
-            qualifiers.append(settings.highLatitudeRule)
+            qualifiers.append(settings.highLatitudeRule.localizedDisplay)
         }
-        if !qualifiers.isEmpty { lines.append(qualifiers.joined(separator: " · ")) }
+        if !qualifiers.isEmpty { lines.append(qualifiers.joined(separator: JoinSeparator.dot)) }
         return lines.joined(separator: "\n")
     }
 
@@ -239,15 +239,15 @@ struct GlanceCard: View {
 
     private var qiblaSummary: String? {
         guard let coordinate = validCoordinate, let meters = metersToKaaba else { return nil }
-        guard meters > Self.atKaabaRadius else { return "You are here" }
+        guard meters > Self.atKaabaRadius else { return String(localized: "You are here") }
         let direction = Qibla(coordinates: Coordinates(latitude: coordinate.latitude,
                                                        longitude: coordinate.longitude)).direction
-        return String(format: "%.0f° %@", direction, Self.compassPoint(direction))
+        return Self.bearingText(direction)
     }
 
     private var distanceToMakkah: String? {
         guard let meters = metersToKaaba else { return nil }
-        guard meters > Self.atKaabaRadius else { return "At the Kaaba" }
+        guard meters > Self.atKaabaRadius else { return String(localized: "At the Kaaba") }
         return Self.distanceText(meters)
     }
 
@@ -259,9 +259,9 @@ struct GlanceCard: View {
         if let yesterday = daylightLength(dayOffset: -1) {
             let delta = Int((today - yesterday).rounded() / 60)
             if delta != 0 {
-                value += "\n\(delta > 0 ? "+" : "−")\(abs(delta)) min vs yesterday"
+                value += "\n" + String(localized: "\(delta > 0 ? "+" : "−")\(abs(delta)) min vs yesterday")
             } else {
-                value += "\nSame as yesterday"
+                value += "\n" + String(localized: "Same as yesterday")
             }
         }
         return value
@@ -274,8 +274,10 @@ struct GlanceCard: View {
               let maghrib = prayers.first(where: { $0.nameTransliteration == "Maghrib" })?.time,
               maghrib > fajr
         else { return nil }
+        // The range is led right to left in Arabic: a 24-hour clock has no letter in it to set the line's
+        // direction, and the start time drew on the left (`SymbolNumber.rightToLeftLine`).
         return "\(Self.durationText(maghrib.timeIntervalSince(fajr)))\n"
-            + "\(settings.formatDate(fajr)) – \(settings.formatDate(maghrib))"
+            + SymbolNumber.rightToLeftLine("\(settings.formatDate(fajr)) – \(settings.formatDate(maghrib))")
     }
 
     /// Maghrib to the next dawn. Computed against *tomorrow's* Fajr, since tonight's night ends tomorrow.
@@ -290,13 +292,13 @@ struct GlanceCard: View {
         // The actual clock times, like the fasting window above - "Maghrib to Fajr" only restated the names of
         // the two prayers, which the list already shows.
         return "\(Self.durationText(fajr.timeIntervalSince(maghrib)))\n"
-            + "\(settings.formatDate(maghrib)) – \(settings.formatDate(fajr))"
+            + SymbolNumber.rightToLeftLine("\(settings.formatDate(maghrib)) – \(settings.formatDate(fajr))")
     }
 
     private var moonSummary: String {
         // The hour-quantized phase shares the sky card's memo entry instead of evicting it.
         let phase = MoonPhase.onCurrentHour()
-        return "\(phase.name)\n\(phase.illuminationPercent)% illuminated"
+        return String(localized: "\(phase.name)\n\(phase.illuminationPercent)% illuminated")
     }
 
     /// The winning (event, date) pair, resolved once per civil day + hijri year. Walking
@@ -336,8 +338,8 @@ struct GlanceCard: View {
 
         guard let best else { return nil }
         let days = calendar.dateComponents([.day], from: today, to: best.date).day ?? 0
-        let when = days == 0 ? "Today" : (days == 1 ? "Tomorrow" : "in \(days) days")
-        return "\(best.name)\n\(when)"
+        let when = days == 0 ? String(localized: "Today") : (days == 1 ? String(localized: "Tomorrow") : String(localized: "in \(days) days"))
+        return "\(best.name.localizedDisplay)\n\(when)"
     }
 
     private var travelSummary: String? {
@@ -346,11 +348,11 @@ struct GlanceCard: View {
         let there = CLLocation(latitude: home.latitude, longitude: home.longitude)
         let meters = here.distance(from: there)
         let status = settings.travelingMode
-            ? "Traveling mode on"
-            : (meters >= Settings.travelThresholdM ? "Past 48 mi" : "Within 48 mi")
+            ? String(localized: "Traveling mode on")
+            : (meters >= Settings.travelThresholdM ? String(localized: "Past 48 mi") : String(localized: "Within 48 mi")).localizedDigits
         // Inside the home city the distance is GPS noise ("0.0 mi (0.0 km)"): say where you are, the
         // way the Makkah tile says "At the Kaaba" inside the same radius.
-        guard meters > Self.atKaabaRadius else { return "At home\n\(status)" }
+        guard meters > Self.atKaabaRadius else { return String(localized: "At home\n\(status)") }
         return "\(Self.distanceText(meters))\n\(status)"
     }
 
@@ -388,7 +390,7 @@ struct GlanceCard: View {
 
     private static func durationText(_ seconds: TimeInterval) -> String {
         let total = Int(seconds.rounded())
-        return "\(total / 3600)h \((total % 3600) / 60)m"
+        return String(localized: "\(total / 3600)h \((total % 3600) / 60)m")
     }
 
     private static let distanceFormatter: NumberFormatter = {
@@ -401,16 +403,29 @@ struct GlanceCard: View {
     private static func distanceText(_ meters: CLLocationDistance) -> String {
         let miles = meters / 1609.34
         let kilometers = meters / 1000
-        guard miles >= 10 else { return String(format: "%.1f mi (%.1f km)", miles, kilometers) }
+        // The locale's digits in Arabic, like the whole-number branch below; English keeps "2.4 mi (3.9 km)".
+        guard miles >= 10 else {
+            return String(format: NSLocalizedString("%.1f mi (%.1f km)", comment: ""),
+                          locale: AppLanguage.isArabic ? Locale.current : nil, miles, kilometers)
+        }
         let mi = distanceFormatter.string(from: NSNumber(value: miles)) ?? "\(Int(miles))"
         let km = distanceFormatter.string(from: NSNumber(value: kilometers)) ?? "\(Int(kilometers))"
-        return "\(mi) mi (\(km) km)"
+        return String(localized: "\(mi) mi (\(km) km)")
+    }
+
+    /// "58° ENE". The number and its degree sign stay one run in Arabic (`SymbolNumber`), and the line is
+    /// led right to left there: it opens on that isolated run, so its direction rested on the compass
+    /// point's letters alone (`SymbolNumber.rightToLeftLine`).
+    private static func bearingText(_ direction: Double) -> String {
+        SymbolNumber.rightToLeftLine("\(SymbolNumber.degrees(direction, places: 0)) \(compassPoint(direction))")
     }
 
     /// 16-point compass, so a bearing reads as a direction rather than a number to decode.
     private static func compassPoint(_ degrees: Double) -> String {
-        let points = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
-                      "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+        let points = [String(localized: "N"), String(localized: "NNE"), String(localized: "NE"), String(localized: "ENE"),
+                      String(localized: "E"), String(localized: "ESE"), String(localized: "SE"), String(localized: "SSE"),
+                      String(localized: "S"), String(localized: "SSW"), String(localized: "SW"), String(localized: "WSW"),
+                      String(localized: "W"), String(localized: "WNW"), String(localized: "NW"), String(localized: "NNW")]
         let normalized = degrees.truncatingRemainder(dividingBy: 360)
         let positive = normalized < 0 ? normalized + 360 : normalized
         return points[Int((positive / 22.5).rounded()) % 16]
@@ -494,7 +509,7 @@ private struct GlanceTile: View, Equatable {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(tile.title). \(tile.value.replacingOccurrences(of: "\n", with: ", "))")
+        .accessibilityLabel("\(tile.title). \(tile.value.replacingOccurrences(of: "\n", with: ", ").localizedDigits)")
         .accessibilityAddTraits(.isButton)
     }
 
@@ -562,11 +577,11 @@ private struct GlanceTile: View, Equatable {
     /// The headline in semibold primary; the detail (when present) as a caption-secondary second
     /// line of the SAME Text, so the two-line reservation above covers both shapes.
     private func styledValue(headline: String, detail: String?) -> Text {
-        let headlineText = Text(headline)
+        let headlineText = Text(headline.localizedDigits)
             .font(.subheadline.weight(.semibold))
             .foregroundColor(.primary)
         guard let detail else { return headlineText }
-        return headlineText + Text("\n" + detail)
+        return headlineText + Text("\n" + detail.localizedDigits)
             .font(.caption)
             .foregroundColor(Self.secondaryInk)
     }

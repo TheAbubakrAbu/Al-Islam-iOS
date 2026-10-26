@@ -134,16 +134,16 @@ struct AskAISource: Identifiable, Equatable, Codable {
     /// The card's kind label and glyph ("Quran", "book.closed.fill").
     var kindLabel: String {
         switch kind {
-        case .ayah: return "Quran"
-        case .hadith: return "Hadith"
-        case .tafsir: return "Tafsir"
-        case .surah: return "Surah"
-        case .article: return "Article"
-        case .prayer: return "Prayer times"
-        case .name: return "Name of Allah"
-        case .dua, .hisnDua: return "Dua"
-        case .tip: return "App tip"
-        case .setting: return "Setting"
+        case .ayah: return String(localized: "Quran")
+        case .hadith: return String(localized: "Hadith")
+        case .tafsir: return String(localized: "Tafsir")
+        case .surah: return String(localized: "Surah")
+        case .article: return String(localized: "Article")
+        case .prayer: return String(localized: "Prayer times")
+        case .name: return String(localized: "Name of Allah")
+        case .dua, .hisnDua: return String(localized: "Dua")
+        case .tip: return String(localized: "App tip")
+        case .setting: return String(localized: "Setting")
         }
     }
 
@@ -454,28 +454,33 @@ enum AskAISourceFactory {
     /// A setting's place in the app, from the settings search index ("Reciter" at "Quran Settings
     /// → Recitation"): the one source that can answer "how do I change the reciter".
     static func setting(_ entry: SettingsSearchEntry) -> AskAISource {
-        var text = "The setting \u{201C}\(entry.title)\u{201D} is at: \(entry.path)."
+        // English in every interface language (`englishTitle`): the model reads it and the transcript keeps
+        // it. The card draws the title in the interface language (`AskAISourceCard.displayTitle`).
+        let title = entry.englishTitle
+        var text = "The setting \u{201C}\(title)\u{201D} is at: \(entry.path)."
         if !entry.keywords.isEmpty { text += " It covers: \(entry.keywords)." }
         if entry.advanced { text += " It is shown only with Advanced Settings turned on; opening it from Settings search turns them on." }
         return AskAISource(
             kind: .setting(id: entry.id),
-            reference: "Setting: \(entry.title)",
-            title: entry.title,
+            reference: "Setting: \(title)",
+            title: title,
             text: text,
             provenance: ["\(AppIdentifiers.appName) Settings, at \(entry.path)"],
-            aliases: [entry.title.lowercased()],
+            aliases: [title.lowercased()],
             maxCharacters: 400)
     }
 
     #if HAS_TIPS
     static func tip(_ tip: AppTip) -> AskAISource {
-        AskAISource(
+        // The tip's English (`AppTip.english`) in every interface language, as for a setting above.
+        let english = tip.english
+        return AskAISource(
             kind: .tip(id: tip.id),
-            reference: "App tip: \(tip.title)",
-            title: tip.title,
-            text: "\(tip.detail) Where: \(tip.place).",
-            provenance: ["\(AppIdentifiers.appName) Tips & Tricks, \(tip.area.title)", "Where: \(tip.place)"],
-            aliases: [tip.title.lowercased()],
+            reference: "App tip: \(english.title)",
+            title: english.title,
+            text: "\(english.detail) Where: \(english.place).",
+            provenance: ["\(AppIdentifiers.appName) Tips & Tricks, \(tip.area.englishTitle)", "Where: \(english.place)"],
+            aliases: [english.title.lowercased()],
             maxCharacters: 500)
     }
 
@@ -486,12 +491,18 @@ enum AskAISourceFactory {
     /// prayer's fard count and its sunnah rakahs. Nil when no times have been computed yet.
     static func prayerTimes() -> AskAISource? {
         guard let today = Settings.shared.prayers, !today.fullPrayers.isEmpty else { return nil }
+        // The model reads English: the prayer names, the times and the date. In English the clock and the
+        // date keep the reader's own region format, as they always have; in another interface language
+        // they are pinned to US English (Western digits, English month names, the Gregorian calendar),
+        // where they would otherwise reach the model in that language's digits and month names.
+        let pinsEnglish = !AppLanguage.code.hasPrefix("en")
         let clock = DateFormatter()
+        if pinsEnglish { clock.locale = Locale(identifier: "en_US") }
         clock.timeStyle = .short
         clock.dateStyle = .none
         var lines: [String] = []
         for prayer in today.fullPrayers {
-            var line = "\(prayer.displayName) \(clock.string(from: prayer.time))"
+            var line = "\(prayer.nameCustom ?? prayer.nameTransliteration) \(clock.string(from: prayer.time))"
             var counts: [String] = []
             if prayer.rakah != "0" { counts.append("\(prayer.rakah) fard") }
             if prayer.sunnahBefore != "0" { counts.append("\(prayer.sunnahBefore) sunnah before") }
@@ -500,8 +511,16 @@ enum AskAISourceFactory {
             if let note = prayer.sunnahNote { line += ". " + note }
             lines.append(line)
         }
-        let day = today.day.formatted(date: .abbreviated, time: .omitted)
-        let place = today.city.isEmpty ? "" : " in \(today.city)"
+        let day = pinsEnglish
+            ? today.day.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: Locale(identifier: "en_US"),
+                                                   calendar: Calendar(identifier: .gregorian)))
+            : today.day.formatted(date: .abbreviated, time: .omitted)
+        // The city is geocoded in the interface language, so outside English it can be an Arabic name, and
+        // there is no English one stored beside it. The model gets "your current location" instead: Apple's
+        // model turns away a prompt with much Arabic, and an English answer would quote the name. The card's
+        // title keeps the name the reader knows.
+        let city = pinsEnglish && today.city.isMostlyArabicScript ? "your current location" : today.city
+        let place = city.isEmpty ? "" : " in \(city)"
         // Told the current time too: "how long until Asr" is arithmetic the model can only do if it
         // knows where the day stands.
         let text = "Prayer times\(place) for \(day), computed by this app. It is now \(clock.string(from: Date())).\n"
@@ -511,7 +530,7 @@ enum AskAISourceFactory {
             reference: "Prayer times today",
             title: "Prayer times today" + (today.city.isEmpty ? "" : " \u{00B7} \(today.city)"),
             text: text,
-            provenance: ["Computed by this app for \(today.city.isEmpty ? "your location" : today.city) on \(day)"],
+            provenance: ["Computed by this app for \(city.isEmpty ? "your location" : city) on \(day)"],
             aliases: ["today's prayer times", "the prayer times", "prayer times"],
             maxCharacters: 900,
             isSubject: true)

@@ -3,7 +3,7 @@ import SwiftUI
 
 struct WatchSearchField: View {
     @Binding var text: String
-    var placeholder: String = "Search"
+    var placeholder: String = String(localized: "Search")
 
     var body: some View {
         HStack(spacing: 8) {

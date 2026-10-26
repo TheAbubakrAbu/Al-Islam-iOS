@@ -68,7 +68,7 @@ enum FastingActivityController {
 
         do {
             _ = try Activity.request(
-                attributes: FastingAttributes(phase: window.phase, city: settings.currentLocation?.city ?? ""),
+                attributes: FastingAttributes(phase: window.phase, city: settings.currentLocation?.displayCity ?? ""),
                 content: ActivityContent(state: state, staleDate: staleDate),
                 pushType: nil
             )

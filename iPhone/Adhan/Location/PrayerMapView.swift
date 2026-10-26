@@ -154,9 +154,9 @@ struct PrayerTimesMapView: View {
     private var optionalTimesSection: some View {
         if effectiveLocation != nil {
             Section {
-                optionalTimeToggle("Duhaa", icon: "sun.haze.fill", isOn: optionalBinding($mapShowDuha, fallback: settings.showDuha))
-                optionalTimeToggle("Islamic Midnight", icon: "moon.fill", isOn: optionalBinding($mapShowIslamicMidnight, fallback: settings.showIslamicMidnight))
-                optionalTimeToggle("Last Third of the Night", icon: "moon.stars.fill", isOn: optionalBinding($mapShowLastThird, fallback: settings.showLastThird))
+                optionalTimeToggle(String(localized: "Duhaa"), icon: "sun.haze.fill", isOn: optionalBinding($mapShowDuha, fallback: settings.showDuha))
+                optionalTimeToggle(String(localized: "Islamic Midnight"), icon: "moon.fill", isOn: optionalBinding($mapShowIslamicMidnight, fallback: settings.showIslamicMidnight))
+                optionalTimeToggle(String(localized: "Last Third of the Night"), icon: "moon.stars.fill", isOn: optionalBinding($mapShowLastThird, fallback: settings.showLastThird))
             } header: {
                 Text("Optional Times")
             } footer: {
@@ -208,13 +208,15 @@ struct PrayerTimesMapView: View {
                         }
 
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(location.city)
+                            Text(location.displayCity)
                                 .font(.title3.weight(.bold))
                                 .lineLimit(2)
                                 .minimumScaleFactor(0.8)
                             Text(selectedLocation == nil
-                                 ? "Your current location"
-                                 : String(format: "%.3f°, %.3f°", location.latitude, location.longitude))
+                                 ? String(localized: "Your current location")
+                                 // Signed pair, kept one left-to-right run in Arabic (`SymbolNumber`).
+                                 : SymbolNumber.isolated(String(format: "%.3f°, %.3f°", locale: AppLanguage.isArabic ? Locale.current : nil,
+                                                                location.latitude, location.longitude)))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -235,9 +237,9 @@ struct PrayerTimesMapView: View {
                     }
 
                     HStack(spacing: 6) {
-                        infoChip(activeMethod, systemImage: "function")
+                        infoChip(activeMethod.localizedDisplay, systemImage: "function")
                         if selectedLocation != nil {
-                            infoChip("Auto", systemImage: "wand.and.stars")
+                            infoChip(String(localized: "Auto"), systemImage: "wand.and.stars")
                         }
                     }
                 }
@@ -370,13 +372,13 @@ struct PrayerTimesMapView: View {
     }
 
     private var timeZoneCaption: String {
-        let city = selectedLocation.map(shortCity) ?? "the city"
-        return "“City Time” shows each prayer on \(city)’s local clock, the time you’d see if you were there. “My Time” converts those same moments to your current time zone."
+        let city = selectedLocation.map(shortCity) ?? String(localized: "the city")
+        return String(localized: "“City Time” shows each prayer on \(city)’s local clock, the time you’d see if you were there. “My Time” converts those same moments to your current time zone.")
     }
 
     private var methodCaption: String {
-        let city = selectedLocation.map(shortCity) ?? "this city"
-        return "Fajr and Isha vary by method, so \(city) uses the \(activeMethod) method matched to its region. Your location keeps your own method."
+        let city = selectedLocation.map(shortCity) ?? String(localized: "this city")
+        return String(localized: "Fajr and Isha vary by method, so \(city) uses the \(activeMethod.localizedDisplay) method matched to its region. Your location keeps your own method.")
     }
 
     // MARK: - Prayer Times
@@ -415,7 +417,7 @@ struct PrayerTimesMapView: View {
                 HStack {
                     Text("Prayer Times")
                     Spacer()
-                    Text(isComparing ? "Comparison" : shortCity(location))
+                    Text(isComparing ? String(localized: "Comparison") : shortCity(location))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(settings.accentColor.color)
                 }
@@ -449,7 +451,7 @@ struct PrayerTimesMapView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(prayer.displayName)
                     .font(.headline)
-                Text(prayer.nameEnglish)
+                Text(prayer.nameEnglish.localizedDisplay)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -508,7 +510,7 @@ struct PrayerTimesMapView: View {
         HStack(spacing: 10) {
             Image(systemName: row.image)
                 .font(.title3)
-                .foregroundColor(row.name == "Shurooq" ? .primary : settings.accentColor.color)
+                .foregroundColor(row.selected.nameTransliteration == "Shurooq" ? .primary : settings.accentColor.color)
                 .frame(width: 30, alignment: .center)
 
             Text(row.name)
