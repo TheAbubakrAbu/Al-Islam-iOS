@@ -490,6 +490,7 @@ extension Settings {
             showEnglishMustafa ? "1" : "0",
             displayQiraah,
             arabicScriptStyleRaw,
+            waslSignRaw,
             fontArabic,
             useFontArabic ? "1" : "0",
             "\(fontArabicSize)",

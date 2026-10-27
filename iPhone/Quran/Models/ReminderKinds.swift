@@ -289,6 +289,9 @@ final class ExtraRemindersStore: ObservableObject {
     /// signature when done.
     func rebuild(inputs: BuildInputs, pendingIDs: [String]? = nil, reschedulePrayers: Bool, reason: String) async {
         let prefixes = Self.prefixes
+        // Allow Notifications off: the stale ones still go, nothing is added (the inputs keep their
+        // signature, so the switch's re-arm rebuilds from them).
+        let enabled = Settings.shared.notificationsEnabled
         await Task.detached(priority: .utility) {
             let center = UNUserNotificationCenter.current()
             let ids: [String]
@@ -299,7 +302,7 @@ final class ExtraRemindersStore: ObservableObject {
             }
             let stale = ids.filter { id in prefixes.contains { id.hasPrefix($0) } }
             center.removePendingNotificationRequests(withIdentifiers: stale)
-            let requests = Self.buildRequests(inputs)
+            let requests = enabled ? Self.buildRequests(inputs) : []
             for request in requests {
                 try? await center.add(request)
             }

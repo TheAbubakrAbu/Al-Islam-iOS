@@ -81,6 +81,11 @@ private struct QuranTrailingToolbar: ViewModifier {
 /// the top left button just be a more button that contains grid and everything else"). Until then Full
 /// Mode showed the reading-mode toggle and the Quran Planner here as two buttons, and the grid switch
 /// at the trailing edge; all three are items of the menu now, with the summary doors.
+///
+/// The grid switch is the menu's HOLD shortcut, never a double tap (2026-10-26). A double-tap shortcut
+/// makes every single tap wait out the double-tap interval before the menu opens (`ShortcutMenu`), and
+/// that wait is what Abu felt as lag on this tab and the Hadith tab beside the Adhan tab's shortcut-free
+/// ⋯ ("why so laggy?"). The planner gave the hold up to it: it is one tap further, under Explore.
 private struct QuranLeadingToolbar: ViewModifier {
     private let settings = Settings.shared
     @ObservedObject private var quranDisplay = QuranDisplay.shared
@@ -105,11 +110,7 @@ private struct QuranLeadingToolbar: ViewModifier {
         } else {
             content.toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    TabMoreMenu(isBusy: isPreparingPageMode, doubleTap: gridShortcut,
-                                hold: settings.isHafsDisplay ? MenuShortcut(String(localized: "Open Quran Planner")) {
-                                    settings.hapticFeedback()
-                                    plannerRequest = true
-                                } : nil) { moreMenuItems }
+                    TabMoreMenu(isBusy: isPreparingPageMode, hold: gridShortcut) { moreMenuItems }
                         // The planner without its button: its settle hooks keep stamping a finished
                         // plan, and its sheet opens from the menu (`plannerRequest`).
                         .background {

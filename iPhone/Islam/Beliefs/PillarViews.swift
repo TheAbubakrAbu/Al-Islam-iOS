@@ -959,13 +959,7 @@ struct ShahadahView: View {
 
                 Section(header: ArticleHeader("FIRST VERSION")) {
                     VStack(alignment: .leading) {
-                        Text(verbatim: "أَشهَدُ أَن لَا إِلٰهَ إِلَّا ٱللّٰهُ وَأَشهَدُ أَنَّ مُحَمَّدًا رَسُولُ ٱللّٰهِ")
-                            .font(.body)
-                            .foregroundColor(appearance.accent)
-                            .multilineTextAlignment(.trailing)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 2)
+                        ArticleArabic(verbatim: "أَشهَدُ أَن لَا إِلٰهَ إِلَّا ٱللّٰهُ وَأَشهَدُ أَنَّ مُحَمَّدًا رَسُولُ ٱللّٰهِ")
 
                         Text(verbatim: "Ashhadu an la ilaha illa Allah, wa ashhadu anna Muhammad rasul Allah.")
                             .font(.body)
@@ -975,17 +969,13 @@ struct ShahadahView: View {
                             .font(.body)
                             .padding(.vertical, 2)
                     }
+
+                    ArticleCallout("Said aloud, the noon of “an” melts into the laam after it (idgham): “an la ilaha” is “allaa ilaaha”, and “illa Allah” runs together as “illallah”. Ashhadu allaa ilaaha illallah, wa ashhadu anna Muhammadan rasoolullah.", title: "How it is said", systemImage: "waveform")
                 }
 
                 Section(header: ArticleHeader("SECOND VERSION")) {
                     VStack(alignment: .leading) {
-                        Text(verbatim: "أَشهَدُ أَن لَا إِلٰهَ إِلَّا ٱللّٰهُ وَأَشهَدُ أَنَّ مُحَمَّدًا عَبدُهُ وَرَسُولُهُ")
-                            .font(.body)
-                            .foregroundColor(appearance.accent)
-                            .multilineTextAlignment(.trailing)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 2)
+                        ArticleArabic(verbatim: "أَشهَدُ أَن لَا إِلٰهَ إِلَّا ٱللّٰهُ وَأَشهَدُ أَنَّ مُحَمَّدًا عَبدُهُ وَرَسُولُهُ")
 
                         Text(verbatim: "Ashhadu an la ilaha illa Allah, wa ashhadu anna Muhammad abduhu wa rasuluhu.")
                             .font(.body)

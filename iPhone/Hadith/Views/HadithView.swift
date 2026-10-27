@@ -23,7 +23,7 @@ struct HadithTrailingToolbar: ViewModifier {
         if let moreMenuItems {
             content.toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    TabMoreMenu(doubleTap: MenuShortcut(hadithGridMode && !listForJump.wrappedValue ? String(localized: "Show as List") : String(localized: "Show as Grid")) {
+                    TabMoreMenu(hold: MenuShortcut(hadithGridMode && !listForJump.wrappedValue ? String(localized: "Show as List") : String(localized: "Show as Grid")) {
                         Settings.shared.hapticFeedback()
                         withAnimation {
                             if listForJump.wrappedValue { listForJump.wrappedValue = false } else { hadithGridMode.toggle() }

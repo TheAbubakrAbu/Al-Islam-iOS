@@ -32,6 +32,11 @@ import SwiftUI
 /// The ⋯ menu that leads every tab's toolbar, in both modes: the tab's grid or list switch and its
 /// other former toolbar buttons, plus the doors Simple Mode takes off the screen (rule 3). The gear
 /// never moves into it: it keeps its own trailing slot.
+///
+/// Its one shortcut is a HOLD (the tab's grid or list switch). Never a double tap: a double-tap shortcut
+/// makes every single tap wait out the double-tap interval before the menu opens (`ShortcutMenu`), and
+/// that wait is what read as lag on the Quran and Hadith tabs beside the Adhan tab's plain menu (Abu,
+/// 2026-10-26: "why so laggy?").
 struct TabMoreMenu<Items: View>: View {
     /// Observed for the tint. Not `@Environment(\.appearance)`: this view lives in a toolbar, the
     /// hoisted context where environment objects have failed to arrive in this app before.

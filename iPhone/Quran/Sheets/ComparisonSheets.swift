@@ -17,9 +17,22 @@ struct AyahQiraahComparisonSheet: View {
     /// rather than presented as a sheet of its own: no container of its own, no X.
     var embedded: Bool = false
     @State private var searchText = ""
-    /// The Arabic size, shared with the Qiraat Explorer (the same four steps in the same options
-    /// menu), so the two comparison screens read at one size.
+    /// The Arabic size, shared with the Qiraat Explorer (whose options menu offers four steps of the
+    /// same value), so the two comparison screens read at one size. Here it is the slider above the
+    /// search bar (Abu, 2026-10-27: "the text slider back on top of the search bar").
     @AppStorage("qiraatExplorerFontSize") private var fontSize: Double = 24
+    /// The size while the slider's thumb is down (the rows follow it live); nil otherwise. The
+    /// slider writes `fontSize` once, on release.
+    @State private var liveFontSize: Double?
+    /// The horizontal span of the rows' Arabic text in the sheet's coordinate space, measured off
+    /// the rows themselves, and the band's width in the same space: the pinned current riwayah's
+    /// text takes exactly the rows' edges, so it starts and wraps where theirs does (Abu,
+    /// 2026-10-27: "it doesn't start at the exact same as the others, I want it to start at the
+    /// exact same so I can really measure them"). Nil until a row has laid out; the band pads its
+    /// text 16 pt until then.
+    @State private var rowTextSpan: ClosedRange<CGFloat>?
+    @State private var bandWidth: CGFloat?
+    private static let sheetSpace = "qiraah-comparison-sheet"
     @State private var showSummarize = false
     @State private var showUnlock = false
     /// Smart comparison (default ON): rows are aligned through Hafs to the SAME WORDS even where a
@@ -163,17 +176,31 @@ struct AyahQiraahComparisonSheet: View {
         // The app's own bottom search bar, not `.searchable` - the same inset the reciter picker
         // (`SettingsQuranView.reciterSearchControlsInset`) and every other search in the app uses.
         .adaptiveSafeArea(edge: .bottom) {
-            // In Compare Two the list is the two cards, so the search bar steps aside with the rows.
-            if !duelMode {
-                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search riwayat"))
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, BottomBarCushion.standard)
-                    .background(Color.white.opacity(0.00001))
+            // The text size slider rides above the search bar. In Compare Two the list is the two
+            // cards, so the search bar steps aside with the rows; the slider stays.
+            VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+                textSizeBar
+                if !duelMode {
+                    SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search riwayat"))
+                }
             }
+            .padding(.horizontal, 24)
+            .padding(.bottom, BottomBarCushion.standard)
+            .background(Color.white.opacity(0.00001))
         }
         // A safe-area inset rather than a VStack above the List: with a VStack, the half-height
         // (.medium) sheet detent laid the band out as a blank gap until the sheet was dragged up.
         .safeAreaInset(edge: .top, spacing: 0) { band }
+        // The rows report where their Arabic sits and the band its width, both in this space, so
+        // the pinned text can take the rows' exact edges (`rowTextSpan`).
+        .coordinateSpace(name: Self.sheetSpace)
+        .onPreferenceChange(RowTextSpanKey.self) { span in
+            if let span, span != rowTextSpan { rowTextSpan = span }
+        }
+        .onPreferenceChange(BandWidthKey.self) { width in
+            if let width, width != bandWidth { bandWidth = width }
+        }
+        .onChange(of: fontSize) { _ in liveFontSize = nil }
         .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))
         .navigationBarTitleDisplayMode(.inline)
         .sheetDismissToolbarIf(!embedded)
@@ -239,16 +266,9 @@ struct AyahQiraahComparisonSheet: View {
     }
 
     /// The Explorer's options menu with this sheet's own switches: what used to be four
-    /// single-switch sections above the rows, and the text size that used to be a slider in the band.
+    /// single-switch sections above the rows. The text size is the slider above the search bar.
     private var optionsMenu: some View {
         Menu {
-            Picker("Text Size", selection: $fontSize) {
-                Text("Small").tag(20.0)
-                Text("Medium").tag(24.0)
-                Text("Large").tag(28.0)
-                Text("Extra Large").tag(34.0)
-            }
-            Divider()
             // `.automatic`, not the app's padded switch: inside a menu that style draws double-height
             // rows with stray checkmarks (see the memory note on menu toggles).
             Toggle(isOn: $smartComparison) {
@@ -301,19 +321,51 @@ struct AyahQiraahComparisonSheet: View {
             }
             .pickerStyle(.segmented)
             .accessibilityLabel("Comparison mode")
+            .padding(.horizontal)
 
             if duelMode {
                 sidesRow
+                    .padding(.horizontal)
             } else if let currentOption {
                 currentRiwayah(currentOption)
+                    .padding(.leading, bandTextInsets.leading)
+                    .padding(.trailing, bandTextInsets.trailing)
             }
         }
-        .padding(.horizontal)
         .padding(.top, 8)
         .padding(.bottom, 10)
         .background(.ultraThinMaterial)
+        .background(GeometryReader { geometry in
+            Color.clear.preference(key: BandWidthKey.self, value: geometry.size.width)
+        })
         .overlay(Divider(), alignment: .bottom)
     }
+
+    /// The current riwayah's edges: the rows' measured Arabic span while one has laid out, the
+    /// band's ordinary 16 pt until then.
+    private var bandTextInsets: (leading: CGFloat, trailing: CGFloat) {
+        guard let span = rowTextSpan, let width = bandWidth, span.upperBound <= width + 0.5 else {
+            return (16, 16)
+        }
+        return (max(0, span.lowerBound), max(0, width - span.upperBound))
+    }
+
+    /// The Arabic size as a floating bar: the app's FontSizeSlider without its title row, its two
+    /// steps set in the current riwayah's face, reading live into the rows and writing once on
+    /// release.
+    private var textSizeBar: some View {
+        FontSizeSlider(String(localized: "Text Size"), value: $fontSize, in: 15...45, sample: nil,
+                       fontName: settings.quranArabicFontName(for: currentOption?.tag ?? Settings.Riwayah.hafsTag),
+                       glyph: settings.cleanedQuranArabic("ب"),
+                       onLiveChange: { liveFontSize = $0 },
+                       compact: true)
+            .padding(.horizontal, 14)
+            .frame(height: 50)
+            .conditionalGlassEffect()
+    }
+
+    /// What the rows and the pinned text draw at: the thumb's size while it is down.
+    private var shownFontSize: Double { liveFontSize ?? fontSize }
 
     /// The riwayah the reader is displaying, pinned so every row can be compared against it without
     /// scrolling back up.
@@ -349,7 +401,7 @@ struct AyahQiraahComparisonSheet: View {
                     Text(text ?? String(localized: "This ayah is not separate in this riwayah."))
                 }
             }
-                .font(.custom(comparisonArabicFontName(for: option), size: fontSize))
+                .font(.custom(comparisonArabicFontName(for: option), size: shownFontSize))
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .foregroundColor(text == nil ? .secondary : .primary)
                 .multilineTextAlignment(.trailing)
@@ -726,7 +778,7 @@ struct AyahQiraahComparisonSheet: View {
                     Text(text ?? String(localized: "This ayah is not separate in this riwayah."))
                 }
             }
-                .font(.custom(comparisonArabicFontName(for: option), size: fontSize))
+                .font(.custom(comparisonArabicFontName(for: option), size: shownFontSize))
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .foregroundColor(text == nil ? .secondary : .primary)
                 .multilineTextAlignment(.trailing)
@@ -734,6 +786,7 @@ struct AyahQiraahComparisonSheet: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
                 .environment(\.layoutDirection, .leftToRight)
+                .reportingRowTextSpan(in: Self.sheetSpace)
         }
         .padding(.vertical, 4)
         .opacity(text == nil ? 0.55 : 1)
@@ -828,7 +881,7 @@ struct AyahQiraahComparisonSheet: View {
                 term: searchText,
                 font: .custom(
                     comparisonArabicFontName(for: option),
-                    size: fontSize
+                    size: shownFontSize
                 ),
                 accent: settings.accentColor.color,
                 fg: text == nil ? .secondary : .primary,
@@ -840,6 +893,7 @@ struct AyahQiraahComparisonSheet: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
                 .environment(\.layoutDirection, .leftToRight)
+                .reportingRowTextSpan(in: Self.sheetSpace)
 
             // Hearing the difference: the same reciter, both readings, where a pair exists.
             if text != nil, QiraatVariantAudioStore.isBundled {
@@ -849,6 +903,35 @@ struct AyahQiraahComparisonSheet: View {
         .padding(.vertical, 4)
         .opacity(text == nil ? 0.55 : 1)
         .textSelection(.enabled)
+    }
+}
+
+/// The horizontal span of a row's Arabic text in the sheet's named coordinate space, carried up
+/// to the sheet so its pinned current riwayah can take the same edges. The first row to report
+/// wins; every row reports the same span.
+private struct RowTextSpanKey: PreferenceKey {
+    static var defaultValue: ClosedRange<CGFloat>? = nil
+    static func reduce(value: inout ClosedRange<CGFloat>?, nextValue: () -> ClosedRange<CGFloat>?) {
+        value = value ?? nextValue()
+    }
+}
+
+/// The pinned band's width in the same space, so the span converts to leading and trailing insets.
+private struct BandWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat? = nil
+    static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
+        value = value ?? nextValue()
+    }
+}
+
+private extension View {
+    /// Reports this view's horizontal span in `space` through `RowTextSpanKey`.
+    func reportingRowTextSpan(in space: String) -> some View {
+        background(GeometryReader { geometry in
+            let frame = geometry.frame(in: .named(space))
+            Color.clear.preference(key: RowTextSpanKey.self,
+                                   value: frame.width > 0 ? frame.minX...frame.maxX : nil)
+        })
     }
 }
 

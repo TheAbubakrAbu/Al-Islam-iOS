@@ -62,11 +62,7 @@ struct PrayerTimesMapView: View {
                 if !settings.favoriteLocations.isEmpty {
                     favoritesSection
                 }
-                if selectedLocation != nil {
-                    optionsSection
-                }
                 prayerTimesSection
-                optionalTimesSection
                     .id("optionalTimes")
             }
             #if DEBUG
@@ -89,6 +85,11 @@ struct PrayerTimesMapView: View {
                         .font(.body.weight(.semibold))
                 }
                 .tint(settings.accentColor.color)
+            }
+            ToolbarItem(placement: .primaryAction) {
+                if effectiveLocation != nil {
+                    optionsMenu
+                }
             }
         }
         .sheet(isPresented: $showCityPicker) {
@@ -151,20 +152,56 @@ struct PrayerTimesMapView: View {
     }
 
     @ViewBuilder
-    private var optionalTimesSection: some View {
-        if effectiveLocation != nil {
-            Section {
-                optionalTimeToggle(String(localized: "Duhaa"), icon: "sun.haze.fill", isOn: optionalBinding($mapShowDuha, fallback: settings.showDuha))
-                optionalTimeToggle(String(localized: "Islamic Midnight"), icon: "moon.fill", isOn: optionalBinding($mapShowIslamicMidnight, fallback: settings.showIslamicMidnight))
-                optionalTimeToggle(String(localized: "Last Third of the Night"), icon: "moon.stars.fill", isOn: optionalBinding($mapShowLastThird, fallback: settings.showLastThird))
-            } header: {
-                Text("OPTIONAL TIMES")
-            } footer: {
-                Text(isComparing
-                     ? "Computed for both cities from their own sunrise, Maghrib and next Fajr. These switches only affect this screen."
-                     : "Computed from this city\u{2019}s own sunrise, Maghrib and next Fajr. These switches only affect this screen.")
+    /// The screen's options as the toolbar menu (Design Grammar 6): whose clock the times read on,
+    /// the comparison with the reader's own location, and the three optional times, which only
+    /// affect this screen. These used to be an OPTIONS section between the map and the times and an
+    /// OPTIONAL TIMES section under them; what their captions said is the times' footer now.
+    private var optionsMenu: some View {
+        Menu {
+            Picker("Show Times In", selection: $showCityTime) {
+                Label("City Time", systemImage: "building.2").tag(true)
+                Label("My Time", systemImage: "clock").tag(false)
             }
+            Divider()
+            // `.automatic`, not the app's padded switch: inside a menu that style draws double-height
+            // rows with stray checkmarks (see the memory note on menu toggles).
+            Toggle(isOn: $compareAutomaticLocation) {
+                Label("Compare With My Location", systemImage: "arrow.left.arrow.right")
+                Text("Both cities\u{2019} times side by side")
+            }
+            .toggleStyle(.automatic)
+            .disabled(!canCompareAutomaticLocation)
+            Divider()
+            Toggle(isOn: optionalBinding($mapShowDuha, fallback: settings.showDuha)) {
+                Label("Duhaa", systemImage: "sun.haze.fill")
+            }
+            .toggleStyle(.automatic)
+            Toggle(isOn: optionalBinding($mapShowIslamicMidnight, fallback: settings.showIslamicMidnight)) {
+                Label("Islamic Midnight", systemImage: "moon.fill")
+            }
+            .toggleStyle(.automatic)
+            Toggle(isOn: optionalBinding($mapShowLastThird, fallback: settings.showLastThird)) {
+                Label("Last Third of the Night", systemImage: "moon.stars.fill")
+            }
+            .toggleStyle(.automatic)
+        } label: {
+            Image(systemName: "slider.horizontal.3")
         }
+        .fixedMenuOrder()
+        .tint(settings.accentColor.color)
+        .accessibilityLabel("City prayer times options")
+    }
+
+    /// What the former OPTIONS and OPTIONAL TIMES captions said, under the times: whose clock they
+    /// read on, which method the city uses, and where the optional times come from.
+    private var prayerTimesFooter: String {
+        var parts = [timeZoneCaption, methodCaption]
+        if showsAnyOptionalTime {
+            parts.append(isComparing
+                 ? String(localized: "The optional times are computed for both cities from their own sunrise, Maghrib and next Fajr, and only affect this screen.")
+                 : String(localized: "The optional times are computed from this city\u{2019}s own sunrise, Maghrib and next Fajr, and only affect this screen."))
+        }
+        return parts.joined(separator: " ")
     }
 
     /// A `Bool?` store that reads as the user's real toggle until it is set here.
@@ -175,9 +212,6 @@ struct PrayerTimesMapView: View {
         )
     }
 
-    private func optionalTimeToggle(_ title: String, icon: String, isOn: Binding<Bool>) -> some View {
-        SettingsToggle(title, systemImage: icon, isOn: isOn)
-    }
 
     // MARK: - Hero
 
@@ -325,36 +359,6 @@ struct PrayerTimesMapView: View {
 
     // MARK: - Options
 
-    private var optionsSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 6) {
-                Picker("Show Times In", selection: $showCityTime) {
-                    Text("City Time").tag(true)
-                    Text("My Time").tag(false)
-                }
-                .pickerStyle(.segmented)
-                .onChange(of: showCityTime) { _ in settings.hapticFeedback() }
-
-                Text(timeZoneCaption)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical, 2)
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                SettingsToggle(String(localized: "Compare With My Location"), systemImage: "arrow.left.arrow.right", isOn: $compareAutomaticLocation)
-                    .disabled(!canCompareAutomaticLocation)
-
-                Text(methodCaption)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical, 2)
-            }
-        } header: {
-            Text("OPTIONS")
-        }
-    }
-
     private var timeZoneCaption: String {
         let city = selectedLocation.map(shortCity) ?? String(localized: "the city")
         return String(localized: "“City Time” shows each prayer on \(city)’s local clock, the time you’d see if you were there. “My Time” converts those same moments to your current time zone.")
@@ -403,6 +407,8 @@ struct PrayerTimesMapView: View {
                         .foregroundStyle(settings.accentColor.color)
                         .textCase(nil)
                 }
+            } footer: {
+                Text(prayerTimesFooter)
             }
         } else {
             Section {

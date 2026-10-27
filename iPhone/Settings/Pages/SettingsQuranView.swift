@@ -426,7 +426,7 @@ struct SettingsQuranView: View {
             SettingsToggle(String(localized: "Keep Sheet Open"), caption: String(localized: "Opening Tafsir or another action from an ayah keeps its actions underneath; closing the new sheet returns to them. Off, the actions close as the new sheet opens."), isOn: $quranDisplay.keepAyahSheetOpen)
 
             #if os(iOS)
-            SettingsToggle(String(localized: "Keep Sheet Open While Playing"), caption: String(localized: "Play This Ayah, Play From Ayah and Repeat Ayah in an ayah's actions leave the sheet up so you can keep reading. Play Custom Range still closes it."), isOn: $quranDisplay.keepAyahSheetOpenOnPlay)
+            SettingsToggle(String(localized: "Keep Sheet Open While Playing"), caption: String(localized: "Play This Ayah and Repeat Ayah in an ayah's actions leave the sheet up so you can keep reading. Play From Ayah and Play Custom Range still close it."), isOn: $quranDisplay.keepAyahSheetOpenOnPlay)
 
             SettingsToggle(String(localized: "Keep Screen On"), caption: String(localized: "The screen stays awake while an ayah's actions sheet is open."), isOn: $quranDisplay.ayahSheetKeepsScreenOn)
             #endif
@@ -521,6 +521,7 @@ struct SettingsQuranView: View {
             }
 
             Section(header: Text("LETTERS AND MARKS")) {
+                waslSignPicker
                 beginnerModeGroup
                 // Last on purpose (user rule): Hide Tashkeel is the page's most drastic, least
                 // recommended option, so it sits at the bottom of the list rather than leading it.
@@ -837,6 +838,50 @@ struct SettingsQuranView: View {
         }
     }
     #endif
+
+    /// Hamzat al-wasl: the saad of the Madinah prints or the Maghribi dot, on every riwayah; Follow
+    /// the Print keeps each text as its mushaf writes it (Abu, 2026-10-26). The divine name in both
+    /// notations, set in the reader's own Quran face, previews the choice. The codes behind it ship
+    /// precomputed (WaslSigns.swift), so the picker only changes which splice the rows apply.
+    private var waslSignPicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Picker("Hamzat al-Wasl", selection: Binding(
+                get: { settings.waslSignStyle },
+                set: { newValue in
+                    settings.hapticFeedback()
+                    settings.waslSignStyle = newValue
+                }
+            )) {
+                ForEach(Settings.WaslSignStyle.allCases) { style in
+                    Text(style.label).tag(style)
+                }
+            }
+            #if os(iOS)
+            .pickerStyle(SegmentedPickerStyle())
+            #endif
+
+            HStack(spacing: 28) {
+                waslSignPreview("\u{0671}\u{0644}\u{0644}\u{0651}\u{064E}\u{0647}\u{0650}", label: Settings.WaslSignStyle.saad.label)
+                waslSignPreview("\u{0627}\u{0650}\u{06EC}\u{0644}\u{0644}\u{0651}\u{064E}\u{0647}\u{0650}", label: Settings.WaslSignStyle.dot.label)
+            }
+            .frame(maxWidth: .infinity)
+
+            SettingsCaption(settings.waslSignStyle.detail)
+        }
+        .disabled(!settings.showArabicText)
+    }
+
+    /// One word of the preview: the Quran face the reader has chosen, over a small label.
+    private func waslSignPreview(_ word: String, label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(word)
+                .font(.custom(settings.quranArabicFontName(for: settings.displayQiraahForArabic), size: 30))
+                .environment(\.layoutDirection, .rightToLeft)
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+    }
 
     private var beginnerModeGroup: some View {
         SettingsToggle(String(localized: "Enable Arabic Beginner Mode"), caption: String(localized: "Puts a space between each Arabic letter to make it easier for beginners to read the Quran."), isOn: $quranDisplay.beginnerMode)
@@ -1237,7 +1282,7 @@ struct FavoritesView: View {
 extension SettingsSearchEntry {
     static let quranEntries: [SettingsSearchEntry] = [
         .init(title: "Keep Sheet Open", path: "Quran Settings → Reading View", keywords: "ayah actions sheet stay open stack tafsir custom range underneath second", destination: .quranPage(.readingView)),
-        .init(title: "Keep Sheet Open While Playing", path: "Quran Settings → Reading View", keywords: "ayah actions sheet stay open play ayah repeat play from close dismiss read while playing", destination: .quranPage(.readingView)),
+        .init(title: "Keep Sheet Open While Playing", path: "Quran Settings → Reading View", keywords: "ayah actions sheet stay open play this ayah repeat close dismiss read while playing", destination: .quranPage(.readingView)),
         .init(title: "Keep Screen On", path: "Quran Settings → Reading View", keywords: "ayah actions sheet screen awake sleep dim lock idle display", destination: .quranPage(.readingView)),
         .init(title: "Ayah Card Size", path: "Ayah actions sheet", keywords: "preview card arabic bigger smaller plus minus percent remember size", destination: .quranSettings),
         .init(title: "Quran Settings", path: "Al-Quran", keywords: "mushaf reading", destination: .quranSettings),

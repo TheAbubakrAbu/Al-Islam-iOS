@@ -586,32 +586,30 @@ struct PrayerList: View {
 
     @ViewBuilder
     private func gridContent(prayers: [Prayer], isComparisonBaseline: Bool = false, highlightsCurrent: Bool = true) -> some View {
+        // The 4.6.4 table, back since 2026-10-26 (Abu: "grid and tiles a lot of overlap ... bring back
+        // old grid"): wide gaps, nothing drawn behind a cell. The welled cell of 2026-10-03 is the Tiles'
+        // now (`PrayerTile`). The current prayer is the plain accent: there is no tint under it here.
         let columns = Array(
-            repeating: GridItem(.flexible(), spacing: 8),
+            repeating: GridItem(.flexible(), spacing: 12),
             count: prayers.count == 4 ? 2 : 3
         )
-        // The same color rules as the tiles (Abu, 2026-10-01: "make adhan grid and split look better
-        // like from Tilawa"): once per grid, the highlighted prayer, its index and the legible accent.
         let currentName = currentPrayerName
         let currentIndex = prayers.firstIndex { $0.nameTransliteration == live.currentPrayer?.nameTransliteration }
         let accent = settings.accentColor.accent2
-        let textAccent = tileTextAccent(accent)
 
         // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
         // each self-sizing pass, which iOS 26 traps on.
-        SummaryTileGrid(columns: columns.count, spacing: 8) {
+        SummaryTileGrid(columns: columns.count, spacing: 12) {
             ForEach(Array(prayers.enumerated()), id: \.element.stableDisplayID) { index, prayer in
                 let color: Color = isComparisonBaseline
                     ? .secondary
-                    : (highlightsCurrent ? prayerColor(at: index, currentIndex: currentIndex, accent: textAccent) : .primary)
+                    : (highlightsCurrent ? prayerColor(at: index, currentIndex: currentIndex, accent: accent) : .primary)
                 let isCurrent = highlightsCurrent && !isComparisonBaseline
                     && (currentName?.contains(prayer.nameTransliteration) ?? false)
 
-                PrayerGridTile(
+                PrayerGridCell(
                     prayer: prayer,
                     color: color,
-                    isCurrent: isCurrent,
-                    accent: accent,
                     trackerMark: isComparisonBaseline ? nil : trackerMark(for: prayer)
                 )
                 .contentShape(Rectangle())
@@ -627,7 +625,7 @@ struct PrayerList: View {
                 ))
             }
         }
-        .padding(.horizontal, -6)
+        .padding(.horizontal, -20)
         .lineLimit(1)
         .minimumScaleFactor(0.5)
 
@@ -710,16 +708,12 @@ struct PrayerList: View {
         // padding comes down - that's what lets six prayers fit a screen at a readable size.
         let columnCount = 2
         let tileSpacing: CGFloat = 5
-        let tileHorizontalPadding: CGFloat = 7
-        let tileVerticalPadding: CGFloat = 5
         #else
         // Keyed on what is actually RENDERED: the combined Qasr set (4 rows) reads best two-up, but
         // "View Full Prayers" restores the six - which want the normal three columns, not two rows of
         // three stretched tiles with a hole (user rule: full prayers = grid of 3).
         let columnCount = (settings.travelingMode && !fullPrayers) ? 2 : 3
         let tileSpacing: CGFloat = 8
-        let tileHorizontalPadding: CGFloat = 8
-        let tileVerticalPadding: CGFloat = 8
         #endif
         let columns = Array(
             repeating: GridItem(.flexible(), spacing: tileSpacing),
@@ -732,9 +726,9 @@ struct PrayerList: View {
         // The current tile's TEXT; its tint and glow keep the plain accent.
         let textAccent = tileTextAccent(accent)
 
-        // Not wrapped in an iOS 26 `GlassEffectContainer`: tried, and it re-rendered the tiles flatter
-        // and dropped the current tile's glow. The flat pre-26 fill below is the win that matters
-        // (the A11-A13 devices that stutter never run iOS 26).
+        // Plain shapes, no glass (`PrayerCellWell`, the cell the Grid layout wore from 2026-10-03 to
+        // 2026-10-26): a GlassEffectContainer re-rendered the tiles flatter and lost the glow when it
+        // was tried, and the A11-A13 devices that stutter never run iOS 26 anyway.
         // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
         // each self-sizing pass, which iOS 26 traps on.
         SummaryTileGrid(columns: columns.count, spacing: tileSpacing) {
@@ -745,74 +739,8 @@ struct PrayerList: View {
                 let isCurrent = highlightsCurrent && !isComparisonBaseline
                     && (currentName?.contains(prayer.nameTransliteration) ?? false)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    #if os(watchOS)
-                    HStack(spacing: 3) {
-                        // The 40 mm face leaves a half-width tile about 46 pt for the name beside the
-                        // icon, and "Shurooq" / "Maghrib" truncated there; the icon steps aside on that
-                        // face so the name keeps its size (the time line still carries the tint).
-                        if !WatchScreen.isNarrow {
-                            Image(systemName: prayer.image)
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(color)
-                        }
-
-                        // The name owns the line: a fixed-size icon plus layoutPriority keeps a long
-                        // name ("Shurooq") from being the one tile that scales to a sliver while its
-                        // neighbors render full size. 0.8 is a trim, not a shrink.
-                        Text(prayer.compactDisplayName)
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(color)
-                            .minimumScaleFactor(WatchScreen.isNarrow ? 0.7 : 0.8)
-                            .layoutPriority(1)
-                    }
-
-                    Text(prayer.time, style: .time)
-                        .font(.caption.monospacedDigit())
-                        .foregroundColor(color)
-                        .minimumScaleFactor(0.8)
-                    #else
-                    HStack(alignment: .top) {
-                        Image(systemName: prayer.image)
-                            .font(.subheadline)
-                            .foregroundColor(color)
-
-                        Spacer()
-
-                        if !isComparisonBaseline {
-                            prayerBell(for: prayer, rowColor: color)
-                        }
-                    }
-
-                    HStack(spacing: 5) {
-                        Text(prayer.compactDisplayName)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(color)
-
-                        PrayerMarkDot(mark: isComparisonBaseline ? nil : trackerMark(for: prayer))
-                    }
-
-                    Text(prayer.time, style: .time)
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundColor(color)
-                    #endif
-                }
-                .padding(.horizontal, tileHorizontalPadding)
-                .padding(.vertical, tileVerticalPadding)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                // Only the CURRENT prayer's tile is tinted. The rest are clear, so the one that matters reads
-                // at a glance instead of competing with five other filled boxes.
-                .conditionalGlassEffect(
-                    clear: !isCurrent,
-                    rectangle: true,
-                    useColor: isCurrent ? 0.25 : nil,
-                    customTint: isCurrent ? accent : nil,
-                    flat: true
-                )
-                // The soft accent glow lifts the current prayer's tile off the board - the tint said
-                // "different", the glow says "now".
-                .softShadow(color: isCurrent ? accent.opacity(0.35) : .clear,
-                            radius: isCurrent ? 8 : 0, x: 0, y: 2)
+                tileCell(for: prayer, color: color, isCurrent: isCurrent, accent: accent,
+                         isComparisonBaseline: isComparisonBaseline)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     togglePrayerExpansion(for: prayer)
@@ -840,6 +768,65 @@ struct PrayerList: View {
         }
 
         expandedPrayerDetail(for: prayers)
+    }
+
+    /// One tile of the Tiles layout. iOS: `PrayerTile`, the centred welled cell with the bell in its
+    /// corner. The watch keeps its own tighter stack (icon beside the name, caption type, the one tinted
+    /// tile), which is what lets six prayers fit a face at a readable size.
+    @ViewBuilder
+    private func tileCell(for prayer: Prayer, color: Color, isCurrent: Bool, accent: Color,
+                          isComparisonBaseline: Bool) -> some View {
+        #if os(watchOS)
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 3) {
+                // The 40 mm face leaves a half-width tile about 46 pt for the name beside the
+                // icon, and "Shurooq" / "Maghrib" truncated there; the icon steps aside on that
+                // face so the name keeps its size (the time line still carries the tint).
+                if !WatchScreen.isNarrow {
+                    Image(systemName: prayer.image)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(color)
+                }
+
+                // The name owns the line: a fixed-size icon plus layoutPriority keeps a long
+                // name ("Shurooq") from being the one tile that scales to a sliver while its
+                // neighbors render full size. 0.8 is a trim, not a shrink.
+                Text(prayer.compactDisplayName)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(color)
+                    .minimumScaleFactor(WatchScreen.isNarrow ? 0.7 : 0.8)
+                    .layoutPriority(1)
+            }
+
+            Text(prayer.time, style: .time)
+                .font(.caption.monospacedDigit())
+                .foregroundColor(color)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 5)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // Only the CURRENT prayer's tile is tinted. The rest are clear, so the one that matters reads
+        // at a glance instead of competing with five other filled boxes.
+        .conditionalGlassEffect(
+            clear: !isCurrent,
+            rectangle: true,
+            useColor: isCurrent ? 0.25 : nil,
+            customTint: isCurrent ? accent : nil,
+            flat: true
+        )
+        // The soft accent glow lifts the current prayer's tile off the board - the tint said
+        // "different", the glow says "now".
+        .softShadow(color: isCurrent ? accent.opacity(0.35) : .clear,
+                    radius: isCurrent ? 8 : 0, x: 0, y: 2)
+        #else
+        PrayerTile(prayer: prayer, color: color, isCurrent: isCurrent, accent: accent,
+                   trackerMark: isComparisonBaseline ? nil : trackerMark(for: prayer)) {
+            if !isComparisonBaseline {
+                prayerBell(for: prayer, rowColor: color)
+            }
+        }
+        #endif
     }
 
     @ViewBuilder
@@ -1595,15 +1582,19 @@ private extension Prayer {
     }
 }
 
-/// One cell of the Grid layout: icon over name over time, centred, in a rounded well. The current
-/// prayer's well takes the accent (fill, hairline, glow); the rest are a faint neutral well so the
-/// board reads as a grid instead of floating text (the Tilawa grid, 2026-10-01).
-private struct PrayerGridTile: View {
+/// One tile of the Tiles layout, the default board: icon over name over time, centred in a rounded
+/// well. The current prayer's well takes the accent (fill, hairline, glow); the rest are a faint
+/// neutral well so the board reads as one grid instead of floating text. This was the Grid layout's
+/// cell from 2026-10-03 (the Tilawa grid) until 2026-10-26, when Abu asked for the tiles to be
+/// "inspired from grid too" and the Grid to go back to its flat table (`PrayerGridCell`): two welled
+/// boards were one too many. The bell keeps its corner; it is what makes Tiles the full board.
+private struct PrayerTile<Bell: View>: View {
     let prayer: Prayer
     let color: Color
     let isCurrent: Bool
     let accent: Color
     var trackerMark: PrayerMark? = nil
+    @ViewBuilder let bell: () -> Bell
 
     var body: some View {
         VStack(alignment: .center, spacing: 4) {
@@ -1617,6 +1608,7 @@ private struct PrayerGridTile: View {
                     .font(.subheadline.weight(isCurrent ? .heavy : .bold))
                     .foregroundColor(color)
 
+                // The tracker is the phone's; the watch compiles this struct but never draws it.
                 #if os(iOS)
                 PrayerMarkDot(mark: trackerMark)
                 #endif
@@ -1629,7 +1621,46 @@ private struct PrayerGridTile: View {
         .padding(.vertical, 12)
         .padding(.horizontal, 6)
         .frame(maxWidth: .infinity)
+        // The bell in the tile's top-trailing corner, clear of the centred icon: the stack keeps its
+        // centre whether or not a bell is drawn (the comparison baseline draws none).
+        .overlay(alignment: .topTrailing) {
+            bell()
+                .padding(2)
+        }
         .background(PrayerCellWell(isCurrent: isCurrent, accent: accent, cornerRadius: 14))
+    }
+}
+
+/// One cell of the Grid layout: the flat table of 4.6.4, back since 2026-10-26 (Abu: "bring back old
+/// grid"). Icon and bold name on one centred line, the time under it, nothing drawn behind them; the
+/// board's air is the wide gaps. The current prayer is the accent and the past ones dim, the rule every
+/// layout shares, and the tracker dot stays beside the name. No bell and no well: those are the Tiles'.
+private struct PrayerGridCell: View {
+    let prayer: Prayer
+    let color: Color
+    var trackerMark: PrayerMark? = nil
+
+    var body: some View {
+        VStack(alignment: .center, spacing: 2) {
+            HStack(spacing: 4) {
+                Image(systemName: prayer.image)
+                    .font(.subheadline)
+                    .padding([.trailing, .bottom], -2)
+                    .accessibilityHidden(true)
+
+                Text(prayer.compactDisplayName)
+                    .font(.subheadline.weight(.bold))
+
+                #if os(iOS)
+                PrayerMarkDot(mark: trackerMark)
+                #endif
+            }
+
+            Text(prayer.time, style: .time)
+                .font(.subheadline.monospacedDigit())
+        }
+        .foregroundColor(color)
+        .frame(maxWidth: .infinity)
     }
 }
 

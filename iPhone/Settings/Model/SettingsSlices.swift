@@ -250,7 +250,7 @@ final class AdhanSettings: ObservableObject, SettingsSlice {
         "naggingPerDeadlineStart", "naggingSound", "naggingStartOffset", "naggingSunrise",
         "notificationAlertSnoozedUntil", "notificationAsr", "notificationDhuhr", "notificationDuha",
         "notificationFajr", "notificationIsha", "notificationIslamicMidnight", "notificationLastThird",
-        "notificationMaghrib", "notificationNeverAskAgain", "notificationSunrise", "offsetAsr",
+        "notificationMaghrib", "notificationNeverAskAgain", "notificationSunrise", "notificationsEnabled", "offsetAsr",
         "offsetDhuhr", "offsetFajr", "offsetIsha", "offsetMaghrib",
         "offsetSunrise", "prayerCalculation", "prayerNotificationEnglishNames", "preNotificationAsr",
         "preNotificationDhuhr", "preNotificationDuha", "preNotificationFajr", "preNotificationIsha",
@@ -554,6 +554,11 @@ final class AdhanSettings: ObservableObject, SettingsSlice {
         set { Settings.shared.notificationFajr = newValue }
     }
 
+    var notificationsEnabled: Bool {
+        get { Settings.shared.notificationsEnabled }
+        set { Settings.shared.notificationsEnabled = newValue }
+    }
+
     var notificationIsha: Bool {
         get { Settings.shared.notificationIsha }
         set { Settings.shared.notificationIsha = newValue }
@@ -833,7 +838,7 @@ final class QuranDisplay: ObservableObject, SettingsSlice {
         "mushafHafsPDFEdition", "mushafPDFAppearance", "mushafPageLanguage", "mushafTwoPageSpread",
         "qiraatComparisonMode", "quranArabicScriptStyle", "quranPageMode", "quranSortDirection",
         "quranSortMode", "quranTestModeEndsOnLeave", "quranTestModeHides", "quranTestModeOn",
-        "quranTestModeReveals", "quranTestModeRevealsRecited", "reciteType", "reciter",
+        "quranTestModeReveals", "quranTestModeRevealsRecited", "quranWaslSign", "reciteType", "reciter",
         "reciterId", "removeArabicDots", "riwayahTajweedHiddenRules", "saveLastListenedAyah",
         "saveLastListenedSurah", "saveLastReadAyah", "searchForSurahs", "shareShowAyahInformation",
         "shareShowSurahInformation", "showArabicText", "showAyahOfTheDay", "showBookmarks",
@@ -862,6 +867,11 @@ final class QuranDisplay: ObservableObject, SettingsSlice {
     var arabicScriptStyleRaw: String {
         get { Settings.shared.arabicScriptStyleRaw }
         set { Settings.shared.arabicScriptStyleRaw = newValue }
+    }
+
+    var waslSignRaw: String {
+        get { Settings.shared.waslSignRaw }
+        set { Settings.shared.waslSignRaw = newValue }
     }
 
     var automaticKhatmCompletion: Bool {

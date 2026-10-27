@@ -419,6 +419,136 @@ struct ShareAyahSheet: View {
 
     /// The caption under the riwayah picker: names the resolved number when smart matching moved it,
     /// explains the numbering drift otherwise.
+    /// The card's appearance and its information lines, as the toolbar options menu (Design Grammar
+    /// 6, the Qiraah Comparison sheet's layout; Abu, 2026-10-27): the face, tajweed and the two
+    /// cleanup switches for the Arabic, the ayah and surah information, and which riwayah the Arabic
+    /// is taken from. What to INCLUDE (Arabic, transliteration, the translations, the note) stays in
+    /// the list under the preview, since those are flipped while watching it. Before, twelve rows
+    /// scrolled in a 200 pt box between the preview and the buttons.
+    private var optionsMenu: some View {
+        Menu {
+            if shareSettings.arabic {
+                if actionMode == .image {
+                    // The face is a property of the drawn card, not of the text.
+                    Picker("Arabic Font", selection: shareArabicFontBinding) {
+                        Text("Uthmani").tag(Settings.hafsUthmaniFontName)
+                        Text("Indopak").tag(Settings.indopakFontName)
+                        Text("Hijazi").tag(Settings.hijaziFontName)
+                        Text("Kufi").tag(Settings.kufiFontName)
+                        Text("Basic").tag(Settings.systemArabicFontName)
+                    }
+                    .pickerStyle(.menu)
+                }
+                // `.automatic`, not the app's padded switch: inside a menu that style draws
+                // double-height rows with stray checkmarks (see the memory note on menu toggles).
+                if actionMode == .image && isHafsShare {
+                    Toggle(isOn: Binding(
+                        get: { shareSettings.showTajweed },
+                        set: { shareSettings = updatedShareSettings(showTajweed: $0) }
+                    )) {
+                        Label("Show Tajweed", systemImage: "paintpalette")
+                    }
+                    .toggleStyle(.automatic)
+                }
+                Toggle(isOn: $shareSettings.cleanArabic) {
+                    Label("Hide Tashkeel and Signs", systemImage: "textformat")
+                }
+                .toggleStyle(.automatic)
+                if canShowHideArabicDotsToggle {
+                    Toggle(isOn: Binding(
+                        get: { shareSettings.hideArabicDots },
+                        set: { shareSettings = updatedShareSettings(hideArabicDots: $0) }
+                    )) {
+                        Label("Hide Arabic Dots", systemImage: "circle.dotted")
+                    }
+                    .toggleStyle(.automatic)
+                }
+                Divider()
+            }
+            Toggle(isOn: $quranDisplay.showAyahInformation) {
+                Label("Show Ayah Information", systemImage: "number")
+            }
+            .toggleStyle(.automatic)
+            Toggle(isOn: $quranDisplay.showSurahInformation) {
+                Label("Show Surah Information", systemImage: "text.book.closed")
+            }
+            .toggleStyle(.automatic)
+            if settings.showQiraahDetails {
+                Divider()
+                Toggle(isOn: includeQiraahBinding) {
+                    Label("Show Riwayah/Qiraah", systemImage: "character.book.closed.fill.ar")
+                }
+                .toggleStyle(.automatic)
+                // Which riwayah the shared Arabic is taken from.
+                Picker("Riwayah", selection: $shareQiraah) {
+                    ForEach(Settings.Riwayah.textOptions, id: \.tag) { option in
+                        Text(AppLanguage.isArabicScript ? option.displayLabel(omitsDefaultSuffix: true) : option.label)
+                            .tag(option.tag)
+                    }
+                }
+                .pickerStyle(.menu)
+                // The same words across riwayat (anchored through Hafs, like the comparison sheet)
+                // vs. whatever verse sits at the raw tapped number. Only shown once the picker has
+                // moved off the riwayah the ayah was tapped under: on the same riwayah the resolution
+                // is the identity.
+                if shareQiraahDiffersFromOrigin {
+                    Toggle(isOn: $smartAyahMatching) {
+                        Label("Smart Ayah Matching", systemImage: "wand.and.stars")
+                        Text("Follow the same words where the numbering differs")
+                    }
+                    .toggleStyle(.automatic)
+                }
+            }
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+        }
+        .fixedMenuOrder()
+        .tint(settings.accentColor.color)
+        .accessibilityLabel("Share options")
+    }
+
+    /// The face of the shared card; every Hijazi mark style reads as "Hijazi", and picking "Hijazi"
+    /// means the mark style the reader is on (or the default one).
+    private var shareArabicFontBinding: Binding<String> {
+        Binding(
+            get: {
+                Settings.pickerFaceName(for: Settings.normalizedArabicFontName(
+                    shareSettings.shareArabicFont.isEmpty ? settings.fontArabic : shareSettings.shareArabicFont
+                ))
+            },
+            set: { val in
+                let chosen = val == Settings.hijaziFontName ? Settings.currentHijaziFontName : val
+                let normalizedFont = Settings.normalizedArabicFontName(chosen)
+                storedShareArabicFont = normalizedFont
+                shareSettings = ShareSettings(
+                    arabic: shareSettings.arabic,
+                    transliteration: shareSettings.transliteration,
+                    englishSaheeh: shareSettings.englishSaheeh,
+                    englishMustafa: shareSettings.englishMustafa,
+                    includeQiraah: shareSettings.includeQiraah,
+                    shareArabicFont: normalizedFont,
+                    cleanArabic: shareSettings.cleanArabic,
+                    hideArabicDots: shareSettings.hideArabicDots,
+                    showTajweed: shareSettings.showTajweed
+                )
+            }
+        )
+    }
+
+    /// Show Riwayah/Qiraah. On Hafs the flip IS the saved preference. On any other riwayah the flip
+    /// is session-only: the next riwayah change re-resolves it, and the Hafs preference stays untouched.
+    private var includeQiraahBinding: Binding<Bool> {
+        Binding(
+            get: { shareSettings.includeQiraah },
+            set: { newValue in
+                if !Settings.isNonHafsQiraah(shareQiraah) {
+                    shareIncludeRiwayah = newValue
+                }
+                shareSettings = updatedShareSettings(includeQiraah: newValue)
+            }
+        )
+    }
+
     private var riwayahFooterText: String {
         if !ayahExistsInShareQiraah {
             return String(localized: "This ayah is not separate in this riwayah; its words are part of a neighboring ayah, so the Hafs text is shown.")
@@ -521,138 +651,9 @@ struct ShareAyahSheet: View {
                                 .padding(.vertical, 4)
                         }
 
-                        if shareSettings.arabic {
-                            if actionMode == .image {
-                                Picker("Arabic Font", selection: Binding(
-                                    get: {
-                                        // Every Hijazi mark style reads as "Hijazi" in a segmented picker.
-                                        Settings.pickerFaceName(for: Settings.normalizedArabicFontName(
-                                            shareSettings.shareArabicFont.isEmpty ? settings.fontArabic : shareSettings.shareArabicFont
-                                        ))
-                                    },
-                                    set: { val in
-                                        // "Hijazi" means the mark style the reader is on (or the default one).
-                                        let chosen = val == Settings.hijaziFontName ? Settings.currentHijaziFontName : val
-                                        let normalizedFont = Settings.normalizedArabicFontName(chosen)
-                                        storedShareArabicFont = normalizedFont
-                                        shareSettings = ShareSettings(
-                                            arabic: shareSettings.arabic,
-                                            transliteration: shareSettings.transliteration,
-                                            englishSaheeh: shareSettings.englishSaheeh,
-                                            englishMustafa: shareSettings.englishMustafa,
-                                            includeQiraah: shareSettings.includeQiraah,
-                                            shareArabicFont: normalizedFont,
-                                            cleanArabic: shareSettings.cleanArabic,
-                                            hideArabicDots: shareSettings.hideArabicDots,
-                                            showTajweed: shareSettings.showTajweed
-                                        )
-                                    }
-                                ).animation(.easeInOut)) {
-                                    Text("Uthmani").tag(Settings.hafsUthmaniFontName)
-                                    Text("Indopak").tag(Settings.indopakFontName)
-                                    Text("Hijazi").tag(Settings.hijaziFontName)
-                                    Text("Kufi").tag(Settings.kufiFontName)
-                                    Text("Basic").tag(Settings.systemArabicFontName)
-                                }
-                                .pickerStyle(SegmentedPickerStyle())
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 2)
-                            }
-
-                            if actionMode == .image && isHafsShare {
-                                Toggle("Show Tajweed", isOn: Binding(
-                                    get: { shareSettings.showTajweed },
-                                    set: { shareSettings = updatedShareSettings(showTajweed: $0) }
-                                ).animation(.easeInOut))
-                                .tint(settings.accentColor.color)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 4)
-                            }
-
-                            Toggle("Hide Tashkeel and Diacretics", isOn: $shareSettings.cleanArabic.animation(.easeInOut))
-                                .tint(settings.accentColor.color)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 4)
-
-                            if canShowHideArabicDotsToggle {
-                                Toggle("Hide Arabic Dots", isOn: Binding(
-                                    get: { shareSettings.hideArabicDots },
-                                    set: { shareSettings = updatedShareSettings(hideArabicDots: $0) }
-                                ).animation(.easeInOut))
-                                .tint(settings.accentColor.color)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 4)
-                            }
-                        }
-
-                        Toggle("Show Ayah Information", isOn: $quranDisplay.showAyahInformation.animation(.easeInOut))
-                            .tint(settings.accentColor.color)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 4)
-
-                        Toggle("Show Surah Information", isOn: $quranDisplay.showSurahInformation.animation(.easeInOut))
-                            .tint(settings.accentColor.color)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 4)
-
-                        if settings.showQiraahDetails {
-                            Toggle(isOn: Binding(
-                                get: { shareSettings.includeQiraah },
-                                set: { newValue in
-                                    // On Hafs the flip IS the saved preference. On any other riwayah the
-                                    // flip is session-only - the next riwayah change re-resolves it, and
-                                    // the Hafs preference stays untouched.
-                                    if !Settings.isNonHafsQiraah(shareQiraah) {
-                                        shareIncludeRiwayah = newValue
-                                    }
-                                    shareSettings = updatedShareSettings(includeQiraah: newValue)
-                                }
-                            )
-                                .animation(.easeInOut)) {
-                                Label("Show Riwayah/Qiraah", systemImage: "character.book.closed.fill.ar")
-                            }
-                            .tint(settings.accentColor.color)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 4)
-
-                            // Last in the list, by request: which riwayah the shared Arabic is taken from.
-                            //
-                            // `useMenuRow`, NOT the bare glass chip. The chip form wraps its label in
-                            // `conditionalGlassEffect()`, which on iOS 26 is INTERACTIVE Liquid Glass - the
-                            // glass takes the touch to play its own press response, so the chip lit up like
-                            // a button and the menu never opened ("I touch it and it acts like a button not
-                            // a picker"). The row form's label is plain, with the whole row as one
-                            // `contentShape` tap target - the same form the Settings screen and
-                            // `SelectAyahTextSheet` use, where the picker has always opened correctly.
-                            ArabicTextRiwayahPicker(
-                                selection: $shareQiraah.animation(.easeInOut),
-                                useMenuRow: true
-                            )
-                            .padding(.horizontal, 20)
-                            .padding(.top, 6)
-                            .padding(.bottom, 4)
-
-                            // The same words across riwayat (anchored through Hafs, like the comparison
-                            // sheet) vs. whatever verse sits at the raw tapped number. Only shown once the
-                            // picker has moved off the riwayah the ayah was tapped under - on the same
-                            // riwayah the resolution is the identity.
-                            if shareQiraahDiffersFromOrigin {
-                                Toggle(isOn: $smartAyahMatching.animation(.easeInOut)) {
-                                    Label("Smart Ayah Matching", systemImage: "wand.and.stars")
-                                }
-                                .tint(settings.accentColor.color)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 4)
-
-                                Text(riwayahFooterText)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.horizontal, 20)
-                                    .padding(.bottom, 4)
-                            }
-                        }
+                        // Everything that shapes the card rather than choosing what goes on it (the
+                        // face, tajweed, the cleanup switches, the information lines, the riwayah) is
+                        // in the toolbar menu: `optionsMenu`.
                     }
                 }
                 .frame(maxHeight: 200)
@@ -689,6 +690,9 @@ struct ShareAyahSheet: View {
             }
             .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) { optionsMenu }
+            }
             // This sheet had no dismiss control at all - you could only swipe it away or complete a share.
             .sheetDismissToolbar()
             // Full-size before the wash so the background always covers the whole sheet.

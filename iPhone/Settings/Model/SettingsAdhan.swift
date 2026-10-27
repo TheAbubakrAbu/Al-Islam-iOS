@@ -1523,6 +1523,9 @@ extension Settings {
     /// up. Returns whether the announcement was audible, i.e. whether the caller should refresh its stamp.
     @discardableResult
     private func postAutoChangeNotification(id: String, body: String, lastAnnouncedAt: Date?) -> Bool {
+        // Allow Notifications off: the verdict still applies (the mode or method changed), only the banner
+        // is withheld, and the stamp stays so the next one while it is on is audible.
+        guard notificationsEnabled else { return false }
         let now = Date()
         let inCooldown: Bool = {
             guard let last = lastAnnouncedAt, last <= now else { return false }
@@ -2383,6 +2386,31 @@ extension Settings {
     /// finds it allowed again reschedules.
     static var notificationsDeliverable: Bool?
 
+    /// Posted on the main queue after `notificationsEnabled` changes, for the schedulers this file
+    /// cannot name: the Quran reminders and the planner re-arm from it (Al-IslamApp.swift).
+    static let notificationsEnabledDidChangeNotification = Notification.Name("Settings.notificationsEnabledDidChange")
+
+    /// `notificationsEnabled` flipped (Notification Settings, "Allow Notifications"). Off: every pending
+    /// request goes, this scheduler's and the reminders' alike, and so does what is already in Notification
+    /// Center. On: the prayer pass runs again and the reminder kinds re-arm from the choices that were
+    /// kept. While it is off, the gates that keep a later pass from scheduling anything are
+    /// `schedulePrayerTimeNotifications`, `postAutoChangeNotification`, `notificationAuthorizationResult`
+    /// (no prompt, no "Notifications Off" dialog), `SunnahReminderStore.rearm`, `ExtraRemindersStore.rebuild`
+    /// and `QuranPlannerReminder`, which keeps a copy of its request for the switch to bring back.
+    func notificationsEnabledDidChange() {
+        guard Settings.isAppProcess else { return }
+        #if os(iOS) || os(watchOS)
+        if notificationsEnabled {
+            scheduleNotifications(deferred: true)
+        } else {
+            let center = UNUserNotificationCenter.current()
+            center.removeAllPendingNotificationRequests()
+            center.removeAllDeliveredNotifications()
+        }
+        #endif
+        NotificationCenter.default.post(name: Self.notificationsEnabledDidChangeNotification, object: nil)
+    }
+
     /// `askIfUndetermined`: false leaves an unanswered permission alone (reports false) instead of
     /// raising the system prompt. The Adhan tab passes false while the permissions sheet's Not Now
     /// stands (`PermissionsSheet`), so the sheet is the one door to that prompt; Settings' Request
@@ -2418,7 +2446,8 @@ extension Settings {
             return true
 
         case .denied:
-            showNotificationAlert = !notificationNeverAskAgain
+            // Not nagged about the system switch while the app's own switch is off.
+            showNotificationAlert = !notificationNeverAskAgain && notificationsEnabled
             logger.debug("Notification permission denied")
             return false
 
@@ -2429,7 +2458,8 @@ extension Settings {
             // permission undetermined instead of asking. DEBUG builds only.
             if ProcessInfo.processInfo.arguments.contains("-skipNotificationPrompt") { return false }
             #endif
-            guard askIfUndetermined else { return false }
+            // Nor prompted for it: the prompt comes when the app's switch is on and a screen asks again.
+            guard askIfUndetermined, notificationsEnabled else { return false }
             do {
                 let granted = try await center.requestAuthorization(options: [.alert, .sound])
                 showNotificationAlert = !granted && !notificationNeverAskAgain
@@ -2987,6 +3017,15 @@ extension Settings {
         #else
         let plansAnyway = false
         #endif
+        guard notificationsEnabled || plansAnyway else {
+            // Allow Notifications is off (`notificationsEnabledDidChange`): nothing is built, and the queue
+            // is cleared here too, so a pass raised while it is off (a location fix, a settings change, a
+            // launch) can never bring an alert back.
+            logger.debug("Prayer schedule skipped: Allow Notifications is off")
+            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            completion?()
+            return
+        }
         if Self.notificationsDeliverable == nil, !plansAnyway {
             // No authorization check has run yet this launch: a traveling flip at launch schedules
             // before the Adhan tab asks, and built 61 requests that all failed with permission denied

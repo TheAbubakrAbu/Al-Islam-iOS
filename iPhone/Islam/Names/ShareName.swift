@@ -175,19 +175,8 @@ struct NameShareSheet: View {
 
                         toggle("Description", $includeDescription, disabled: includeDescription && enabledPartCount == 1)
 
-                        // Image mode only: the face is a property of the drawn card, not of the text.
-                        if includeArabic, actionMode == .image {
-                            Picker("Arabic Font", selection: shareFaceBinding) {
-                                Text("Uthmani").tag(Settings.IslamArabicFace.uthmani)
-                                Text("IndoPak").tag(Settings.IslamArabicFace.indopak)
-                                Text("Hijazi").tag(Settings.IslamArabicFace.hijazi)
-                                Text("Kufi").tag(Settings.IslamArabicFace.kufi)
-                                Text("Basic").tag(Settings.IslamArabicFace.basic)
-                            }
-                            .pickerStyle(SegmentedPickerStyle())
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 2)
-                        }
+                        // The face shapes the card rather than choosing what goes on it: it is in the
+                        // toolbar menu (`optionsMenu`).
                     }
                 }
                 .frame(maxHeight: 200)
@@ -216,6 +205,14 @@ struct NameShareSheet: View {
                 }
             }
             .navigationTitle(name.transliteration)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    // The face only matters on the drawn card with Arabic on it.
+                    if includeArabic, actionMode == .image {
+                        optionsMenu
+                    }
+                }
+            }
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -308,6 +305,25 @@ struct NameShareSheet: View {
         guard didFinishInitialSetup else { return }
         settings.hapticFeedback()
         generatePreviewImage()
+    }
+
+    /// The card's face, as the toolbar options menu (Design Grammar 6, the ayah share sheet's layout).
+    private var optionsMenu: some View {
+        Menu {
+            Picker("Arabic Font", selection: shareFaceBinding) {
+                Text("Uthmani").tag(Settings.IslamArabicFace.uthmani)
+                Text("IndoPak").tag(Settings.IslamArabicFace.indopak)
+                Text("Hijazi").tag(Settings.IslamArabicFace.hijazi)
+                Text("Kufi").tag(Settings.IslamArabicFace.kufi)
+                Text("Basic").tag(Settings.IslamArabicFace.basic)
+            }
+            .pickerStyle(.menu)
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+        }
+        .fixedMenuOrder()
+        .tint(settings.accentColor.color)
+        .accessibilityLabel("Share options")
     }
 
     @ViewBuilder

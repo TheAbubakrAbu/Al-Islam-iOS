@@ -207,6 +207,9 @@ enum QiraatProfiles {
     /// The one-line form, for a footer under a list that already names the two.
     static let sharedTextShortNote = String(localized: "Nothing is transmitted differently between these two narrators via al-Durrah, so they carry one text. Open either for the detail.")
 
+    /// Under every WHAT STANDS OUT list: the page can show the letters, not the sound.
+    static let pageShowsOnlyPart = String(localized: "A printed mushaf shows only part of this. The rest is passed on by ear, which is why a reading is learned with a teacher.")
+
     // MARK: - The ten imams, in the guide's own alphabetical order
 
     static let masters: [QiraahMasterProfile] = [
@@ -222,8 +225,12 @@ enum QiraatProfiles {
                 String(localized: "He was known for his piety as much as his recitation, and the reports about him dwell on how carefully he held to what he had been taught rather than on any innovation of his own."),
             ],
             hallmarks: [
-                String(localized: "Among the oldest of the ten readings by generation."),
-                String(localized: "Distinctive treatment of the hamzah and of the letters at the openings of surahs."),
+                String(localized: "Every resting hamzah becomes a long vowel: يُؤۡمِنُونَ is read يُومِنُونَ and بِئۡسَ as بِيسَ. The mushaf writes it so, which is why it carries about 1,500 fewer hamzah signs than Hafs's."),
+                String(localized: "The plural mim is joined with a waw before a vowel, قُلُوبِهِمُۥ, رَزَقۡنَٰهُمُۥ, as Ibn Kathir reads it."),
+                String(localized: "Two hamzahs in one word: the second is softened and an alef slipped between them, ءَٰا۬نذَرۡتَهُمُۥ. The name إِسۡرَآيلَ loses its hamzah altogether."),
+                String(localized: "The resting nun is hidden before خ and غ, مِن غَيۡرِ, where every other reading sounds it clearly."),
+                String(localized: "The letters that open a surah are read with a breath-less pause after each one, and the separated madd is kept short, two counts."),
+                String(localized: "No imalah: the reading stays level (fath) throughout."),
             ],
             companions: String(localized: "Transmitted from Zayd ibn Thabit, Ubayy ibn Ka'b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them)."),
             narratorTags: [Settings.Riwayah.ibnWardan, Settings.Riwayah.ibnJammaz]
@@ -240,8 +247,12 @@ enum QiraatProfiles {
                 String(localized: "Both of his canonical narrators read on al-Yazidi rather than on Abu Amr himself, so the riwayat of ad-Duri and as-Susi meet one generation below the imam."),
             ],
             hallmarks: [
-                String(localized: "Extensive idgham (assimilation), including the large idgham between words."),
-                String(localized: "A generally light, easing treatment of the hamzah."),
+                String(localized: "The large idgham: a word's last letter merges into the same or a near letter at the start of the next word, قَال رَّبُّكَ, رَبِحَت تِّجَٰرَتُهُمۡ, لَذَهَب بِّسَمۡعِهِمۡ. As-Susi's mushaf writes it at about a thousand places; ad-Duri does not read it by the Shatibiyyah route."),
+                String(localized: "Imalah of the alef before a ra with a kasra, ٱلنَّٜاسِ, ٱلنَّٜارِ, ٱلۡكَٰٜفِرِينَ, and of words ending in ى after a ra, أُخۡرٜىٰ, تَرٜىٰ; a half tilt (taqlil) on ٱلدُّنۡيَا and مُوسَىٰ."),
+                String(localized: "The vowel of a few verbs is dropped or slurred before كُمۡ: يَأۡمُرۡكُمۡ, بَارِئۡكُمۡ."),
+                String(localized: "Two hamzahs meeting between words: the first is dropped, هَٰٓؤُلَآ إِن. As-Susi also turns every resting hamzah into a long vowel, يُومِنُونَ, تُومَرُونَ; ad-Duri keeps it."),
+                String(localized: "The separated madd is short or medium: ad-Duri's mushaf prints it stretched, as-Susi's short."),
+                String(localized: "Between two surahs three ways are transmitted: the basmalah, a breath-less pause, or running straight on."),
             ],
             companions: String(localized: "Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas'ud, Abu Musa al-Ash'ari, Abdullah ibn Abbas, Ubayy ibn Ka'b, Zayd ibn Thabit, and Abu Hurayrah (may Allah be pleased with them)."),
             narratorTags: [Settings.Riwayah.duri, Settings.Riwayah.susi]
@@ -258,8 +269,11 @@ enum QiraatProfiles {
                 String(localized: "He is the seventh and last of the imams gathered by Ibn Mujahid into the famous seven."),
             ],
             hallmarks: [
-                String(localized: "Frequent imalah (tilting the fatha towards a kasra)."),
-                String(localized: "Distinctive pausing conventions on the feminine ta."),
+                String(localized: "Imalah wherever a word ends in an alef written as a ya: مُوسٜىٰ, ٱلۡهُدٜىٰ, بَلٜىٰ, وَكَفٜىٰ, and in ٱلدُّنۡيٜا, some 1,600 places in Abu al-Harith's mushaf and 1,950 in ad-Duri's."),
+                String(localized: "At a pause the feminine ta (ة) tilts as well: ٱلۡجَنَّةَ is heard as al-jannih. This is al-Kisai's alone among the ten, and nothing marks it on the page."),
+                String(localized: "The lam of هَلۡ and بَلۡ merges into the letter after it: هَل ثُّوِّبَ, as Hamzah reads."),
+                String(localized: "Every hamzah in full, reading on and at a stop, and four counts on the separated madd, as Hafs."),
+                String(localized: "Basmalah between every two surahs."),
             ],
             companions: String(localized: "Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka'b, Zayd ibn Thabit, Abdullah ibn Mas'ud, Abdullah ibn Abbas, Abu Hurayrah, and Husayn ibn Ali (may Allah be pleased with them)."),
             narratorTags: [Settings.Riwayah.abuHarith, Settings.Riwayah.duriKisai]
@@ -276,8 +290,11 @@ enum QiraatProfiles {
                 String(localized: "His two narrators went in different directions: Shu'bah preserved what he took with great caution, while Hafs transmitted the reading that would eventually become the standard printed mushaf across most of the world."),
             ],
             hallmarks: [
-                String(localized: "The basis of the Madinah mushaf and of most printed Qurans today (through Hafs)."),
-                String(localized: "Clear pronunciation of the hamzah, with relatively little assimilation."),
+                String(localized: "Every hamzah pronounced in full, with no softening at a stop. Hafs's one exception is ءَا۬عۡجَمِيّٞ in Fussilat."),
+                String(localized: "Almost no imalah: Hafs has one, مَجۡرٜىٰهَا in Hud; Shu'bah a handful, أَدۡرٜىٰكَ, رٜءَا, and the opening letters حٜمٓ and الٓرٜ."),
+                String(localized: "Four counts on both the joined and the separated madd, the middle measure of the ten."),
+                String(localized: "Shu'bah differs from Hafs in some five hundred places, nearly all a vowel or a dot, so the pair shows cleanly how two riwayat of one imam can differ."),
+                String(localized: "Basmalah between every two surahs, and the text of almost every printed mushaf today, through Hafs."),
             ],
             companions: String(localized: "Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas'ud, Zayd ibn Thabit, and Ubayy ibn Ka'b (may Allah be pleased with them)."),
             narratorTags: [Settings.Riwayah.hafsTag, Settings.Riwayah.shubah]
@@ -292,11 +309,15 @@ enum QiraatProfiles {
                 String(localized: "Hamzah was called az-Zayyat because he traded in oil between Kufa and Hulwan. He became the imam of recitation in Kufa after Asim, and his reading is among the most distinctive of the ten."),
                 String(localized: "He was known for long night prayer and for an exacting devotion to tajwid. His reading asks more of the reciter than most: the elongations are the longest of the ten, and the treatment of the hamzah when pausing is a subject studied on its own."),
                 String(localized: "His student Khalaf later made his own selection from Hamzah's reading and became the tenth imam in his own right, which is why Khalaf appears twice in the guide, once as a narrator and once as a master."),
+                String(localized: "What a listener hears is not always what the page writes. Reading on, Hamzah pronounces every hamzah in full. When he stops on a word, a hamzah in its middle or at its end is eased, following the written form: turned into a long vowel, moved onto the letter before it, or softened. Every recording stops at the end of each ayah, so the last word of every ayah is heard without its hamzah (قَدۡ أَفۡلَحَ ٱلۡمُؤۡمِنُونَ ends in al-muuminoon), while a mushaf prints the continuous form and keeps it. The test is the same word mid-ayah, where the reciter keeps going: in 4:92 Khalaf reads li-mu'minin and mu'minan with the hamzah in full."),
             ],
             hallmarks: [
-                String(localized: "The longest madd (elongation) of the ten readings."),
-                String(localized: "Extensive sakt (brief pause) and a distinctive easing of the hamzah at a stop."),
-                String(localized: "Frequent imalah."),
+                String(localized: "The longest madd of the ten: six counts on both the joined and the separated madd."),
+                String(localized: "Every hamzah in full while reading on, eased at a stop: the last word of each ayah sounds hamzah-less in recordings, قَدۡ أَفۡلَحَ ٱلۡمُؤۡمِنُونَ ending in al-muuminoon, while the mushaf keeps it."),
+                String(localized: "A sakt (brief pause without breath) before the hamzah of أل, of شَيۡء and of a detached word, through Khalaf; Khallad has it both ways on the first two."),
+                String(localized: "Imalah wherever a word ends in an alef written as a ya, مُوسٜىٰ, ٱلۡهُدٜىٰ, ٱلدُّنۡيٜا, and in جٜآءَ and شٜآءَ wherever they occur, about 1,900 places."),
+                String(localized: "The ha of عَلَيۡهُمۡ, إِلَيۡهُمۡ and لَدَيۡهُمۡ read with a damma, and the lam of هَلۡ and بَلۡ merged into the letter after it, هَل ثُّوِّبَ."),
+                String(localized: "No basmalah between two surahs: the end of one surah runs straight into the next."),
             ],
             companions: String(localized: "Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka'b, Zayd ibn Thabit, Abdullah ibn Mas'ud, and Husayn ibn Ali (may Allah be pleased with them)."),
             narratorTags: [Settings.Riwayah.khalaf, Settings.Riwayah.khallad]
@@ -313,8 +334,11 @@ enum QiraatProfiles {
                 String(localized: "Both of his canonical narrators, Hisham and Ibn Dhakwan, came generations later and received the reading through intermediate teachers."),
             ],
             hallmarks: [
-                String(localized: "Distinctive word-forms in several places where the Syrian mushaf's rasm differs."),
-                String(localized: "A characteristic treatment of the two consecutive hamzahs."),
+                String(localized: "Word-forms that follow the Damascus mushaf's own spelling: سَارِعُوٓاْ without the waw, فَلَا يَخَافُ for وَلَا يَخَافُ, and a dozen more."),
+                String(localized: "Every hamzah in full for Ibn Dhakwan. Hisham softens a final hamzah at a stop, and may slip an alef between two hamzahs in one word, ءَٰا۬نتَ."),
+                String(localized: "Imalah in a short list of words: Ibn Dhakwan tilts جٜآءَ and شٜآءَ wherever they occur; Hisham only in a few words and the opening letters الٓرٜ."),
+                String(localized: "Four counts on both madds, as Hafs."),
+                String(localized: "Between two surahs three ways are transmitted: the basmalah, a breath-less pause, or running straight on."),
             ],
             companions: String(localized: "Transmitted from Uthman ibn Affan and Abu ad-Darda (may Allah be pleased with them)."),
             narratorTags: [Settings.Riwayah.hisham, Settings.Riwayah.ibnDhakwan]
@@ -331,8 +355,12 @@ enum QiraatProfiles {
                 String(localized: "Neither al-Bazzi nor Qunbul met him: both received the Makkan reading through intermediate teachers, which is the usual pattern for the earlier imams of the ten."),
             ],
             hallmarks: [
-                String(localized: "Generous madd on the connecting vowels."),
-                String(localized: "A distinctive doubling in certain words, transmitted through al-Bazzi."),
+                String(localized: "The pronoun ha is drawn out even after a resting letter: فِيهِۦ, مِنۡهُۥ, عَنۡهُۥ, read fihee, minhoo. No other reading does this throughout."),
+                String(localized: "The plural mim is joined with a waw before a vowel: رَزَقۡنَٰهُمُۥ, قُلُوبِهِمُۥ."),
+                String(localized: "The separated madd kept short, two counts, and no imalah: the reading stays level (fath) throughout."),
+                String(localized: "Two hamzahs meeting between words: al-Bazzi drops the first, جَا أَحَدٞ; Qunbul softens the second. Qunbul also reads الصراط with a seen, ٱلصِّۜرَٰطَ."),
+                String(localized: "Al-Bazzi doubles the ta of a set of verbs, وَلَا تَّفَرَّقُواْ, and carries the takbir, Allahu akbar, before the basmalah of every surah from ad-Duha to the end."),
+                String(localized: "Basmalah between every two surahs."),
             ],
             companions: String(localized: "Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka'b, Abdullah ibn Abbas, and Abdullah ibn as-Sa'ib (may Allah be pleased with them)."),
             narratorTags: [Settings.Riwayah.buzzi, Settings.Riwayah.qunbul]
@@ -346,11 +374,15 @@ enum QiraatProfiles {
             paragraphs: [
                 String(localized: "Khalaf memorised the Quran as a boy and read on Sulaym, the student of Hamzah, becoming one of Hamzah's two canonical narrators. He then made his own considered selection (ikhtiyar) from the readings he had received, and that selection is the tenth of the ten Qiraat."),
                 String(localized: "This is why his name appears twice in the guide: Khalaf an Hamzah is a riwayah of the sixth reading, while Khalaf al-Ashir (Khalaf the Tenth) is a reading of its own, with its own two narrators, Ishaq and Idris."),
+                String(localized: "The two are taught from different poems. Hamzah's reading, with Khalaf's narration of it, is in ash-Shatibiyyah; Khalaf's own reading is in ad-Durrah al-Mudiyyah, Ibn al-Jazari's poem on the three readings that complete the ten. They part company on the hamzah: as Khalaf al-Ashir he pronounces it in full at a stop as well, and ad-Durrah gives him no sakt. So a mushaf titled Khalaf al-Ashir and one titled Khalaf an Hamzah read differently, although the same man stands behind both."),
                 String(localized: "He was a scholar of Baghdad known for his precision and his asceticism, and his selection was recognised as canonical because it met the same three conditions as the rest: the Uthmanic rasm, sound Arabic, and authentic mass transmission."),
             ],
             hallmarks: [
-                String(localized: "A considered selection (ikhtiyar) drawn mostly from the Kufan readings."),
-                String(localized: "Close to Hamzah in many places, but with its own settled choices."),
+                String(localized: "A considered selection (ikhtiyar) drawn mostly from the Kufan readings: close to Hamzah in many places, but with its own settled choices."),
+                String(localized: "The hamzah in full at a stop and no sakt, unlike his narration of Hamzah, which is why a Khalaf al-Ashir mushaf and a Khalaf an Hamzah mushaf read differently."),
+                String(localized: "Four counts on the separated madd, against Hamzah's six."),
+                String(localized: "Hamzah's imalah kept: مُوسٜىٰ, ٱلدُّنۡيٜا, جٜآءَ, شٜآءَ, about 1,870 places."),
+                String(localized: "The ha of عَلَيۡهِمۡ with a kasra, as Hafs, where Hamzah reads a damma."),
             ],
             companions: String(localized: "Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas'ud, Zayd ibn Thabit, Ubayy ibn Ka'b, and Husayn ibn Ali (may Allah be pleased with them)."),
             narratorTags: [Settings.Riwayah.ishaq, Settings.Riwayah.idris]
@@ -367,8 +399,12 @@ enum QiraatProfiles {
                 String(localized: "Through Warsh his reading became the recitation of North and West Africa, where it remains dominant; through Qalun it is the reading of Libya and parts of Tunisia."),
             ],
             hallmarks: [
-                String(localized: "The most widely recited reading after Hafs, especially across Africa."),
-                String(localized: "Warsh and Qalun differ from each other more than most narrator pairs."),
+                String(localized: "Warsh and Qalun differ more than any other pair of narrators, so Nafi is learned as two readings in practice."),
+                String(localized: "Warsh moves a hamzah's vowel onto the resting letter before it, قَدَ اَفۡلَحَ, وَبِالَاخِرَةِ, and turns a resting hamzah into a long vowel, يُومِنُونَ; Qalun keeps the hamzah, يُؤۡمِنُونَ."),
+                String(localized: "The separated madd: six counts for Warsh, the longest, two for Qalun as his mushaf prints it. Warsh also stretches the alef after a hamzah, ءَامَنُواْ, by three transmitted lengths (madd al-badal)."),
+                String(localized: "A half tilt (taqlil) for Warsh on words ending in ى and on ٱلدُّنۡيَا, مُوس۪ىٰ, ٱلۡهُد۪ىٰ, ٱلنّ۪ارِ, ٱلۡكٰ۪فِرِينَ; Qalun reads them level."),
+                String(localized: "Two hamzahs meeting between words: Qalun drops the first, جَا أَحَدٞ, هَٰؤُلَآ۟ إِن; Warsh softens the second. The plural mim: Qalun may join it with a waw (two ways are transmitted), Warsh only before a hamzah, عَلَيۡهِمُۥٓ ءَآنذَرۡتَهُمُۥٓ."),
+                String(localized: "Warsh thickens the lam after ص, ط and ظ, ٱلصَّلَوٰةَ, and thins the ra after a kasra, sounds a Hafs reader notices at once. Basmalah between every two surahs for Qalun; Warsh has three ways."),
             ],
             companions: String(localized: "Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka'b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them)."),
             narratorTags: [Settings.Riwayah.warsh, Settings.Riwayah.qaloon]
@@ -385,8 +421,11 @@ enum QiraatProfiles {
                 String(localized: "His two narrators, Ruways and Rawh, were both Basrans who read directly on him."),
             ],
             hallmarks: [
-                String(localized: "A distinctive treatment of the connecting pronouns (ha' al-kinayah)."),
-                String(localized: "Several word-forms that make the reading immediately recognisable."),
+                String(localized: "The ha of عَلَيۡهُمۡ, إِلَيۡهُمۡ and لَدَيۡهُمۡ read with a damma, as Hamzah."),
+                String(localized: "At a pause a soft ha is added to هُوَ and هِيَ, هُوَهۡ, هِيَهۡ, so the vowel is heard."),
+                String(localized: "The separated madd kept short, two counts, and every hamzah in full; Ruways softens the second of two that meet between words, ٱلسُّفَهَآءُ اَلَآ."),
+                String(localized: "Imalah only in ٱلۡكَٰٜفِرِينَ, through Ruways; Rawh reads level. Ruways also reads الصراط with a seen, صِۜرَٰطَ."),
+                String(localized: "Basmalah between every two surahs."),
             ],
             companions: String(localized: "Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka'b, Zayd ibn Thabit, Abdullah ibn Mas'ud, Abu Musa al-Ash'ari, Abdullah ibn Abbas, and Abu Hurayrah (may Allah be pleased with them)."),
             narratorTags: [Settings.Riwayah.ruways, Settings.Riwayah.rawh]
@@ -409,7 +448,9 @@ enum QiraatProfiles {
             ],
             hallmarks: [
                 String(localized: "The default reading of this app and of most printed Qurans."),
-                String(localized: "Almost no imalah, and a single well-known instance of the weak-letter pronunciation in Surah Fussilat."),
+                String(localized: "Every hamzah in full and almost no imalah: one tilt, مَجۡرٜىٰهَا in Hud, and one softened hamzah, ءَا۬عۡجَمِيّٞ in Fussilat."),
+                String(localized: "Four breath-less pauses, عِوَجَاۜ, مَرۡقَدِنَاۜ, مَنۡۜ رَاقٖ, بَلۡۜ رَانَ, and the shaded nun of تَأۡمَ۬نَّا in Yusuf."),
+                String(localized: "Four counts on both the joined and the separated madd."),
             ]
         ),
         RiwayahNarratorProfile(
@@ -423,8 +464,9 @@ enum QiraatProfiles {
                 String(localized: "His riwayah differs from Hafs in a few hundred places, most of them small differences of vowel or of assimilation."),
             ],
             hallmarks: [
-                String(localized: "Differs from Hafs in roughly five hundred points across the Quran."),
-                String(localized: "Distinctive readings in the disconnected letters opening some surahs."),
+                String(localized: "Differs from Hafs in roughly five hundred points across the Quran, nearly all a vowel or a dot."),
+                String(localized: "Imalah in a handful of words, أَدۡرٜىٰكَ, رٜءَا, أَعۡمٜىٰ, and in the opening letters حٜمٓ, الٓرٜ, كٓهيٜعٓصٓ."),
+                String(localized: "Every hamzah in full and four counts on both madds, as Hafs."),
             ]
         ),
         // Nafi
@@ -439,9 +481,11 @@ enum QiraatProfiles {
                 String(localized: "It is the most different from Hafs of the widely-recited narrations, and the one most likely to surprise a reader who has only ever heard Hafs."),
             ],
             hallmarks: [
-                String(localized: "Extensive taqlil and imalah (tilting the long a towards e)."),
-                String(localized: "Longer madd than Hafs in several categories, and a distinctive treatment of the hamzah."),
-                String(localized: "The narration whose printed mushaf uses the Maghribi script."),
+                String(localized: "A hamzah's vowel moved onto the resting letter before it, قَدَ اَفۡلَحَ, وَبِالَاخِرَةِ, and every resting hamzah turned into a long vowel, يُومِنُونَ, اَ۬لۡمُومِنُونَ: his mushaf has 4,600 fewer hamzah signs than Hafs's."),
+                String(localized: "Six counts on both madds, the longest, and three transmitted lengths on the alef after a hamzah, ءَامَنُواْ (madd al-badal)."),
+                String(localized: "A half tilt (taqlil) on words ending in ى and on ٱلدُّنۡيَا, مُوس۪ىٰ, ٱلۡهُد۪ىٰ, ٱلنّ۪ارِ, ٱلۡكٰ۪فِرِينَ, about 2,500 places."),
+                String(localized: "A thick lam after ص, ط and ظ, ٱلصَّلَوٰةَ, and a thin ra after a kasra."),
+                String(localized: "The narration whose printed mushaf uses the Maghribi script, with the dot for hamzat al-wasl."),
             ]
         ),
         RiwayahNarratorProfile(
@@ -455,8 +499,11 @@ enum QiraatProfiles {
                 String(localized: "His narration is the recitation of Libya and of parts of Tunisia today."),
             ],
             hallmarks: [
-                String(localized: "Shorter madd than Warsh, and a lighter touch overall."),
-                String(localized: "The two narrators of Nafi differ from each other in several hundred places."),
+                String(localized: "Shorter madd than Warsh, two counts on the separated madd as his mushaf prints it, and a lighter touch overall."),
+                String(localized: "Keeps the hamzah where Warsh drops it, يُؤۡمِنُونَ, and drops the first of two hamzahs meeting between words, جَا أَحَدٞ, هَٰؤُلَآ۟ إِن."),
+                String(localized: "Two hamzahs in one word: the second softened with an alef slipped between, ءَٰا۬نذَرۡتَهُمۡ."),
+                String(localized: "The plural mim may be joined with a waw: both ways are transmitted, and the printed text keeps it closed, عَلَيۡهِمۡ."),
+                String(localized: "Level reading (fath) where Warsh tilts, and the basmalah between every two surahs."),
             ]
         ),
         // Ibn Kathir
@@ -470,8 +517,10 @@ enum QiraatProfiles {
                 String(localized: "His narration carries a well-known feature: the doubling of the ta in a set of verbs, which is particular to him among the narrators of Ibn Kathir."),
             ],
             hallmarks: [
-                String(localized: "The doubled ta in a defined set of words."),
-                String(localized: "The takbir between the surahs at the end of the Quran is transmitted through him."),
+                String(localized: "The doubled ta in a defined set of verbs, وَلَا تَّفَرَّقُواْ, when read on from the word before."),
+                String(localized: "Drops the first of two hamzahs meeting between words, جَا أَحَدٞ."),
+                String(localized: "Carries Ibn Kathir's drawn-out pronoun ha, فِيهِۦ, مِنۡهُۥ, and the joined plural mim, رَزَقۡنَٰهُمُۥ."),
+                String(localized: "The takbir between the surahs from ad-Duha to the end of the Quran is transmitted through him."),
             ]
         ),
         RiwayahNarratorProfile(
@@ -484,8 +533,9 @@ enum QiraatProfiles {
                 String(localized: "He lived to a great age and continued teaching almost to the end, which is part of why his narration is so widely attested."),
             ],
             hallmarks: [
-                String(localized: "Differs from al-Bazzi in a modest number of places."),
-                String(localized: "A distinctive reading of the hamzah in several words."),
+                String(localized: "Differs from al-Bazzi in a modest number of places, the best known being الصراط read with a seen, ٱلصِّۜرَٰطَ."),
+                String(localized: "Softens the second of two hamzahs meeting between words where al-Bazzi drops the first."),
+                String(localized: "Carries Ibn Kathir's drawn-out pronoun ha, عَنۡهُۥ, and the joined plural mim, قُلُوبِهِمُۥ."),
             ]
         ),
         // Abu Amr
@@ -501,7 +551,9 @@ enum QiraatProfiles {
             ],
             hallmarks: [
                 String(localized: "Appears twice in the twenty riwayat, once under Abu Amr and once under al-Kisai."),
-                String(localized: "Carries Abu Amr's extensive assimilation between words."),
+                String(localized: "Abu Amr's imalah, ٱلنَّٜاسِ, ٱلنَّٜارِ, ٱلۡكَٰٜفِرِينَ, أُخۡرٜىٰ, with the half tilt on ٱلدُّنۡيَا and مُوسَىٰ, and the slurred vowels of يَأۡمُرۡكُمۡ, بَارِئۡكُمۡ."),
+                String(localized: "Keeps the resting hamzah, يُؤۡمِنُونَ, where as-Susi turns it into a long vowel, and does not read the large idgham by the Shatibiyyah route."),
+                String(localized: "His mushaf prints the separated madd stretched."),
             ]
         ),
         RiwayahNarratorProfile(
@@ -514,8 +566,9 @@ enum QiraatProfiles {
                 String(localized: "His narration takes Abu Amr's assimilation furthest: the large idgham, where a final letter merges into the first letter of the next word, is applied more consistently in as-Susi than anywhere else among the twenty."),
             ],
             hallmarks: [
-                String(localized: "The fullest application of the large idgham (idgham kabir)."),
-                String(localized: "A markedly flowing, connected sound as a result."),
+                String(localized: "The fullest application of the large idgham (idgham kabir): قَال رَّبُّكَ, رَبِحَت تِّجَٰرَتُهُمۡ, حَيۡث شِّيتُمَا, written at about a thousand places in his mushaf."),
+                String(localized: "Every resting hamzah turned into a long vowel, يُومِنُونَ, تُومَرُونَ, on top of Abu Amr's dropped first hamzah, هَٰؤُلَا إِن."),
+                String(localized: "A markedly flowing, connected sound as a result, with the separated madd kept short."),
             ]
         ),
         // Ibn Amir
@@ -529,8 +582,9 @@ enum QiraatProfiles {
                 String(localized: "He and Ibn Dhakwan are the two narrators through whom the reading of Sham survived, at a distance of roughly a century from the imam himself."),
             ],
             hallmarks: [
-                String(localized: "Distinctive handling of the two consecutive hamzahs."),
-                String(localized: "Several readings unique to him within the Syrian tradition."),
+                String(localized: "Softens only the final hamzah of a word at a stop, and may slip an alef between two hamzahs in one word, ءَٰا۬نتَ."),
+                String(localized: "Imalah only in the opening letters الٓرٜ, كٓهيٜعٓصٓ, and a few words such as عٰٜبِدُونَ, where Ibn Dhakwan tilts جَآءَ and شَآءَ throughout."),
+                String(localized: "The Damascus spellings, سَارِعُوٓاْ, فَلَا يَخَافُ, shared with Ibn Dhakwan, and several readings unique to him within the Syrian tradition."),
             ]
         ),
         RiwayahNarratorProfile(
@@ -543,8 +597,9 @@ enum QiraatProfiles {
                 String(localized: "The two narrators of Ibn Amir differ from one another in a number of places, so the Damascene reading is normally studied as the pair rather than as one."),
             ],
             hallmarks: [
-                String(localized: "Differs from Hisham in a modest but well-catalogued set of places."),
-                String(localized: "A characteristic imalah in particular words."),
+                String(localized: "Every hamzah in full, reading on and at a stop."),
+                String(localized: "Imalah of جٜآءَ and شٜآءَ wherever they occur, about 370 places, which Hisham reads level."),
+                String(localized: "The Damascus spellings, سَارِعُوٓاْ, فَلَا يَخَافُ, shared with Hisham, and a modest, well-catalogued set of places where the two part."),
             ]
         ),
         // Hamzah
@@ -556,10 +611,13 @@ enum QiraatProfiles {
             paragraphs: [
                 String(localized: "Khalaf read on Sulaym, Hamzah's student, and is one of Hamzah's two canonical narrators. He is the same Khalaf who later made his own selection and became the tenth of the ten imams, which is why the guide lists him in both places."),
                 String(localized: "Read as a narrator of Hamzah, he transmits Hamzah's reading with its long madd and its distinctive pauses; read as Khalaf al-Ashir, he is following his own considered choices."),
+                String(localized: "The sakt is his: a short pause without breath on the consonant before a hamzah, in three places. The lam of أل (ٱلۡأَرۡضِ), the word شَيۡء, and a detached consonant ending the word before (قَدۡ أَفۡلَحَ, مِنۡ ءَامَنَ). Khallad never pauses on the detached word, and on the other two both ways are transmitted from him. At a stop both narrators ease the hamzah as Hamzah does, which is why a recording of either ends each ayah without it while the mushaf keeps it."),
+                String(localized: "Two mushafs carry his name and read differently. One titled Khalaf an Hamzah is Hamzah's reading as ash-Shatibiyyah transmits it; one titled Khalaf al-Ashir is his own reading as ad-Durrah transmits it, with the hamzah in full at a stop and no sakt. A student should check which one the teacher wants. This app carries both."),
             ],
             hallmarks: [
                 String(localized: "The only person in the twenty who is also one of the ten imams."),
-                String(localized: "Carries Hamzah's long elongation and hamzah treatment."),
+                String(localized: "Carries Hamzah's six-count madd, his imalah, مُوسٜىٰ, جٜآءَ, and the damma of عَلَيۡهُمۡ."),
+                String(localized: "Sakt before the hamzah of أل, of شَيۡء and of a detached word, قَدۡ أَفۡلَحَ, and الصراط with the sad shaded towards a zay (ishmam), a sound the page does not mark."),
             ]
         ),
         RiwayahNarratorProfile(
@@ -569,11 +627,12 @@ enum QiraatProfiles {
             summary: String(localized: "Hamzah's Kufan narrator, through Sulaym."),
             paragraphs: [
                 String(localized: "Khallad also read on Sulaym and transmitted Hamzah's reading in Kufa. He was regarded as exacting in the details of Hamzah's tajwid, which in this reading are unusually demanding."),
-                String(localized: "The differences between Khalaf and Khallad are few, and mostly concern the sakt and the treatment of certain hamzahs."),
+                String(localized: "The differences between Khalaf and Khallad are few, and the best known is the sakt, the short pause without breath before a hamzah. Khalaf pauses on the consonant before it in أل, in شَيۡء and at the end of a detached word (قَدۡ أَفۡلَحَ); Khallad never pauses on the detached word, and on أل and شَيۡء both ways are transmitted from him, with the pause and without. At a stop he eases the hamzah exactly as Khalaf does, so his recordings also end each ayah without it while the mushaf keeps it."),
             ],
             hallmarks: [
                 String(localized: "Very close to Khalaf, differing in a small set of places."),
-                String(localized: "Preserves Hamzah's demanding pausing rules."),
+                String(localized: "No sakt on a detached word; both ways on أل and شَيۡء."),
+                String(localized: "Preserves Hamzah's demanding pausing rules: the hamzah eased at a stop exactly as Khalaf does."),
             ]
         ),
         // al-Kisai
@@ -587,8 +646,9 @@ enum QiraatProfiles {
                 String(localized: "His narration and ad-Duri's are the two through which al-Kisai's reading is preserved."),
             ],
             hallmarks: [
-                String(localized: "Carries al-Kisai's frequent imalah."),
-                String(localized: "Distinctive pausing on the feminine ta."),
+                String(localized: "Carries al-Kisai's imalah in full, مُوسٜىٰ, ٱلۡهُدٜىٰ, ٱلدُّنۡيٜا, some 1,600 places, and the feminine ta tilted at a pause."),
+                String(localized: "The lam of هَلۡ and بَلۡ merged into the letter after it, هَل ثُّوِّبَ."),
+                String(localized: "Every hamzah in full and four counts on the madd, as Hafs."),
             ]
         ),
         RiwayahNarratorProfile(
@@ -603,6 +663,7 @@ enum QiraatProfiles {
             hallmarks: [
                 String(localized: "The second of ad-Duri's two narrations among the twenty."),
                 String(localized: "Read directly on al-Kisai, unlike his narration of Abu Amr."),
+                String(localized: "Al-Kisai's imalah with a few more words than Abu al-Harith tilts, about 1,950 places against 1,600."),
             ]
         ),
         // Abu Ja'far
@@ -616,8 +677,10 @@ enum QiraatProfiles {
                 String(localized: "He died a generation before most of the other narrators of the twenty, which is consistent with Abu Ja'far being among the earliest of the ten imams."),
             ],
             hallmarks: [
-                String(localized: "Preserves the older Madinan practice Abu Ja'far taught."),
-                String(localized: "Distinctive treatment of the disconnected letters."),
+                String(localized: "Every resting hamzah a long vowel, يُومِنُونَ, and the name إِسۡرَآيلَ without its hamzah."),
+                String(localized: "The joined plural mim, قُلُوبِهِمُۥ, and the softened second hamzah with an alef between, ءَٰا۬نذَرۡتَهُمُۥ."),
+                String(localized: "The resting nun hidden before خ and غ, مِن غَيۡرِ, and a breath-less pause after each opening letter of a surah."),
+                String(localized: "Level reading (fath) throughout, with the separated madd kept short."),
             ]
         ),
         RiwayahNarratorProfile(
@@ -630,8 +693,8 @@ enum QiraatProfiles {
                 String(localized: "The differences between the two narrators of Abu Ja'far are relatively few."),
             ],
             hallmarks: [
-                String(localized: "Close to Ibn Wardan throughout."),
-                String(localized: "Carries the Madinan reading of the generation before Nafi."),
+                String(localized: "Close to Ibn Wardan throughout: the two part in 58 ayahs, the smallest gap between any pair of narrators but one."),
+                String(localized: "Carries the Madinan reading of the generation before Nafi, with Abu Ja'far's long vowels for the resting hamzah and the joined plural mim."),
             ]
         ),
         // Ya'qub
@@ -645,8 +708,9 @@ enum QiraatProfiles {
                 String(localized: "Ruways is a nickname; his given name was Muhammad ibn al-Mutawakkil."),
             ],
             hallmarks: [
-                String(localized: "Carries Ya'qub's distinctive handling of the connecting pronoun."),
-                String(localized: "Differs from Rawh in a limited, well-documented set of places."),
+                String(localized: "Carries Ya'qub's damma in عَلَيۡهُمۡ and his soft ha at a pause on هُوَ and هِيَ."),
+                String(localized: "Softens the second of two hamzahs meeting between words, ٱلسُّفَهَآءُ اَلَآ, and reads الصراط with a seen, صِۜرَٰطَ."),
+                String(localized: "Imalah in ٱلۡكَٰٜفِرِينَ only, about ninety places; otherwise level."),
             ]
         ),
         RiwayahNarratorProfile(
@@ -660,7 +724,8 @@ enum QiraatProfiles {
             ],
             hallmarks: [
                 String(localized: "Very close to Ruways, with a small set of differences."),
-                String(localized: "Preserves Ya'qub's characteristic word-forms."),
+                String(localized: "Every hamzah in full and no imalah: the most level of Ya'qub's two riwayat."),
+                String(localized: "Preserves Ya'qub's characteristic word-forms and the damma of عَلَيۡهُمۡ."),
             ]
         ),
         // Khalaf al-Ashir
@@ -674,7 +739,7 @@ enum QiraatProfiles {
                 String(localized: "He is the first of the two narrators of the tenth reading."),
             ],
             hallmarks: [
-                String(localized: "Transmits Khalaf's own ikhtiyar, not Hamzah's reading."),
+                String(localized: "Transmits Khalaf's own ikhtiyar, not Hamzah's reading: the hamzah in full at a stop, no sakt, four counts on the madd."),
                 String(localized: "Baghdadi in chain and in teaching."),
                 String(localized: "Reads identically to Idris: al-Durrah reports no difference between them."),
             ]
@@ -717,10 +782,17 @@ struct QiraahMasterDetailView: View {
                     }
                 }
 
-                Section(header: Text("KNOWN FOR")) {
+                // The reading's own sound, feature by feature, in the shape a student is used to from
+                // the bookshop guides ("What stands out in Hamzah's reading"): a sentence each, with the
+                // word as this app's own text of the riwayah writes it (Abu, 2026-10-26).
+                Section {
                     ForEach(profile.hallmarks, id: \.self) { item in
                         Text("• \(item)").font(.body)
                     }
+                } header: {
+                    Text("WHAT STANDS OUT IN THIS READING")
+                } footer: {
+                    Text(QiraatProfiles.pageShowsOnlyPart)
                 }
 
                 Section(header: Text("RECITED TODAY")) {
@@ -830,10 +902,14 @@ struct RiwayahNarratorDetailView: View {
                     }
                 }
 
-                Section(header: Text("KNOWN FOR")) {
+                Section {
                     ForEach(profile.hallmarks, id: \.self) { item in
                         Text("• \(item)").font(.body)
                     }
+                } header: {
+                    Text("WHAT STANDS OUT IN THIS RIWAYAH")
+                } footer: {
+                    Text(QiraatProfiles.pageShowsOnlyPart)
                 }
 
                 #if os(iOS)

@@ -119,7 +119,9 @@ the one tint strength.
 - A screen with modes shows them as a segmented control: in the toolbar's principal slot when the screen's band
   already says where you are (the Qiraat Explorer), or at the top of the pinned band when the title carries the
   context (the Qiraah Comparison sheet). Options go in the toolbar menu, never in single-switch sections above
-  the content.
+  the content. Applied so far: the Qiraat Explorer, the Qiraah Comparison sheet, Select Text, the three share
+  sheets (ayah, hadith, name: what to INCLUDE stays under the preview, what shapes the card is in the menu) and
+  City Prayer Times (2026-10-27). A choice of CONTENT (which riwayah, which tafsir) stays a row or a control.
 - A resource's opening is a `ResourceHero`; an article's parts use the article kit (`ArticleDesign.swift`).
 - Dialogs are confirmation dialogs, not alerts (except the two that take text).
 

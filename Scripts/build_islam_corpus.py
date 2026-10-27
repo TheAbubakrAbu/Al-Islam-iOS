@@ -70,7 +70,9 @@ SECTION_RE = re.compile(r"(?:Section\(header:\s*(?:ArticleHeader\(|Text\(" + TEX
 # `ArticleClosing(articleMarkdown: "...")`, and the data blocks `.lead(`, `.step(`, `.bullet(`. A plain
 # paragraph is `ArticleParagraph(verbatim: "...")` / `ArticleParagraph(articleMarkdown: "...")` since
 # 2026-10-19 (the drag-selectable form of the `Text` rows the pages were written with).
-TEXT_RE = re.compile(r"(?:(?<![\w.])(?:Text|ArticleParagraph|ArticleLead|ArticleStep|ArticleBullet|ArticleClosing)\(" + TEXT_ARG
+# `ArticleArabic(verbatim: "...")` (2026-10-26) is the Arabic of the adhan, the iqamah, the takbir and the
+# shahadah, set in the Islam tab's face; it carries the same words the `Text` rows it replaced did.
+TEXT_RE = re.compile(r"(?:(?<![\w.])(?:Text|ArticleParagraph|ArticleLead|ArticleStep|ArticleBullet|ArticleClosing|ArticleArabic)\(" + TEXT_ARG
                      + r"|(?<!\w)\.(?:text|markdown|lead|step|bullet)\()(" + STR + r")\)", re.S)
 # The kit's other cards, read into sentences: a callout ("Title. Body"), a term card ("Term (Arabic):
 # meaning"), stat tiles ("value label"), a chain ("name, detail"), a checklist ("Title: item item"),

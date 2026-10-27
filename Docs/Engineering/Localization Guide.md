@@ -143,6 +143,16 @@ DD=<the build's -derivedDataPath>
 `todo`, `validate`, `merge`, `check` and `sibling` take `--lang ur` for Urdu (Arabic is the default). An Urdu
 batch carries each key's Arabic as `arabic`, the reference for its sense and for the Islamic term chosen.
 
+Sync only after a build of the whole scheme, and read its report: a long-lived DerivedData (`build/DerivedData`)
+keeps `.stringsdata` that no longer speak for the code, and on 2026-10-26 a sync there "revived" 462 dead keys.
+`extracted()` now ignores a stringsdata whose source file no longer exists (a file moved by the pbxproj
+reorganisation left its old one behind under the old path) and reads one configuration only, the one built most
+recently (a Release build from September sat beside today's Debug build and carried 35 keys the code had lost);
+it prints which configuration it took. A report with hundreds revived or marked stale is the trap, not the code:
+restore the catalog and look at the DerivedData before translating anything. (A stringsdata's age against its
+source is NOT a usable test: an incremental build leaves an unchanged file's stringsdata older than a source whose
+mtime moved without a content change, and that rule marked 758 live keys stale.)
+
 A translation file is `{english key: translation}`; a key with exactly one integer argument may map to an object
 of plural forms (Arabic `one`, `two`, `few`, `many`, `other`; Urdu `one`, `other`; optional `zero` in both).
 The validator rejects mismatched placeholders, leftover English words, em dashes and changed `${parameter}`

@@ -512,6 +512,8 @@ extension SettingsSearchEntry.Destination {
         #if HAS_ICLOUD_BACKUP
         case .cloudBackup: return .general
         #endif
+        // The feature lists span every page, so they are the root's, like the door to all the tips.
+        case .featureList: return .general
         // A page's own tips belong to that page's search; the door to all of them, to the root's.
         case .tips(let area):
             switch area {
@@ -556,7 +558,7 @@ extension SettingsSearchEntry {
         #if HAS_HADITH
         entries += hadithEntries
         #endif
-        return entries + islamEntries + appearanceEntries + aboutYouEntries + backupEntries + tipsEntries + creditEntries
+        return entries + islamEntries + appearanceEntries + aboutYouEntries + backupEntries + tipsEntries + featureListEntries + creditEntries
     }()
 
     /// iCloud Backup's entries, which only Al-Islam has (`HAS_ICLOUD_BACKUP`): the companion apps never
@@ -673,6 +675,7 @@ enum SettingsSearchDestinationView {
         #endif
         case .tips(let area):
             if let area { TipsView(area: area) } else { TipsHubView() }
+        case .featureList(let list): FeatureListView(list: list)
         case .credits: CreditsView(presentedAsSheet: false)
         case .credit(let id): CreditsView(presentedAsSheet: false, scrollTo: id)
         }

@@ -112,6 +112,50 @@ enum TipArea: String, CaseIterable, Identifiable {
     static let offered: [TipArea] = allCases.filter { area in TipCatalog.all.contains { $0.area == area } }
 }
 
+/// The two settings lists every settings page opens beside its Tips & Tricks (Abu, 2026-10-26: "add for
+/// each settings page unique features where it's just a settings list of all of them and another one
+/// called beginner features"). Each is a plain list of settings rows, never cards: a row is a tip with
+/// a `destination`, and opens that setting's own screen (`FeatureListView`).
+enum FeatureList: String, CaseIterable, Identifiable {
+    /// What only this app has: the Settings tab's ONLY IN AL-ISLAM cards, as rows (`TipCatalog.spotlight`),
+    /// so the two never drift apart.
+    case unique
+    /// What helps a new Muslim or an Arabic learner (`AppTip.beginner`).
+    case beginner
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .unique: return String(localized: "Unique Features")
+        case .beginner: return String(localized: "Beginner Features")
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .unique: return "checkmark.seal.fill"
+        case .beginner: return "leaf.fill"
+        }
+    }
+
+    var tips: [AppTip] {
+        switch self {
+        case .unique: return TipCatalog.spotlight
+        case .beginner: return TipCatalog.beginner
+        }
+    }
+
+    /// The door row's caption on a settings page: how many, and for whom.
+    var caption: String {
+        let count = tips.count
+        switch self {
+        case .unique: return String(localized: "\(count) settings only \(AppIdentifiers.displayName) has")
+        case .beginner: return String(localized: "\(count) settings for new Muslims and Arabic learners")
+        }
+    }
+}
+
 struct AppTip: Identifiable {
     let id: String
     let area: TipArea
@@ -133,6 +177,10 @@ struct AppTip: Identifiable {
     /// tip's full title and detail are written for a list row, and truncate on a 168 pt card).
     var card: (title: String, pitch: String)? = nil
     var spotlight: Bool { card != nil }
+    /// A setting made for a new Muslim or an Arabic learner: one row of the Beginner Features list
+    /// (`FeatureList.beginner`, 2026-10-26). Only a tip with a `destination` belongs there, since that
+    /// list is a settings list and every row opens its setting.
+    var beginner = false
     /// False where the device cannot do it (Apple Intelligence, an OS version), so nobody is told
     /// about a control they do not have.
     var isAvailable: () -> Bool = { true }
@@ -145,7 +193,7 @@ struct AppTip: Identifiable {
     init(id: String, area: TipArea, group: InterfaceText, systemImage: String, title: InterfaceText,
          detail: InterfaceText, place: InterfaceText, destination: SettingsSearchEntry.Destination? = nil,
          advanced: Bool = false, tour: Bool = false, card: (title: InterfaceText, pitch: InterfaceText)? = nil,
-         isAvailable: @escaping () -> Bool = { true }) {
+         beginner: Bool = false, isAvailable: @escaping () -> Bool = { true }) {
         self.id = id
         self.area = area
         self.group = group.display
@@ -157,6 +205,7 @@ struct AppTip: Identifiable {
         self.advanced = advanced
         self.tour = tour
         self.card = card.map { (title: $0.title.display, pitch: $0.pitch.display) }
+        self.beginner = beginner
         self.isAvailable = isAvailable
         english = (group: group.english, title: title.english, detail: detail.english, place: place.english)
     }
@@ -228,6 +277,20 @@ enum TipCatalog {
 
     static func tour(in area: TipArea) -> [AppTip] {
         tips(in: area).filter(\.tour)
+    }
+
+    /// The Beginner Features rows (`FeatureList.beginner`): every tip marked `beginner` that opens a
+    /// setting, in the catalogue's order, so the list reads area by area as the hub does.
+    static var beginner: [AppTip] {
+        all.filter { $0.beginner && $0.destination != nil && $0.isAvailable() }
+    }
+
+    /// A feature list's tips grouped by area, in area order, for its sections.
+    static func areaGroups(_ tips: [AppTip]) -> [(area: TipArea, tips: [AppTip])] {
+        TipArea.allCases.compactMap { area in
+            let hits = tips.filter { $0.area == area }
+            return hits.isEmpty ? nil : (area, hits)
+        }
     }
 
     /// The Settings tab's cards, in the order they are worth meeting: the mode nobody else has first.
@@ -485,7 +548,7 @@ enum TipCatalog {
         AppTip(id: "notif.nagging", area: .notifications, group: InterfaceText("PRAYING ON TIME"), systemImage: "exclamationmark.bubble.fill",
                title: InterfaceText("Nagging Mode"),
                detail: InterfaceText("Asks \u{201C}Did you pray it?\u{201D} as each prayer's time runs out and keeps asking until you answer. You choose when it starts, how often it repeats, which prayers, a check-in after the adhan, the tone, and a pause."),
-               place: InterfaceText("Notifications, Nagging Mode"), destination: .notificationsPage(.naggingMode), tour: true, card: (InterfaceText("Nagging Mode"), InterfaceText("Asks \u{201C}Did you pray?\u{201D} until you answer. Now with its own schedule, tone, and pause."))),
+               place: InterfaceText("Notifications, Nagging Mode"), destination: .notificationsPage(.naggingMode), tour: true, card: (InterfaceText("Nagging Mode"), InterfaceText("Asks \u{201C}Did you pray?\u{201D} until you answer. Now with its own schedule, tone, and pause.")), beginner: true),
         AppTip(id: "notif.lockscreen", area: .notifications, group: InterfaceText("PRAYING ON TIME"), systemImage: "hand.tap.fill",
                title: InterfaceText("Answer from the Lock Screen"),
                detail: InterfaceText("Touch and hold a \u{201C}Did you pray?\u{201D} reminder for \u{201C}Yes, on time\u{201D} and \u{201C}Yes, but late\u{201D}. Either one marks the prayer tracker and cancels the rest of that prayer's reminders, without opening the app."),
@@ -519,7 +582,7 @@ enum TipCatalog {
         AppTip(id: "notif.meanings", area: .notifications, group: InterfaceText("WORDING AND DATES"), systemImage: "textformat",
                title: InterfaceText("Say what the names mean"),
                detail: InterfaceText("Show English Meanings words a notification as \u{201C}Time for Maghrib (sunset)\u{201D}."),
-               place: InterfaceText("Notifications, Prayer Notifications"), destination: .notificationsPage(.prayerReminders)),
+               place: InterfaceText("Notifications, Prayer Notifications"), destination: .notificationsPage(.prayerReminders), beginner: true),
         AppTip(id: "notif.daybefore", area: .notifications, group: InterfaceText("WORDING AND DATES"), systemImage: "calendar.badge.exclamationmark",
                title: InterfaceText("Never surprised by Ramadan"),
                detail: InterfaceText("Remind a Day Before sends a heads-up the evening before each Islamic date, so Ramadan, Eid, and the days of fasting do not arrive unannounced."),
@@ -562,6 +625,17 @@ enum TipCatalog {
                title: InterfaceText("Double tap for a shortcut"),
                detail: InterfaceText("Double tap an ayah's text, anywhere off a word, to play just that ayah. Tap its play button for Choose Reciter, Repeat Ayah, Play From Ayah and Play This Ayah; double tap the button to play from there to the end of the surah, or hold it for a custom range. Double tap its ellipsis to copy; hold to share. The reader's own play button at the bottom opens its menu on a tap: double tap it to play the surah, or hold it for a custom range (Choose Reciter, in a riwayah other than Hafs). Hadith ellipsis buttons use the same copy and share shortcuts. A Copied badge confirms when the copy is ready. With VoiceOver, use the named actions or the menu."),
                place: InterfaceText("Ayah and hadith controls"), isAvailable: { hasMenuShortcuts }),
+        // The two settings the app was first known for, written down so the Beginner Features list can
+        // open them (2026-10-26). Checked against SettingsQuranView (Enable Arabic Beginner Mode on Arabic
+        // Text, Show Transliteration on English Text) and `AyahDisplayOption.beginner`.
+        AppTip(id: "quran.beginnermode", area: .quran, group: InterfaceText("READING"), systemImage: "text.word.spacing",
+               title: InterfaceText("Arabic Beginner Mode"),
+               detail: InterfaceText("Enable Arabic Beginner Mode, on Arabic Text, puts a space between each Arabic letter, so a learner can tell the letters apart while reading the Quran. Apply Settings on an ayah, or on several selected at once, turns Beginner Mode on for just those."),
+               place: InterfaceText("Quran Settings, Arabic Text"), destination: .quranPage(.arabicText), beginner: true),
+        AppTip(id: "quran.transliteration", area: .quran, group: InterfaceText("READING"), systemImage: "character.textbox",
+               title: InterfaceText("Read the Arabic in Latin letters"),
+               detail: InterfaceText("Show Transliteration, on English Text, writes each ayah in Latin letters beneath the Arabic, so it can be read aloud before the script is familiar. Hafs only, with Include English on."),
+               place: InterfaceText("Quran Settings, English Text"), destination: .quranPage(.englishText), beginner: true),
         AppTip(id: "quran.holdtitle", area: .quran, group: InterfaceText("MOVING AROUND"), systemImage: "hand.tap.fill",
                title: InterfaceText("Hold the title to choose a surah"),
                detail: InterfaceText("In the reader, touch and hold the title at the top to go straight to Choose Surah. In page mode, holding the pill at the foot of the page does the same. A plain tap on the title opens its whole menu."),
@@ -598,7 +672,7 @@ enum TipCatalog {
         AppTip(id: "quran.wordtap", area: .quran, group: InterfaceText("AYAHS AND WORDS"), systemImage: "character.magnify",
                title: InterfaceText("Tap a word twice"),
                detail: InterfaceText("Two taps on a word open Word Study: its meaning, its grammar with each part of the word lit in turn (prefix, stem, suffix), its root with every word built on it, the ayah's themes, and its tajweed. Switch to any other word of the ayah from the strip, or tap a word of the same root to study it there. A single tap still marks the ayah. It works offline, on Hafs."),
-               place: InterfaceText("Quran reader"), destination: .quranPage(.arabicText), tour: true, card: (InterfaceText("Word Study"), InterfaceText("Tap a word twice for its meaning, grammar, root, and themes."))),
+               place: InterfaceText("Quran reader"), destination: .quranPage(.arabicText), tour: true, card: (InterfaceText("Word Study"), InterfaceText("Tap a word twice for its meaning, grammar, root, and themes.")), beginner: true),
         AppTip(id: "quran.pins", area: .quran, group: InterfaceText("AYAHS AND WORDS"), systemImage: "slider.horizontal.2.square",
                title: InterfaceText("Settings for one ayah"),
                detail: InterfaceText("Apply Settings, in an ayah's actions, changes how that one ayah is shown: beginner spacing, tajweed, tashkeel, dots, word by word. Reset to App Settings puts it back."),
@@ -613,7 +687,7 @@ enum TipCatalog {
                place: InterfaceText("Quran reader, ayah actions")),
         AppTip(id: "quran.keepopen", area: .quran, group: InterfaceText("AYAHS AND WORDS"), systemImage: "rectangle.stack",
                title: InterfaceText("Keep the actions open"),
-               detail: InterfaceText("With Keep Sheet Open on, tafsir and the other tools open on top of an ayah's actions instead of replacing them, so you come back to where you were. Keep Sheet Open While Playing, in the actions themselves, leaves them up while Play This Ayah, Play From Ayah or Repeat Ayah recites, and Keep Screen On stops the screen from sleeping while they are open."),
+               detail: InterfaceText("With Keep Sheet Open on, tafsir and the other tools open on top of an ayah's actions instead of replacing them, so you come back to where you were. Keep Sheet Open While Playing, in the actions themselves, leaves them up while Play This Ayah or Repeat Ayah recites (Play From Ayah still closes them), and Keep Screen On stops the screen from sleeping while they are open."),
                place: InterfaceText("Quran Settings, Reading View"), destination: .quranPage(.readingView)),
         AppTip(id: "quran.similar", area: .quran, group: InterfaceText("AYAHS AND WORDS"), systemImage: "arrow.triangle.branch",
                title: InterfaceText("Ayahs that resemble each other"),
@@ -806,7 +880,7 @@ enum TipCatalog {
         AppTip(id: "hadith.onelanguage", area: .hadith, group: InterfaceText("READING"), systemImage: "textformat",
                title: InterfaceText("Read in one language"),
                detail: InterfaceText("Hide the Arabic or the English to read only the other. A search still shows the hidden language wherever it matched."),
-               place: InterfaceText("Hadith Settings"), destination: .hadithPage(.arabicText)),
+               place: InterfaceText("Hadith Settings"), destination: .hadithPage(.arabicText), beginner: true),
         AppTip(id: "hadith.allah", area: .hadith, group: InterfaceText("READING"), systemImage: "paintbrush.fill",
                title: InterfaceText("The name of Allah in red"),
                detail: InterfaceText("Highlight Allah colors His name in both the Arabic and the English."),
@@ -915,7 +989,7 @@ enum TipCatalog {
         AppTip(id: "islam.letters", area: .islam, group: InterfaceText("LEARNING"), systemImage: "textformat.size.ar",
                title: InterfaceText("Hear every letter"),
                detail: InterfaceText("On a letter's page, tap a syllable and press play to hear it. The eye button hides the English readings, so the marks can be practiced from the Arabic alone."),
-               place: InterfaceText("Islam tab, Arabic Alphabet"), destination: .islamPage(.alphabet), tour: true),
+               place: InterfaceText("Islam tab, Arabic Alphabet"), destination: .islamPage(.alphabet), tour: true, beginner: true),
         AppTip(id: "islam.letterfamilies", area: .islam, group: InterfaceText("LEARNING"), systemImage: "wind",
                title: InterfaceText("Group the alphabet by tajweed"),
                detail: InterfaceText("The button beside the alphabet's search regroups the letters by where they are made, by a quality such as whistling (safeer) or breath (hams), or by the rule they trigger after a noon sakinah. Every family is named in Arabic and English, and a chip above the letters narrows the alphabet to one family."),
@@ -1053,8 +1127,8 @@ enum TipCatalog {
         ], separator: " ")
     }
 
-    /// The tabs whose ⋯ menu answers a double tap (`TabMoreMenu(doubleTap:)`); the Adhan tab's does not,
-    /// and only the Quran tab's answers a hold (the Quran Planner).
+    /// The tabs whose ⋯ menu answers a hold (`TabMoreMenu(hold:)`); the Adhan tab's does not. A hold and
+    /// not a double tap since 2026-10-26: the double tap made every plain tap wait (see `ShortcutMenu`).
     private static var menuShortcutDetail: InterfaceText {
         #if HAS_QURAN && HAS_HADITH
         let tabs = InterfaceText("the Quran, Hadith, Islam, and Settings tabs")
@@ -1063,12 +1137,7 @@ enum TipCatalog {
         #else
         let tabs = InterfaceText("the Islam and Settings tabs")
         #endif
-        let lead = InterfaceText { "Double tap the ⋯ menu at the top of \(tabs[$0]) to switch between the grid and the list without opening it." }
-        #if HAS_QURAN
-        return InterfaceText { "\(lead[$0]) On the Quran tab, holding it opens the Quran Planner. A single tap still opens the whole menu." }
-        #else
-        return InterfaceText { "\(lead[$0]) A single tap still opens the whole menu." }
-        #endif
+        return InterfaceText { "Touch and hold the ⋯ menu at the top of \(tabs[$0]) to switch between the grid and the list without opening it. A single tap opens the whole menu at once." }
     }
 
     private static let generalLead: [AppTip] = [
@@ -1080,7 +1149,7 @@ enum TipCatalog {
         AppTip(id: "app.simple", area: .app, group: InterfaceText("FINDING THINGS"), systemImage: "rectangle.compress.vertical",
                title: InterfaceText("Too much on screen? Simple Mode"),
                detail: simpleModeDetail,
-               place: InterfaceText("Settings tab, under the settings"), destination: .simpleMode),
+               place: InterfaceText("Settings tab, under the settings"), destination: .simpleMode, beginner: true),
 
         AppTip(id: "app.search", area: .app, group: InterfaceText("FINDING THINGS"), systemImage: "magnifyingglass",
                title: InterfaceText("Search every setting"),
@@ -1095,7 +1164,7 @@ enum TipCatalog {
                detail: InterfaceText("Most rows, cards, tiles, and images answer a touch and hold with a menu: Copy, Share, Favorite, View Fullscreen, or Scroll To."),
                place: InterfaceText("Everywhere"), tour: true),
         AppTip(id: "app.menushortcuts", area: .app, group: InterfaceText("FINDING THINGS"), systemImage: "ellipsis.circle.fill",
-               title: InterfaceText("Double tap the ⋯ menu"),
+               title: InterfaceText("Hold the ⋯ menu"),
                detail: menuShortcutDetail,
                place: InterfaceText("The ⋯ menu at the top of a tab"), isAvailable: { hasMenuShortcuts }),
         AppTip(id: "app.bars", area: .app, group: InterfaceText("FINDING THINGS"), systemImage: "rectangle.compress.vertical",
@@ -1110,7 +1179,7 @@ enum TipCatalog {
         AppTip(id: "app.aboutyou", area: .app, group: InterfaceText("YOU"), systemImage: "person.crop.circle.fill",
                title: InterfaceText("Tell the app who you are"),
                detail: InterfaceText("About You remembers whether you grew up Muslim, embraced Islam, are just getting started, or are learning about Islam, and tailors the Start Here guide on the Islam tab. It never leaves your iPhone. Replay the Welcome Tutorial, on the same page, walks the welcome again."),
-               place: InterfaceText("Settings tab, About You"), destination: .aboutYou),
+               place: InterfaceText("Settings tab, About You"), destination: .aboutYou, beginner: true),
     ]
 
     // iCloud Backup's tips, Al-Islam's alone (`HAS_ICLOUD_BACKUP`; the companion apps never receive the
@@ -1168,14 +1237,16 @@ enum TipCatalog {
         AppTip(id: "app.helpdoors", area: .app, group: InterfaceText("HOW IT LOOKS"), systemImage: "questionmark.circle.fill",
                title: InterfaceText("A question on every tab"),
                detail: helpDoorsDetail,
-               place: helpDoorsPlace, destination: .appearancePage(.lookAndFeel), isAvailable: TipCatalog.outsideSimpleMode),
+               place: helpDoorsPlace, destination: .appearancePage(.lookAndFeel), beginner: true, isAvailable: TipCatalog.outsideSimpleMode),
     ]
 }
 
 // MARK: - The door on each settings page
 
-/// "Tips & Tricks", the first row of a settings page. `resolve` is the page's own search resolver, so
-/// a tip that opens one of that page's screens pushes it directly instead of a second page root.
+/// "Tips & Tricks", the door on every settings page, with Unique Features and Beginner Features under
+/// it since 2026-10-26 (`FeatureList`): the page's own tips, then the two settings lists every page
+/// shares. `resolve` is the page's own search resolver, so a tip or a feature that opens one of that
+/// page's screens pushes it directly instead of a second page root.
 struct TipsSection: View {
     private let settings = Settings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
@@ -1183,16 +1254,82 @@ struct TipsSection: View {
     var resolve: (SettingsSearchEntry.Destination) -> AnyView? = { _ in nil }
 
     var body: some View {
-        Section {
+        Section(header: Text("DISCOVER")) {
             NavigationLink(destination: LazyDestination { TipsView(area: area, resolve: resolve) }) {
                 SettingsRowLabel(title: String(localized: "Tips & Tricks"), systemImage: "lightbulb.fill",
                                  subtitle: String(localized: "\(TipCatalog.tips(in: area).count) things that are easy to miss"),
                                  tint: area.tint, secondaryTint: area.secondaryTint)
             }
             .tint(settings.accentColor.color)
+
+            // The lists span every area, so their chips wear the Settings tab's own colour, as the
+            // root's All Tips & Tricks row does.
+            ForEach(FeatureList.allCases) { list in
+                NavigationLink(destination: LazyDestination { FeatureListView(list: list, resolve: resolve) }) {
+                    SettingsRowLabel(title: list.title, systemImage: list.systemImage, subtitle: list.caption,
+                                     tint: SettingsTint.appearance)
+                }
+                .tint(settings.accentColor.color)
+            }
         }
-        // Simple Mode keeps one door to the tips, the All Tips & Tricks row on the Settings tab.
+        // Simple Mode keeps one door to the tips, the All Tips & Tricks row on the Settings tab, and
+        // drops the two lists the way it drops the root's ONLY IN AL-ISLAM cards: every setting in
+        // them is still on its own page and in the search.
         .hiddenInSimple(.pageTipsRows)
+    }
+}
+
+// MARK: - Unique Features and Beginner Features
+
+/// One of the two feature lists (`FeatureList`): a plain settings list, every row a `SettingsRowLabel`
+/// that opens the setting it names, in sections by the settings page that owns it. `resolve` is the
+/// opening page's own resolver, as `TipsView` takes it.
+struct FeatureListView: View {
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    let list: FeatureList
+    var resolve: (SettingsSearchEntry.Destination) -> AnyView? = { _ in nil }
+
+    var body: some View {
+        let groups = TipCatalog.areaGroups(list.tips)
+        List {
+            Group {
+                ForEach(groups, id: \.area.id) { group in
+                    Section(header: Text(group.area.title.uppercased())) {
+                        ForEach(group.tips) { tip in
+                            row(for: tip)
+                        }
+                    }
+                }
+            }
+            .themedListRowBackground()
+        }
+        .applyConditionalListStyle()
+        .compactListSectionSpacing()
+        .navigationTitle(list.title)
+    }
+
+    /// The card's short title where the tip has one (the tip's own is written for a list row with room
+    /// to wrap), the place it is done as the caption, exactly the root's fallback rows.
+    @ViewBuilder
+    private func row(for tip: AppTip) -> some View {
+        if let destination = tip.destination {
+            NavigationLink(destination: LazyDestination {
+                Group {
+                    if let own = resolve(destination) {
+                        own
+                    } else {
+                        AnyView(SettingsSearchDestinationView.view(for: destination))
+                    }
+                }
+                .revealsAdvancedSettings(tip.advanced)
+            }) {
+                SettingsRowLabel(title: tip.card?.title ?? tip.title, systemImage: tip.systemImage,
+                                 subtitle: tip.place,
+                                 tint: tip.area.tint, secondaryTint: tip.area.secondaryTint)
+            }
+            .tint(settings.accentColor.color)
+        }
     }
 }
 
@@ -1641,6 +1778,12 @@ struct SettingsSpotlightSection: View {
 // MARK: - Settings-search entries (kept in THIS file, next to the screens they describe)
 extension SettingsSearchEntry {
     private static let tipKeywords = "tips tricks hidden features gestures shortcuts tutorial tour how to help discover easy to miss did you know"
+
+    /// The two feature lists, found by what they are for (a new Muslim, what only this app has).
+    static let featureListEntries: [SettingsSearchEntry] = [
+        .init(title: "Unique Features", path: "Settings", keywords: tipKeywords + " only in al-islam exclusive special unusual what makes different spotlight cards", destination: .featureList(.unique)),
+        .init(title: "Beginner Features", path: "Settings", keywords: tipKeywords + " new muslim convert revert beginner learner learning arabic start here simple mode transliteration", destination: .featureList(.beginner)),
+    ]
 
     static let tipsEntries: [SettingsSearchEntry] = [
         .init(title: "Tips & Tricks", path: "Settings", keywords: tipKeywords, destination: .tips(nil)),

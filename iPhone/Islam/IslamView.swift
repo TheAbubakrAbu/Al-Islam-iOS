@@ -762,7 +762,7 @@ struct IslamView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if #available(iOS 16.0, *), query.isEmpty {
-                        TabMoreMenu(doubleTap: MenuShortcut(settings.islamGridMode ? String(localized: "Show as List") : String(localized: "Show as Grid")) {
+                        TabMoreMenu(hold: MenuShortcut(settings.islamGridMode ? String(localized: "Show as List") : String(localized: "Show as Grid")) {
                             settings.hapticFeedback()
                             withAnimation { settings.islamGridMode.toggle() }
                         }) { islamMoreMenuItems }
@@ -1370,7 +1370,7 @@ struct IslamView: View {
         .islamSettingsToolbar()
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                TabMoreMenu(doubleTap: MenuShortcut(settings.islamGridMode ? String(localized: "Show as List") : String(localized: "Show as Grid")) {
+                TabMoreMenu(hold: MenuShortcut(settings.islamGridMode ? String(localized: "Show as List") : String(localized: "Show as Grid")) {
                     settings.hapticFeedback()
                     withAnimation { settings.islamGridMode.toggle() }
                 }) { islamMoreMenuItems }

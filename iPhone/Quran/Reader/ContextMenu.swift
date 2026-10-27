@@ -1643,48 +1643,18 @@ struct SelectAyahTextSheet: View {
         NavigationView {
             List {
                 Group {
+                    // The riwayah whose Arabic is being selected stays a row: it picks the content.
+                    // Everything that shapes the text (the face, the two cleanup switches, Smart Ayah
+                    // Matching) is in the toolbar menu, so the text blocks come first (Design
+                    // Grammar 6, the Qiraah Comparison sheet's layout; Abu, 2026-10-27).
                     if settings.showQiraahDetails {
                         Section {
                             ArabicTextRiwayahPicker(selection: $selectedQiraah, useMenuRow: true)
-
-                            // The same words across riwayat (anchored through Hafs, like the comparison
-                            // sheet) vs. whatever verse sits at the raw tapped number. Only shown once the
-                            // picker has moved off the riwayah the ayah was tapped under - on the same
-                            // riwayah the resolution is the identity (same rule as the share sheet).
-                            if selectedQiraahDiffersFromOrigin {
-                                SettingsToggle(String(localized: "Smart Ayah Matching"), systemImage: "wand.and.stars", isOn: $smartAyahMatching)
-                            }
                         } footer: {
                             if selectedQiraahDiffersFromOrigin {
                                 Text(riwayahFooterText)
                             }
                         }
-                    }
-
-                    Section {
-                        Picker("Arabic Font", selection: $selectedFontName) {
-                            Text("Uthmani").tag(Settings.hafsUthmaniFontName)
-                            Text("Maghribi").tag(Settings.warshUthmaniFontName)
-                            Text("Indopak").tag(Settings.indopakFontName)
-                            // The Hijazi face's three mark styles get an entry each (a menu has the room).
-                            ForEach(Settings.HijaziMarkStyle.allCases) { style in
-                                Text("Hijazi (\(style.label))").tag(style.fontName)
-                            }
-                            Text("Kufi").tag(Settings.kufiFontName)
-                            Text("Basic").tag(Settings.systemArabicFontName)
-                        }
-                        // Six faces no longer fit a segmented control on an iPhone-width sheet (every
-                        // label truncated), so this is a menu row like the riwayah row above it.
-                        .pickerStyle(.menu)
-                        .onChange(of: selectedFontName) { _ in settings.hapticFeedback() }
-
-                        SettingsToggle(String(localized: "Hide Tashkeel (Vowel Diacritics) and Signs"), isOn: $hideTashkeel)
-
-                        // Independent, like the settings page it is seeded from: gating this row
-                        // on the one above made "dots hidden, tashkeel shown" unreachable here too.
-                        SettingsToggle(String(localized: "Hide Arabic Dots"), isOn: $hideDots)
-                    } footer: {
-                        Text("Shapes only the Arabic text below; the reading view keeps its own settings.")
                     }
 
                     if ayahExistsInSelectedQiraah {
@@ -1743,9 +1713,65 @@ struct SelectAyahTextSheet: View {
             .applyConditionalListStyle()
             .navigationTitle(ayahSheetTitle(surahNumber: surah.id, ayahNumber: ayah.id))
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) { optionsMenu }
+            }
             .sheetDismissToolbar()
         }
         .navigationViewStyle(.stack)
+    }
+
+    /// What shapes the Arabic block, as the toolbar options menu: the face (six, so a submenu), the
+    /// two cleanup switches, and Smart Ayah Matching once the riwayah has moved off the reader's.
+    /// Shapes only the text in this sheet; the reading view keeps its own settings.
+    private var optionsMenu: some View {
+        Menu {
+            Picker("Arabic Font", selection: $selectedFontName) {
+                Text("Uthmani").tag(Settings.hafsUthmaniFontName)
+                Text("Maghribi").tag(Settings.warshUthmaniFontName)
+                Text("Indopak").tag(Settings.indopakFontName)
+                // The Hijazi face's three mark styles get an entry each (a menu has the room).
+                ForEach(Settings.HijaziMarkStyle.allCases) { style in
+                    Text("Hijazi (\(style.label))").tag(style.fontName)
+                }
+                Text("Kufi").tag(Settings.kufiFontName)
+                Text("Basic").tag(Settings.systemArabicFontName)
+            }
+            .pickerStyle(.menu)
+            .onChange(of: selectedFontName) { _ in settings.hapticFeedback() }
+            Divider()
+            // `.automatic`, not the app's padded switch: inside a menu that style draws double-height
+            // rows with stray checkmarks (see the memory note on menu toggles).
+            Toggle(isOn: $hideTashkeel) {
+                Label("Hide Tashkeel and Signs", systemImage: "textformat")
+                Text("Select the bare lettering")
+            }
+            .toggleStyle(.automatic)
+            // Independent, like the settings page it is seeded from: gating this row on the one
+            // above made "dots hidden, tashkeel shown" unreachable here too.
+            Toggle(isOn: $hideDots) {
+                Label("Hide Dots", systemImage: "circle.dotted")
+                Text("Down to the Uthmani rasm")
+            }
+            .toggleStyle(.automatic)
+            // The same words across riwayat (anchored through Hafs, like the comparison sheet) vs.
+            // whatever verse sits at the raw tapped number. Only shown once the picker has moved
+            // off the riwayah the ayah was tapped under: on the same riwayah the resolution is the
+            // identity (same rule as the share sheet).
+            if settings.showQiraahDetails, selectedQiraahDiffersFromOrigin {
+                Divider()
+                Toggle(isOn: $smartAyahMatching) {
+                    Label("Smart Ayah Matching", systemImage: "wand.and.stars")
+                    Text("Follow the same words where the numbering differs")
+                }
+                .toggleStyle(.automatic)
+            }
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+        }
+        .fixedMenuOrder()
+        .tint(settings.accentColor.color)
+        .accessibilityLabel("Text options")
     }
 
     @ViewBuilder

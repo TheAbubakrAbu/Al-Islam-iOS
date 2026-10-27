@@ -365,8 +365,9 @@ struct AyahRow: View, Equatable {
         let qiraahKey = qiraah ?? "Hafs"
         // The dots flag must be in the key: it changes the text `textCleanArabic` returns for the
         // same `clean` bit, and nothing purges this cache when the toggle flips. The beta mark for
-        // the same reason (`RiwayahTextCacheMark`).
-        let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)\(choices.hideDots ? 1 : 0)|\(choices.beginner ? 1 : 0)|\(qiraahKey)"
+        // the same reason (`RiwayahTextCacheMark`), and the hamzat al-wasl notation likewise.
+        let wasl = settings.waslSign(for: qiraah)
+        let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)\(choices.hideDots ? 1 : 0)|\(choices.beginner ? 1 : 0)|\(qiraahKey)|\(wasl.rawValue)"
             + RiwayahTextCacheMark.mark(for: qiraah)
         // The key names the ayah by its surah and number alone, so it is only right while `ayah` really
         // is that surah's ayah. A row handed another surah's ayah files those words under this number for
@@ -379,7 +380,7 @@ struct AyahRow: View, Equatable {
         }
 
         let baseText = ayah.displayArabicText(surahId: surah.id, clean: clean, removeDots: choices.hideDots,
-                                              qiraahOverride: comparisonQiraahOverride)
+                                              qiraahOverride: comparisonQiraahOverride, waslSign: wasl)
         let spaced = choices.beginner ? baseText.beginnerSpaced : baseText
         Self.arabicDisplayCache.setObject(spaced as NSString, forKey: key as NSString)
         return spaced
@@ -395,13 +396,14 @@ struct AyahRow: View, Equatable {
         let qiraah = settings.displayQiraahForArabic
         let qiraahKey = qiraah ?? "Hafs"
         let betaMark = RiwayahTextCacheMark.mark(for: qiraah)
+        let wasl = settings.waslSign(for: qiraah)
         let ayahs = limit.map { Array(surah.ayahs.prefix($0)) } ?? surah.ayahs
 
         for ayah in ayahs where ayah.existsInQiraah(qiraah, surahID: surah.id) {
-            let key = ("\(surah.id):\(ayah.id)|\(clean ? 1 : 0)\(dots ? 1 : 0)|\(beginner ? 1 : 0)|\(qiraahKey)" + betaMark) as NSString
+            let key = ("\(surah.id):\(ayah.id)|\(clean ? 1 : 0)\(dots ? 1 : 0)|\(beginner ? 1 : 0)|\(qiraahKey)|\(wasl.rawValue)" + betaMark) as NSString
             if Self.arabicDisplayCache.object(forKey: key) != nil { continue }
 
-            let baseText = ayah.displayArabicText(surahId: surah.id, clean: clean, removeDots: dots, qiraahOverride: qiraah)
+            let baseText = ayah.displayArabicText(surahId: surah.id, clean: clean, removeDots: dots, qiraahOverride: qiraah, waslSign: wasl)
             let displayText = beginner ? baseText.beginnerSpaced : baseText
             Self.arabicDisplayCache.setObject(displayText as NSString, forKey: key)
         }
@@ -603,6 +605,13 @@ struct AyahRow: View, Equatable {
         return Int(args[i + 1])
     }()
     private static var debugOpenComparison = ProcessInfo.processInfo.arguments.contains("-openQiraahComparison")
+    /// "-openAyahSecondary <kind>" (share, selectText, tafsir, translations...: `AyahSecondarySheet`'s raw
+    /// values) opens that sheet of the same row, for screenshot runs of the sheets' chrome.
+    private static var debugOpenSecondary: AyahSecondarySheet? = {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-openAyahSecondary"), i + 1 < args.count else { return nil }
+        return AyahSecondarySheet(rawValue: args[i + 1])
+    }()
     /// The "s:a" the session was launched at (the "-lastRead" arg) - matched directly because the
     /// live last-read tracking overwrites the defaults as rows scroll past.
     private static let debugTargetAyah: (surah: Int, ayah: Int)? = {
@@ -1632,6 +1641,12 @@ struct AyahRow: View, Equatable {
                             Self.debugOpenComparison = false
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                                 requestSheet(.secondary(.qiraah))
+                            }
+                        }
+                        if let kind = Self.debugOpenSecondary {
+                            Self.debugOpenSecondary = nil
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                requestSheet(.secondary(kind))
                             }
                         }
                     }

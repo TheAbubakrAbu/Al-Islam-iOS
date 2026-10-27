@@ -186,7 +186,7 @@ enum SimpleTrim: String, CaseIterable, Identifiable {
         Entry(.cardTodayPills, surface: .islam, title: "The Today pills on the Reminder of the Day and Dua of the Day cards", door: .moreMenu("Today")),
         Entry(.dailyHubShuffles, surface: .destinations, title: "The shuffle circles on the Ayah and Hadith of the Day", door: .dropped()),
         Entry(.spotlightCards, surface: .settings, title: "The ONLY IN AL-ISLAM spotlight cards", door: .elsewhere("the All Tips & Tricks row")),
-        Entry(.pageTipsRows, surface: .settings, title: "The Tips & Tricks row on each settings page", door: .settings("All Tips & Tricks")),
+        Entry(.pageTipsRows, surface: .settings, title: "The Tips & Tricks, Unique Features and Beginner Features rows on each settings page", door: .settings("All Tips & Tricks")),
         Entry(.pageHelpDoors, surface: .settings, title: "NEED A HAND? on the settings pages", door: .dropped("the tab sections it controls are hidden too")),
     ]
 

@@ -2088,29 +2088,12 @@ struct HadithShareSheet: View {
                             toggle("English", $includeEnglish, disabled: includeEnglish && enabledPartCount == 1)
                         }
 
-                        // The ayah sheet's secondary options: the same 0.8-scaled compact rows, and the
-                        // font picker lives INSIDE the option list, image mode only (the face is a
-                        // property of the drawn card, not of the text).
-                        if includeArabic, !text.arabic.isEmpty {
-                            if actionMode == .image {
-                                Picker("Arabic Font", selection: shareFaceBinding) {
-                                    Text("Uthmani").tag(Settings.IslamArabicFace.uthmani)
-                                    Text("IndoPak").tag(Settings.IslamArabicFace.indopak)
-                                    Text("Hijazi").tag(Settings.IslamArabicFace.hijazi)
-                                    Text("Kufi").tag(Settings.IslamArabicFace.kufi)
-                                    Text("Basic").tag(Settings.IslamArabicFace.basic)
-                                }
-                                .pickerStyle(SegmentedPickerStyle())
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 2)
-                            }
-
-                            compactToggle("Hide Tashkeel and Diacretics", $hideTashkeel)
-                        }
-
                         if noteText != nil {
-                            compactToggle("Include Note", $includeNote)
+                            toggle("Include Note", $includeNote, disabled: false)
                         }
+
+                        // The face and the tashkeel switch shape the card rather than choosing what
+                        // goes on it: they are in the toolbar menu (`optionsMenu`).
                     }
                 }
                 .frame(maxHeight: 200)
@@ -2146,6 +2129,14 @@ struct HadithShareSheet: View {
                 }
             }
             .navigationTitle(book.displayReference(hadith.displayNumber))
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    // The options only shape the Arabic: nothing to offer without it.
+                    if includeArabic, !text.arabic.isEmpty {
+                        optionsMenu
+                    }
+                }
+            }
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
             // Full-size before the wash so the background always covers the whole sheet.
@@ -2193,6 +2184,35 @@ struct HadithShareSheet: View {
         guard didFinishInitialSetup else { return }
         settings.hapticFeedback()
         generatePreviewImage()
+    }
+
+    /// What shapes the Arabic on the card, as the toolbar options menu (Design Grammar 6, the ayah
+    /// share sheet's layout): the face in image mode, and the tashkeel switch.
+    private var optionsMenu: some View {
+        Menu {
+            if actionMode == .image {
+                // The face is a property of the drawn card, not of the text.
+                Picker("Arabic Font", selection: shareFaceBinding) {
+                    Text("Uthmani").tag(Settings.IslamArabicFace.uthmani)
+                    Text("IndoPak").tag(Settings.IslamArabicFace.indopak)
+                    Text("Hijazi").tag(Settings.IslamArabicFace.hijazi)
+                    Text("Kufi").tag(Settings.IslamArabicFace.kufi)
+                    Text("Basic").tag(Settings.IslamArabicFace.basic)
+                }
+                .pickerStyle(.menu)
+            }
+            // `.automatic`, not the app's padded switch: inside a menu that style draws double-height
+            // rows with stray checkmarks (see the memory note on menu toggles).
+            Toggle(isOn: $hideTashkeel) {
+                Label("Hide Tashkeel and Signs", systemImage: "textformat")
+            }
+            .toggleStyle(.automatic)
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+        }
+        .fixedMenuOrder()
+        .tint(settings.accentColor.color)
+        .accessibilityLabel("Share options")
     }
 
     @ViewBuilder

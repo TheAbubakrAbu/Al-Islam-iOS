@@ -487,6 +487,13 @@
 		7A9A000000000000000000F1 /* SolarMoonWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9A000000000000000000F0 /* SolarMoonWidgets.swift */; };
 		7A9A000000000000000000F2 /* MoonPhase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F000022F7A000000AAF800 /* MoonPhase.swift */; };
 		7A9C00000000000000000001 /* qiraah.solidpack in Resources */ = {isa = PBXBuildFile; fileRef = 7A9C00000000000000000011 /* qiraah.solidpack */; };
+		7A9D0000000000000000B001 /* WaslSigns.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9D0000000000000000A001 /* WaslSigns.swift */; };
+		7A9D0000000000000000B002 /* WaslSigns.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9D0000000000000000A001 /* WaslSigns.swift */; };
+		7A9D0000000000000000B003 /* WaslSigns.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9D0000000000000000A001 /* WaslSigns.swift */; };
+		7A9D0000000000000000B004 /* WaslSigns.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9D0000000000000000A001 /* WaslSigns.swift */; };
+		7A9D0000000000000000B005 /* WaslSigns.json.xz in Resources */ = {isa = PBXBuildFile; fileRef = 7A9D0000000000000000A002 /* WaslSigns.json.xz */; };
+		7A9D0000000000000000B006 /* WaslSignSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9D0000000000000000A003 /* WaslSignSamples.swift */; };
+		7A9D0000000000000000B007 /* WaslSignTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9D0000000000000000A004 /* WaslSignTests.swift */; };
 		7A9C00000000000000000002 /* tajweed.solidpack in Resources */ = {isa = PBXBuildFile; fileRef = 7A9C00000000000000000012 /* tajweed.solidpack */; };
 		7A9C00000000000000000003 /* lines.solidpack in Resources */ = {isa = PBXBuildFile; fileRef = 7A9C00000000000000000013 /* lines.solidpack */; };
 		7ADD171122F0000000AA0011 /* HadithModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD171022F0000000AA0010 /* HadithModels.swift */; };
@@ -1123,6 +1130,10 @@
 		7A9A000000000000000000E0 /* AppLifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLifecycle.swift; sourceTree = "<group>"; };
 		7A9A000000000000000000F0 /* SolarMoonWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolarMoonWidgets.swift; sourceTree = "<group>"; };
 		7A9C00000000000000000011 /* qiraah.solidpack */ = {isa = PBXFileReference; lastKnownFileType = file; path = qiraah.solidpack; sourceTree = "<group>"; };
+		7A9D0000000000000000A001 /* WaslSigns.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaslSigns.swift; sourceTree = "<group>"; };
+		7A9D0000000000000000A002 /* WaslSigns.json.xz */ = {isa = PBXFileReference; lastKnownFileType = file; path = WaslSigns.json.xz; sourceTree = "<group>"; };
+		7A9D0000000000000000A003 /* WaslSignSamples.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaslSignSamples.swift; sourceTree = "<group>"; };
+		7A9D0000000000000000A004 /* WaslSignTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaslSignTests.swift; sourceTree = "<group>"; };
 		7A9C00000000000000000012 /* tajweed.solidpack */ = {isa = PBXFileReference; lastKnownFileType = file; path = tajweed.solidpack; sourceTree = "<group>"; };
 		7A9C00000000000000000013 /* lines.solidpack */ = {isa = PBXFileReference; lastKnownFileType = file; path = lines.solidpack; sourceTree = "<group>"; };
 		7ADD171022F0000000AA0010 /* HadithModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HadithModels.swift; sourceTree = "<group>"; };
@@ -1578,6 +1589,8 @@
 				E40025D8E42E4EA1A4127E61 /* PrayerNotificationCategoryTests.swift */,
 				7249B76730770CAF007F1D04 /* AlefMaddaEquivalenceTests.swift */,
 				7249B76830770CAF007F1D04 /* ArabicDotsTests.swift */,
+				7A9D0000000000000000A003 /* WaslSignSamples.swift */,
+				7A9D0000000000000000A004 /* WaslSignTests.swift */,
 				D9307DF5C29249BE86021382 /* LetterWordExamplesTests.swift */,
 				7249B76930770CAF007F1D04 /* ArabicSpeechRecursionTests.swift */,
 				7249B76A30770CAF007F1D04 /* AskAITextTests.swift */,
@@ -1990,6 +2003,7 @@
 				7BF0000000000000000000A3 /* SurahSections.json.xz */,
 				7A9A000000000000000000A4 /* surahinfos.qpk */,
 				7A9A000000000000000000A5 /* qiraat.qpk */,
+				7A9D0000000000000000A002 /* WaslSigns.json.xz */,
 				7A9C00000000000000000011 /* qiraah.solidpack */,
 				7A9C00000000000000000012 /* tajweed.solidpack */,
 				7A9C00000000000000000013 /* lines.solidpack */,
@@ -2265,6 +2279,7 @@
 			isa = PBXGroup;
 			children = (
 				720CCE042E394375002DD82E /* QuranData.swift */,
+				7A9D0000000000000000A001 /* WaslSigns.swift */,
 				72F7DB672F030A2D0037B059 /* QuranStructs.swift */,
 				7A9A000000000000000000A1 /* QuranPack.swift */,
 				7A9A000000000000000000A2 /* QuranPackAdapter.swift */,
@@ -2660,6 +2675,7 @@
 				7BF0000000000000000000C2 /* SurahSections.json.xz in Resources */,
 				7A9A000000000000000000D3 /* surahinfos.qpk in Resources */,
 				7A9A000000000000000000D5 /* qiraat.qpk in Resources */,
+				7A9D0000000000000000B005 /* WaslSigns.json.xz in Resources */,
 				7A9C00000000000000000001 /* qiraah.solidpack in Resources */,
 				7A9C00000000000000000002 /* tajweed.solidpack in Resources */,
 				7A9C00000000000000000003 /* lines.solidpack in Resources */,
@@ -2758,6 +2774,7 @@
 				725C5F093013B88400DFEC8B /* CustomPrayerNames.swift in Sources */,
 				728D75B22F79C5A300502B8A /* ArabicLetters.swift in Sources */,
 				720CCE322E3944F9002DD82E /* QuranData.swift in Sources */,
+				7A9D0000000000000000B004 /* WaslSigns.swift in Sources */,
 				C0C3635C522540E7BF8B9535 /* QuranSearchFilterModel.swift in Sources */,
 				7A9A000000000000000000B1 /* QuranPack.swift in Sources */,
 				7A9A000000000000000000C1 /* QuranPackAdapter.swift in Sources */,
@@ -2820,6 +2837,7 @@
 				720CCE262E39439E002DD82E /* Globals.swift in Sources */,
 				73C0000000000000000000C2 /* QuranWidgetSnapshot.swift in Sources */,
 				720CCE312E3944F9002DD82E /* QuranData.swift in Sources */,
+				7A9D0000000000000000B003 /* WaslSigns.swift in Sources */,
 				9B4A23CE73C84618BDAE7A9C /* QuranSearchFilterModel.swift in Sources */,
 				7A9A000000000000000000B2 /* QuranPack.swift in Sources */,
 				7A9A000000000000000000C2 /* QuranPackAdapter.swift in Sources */,
@@ -3053,6 +3071,7 @@
 				7ADD183200000000AA0032 /* SurahStats.swift in Sources */,
 				7ADD183400000000AA0034 /* SummarizeSheet.swift in Sources */,
 				720CCE142E394375002DD82E /* QuranData.swift in Sources */,
+				7A9D0000000000000000B001 /* WaslSigns.swift in Sources */,
 				30E9D7028EAE4F2D8FB9B1F8 /* QuranSearchFilterModel.swift in Sources */,
 				7A9A000000000000000000B3 /* QuranPack.swift in Sources */,
 				7A9A000000000000000000C3 /* QuranPackAdapter.swift in Sources */,
@@ -3266,6 +3285,7 @@
 				7ADD180F00000000AA0018 /* QuranHistoryRows.swift in Sources */,
 				728D75B92F79CA5D00502B8A /* CalendarView.swift in Sources */,
 				720CCE1E2E394375002DD82E /* QuranData.swift in Sources */,
+				7A9D0000000000000000B002 /* WaslSigns.swift in Sources */,
 				EAA58EE11744419FB0BD8872 /* QuranSearchFilterModel.swift in Sources */,
 				7A9A000000000000000000B4 /* QuranPack.swift in Sources */,
 				7A9A000000000000000000C4 /* QuranPackAdapter.swift in Sources */,
@@ -3304,6 +3324,8 @@
 				821C4AE1554B448DB9D6DE5C /* PrayerNotificationCategoryTests.swift in Sources */,
 				7249B78830770CAF007F1D04 /* AlefMaddaEquivalenceTests.swift in Sources */,
 				7249B78930770CAF007F1D04 /* ArabicDotsTests.swift in Sources */,
+				7A9D0000000000000000B006 /* WaslSignSamples.swift in Sources */,
+				7A9D0000000000000000B007 /* WaslSignTests.swift in Sources */,
 				EF46C22F609449C99AA5131F /* LetterWordExamplesTests.swift in Sources */,
 				7249B78A30770CAF007F1D04 /* ArabicSpeechRecursionTests.swift in Sources */,
 				7249B78B30770CAF007F1D04 /* AskAITextTests.swift in Sources */,

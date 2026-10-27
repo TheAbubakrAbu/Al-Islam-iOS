@@ -419,7 +419,9 @@ final class SunnahReminderStore: ObservableObject {
         }
         let stale = ids.filter { $0.hasPrefix(Self.identifierPrefix) }
         center.removePendingNotificationRequests(withIdentifiers: stale)
-        let requests = enabledPresets.map(request(for:))
+        // Allow Notifications off: the stale ones still go, nothing is added; the presets keep their
+        // switches for when it comes back on (`Settings.notificationsEnabledDidChange` re-arms).
+        let requests = Settings.shared.notificationsEnabled ? enabledPresets.map(request(for:)) : []
         for request in requests {
             try? await center.add(request)
         }
@@ -509,6 +511,7 @@ final class SunnahReminderStore: ObservableObject {
 /// two cadences, each with its time, its hadith, and a door to what it is about.
 struct SunnahRemindersView: View {
     @ObservedObject private var store = SunnahReminderStore.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
 
     @State private var permissionDenied = false
     @State private var hadithLink: SunnahReminderPreset.HadithLink?
@@ -534,6 +537,12 @@ struct SunnahRemindersView: View {
 
                 if permissionDenied {
                     Label("Notifications are off for \(AppIdentifiers.displayName) in iPhone Settings, so these reminders cannot arrive.", systemImage: "bell.slash")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if !adhanSettings.notificationsEnabled {
+                    Label("Allow Notifications is off in Notification Settings, so these reminders cannot arrive until it is on.", systemImage: "bell.slash")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

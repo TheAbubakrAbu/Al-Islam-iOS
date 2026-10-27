@@ -231,6 +231,35 @@ struct ArticleParagraph: View {
     #endif
 }
 
+// MARK: - Arabic
+
+/// A passage of Arabic that is neither an ayah nor a narration: the words of the adhan and the iqamah,
+/// the takbir, the shahadah. Set as a narration's Arabic is in a `ScriptureQuote` (the Islam tab's face,
+/// the accent, trailing, the name of Allah painted when that is on), so every Arabic an article shows
+/// reads as one thing (Abu, 2026-10-26: "Arabic text like that maybe should be written the same way as
+/// Quran and Hadith with the different font and size and color and everything"). Not the mushaf face:
+/// these words are not Quran. The corpus builder reads it as prose (`TEXT_RE` in
+/// Scripts/build_islam_corpus.py), as it read the plain `Text` rows these replaced.
+struct ArticleArabic: View {
+    @Environment(\.appearance) private var appearance
+
+    let text: String
+
+    init(verbatim text: String) { self.text = text }
+
+    var body: some View {
+        Text.islamArabic(text.decomposingAlefMadda, highlightAllah: appearance.highlightAllahIslam)
+            .font(appearance.islamArabicFont(base: 24, relativeTo: .title2))
+            .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+            .lineSpacing(6)
+            .foregroundColor(appearance.accent)
+            .multilineTextAlignment(.trailing)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.vertical, 2)
+    }
+}
+
 // MARK: - Lead
 
 /// The page's opening card: its "In short:" sentence set large, under a small IN SHORT label. Replaces

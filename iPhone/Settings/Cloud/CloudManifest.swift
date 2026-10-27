@@ -81,7 +81,7 @@ enum CloudManifest {
         "quran.surahInfo.source", "quran.tafsir.author", "quranArabicScriptStyle", "quranGridMode",
         "quranPageMode", "quranPlannerReminderEnabled", "quranPlannerReminderMinutes",
         "quranSearchFilterPreferences", "quranSearchHelpCollapsed", "quranSearchHelpRemoved", "quranSortDirection", "quranSortMode",
-        "quranTestModeEndsOnLeave", "quranTestModeHides", "quranTestModeReveals", "quranTestModeRevealsRecited",
+        "quranTestModeEndsOnLeave", "quranTestModeHides", "quranTestModeReveals", "quranTestModeRevealsRecited", "quranWaslSign",
         "quranicSukoonInLetterPractice", "readerLegendPage", "reciteType", "reciter", "reciterId",
         "removeArabicDots", "riwayahTajweedHiddenRules", "saveLastListenedAyah", "saveLastListenedSurah",
         "saveLastReadAyah", "searchFilterBarEveryButton", "searchForSurahs", "searchOpensOnAIResults",

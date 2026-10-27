@@ -1913,6 +1913,15 @@ struct GridTileMenu<Label: View, Menu: View>: View {
 
 /// A menu with optional, explicitly named shortcuts. Single tap always opens the original menu.
 /// VoiceOver keeps native menu activation; shortcuts are also exposed as named accessibility actions.
+///
+/// THE COST OF A DOUBLE TAP. With `doubleTap` set, the single tap cannot fire until the double-tap
+/// recognizer has failed, so every plain tap opens the menu one double-tap interval late (about a third
+/// of a second: `GridTileHoldLayer` wires `tap.require(toFail: doubleTap)`, and UIKit's interval is not
+/// tunable). A `hold` alone costs a tap nothing: the hold fails the moment the finger lifts early. So a
+/// control whose first job is to open its menu takes a hold shortcut, not a double tap (the tabs' ⋯ menus
+/// since 2026-10-26, when the wait read as lag beside the Adhan tab's shortcut-free menu); a double tap
+/// belongs on a control whose shortcut is the common action and whose menu is the rarer tap (the ayah
+/// and hadith ▶ and ⋯ buttons), where the wait is the price of that shortcut.
 struct MenuShortcut {
     let title: String
     let action: () -> Void

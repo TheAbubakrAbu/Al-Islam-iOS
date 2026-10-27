@@ -162,6 +162,9 @@ struct SettingsSearchEntry: Identifiable {
         #endif
         /// Tips & Tricks: one area's list, or all six behind one door when nil.
         case tips(TipArea?)
+        /// Unique Features or Beginner Features: the two settings lists every settings page opens beside
+        /// its Tips & Tricks (`FeatureList`, 2026-10-26).
+        case featureList(FeatureList)
         case credits
         /// One credited source on the Credits page (`CreditItem.id`): the page opens scrolled to it.
         case credit(String)
@@ -206,6 +209,7 @@ struct SettingsSearchEntry: Identifiable {
             case .cloudBackup: return "icloud.fill"
             #endif
             case .tips: return "lightbulb.fill"
+            case .featureList(let list): return list.systemImage
             case .credits: return "scroll.fill"
             case .credit: return "link"
             #if HAS_ADHAN
@@ -348,7 +352,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var settingsMoreMenu: some View {
         if Self.canPushProgrammatically, settingsSearchText.isEmpty {
-            TabMoreMenu(doubleTap: MenuShortcut(settings.settingsGridMode ? String(localized: "Show as List") : String(localized: "Show as Grid")) {
+            TabMoreMenu(hold: MenuShortcut(settings.settingsGridMode ? String(localized: "Show as List") : String(localized: "Show as Grid")) {
                 settings.hapticFeedback()
                 withAnimation { settings.settingsGridMode.toggle() }
             }) {
@@ -729,6 +733,9 @@ struct SettingsView: View {
         case "tipsHadith": return .tips(.hadith)
         case "tipsIslam": return .tips(.islam)
         case "tipsApp": return .tips(.app)
+        // The two feature lists every settings page opens (2026-10-26), each screenshotted on its own.
+        case "uniqueFeatures": return .featureList(.unique)
+        case "beginnerFeatures": return .featureList(.beginner)
         case "appearance": return .appearance
         case "appearanceColors": return .appearancePage(.customColors)
         case "appearanceLook": return .appearancePage(.lookAndFeel)
@@ -1062,7 +1069,7 @@ struct SettingsView: View {
         Section(header: SectionIconHeader(String(localized: "SETTINGS"), icon: "gearshape.fill")) {
             #if HAS_ADHAN
             resourceLink(title: String(localized: "Notifications"), systemImage: "bell.badge.fill",
-                         subtitle: String(localized: "Prayer alerts, adhan sounds, reminders"), tint: SettingsTint.notifications) {
+                         subtitle: NotificationView.doorSubtitle, tint: SettingsTint.notifications) {
                 NotificationView()
             }
             resourceLink(title: String(localized: "Prayer Settings"), systemImage: "safari.fill",
@@ -1169,7 +1176,7 @@ struct SettingsView: View {
         Section(header: SectionIconHeader(String(localized: "SETTINGS"), icon: "gearshape.fill")) {
             #if HAS_ADHAN
             splitResourceLink(title: String(localized: "Notifications"), systemImage: "bell.badge.fill",
-                              subtitle: String(localized: "Prayer alerts, adhan sounds, reminders"), tint: SettingsTint.notifications, value: .notification)
+                              subtitle: NotificationView.doorSubtitle, tint: SettingsTint.notifications, value: .notification)
             splitResourceLink(title: String(localized: "Prayer Settings"), systemImage: "safari.fill",
                               subtitle: String(localized: "Calculation, offsets, travel, sky"), tint: SettingsTint.prayer, value: .prayerSettings)
             #endif

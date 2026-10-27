@@ -121,14 +121,33 @@ def extracted(dd):
     relative to the checkout that built them (this one, or a sibling's)."""
     keys = {}
     pattern = os.path.join(dd, "Build", "Intermediates.noindex", "**", "*.stringsdata")
-    for path in glob.glob(pattern, recursive=True):
-        if not any(t in path for t in TARGET_BUILDS):
-            continue
+    paths = [p for p in glob.glob(pattern, recursive=True) if any(t in p for t in TARGET_BUILDS)]
+    # One configuration only, the one built most recently. A long-lived DerivedData keeps every
+    # configuration ever built there, and a Release build from September beside today's Debug build
+    # carried 35 keys the code no longer has (2026-10-26); the slices of one configuration are rebuilt
+    # together, so the newest one speaks for the code as it is.
+    def configuration(path):
+        found = re.search(r"/(Debug|Release)-[^/]+/", path)
+        return found.group(1) if found else ""
+    newest = {}
+    for path in paths:
+        name = configuration(path)
+        newest[name] = max(newest.get(name, 0), os.path.getmtime(path))
+    if len(newest) > 1:
+        keep = max(newest, key=newest.get)
+        print(f"extracted: the {keep} build; ignoring older {', '.join(sorted(n for n in newest if n != keep))} slices")
+        paths = [p for p in paths if configuration(p) == keep]
+    for path in paths:
         try:
             data = json.load(open(path, encoding="utf-8"))
         except (ValueError, OSError):
             continue
         source = data.get("source", "")
+        # A moved or deleted file leaves its old .stringsdata behind in a long-lived DerivedData (2026-10-26:
+        # a sync against build/DerivedData revived 462 dead keys from pre-reorganisation paths such as
+        # iPhone/Settings/SettingsAdhanView.swift). Only a source that still exists speaks for the code.
+        if os.path.isabs(source) and not os.path.exists(source):
+            continue
         src = os.path.relpath(source, repo_of(source) if os.path.isabs(source) else REPO)
         for entry in data.get("tables", {}).get("Localizable", []):
             keys.setdefault(entry["key"], set()).add(src)

@@ -364,9 +364,21 @@ enum QuranPlannerReminder {
             cancel()
             return
         }
+        add(minutes: minutes, body: lines.joined(separator: " "))
+    }
+
+    /// The request as last scheduled (its time and body), kept so Allow Notifications can bring it back
+    /// when it comes on again (`rearmIfKept`, from `Settings.notificationsEnabledDidChange`); the planner
+    /// refreshes the body on its next visit, as it always has.
+    private static let lastScheduledKey = "quranPlannerReminderLast"
+
+    private static func add(minutes: Int, body: String) {
+        UserDefaults.standard.set(["minutes": minutes, "body": body], forKey: lastScheduledKey)
+        // Allow Notifications off: the copy waits, nothing is pending.
+        guard Settings.shared.notificationsEnabled else { return }
         let content = UNMutableNotificationContent()
         content.title = String(localized: "Quran Planner")
-        content.body = lines.joined(separator: " ")
+        content.body = body
         content.sound = .default
 
         var components = DateComponents()
@@ -379,7 +391,15 @@ enum QuranPlannerReminder {
         )
     }
 
+    /// Re-adds the reminder as it was last scheduled, if one was and it has not been cancelled since.
+    static func rearmIfKept() {
+        guard let last = UserDefaults.standard.dictionary(forKey: lastScheduledKey),
+              let minutes = last["minutes"] as? Int, let body = last["body"] as? String else { return }
+        add(minutes: minutes, body: body)
+    }
+
     static func cancel() {
+        UserDefaults.standard.removeObject(forKey: lastScheduledKey)
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
     }
 

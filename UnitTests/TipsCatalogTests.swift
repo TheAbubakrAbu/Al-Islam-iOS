@@ -47,6 +47,28 @@ final class TipsCatalogTests: XCTestCase {
         XCTAssertEqual(TipCatalog.searchHint, "\"adhan\", \"tajweed\" or \"widget\"")
     }
 
+    /// The two feature lists on every settings page (2026-10-26) are settings lists: every row opens a
+    /// setting, Unique Features is exactly the Settings tab's cards, and Beginner Features is the tips
+    /// written for a new Muslim or an Arabic learner, in the catalogue's area order.
+    func testFeatureListsAreSettingsLists() {
+        XCTAssertEqual(FeatureList.unique.tips.map(\.id), TipCatalog.spotlight.map(\.id))
+        XCTAssertEqual(FeatureList.beginner.tips.map(\.id),
+                       ["notif.nagging", "notif.meanings", "quran.beginnermode", "quran.transliteration", "quran.wordtap",
+                        "hadith.onelanguage", "islam.letters", "app.simple", "app.aboutyou", "app.helpdoors"])
+        for tip in FeatureList.unique.tips + FeatureList.beginner.tips {
+            XCTAssertNotNil(tip.destination, "\(tip.id) has no setting to open")
+        }
+        for list in FeatureList.allCases {
+            XCTAssertFalse(list.caption.isEmpty, list.rawValue)
+        }
+        XCTAssertEqual(SettingsSearchEntry.featureListEntries.count, 2)
+        if case .featureList(let list)? = SettingsSearchEntry.featureListEntries.first?.destination {
+            XCTAssertEqual(list, .unique)
+        } else {
+            XCTFail("the Unique Features entry opens the Unique Features list")
+        }
+    }
+
     /// Islam is the one area with two colours, yellow into green, and the spotlight card, the chips
     /// and the hub rows all read them from here.
     func testIslamWearsBothColours() {
@@ -65,7 +87,7 @@ final class TipsCatalogTests: XCTestCase {
                    "app.menushortcuts", "islam.locators"] {
             XCTAssertNotNil(tip(id), id)
         }
-        XCTAssertEqual(TipCatalog.all.count, 158)
+        XCTAssertEqual(TipCatalog.all.count, 160)
 
         if case .quranPage(let page)? = tip("quran.testmode")?.destination {
             XCTAssertEqual(page, .testMode)
@@ -85,6 +107,6 @@ final class TipsCatalogTests: XCTestCase {
         XCTAssertTrue(tip("quran.nowplaying")?.detail.contains("Range Ayahs") == true)
         XCTAssertTrue(tip("adhan.stopadhan")?.detail.contains("Play Automatically") == true)
         XCTAssertTrue(tip("adhan.weather")?.detail.contains("Try Another Sky") == true)
-        XCTAssertEqual(tip("app.menushortcuts")?.detail, "Double tap the ⋯ menu at the top of the Quran, Hadith, Islam, and Settings tabs to switch between the grid and the list without opening it. On the Quran tab, holding it opens the Quran Planner. A single tap still opens the whole menu.")
+        XCTAssertEqual(tip("app.menushortcuts")?.detail, "Touch and hold the ⋯ menu at the top of the Quran, Hadith, Islam, and Settings tabs to switch between the grid and the list without opening it. A single tap opens the whole menu at once.")
     }
 }

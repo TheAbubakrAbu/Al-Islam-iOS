@@ -695,6 +695,16 @@ private struct MainTabView: View {
                 guard !Task.isCancelled else { return }
                 await ReminderScheduler.rearmAfterLaunch()
             }
+            // Allow Notifications turned back on (`Settings.notificationsEnabledDidChange`, which cleared
+            // every pending request when it went off): the same pass now, plus the planner's kept
+            // reminder. Off needs nothing here: the clearing was the whole of it.
+            .onReceive(NotificationCenter.default.publisher(for: Settings.notificationsEnabledDidChangeNotification)) { _ in
+                guard Settings.shared.notificationsEnabled else { return }
+                Task { @MainActor in
+                    await ReminderScheduler.rearmAfterLaunch()
+                    QuranPlannerReminder.rearmIfKept()
+                }
+            }
             #if DEBUG
             // "-simulateReminderTap surah:67" (or "ayah:2:285", "open", "hadith"): what a reminder's
             // or a daily card's tap does, two seconds after the reveal, from whichever tab the launch

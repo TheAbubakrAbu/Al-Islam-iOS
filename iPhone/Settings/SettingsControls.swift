@@ -196,6 +196,10 @@ struct FontSizeSlider: View {
     /// two sliders): the type size the sample reads at for a value. The sample is then the body
     /// style at that size, in `fontName` when one is given, instead of `value` points.
     var sampleTypeSize: ((Double) -> DynamicTypeSize)? = nil
+    /// Without the title row: the two glyph steps and the slider alone, for a floating bar that has
+    /// no room for a title (the riwayah comparison sheet's text size bar). The title still names the
+    /// control to accessibility.
+    var compact = false
 
     @Environment(\.appearance) private var appearance
     /// The size while the thumb is down; nil otherwise.
@@ -205,7 +209,8 @@ struct FontSizeSlider: View {
          fontName: String? = nil, glyph: String = "A",
          label: @escaping (Double) -> String = { String(localized: "\(Int($0.rounded())) pt") },
          onLiveChange: ((Double) -> Void)? = nil,
-         sampleTypeSize: ((Double) -> DynamicTypeSize)? = nil) {
+         sampleTypeSize: ((Double) -> DynamicTypeSize)? = nil,
+         compact: Bool = false) {
         self.title = title
         self._value = value
         self.range = range
@@ -215,6 +220,7 @@ struct FontSizeSlider: View {
         self.label = label
         self.onLiveChange = onLiveChange
         self.sampleTypeSize = sampleTypeSize
+        self.compact = compact
     }
 
     private var shown: Double { dragging ?? value }
@@ -247,12 +253,14 @@ struct FontSizeSlider: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(title)
-                Spacer()
-                Text(label(shown))
-                    .foregroundColor(.secondary)
-                    .monospacedDigit()
+            if !compact {
+                HStack {
+                    Text(title)
+                    Spacer()
+                    Text(label(shown))
+                        .foregroundColor(.secondary)
+                        .monospacedDigit()
+                }
             }
 
             if let sample {

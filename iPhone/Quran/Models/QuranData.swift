@@ -493,7 +493,10 @@ struct Ayah: Codable, Identifiable, Equatable {
     /// Arabic to show in UI. For Fatiha ayah 1 with clean mode, if the ayah doesn’t start with بسم (e.g. ta'awwudh), shows Bismillah instead.
     /// - Parameter qiraahOverride: When non-nil, use this qiraah instead of Settings (e.g. comparison mode). Use "" for Hafs.
     /// - Parameter removeDots: Whether the dots go, with or without `clean`. Nil follows the app setting.
-    func displayArabicText(surahId: Int, clean: Bool, removeDots: Bool? = nil, qiraahOverride: String? = nil) -> String {
+    /// - Parameter waslSign: Which hamzat al-wasl notation shows (WaslSigns.swift). Nil follows the
+    ///   setting, resolved for this riwayah; the off-main page composer passes its snapshot.
+    func displayArabicText(surahId: Int, clean: Bool, removeDots: Bool? = nil, qiraahOverride: String? = nil,
+                           waslSign: Settings.WaslSignStyle? = nil) -> String {
         let qiraah: String? = if let override = qiraahOverride {
             (override.isEmpty || override == "Hafs") ? nil : override
         } else {
@@ -504,11 +507,13 @@ struct Ayah: Codable, Identifiable, Equatable {
         // stripping tashkeel + signs is exactly what exposes the shared Uthmani rasm across qiraat.
         let text = if qiraah == nil {
             clean ? textCleanArabic(for: qiraah, removeDots: removeDots)
-                  : vocalized(textArabic(for: qiraah, surahID: surahId), removeDots: removeDots)
+                  : vocalized(waslShaped(textArabic(for: qiraah, surahID: surahId), qiraah: nil, surahId: surahId, style: waslSign),
+                              removeDots: removeDots)
         } else if clean {
             textCleanArabic(for: qiraah, surahID: surahId, removeDots: removeDots)
         } else {
-            vocalized(Self.withoutSukoon(textArabic(for: qiraah, surahID: surahId)), removeDots: removeDots)
+            vocalized(waslShaped(Self.withoutSukoon(textArabic(for: qiraah, surahID: surahId)), qiraah: qiraah, surahId: surahId, style: waslSign),
+                      removeDots: removeDots)
         }
         // Al-Fatihah 1:1 in clean mode: only a ta'awwudh gives way to the basmala, tested on the RAW
         // text with the signs stripped (the composer's own check). "Does not start with بسم" also
@@ -528,7 +533,22 @@ struct Ayah: Codable, Identifiable, Equatable {
     /// letters, and a dotless ٮ is no longer the qalqalah ب. (`displayArabicText(clean: false)`
     /// follows Hide Dots since 2026-09-11, so it stopped meaning "raw" for the callers that used it so.)
     func rawArabicText(surahId: Int, qiraahOverride: String? = nil) -> String {
-        displayArabicText(surahId: surahId, clean: false, removeDots: false, qiraahOverride: qiraahOverride)
+        displayArabicText(surahId: surahId, clean: false, removeDots: false, qiraahOverride: qiraahOverride, waslSign: .print)
+    }
+
+    /// The hamzat al-wasl notation the reader asked for (`Settings.WaslSignStyle`), applied to one
+    /// ayah's vocalized text from the engine's per-word codes (WaslSigns.swift). Nothing is derived
+    /// here: the codes say which alef changes and what it carries. Hide Tashkeel never reaches this
+    /// (the stripped text has neither notation), and `rawArabicText` pins `.print`.
+    private func waslShaped(_ raw: String, qiraah: String?, surahId: Int, style: Settings.WaslSignStyle?) -> String {
+        let style = style ?? Settings.shared.waslSign(for: qiraah)
+        guard style != .print,
+              let codes = WaslSignStore.shared.codes(qiraah: qiraah, surah: surahId, ayah: id, style: style) else { return raw }
+        let key = ("W:" + codes + "|" + raw) as NSString
+        if let cached = CleanArabicTextCache.cache.object(forKey: key) { return cached as String }
+        let result = WaslSignTransform.apply(raw, codes: codes)
+        CleanArabicTextCache.cache.setObject(result as NSString, forKey: key)
+        return result
     }
 
     init(from decoder: Decoder) throws {
@@ -748,10 +768,11 @@ final class TajweedStore {
 
     private func paintCacheKey(
         surah: Int, ayah: Int, text: String, requestedDisplayText: String?,
-        cleanDisplayText: Bool, beginnerSpacing: Bool, removeArabicDots: Bool, visibilitySignature: String
+        cleanDisplayText: Bool, beginnerSpacing: Bool, removeArabicDots: Bool, visibilitySignature: String,
+        waslSign: Settings.WaslSignStyle = .print
     ) -> NSString {
         let requestedDisplayDigest = requestedDisplayText.map(Self.stableTextDigest) ?? 0
-        return "\(surah):\(ayah):\(Self.stableTextDigest(text)):\(requestedDisplayDigest):\(cleanDisplayText ? 1 : 0):\(beginnerSpacing ? 1 : 0):\(removeArabicDots ? 1 : 0):\(visibilitySignature)" as NSString
+        return "\(surah):\(ayah):\(Self.stableTextDigest(text)):\(requestedDisplayDigest):\(cleanDisplayText ? 1 : 0):\(beginnerSpacing ? 1 : 0):\(removeArabicDots ? 1 : 0):\(waslSign.rawValue):\(visibilitySignature)" as NSString
     }
 
     /// What the caches know about one ayah's paint, for a row that must not paint in its body.
@@ -780,14 +801,16 @@ final class TajweedStore {
         displayText requestedDisplayText: String? = nil,
         cleanDisplayText: Bool = false,
         beginnerSpacing: Bool = false,
-        removeArabicDots: Bool? = nil
+        removeArabicDots: Bool? = nil,
+        waslSign: Settings.WaslSignStyle? = nil
     ) -> CachedPaint? {
         // Hide Dots stands on its own (2026-09-11): it never waits for Hide Tashkeel.
         let shouldRemoveArabicDots = removeArabicDots ?? settings.removeArabicDots
+        let shouldWaslSign = waslSign ?? settings.waslSign(for: nil)
         let cacheKey = paintCacheKey(
             surah: surah, ayah: ayah, text: text, requestedDisplayText: requestedDisplayText,
             cleanDisplayText: cleanDisplayText, beginnerSpacing: beginnerSpacing,
-            removeArabicDots: shouldRemoveArabicDots, visibilitySignature: snapshotVisibility()
+            removeArabicDots: shouldRemoveArabicDots, visibilitySignature: snapshotVisibility(), waslSign: shouldWaslSign
         )
         if let cached = attributedCache.object(forKey: cacheKey) { return .painted(cached.value) }
         if unpaintedKeys.object(forKey: cacheKey) != nil { return .nothing }
@@ -807,14 +830,16 @@ final class TajweedStore {
         cleanDisplayText: Bool = false,
         beginnerSpacing: Bool = false,
         removeArabicDots: Bool? = nil,
+        waslSign: Settings.WaslSignStyle? = nil,
         completion: @escaping @MainActor () -> Void
     ) {
         // Hide Dots stands on its own (2026-09-11): it never waits for Hide Tashkeel.
         let shouldRemoveArabicDots = removeArabicDots ?? settings.removeArabicDots
+        let shouldWaslSign = waslSign ?? settings.waslSign(for: nil)
         let cacheKey = paintCacheKey(
             surah: surah, ayah: ayah, text: text, requestedDisplayText: requestedDisplayText,
             cleanDisplayText: cleanDisplayText, beginnerSpacing: beginnerSpacing,
-            removeArabicDots: shouldRemoveArabicDots, visibilitySignature: snapshotVisibility()
+            removeArabicDots: shouldRemoveArabicDots, visibilitySignature: snapshotVisibility(), waslSign: shouldWaslSign
         ) as String
         guard !inFlightPaintKeys.contains(cacheKey) else { return }
         inFlightPaintKeys.insert(cacheKey)
@@ -825,7 +850,7 @@ final class TajweedStore {
             _ = self.attributedText(
                 surah: surah, ayah: ayah, text: text, displayText: requestedDisplayText,
                 cleanDisplayText: cleanDisplayText, beginnerSpacing: beginnerSpacing,
-                removeArabicDots: shouldRemoveArabicDots
+                removeArabicDots: shouldRemoveArabicDots, waslSign: shouldWaslSign
             )
             await MainActor.run {
                 self.inFlightPaintKeys.remove(cacheKey)
@@ -841,7 +866,8 @@ final class TajweedStore {
         displayText requestedDisplayText: String? = nil,
         cleanDisplayText: Bool = false,
         beginnerSpacing: Bool = false,
-        removeArabicDots: Bool? = nil
+        removeArabicDots: Bool? = nil,
+        waslSign: Settings.WaslSignStyle? = nil
     ) -> AttributedString? {
         // The visibility is PART of the key now: toggling a legend category used to wipe all 1,800
         // entries; now it just misses, and toggling back finds the old entries still there.
@@ -849,6 +875,7 @@ final class TajweedStore {
 
         // Hide Dots stands on its own (2026-09-11): it never waits for Hide Tashkeel.
         let shouldRemoveArabicDots = removeArabicDots ?? settings.removeArabicDots
+        let shouldWaslSign = waslSign ?? settings.waslSign(for: nil)
 
         // Key the cache on the INPUTS, not on the projected `displayText`. `displayText` is a pure function of
         // (text, requestedDisplayText, cleanDisplayText, beginnerSpacing, shouldRemoveArabicDots), so keying on
@@ -858,7 +885,7 @@ final class TajweedStore {
         let cacheKey = paintCacheKey(
             surah: surah, ayah: ayah, text: text, requestedDisplayText: requestedDisplayText,
             cleanDisplayText: cleanDisplayText, beginnerSpacing: beginnerSpacing,
-            removeArabicDots: shouldRemoveArabicDots, visibilitySignature: visibilitySignature
+            removeArabicDots: shouldRemoveArabicDots, visibilitySignature: visibilitySignature, waslSign: shouldWaslSign
         )
         if let cached = attributedCache.object(forKey: cacheKey) {
             return cached.value
@@ -866,7 +893,7 @@ final class TajweedStore {
         return paint(
             surah: surah, ayah: ayah, text: text, requestedDisplayText: requestedDisplayText,
             cleanDisplayText: cleanDisplayText, beginnerSpacing: beginnerSpacing,
-            removeArabicDots: shouldRemoveArabicDots, cacheKey: cacheKey, visibilitySignature: visibilitySignature
+            removeArabicDots: shouldRemoveArabicDots, waslSign: shouldWaslSign, cacheKey: cacheKey, visibilitySignature: visibilitySignature
         ).string
     }
 
@@ -880,17 +907,23 @@ final class TajweedStore {
         cleanDisplayText: Bool,
         beginnerSpacing: Bool,
         removeArabicDots shouldRemoveArabicDots: Bool,
+        waslSign: Settings.WaslSignStyle = .print,
         cacheKey: NSString,
         visibilitySignature: String
     ) -> (string: AttributedString?, ops: [PaintOp]) {
+        // The hamzat al-wasl codes for THIS ayah of the Hafs text (this painter is Hafs-only): nil
+        // under Follow the Print and Saad, where the raw text already is the display text, and under
+        // Hide Tashkeel, which strips both notations.
+        let waslCodes = cleanDisplayText ? nil : WaslSignStore.shared.codes(qiraah: nil, surah: surah, ayah: ayah, style: waslSign)
         // Only now run the expensive projection + painting.
-        let projection = (requestedDisplayText != nil || cleanDisplayText || beginnerSpacing || shouldRemoveArabicDots)
+        let projection = (requestedDisplayText != nil || cleanDisplayText || beginnerSpacing || shouldRemoveArabicDots || waslCodes != nil)
             ? tajweedProjection(
                 from: text,
                 requestedDisplayText: requestedDisplayText,
                 cleanDisplayText: cleanDisplayText,
                 beginnerSpacing: beginnerSpacing,
-                removeArabicDots: shouldRemoveArabicDots
+                removeArabicDots: shouldRemoveArabicDots,
+                waslCodes: waslCodes
             )
             : nil
         let displayText = projection?.displayText ?? text
@@ -1108,10 +1141,17 @@ final class TajweedStore {
         requestedDisplayText: String?,
         cleanDisplayText: Bool,
         beginnerSpacing: Bool,
-        removeArabicDots: Bool
+        removeArabicDots: Bool,
+        waslCodes: String? = nil
     ) -> TajweedProjection {
         var projectedScalars = String.UnicodeScalarView()
         projectedScalars.reserveCapacity(rawText.unicodeScalars.count * (beginnerSpacing ? 2 : 1))
+        // Hamzat al-wasl in the dot notation (WaslSigns.swift): one code per word, applied to the
+        // word's first U+0671 exactly as `displayArabicText` applies it, so the projected text stays
+        // byte-identical to the row's. Words are counted over the same U+0020 gaps the splice uses.
+        let codes: [Character] = waslCodes.map(Array.init) ?? []
+        var wordIndex = 0
+        var waslaSeenInWord = false
 
         let rawUTF16Count = rawText.utf16.count
         var rawUTF16ToDisplayRange = [Range<Int>?](repeating: nil, count: rawUTF16Count)
@@ -1133,7 +1173,20 @@ final class TajweedStore {
 
             for scalar in String(character).unicodeScalars {
                 let rawLength = utf16Length(of: scalar)
-                let outScalars = displayScalars(for: scalar, cleanDisplayText: cleanDisplayText, removeArabicDots: removeArabicDots)
+                let outScalars: [UnicodeScalar]
+                if scalar.value == 0x20 {
+                    wordIndex += 1
+                    waslaSeenInWord = false
+                    outScalars = displayScalars(for: scalar, cleanDisplayText: cleanDisplayText, removeArabicDots: removeArabicDots)
+                } else if scalar == WaslSignTransform.wasla, !cleanDisplayText, wordIndex < codes.count,
+                          let expansion = WaslSignTransform.expansion(forCode: codes[wordIndex]) {
+                    // the word's first wasla takes the join vowel and the start sign; a later one is bare
+                    let shaped = waslaSeenInWord ? [WaslSignTransform.alef] : expansion
+                    outScalars = removeArabicDots ? shaped.map { dotlessArabicScalar($0) } : shaped
+                    waslaSeenInWord = true
+                } else {
+                    outScalars = displayScalars(for: scalar, cleanDisplayText: cleanDisplayText, removeArabicDots: removeArabicDots)
+                }
                 if pendingBeginnerSpacer, !outScalars.isEmpty {
                     projectedScalars.append(" ")
                     displayUTF16Offset += 1

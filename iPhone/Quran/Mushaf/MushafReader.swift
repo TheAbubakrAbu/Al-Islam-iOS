@@ -4496,6 +4496,9 @@ struct MushafComposeConfig {
     /// nil means Hafs. Threaded into `displayArabicText(qiraahOverride:)` so the compose never falls back
     /// to reading Settings off-main.
     let displayQiraah: String?
+    /// The hamzat al-wasl notation, resolved for `displayQiraah` on main (`Settings.waslSign(for:)`),
+    /// threaded the same way.
+    let waslSign: Settings.WaslSignStyle
     let cleanArabicText: Bool
     let beginnerMode: Bool
     /// Individual ayahs pinning their own display choices (the per-ayah "Apply Settings" menu, or the
@@ -4549,6 +4552,7 @@ struct MushafComposeConfig {
             quranUsesSystemArabicFont: s.quranUsesSystemArabicFont,
             arabicFontName: s.quranArabicFontName(for: s.displayQiraahForArabic),
             displayQiraah: s.displayQiraahForArabic,
+            waslSign: s.waslSign(for: s.displayQiraahForArabic),
             cleanArabicText: s.cleanArabicText,
             beginnerMode: s.beginnerMode,
             ayahOverrides: AyahDisplayOverrides.shared.overrides,
@@ -4755,7 +4759,7 @@ struct MushafPageComposer {
         let beginner = choice.beginner
         let qiraahOverride = config.displayQiraah ?? "Hafs"
         let base = ayah.displayArabicText(surahId: surah.id, clean: clean, removeDots: choice.dots,
-                                          qiraahOverride: qiraahOverride)
+                                          qiraahOverride: qiraahOverride, waslSign: config.waslSign)
         let display = beginner ? base.beginnerSpaced : base
         let font = arabicFont(size)
 
@@ -4766,11 +4770,12 @@ struct MushafPageComposer {
                // The RAW text: fully vocalized and dotted. The projection applies this ayah's own clean
                // and dots choices; reading the global Hide Dots here produced a shorter string than
                // the page was measured with, and `finalize` aborted (Quality Guide C1).
-               text: ayah.displayArabicText(surahId: surah.id, clean: false, removeDots: false, qiraahOverride: qiraahOverride),
+               text: ayah.displayArabicText(surahId: surah.id, clean: false, removeDots: false, qiraahOverride: qiraahOverride, waslSign: .print),
                displayText: display,
                cleanDisplayText: clean,
                beginnerSpacing: beginner,
-               removeArabicDots: choice.dots
+               removeArabicDots: choice.dots,
+               waslSign: config.waslSign
            ) {
             // The tajweed colours are already UIColor; overlay the font/paragraph without touching them.
             let ns = NSMutableAttributedString(attributedString: NSAttributedString(styled))
@@ -4791,8 +4796,8 @@ struct MushafPageComposer {
                // The full text is the vocalized, DOTTED one: the store strips (and un-dots) it itself.
                fullText: clean
                    ? (beginner
-                      ? ayah.displayArabicText(surahId: surah.id, clean: false, removeDots: false, qiraahOverride: qiraahOverride).beginnerSpaced
-                      : ayah.displayArabicText(surahId: surah.id, clean: false, removeDots: false, qiraahOverride: qiraahOverride))
+                      ? ayah.displayArabicText(surahId: surah.id, clean: false, removeDots: false, qiraahOverride: qiraahOverride, waslSign: config.waslSign).beginnerSpaced
+                      : ayah.displayArabicText(surahId: surah.id, clean: false, removeDots: false, qiraahOverride: qiraahOverride, waslSign: config.waslSign))
                    : nil
            ) {
             let ns = NSMutableAttributedString(attributedString: NSAttributedString(styled))
@@ -6575,6 +6580,7 @@ enum MushafPageRenderCache {
             "\(page.page)", page.contentSpan, "\(Int(width.rounded()))", "\(Int(height.rounded()))",
             String(describing: config.pageLanguage),
             config.removeArabicDots ? "d" : "-",
+            config.waslSign.rawValue,
             config.quranUsesSystemArabicFont ? "s" : "-",
             config.arabicFontName,
             config.displayQiraah ?? "Hafs",

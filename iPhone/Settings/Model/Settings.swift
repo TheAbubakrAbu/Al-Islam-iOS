@@ -1894,6 +1894,16 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
 
     // MARK: - [Al-Adhan] Prayer - @Setting (notifications, travel, calculation, alerts)
 
+    /// The one switch over every notification the app sends: Notification Settings, "Allow Notifications"
+    /// (Abu, 2026-10-26: "a notification setting to turn off all notifications"). Off, no kind schedules
+    /// anything (the prayers and the adhan, nagging, the Islamic dates, the Sunnah, Quran and planner
+    /// reminders, the auto-change banners), whatever is pending is cleared, and the app neither asks for
+    /// the system permission nor nags about it; every per-kind choice stays as it was, so turning it back
+    /// on restores the same schedule. `notificationsEnabledDidChange` (SettingsAdhan.swift) lists the gates.
+    @Setting("notificationsEnabled") var notificationsEnabled: Bool = true {
+        didSet { self.notificationsEnabledDidChange() }
+    }
+
     @Setting("dateNotifications") var dateNotifications = true {
         didSet { self.fetchPrayerTimesDebounced(notification: true) }
     }
@@ -3127,10 +3137,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// lighter feel on a small screen; on stacks them, so dismissing the second returns to the first.
     @Setting("keepAyahSheetOpen") var keepAyahSheetOpen: Bool = false
 
-    /// Play This Ayah, Play From Ayah and Repeat Ayah start the recitation WITHOUT closing the ayah's
-    /// actions sheet (Abu, 2026-10-25: "sometimes when its playing i want to read the big sheet"). Off by
-    /// default, which keeps the old close: the reader is where the highlight moves. Play Custom Range is
-    /// deliberately not one of them; its own sheet plays the range and closes as it always has.
+    /// Play This Ayah and Repeat Ayah start the recitation WITHOUT closing the ayah's actions sheet
+    /// (Abu, 2026-10-25: "sometimes when its playing i want to read the big sheet"). Off by default,
+    /// which keeps the old close: the reader is where the highlight moves. Play From Ayah is deliberately
+    /// not one of them since 2026-10-26 (Abu: "play from ayah shouldn't count for keeping sheet opened,
+    /// only repeat and play this ayah"), nor is Play Custom Range; both close the sheet as they always have.
     @Setting("keepAyahSheetOpenOnPlay") var keepAyahSheetOpenOnPlay: Bool = false
 
     /// Holds the display awake while the ayah's actions sheet is on screen (Abu, 2026-10-25: "if that
@@ -3382,6 +3393,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// chosen, which resolves to Madani - the effective default. A value written here is always an
     /// explicit choice and is honored as one, so the old "automatic" saves still mean Automatic.
     @Setting("quranArabicScriptStyle") var arabicScriptStyleRaw: String = ""
+    /// Raw storage for `waslSignStyle` (WaslSigns.swift): which hamzat al-wasl notation the Quran
+    /// shows. Empty means the reader never chose, which is Follow the Print.
+    @Setting("quranWaslSign") var waslSignRaw: String = ""
 
     /// The Arabic face for the NON-Quran Arabic screens (Hadith, Adhkar, Duas, 99 Names, Arabic Alphabet).
     /// Independent of the Quran's own font picker. Kufi and Hijazi are the same faces the Quran picker

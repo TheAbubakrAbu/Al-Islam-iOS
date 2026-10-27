@@ -504,7 +504,7 @@ struct AdhanOtherView: View {
                 }
 
                 Section(header: ArticleHeader("WORDS OF THE ADHAN")) {
-                    Text(verbatim: """
+                    ArticleArabic(verbatim: """
                     اللَّهُ أَكبَرُ، اللَّهُ أَكبَرُ
                     اللَّهُ أَكبَرُ، اللَّهُ أَكبَرُ
 
@@ -520,11 +520,6 @@ struct AdhanOtherView: View {
                     اللَّهُ أَكبَرُ، اللَّهُ أَكبَرُ
                     لَا إِلَٰهَ إِلَّا اللَّهُ
                     """)
-                    .font(.body)
-                    .multilineTextAlignment(.trailing)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .foregroundColor(appearance.accent)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
 
                     Text(verbatim: """
                     Allahu Akbar, Allahu Akbar
@@ -561,6 +556,8 @@ struct AdhanOtherView: View {
                     There is no deity but Allah
                     """)
                     .font(.body)
+
+                    ArticleCallout("The noon of “an” melts into the laam after it (idgham), so “an la ilaha” is said “allaa ilaaha”, and “illa Allah” runs together as “illallah”: Ashhadu allaa ilaaha illallah. “Rasool Allah” joins the same way, rasoolullah, and so does the closing line, La ilaha illallah.", title: "How it is said", systemImage: "waveform")
                 }
 
                 Section(header: ArticleHeader("ONLY FOR FAJR")) {
@@ -570,12 +567,7 @@ struct AdhanOtherView: View {
                         .font(.body)
                         .foregroundColor(appearance.accent)
 
-                    Text(verbatim: "الصَّلَاةُ خَيرٌ مِنَ النَّومِ")
-                        .font(.body)
-                        .foregroundColor(appearance.accent)
-                        .multilineTextAlignment(.trailing)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    ArticleArabic(verbatim: "الصَّلَاةُ خَيرٌ مِنَ النَّومِ")
 
                     ArticleParagraph(verbatim: "As-salatu khayrun mina-nawm\n(Prayer is better than sleep)")
 
@@ -628,7 +620,7 @@ struct IqamahView: View {
                 }
 
                 Section(header: ArticleHeader("WORDS OF THE IQAMAH")) {
-                    Text(verbatim: """
+                    ArticleArabic(verbatim: """
                     اللَّهُ أَكبَرُ، اللَّهُ أَكبَرُ
 
                     أَشهَدُ أَن لَا إِلَٰهَ إِلَّا اللَّهُ
@@ -644,11 +636,6 @@ struct IqamahView: View {
 
                     لَا إِلَٰهَ إِلَّا اللَّهُ
                     """)
-                    .font(.body)
-                    .multilineTextAlignment(.trailing)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .foregroundColor(appearance.accent)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
 
                     Text(verbatim: """
                     Allahu Akbar, Allahu Akbar
@@ -685,6 +672,8 @@ struct IqamahView: View {
                     There is no deity but Allah
                     """)
                     .font(.body)
+
+                    ArticleCallout("The noon of “an” melts into the laam after it (idgham), so “an la ilaha” is said “allaa ilaaha”, and “illa Allah” runs together as “illallah”: Ashhadu allaa ilaaha illallah. “Rasool Allah” joins the same way, rasoolullah, and so does the closing line, La ilaha illallah.", title: "How it is said", systemImage: "waveform")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -788,12 +777,7 @@ struct TakbiratView: View {
                 Section(header: ArticleHeader("SHORT TAKBIRAT")) {
                     ArticleParagraph(verbatim: "This is the short version of the Takbir:")
 
-                    Text(verbatim: "اللَّهُ أَكبَرُ اللَّهُ أَكبَرُ لَا إِلَهَ إِلَّا اللَّهُ، وَاللَّهُ أَكبَرُ اللَّهُ أَكبَرُ وَلِلَّهِ الحَمدُ")
-                        .font(.body)
-                        .foregroundColor(appearance.accent)
-                        .multilineTextAlignment(.trailing)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    ArticleArabic(verbatim: "اللَّهُ أَكبَرُ اللَّهُ أَكبَرُ لَا إِلَهَ إِلَّا اللَّهُ، وَاللَّهُ أَكبَرُ اللَّهُ أَكبَرُ وَلِلَّهِ الحَمدُ")
 
                     ArticleParagraph(verbatim: "Allahu Akbar, Allahu Akbar, La Ilaha Illa Allah, Allahu Akbar, Allahu Akbar, wa lillahil hamd")
 
@@ -1713,6 +1697,7 @@ struct QiraatView: View {
                     // riwayahs have hamzas, which don't, which have Madani hamzat al-wasl and which
                     // have dots"), on a page of its own with counts from the app's texts.
                     ArticleParagraph(verbatim: "The mushafs differ on the page too: which readings pronounce the hamzah and which ease or drop it, the Madani dot for hamzat al-wasl, and the dots of imalah and taqlil under the letters.")
+                    ArticleParagraph(verbatim: "A printed mushaf is set in one riwayah, and many editions note a second narrator’s differences in the margin: Khallad beside Khalaf, Shu’bah beside Hafs. The explorer above does that for all twenty at once.")
                     ArticleDoorRow(door: .article("RiwayatDifferencesView"))
                 }
 
@@ -1875,15 +1860,25 @@ struct QiraatView: View {
                     .font(.caption)
                 }
 
+                Section(header: ArticleHeader("THE TEXTS STUDENTS MEMORISE")) {
+                    ArticleParagraph(verbatim: "The ten are taught from three poems, memorised and recited to a teacher line by line. Ash-Shatibiyyah (Hirz al-Amani wa Wajh at-Tahani), by al-Qasim ibn Firruh ash-Shatibi of Xativa in al-Andalus (d. 590 AH in Cairo), sets out the seven readings and their fourteen riwayaat in 1,173 lines rhyming in lam, which is why it is also called al-Lamiyyah. It opens with the names of the imams and the code letters that stand for them, then the usul (the rules that recur across the whole Quran: the hamzah, madd, idgham, the ha of the pronoun), then the farsh (the word-by-word differences, surah by surah), and closes with notes on writing and pausing.")
+
+                    ArticleParagraph(verbatim: "Ad-Durrah al-Mudiyyah, by Ibn al-Jazari (d. 833 AH), adds the three completing readings in about 240 lines. Together the two poems are the ‘Ashara Sughra, the ten by the shorter route, where students of the ten begin. His Tayyibat an-Nashr (about 1,015 lines, drawn from his prose an-Nashr fi al-Qira’at al-‘Ashr) is the ‘Ashara Kubra: the same ten readings with many more turuq (routes of transmission) under each narrator, studied after the Sughra.")
+
+                    ArticleParagraph(verbatim: "Ibn al-Jazari set three conditions for an accepted reading: a sound chain of transmission, agreement with one of the Uthmani mushafs, and agreement with Arabic. The ten meet all three, and the twenty riwayaat in this app follow the Sughra: ash-Shatibiyyah for the seven, ad-Durrah for the three.")
+                }
+
                 Section(header: ArticleHeader("OTHER REPORTED QIRAAT")) {
                     ArticleParagraph(verbatim: "There are other reported qiraat besides these Ten. Unlike the 10 Qiraat, which are mutawatir and mass attested, those others do not reach mutawatir status. That does not automatically make them inauthentic; some have isnad to Prophet Muhammad (peace and blessings be upon him), but because they are not mass attested, we avoid them in public recitation and worship.")
+
+                    ArticleParagraph(verbatim: "The best known are the four readings beyond the ten, called shadh: those of al-Hasan al-Basri, Ibn Muhaysin, Yahya al-Yazidi and al-A’mash. Students of the Kubra sometimes take them up after the ten; with the ten they are called the fourteen.")
 
                     ArticleParagraph(verbatim: "We recite what is known with certainty (yaqin يَقِين) to be from Prophet Muhammad (peace and blessings be upon him): the 10 Qiraat and their 20 Riwayaat. This unites the Ummah upon what is rigorously established.")
                 }
 
                 Section(header: ArticleHeader("PRACTICAL STUDY & ADVICE")) {
                     ArticleBullet(verbatim: "• Learn with a qualified teacher who has ijazah (إِجَازَة) and isnad (إِسنَاد). Do not self-invent pronunciations or rely only on apps without verification.")
-                    ArticleBullet(verbatim: "• Begin with one riwayah (commonly Hafs an Asim), then explore others (e.g., Warsh an Nafi) as you progress.")
+                    ArticleBullet(verbatim: "• The usual road: Hafs an Asim with tajweed first; then a second riwayah or the seven, memorising ash-Shatibiyyah; then the ten by the Sughra, adding ad-Durrah; then the Kubra with Tayyibat an-Nashr. At every stage the Quran is read to a teacher who holds ijazah, and books and apps are the supplement.")
                     ArticleBullet(verbatim: "• Remember: the variety of the readings is a mercy and an ease from Allah, not a contradiction. They illuminate the Quran’s depth and precision.")
                 }
 

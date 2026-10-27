@@ -745,6 +745,24 @@ final class SimpleModeUITests: XCTestCase {
         if app.buttons["Stop playing"].exists { app.buttons["Stop playing"].tap() }
     }
 
+    /// Play From Ayah closes the sheet even with Keep Sheet Open While Playing on (Abu, 2026-10-26:
+    /// "play from ayah shouldn't count for keeping sheet opened, only repeat and play this ayah"): the
+    /// recitation moves on past this ayah, so only Play This Ayah and Repeat Ayah keep the sheet.
+    func testActionsSheetPlayFromClosesSheetEvenWhenSwitchOn() {
+        let app = launchActionsSheet(keepOpenOnPlay: true)
+        let playFrom = app.buttons["Play From Ayah"]
+        XCTAssertTrue(playFrom.waitForExistence(timeout: 10), "the actions sheet has no Play From Ayah tile")
+        XCTAssertTrue(actionsSheetSwitch(app).exists, "the actions sheet has no Keep Screen On switch")
+        playFrom.tap()
+        let untilEndOfSurah = app.buttons["Until End of Surah"]
+        XCTAssertTrue(untilEndOfSurah.waitForExistence(timeout: 5), "the Play From Ayah tile did not open its menu")
+        untilEndOfSurah.tap()
+        let closed = actionsSheetSwitch(app).waitForNonExistence(timeout: 5)
+        if !closed { attachScreenshot("Actions sheet after Play From Ayah, switch on") }
+        XCTAssertTrue(closed, "Play From Ayah left the sheet open with Keep Sheet Open While Playing on")
+        if app.buttons["Stop playing"].waitForExistence(timeout: 5) { app.buttons["Stop playing"].tap() }
+    }
+
     /// The sheet's Choose Reciter row opens the reciter list ON the sheet: closing the list without a
     /// pick lands back on the actions.
     func testActionsSheetChooseReciterStacksOnSheet() {
@@ -882,19 +900,21 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertTrue(opened, "holding the text did not open the ayah actions sheet")
     }
 
-    func testMoreMenuDoubleTapChangesLayout() {
+    /// The grid switch is the ⋯ menu's HOLD since 2026-10-26 (a double tap made every plain tap wait
+    /// out the double-tap interval, which read as lag; see `ShortcutMenu`).
+    func testMoreMenuHoldChangesLayout() {
         let app = launch(["-launchTabQuran", "-seedBool", "simpleMode=0,THEfirstLaunch=0,quranGridMode=0"])
         let more = app.buttons["tabMoreMenu"]
         XCTAssertTrue(more.waitForExistence(timeout: 15))
-        more.doubleTap()
-        XCTAssertFalse(app.buttons["Open a Random Surah"].exists, "double tap also opened More")
+        more.press(forDuration: 0.7)
+        XCTAssertFalse(app.buttons["Open a Random Surah"].exists, "the hold also opened More")
         more.tap()
         let changedToGrid = app.buttons["Show as List"].waitForExistence(timeout: 5)
         if !changedToGrid {
             attachScreenshot("More after layout shortcut")
             print(app.debugDescription)
         }
-        XCTAssertTrue(changedToGrid, "double tap did not switch to grid")
+        XCTAssertTrue(changedToGrid, "the hold did not switch to grid")
     }
 
     /// Full Mode's ⋯ menu is four groups with the deeper study and the playback behind submenus

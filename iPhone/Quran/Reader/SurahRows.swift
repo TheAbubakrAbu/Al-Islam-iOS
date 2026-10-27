@@ -129,7 +129,7 @@ struct SurahRow: View, Equatable {
         self.isLastRead = Settings.shared.saveLastReadAyah && Settings.shared.lastReadSurah == surah.id
         self.isLastListened = Settings.shared.lastListenedSurah?.surahNumber == surah.id
         self.customAccentHex = Settings.shared.customAccentColorHex
-        self.cleanArabicKey = "\(Settings.shared.cleanArabicText ? 1 : 0)\(Settings.shared.removeArabicDots ? 1 : 0)"
+        self.cleanArabicKey = "\(Settings.shared.cleanArabicText ? 1 : 0)\(Settings.shared.removeArabicDots ? 1 : 0)" + Settings.shared.waslSignRaw
     }
 
     private var revelationEmoji: String {
@@ -745,6 +745,7 @@ struct SurahAyahRow: View, Equatable {
             settings.removeArabicDots ? "1" : "0",
             settings.beginnerMode ? "1" : "0",
             settings.displayQiraah,
+            settings.waslSignRaw,
             categorySignature
         ].joined(separator: "|")
     }
@@ -1364,6 +1365,7 @@ struct AyahSearchRow: View, Equatable {
             settings.removeArabicDots ? "1" : "0",
             settings.beginnerMode ? "1" : "0",
             settings.displayQiraah,
+            settings.waslSignRaw,
             categorySignature,
             query
         ].joined(separator: "|")

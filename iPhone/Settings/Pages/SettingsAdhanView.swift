@@ -513,7 +513,7 @@ struct SettingsAdhanView: View {
         Section(header: Text("NOTIFICATIONS")) {
             NavigationLink(destination: LazyDestination { NotificationView() }) {
                 SettingsRowLabel(title: String(localized: "Notification Settings"), systemImage: "bell.badge.fill",
-                                 subtitle: String(localized: "Prayer alerts, adhan sounds, reminders"), tint: SettingsTint.notifications)
+                                 subtitle: NotificationView.doorSubtitle, tint: SettingsTint.notifications)
             }
             .tint(settings.accentColor.color)
         }
@@ -916,8 +916,33 @@ struct NotificationView: View {
         #endif
     }
 
+    /// The master switch first, then everything it governs. Off, the page is the switch and its note
+    /// alone (the iOS Settings app's own Allow Notifications grammar) and every choice under it is kept.
     @ViewBuilder
     private var notificationSections: some View {
+        Section(header: Text("ALL NOTIFICATIONS"), footer: Text(allNotificationsFooter)) {
+            SettingsToggle(String(localized: "Allow Notifications"), isOn: $adhanSettings.notificationsEnabled)
+        }
+        if adhanSettings.notificationsEnabled {
+            enabledNotificationSections
+        }
+    }
+
+    private var allNotificationsFooter: String {
+        adhanSettings.notificationsEnabled
+            ? String(localized: "Off, the app sends nothing: no prayer alerts or adhan, no nagging, no Islamic dates, and no reminders of any kind. Every choice below is kept for when it comes back on.")
+            : String(localized: "Every notification from the app is off. Your choices are kept; turn this on to bring them back.")
+    }
+
+    /// The door rows' caption (Settings, Prayer Settings): what the page holds, or that it is all off.
+    static var doorSubtitle: String {
+        Settings.shared.notificationsEnabled
+            ? String(localized: "Prayer alerts, adhan sounds, reminders")
+            : String(localized: "All notifications are off")
+    }
+
+    @ViewBuilder
+    private var enabledNotificationSections: some View {
                 #if os(iOS)
                 Section(header: Text("PERMISSION")) {
                     permissionCard
@@ -1824,6 +1849,7 @@ struct PrayerNotificationDetailView: View {
 extension SettingsSearchEntry {
     static let notificationEntries: [SettingsSearchEntry] = sunnahReminderEntries + [
         .init(title: "Notification Settings", path: "Notifications", keywords: "alerts permission bell", destination: .notifications),
+        .init(title: "Allow Notifications", path: "Notifications", keywords: "all notifications off on master switch mute silence everything turn off disable stop none", destination: .notifications),
         .init(title: "Notification Permission", path: "Notifications", keywords: "allow access permission status sounds badges denied", destination: .notifications),
         .init(title: "Adhan Sound", path: "Notifications", keywords: "athan azan sound mecca madinah preview", destination: .notifications),
         .init(title: "Play Adhan Automatically", path: "Notifications", keywords: "automatic auto play in-app adhan full recording open app five minutes play button offer", destination: .notifications),

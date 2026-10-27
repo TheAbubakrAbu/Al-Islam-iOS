@@ -790,9 +790,12 @@ struct AyahActionsSheet: View {
     /// The comparison tile is worth showing as soon as either comparison is available.
     private var canCompare: Bool { settings.showQiraahDetails || settings.isHafsDisplay }
 
-    /// After Play This Ayah, Play From Ayah or Repeat Ayah: the sheet closes, unless "Keep Sheet Open
-    /// While Playing" is on (Abu, 2026-10-25: "sometimes when its playing i want to read the big
-    /// sheet"). Play Custom Range never comes through here; its own sheet plays and closes.
+    /// After Play This Ayah or Repeat Ayah: the sheet closes, unless "Keep Sheet Open While Playing"
+    /// is on (Abu, 2026-10-25: "sometimes when its playing i want to read the big sheet"). Play From
+    /// Ayah does not come through here since 2026-10-26 (Abu: "play from ayah shouldn't count for
+    /// keeping sheet opened, only repeat and play this ayah"): the recitation moves on through the page
+    /// or surah, so the sheet's own ayah is not what is playing; it closes. Play Custom Range never came
+    /// through here either; its own sheet plays and closes.
     private func closeAfterPlaying() {
         if !settings.keepAyahSheetOpenOnPlay { dismiss() }
     }
@@ -981,9 +984,9 @@ struct AyahActionsSheet: View {
         if settings.isHafsDisplay {
             // The ▶ menu's playback list in its order (and the Quran tab's Play Ayah submenu): Repeat
             // Ayah, Play Custom Range, Play From Ayah, then Play This Ayah, the primary action, lowest and
-            // nearest the thumb. Who recites is the Choose Reciter row under the grid. Repeat, Play From
-            // and Play This close the sheet unless Keep Sheet Open While Playing is on
-            // (`closeAfterPlaying`); Custom Range opens its own sheet.
+            // nearest the thumb. Who recites is the Choose Reciter row under the grid. Repeat and Play
+            // This close the sheet unless Keep Sheet Open While Playing is on (`closeAfterPlaying`);
+            // Play From always closes it, and Custom Range opens its own sheet.
             list.append(AyahAction(id: "repeat", title: String(localized: "Repeat Ayah"), systemImage: "repeat", kind: .repeatMenu))
 
             list.append(AyahAction(id: "customRange", title: String(localized: "Play Custom Range"), systemImage: "slider.horizontal.3", action: {
@@ -1078,7 +1081,7 @@ struct AyahActionsSheet: View {
 
                 optionToggle(
                     String(localized: "Keep Sheet Open While Playing"),
-                    caption: String(localized: "Play This Ayah, Play From Ayah and Repeat Ayah leave this sheet up so you can keep reading. Play Custom Range still closes it."),
+                    caption: String(localized: "Play This Ayah and Repeat Ayah leave this sheet up so you can keep reading. Play From Ayah and Play Custom Range still close it."),
                     systemImage: "rectangle.stack",
                     isOn: $quranDisplay.keepAyahSheetOpenOnPlay
                 )
@@ -1220,8 +1223,10 @@ struct AyahActionsSheet: View {
 
                 case .playFromMenu:
                     Menu {
+                        // Always closes, whatever Keep Sheet Open While Playing says: the recitation
+                        // carries on past this ayah (see `closeAfterPlaying`).
                         ayahPlayFromMenuItems(surah: surah.id, ayah: ayah.id, settings: settings,
-                                              quranPlayer: quranPlayer) { closeAfterPlaying() }
+                                              quranPlayer: quranPlayer) { dismiss() }
                     } label: {
                         actionTileLabel(item.title, systemImage: item.systemImage)
                     }
