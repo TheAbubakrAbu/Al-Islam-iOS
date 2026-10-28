@@ -1256,6 +1256,8 @@ final class HisnDuasStore: @unchecked Sendable {
         /// The label as the reader sees it: the book's own Arabic chapter title in the Arabic
         /// interface (as the Today screen shows it). `label` stays the English data.
         var displayLabel: String { AppLanguage.isArabicScript && !arabic.isEmpty ? arabic : label.localizedDisplay }
+        /// The situation's row id in the library's list, where the situation rail jumps.
+        var railRowID: String { "hisn-situation-\(id)" }
     }
 
     struct Collection: Identifiable {
@@ -1573,6 +1575,7 @@ struct HisnDuaLibraryView: View {
 
     var body: some View {
         let _ = RenderCounter.hit("HisnDuaLibraryView")
+        ScrollViewReader { proxy in
         List {
             Group {
                 if let library {
@@ -1625,7 +1628,9 @@ struct HisnDuaLibraryView: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
-                        ForEach(categories) { category in
+                        // Identified by the rail's row id: an `.id` on the link itself never
+                        // reached the List, so a jump to it did nothing.
+                        ForEach(categories, id: \.railRowID) { category in
                             NavigationLink(destination: LazyDestination { DuaCollectionView(collection: Self.collection(for: category, library: library)) }) {
                                 HStack(spacing: 10) {
                                     Text(category.number.localizedDigits)
@@ -1670,6 +1675,14 @@ struct HisnDuaLibraryView: View {
         }
         .applyConditionalListStyle(disableNowPlayingInset: true)
         .compactListSectionSpacing()
+        #if os(iOS)
+        // The situations' numbers down the edge (1, 5, 10 ... 130, 132); not while searching.
+        .jumpIndexRail(query.isEmpty ? Self.situationRailItems(shownCategories) : [],
+                       accessibilityName: String(localized: "Situation index"), proxy: proxy) { item in
+            shownCategories.indices.contains(item.id) ? shownCategories[item.id].railRowID : nil
+        }
+        #endif
+        }
         .adaptiveSafeArea(edge: .bottom) {
             SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search Hisn al-Muslim"))
                 .padding(.horizontal, 24)
@@ -1685,6 +1698,17 @@ struct HisnDuaLibraryView: View {
             applyFilter()
         }
     }
+
+    #if os(iOS)
+    /// The situation rail's stops by al-Qahtani's chapter numbers, for 40 situations or more. Counted
+    /// by place instead should a number ever be missing or out of order.
+    private static func situationRailItems(_ categories: [HisnDuasStore.Category]) -> [JumpIndexItem] {
+        guard categories.count >= 40 else { return [] }
+        let printed = categories.compactMap { Int($0.number) }
+        let numbers = printed.count == categories.count && printed == printed.sorted() ? printed : Array(1...categories.count)
+        return JumpIndexItem.numberedStops(numbers) { categories[$0].displayLabel }
+    }
+    #endif
 
     private static func filter(_ library: HisnDuasStore.Library?, query: String) -> (categories: [HisnDuasStore.Category], matches: [HisnDuasStore.Entry]) {
         guard let library else { return ([], []) }

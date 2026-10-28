@@ -73,6 +73,6 @@ final class SimpleTrimCatalogTests: XCTestCase {
     }
 
     func testCatalogCount() {
-        XCTAssertEqual(SimpleTrim.allCases.count, 43)
+        XCTAssertEqual(SimpleTrim.allCases.count, 44)
     }
 }

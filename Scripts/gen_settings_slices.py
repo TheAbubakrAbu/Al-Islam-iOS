@@ -28,10 +28,10 @@ SLICES = {
         {'accentColor', 'customAccentColorHex', 'customBackgroundColorHex', 'defaultView', 'classicLook',
          'classicLookInLowPower', 'showAccentGlow', 'alIslamGlow', 'colorSchemeString', 'userBackgroundRaw'}),
     'SystemSettings': (
-        'App-wide switches no tab owns: onboarding flags, Simple Mode, Advanced, haptics, the launch '
-        'tab, grid modes, help doors, the daily rollover hour.',
+        'App-wide switches no tab owns: onboarding flags, Simple Mode, Advanced, haptics, keep screen on, '
+        'the launch tab, grid modes, help doors, the daily rollover hour.',
         {'firstLaunch', 'aboutYouVersionSeen', 'cloudOfferVersionSeen', 'startHereHidden', 'startHereVisitedRaw',
-         'helpDoorsHiddenRaw', 'helpDoorsCollapsedRaw', 'launchTabRaw', 'launchTabChosen', 'hapticOn',
+         'helpDoorsHiddenRaw', 'helpDoorsCollapsedRaw', 'launchTabRaw', 'launchTabChosen', 'hapticOn', 'keepScreenOnRaw',
          'advancedSettings', 'simpleMode', 'gridMode', 'gridModeArabicRaw', 'gridModeNamesRaw', 'gridModeIslamRaw',
          'gridModeSettingsRaw', 'dailyRolloverAtFajr'}),
     'AdhanSettings': (
@@ -57,7 +57,7 @@ SLICES = {
          'quranSortDirectionRaw', 'khatmGroupByJuz', 'searchForSurahs', 'saveLastReadAyah', 'saveLastListenedSurah',
          'saveLastListenedAyah', 'showAyahOfTheDay', 'showWordOfTheDay', 'displayQiraah', 'qiraatComparisonMode',
          'showOtherQiraatReciters', 'betaQiraatEnabled', 'acceptedBetaQiraatNotice', 'riwayahTajweedHiddenRules',
-         'tajweedCustomColors', 'showArabicText', 'highlightAllahNames', 'keepAyahSheetOpen', 'keepAyahSheetOpenOnPlay',
+         'tajweedCustomColors', 'showArabicText', 'highlightAllahNames', 'keepAyahSheetOpen', 'keepAyahSheetOpenOnPlay', 'waslSignRaw',
          'ayahSheetKeepsScreenOn', 'ayahPreviewCardScale',
          'cleanArabicText', 'removeArabicDots', 'showTransliteration', 'showEnglishSaheeh', 'showEnglishMustafa',
          'showPageJuzDividers', 'showFullSurahRow', 'englishFontSize', 'fontArabic', 'fontArabicSize', 'useFontArabic',

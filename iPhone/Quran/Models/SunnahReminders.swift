@@ -41,6 +41,12 @@ enum AdhanOpenTarget: Equatable {
     case qibla
 }
 
+/// A narration to open in its book on the Hadith tab: a study sheet's "Open in Book".
+struct HadithOpenTarget: Equatable {
+    let slug: String
+    let idInBook: Int
+}
+
 enum IslamOpenTarget: Equatable {
     case hadithTab
     /// The Islam tab itself, nothing pushed: where About You lands someone who is there to learn,
@@ -78,6 +84,14 @@ final class AppNavigation: ObservableObject {
 
     func openIslam(_ target: IslamOpenTarget) {
         pendingIslam = target
+    }
+
+    /// The Hadith tab's pending narration (a study sheet's "Open in Book", HadithResolvedList.swift):
+    /// MainTabView switches tabs, HadithView opens the book at it and clears it.
+    @Published var pendingHadith: HadithOpenTarget?
+
+    func openHadith(slug: String, idInBook: Int) {
+        pendingHadith = HadithOpenTarget(slug: slug, idInBook: idInBook)
     }
 
     func open(_ target: QuranOpenTarget) {

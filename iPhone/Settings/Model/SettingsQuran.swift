@@ -10,6 +10,10 @@ extension Settings {
     enum QuranSortMode: String, CaseIterable, Identifiable {
         case surah
         case juz
+        /// Each surah once, under the juz it opens in, every juz a header (Abu, 2026-10-27: "add a
+        /// simple juz mode thats similar to tarteel's version"). `.juz` lists every surah a juz runs
+        /// through, with the ayah it starts or ends at.
+        case simpleJuz
         case revelation
         case khatm
         case page
@@ -27,6 +31,7 @@ extension Settings {
             case .surah: return String(localized: "Surah")
             case .ayahs: return String(localized: "Ayah Count")
             case .juz: return String(localized: "Juz")
+            case .simpleJuz: return String(localized: "Simple Juz")
             case .page: return String(localized: "Page Count")
             case .pages: return String(localized: "Pages")
             case .revelation: return String(localized: "Revelation")
@@ -43,6 +48,7 @@ extension Settings {
             case .surah: return "list.number"
             case .ayahs: return "number"
             case .juz: return "square.grid.3x3"
+            case .simpleJuz: return "list.bullet.rectangle"
             case .page: return "doc.text"
             case .pages: return "doc.text.fill"
             case .revelation: return "sparkles"

@@ -1700,6 +1700,8 @@ struct ArabicLetterPage: View {
                     Text("If a word starts with hamzatul waSl, its pronunciation depends on the third letter of the word. For verbs: if the third letter has a damma, pronounce it with a damma (أُ); if it has a kasra or fatha, pronounce it with a kasra (إِ).")
                     Text("In the Quran, there are seven nouns that start with hamzatul waSl. These nouns always begin with a kasra when pronounced in isolation.")
                     Text("Hamzatul waSl is usually not written with diacritics, but in learner texts or the Quran, it may be marked with a small ص above the Alif, indicating waSl.")
+                    // The whole of it, with the drills, on its own page (2026-10-27).
+                    HamzatulWaslLink()
                 }
                 .font(.body)
             default:

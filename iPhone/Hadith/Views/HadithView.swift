@@ -766,6 +766,27 @@ struct HadithView: View {
                 // Both containers navigate by path.
                 bookPath = [.book(slug: book.slug, autoOpenHadithID: nil)]
             }
+            // A study sheet's "Open in Book" (HadithResolvedList.swift): the narration opened in its
+            // chapter through the door the bookmarks use, once the tab switch (and the sheet's
+            // dismissal, which the sheet itself waits out) has settled; then the request is cleared
+            // so it never replays.
+            .onReceive(AppNavigation.shared.$pendingHadith) { target in
+                guard let target else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    AppNavigation.shared.pendingHadith = nil
+                    let reference = HadithBookmark(slug: target.slug, idInBook: target.idInBook, reference: "", preview: "")
+                    if #available(iOS 16.0, *), !usesColumnNavigation, !bookPath.isEmpty {
+                        // The sheet was opened from inside a book: a book route swapped in place keeps
+                        // the book screen's state, so its one-shot auto-open never re-fires (nor would
+                        // a chapter route swapped under the reader's own state). Back to the shelf
+                        // first, then the fresh push, delayed like every programmatic push here.
+                        bookPath.removeAll()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { pushedReference = reference }
+                    } else {
+                        pushedReference = reference
+                    }
+                }
+            }
             .onChange(of: pushedReference) { reference in
                 guard #available(iOS 16.0, *), let reference else { return }
                 pushedReference = nil

@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import CoreText
 import Combine
 #if canImport(AppKit)
 import AppKit
@@ -601,6 +602,45 @@ struct Ayah: Codable, Identifiable, Equatable {
     // Use `displayArabicText(surahId:clean:qiraahOverride:)`.)
 }
 
+/// Where a face begins the glyph that draws each small iqlab meem of a word (see
+/// `TajweedStore.tinyMeemPaintRanges`). Shaped once per word and face; about 600 words ever ask.
+enum TinyMeemGlyphs {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var cache: [String: [Int: Int]] = [:]
+
+    /// For each small meem (ۢ U+06E2, ۭ U+06ED) of `word`, by its UTF-16 offset, the offset of the first
+    /// character of the glyph that draws it in `fontName`: itself when the meem is a glyph of its own.
+    /// A face that does not load answers that way too, so the meem alone is painted.
+    static func glyphStarts(word: String, fontName: String) -> [Int: Int] {
+        let key = fontName + "|" + word
+        lock.lock()
+        if let hit = cache[key] { lock.unlock(); return hit }
+        lock.unlock()
+
+        let units = Array(word.utf16)
+        let meems = units.indices.filter { units[$0] == 0x06E2 || units[$0] == 0x06ED }
+        var starts: [Int] = []
+        if !meems.isEmpty, let font = QuranFontCache.font(name: fontName, size: 40) {
+            let line = CTLineCreateWithAttributedString(NSAttributedString(string: word, attributes: [.font: font]))
+            for run in (CTLineGetGlyphRuns(line) as? [CTRun]) ?? [] {
+                let count = CTRunGetGlyphCount(run)
+                var indices = [CFIndex](repeating: 0, count: count)
+                CTRunGetStringIndices(run, CFRange(location: 0, length: count), &indices)
+                starts += indices.map { Int($0) }
+            }
+        }
+        var result: [Int: Int] = [:]
+        for meem in meems {
+            // The glyph holding the meem is the one that starts last at or before it.
+            result[meem] = starts.filter { $0 <= meem }.max() ?? meem
+        }
+        lock.lock()
+        cache[key] = result
+        lock.unlock()
+        return result
+    }
+}
+
 final class TajweedStore {
     static let shared = TajweedStore()
     private static let fatha = UnicodeScalar(0x064E)!
@@ -772,7 +812,9 @@ final class TajweedStore {
         waslSign: Settings.WaslSignStyle = .print
     ) -> NSString {
         let requestedDisplayDigest = requestedDisplayText.map(Self.stableTextDigest) ?? 0
-        return "\(surah):\(ayah):\(Self.stableTextDigest(text)):\(requestedDisplayDigest):\(cleanDisplayText ? 1 : 0):\(beginnerSpacing ? 1 : 0):\(removeArabicDots ? 1 : 0):\(waslSign.rawValue):\(visibilitySignature)" as NSString
+        // The face too: where the iqlab meem's colour can go depends on how the face draws it
+        // (`tinyMeemPaintRanges`).
+        return "\(surah):\(ayah):\(Self.stableTextDigest(text)):\(requestedDisplayDigest):\(cleanDisplayText ? 1 : 0):\(beginnerSpacing ? 1 : 0):\(removeArabicDots ? 1 : 0):\(waslSign.rawValue):\(visibilitySignature):\(settings.fontArabic)" as NSString
     }
 
     /// What the caches know about one ayah's paint, for a row that must not paint in its body.
@@ -1400,8 +1442,8 @@ final class TajweedStore {
             )
 
             // Small high yeh (ۧ) sits on a tatweel (e.g. ـۧ in ٱلنَّبِيِّـۧنَ) and the font won't paint a
-            // foreground color onto the bare mark, so color the whole carrier cluster instead - the same
-            // "color the whole letter" approach used for the tiny iqlaab meem - so it's actually visible.
+            // foreground color onto the bare mark, so color the whole carrier cluster instead, so it's
+            // actually visible.
             for cluster in clusters where clusterHasSmallHighYehMaddMark(cluster) {
                 for range in smallHighYehMaddPaintRanges(in: cluster) {
                     appendPaintOpIfVisible(
@@ -2917,18 +2959,39 @@ final class TajweedStore {
         return !hasAnyTashkeel(clusters[index]) || clusters[index].contains(Self.smallHighUprightRectangularZero)
     }
 
-    private func tinyMeemPaintRanges(in cluster: CharacterClusterInfo) -> [NSRange] {
-        // Color the whole carrier letter (e.g. the ة in ةُۢ before baa), not just the small meem mark,
-        // so the iqlaab is actually visible on the letter.
+    /// The iqlab colour goes on the small meem itself, above (ۢ) or below (ۭ), and the letter carrying it
+    /// keeps its own rule (Abu, 2026-10-27: "it was just supposed to be bottom and top meem"). The whole
+    /// letter was painted from 4.4.0, which hid the weight of 33 raas (بَصِيرُۢ) and 14 isti'la letters.
+    ///
+    /// The paint follows the GLYPH, though, because KFGQPC HAFS draws only 412 of the 609 small meems as
+    /// a glyph of their own: 61 share one with the kasra over them (قِۭ, a `liga` ligature) and 136 are
+    /// baked into the letter itself (مُحِيطُۢ, كَافِرِۭ, the noon of أَنۢبِئۡهُم: 21 `calt` ligatures). A glyph
+    /// takes the colour of its FIRST character, so a meem-only paint left those with no visible iqlab at
+    /// all, which is why the whole letter was painted. Deleting the ligatures is no way out: rendered
+    /// without them the meem lands on the letter or its vowel in every one (checked 2026-10-27). So the
+    /// range runs from the start of the glyph that draws the meem: the meem alone, the kasra and meem, or
+    /// the whole letter where the font leaves no choice.
+    private func tinyMeemPaintRanges(clusters: [CharacterClusterInfo], index: Int) -> [NSRange] {
+        let cluster = clusters[index]
         guard clusterHasTinyMeemIqlaabMark(cluster) else { return [] }
-        // ... unless the letter is a noon or meem with shadda (صُمُّۢ بُكۡمٌ 2:18 and 2:171, مُطۡمَئِنُّۢ بِ
-        // 16:106: five sites), whose own ghunnah a whole-cluster iqlab hid until 2026-10-12. There the
-        // mark alone takes the iqlab colour and the letter keeps its ghunnah; the word card lists both.
-        if let base = cluster.primaryArabicLetter, base == "ن" || base == "م", hasShadda(cluster) {
-            let marks = [Self.smallHighMeem, Self.smallLowMeem].compactMap { scalarRange(in: cluster, scalar: $0) }
-            if !marks.isEmpty { return marks }
+        var first = index, last = index
+        while first > 0, !isWhitespaceOnly(clusters[first - 1]) { first -= 1 }
+        while last + 1 < clusters.count, !isWhitespaceOnly(clusters[last + 1]) { last += 1 }
+        let wordStart = clusters[first].utf16Range.lowerBound
+        let glyphStarts = TinyMeemGlyphs.glyphStarts(word: clusters[first...last].map(\.text).joined(),
+                                                     fontName: settings.fontArabic)
+        var ranges: [NSRange] = []
+        var offset = cluster.utf16Range.lowerBound
+        for scalar in cluster.text.unicodeScalars {
+            let length = utf16Length(of: scalar)
+            if scalar == Self.smallHighMeem || scalar == Self.smallLowMeem {
+                // Never reach back past this letter, whatever the font did.
+                let start = max(wordStart + (glyphStarts[offset - wordStart] ?? offset - wordStart), cluster.utf16Range.lowerBound)
+                ranges.append(NSRange(location: start, length: offset + length - start))
+            }
+            offset += length
         }
-        return [nsRange(for: cluster)]
+        return ranges
     }
 
     private func clusterHasSmallHighYehMaddMark(_ cluster: CharacterClusterInfo) -> Bool {
@@ -2937,7 +3000,7 @@ final class TajweedStore {
 
     private func smallHighYehMaddPaintRanges(in cluster: CharacterClusterInfo) -> [NSRange] {
         // Color the whole carrier cluster (e.g. the ـۧ in ٱلنَّبِيِّـۧنَ), not just the bare small high yeh
-        // mark, so this miniature natural madd actually shows - same reasoning as `tinyMeemPaintRanges`.
+        // mark, so this miniature natural madd actually shows (the font will not colour the bare mark).
         guard clusterHasSmallHighYehMaddMark(cluster) else { return [] }
         return [nsRange(for: cluster)]
     }
@@ -3083,10 +3146,10 @@ final class TajweedStore {
         for idx in clusters.indices {
             let cluster = clusters[idx]
 
-            // Tiny high meem (ۢ): color only the mark. Tiny low meem (ۭ): color the full cluster.
+            // The small meem of iqlab, above (ۢ) or below (ۭ): only the glyph that draws it.
             if clusterHasTinyMeemIqlaabMark(cluster),
                !shouldSuppressTinyMeemIqlaab(clusters: clusters, index: idx) {
-                for range in tinyMeemPaintRanges(in: cluster) {
+                for range in tinyMeemPaintRanges(clusters: clusters, index: idx) {
                     appendPaintOpIfVisible(range: range, priority: PaintPriority.tinyMeemIqlaab, category: .iqlaab, into: &ops)
                 }
             }
@@ -3156,6 +3219,9 @@ final class TajweedStore {
 
             // Noon with no tashkeel: classify from the next Arabic letter (ignoring spaces).
             if base == "ن" && !hasAnyTashkeel(cluster) {
+                // A noon carrying the small meem (مِنۢ, 270 sites) is the iqlab the meem above already
+                // paints; painting the noon too coloured the whole letter.
+                if clusterHasTinyMeemIqlaabMark(cluster) { continue }
                 guard let nextIndex = nextArabicLetterClusterIndex(clusters: clusters, after: idx),
                       let nextBase = clusters[nextIndex].primaryArabicLetter else {
                     continue
@@ -3542,16 +3608,23 @@ final class TajweedStore {
         guard clusters[index].primaryArabicLetter == "ر" else { return false }
         let current = clusters[index]
         if indexOfFinalPronouncedArabicLetterCluster(clusters: clusters) == index {
+            // A tanween fath is not stopped on a sukoon: it turns into the 'iwad alif and the raa keeps
+            // its fatha, so it is heavy whatever comes before it (سَعِيرًا 33:64, ذِكۡرٗا 18:70). The
+            // letter-before rule below is for a raa stopped on a sukoon. 131 ayah ends were painted
+            // light until 2026-10-27, 117 of them after a madd yaa.
+            if hasFathatayn(current) { return true }
             guard let previousIndex = previousPronouncedArabicLetterClusterIndex(clusters: clusters, before: index) else { return false }
             let previous = finalRaaVowelContextCluster(clusters: clusters, previousIndex: previousIndex)
             if hasKasraFamily(previous) { return false }
-            if previous.primaryArabicLetter == "و" {
-                return !hasAnyTashkeel(previous) || hasDammaFamily(previous)
-            }
-            if previous.primaryArabicLetter == "ا" || previous.primaryArabicLetter == "ى" {
+            // A vowelled letter decides by its vowel, a waw included: past the saakin taa of وَٱلۡوَتۡرِ
+            // (89:3) the waw is a consonant with a fatha, which the madd-waw test (a bare waw, or one
+            // with a damma) painted light until 2026-10-27.
+            if hasFathaFamily(previous) || hasDammaFamily(previous) { return true }
+            // A bare madd waw or alif is heavy (ٱلۡأُمُورُ, ٱلنَّارِ); a bare madd yaa is not (قَدِيرٞ).
+            if let base = previous.primaryArabicLetter, base == "و" || base == "ا" || base == "ى" {
                 return !hasAnyTashkeel(previous)
             }
-            return hasFathaFamily(previous) || hasDammaFamily(previous)
+            return false
         }
         if hasKasraFamily(current) { return false }
         if hasHeavyOpenVowel(current) { return true }

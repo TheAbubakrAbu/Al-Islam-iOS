@@ -308,6 +308,24 @@ struct HadithRow: View, Equatable {
     @State private var showRespectAlert = false
     @State private var showSummarize = false
     @State private var showSelectTextSheet = false
+    @State private var showChainSheet = false
+    @State private var showSimilarSheet = false
+    #if DEBUG
+    private static var debugChainOpened = false
+    private static var debugSimilarOpened = false
+    #endif
+
+    /// This narration has a chain the app can draw (HadithChains.swift): a binary search in its book's
+    /// chains, which the book screen inflates as it appears (or the first row to ask, once).
+    private var hasChain: Bool {
+        HadithChainStore.shared.hasChain(slug: book.slug, idInBook: hadith.idInBook)
+    }
+
+    /// This narration has other rows on the shelf carrying its text, or nearly (SimilarHadiths.swift):
+    /// the same binary search as `hasChain`, in a book block the book screen inflates as it appears.
+    private var hasSimilar: Bool {
+        SimilarHadithsStore.shared.hasMatches(slug: book.slug, idInBook: hadith.idInBook)
+    }
 
     /// "Sahih al-Bukhari 1234" - the standard way a hadith is cited (the sunnah.com citation when
     /// one exists, the internal row number for the books that have none).
@@ -701,7 +719,26 @@ struct HadithRow: View, Equatable {
             // OUTSIDE the Arabic/English blocks above: the grading is part of the hadith, not a
             // display preference, so it renders whenever the hadith has grades - including with both
             // display toggles off.
-            HadithGradeLine(grades: grades, font: compact ? .caption2 : .footnote)
+            // A tap on the grade opens the chain it rests on (Abu, 2026-10-27: "if I click on the ruling
+            // ... see chain"), marked by the chain glyph at the line's end.
+            if !compact, !grades.isEmpty, hasChain {
+                Button {
+                    settings.hapticFeedback()
+                    showChainSheet = true
+                } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        HadithGradeLine(grades: grades, font: .footnote)
+                        Image(systemName: "point.3.connected.trianglepath.dotted")
+                            .font(.caption)
+                            .foregroundColor(settings.accentColor.color)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(Text("Shows the chain of narrators"))
+            } else {
+                HadithGradeLine(grades: grades, font: compact ? .caption2 : .footnote)
+            }
 
             // The bookmark's note, shown in the reading row exactly like a noted ayah - quiet, under the text.
             if !compact, let note = noteText {
@@ -757,6 +794,31 @@ struct HadithRow: View, Equatable {
             SelectHadithTextSheet(book: book, hadith: hadith)
                 .smallMediumSheetPresentation()
         }
+        .sheet(isPresented: $showChainSheet) {
+            HadithChainSheet(book: book, hadith: hadith)
+        }
+        .sheet(isPresented: $showSimilarSheet) {
+            SimilarHadithsSheet(book: book, hadith: hadith)
+        }
+        #if DEBUG
+        .onAppear {
+            // "-openHadithChain bukhari:1" / "-openSimilarHadiths bukhari:1" (slug:idInBook, with
+            // -launchHadithOpen): that row opens its chain, or its similar narrations.
+            let arguments = ProcessInfo.processInfo.arguments
+            guard !compact else { return }
+            let target = "\(book.slug):\(hadith.idInBook)"
+            if let index = arguments.firstIndex(of: "-openHadithChain"), arguments.indices.contains(index + 1),
+               arguments[index + 1] == target, !Self.debugChainOpened {
+                Self.debugChainOpened = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showChainSheet = true }
+            }
+            if let index = arguments.firstIndex(of: "-openSimilarHadiths"), arguments.indices.contains(index + 1),
+               arguments[index + 1] == target, !Self.debugSimilarOpened {
+                Self.debugSimilarOpened = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showSimilarSheet = true }
+            }
+        }
+        #endif
         #if os(iOS) && canImport(FoundationModels)
         .sheet(isPresented: $showSummarize) {
             // Single-source: one narration, not a set of editions, so no `multiSource` and no
@@ -853,6 +915,26 @@ struct HadithRow: View, Equatable {
             showSelectTextSheet = true
         } label: {
             Label("Select Text", systemImage: "highlighter")
+        }
+
+        // The narration's isnad, drawn in Arabic and shareable (HadithChainSheet).
+        if hasChain {
+            Button {
+                settings.hapticFeedback()
+                showChainSheet = true
+            } label: {
+                Label("Chain of Narrators", systemImage: "point.3.connected.trianglepath.dotted")
+            }
+        }
+
+        // The other narrations on the shelf that carry this text, or nearly (SimilarHadithsSheet).
+        if hasSimilar {
+            Button {
+                settings.hapticFeedback()
+                showSimilarSheet = true
+            } label: {
+                Label("Similar Hadiths", systemImage: "doc.text.magnifyingglass")
+            }
         }
 
         // ONE share surface and ONE copy, both driven by the same composition options - the pile of

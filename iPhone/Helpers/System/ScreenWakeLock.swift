@@ -26,6 +26,15 @@ import UIKit
 /// default, Abu 2026-10-25) holds the lock while that sheet is on screen, playing or not: the reader
 /// asked for it by name, so it is not the guess about intent that "while playing" would be.
 ///
+/// THE KEEP SCREEN ON SETTING (Abu, 2026-10-27: "always keep app open, only on Quran, never
+/// (default)"). Appearance > Look and Feel. "Always" holds the screen for as long as the app is in
+/// front; "In the Quran" holds it while a surah is open (`holdsScreenInQuran`, counted apart from the
+/// holders above because whether it counts depends on the setting, which can change while the reader
+/// is open). "Never" leaves only the holders above: they are narrow, asked-for holds that the reader
+/// would expect to keep. The list reader used to hold the screen whenever it was open, through a
+/// second writer of the same flag (`ScreenAwake`), which this class's next `apply` silently overruled
+/// on the first return to the app; that writer is gone and its job is the "In the Quran" choice.
+///
 /// WHY THE FLAG IS WRITTEN AND NOT TRUSTED. `isIdleTimerDisabled` is a property of the WINDOW SCENE's
 /// application object and iOS resets it across background transitions, so the count is the truth and the
 /// flag is re-asserted from it (see `reassert`) rather than read back.
@@ -37,6 +46,9 @@ final class ScreenWakeLock {
     /// How many views currently want the screen up. Never negative: an unbalanced release is a bug in a
     /// caller, and clamping keeps it from stranding the flag ON for the rest of the session.
     private var holders = 0
+    /// How many Quran readers are on screen. They hold the screen only while Keep Screen On is set to
+    /// "In the Quran".
+    private var quranReaders = 0
 
     func acquire() {
         holders += 1
@@ -49,15 +61,35 @@ final class ScreenWakeLock {
         apply()
     }
 
-    /// Re-applies the flag from the count. Called on foregrounding, where iOS may have cleared it while
-    /// the app was away but our holders are all still mounted.
+    func readerAppeared() {
+        quranReaders += 1
+        apply()
+    }
+
+    func readerDisappeared() {
+        guard quranReaders > 0 else { return }
+        quranReaders -= 1
+        apply()
+    }
+
+    /// Re-applies the flag from the counts and the setting. Called on foregrounding, where iOS may have
+    /// cleared it while the app was away but our holders are all still mounted, and when Keep Screen On
+    /// changes.
     func reassert() { apply() }
 
     private func apply() {
         // iOS only: `isIdleTimerDisabled` does not exist on watchOS, and on the Mac (Designed for iPad)
         // display sleep belongs to the system's own power settings, which an app should not hold open.
         #if os(iOS)
-        UIApplication.shared.isIdleTimerDisabled = holders > 0
+        let wanted: Bool
+        switch Settings.shared.keepScreenOn {
+        case .always: wanted = true
+        case .quran: wanted = holders > 0 || quranReaders > 0
+        case .never: wanted = holders > 0
+        }
+        if UIApplication.shared.isIdleTimerDisabled != wanted {
+            UIApplication.shared.isIdleTimerDisabled = wanted
+        }
         #endif
     }
 }
@@ -93,10 +125,36 @@ private struct KeepScreenAwake: ViewModifier {
     }
 }
 
+/// Counts a Quran reader for as long as it is on screen; `ScreenWakeLock` decides from the setting
+/// whether that keeps the display up. A tab switch or a page pushed over the reader is a disappear,
+/// so the screen may sleep there again.
+private struct QuranReaderPresence: ViewModifier {
+    @State private var present = false
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                guard !present else { return }
+                present = true
+                ScreenWakeLock.shared.readerAppeared()
+            }
+            .onDisappear {
+                guard present else { return }
+                present = false
+                ScreenWakeLock.shared.readerDisappeared()
+            }
+    }
+}
+
 extension View {
     /// Holds the display awake while `active` - for a recitation highlight the user is reading along
     /// with. See `ScreenWakeLock` for why this is keyed to the highlight and not to playback.
     func keepScreenAwake(while active: Bool) -> some View {
         modifier(KeepScreenAwake(active: active))
+    }
+
+    /// Marks the Quran reader, which holds the display while Keep Screen On is "In the Quran".
+    func holdsScreenInQuran() -> some View {
+        modifier(QuranReaderPresence())
     }
 }

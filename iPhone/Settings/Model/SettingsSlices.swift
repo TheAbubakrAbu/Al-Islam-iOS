@@ -120,7 +120,7 @@ final class AppearanceSettings: ObservableObject, SettingsSlice {
     }
 }
 
-/// App-wide switches no tab owns: onboarding flags, Simple Mode, Advanced, haptics, the launch tab, grid modes, help doors, the daily rollover hour.
+/// App-wide switches no tab owns: onboarding flags, Simple Mode, Advanced, haptics, keep screen on, the launch tab, grid modes, help doors, the daily rollover hour.
 final class SystemSettings: ObservableObject, SettingsSlice {
     static let shared = SystemSettings()
     static let label = "SystemSettings"
@@ -128,8 +128,8 @@ final class SystemSettings: ObservableObject, SettingsSlice {
         "THEfirstLaunch", "aboutYouVersionSeen", "advancedSettings", "cloudBackup.offerVersionSeen",
         "dailyRolloverAtFajr", "gridModeArabicRaw", "gridModeIslamRaw", "gridModeNamesRaw",
         "gridModeSettingsRaw", "hapticOn", "helpDoorsCollapsed", "helpDoorsHidden",
-        "launchTab", "launchTabChosen", "quranGridMode", "simpleMode",
-        "startHereHidden", "startHereVisited",
+        "keepScreenOn", "launchTab", "launchTabChosen", "quranGridMode",
+        "simpleMode", "startHereHidden", "startHereVisited",
     ]
 
     private init() { ObjectPublishCounter.attach(self, label: Self.label) }
@@ -203,6 +203,11 @@ final class SystemSettings: ObservableObject, SettingsSlice {
         set { Settings.shared.helpDoorsHiddenRaw = newValue }
     }
 
+    var keepScreenOnRaw: String {
+        get { Settings.shared.keepScreenOnRaw }
+        set { Settings.shared.keepScreenOnRaw = newValue }
+    }
+
     var launchTabChosen: Bool {
         get { Settings.shared.launchTabChosen }
         set { Settings.shared.launchTabChosen = newValue }
@@ -250,17 +255,17 @@ final class AdhanSettings: ObservableObject, SettingsSlice {
         "naggingPerDeadlineStart", "naggingSound", "naggingStartOffset", "naggingSunrise",
         "notificationAlertSnoozedUntil", "notificationAsr", "notificationDhuhr", "notificationDuha",
         "notificationFajr", "notificationIsha", "notificationIslamicMidnight", "notificationLastThird",
-        "notificationMaghrib", "notificationNeverAskAgain", "notificationSunrise", "notificationsEnabled", "offsetAsr",
-        "offsetDhuhr", "offsetFajr", "offsetIsha", "offsetMaghrib",
-        "offsetSunrise", "prayerCalculation", "prayerNotificationEnglishNames", "preNotificationAsr",
-        "preNotificationDhuhr", "preNotificationDuha", "preNotificationFajr", "preNotificationIsha",
-        "preNotificationIslamicMidnight", "preNotificationLastThird", "preNotificationMaghrib", "preNotificationSunrise",
-        "shortAdhanAsr", "shortAdhanDhuhr", "shortAdhanFajr", "shortAdhanIsha",
-        "shortAdhanMaghrib", "showDuha", "showIslamicMidnight", "showLastThird",
-        "showLocationAlert", "showNotificationAlert", "showPrayerInfo", "showSkyScene",
-        "showSkyView", "skyFillsAdhanTab", "skyGradients", "skySceneStyle",
-        "skyShowsWeather", "switchHijriDateAtMaghrib", "travelAutomatic", "travelTurnOffAutomatic",
-        "travelTurnOnAutomatic", "travelingMode", "travelingShowFullPrayers",
+        "notificationMaghrib", "notificationNeverAskAgain", "notificationSunrise", "notificationsEnabled",
+        "offsetAsr", "offsetDhuhr", "offsetFajr", "offsetIsha",
+        "offsetMaghrib", "offsetSunrise", "prayerCalculation", "prayerNotificationEnglishNames",
+        "preNotificationAsr", "preNotificationDhuhr", "preNotificationDuha", "preNotificationFajr",
+        "preNotificationIsha", "preNotificationIslamicMidnight", "preNotificationLastThird", "preNotificationMaghrib",
+        "preNotificationSunrise", "shortAdhanAsr", "shortAdhanDhuhr", "shortAdhanFajr",
+        "shortAdhanIsha", "shortAdhanMaghrib", "showDuha", "showIslamicMidnight",
+        "showLastThird", "showLocationAlert", "showNotificationAlert", "showPrayerInfo",
+        "showSkyScene", "showSkyView", "skyFillsAdhanTab", "skyGradients",
+        "skySceneStyle", "skyShowsWeather", "switchHijriDateAtMaghrib", "travelAutomatic",
+        "travelTurnOffAutomatic", "travelTurnOnAutomatic", "travelingMode", "travelingShowFullPrayers",
     ]
 
     private init() { ObjectPublishCounter.attach(self, label: Self.label) }
@@ -554,11 +559,6 @@ final class AdhanSettings: ObservableObject, SettingsSlice {
         set { Settings.shared.notificationFajr = newValue }
     }
 
-    var notificationsEnabled: Bool {
-        get { Settings.shared.notificationsEnabled }
-        set { Settings.shared.notificationsEnabled = newValue }
-    }
-
     var notificationIsha: Bool {
         get { Settings.shared.notificationIsha }
         set { Settings.shared.notificationIsha = newValue }
@@ -587,6 +587,11 @@ final class AdhanSettings: ObservableObject, SettingsSlice {
     var notificationSunrise: Bool {
         get { Settings.shared.notificationSunrise }
         set { Settings.shared.notificationSunrise = newValue }
+    }
+
+    var notificationsEnabled: Bool {
+        get { Settings.shared.notificationsEnabled }
+        set { Settings.shared.notificationsEnabled = newValue }
     }
 
     var offsetAsr: Int {
@@ -838,19 +843,19 @@ final class QuranDisplay: ObservableObject, SettingsSlice {
         "mushafHafsPDFEdition", "mushafPDFAppearance", "mushafPageLanguage", "mushafTwoPageSpread",
         "qiraatComparisonMode", "quranArabicScriptStyle", "quranPageMode", "quranSortDirection",
         "quranSortMode", "quranTestModeEndsOnLeave", "quranTestModeHides", "quranTestModeOn",
-        "quranTestModeReveals", "quranTestModeRevealsRecited", "quranWaslSign", "reciteType", "reciter",
-        "reciterId", "removeArabicDots", "riwayahTajweedHiddenRules", "saveLastListenedAyah",
-        "saveLastListenedSurah", "saveLastReadAyah", "searchForSurahs", "shareShowAyahInformation",
-        "shareShowSurahInformation", "showArabicText", "showAyahOfTheDay", "showBookmarks",
-        "showEnglishMustafa", "showEnglishSaheeh", "showFavorites", "showFullSurahRow",
-        "showMuqattaatHelper", "showOtherQiraatReciters", "showPageJuzDividers", "showTajweedBareNuunMeem",
-        "showTajweedColors", "showTajweedGeneralGhunnah", "showTajweedHamzatWaslSilent", "showTajweedIdghamBiGhunnahHeavy",
-        "showTajweedIdghamBilaGhunnah", "showTajweedIkhfaa", "showTajweedIqlab", "showTajweedLamShamsiyah",
-        "showTajweedMadd246", "showTajweedMaddConnected", "showTajweedMaddNatural2", "showTajweedMaddNaturalMiniature",
-        "showTajweedMaddNecessary6", "showTajweedMaddSeparated", "showTajweedQalqalah", "showTajweedSukoonJazm",
-        "showTajweedTafkhim", "showTransliteration", "showWordOfTheDay", "tajweedCustomColors",
-        "useFontArabic", "wordByWordInline", "wordByWordInlineTranslation", "wordByWordInlineTransliteration",
-        "wordByWordMeanings",
+        "quranTestModeReveals", "quranTestModeRevealsRecited", "quranWaslSign", "reciteType",
+        "reciter", "reciterId", "removeArabicDots", "riwayahTajweedHiddenRules",
+        "saveLastListenedAyah", "saveLastListenedSurah", "saveLastReadAyah", "searchForSurahs",
+        "shareShowAyahInformation", "shareShowSurahInformation", "showArabicText", "showAyahOfTheDay",
+        "showBookmarks", "showEnglishMustafa", "showEnglishSaheeh", "showFavorites",
+        "showFullSurahRow", "showMuqattaatHelper", "showOtherQiraatReciters", "showPageJuzDividers",
+        "showTajweedBareNuunMeem", "showTajweedColors", "showTajweedGeneralGhunnah", "showTajweedHamzatWaslSilent",
+        "showTajweedIdghamBiGhunnahHeavy", "showTajweedIdghamBilaGhunnah", "showTajweedIkhfaa", "showTajweedIqlab",
+        "showTajweedLamShamsiyah", "showTajweedMadd246", "showTajweedMaddConnected", "showTajweedMaddNatural2",
+        "showTajweedMaddNaturalMiniature", "showTajweedMaddNecessary6", "showTajweedMaddSeparated", "showTajweedQalqalah",
+        "showTajweedSukoonJazm", "showTajweedTafkhim", "showTransliteration", "showWordOfTheDay",
+        "tajweedCustomColors", "useFontArabic", "wordByWordInline", "wordByWordInlineTranslation",
+        "wordByWordInlineTransliteration", "wordByWordMeanings",
     ]
 
     private init() { ObjectPublishCounter.attach(self, label: Self.label) }
@@ -867,11 +872,6 @@ final class QuranDisplay: ObservableObject, SettingsSlice {
     var arabicScriptStyleRaw: String {
         get { Settings.shared.arabicScriptStyleRaw }
         set { Settings.shared.arabicScriptStyleRaw = newValue }
-    }
-
-    var waslSignRaw: String {
-        get { Settings.shared.waslSignRaw }
-        set { Settings.shared.waslSignRaw = newValue }
     }
 
     var automaticKhatmCompletion: Bool {
@@ -1247,6 +1247,11 @@ final class QuranDisplay: ObservableObject, SettingsSlice {
     var useFontArabic: Bool {
         get { Settings.shared.useFontArabic }
         set { Settings.shared.useFontArabic = newValue }
+    }
+
+    var waslSignRaw: String {
+        get { Settings.shared.waslSignRaw }
+        set { Settings.shared.waslSignRaw = newValue }
     }
 
     var wordByWordInline: Bool {

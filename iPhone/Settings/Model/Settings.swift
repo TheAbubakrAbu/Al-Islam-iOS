@@ -1328,6 +1328,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         // What was last scheduled, played or drawn here.
         "lastCalculationNotificationAt", "lastTravelingNotificationAt", "lastScheduledHijriYear",
         "extraRemindersArmedSignature", "foregroundAdhanLastPlayedMoment", "adhanClipStamps",
+        // The Quran Planner reminder as this phone last scheduled it, kept so Allow Notifications can
+        // re-add it (`QuranPlannerReminder.rearmIfKept`); its time and switch are the preferences.
+        "quranPlannerReminderLast",
         "dailyWidgetsWrittenDay", "quranWidgetSnapshot", "dailyWidgetSnapshot", "mushaf.lastPageGeometry",
         // Whether a recitation is playing on this phone right now, mirrored into the app group for the
         // Control Center toggle (`QuranPlayer.mirrorPlaybackStateForControls`): live state, and a restore
@@ -1350,9 +1353,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         // Retired keys an older build left in the domain; nothing reads them now (`arabicGridMode`: the
         // pre-4.6.0 alphabet switch the per-screen `gridModeArabicRaw` replaced; `shouldShowRateAlert`:
         // the old review latch, migrated once by AppReview and never read again; the seven
-        // `advancedSettings_<screen>` switches of the screens that lost theirs on 2026-10-25).
+        // `advancedSettings_<screen>` switches of the screens that lost theirs on 2026-10-25;
+        // `showJuzJumpGrid`: the fold of the JUMP TO JUZ card the juz rail replaced on 2026-10-27).
         "foregroundAdhanLastPlayedID", "gridMode", "islamGridMode", "namesGridMode", "arabicGridMode",
-        "shouldShowRateAlert",
+        "shouldShowRateAlert", "showJuzJumpGrid",
     ] + AdvancedScreen.retiredStorageKeys + [
         // Today's picks: tomorrow they are wrong anyway.
         "hijriDate", "ayahOfTheDayHiddenDate", "ayahOfTheDayOverride", "hadithOfTheDayHiddenDate", "hadithOfTheDayOverride", "hadithOfTheDayResolved",
@@ -3927,6 +3931,41 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     @Setting("launchTabChosen") var launchTabChosen: Bool = false
 
     @Setting("hapticOn") var hapticOn: Bool = true
+
+    /// When the display may not sleep on its own (Abu, 2026-10-27: "have a setting to always keep the
+    /// display on in the app or at least for Quran ... always keep app open, only on Quran, never
+    /// (default)"). Raw `KeepScreenOn`; read by `ScreenWakeLock`, which also keeps its narrower holds
+    /// (the moving recitation highlight, the ayah sheet's own switch) whatever this says.
+    @Setting("keepScreenOn") var keepScreenOnRaw: String = KeepScreenOn.never.rawValue
+
+    enum KeepScreenOn: String, CaseIterable, Identifiable {
+        case never, quran, always
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .never: return String(localized: "Never")
+            case .quran: return String(localized: "In the Quran")
+            case .always: return String(localized: "Always")
+            }
+        }
+
+        /// The choices this app offers: "In the Quran" only where there is a Quran reader to hold
+        /// the screen (Al-Adhan, which shares this file, has none).
+        static var offered: [KeepScreenOn] {
+            #if HAS_QURAN
+            return allCases
+            #else
+            return [.never, .always]
+            #endif
+        }
+    }
+
+    var keepScreenOn: KeepScreenOn {
+        get { KeepScreenOn(rawValue: keepScreenOnRaw).flatMap { KeepScreenOn.offered.contains($0) ? $0 : nil } ?? .never }
+        set { keepScreenOnRaw = newValue.rawValue }
+    }
 
     /// The switch behind a settings screen's second half (Abu, 2026-09-22: "make nagging mode much
     /// simpler ... only have an option to make it more customizable ... by default should be simple,

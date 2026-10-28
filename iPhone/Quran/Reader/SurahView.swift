@@ -1490,6 +1490,15 @@ struct SurahView: View {
     }
     #endif
 
+    #if os(iOS)
+    /// The ayah rail's stops (1, 10, 20 ... 280, 286 for al-Baqarah), for a surah of 20 ayahs or more:
+    /// below that the list is a few screens and the rail would be clutter.
+    static func ayahRailItems(_ ayahs: [Ayah]) -> [JumpIndexItem] {
+        guard ayahs.count >= 20 else { return [] }
+        return JumpIndexItem.numberedStops(ayahs.map(\.id)) { String(localized: "Ayah \(ayahs[$0].id)") }
+    }
+    #endif
+
     /// Scrolls the reading list to its very top (same retry discipline as `scrollToAyah`).
     private func scrollToListTop(proxy: ScrollViewProxy) {
         let targetID = surahListTopTargetID
@@ -2098,12 +2107,9 @@ struct SurahView: View {
             .onDisappear {
                 if pageChromeCollapsed { pageChromeCollapsed = false }
             }
-            // The reader is the one screen that keeps the display awake (Phase 5 step 12): reading or
-        // following a recitation here, the screen stays on; listening from any other tab it sleeps.
-        // Never on the reduced tier, and re-applied when the tier flips mid-session.
-        .onAppear { ScreenAwake.readerVisible = true }
-        .onDisappear { ScreenAwake.readerVisible = false }
-        .onChange(of: appearance.isReducedTier) { _ in ScreenAwake.apply() }
+        // The reader holds the display while Keep Screen On is "In the Quran" (Appearance > Look and
+        // Feel). See `ScreenWakeLock`.
+        .holdsScreenInQuran()
         .sheet(item: $rowSheet) { request in
             AyahRowSheetContent(
                 request: request,
@@ -2921,6 +2927,15 @@ struct SurahView: View {
             // still never runs under the notch - but only on the side the notch is actually on, and
             // the other side reads edge to edge.
             .readerLandscapeWidth(isCompactHeight)
+            #if os(iOS)
+            // The ayah numbers down the edge (the Quran tab's juz rail, for one surah). Not while a
+            // search filters the list, and not on a phone in landscape: there the rows take the
+            // safe-area gutter back for the text (above), so the rail would sit on the Arabic.
+            .jumpIndexRail(searchText.isEmpty && !isCompactHeight ? Self.ayahRailItems(ayahsForQiraah) : [],
+                           accessibilityName: String(localized: "Ayah index"), proxy: proxy) { item in
+                ayahsForQiraah.indices.contains(item.id) ? ayahsForQiraah[item.id].id : nil
+            }
+            #endif
             // Apple Music-style: the bottom bars minimize while scrolling down, restore on scroll-up.
             .collapseBarsOnScroll($barsCollapsed)
             .trackUserScrollTouch(userTouching.binding)

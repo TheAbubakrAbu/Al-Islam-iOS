@@ -6,7 +6,7 @@ import SwiftUI
 ///
 /// The Qiraat Explorer covers how the readings differ in WORDS. This page covers what a reader sees
 /// the moment they switch the Quran tab to another riwayah: the hamzah kept, eased or dropped, the dot
-/// that stands for an eased hamzah, ٱ against the Madani dot for hamzat al-wasl, the filled and hollow
+/// that stands for an eased hamzah, the small ṣad against the Madani dot for hamzat al-wasl, the filled and hollow
 /// dots of imalah and taqlil, the small waw of silah, and the madd sign. Every spelling below was
 /// copied out of the app's own riwayah texts by a script (never retyped), and every count was taken
 /// from them: the eight verified texts in Quran-Tajweed-Engine/sources/Qiraat (with Hafs from
@@ -17,7 +17,7 @@ struct RiwayatDifferencesView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    ArticleLead("In short: all twenty riwayat share one Uthmanic skeleton. What changes on the page is the marks around it: the hamzah kept, eased or dropped, a dot for hamzat al-wasl where Hafs writes ٱ, and dots under the letters where a vowel tilts.")
+                    ArticleLead("In short: all twenty riwayat share one Uthmanic skeleton. What changes on the page is the marks around it: the hamzah kept, eased or dropped, a dot on the joining alef where Hafs writes a small ṣad, and dots under the letters where a vowel tilts.")
                 }
 
                 Section(header: ArticleHeader("ONE SKELETON, DIFFERENT MARKS")) {
@@ -85,15 +85,15 @@ struct RiwayatDifferencesView: View {
                     ])
                 }
 
-                Section(header: ArticleHeader("HAMZAT AL-WASL: ٱ OR A DOT")) {
+                Section(header: ArticleHeader("HAMZAT AL-WASL: THE ṢAD OR THE DOT")) {
                     ArticleParagraph(verbatim: "Hamzat al-wasl is the alef that is sounded only when you begin with it and passes silently when you join, like the “al-” of ٱلۡحَمۡدُ. The mushafs write it in two ways.")
 
                     RiwayahSpellingCard(title: "Quran 1:2 (1:1 in the Madinan and Basran counts): “all praise”", [
-                        RiwayahSpelling("Hafs, Shu’bah, al-Bazzi, Qunbul, Hisham, Ibn Dhakwan, and the narrators of Hamzah, al-Kisa’i and Khalaf", arabic: "ٱلۡحَمۡدُ", note: "ٱ: a small head of the letter ṣad over the alef, the sign of joining"),
+                        RiwayahSpelling("Hafs, Shu’bah, al-Bazzi, Qunbul, Hisham, Ibn Dhakwan, and the narrators of Hamzah, al-Kisa’i and Khalaf", arabic: "ٱلۡحَمۡدُ", note: "The sign of joining: a small head of the letter ṣad over the alef"),
                         RiwayahSpelling("Qalun, Warsh, Ibn Wardan, Ibn Jammaz, ad-Duri, as-Susi, Ruways, Rawh", arabic: "اِ۬لۡحَمۡدُ", note: "A dot on the alef, set where the vowel of the join falls: the Madani hamzat al-wasl"),
                     ])
 
-                    ArticleParagraph(verbatim: "In the second way the dot’s position carries the vowel that the joining takes from the word before: over the alef after a fatha, under it after a kasra, and beside it after a damma. Each Madani and Basri text in this app carries about ten thousand of these dots; Hafs’s carries 13,483 of the ٱ.")
+                    ArticleParagraph(verbatim: "In the second way the dot’s position carries the vowel that the joining takes from the word before: over the alef after a fatha, under it after a kasra, and beside it after a damma. Each Madani and Basri text in this app carries about ten thousand of these dots; Hafs’s carries 13,483 alefs with the small ṣad.")
 
                     RiwayahSpellingCard(title: "The dot follows the vowel before it (Qalun)", [
                         RiwayahSpelling("After a fatha, 1:7", arabic: "صِرَٰطَ اَ۬لذِينَ", note: "The dot over the alef"),
@@ -101,7 +101,7 @@ struct RiwayatDifferencesView: View {
                         RiwayahSpelling("After a damma, 2:5", arabic: "هُمُ اُ۬لۡمُفۡلِحُونَ", note: "The dot beside the alef"),
                     ])
 
-                    ArticleParagraph(verbatim: "The ٱ is the sign of the eastern system of marks that most printed mushafs follow today. The dot belongs to the dot-based way of marking kept for centuries in the mushafs of North and West Africa and of the Sudan, the lands where Warsh, Qalun and ad-Duri are recited.")
+                    ArticleParagraph(verbatim: "The small ṣad is the sign of the eastern system of marks that most printed mushafs follow today. The dot belongs to the dot-based way of marking kept for centuries in the mushafs of North and West Africa and of the Sudan, the lands where Warsh, Qalun and ad-Duri are recited.")
                 }
 
                 Section(header: ArticleHeader("DOTS UNDER THE LETTERS: IMALAH AND TAQLIL")) {
@@ -163,7 +163,7 @@ struct RiwayatDifferencesView: View {
                 }
 
                 Section(header: ArticleHeader("THE MADD SIGN")) {
-                    ArticleParagraph(verbatim: "A long vowel before a hamzah is stretched. When the long vowel ends one word and the hamzah begins the next (al-madd al-munfasil), the readings divide: some stretch it and some keep it short (qasr), and the printed mushafs show which by drawing the madd sign ٓ or leaving it out.")
+                    ArticleParagraph(verbatim: "A long vowel before a hamzah is stretched. When the long vowel ends one word and the hamzah begins the next (al-madd al-munfasil), the readings divide: some stretch it and some keep it short (qasr), and the printed mushafs show which by drawing the madd sign, the wavy line over the long vowel of بِمَآ, or leaving it out.")
 
                     RiwayahSpellingCard(title: "Quran 2:4 (2:3 outside the Kufan count): “in what was revealed”", [
                         RiwayahSpelling("Hafs, Warsh", arabic: "بِمَآ أُنزِلَ", note: "Stretched, with the madd sign"),
@@ -201,7 +201,7 @@ struct RiwayatDifferencesView: View {
                 }
 
                 Section(header: ArticleHeader("EVERY RIWAYAH AT A GLANCE")) {
-                    ArticleParagraph(verbatim: "The twenty, in the classical order of their imams, with what each one’s mushaf shows. Tap one to read about its narrator.")
+                    ArticleParagraph(verbatim: "The twenty, in the classical order of their imams, each with six words as its own text spells them: the hamzah in يُؤۡمِنُونَ at 2:3, two hamzahs together in ءَأَنذَرۡتَهُمۡ at 2:6, hamzat al-wasl in ٱلۡحَمۡدُ at 1:2, the tilt in مُوسَىٰ at 2:54, silah in عَلَيۡهِمۡ at 1:7, and the madd in بِمَآ أُنزِلَ at 2:4, numbered as Hafs counts them. A word in color is written differently from Hafs. Tap a riwayah to read about its narrator.")
 
                     RiwayahTraitsTable()
                 }
@@ -221,7 +221,7 @@ struct RiwayatDifferencesView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    ArticleClosing("The twenty riwayat share one skeleton and one Quran. What their mushafs add, the hamzah or the dot that stands for it, ٱ or a dot for the joining alef, a filled dot or a hollow ring for a tilted vowel, a small waw, a madd sign, is each reading’s pronunciation written down faithfully, so that it can be recited exactly as it was taught.")
+                    ArticleClosing("The twenty riwayat share one skeleton and one Quran. What their mushafs add, the hamzah or the dot that stands for it, a small ṣad or a dot on the joining alef, a filled dot or a hollow ring for a tilted vowel, a small waw, a madd sign, is each reading’s pronunciation written down faithfully, so that it can be recited exactly as it was taught.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
@@ -231,7 +231,7 @@ struct RiwayatDifferencesView: View {
                     ArticleTermCard("Ibdal", arabic: "إِبدَال", meaning: "From **ب-د-ل**, to exchange: turning a hamzah into a long vowel, as in يُومِنُونَ.")
                     ArticleTermCard("Naql", arabic: "نَقل", meaning: "From **ن-ق-ل**, to move: moving a hamzah’s vowel onto the quiet letter before it and dropping the hamzah, Warsh’s way.")
                     ArticleTermCard("Idkhal", arabic: "إِدخَال", meaning: "From **د-خ-ل**, to put in: a short alef inserted between two hamzahs.")
-                    ArticleTermCard("Hamzat al-wasl", arabic: "هَمزَة الوَصل", meaning: "The joining alef, sounded only when a word begins with it; written ٱ in Hafs and with a dot in the Madani mushafs.")
+                    ArticleTermCard("Hamzat al-wasl", arabic: "هَمزَة الوَصل", meaning: "The joining alef, sounded only when a word begins with it; written with a small ṣad over the alef in Hafs (ٱلۡحَمۡدُ) and with a dot in the Madani mushafs (اِ۬لۡحَمۡدُ).")
                     ArticleTermCard("Imalah", arabic: "إِمَالَة", meaning: "From **م-ي-ل**, to lean: tilting a fatha towards a kasra, marked with a filled dot.")
                     ArticleTermCard("Taqlil", arabic: "تَقلِيل", meaning: "From **ق-ل-ل**, to lessen: the half tilt between a fatha and an imalah, marked with a hollow ring.")
                     ArticleTermCard("Silah", arabic: "صِلَة", meaning: "From **و-ص-ل**, to join: joining a pronoun’s vowel to a long vowel, written with a small waw.")
@@ -287,11 +287,12 @@ struct RiwayahSpellingCard: View {
 
             ForEach(Array(spellings.enumerated()), id: \.offset) { index, spelling in
                 VStack(alignment: .leading, spacing: 4) {
+                    // No single-line shrink: it halved Hafs's ٱلۡحَمۡدُ beside the dot spelling under it, and
+                    // every spelling here fits a line at this size anyway.
                     Text(spelling.arabic)
                         .font(Font.arabic(Settings.hafsUthmaniFontName, size: 30, relativeTo: .title))
                         .foregroundColor(index == 0 ? .primary : accent)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         // The Arabic word sits on the right in both interfaces (`.trailing` alone is the
                         // left edge in a right-to-left layout).
@@ -302,7 +303,7 @@ struct RiwayahSpellingCard: View {
                         .foregroundColor(.primary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text(spelling.note)
+                    Text(quranicInline: spelling.note, size: 12, relativeTo: .caption)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -453,28 +454,75 @@ struct RiwayahTraits: Identifiable {
     static let all: [RiwayahTraits] = [
         RiwayahTraits(name: "Qalun", from: "from Nafi’", tag: Settings.Riwayah.qaloon, hamzah: "Eases the second of two", wasl: "Dot", dots: "Almost none", silah: "Optional; printed without", madd: "Short as printed"),
         RiwayahTraits(name: "Warsh", from: "from Nafi’", tag: Settings.Riwayah.warsh, hamzah: "Softens the quiet hamzah; naql", wasl: "Dot", dots: "1,877 hollow", silah: "Before a hamzah", madd: "Long"),
-        RiwayahTraits(name: "al-Bazzi", from: "from Ibn Kathir", tag: Settings.Riwayah.buzzi, hamzah: "Eases the second of two", wasl: "ٱ", dots: "Almost none", silah: "Always", madd: "Short"),
-        RiwayahTraits(name: "Qunbul", from: "from Ibn Kathir", tag: Settings.Riwayah.qunbul, hamzah: "Eases the second of two", wasl: "ٱ", dots: "Almost none", silah: "Always", madd: "Short"),
+        RiwayahTraits(name: "al-Bazzi", from: "from Ibn Kathir", tag: Settings.Riwayah.buzzi, hamzah: "Eases the second of two", wasl: "Small ṣad", dots: "Almost none", silah: "Always", madd: "Short"),
+        RiwayahTraits(name: "Qunbul", from: "from Ibn Kathir", tag: Settings.Riwayah.qunbul, hamzah: "Eases the second of two", wasl: "Small ṣad", dots: "Almost none", silah: "Always", madd: "Short"),
         RiwayahTraits(name: "ad-Duri", from: "from Abu ‘Amr", tag: Settings.Riwayah.duri, hamzah: "Eases the second of two", wasl: "Dot", dots: "748 filled, 626 hollow", silah: "No", madd: "Long as printed"),
         RiwayahTraits(name: "as-Susi", from: "from Abu ‘Amr", tag: Settings.Riwayah.susi, hamzah: "Softens the quiet hamzah", wasl: "Dot", dots: "620 filled, 593 hollow", silah: "No", madd: "Short"),
-        RiwayahTraits(name: "Hisham", from: "from Ibn ‘Amir", tag: Settings.Riwayah.hisham, hamzah: "Pronounced; eased in one of two ways", wasl: "ٱ", dots: "Almost none", silah: "No", madd: "Long"),
-        RiwayahTraits(name: "Ibn Dhakwan", from: "from Ibn ‘Amir", tag: Settings.Riwayah.ibnDhakwan, hamzah: "Pronounced", wasl: "ٱ", dots: "374 filled", silah: "No", madd: "Long"),
-        RiwayahTraits(name: "Shu’bah", from: "from ‘Asim", tag: Settings.Riwayah.shubah, hamzah: "Pronounced", wasl: "ٱ", dots: "79 filled", silah: "No", madd: "Long"),
-        RiwayahTraits(name: "Hafs", from: "from ‘Asim", tag: Settings.Riwayah.hafsTag, hamzah: "Pronounced", wasl: "ٱ", dots: "One, in 11:41", silah: "No", madd: "Long"),
-        RiwayahTraits(name: "Khalaf", from: "from Hamzah", tag: Settings.Riwayah.khalaf, hamzah: "Pronounced; eased at a stop", wasl: "ٱ", dots: "1,922 filled", silah: "No", madd: "Long"),
-        RiwayahTraits(name: "Khallad", from: "from Hamzah", tag: Settings.Riwayah.khallad, hamzah: "Pronounced; eased at a stop", wasl: "ٱ", dots: "1,911 filled", silah: "No", madd: "Long"),
-        RiwayahTraits(name: "Abu al-Harith", from: "from al-Kisa’i", tag: Settings.Riwayah.abuHarith, hamzah: "Pronounced", wasl: "ٱ", dots: "1,608 filled", silah: "No", madd: "Long"),
-        RiwayahTraits(name: "ad-Duri", from: "from al-Kisa’i", tag: Settings.Riwayah.duriKisai, hamzah: "Pronounced", wasl: "ٱ", dots: "1,956 filled", silah: "No", madd: "Long"),
+        RiwayahTraits(name: "Hisham", from: "from Ibn ‘Amir", tag: Settings.Riwayah.hisham, hamzah: "Pronounced; eased in one of two ways", wasl: "Small ṣad", dots: "Almost none", silah: "No", madd: "Long"),
+        RiwayahTraits(name: "Ibn Dhakwan", from: "from Ibn ‘Amir", tag: Settings.Riwayah.ibnDhakwan, hamzah: "Pronounced", wasl: "Small ṣad", dots: "374 filled", silah: "No", madd: "Long"),
+        RiwayahTraits(name: "Shu’bah", from: "from ‘Asim", tag: Settings.Riwayah.shubah, hamzah: "Pronounced", wasl: "Small ṣad", dots: "79 filled", silah: "No", madd: "Long"),
+        RiwayahTraits(name: "Hafs", from: "from ‘Asim", tag: Settings.Riwayah.hafsTag, hamzah: "Pronounced", wasl: "Small ṣad", dots: "One, in 11:41", silah: "No", madd: "Long"),
+        RiwayahTraits(name: "Khalaf", from: "from Hamzah", tag: Settings.Riwayah.khalaf, hamzah: "Pronounced; eased at a stop", wasl: "Small ṣad", dots: "1,922 filled", silah: "No", madd: "Long"),
+        RiwayahTraits(name: "Khallad", from: "from Hamzah", tag: Settings.Riwayah.khallad, hamzah: "Pronounced; eased at a stop", wasl: "Small ṣad", dots: "1,911 filled", silah: "No", madd: "Long"),
+        RiwayahTraits(name: "Abu al-Harith", from: "from al-Kisa’i", tag: Settings.Riwayah.abuHarith, hamzah: "Pronounced", wasl: "Small ṣad", dots: "1,608 filled", silah: "No", madd: "Long"),
+        RiwayahTraits(name: "ad-Duri", from: "from al-Kisa’i", tag: Settings.Riwayah.duriKisai, hamzah: "Pronounced", wasl: "Small ṣad", dots: "1,956 filled", silah: "No", madd: "Long"),
         RiwayahTraits(name: "Ibn Wardan", from: "from Abu Ja’far", tag: Settings.Riwayah.ibnWardan, hamzah: "Softens the quiet hamzah", wasl: "Dot", dots: "Almost none", silah: "Always", madd: "Short"),
         RiwayahTraits(name: "Ibn Jammaz", from: "from Abu Ja’far", tag: Settings.Riwayah.ibnJammaz, hamzah: "Softens the quiet hamzah", wasl: "Dot", dots: "Almost none", silah: "Always", madd: "Short"),
         RiwayahTraits(name: "Ruways", from: "from Ya’qub", tag: Settings.Riwayah.ruways, hamzah: "Eases the second of two", wasl: "Dot", dots: "92 filled", silah: "No", madd: "Short"),
         RiwayahTraits(name: "Rawh", from: "from Ya’qub", tag: Settings.Riwayah.rawh, hamzah: "Pronounced", wasl: "Dot", dots: "Almost none", silah: "No", madd: "Short"),
-        RiwayahTraits(name: "Ishaq", from: "from Khalaf", tag: Settings.Riwayah.ishaq, hamzah: "Pronounced", wasl: "ٱ", dots: "1,871 filled", silah: "No", madd: "Long"),
-        RiwayahTraits(name: "Idris", from: "from Khalaf", tag: Settings.Riwayah.idris, hamzah: "Pronounced", wasl: "ٱ", dots: "1,871 filled", silah: "No", madd: "Long"),
+        RiwayahTraits(name: "Ishaq", from: "from Khalaf", tag: Settings.Riwayah.ishaq, hamzah: "Pronounced", wasl: "Small ṣad", dots: "1,871 filled", silah: "No", madd: "Long"),
+        RiwayahTraits(name: "Idris", from: "from Khalaf", tag: Settings.Riwayah.idris, hamzah: "Pronounced", wasl: "Small ṣad", dots: "1,871 filled", silah: "No", madd: "Long"),
     ]
 }
 
-/// The twenty riwayat, one row each: the name, the imam, and the five traits as chips. A row opens the
+/// The six words of the at-a-glance table, each as every riwayah's own text writes it (Abu, 2026-10-27:
+/// "how the riwayah differ on the page ... why not use Arabic text?"). Copied out of the app's twenty
+/// texts by a script, never retyped: the seven KFGQPC sources behind qiraat.qpk, the twelve beta texts
+/// behind qiraah.solidpack, and Hafs from Quran.json. Each word was found by its skeleton in its surah,
+/// so a text's own ayah numbering did not matter.
+enum RiwayahGlance {
+    struct Word {
+        let label: String
+        let reference: String
+    }
+
+    /// The order of every list in `spellings`; the references are Hafs's count.
+    static let words: [Word] = [
+        Word(label: "Hamzah", reference: "2:3"),
+        Word(label: "Two hamzahs", reference: "2:6"),
+        Word(label: "Wasl", reference: "1:2"),
+        Word(label: "Tilt", reference: "2:54"),
+        Word(label: "Silah", reference: "1:7"),
+        Word(label: "Madd", reference: "2:4"),
+    ]
+
+    static let spellings: [String: [String]] = [
+        Settings.Riwayah.qaloon: ["يُؤۡمِنُونَ", "ءَٰا۬نذَرۡتَهُمۡ", "اِ۬لۡحَمۡدُ", "مُوسَىٰ", "عَلَيۡهِمۡ", "بِمَا أُنزِلَ"],
+        Settings.Riwayah.warsh: ["يُومِنُونَ", "ءَآنذَرۡتَهُمُۥٓ", "اِ۬لۡحَمۡدُ", "مُوس۪ىٰ", "عَلَيۡهِمۡ", "بِمَآ أُنزِلَ"],
+        Settings.Riwayah.buzzi: ["يُؤۡمِنُونَ", "ءَا۬نذَرۡتَهُمُۥ", "ٱلۡحَمۡدُ", "مُوسَىٰ", "عَلَيۡهِمُۥ", "بِمَا أُنزِلَ"],
+        Settings.Riwayah.qunbul: ["يُؤۡمِنُونَ", "ءَا۬نذَرۡتَهُمُۥ", "ٱلۡحَمۡدُ", "مُوسَىٰ", "عَلَيۡهِمُۥ", "بِمَا أُنزِلَ"],
+        Settings.Riwayah.duri: ["يُؤۡمِنُونَ", "ءَٰا۬نذَرۡتَهُمۡ", "اِ۬لۡحَمۡدُ", "مُوس۪يٰ", "عَلَيۡهِمۡ", "بِمَآ أُنزِلَ"],
+        Settings.Riwayah.susi: ["يُومِنُونَ", "ءَٰا۬نذَرۡتَهُمۡ", "اِ۬لۡحَمۡدُ", "مُوس۪يٰ", "عَلَيۡهِمۡ", "بِمَا أُنزِلَ"],
+        Settings.Riwayah.hisham: ["يُؤۡمِنُونَ", "ءَٰا۬نذَرۡتَهُمۡ", "ٱلۡحَمۡدُ", "مُوسَىٰ", "عَلَيۡهِمۡ", "بِمَآ أُنزِلَ"],
+        Settings.Riwayah.ibnDhakwan: ["يُؤۡمِنُونَ", "ءَأَنذَرۡتَهُمۡ", "ٱلۡحَمۡدُ", "مُوسَىٰ", "عَلَيۡهِمۡ", "بِمَآ أُنزِلَ"],
+        Settings.Riwayah.shubah: ["يُؤۡمِنُونَ", "ءَأَنذَرۡتَهُمۡ", "ٱلۡحَمۡدُ", "مُوسَىٰ", "عَلَيۡهِمۡ", "بِمَآ أُنزِلَ"],
+        Settings.Riwayah.hafsTag: ["يُؤۡمِنُونَ", "ءَأَنذَرۡتَهُمۡ", "ٱلۡحَمۡدُ", "مُوسَىٰ", "عَلَيۡهِمۡ", "بِمَآ أُنزِلَ"],
+        Settings.Riwayah.khalaf: ["يُؤۡمِنُونَ", "ءَأَنذَرۡتَهُمۡ", "ٱلۡحَمۡدُ", "مُوسٜىٰ", "عَلَيۡهُمۡ", "بِمَآ أُنزِلَ"],
+        Settings.Riwayah.khallad: ["يُؤۡمِنُونَ", "ءَأَنذَرۡتَهُمۡ", "ٱلۡحَمۡدُ", "مُوسٜىٰ", "عَلَيۡهُمۡ", "بِمَآ أُنزِلَ"],
+        Settings.Riwayah.abuHarith: ["يُؤۡمِنُونَ", "ءَأَنذَرۡتَهُمۡ", "ٱلۡحَمۡدُ", "مُوسٜىٰ", "عَلَيۡهِمۡ", "بِمَآ أُنزِلَ"],
+        Settings.Riwayah.duriKisai: ["يُؤۡمِنُونَ", "ءَأَنذَرۡتَهُمۡ", "ٱلۡحَمۡدُ", "مُوسٜىٰ", "عَلَيۡهِمۡ", "بِمَآ أُنزِلَ"],
+        Settings.Riwayah.ibnWardan: ["يُومِنُونَ", "ءَٰا۬نذَرۡتَهُمُۥ", "اِ۬لۡحَمۡدُ", "مُوسَىٰ", "عَلَيۡهِمُۥ", "بِمَا أُنزِلَ"],
+        Settings.Riwayah.ibnJammaz: ["يُومِنُونَ", "ءَٰا۬نذَرۡتَهُمُۥ", "اِ۬لۡحَمۡدُ", "مُوسَىٰ", "عَلَيۡهِمُۥ", "بِمَا أُنزِلَ"],
+        Settings.Riwayah.ruways: ["يُؤۡمِنُونَ", "ءَا۬نذَرۡتَهُمۡ", "اِ۬لۡحَمۡدُ", "مُوسَىٰ", "عَلَيۡهُمۡ", "بِمَا أُنزِلَ"],
+        Settings.Riwayah.rawh: ["يُؤۡمِنُونَ", "ءَأَنذَرۡتَهُمۡ", "اِ۬لۡحَمۡدُ", "مُوسَىٰ", "عَلَيۡهُمۡ", "بِمَا أُنزِلَ"],
+        Settings.Riwayah.ishaq: ["يُؤۡمِنُونَ", "ءَأَنذَرۡتَهُمۡ", "ٱلۡحَمۡدُ", "مُوسٜىٰ", "عَلَيۡهِمۡ", "بِمَآ أُنزِلَ"],
+        Settings.Riwayah.idris: ["يُؤۡمِنُونَ", "ءَأَنذَرۡتَهُمۡ", "ٱلۡحَمۡدُ", "مُوسٜىٰ", "عَلَيۡهِمۡ", "بِمَآ أُنزِلَ"],
+    ]
+}
+
+/// The twenty riwayat, one row each: the name, the imam, and the six words of `RiwayahGlance` as the
+/// riwayah writes them, in a fixed grid so a column compares one word down all twenty. A word written
+/// differently from Hafs takes the accent. VoiceOver reads the five traits in words. A row opens the
 /// narrator's profile.
 struct RiwayahTraitsTable: View {
     @Environment(\.appearance) private var appearance
@@ -504,41 +552,61 @@ struct RiwayahTraitsTable: View {
                     .foregroundColor(.secondary)
             }
 
-            chips(traits)
+            words(traits)
         }
         .padding(.vertical, 3)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: "\(traits.name), \(traits.from). Hamzah: \(traits.hamzah). Hamzat al-wasl: \(traits.wasl). Tilt: \(traits.dots). Silah: \(traits.silah). Madd: \(traits.madd)."))
     }
 
-    @ViewBuilder
-    private func chips(_ traits: RiwayahTraits) -> some View {
-        let items = [("Hamzah", traits.hamzah), ("Wasl", traits.wasl), ("Tilt", traits.dots),
-                     ("Silah", traits.silah), ("Madd", traits.madd)]
-        if #available(iOS 16.0, watchOS 9.0, *) {
-            LeadingChipFlow(spacing: 5) {
-                ForEach(items, id: \.0) { item in
-                    chip(item.0, item.1)
+    /// Three words a line on a phone, two on the watch, the same cells in every row.
+    #if os(watchOS)
+    private static let columns = 2
+    #else
+    private static let columns = 3
+    #endif
+
+    private func words(_ traits: RiwayahTraits) -> some View {
+        let spellings = RiwayahGlance.spellings[traits.tag] ?? []
+        let hafs = RiwayahGlance.spellings[Settings.Riwayah.hafsTag] ?? []
+        let lines = (RiwayahGlance.words.count + Self.columns - 1) / Self.columns
+        return VStack(spacing: 5) {
+            ForEach(0..<lines, id: \.self) { line in
+                HStack(spacing: 5) {
+                    ForEach(0..<Self.columns, id: \.self) { column in
+                        let index = line * Self.columns + column
+                        if index < spellings.count, index < hafs.count {
+                            cell(RiwayahGlance.words[index].label, spellings[index], differs: spellings[index] != hafs[index])
+                        }
+                    }
                 }
             }
-        } else {
-            Text(items.map { "\($0.0): \($0.1)" }.joined(separator: " \u{00B7} "))
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    private func chip(_ label: String, _ value: String) -> some View {
-        HStack(spacing: 3) {
-            Text(label.uppercased())
-                .font(.system(size: 9, weight: .bold))
-                .foregroundColor(appearance.accent)
-            Text(value)
-                .font(.caption2.weight(.medium))
-                .foregroundColor(.primary)
+    private func cell(_ label: String, _ arabic: String, differs: Bool) -> some View {
+        let accent = appearance.accent
+        // Room under the label: this face stacks a small waw over the damma (عَلَيۡهِمُۥ), above the line.
+        return VStack(spacing: 6) {
+            Text(verbatim: label.uppercased())
+                .font(.system(size: 8, weight: .bold))
+                .foregroundColor(differs ? accent : .secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            // The Hafs Uthmani face, like the spelling cards: it carries both wasl notations and the
+            // filled and hollow dots. One line, shrinking only if a narrow column cannot hold it.
+            Text(verbatim: arabic)
+                .font(Font.arabic(Settings.hafsUthmaniFontName, size: 19, relativeTo: .body))
+                .foregroundColor(differs ? accent : .secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
         }
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3)
-        .background(Capsule().fill(appearance.accent.opacity(0.1)))
+        .padding(.vertical, 4)
+        .padding(.horizontal, 4)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(differs ? accent.opacity(0.12) : Color.secondary.opacity(0.07))
+        )
     }
 }

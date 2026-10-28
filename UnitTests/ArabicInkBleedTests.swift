@@ -105,6 +105,54 @@ final class ArabicInkBleedTests: XCTestCase {
                              "No ink left of the page's text column: the last letter's kasra was sliced off")
     }
 
+    /// The fitted page squeezes every line box to 0.90 of the face's own and drops the baseline by half
+    /// the overflow (`MushafPageComposer.lineBoxScale`, `bodyBaselineOffset`), so the tallest marks on a
+    /// page's FIRST line rise above the column. The ۖ over ٱلصِّدِّيقُونَ reaches 1.7pt past the box at
+    /// 60pt (CoreText, 2026-10-27), and at the top of its page (57:19) it lost the top of its ṣād (Abu,
+    /// 2026-10-27: "the sillee is cut off").
+    @MainActor
+    func testFittedPageKeepsInkAboveItsFirstLine() throws {
+        let font = try XCTUnwrap(QuranFontCache.font(name: Settings.hafsUthmaniFontName, size: Self.fontSize))
+        let box = font.lineHeight * 0.90
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .right
+        paragraph.baseWritingDirection = .rightToLeft
+        paragraph.minimumLineHeight = box
+        paragraph.maximumLineHeight = box
+        let attributed = NSAttributedString(
+            string: "هُمُ ٱلصِّدِّيقُونَۖ",
+            attributes: [.font: font, .foregroundColor: UIColor.black, .paragraphStyle: paragraph]
+        )
+        let natural = attributed.boundingRect(with: CGSize(width: 10_000, height: CGFloat.greatestFiniteMagnitude),
+                                              options: [.usesLineFragmentOrigin], context: nil)
+        let width = ceil(natural.width) + 1
+        let height = ceil(box)
+
+        let content = MushafPageTextView(
+            attributed: attributed,
+            ranges: [],
+            width: width,
+            height: height,
+            baselineOffset: ceil(font.ascender - (font.lineHeight - box) / 2),
+            baselineBand: (box - 2)...(box + 2),
+            onTapAyah: { _, _ in },
+            onLongPressAyah: { _, _ in }
+        )
+        .frame(width: width, height: height)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.white)
+
+        let window = show(content)
+        let textView = try XCTUnwrap(Self.textView(in: window), "the page must render through the text view")
+        let column = Self.textColumn(of: textView, in: window)
+        XCTAssertEqual(column.height, height, accuracy: 0.5, "Precondition: the container took the page height")
+
+        let snapshot = try XCTUnwrap(Snapshot(window: window), "the window must snapshot")
+        let topStrip = CGRect(x: column.minX, y: column.minY - 0.5 - Self.probe, width: column.width, height: Self.probe)
+        XCTAssertGreaterThan(snapshot.inkCount(in: topStrip), 0,
+                             "No ink above the page's first line: the pause mark's ṣād was sliced off at the column's top")
+    }
+
     // MARK: - Harness
 
     /// Big enough that the overhang is several pixels wide at 3x: about 1.6pt right and 4pt left.

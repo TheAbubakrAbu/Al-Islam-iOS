@@ -947,14 +947,21 @@ enum SafeAreaInsetVStackSpacing {
 /// housing. Portrait and the iPad/Mac are untouched: `enabled` is only ever true for a compact
 /// height, and the modifier is structurally constant in both states so the List is never rebuilt
 /// (flipping between two branches here would reset its scroll position, Quality Guide G3).
+///
+/// `keepsTrailing` leaves the trailing gutter alone, for a list with a `JumpIndexRail` there: the
+/// rail stays inside the safe area (the sensor housing can be on that side), so the rows must too,
+/// or the rail lands on their trailing buttons (2026-10-27, the Quran tab's juz rail on the JUZ n
+/// headers' info and shuffle buttons).
 private struct ReaderLandscapeWidth: ViewModifier {
     let enabled: Bool
+    let keepsTrailing: Bool
 
     func body(content: Content) -> some View {
         if #available(iOS 17.0, *) {
+            let edges: Edge.Set = keepsTrailing ? .leading : .horizontal
             content
-                .ignoresSafeArea(enabled ? .container : [], edges: .horizontal)
-                .safeAreaPadding(enabled ? .horizontal : [])
+                .ignoresSafeArea(enabled ? .container : [], edges: edges)
+                .safeAreaPadding(enabled ? edges : [])
         } else {
             content
         }
@@ -964,11 +971,12 @@ private struct ReaderLandscapeWidth: ViewModifier {
 
 extension View {
     /// Gives a reading list its full width back on a phone in landscape - see `ReaderLandscapeWidth`.
-    /// Pass `verticalSizeClass == .compact`; it is inert everywhere else.
+    /// Pass `verticalSizeClass == .compact`; it is inert everywhere else. `keepsTrailing`: the
+    /// trailing side keeps its safe area, for a side index there.
     @ViewBuilder
-    func readerLandscapeWidth(_ enabled: Bool) -> some View {
+    func readerLandscapeWidth(_ enabled: Bool, keepsTrailing: Bool = false) -> some View {
         #if os(iOS)
-        modifier(ReaderLandscapeWidth(enabled: enabled))
+        modifier(ReaderLandscapeWidth(enabled: enabled, keepsTrailing: keepsTrailing))
         #else
         self
         #endif
@@ -1472,12 +1480,21 @@ private struct SelectableArticleList: ViewModifier {
     let disableNowPlayingInset: Bool
     let topContentMargin: CGFloat
 
+    private var opensOnSection: Bool { !(scrollTarget ?? "").isEmpty }
+
+    /// Hidden while a landing runs, and from the first frame of a page opened on a section until its
+    /// landing is done, so the reader sees the page once, on the heading (see `ArticleScroll`).
+    private var veiled: Bool { handle.isLanding || (opensOnSection && !handle.hasLanded) }
+
     func body(content: Content) -> some View {
         ScrollViewReader { proxy in
             styled(content, proxy: proxy)
                 .environment(\.articleScrollHandle, handle)
                 .onAppear {
-                    guard let scrollTarget, !scrollTarget.isEmpty else { return }
+                    // Once per page: `onAppear` runs again on the way back from a page this one pushed
+                    // and on a tab switch, and the reader has moved on from the section by then.
+                    guard let scrollTarget, !scrollTarget.isEmpty, !handle.openingLandingRequested else { return }
+                    handle.openingLandingRequested = true
                     ArticleScroll.land(on: scrollTarget, proxy: proxy, after: 0.45, handle: handle)
                 }
         }
@@ -1490,13 +1507,22 @@ private struct SelectableArticleList: ViewModifier {
             // The search chrome applies `articleListStyle` itself, around the page AND its results.
             content.modifier(ArticleSearchChrome(articleID: article, proxy: proxy, handle: handle,
                                                  disableNowPlayingInset: disableNowPlayingInset,
-                                                 topContentMargin: topContentMargin, fallback: fallback))
+                                                 topContentMargin: topContentMargin, veiled: veiled,
+                                                 fallback: fallback))
         } else {
-            content.articleListStyle(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin)
+            veiledPage(content)
+                .articleListStyle(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin)
         }
         #else
-        content.articleListStyle(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin)
+        veiledPage(content)
+            .articleListStyle(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin)
         #endif
+    }
+
+    private func veiledPage(_ content: Content) -> some View {
+        content
+            .opacity(veiled ? 0 : 1)
+            .animation(.easeOut(duration: 0.2), value: veiled)
     }
 }
 

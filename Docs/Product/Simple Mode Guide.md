@@ -64,6 +64,7 @@ Since Simple Mode v2 (2026-10-20) the table of what Simple hides is generated fr
 | wordOfDayTile | quran | The Word of the Day tile | ⋯ menu › Explore › Word of the Day |
 | surahShuffle | quran | The SURAHS shuffle | ⋯ menu › Open a Random Surah |
 | sortRow | quran | The sort row, while the sort is surah ascending | ⋯ menu › Sort |
+| juzRail | quran | The 1 to 30 juz index down the edge, outside the Juz sorts | The Juz and Simple Juz sorts, under the ⋯ menu's Sort |
 | topSurahPair | listReader | The top Previous/Next surah pair | The bottom pair |
 | ayahPlayMenu | listReader | The ▶ button on each ayah | The ayah ⋯ menu's Play This Ayah; More Actions… for the rest; a double tap on the ayah's text still plays it |
 | ayahLongMenu | listReader | The long ayah ⋯ menu | Five actions plus More Actions…, which opens the full actions sheet |
@@ -165,7 +166,7 @@ New: while the authorization status is `.notDetermined`, the request waits for t
 - **One switch**, read directly at each site (`settings.simpleMode`). Two alternatives were rejected:
   - per-element switches, which rebuild the clutter as settings
   - separate simple copies of each tab, which means two copies of 6,000-line views that drift apart
-- **The catalog (v2)**, `iPhone/Settings/Model/SimpleTrims.swift`, compiled into every target that builds `Settings` (iPhone, Watch, Widget, Complication) so no site needs `#if os(iOS)` just to name a trim. It holds `SimpleTrim` (43 cases), `SimpleTrim.Surface`, `Door` and `Entry` (one `Entry(` line per case, which the script parses), `Settings.hides` and `hiddenInSimple`, and `enum SimpleMode` (the tracker window, the nag snooze).
+- **The catalog (v2)**, `iPhone/Settings/Model/SimpleTrims.swift`, compiled into every target that builds `Settings` (iPhone, Watch, Widget, Complication) so no site needs `#if os(iOS)` just to name a trim. It holds `SimpleTrim` (44 cases since 2026-10-27's `juzRail`), `SimpleTrim.Surface`, `Door` and `Entry` (one `Entry(` line per case, which the script parses), `Settings.hides` and `hiddenInSimple`, and `enum SimpleMode` (the tracker window, the nag snooze).
   - **Two idioms read a trim.** `settings.hides(.atAGlance)` (with `unless:` for a rule-2 site) on a view that already observes `Settings`; and the `.hiddenInSimple(.needAHand)` modifier for pure-hide sites and the watch-shared helpers (`SectionPillHeader`, `GridFavoriteStar`, `CountPill`), which owns its `@AppStorage("simpleMode")` so it redraws on the flip without observing every setting. Menu trims are cases read with `hides(...)` inside the menu builder. Nothing outside the script's allow-list reads the raw flag.
   - **`Scripts/check_simple_trims.py`** fails on a case no site reads, a raw read of the flag outside the allow-list, and a missing or stale guide block; `--list` prints every trim with its readers, and `--write-guide` regenerates the table above.
   - **The Simple Mode page** (`SimpleModeSettingsView`) is the live catalog: the switch, one section per surface, then the rule-9 and never-hidden sentences. The root's SIMPLE MODE section has a What Moves Where row that pushes it.

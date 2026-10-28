@@ -364,8 +364,12 @@ enum ThemesPack {
 
     /// The inflated JSON bytes of a pack, for a store that parses (and measures) them itself.
     static func data(_ name: String) -> Data? {
-        guard let url = url(name),
-              let blob = try? Data(contentsOf: url) else { return nil }
+        url(name).flatMap(data(at:))
+    }
+
+    /// The same, for a store that looked its pack up already.
+    static func data(at url: URL) -> Data? {
+        guard let blob = try? Data(contentsOf: url) else { return nil }
         return inflate(blob)
     }
 

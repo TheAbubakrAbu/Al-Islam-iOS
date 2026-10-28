@@ -1553,6 +1553,7 @@ extension SettingsSearchEntry {
         .init(title: "Default List View", path: "Appearance → Look and Feel", keywords: "list style plain grouped inset layout", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Classic Look (No Liquid Glass)", path: "Appearance → Look and Feel", keywords: "liquid glass classic look performance faster battery low power mode ios 26 old design", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Haptic Feedback", path: "Appearance → Look and Feel", keywords: "vibration taptic buzz feedback toggle", destination: .appearancePage(.lookAndFeel)),
+        .init(title: "Keep Screen On", path: "Appearance → Look and Feel", keywords: "screen display awake on sleep dim lock auto-lock autolock idle timer turn off stay always quran reading battery", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Simple Mode", path: "Settings", keywords: "simple simpler busy clutter cluttered overwhelming overwhelmed essentials less minimal declutter calm fewer buttons", destination: .simpleMode),
         .init(title: "Need a Hand? on Every Tab", path: "Appearance → Look and Feel", keywords: "help shortcuts need a hand need help praying reading questions rows doors tabs hide show all nagging beginner transliteration", destination: .appearancePage(.lookAndFeel)),
     ]
@@ -1621,6 +1622,47 @@ struct LaunchTabPicker: View {
 
     /// The note under the picker, as its section's footer on Look and Feel.
     static let footer = String(localized: "The tab you land on when the app opens. A notification or a reminder you tap still opens where it points.")
+}
+
+/// "Keep Screen On": Never (the default), In the Quran, Always (Abu, 2026-10-27). Look and Feel
+/// only. See `ScreenWakeLock` for what each holds and the narrow holds it never turns off.
+struct KeepScreenOnPicker: View {
+    private let settings = Settings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
+    /// Plain, never animated (see `LaunchTabPicker`). The new choice is applied at once: "Always"
+    /// should hold the screen from the moment it is picked, not from the next launch.
+    private var selection: Binding<Settings.KeepScreenOn> {
+        Binding(
+            get: { settings.keepScreenOn },
+            set: { newValue in
+                settings.keepScreenOn = newValue
+                ScreenWakeLock.shared.reassert()
+            }
+        )
+    }
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text("Keep Screen On")
+
+            Picker("Keep Screen On", selection: selection) {
+                ForEach(Settings.KeepScreenOn.offered) { choice in
+                    Text(choice.title).tag(choice)
+                }
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .onChange(of: systemSettings.keepScreenOnRaw) { _ in settings.hapticFeedback() }
+        }
+    }
+
+    /// The note under the picker, as its section's footer on Look and Feel.
+    static var footer: String {
+        #if HAS_QURAN
+        return String(localized: "Stops the screen from dimming and locking on its own. In the Quran: while a surah is open, in the list or on the page. Always: whenever the app is open, which uses more battery. A recitation highlighting along with you keeps it on either way.")
+        #else
+        return String(localized: "Stops the screen from dimming and locking on its own. Always: whenever the app is open, which uses more battery.")
+        #endif
+    }
 }
 
 // MARK: - Appearance sub-screens
@@ -1782,6 +1824,14 @@ struct AppearancePageView: View {
             SettingsToggle(String(localized: "Haptic Feedback"), isOn: $systemSettings.hapticOn)
         } header: {
             Text("HOW IT FEELS")
+        }
+
+        Section {
+            KeepScreenOnPicker()
+        } header: {
+            Text("SCREEN")
+        } footer: {
+            Text(KeepScreenOnPicker.footer)
         }
 
         // The Need a Hand? questions on every tab (HelpDoors.swift), all four at once. Each tab's own

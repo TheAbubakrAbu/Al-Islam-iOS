@@ -694,6 +694,8 @@ struct ProvingPreservationView: View {
                 "**Communal correction.** A slip in public recitation is corrected on the spot, and a misprinted copy is caught by those who know the text.",
                 "**The ten readings.** Specialists in the canonical qira'at preserve the recognised ways of reciting it, down to the letter.",
             ], title: "How the Quran Is Kept", icon: "checkmark.seal.fill"),
+            .text("A chain of teachers, drawn: the reading most of the world recites, from the Prophet through the Companions and the Successors to ‘Asim of Kufa and his two narrators. Every reciter with an ijazah in it can name the teachers between himself and Hafs."),
+            .isnad("The reading of ‘Asim: from the Prophet ﷺ through ‘Uthman, ‘Ali, Ibn Mas‘ud, Ubayy and Zayd ibn Thabit, and ‘Asim’s teachers Abu ‘Abd ar-Rahman as-Sulami, Zirr ibn Hubaysh and Abu ‘Amr ash-Shaybani, to ‘Asim (d. 127 AH), where it divides into Hafs (d. 180 AH) and Shu‘bah (d. 193 AH).", .hafsReading),
             .text("The annual review with Jibril is recorded by Abu Hurayrah (may Allah be pleased with him):"),
             .hadith("bukhari:4998", cite: "Sahih al-Bukhari 4998", arabic: 17...35, english: [0...27]),
             .text("And the Prophet made keeping it a constant duty, because memory that is not refreshed fades:"),

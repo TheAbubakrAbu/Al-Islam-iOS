@@ -390,10 +390,8 @@ struct QuranView: View {
     /// The trash's confirmation, hung on the list rather than on the card: the card exists only while
     /// the field is focused, and a dialog must not vanish with it.
     @State private var confirmingSearchHelpRemoval = false
-    /// Juz mode's JUMP TO JUZ card, open or folded.
-    @AppStorage("showJuzJumpGrid") private var showJuzJumpGrid = true
-    /// A tap on the JUMP TO JUZ card: the juz to scroll to, with a fresh token so the same juz twice
-    /// still scrolls (the reader's `onChange` sees every tap).
+    /// A juz to jump to from outside the juz rail (DEBUG `-juzJump <n>`), with a fresh token so the
+    /// same juz twice still jumps (the reader's `onChange` sees every request).
     @State private var juzJump: JuzJumpRequest?
 
     struct JuzJumpRequest: Equatable {
@@ -401,7 +399,7 @@ struct QuranView: View {
         let token = UUID()
     }
     #if os(iOS)
-    /// The List's collection view, found by a probe in the JUMP TO JUZ card (see `revealSectionHeader`).
+    /// The List's collection view, found by a probe in each JUZ n header (see `revealSectionHeader`).
     @State private var juzListScroll = ListScrollHolder()
     #endif
     @State private var khatmEditMode = false
@@ -1934,8 +1932,13 @@ struct QuranView: View {
             .applyConditionalListStyle(disableNowPlayingInset: true)
             // Landscape on a phone: the sensor housing insets this list 62pt on BOTH sides, so the
             // browse tiles were being laid out into 750pt of an 874pt band. Reclaim the container
-            // inset and re-apply the real per-side clearance, exactly as both readers do.
+            // inset and re-apply the real per-side clearance, exactly as both readers do. The juz
+            // rail's side keeps its inset, so the rail sits beside the rows rather than on them.
+            #if os(iOS)
+            .readerLandscapeWidth(isCompactHeight, keepsTrailing: showsJuzRail)
+            #else
             .readerLandscapeWidth(isCompactHeight)
+            #endif
             #if os(iOS)
             // The Word of the Day's push lives on the List itself (a lazy row's destination never fires),
             // so it works in the iPhone stack and in the iPad split's sidebar column alike.
@@ -1956,7 +1959,17 @@ struct QuranView: View {
             }
             #endif
             .compactListSectionSpacing()
-            .listSectionIndexVisibilityWhenAvailable(visible: settings.quranSortMode == .juz && searchText.isEmpty)
+            #if os(iOS)
+            // The phone, iPad and Mac draw their own juz rail below instead of the system index.
+            .listSectionIndexVisibilityWhenAvailable(visible: false)
+            .overlay(alignment: .trailing) {
+                if showsJuzRail {
+                    juzRail(proxy: scrollProxy)
+                }
+            }
+            #else
+            .listSectionIndexVisibilityWhenAvailable(visible: isJuzSort && searchText.isEmpty)
+            #endif
             // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
             .collapseBarsOnScroll($barsCollapsed)
             // No list-level `.animation(...)` here - it makes lazily-loaded rows stutter while scrolling
@@ -2042,22 +2055,17 @@ struct QuranView: View {
                 }
             }
             #endif
-            // JUMP TO JUZ: the tapped juz's first row to the top, then (once that scroll has
-            // settled) down by its section header's height so "JUZ n" shows under the bar. The juz
-            // grids are one List row per juz, so unlike `scrollToSurahID` grid mode can stay on.
+            // A juz jump from outside the rail lands exactly as a tap on the rail does.
             .onChange(of: juzJump) { request in
                 guard let request else { return }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    withAnimation {
-                        scrollProxy.scrollTo(Self.juzRowAnchor(request.juz), anchor: .top)
-                    }
+                    #if os(iOS)
+                    jumpToJuz(request.juz, proxy: scrollProxy)
+                    settleJuzJump(request.juz)
+                    #else
+                    scrollProxy.scrollTo(Self.juzRowAnchor(request.juz), anchor: .top)
+                    #endif
                 }
-                #if os(iOS)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    guard juzJump == request else { return }
-                    juzListScroll.revealSectionHeader()
-                }
-                #endif
             }
             .onChange(of: scrollToSurahID) { id in
                 guard id > 0 else { return }
@@ -2074,16 +2082,17 @@ struct QuranView: View {
             }
             #if DEBUG
             // "-quranRootScroll <n>": 2 s after the root appears, scrolls its List to the view with that
-            // Int identity, centred - a grid tile's surah number, or a grid chunk row's start index (a
-            // multiple of `tileGridChunk(columns:)`). The only headless way to put a chunk seam on
-            // screen: a simulated swipe that starts on a tile is taken by its hold layer, and one at
-            // the edge by the back-swipe zone.
+            // Int identity, centred - a grid tile's surah number - or to the surah grid's chunk row
+            // starting at tile n (a multiple of `tileGridChunk(columns:)`, `surahGridChunkID`). The
+            // only headless way to put a chunk seam on screen: a simulated swipe that starts on a tile
+            // is taken by its hold layer, and one at the edge by the back-swipe zone.
             .onAppear {
                 let args = ProcessInfo.processInfo.arguments
                 guard let i = args.firstIndex(of: "-quranRootScroll"), args.indices.contains(i + 1),
                       let id = Int(args[i + 1]) else { return }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                     scrollProxy.scrollTo(id, anchor: .center)
+                    scrollProxy.scrollTo(Self.surahGridChunkID(prefix: Self.browseGridPrefix, start: id), anchor: .center)
                 }
             }
             #endif
@@ -2511,7 +2520,7 @@ struct QuranView: View {
         switch mode {
         case .revelation, .page, .ayahs, .words, .letters:
             return true
-        case .surah, .juz, .khatm, .sajdah, .muqattaat, .pages:
+        case .surah, .juz, .simpleJuz, .khatm, .sajdah, .muqattaat, .pages:
             return false
         }
     }
@@ -2524,7 +2533,7 @@ struct QuranView: View {
 
             Divider()
 
-            ForEach([Settings.QuranSortMode.surah, .juz, .khatm]) { mode in
+            ForEach([Settings.QuranSortMode.surah, .juz, .simpleJuz, .khatm]) { mode in
                 sortModeButton(mode)
             }
 
@@ -3143,7 +3152,7 @@ struct QuranView: View {
         // The sort row's only home in Simple while the sort is the default, so the sort lives here too,
         // in both modes: the same buttons the row's menu draws, plus the direction.
         Menu {
-            ForEach([Settings.QuranSortMode.surah, .juz, .khatm]) { mode in
+            ForEach([Settings.QuranSortMode.surah, .juz, .simpleJuz, .khatm]) { mode in
                 sortModeButton(mode)
             }
             Divider()
@@ -3680,8 +3689,9 @@ struct QuranView: View {
             case .ayahs:
                 boxed(surahBrowseSection(context: context, showsRevelationOrder: false))
             case .juz:
-                boxed(juzJumpSection())
                 boxed(juzSections(context: context))
+            case .simpleJuz:
+                boxed(openingJuzSections(context: context))
             case .page:
                 boxed(surahBrowseSection(context: context, showsRevelationOrder: false))
             case .revelation:
@@ -3690,7 +3700,7 @@ struct QuranView: View {
                 boxed(khatmProgressSection())
                 boxed(khatmExtraDetailsSection())
                 if settings.khatmGroupByJuz {
-                    boxed(khatmJuzSections(context: context))
+                    boxed(openingJuzSections(context: context))
                 } else {
                     boxed(surahBrowseSection(context: context, showsRevelationOrder: false))
                 }
@@ -3712,7 +3722,8 @@ struct QuranView: View {
         let rows = usesDescendingQuranSort ? Array(all.reversed()) : all
         if !rows.isEmpty {
             Section(header: pagesHeader(count: rows.count)) {
-                specialAyahCollection(rows.map { (surah: $0.surah, ayah: $0.ayah) }, context: context)
+                specialAyahCollection(rows.map { (surah: $0.surah, ayah: $0.ayah) }, context: context,
+                                      rowPrefix: Self.pagesRowPrefix)
             }
         }
     }
@@ -3739,7 +3750,7 @@ struct QuranView: View {
         let rows = usesDescendingQuranSort ? Array(sajdahAyahs.reversed()) : sajdahAyahs
         if !rows.isEmpty {
             Section(header: sajdahHeader(count: rows.count)) {
-                specialAyahCollection(rows, context: context)
+                specialAyahCollection(rows, context: context, rowPrefix: "special_")
             }
         }
     }
@@ -3766,15 +3777,17 @@ struct QuranView: View {
         let rows = usesDescendingQuranSort ? Array(muqattaatAyahs.reversed()) : muqattaatAyahs
         if !rows.isEmpty {
             Section(header: muqattaatHeader(count: rows.count)) {
-                specialAyahCollection(rows, context: context)
+                specialAyahCollection(rows, context: context, rowPrefix: "special_")
             }
         }
     }
 
     /// Renders an ayah list (pages / sajdah / muqatta'at) as a 2-column grid or a list, matching the
-    /// Bookmarked Ayahs section so grid mode is supported everywhere ayahs are listed.
+    /// Bookmarked Ayahs section so grid mode is supported everywhere ayahs are listed. Each List row
+    /// is `rowPrefix` + the index of its first ayah, which the juz rail scrolls to in the Pages sort.
     @ViewBuilder
-    private func specialAyahCollection(_ rows: [(surah: Surah, ayah: Ayah)], context: SearchDisplayContext) -> some View {
+    private func specialAyahCollection(_ rows: [(surah: Surah, ayah: Ayah)], context: SearchDisplayContext,
+                                       rowPrefix: String) -> some View {
         #if os(iOS)
         if usesGrid {
             // Chunked non-lazy rows (`tileGridChunk`): a lazy grid in a List row can answer a different
@@ -3787,10 +3800,12 @@ struct QuranView: View {
                     }
                 }
                 .tileGridChunkRow(start: start, count: rows.count, chunk: chunk)
+                .id("\(rowPrefix)\(start)")
             }
         } else {
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, item in
+            ForEach(Array(rows.enumerated()), id: \.offset) { index, item in
                 specialAyahRow(item: item, context: context)
+                    .id("\(rowPrefix)\(index)")
             }
         }
         #else
@@ -4128,8 +4143,12 @@ struct QuranView: View {
     private var surahGridColumns: [GridItem] { quranGridColumns }
 
 
+    /// `chunkPrefix` names the grid's rows for the juz rail (`surahGridChunkID`): the browse grid and
+    /// the surah search results take the default (they are never on screen together), each juz of
+    /// Khatm's juz grouping its own.
     @ViewBuilder
-    private func surahGrid(_ surahs: [Surah], context: SearchDisplayContext) -> some View {
+    private func surahGrid(_ surahs: [Surah], context: SearchDisplayContext,
+                           chunkPrefix: String = QuranView.browseGridPrefix) -> some View {
         // Chunked non-lazy rows (`tileGridChunk`): a lazy grid in a List row can answer a different
         // height on each self-sizing pass, which iOS 26 traps on (landscape and the iPad sidebar).
         let chunk = tileGridChunk(columns: surahGridColumns.count)
@@ -4140,6 +4159,7 @@ struct QuranView: View {
                 }
             }
             .tileGridChunkRow(start: start, count: surahs.count, chunk: chunk)
+            .id(Self.surahGridChunkID(prefix: chunkPrefix, start: start))
         }
     }
 
@@ -4329,13 +4349,14 @@ struct QuranView: View {
 
         ForEach(sections) { sectionData in
             let juz = sectionData.juz
-            Section(header: JuzHeader(juz: juz)) {
+            Section(header: juzSectionHeader(juz)) {
                 #if os(iOS)
                 if usesGrid {
                     let openRowID = openJuzRowID(in: sectionData, context: context)
                     // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
-                    // height on each self-sizing pass, which iOS 26 traps on (juz sort's section index
-                    // narrows every row). A juz holds 37 tiles at most (juz 30).
+                    // height on each self-sizing pass, which iOS 26 traps on (the system section index
+                    // juz sort wore until 2026-10-27 narrowed every row). A juz holds 37 tiles at most
+                    // (juz 30).
                     // Chunked like every long grid (`tileGridChunk`): juz 30 holds 37 tiles. The jump
                     // anchor rides the first chunk.
                     let rows = sectionData.rows
@@ -4366,86 +4387,180 @@ struct QuranView: View {
         }
     }
 
-    /// The scroll id a JUMP TO JUZ tap lands on: the juz's first row (its whole grid in grid mode).
-    /// A row, not the section header: a List reaches a far ROW reliably, while a header id landed
-    /// juz 28 to 30 under the toolbar or in the middle of the juz (measured on the 17 Pro).
+    /// The scroll id the juz rail lands on in juz sort: the juz's first row (its first grid row in
+    /// grid mode). A row, not the section header: a List reaches a far ROW reliably, while a header
+    /// id landed juz 28 to 30 under the toolbar or in the middle of the juz (measured on the 17 Pro).
     static func juzRowAnchor(_ juz: Int) -> String { "juzrow_\(juz)" }
 
-    /// Juz mode's jump card (Abu, 2026-10-01: "for juz let me see all 30 when I am in juz and I can tap
-    /// on one and it scrolls down"): all thirty in a 6 x 5 grid above the list, the juz you are
-    /// reading in filled. The native section index is iOS 26 only; this works everywhere.
-    /// How many juz fit across the JUMP TO JUZ card. Six in portrait (five rows of thirty); ten in
-    /// landscape, where the band is more than twice as wide and the list below it has barely any
-    /// height to spare - three rows there instead of five, so the juz list itself stays in view.
-    /// One column at the accessibility sizes in portrait would be unreadable, so it steps to four.
-    private var juzJumpColumnCount: Int {
+    /// A "JUZ n" header, carrying on iOS the probe that hands the rail the List's collection view
+    /// (`ListScrollHolder.revealSectionHeader`). Every header carries one, so whichever is on screen
+    /// first finds the list.
+    @ViewBuilder
+    private func juzSectionHeader(_ juz: Juz) -> some View {
         #if os(iOS)
-        if dynamicTypeSize.isAccessibilitySize { return isCompactHeight ? 6 : 4 }
-        return isCompactHeight ? 10 : 6
+        JuzHeader(juz: juz)
+            .background(ListScrollProbe(holder: juzListScroll))
         #else
-        return 6
+        JuzHeader(juz: juz)
         #endif
     }
 
-    @ViewBuilder
-    private func juzJumpSection() -> some View {
-        let accent = settings.accentColor.color
-        let readingJuz = quranData.ayah(surah: settings.lastReadSurah, ayah: settings.lastReadAyah)?.juz
+    // MARK: - Juz rail
 
-        Section(header: SectionPillHeader(
-            title: String(localized: "JUMP TO JUZ"),
-            count: QuranData.juzList.count,
-            icon: "square.grid.3x3.fill",
-            isExpanded: $showJuzJumpGrid
-        )) {
-            if showJuzJumpGrid {
-                // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
-                // height on each self-sizing pass, which iOS 26 traps on.
-                SummaryTileGrid(columns: juzJumpColumnCount, spacing: 8) {
-                    ForEach(QuranData.juzList, id: \.id) { juz in
-                        let isReading = juz.id == readingJuz
-                        Button {
-                            settings.hapticFeedback()
-                            juzJump = JuzJumpRequest(juz: juz.id)
-                        } label: {
-                            Text("\(juz.id)")
-                                .font(.subheadline.weight(.bold))
-                                .monospacedDigit()
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.6)
-                                .frame(maxWidth: .infinity, minHeight: 40)
-                                .foregroundStyle(isReading ? Color.white : accent)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .fill(isReading ? accent : accent.opacity(0.12))
-                                )
-                                .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Juz \(juz.id), \(juz.displayName)")
-                        .accessibilityHint(isReading ? "Where you are reading" : "")
-                    }
-                }
-                .padding(.vertical, 4)
-                #if os(iOS)
-                .background(ListScrollProbe(holder: juzListScroll))
-                #endif
-            }
+    /// The row ids the juz rail scrolls to outside juz sort (`juzRailLanding`).
+    static let browseGridPrefix = "surahchunk_"
+    static let pagesRowPrefix = "pagesrow_"
+    static func openingJuzGridPrefix(_ juz: Int) -> String { "openingjuz\(juz)_" }
+    static func surahGridChunkID(prefix: String, start: Int) -> String { "\(prefix)\(start)" }
+
+    /// The two Juz sorts, whose list is juz by juz: the watch shows its system index on them, and
+    /// Simple Mode keeps the juz rail for them alone.
+    private var isJuzSort: Bool {
+        settings.quranSortMode == .juz || settings.quranSortMode == .simpleJuz
+    }
+
+    /// Whether the list reads juz 30 first. Khatm keeps mushaf order whatever the direction slot says.
+    private var juzListDescending: Bool {
+        settings.quranSortMode != .khatm && usesDescendingQuranSort
+    }
+
+    /// The juz a surah opens in, the one Simple Juz and Khatm's Juz grouping list it under.
+    private static func openingJuz(of surah: Surah) -> Int? {
+        surah.firstJuz ?? surah.ayahs.first?.juz
+    }
+
+    #if os(iOS)
+    /// The 1 to 30 down the right edge (Abu, 2026-10-27: "Remove the 1-30 buttons for juz and lowkey
+    /// should we have the 1-30 thing on the right side number stuff always there even when not
+    /// sorting by juz? Might have to hide it for certain things though like revelation order"). It
+    /// replaced both the JUMP TO JUZ card and juz sort's iOS 26 section index, so it works on every
+    /// iOS and in grid mode too. Shown wherever the list reads in mushaf order, so juz n is one place
+    /// in it; hidden while a search is typed, as the system index was. Simple Mode keeps it to the two
+    /// Juz sorts (Abu, 2026-10-27: "Hide the 1-30 in simple mode unless in juz mode").
+    private var showsJuzRail: Bool {
+        guard searchText.isEmpty, !settings.hides(.juzRail, unless: isJuzSort) else { return false }
+        switch settings.quranSortMode {
+        case .surah, .juz, .simpleJuz, .khatm, .pages:
+            return true
+        case .revelation, .page, .ayahs, .words, .letters:
+            // Mushaf order only under the Surah direction: ranked by revelation or by length, the
+            // surahs of one juz are scattered over the whole list.
+            return settings.quranSortDirection == .surahOrder
+        case .sajdah, .muqattaat:
+            // Fifteen and twenty-nine rows: nothing to jump through.
+            return false
         }
     }
 
-    /// Khatm-mode Juz grouping: each surah is listed once, under the juz it *starts* in (via `firstJuz`),
-    /// so a surah that merely continues into later juz isn't repeated. Every juz header is still shown, so
-    /// juz that no surah opens (e.g. juz 2, 5) render empty. Rows carry the same khatm progress as the Surah
-    /// grouping because `surahRow`/`surahGridTile` read `quranSortMode == .khatm`.
+    private func juzRail(proxy: ScrollViewProxy) -> some View {
+        let items = QuranData.juzList.map { juz in
+            JumpIndexItem(id: juz.id, label: "\(juz.id)".localizedDigits,
+                          title: String(localized: "Juz \(juz.id)"), subtitle: juz.displayName)
+        }
+        return JumpIndexRail(
+            items: juzListDescending ? items.reversed() : items,
+            accent: settings.accentColor.color,
+            accessibilityName: String(localized: "Juz index"),
+            onSelect: { item in
+                settings.hapticFeedback()
+                jumpToJuz(item.id, proxy: proxy)
+            },
+            onSettle: { item in settleJuzJump(item.id) }
+        )
+    }
+
+    /// Where a stop on the juz rail lands in the current sort.
+    private struct JuzRailLanding {
+        let id: String
+        /// The "JUZ n" headers to bring down under the bar after the row reaches the top: none in a
+        /// list without them, one for the juz's own, two for a juz no surah opens in Simple Juz or
+        /// Khatm's Juz grouping.
+        let headers: Int
+    }
+
+    private func juzRailLanding(_ juz: Int) -> JuzRailLanding? {
+        guard let info = QuranData.juzList.first(where: { $0.id == juz }) else { return nil }
+        let chunk = tileGridChunk(columns: surahGridColumns.count)
+        switch settings.quranSortMode {
+        case .juz:
+            return JuzRailLanding(id: Self.juzRowAnchor(juz), headers: 1)
+        case .simpleJuz, .khatm where settings.khatmGroupByJuz:
+            // A surah sits under the juz it opens in, so juz 2 and 5 are a bare header: those land on
+            // the first surah of the next juz down the list (3 and 6, or 1 and 4 reading backwards)
+            // and bring both headers down.
+            let ids = QuranData.juzList.map(\.id)
+            let onward = juzListDescending ? ids.reversed().filter { $0 <= juz } : ids.filter { $0 >= juz }
+            guard let opening = onward.first(where: { !surahsOpening($0).isEmpty }),
+                  let surah = surahsOpening(opening).first else { return nil }
+            let id = usesGrid
+                ? Self.surahGridChunkID(prefix: Self.openingJuzGridPrefix(opening), start: 0)
+                : "surah_\(surah.id)"
+            return JuzRailLanding(id: id, headers: abs(opening - juz) + 1)
+        case .pages:
+            // The juz's first page in reading order, its last when the list runs backwards.
+            let rows = quranData.pageAyahResults()
+            let found = juzListDescending
+                ? rows.lastIndex { $0.ayah.juz == juz }.map { rows.count - 1 - $0 }
+                : rows.firstIndex { $0.ayah.juz == juz }
+            guard let index = found else { return nil }
+            return JuzRailLanding(id: "\(Self.pagesRowPrefix)\(usesGrid ? index - index % chunk : index)", headers: 0)
+        default:
+            // The first surah in the list's order that the juz runs through: its opening surah reading
+            // forwards, its closing one backwards.
+            let surahs = orderedQuranSurahs(showsRevelationOrder: settings.quranSortMode == .revelation)
+            guard let index = surahs.firstIndex(where: { (info.startSurah...info.endSurah).contains($0.id) })
+            else { return nil }
+            let id = usesGrid
+                ? Self.surahGridChunkID(prefix: Self.browseGridPrefix, start: index - index % chunk)
+                : "surah_\(surahs[index].id)"
+            return JuzRailLanding(id: id, headers: 0)
+        }
+    }
+
+    /// One stop: the landing row to the top at once (no animation, so a drag along the rail keeps up),
+    /// then its header down under the bar.
+    private func jumpToJuz(_ juz: Int, proxy: ScrollViewProxy) {
+        guard let landing = juzRailLanding(juz) else { return }
+        proxy.scrollTo(landing.id, anchor: .top)
+        guard landing.headers > 0 else { return }
+        DispatchQueue.main.async {
+            juzListScroll.revealSectionHeader(headers: landing.headers, animated: false)
+        }
+    }
+
+    /// The finger lifted: one more header pass once the rows a far jump passed over have measured
+    /// themselves. A no-op when the header already shows.
+    private func settleJuzJump(_ juz: Int) {
+        guard let landing = juzRailLanding(juz), landing.headers > 0 else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            juzListScroll.revealSectionHeader(headers: landing.headers, animated: true)
+        }
+    }
+    #endif
+
+    /// The surahs juz `juz` opens, in the list's order (`openingJuzSections`).
+    private func surahsOpening(_ juz: Int) -> [Surah] {
+        let opened = quranData.quran.filter { Self.openingJuz(of: $0) == juz }
+        return juzListDescending ? opened.reversed() : opened
+    }
+
+    /// Simple Juz and Khatm's Juz grouping: each surah is listed once, under the juz it *starts* in (via
+    /// `firstJuz`), so a surah that merely continues into later juz isn't repeated. Every juz header is
+    /// still shown, so juz that no surah opens (2 and 5) render empty, as Tarteel draws its list (Abu,
+    /// 2026-10-27: "add a simple juz mode thats similar to tarteel's version"). Simple Juz reads
+    /// backwards too, juz 30 first and each juz's last surah first; Khatm keeps mushaf order. Khatm's
+    /// rows carry its progress because `surahRow`/`surahGridTile` read `quranSortMode == .khatm`.
     @ViewBuilder
-    private func khatmJuzSections(context: SearchDisplayContext) -> some View {
-        ForEach(QuranData.juzList, id: \.id) { juz in
-            let surahs = quranData.quran.filter { ($0.firstJuz ?? $0.ayahs.first?.juz) == juz.id }
-            Section(header: JuzHeader(juz: juz)) {
+    private func openingJuzSections(context: SearchDisplayContext) -> some View {
+        let opened = Dictionary(grouping: quranData.quran) { Self.openingJuz(of: $0) ?? 0 }
+        let juzList = juzListDescending ? Array(QuranData.juzList.reversed()) : QuranData.juzList
+        ForEach(juzList, id: \.id) { juz in
+            let surahs = juzListDescending ? Array((opened[juz.id] ?? []).reversed()) : opened[juz.id] ?? []
+            Section(header: juzSectionHeader(juz)) {
                 #if os(iOS)
                 if usesGrid {
-                    surahGrid(surahs, context: context)
+                    // Its own chunk ids: every juz's grid starts again at 0.
+                    surahGrid(surahs, context: context, chunkPrefix: Self.openingJuzGridPrefix(juz.id))
                 } else {
                     ForEach(surahs, id: \.id) { surah in
                         surahRow(surah: surah, context: context)
@@ -6101,23 +6216,31 @@ final class ListScrollHolder {
     weak var collectionView: UICollectionView?
 
     /// After a row was scrolled to the top: down by the height of that row's section header, so the
-    /// header ("JUZ 30") shows under the bar instead of just above the visible area. A no-op when the
-    /// list was not found or the row is not the first of its section.
-    func revealSectionHeader() {
-        guard let collectionView else { return }
+    /// header ("JUZ 30") shows under the bar instead of just above the visible area. `headers` above 1
+    /// also brings down the headers of that many empty sections right above it (Khatm's juz grouping,
+    /// where juz 2 and 5 hold no surah). A no-op when the list was not found, the row is not the first
+    /// of its section, or the header already shows.
+    func revealSectionHeader(headers: Int = 1, animated: Bool = true) {
+        guard let collectionView, headers > 0 else { return }
         let top = collectionView.contentOffset.y + collectionView.adjustedContentInset.top
         // The row AT the top edge below the bar: rows scrolled under the glass bar count as visible,
         // so the first visible index path can be the previous section's last row.
         guard let first = collectionView.indexPathForItem(at: CGPoint(x: collectionView.bounds.midX, y: top + 2)),
-              first.item == 0,
-              let header = collectionView.layoutAttributesForSupplementaryElement(
-                  ofKind: UICollectionView.elementKindSectionHeader, at: IndexPath(item: 0, section: first.section))
+              first.item == 0
+        else { return }
+        var section = first.section
+        while section > first.section - (headers - 1), section > 0,
+              collectionView.numberOfItems(inSection: section - 1) == 0 {
+            section -= 1
+        }
+        guard let header = collectionView.layoutAttributesForSupplementaryElement(
+            ofKind: UICollectionView.elementKindSectionHeader, at: IndexPath(item: 0, section: section))
         else { return }
         // Only when the header sits just above the top edge (the jump's landing), never further.
-        guard header.frame.maxY <= top + 2, top - header.frame.minY < 120 else { return }
+        guard header.frame.maxY <= top + 2, top - header.frame.minY < 120 * CGFloat(headers) else { return }
         let target = max(-collectionView.adjustedContentInset.top,
                          header.frame.minY - collectionView.adjustedContentInset.top - 4)
-        collectionView.setContentOffset(CGPoint(x: collectionView.contentOffset.x, y: target), animated: true)
+        collectionView.setContentOffset(CGPoint(x: collectionView.contentOffset.x, y: target), animated: animated)
     }
 }
 

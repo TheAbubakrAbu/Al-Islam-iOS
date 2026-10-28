@@ -731,6 +731,17 @@ struct NamesView: View {
                 }
                 .themedListRowBackground()
             }
+            #if os(iOS)
+            // The names' numbers down the edge, in the list and the grid alike; not while searching.
+            .jumpIndexRail(!hasActiveSearch && keywordVisible ? Self.nameRailItems(names) : [],
+                           accessibilityName: String(localized: "Name index"), proxy: proxy) { item -> String? in
+                guard names.indices.contains(item.id) else { return nil }
+                let chunk = tileGridChunk(columns: nameGridColumns.count)
+                return settings.namesGridMode
+                    ? Self.nameGridRowID(item.id - item.id % chunk)
+                    : "name_\(names[item.id].number)"
+            }
+            #endif
         }
         #if os(watchOS)
         .searchable(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
@@ -1086,6 +1097,20 @@ struct NamesView: View {
         }
     }
 
+    /// A names grid row's id: the index of its first tile.
+    private static func nameGridRowID(_ start: Int) -> String { "name_row_\(start)" }
+
+    #if os(iOS)
+    /// The name rail's stops (1, 5, 10 ... 95, 99), for 40 names or more: the whole list, or a theme
+    /// that big. Each stop's id is its name's index in `names`.
+    private static func nameRailItems(_ names: [NameOfAllah]) -> [JumpIndexItem] {
+        guard names.count >= 40 else { return [] }
+        return JumpIndexItem.numberedStops(names.map(\.number),
+                                           title: { AppLanguage.isArabicScript ? names[$0].displayArabicName : names[$0].transliteration },
+                                           subtitle: { AppLanguage.isArabicScript ? nil : names[$0].meaning })
+    }
+    #endif
+
     @ViewBuilder
     private func namesSections(filteredNames: [NameOfAllah], favoriteSet: Set<Int>, hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
         if settings.namesGridMode {
@@ -1110,6 +1135,7 @@ struct NamesView: View {
                     // default inset), and the default vertical air at its ends.
                     .tileGridChunkRow(start: start, count: filteredNames.count, chunk: chunk, spacing: 8,
                                       horizontalInset: 8, outerInset: listRowDefaultVerticalInset)
+                    .id(Self.nameGridRowID(start))
                 }
             }
         } else if filteredNames.isEmpty, hasActiveSearch {

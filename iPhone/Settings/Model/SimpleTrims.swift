@@ -33,6 +33,7 @@ enum SimpleTrim: String, CaseIterable, Identifiable {
     case wordOfDayTile
     case surahShuffle
     case sortRow
+    case juzRail
     case topSurahPair
     case ayahPlayMenu
     case ayahLongMenu
@@ -164,6 +165,7 @@ enum SimpleTrim: String, CaseIterable, Identifiable {
         Entry(.wordOfDayTile, surface: .quran, title: "The Word of the Day tile", door: .moreMenu("Explore › Word of the Day")),
         Entry(.surahShuffle, surface: .quran, title: "The SURAHS shuffle", door: .moreMenu("Open a Random Surah")),
         Entry(.sortRow, surface: .quran, title: "The sort row, while the sort is surah ascending", door: .moreMenu("Sort")),
+        Entry(.juzRail, surface: .quran, title: "The 1 to 30 juz index down the edge, outside the Juz sorts", door: .elsewhere("the Juz and Simple Juz sorts, under the ⋯ menu's Sort")),
         Entry(.topSurahPair, surface: .listReader, title: "The top Previous/Next surah pair", door: .elsewhere("the bottom pair")),
         Entry(.ayahPlayMenu, surface: .listReader, title: "The ▶ button on each ayah", door: .elsewhere("the ayah ⋯ menu's Play This Ayah; More Actions… for the rest; a double tap on the ayah's text still plays it")),
         Entry(.ayahLongMenu, surface: .listReader, title: "The long ayah ⋯ menu", door: .elsewhere("five actions plus More Actions…, which opens the full actions sheet")),

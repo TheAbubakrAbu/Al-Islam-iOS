@@ -137,6 +137,12 @@ def extracted(dd):
         keep = max(newest, key=newest.get)
         print(f"extracted: the {keep} build; ignoring older {', '.join(sorted(n for n in newest if n != keep))} slices")
         paths = [p for p in paths if configuration(p) == keep]
+    # One slice per source file and target: the newest. The same configuration holds a slice per
+    # PLATFORM too (Debug-iphoneos beside Debug-iphonesimulator, Debug-maccatalyst), and only the one
+    # built last is the code as it is: a device build from earlier in the month revived 183 keys the
+    # files no longer carry (2026-10-27). A file compiled into several targets keeps a slice per target,
+    # since a shared file's `#if os(watchOS)` branches extract only in that target's compile.
+    newest_slice = {}
     for path in paths:
         try:
             data = json.load(open(path, encoding="utf-8"))
@@ -148,6 +154,12 @@ def extracted(dd):
         # iPhone/Settings/SettingsAdhanView.swift). Only a source that still exists speaks for the code.
         if os.path.isabs(source) and not os.path.exists(source):
             continue
+        target = next((t for t in TARGET_BUILDS if t in path), "")
+        stamp = os.path.getmtime(path)
+        current = newest_slice.get((source, target))
+        if current is None or stamp > current[0]:
+            newest_slice[(source, target)] = (stamp, data)
+    for (source, _), (_, data) in newest_slice.items():
         src = os.path.relpath(source, repo_of(source) if os.path.isabs(source) else REPO)
         for entry in data.get("tables", {}).get("Localizable", []):
             keys.setdefault(entry["key"], set()).add(src)

@@ -95,6 +95,67 @@ final class TajweedPaintTests: XCTestCase {
         XCTAssertFalse(found.contains(.tafkhim), "\(firq.reference): found \(found.map(\.rawValue))")
     }
 
+    /// A raa with a tanween fath at the end of an ayah keeps its fatha at the stop (the tanween turns
+    /// into the 'iwad alif), so it is heavy whatever comes before it. The stopped-raa rule, which
+    /// weighs the letter BEFORE the raa, is for a raa stopped on a sukoon. 131 ayah ends were painted
+    /// light until 2026-10-27, 117 of them after a madd yaa.
+    func testAyahFinalRaaWithTanweenFathIsHeavy() async throws {
+        // سَعِيرًا, after a madd yaa
+        try await assertRule(Site(surah: 33, ayah: 64, word: "\u{0633}\u{064E}\u{0639}\u{0650}\u{064A}\u{0631}\u{064B}\u{0627}", scalar: 0x0631), is: .tafkhim)
+        // ذِكۡرٗا, saakin after a kasra
+        try await assertRule(Site(surah: 18, ayah: 70, word: "\u{0630}\u{0650}\u{0643}\u{06E1}\u{0631}\u{0657}\u{0627}", scalar: 0x0631), is: .tafkhim)
+        // مُنتَصِرًا, after a kasra
+        try await assertRule(Site(surah: 18, ayah: 43, word: "\u{0645}\u{064F}\u{0646}\u{062A}\u{064E}\u{0635}\u{0650}\u{0631}\u{064B}\u{0627}", scalar: 0x0631), is: .tafkhim)
+        // قَدِيرٞ, a dammatan stopped on a sukoon after a madd yaa, stays light
+        let qadeer = Site(surah: 2, ayah: 20, word: "\u{0642}\u{064E}\u{062F}\u{0650}\u{064A}\u{0631}\u{065E}", scalar: 0x0631)
+        let found = try await rules(at: qadeer)
+        XCTAssertFalse(found.contains(.tafkhim), "\(qadeer.reference): found \(found.map(\.rawValue))")
+    }
+
+    /// A raa stopped on a sukoon after a saakin letter takes the vowel before that letter, and a waw
+    /// there can be a consonant with a fatha: وَٱلۡوَتۡرِ (89:3) is heavy. It was read as a madd waw, which
+    /// asks for a damma, and painted light until 2026-10-27 (the one disagreement of a whole-Quran raa
+    /// sweep against an independent classifier, 12,402 raas).
+    func testAyahFinalRaaAfterAVowelledWawIsHeavy() async throws {
+        // وَٱلۡوَتۡرِ
+        try await assertRule(Site(surah: 89, ayah: 3, word: "\u{0648}\u{064E}\u{0671}\u{0644}\u{06E1}\u{0648}\u{064E}\u{062A}\u{06E1}\u{0631}\u{0650}", scalar: 0x0631), is: .tafkhim)
+    }
+
+    /// Iqlab colours the small meem that marks it, above (ۢ U+06E2) or below (ۭ U+06ED), and the letter
+    /// carrying it keeps its own rule (Abu, 2026-10-27: "it was just supposed to be bottom and top meem").
+    /// Where KFGQPC HAFS draws the meem inside a bigger glyph, the paint covers that glyph, since a glyph
+    /// takes one colour: the kasra and meem of قِۭ, or the whole letter of طُۢ and رِۭ (`tinyMeemPaintRanges`).
+    func testIqlabPaintsTheSmallMeemsGlyph() async throws {
+        guard Settings.shared.fontArabic == Settings.hafsUthmaniFontName else {
+            throw XCTSkip("the glyph split is KFGQPC HAFS's; this simulator reads another face")
+        }
+        func check(_ surah: Int, _ ayah: Int, _ word: String, letter: UInt32, occurrence: Int = 0,
+                   mark: UInt32, letterRule: TajweedLegendCategory?, line: UInt = #line) async throws {
+            try await assertRule(Site(surah: surah, ayah: ayah, word: word, scalar: mark), is: .iqlaab, line: line)
+            let carrier = Site(surah: surah, ayah: ayah, word: word, scalar: letter, occurrence: occurrence)
+            let found = try await rules(at: carrier, line: line)
+            XCTAssertEqual(found, letterRule.map { [$0] } ?? [], "\(carrier.reference): the letter has \(found.map(\.rawValue))", line: line)
+        }
+        // The meem is a glyph of its own: the meem alone.
+        // مِنۢ: a bare noon, the meem above
+        try await check(2, 27, "\u{0645}\u{0650}\u{0646}\u{06E2}", letter: 0x0646, mark: 0x06E2, letterRule: nil)
+        // بَصِيرُۢ: a heavy raa, the meem above
+        try await check(2, 96, "\u{0628}\u{064E}\u{0635}\u{0650}\u{064A}\u{0631}\u{064F}\u{06E2}", letter: 0x0631, mark: 0x06E2, letterRule: .tafkhim)
+        // أَلِيمُۢ: a meem with no shadda, the meem above
+        try await check(2, 10, "\u{0623}\u{064E}\u{0644}\u{0650}\u{064A}\u{0645}\u{064F}\u{06E2}", letter: 0x0645, mark: 0x06E2, letterRule: nil)
+
+        // The kasra and the meem below are one glyph: both, and the isti'la letter keeps its weight.
+        let shiqaq = "\u{0634}\u{0650}\u{0642}\u{064E}\u{0627}\u{0642}\u{0650}\u{06ED}"
+        try await check(2, 176, shiqaq, letter: 0x0642, occurrence: 1, mark: 0x06ED, letterRule: .tafkhim)
+        try await assertRule(Site(surah: 2, ayah: 176, word: shiqaq, scalar: 0x0650, occurrence: 1), is: .iqlaab)
+
+        // The meem is baked into the letter's own glyph: only the whole letter can show it.
+        // مُحِيطُۢ, the meem above
+        try await check(2, 19, "\u{0645}\u{064F}\u{062D}\u{0650}\u{064A}\u{0637}\u{064F}\u{06E2}", letter: 0x0637, mark: 0x06E2, letterRule: .iqlaab)
+        // كَافِرِۭ, the meem below
+        try await check(2, 41, "\u{0643}\u{064E}\u{0627}\u{0641}\u{0650}\u{0631}\u{0650}\u{06ED}", letter: 0x0631, mark: 0x06ED, letterRule: .iqlaab)
+    }
+
     /// J6: the plural waw before hamzatul-wasl is dropped, its silent alif notwithstanding.
     func testPluralWawBeforeHamzatWaslIsDropped() async throws {
         // وَعَمِلُواْ ٱلصَّٰلِحَٰتِ: the second waw of the word

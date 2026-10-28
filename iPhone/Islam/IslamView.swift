@@ -335,7 +335,8 @@ struct IslamView: View {
             case .arabicAlphabet: return ["letters", "harakat", "huruf", "alphabet", "tashkeel", "numbers",
                                           "sifaat", "sifat", "makharij", "whistling", "safeer", "hams", "families",
                                           "sound-alike", "quiz", "sun letters", "moon letters",
-                                          "reading test", "qaida", "qaidah", "noorani", "spelling", "pronunciation"]
+                                          "reading test", "qaida", "qaidah", "noorani", "spelling", "pronunciation",
+                                          "hamzatul wasl", "hamzat al-wasl", "wasl", "tanween", "connecting hamza"]
             case .tajweedFoundations: return ["recitation", "rules", "makharij", "sifaat", "ghunnah", "qalqalah", "madd",
                                               "noon sakinah", "meem sakinah", "waqf", "hamzatul wasl", "sukoon", "reference", "tajwid",
                                               // The course's own words too, so "tajweed course" still lands here where

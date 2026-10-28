@@ -242,6 +242,9 @@ extension NSAttributedString {
             ))
         }
 
+        // Quranic spellings quoted inside the prose (ٱ, the Uthmani sukoon, the imalah dot) in the face
+        // that has their glyphs.
+        QuranicInline.apply(to: result)
         return result
     }
 }

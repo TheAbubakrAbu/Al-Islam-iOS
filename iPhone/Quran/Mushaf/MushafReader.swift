@@ -4681,7 +4681,9 @@ struct MushafPageComposer {
     /// the font (maximize-font user rule: every line's saving compounds across ~15 lines). At 0.90,
     /// baselines sit 1.58x the point size apart - the pitch a printed mushaf runs - and the overflow
     /// splits evenly above and below (`bodyBaselineOffset`), where the neighbouring lines' own air
-    /// absorbs it; nothing clips, the text view and zoom container draw outside their bounds already.
+    /// absorbs it. The first and last lines have no neighbour there, and a text view never draws past
+    /// its own bounds, so the page's text view hangs past its box above and below
+    /// (`ArabicInkBleedHost.verticalBleed`); without that the ۖ over a first line's word lost its top.
     /// Only the fitted Quranic-face page: English prose and the system face have no air to give, and
     /// fit-off pages keep their classic setting.
     private var lineBoxScale: CGFloat {
@@ -8276,8 +8278,9 @@ struct MushafPageTextView: UIViewRepresentable {
         // persistent pinch zoom), on an overflowing page it is inert (no scroll, no zoom) and just holds
         // the text view for the SwiftUI scroll container around it.
         // The page box that the scroll view, the zoom and the SwiftUI frame all see; the text view
-        // inside it overhangs by the bleed on each side.
-        let host = ArabicInkBleedHost(textView: tv)
+        // inside it overhangs by the bleed on each side, and above and below too: the fitted page's
+        // squeezed line box puts its first line's tallest marks above the box (see `verticalBleed`).
+        let host = ArabicInkBleedHost(textView: tv, verticalBleed: ArabicInkBleedHost.bleed)
         let scroll = PageZoomScrollView()
         scroll.pageView = host
         scroll.pageNumber = pageNumber
@@ -8399,7 +8402,7 @@ struct MushafPageTextView: UIViewRepresentable {
                 host.frame = CGRect(origin: .zero, size: box)
                 // The text view's own box NOW, not at the host's next layout pass: the text assigned
                 // below must find its final frame already set, which is the whole point of this order.
-                tv.frame = ArabicInkBleedHost.textFrame(in: host.bounds)
+                tv.frame = host.textFrame(in: host.bounds)
             }
             // Re-pin on every real update: the width changes on rotation / size-class changes.
             tv.textContainer.widthTracksTextView = false

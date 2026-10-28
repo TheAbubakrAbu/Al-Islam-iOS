@@ -6,6 +6,12 @@ import XCTest
 /// the tajweed painter's projection must come out identical to the display text it paints.
 final class WaslSignTests: XCTestCase {
 
+    /// The Quran loads asynchronously at launch: run after a quick suite, these checks met an empty
+    /// text and counted nothing.
+    override func setUp() async throws {
+        await QuranData.shared.waitUntilLoaded()
+    }
+
     /// Words as the engine and the splice count them: one per U+0020 scalar, never per `Character`
     /// (a space followed by a combining mark is one grapheme but still a word gap here).
     private func wordCount(_ text: String) -> Int {

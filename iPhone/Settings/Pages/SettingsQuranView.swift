@@ -428,7 +428,7 @@ struct SettingsQuranView: View {
             #if os(iOS)
             SettingsToggle(String(localized: "Keep Sheet Open While Playing"), caption: String(localized: "Play This Ayah and Repeat Ayah in an ayah's actions leave the sheet up so you can keep reading. Play From Ayah and Play Custom Range still close it."), isOn: $quranDisplay.keepAyahSheetOpenOnPlay)
 
-            SettingsToggle(String(localized: "Keep Screen On"), caption: String(localized: "The screen stays awake while an ayah's actions sheet is open."), isOn: $quranDisplay.ayahSheetKeepsScreenOn)
+            SettingsToggle(String(localized: "Keep Screen On"), caption: String(localized: "The screen stays awake while an ayah's actions sheet is open. To keep it awake whenever a surah is open, use Keep Screen On in Appearance, Look and Feel."), isOn: $quranDisplay.ayahSheetKeepsScreenOn)
             #endif
         }
     }
@@ -1283,7 +1283,7 @@ extension SettingsSearchEntry {
     static let quranEntries: [SettingsSearchEntry] = [
         .init(title: "Keep Sheet Open", path: "Quran Settings → Reading View", keywords: "ayah actions sheet stay open stack tafsir custom range underneath second", destination: .quranPage(.readingView)),
         .init(title: "Keep Sheet Open While Playing", path: "Quran Settings → Reading View", keywords: "ayah actions sheet stay open play this ayah repeat close dismiss read while playing", destination: .quranPage(.readingView)),
-        .init(title: "Keep Screen On", path: "Quran Settings → Reading View", keywords: "ayah actions sheet screen awake sleep dim lock idle display", destination: .quranPage(.readingView)),
+        .init(title: "Keep Screen On With Ayah Actions", path: "Quran Settings → Reading View", keywords: "ayah actions sheet screen awake sleep dim lock idle display", destination: .quranPage(.readingView)),
         .init(title: "Ayah Card Size", path: "Ayah actions sheet", keywords: "preview card arabic bigger smaller plus minus percent remember size", destination: .quranSettings),
         .init(title: "Quran Settings", path: "Al-Quran", keywords: "mushaf reading", destination: .quranSettings),
         .init(title: "Need a Hand? on the Quran Tab", path: "Quran Settings", keywords: "need a hand help shortcuts questions show hide quran tab need help reading beginner transliteration kahf friday", destination: .quranSettings, isAvailable: { !Settings.shared.hides(.pageHelpDoors) }),

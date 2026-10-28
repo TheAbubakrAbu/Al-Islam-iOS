@@ -246,7 +246,7 @@ enum IslamArticleCatalog {
             ("SahabahView", "The Sahabah (Companions)", "sahabah", ["companions", "abu bakr", "umar", "uthman", "ali"]),
             ("CaliphatesView", "The Caliphates", "caliphates", ["khilafah", "caliph", "rashidun", "umayyad", "abbasid", "ottoman"]),
             ("MadhabView", "The Madhahib of Fiqh (Schools of Law)", "madhab", ["madhhab", "hanafi", "maliki", "shafii", "hanbali", "fiqh", "jurisprudence"]),
-            ("AqeedahMadhabView", "The Madhahib of Aqeedah (Schools of Creed)", "aqeedah", ["aqidah", "creed", "athari", "ashari", "maturidi", "theology"]),
+            ("AqeedahMadhabView", "The Madhahib of Aqeedah (Schools of Creed)", "aqeedah", ["aqidah", "creed", "athari", "ashari", "maturidi", "theology", "jahmiyyah", "qadariyyah", "mutazilah", "khawarij"]),
             ("AhlusSunnahView", "Ahl As-Sunnah Wal Jama\u{2019}ah", "ahlussunnah", ["ahlus sunnah", "sunni", "jamaah", "saved sect"]),
             ("FiqhAqeedahManhajView", "Fiqh, Aqeedah, and Manhaj", "manhaj", ["methodology", "fiqh", "creed"]),
         ]),
@@ -262,7 +262,7 @@ enum IslamArticleCatalog {
         ]),
         group("SALAFIYYAH: THE WAY OF THE SALAF", .pillars, [
             ("TawhidView", "Tawhid: The Oneness of Allah", "tawhid", ["tawheed", "oneness", "monotheism", "la ilaha illa allah"]),
-            ("SalafiyyahView", "What is Salafiyyah?", "salafiyyah", ["salafi", "salafism", "wahhabi", "najd", "ibn abd al-wahhab"]),
+            ("SalafiyyahView", "What is Salafiyyah?", "salafiyyah", ["salafi", "salafism", "wahhabi", "najd", "ibn abd al-wahhab", "salaf", "dhahabi"]),
             ("QuranSunnahView", "The Quran and the Sunnah", "quransunnah", ["two sources", "revelation", "evidence", "daleel"]),
             ("ShirkView", "Shirk: The Unforgivable Sin", "shirk", ["polytheism", "idolatry", "associating partners", "grave worship"]),
             ("KufrView", "Kufr and What Breaks Islam", "kufr", ["disbelief", "apostasy", "nullifiers", "riddah", "takfir"]),
@@ -294,8 +294,9 @@ enum IslamArticleCatalog {
             ("WudhuView", "How to Make Wudhu", "wudhu", ["wudu", "ablution", "purification", "washing"]),
             ("GhuslView", "How to Make Ghusl", "ghusl", ["bath", "full ablution", "janabah", "ritual bath"]),
             ("TayammumView", "How to Make Tayammum", "tayammum", ["dry ablution", "no water", "earth", "dust", "sand"]),
-            ("JumuahView", "How to Pray Jumuah", "jumuah", ["friday prayer", "jummah", "khutbah"]),
-            ("AdhanOtherView", "How to Give the Adhan", "adhan", ["azan", "call to prayer", "muadhin"]),
+            ("JumuahView", "How to Pray Jumuah", "jumuah", ["friday prayer", "jummah", "juma", "khutbah", "late for jumuah", "eid on friday"]),
+            ("KhutbahView", "How to Give the Khutbah", "khutbah", ["khutba", "sermon", "friday sermon", "khatib", "minbar", "khutbat al-hajah", "amma bad", "imam"]),
+            ("AdhanOtherView", "How to Give the Adhan", "adhan", ["azan", "call to prayer", "muadhin", "muezzin", "jumuah adhan", "first adhan", "tarji"]),
             ("IqamahView", "How to Give the Iqamah", "iqamah", ["iqama", "second call"]),
         ]),
         group("MORE PRAYERS", .guides, [
@@ -328,6 +329,7 @@ enum IslamArticleCatalog {
             ("BecomeMuslimView", "How to Become a Muslim", "become-muslim", ["convert", "revert", "shahadah", "shahada", "embrace islam", "new muslim"]),
             ("TawbahView", "How to Repent", "tawbah", ["tawba", "repentance", "forgiveness", "istighfar", "sin"]),
             ("MakeDuaView", "How to Make Dua", "dua", ["supplication", "prayer", "ask allah", "etiquette", "times of answer"]),
+            ("RuqyahView", "How to Do Ruqyah", "ruqyah", ["ruqya", "ruqyah shariyyah", "raqi", "healing", "shifa", "cure", "evil eye", "ayn", "nazar", "hasad", "envy", "sihr", "magic", "black magic", "jinn", "possession", "muawwidhat", "amulet", "taweez"]),
         ]),
     ]
 
@@ -553,7 +555,7 @@ struct ArticleHeader: View {
 
     var body: some View {
         #if os(iOS)
-        Text(title.articleDisplayDigits)
+        Text(quranicInline: title.articleDisplayDigits, size: UIFont.preferredFont(forTextStyle: .footnote).pointSize, relativeTo: .footnote)
             .background(ArticleHeaderProbe(heading: title))
             .id(Self.anchorID(title))
         #else
@@ -565,7 +567,7 @@ struct ArticleHeader: View {
     static func anchorID(_ heading: String) -> String { "articleSection_\(heading)" }
 }
 
-/// The scroll to a section heading: three plain jumps a third of a second apart, then the exact offset.
+/// The scroll to a section heading: three plain jumps a fifth of a second apart, then the exact offset.
 /// A List measures its rows as they come on screen, so `scrollTo` aims at ESTIMATED row heights; an
 /// animated scroll keeps measuring rows on its way and lands a section early or late on a long page
 /// (Abu: a result "doesn't scroll to the right place"), while a jump lands, lets the rows around the
@@ -573,17 +575,31 @@ struct ArticleHeader: View {
 /// section's first ROW at the top and leaves the heading itself under the navigation bar, so the last
 /// word goes to `ArticleScrollHandle.settle`, which reads the heading's measured frame and sets the
 /// offset that shows it `topPadding` points below the bar.
+///
+/// All of it happens behind `ArticleScrollHandle.isLanding`, which the page reads to stay hidden
+/// until the last settle, then fades in on the heading. Shown, the landing was two moves: the jumps
+/// left the heading under the bar and the settle then pulled the page back down to it (Abu,
+/// 2026-10-27: "it scrolls down properly yay but then it scrolls up a little bit too").
 enum ArticleScroll {
     static let topPadding: CGFloat = 16
 
     static func land(on heading: String, proxy: ScrollViewProxy, after delay: Double, handle: ArticleScrollHandle?) {
         let id = ArticleHeader.anchorID(heading)
+        let landing = handle?.beginLanding()
         for step in 0..<3 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay + Double(step) * 0.3) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay + Double(step) * 0.2) {
                 proxy.scrollTo(id, anchor: .top)
                 guard step == 2 else { return }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     handle?.settle(on: heading, padding: topPadding)
+                }
+                // Settled a second time before the page shows: on a page's first open the rows
+                // around the heading can still be measuring at the first settle, and one that
+                // changes height after it moves the heading again (the first open of a fresh
+                // install ended with the heading under the bar).
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    handle?.settle(on: heading, padding: topPadding)
+                    if let landing { handle?.endLanding(landing) }
                 }
             }
         }
@@ -595,6 +611,35 @@ enum ArticleScroll {
 /// instead of from what `ScrollViewProxy.scrollTo` makes of a section header. One per page, handed to
 /// the headers through `articleScrollHandle`.
 final class ArticleScrollHandle: ObservableObject {
+    /// True from the start of a landing to its last settle: the page stays hidden meanwhile, so the
+    /// reader sees it once, already on the heading (see `ArticleScroll`).
+    @Published private(set) var isLanding = false
+    /// Whether a landing has finished on this page. A page opened ON a section hides from its first
+    /// frame until then, before its own landing has even begun.
+    @Published private(set) var hasLanded = false
+    /// Set once the page has asked for its opening landing, so coming back to it (Back from a page it
+    /// pushed, a tab switch) does not yank the reader back to the section they searched for.
+    var openingLandingRequested = false
+    /// The latest landing. Only it may end the hiding; an earlier one it overtook does not.
+    private var landingGeneration = 0
+
+    func beginLanding() -> Int {
+        landingGeneration += 1
+        let generation = landingGeneration
+        isLanding = true
+        // Never left hidden: if a landing is cut short (the page closed mid-way), this lets go anyway.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            self?.endLanding(generation)
+        }
+        return generation
+    }
+
+    func endLanding(_ generation: Int) {
+        guard generation == landingGeneration, isLanding else { return }
+        isLanding = false
+        hasLanded = true
+    }
+
     #if os(iOS)
     private final class Weak {
         weak var view: UIView?
@@ -710,8 +755,11 @@ enum ArticleBlock {
     case term(String, arabic: String, meaning: String)
     /// Number tiles.
     case stats([ArticleStat])
-    /// A chain drawn node by node (an isnad, a line of transmission).
+    /// A line drawn node by node (the messengers in order, a chain of causes).
     case chain([ArticleChainLink], caption: String? = nil)
+    /// A chain of transmission drawn as the isnad diagram (IsnadDiagram.swift), with the caption that
+    /// names its people in order: the words the corpus builder reads for it.
+    case isnad(String, ArticleIsnad)
     /// A short list in one card under a heading; each item markdown.
     case checklist([String], title: String, icon: String = "checkmark.circle.fill")
     /// Two things side by side (two spellings, two claims).
@@ -830,6 +878,8 @@ struct ArticleBlockView: View {
             ArticleStatGrid(stats)
         case .chain(let links, let caption):
             ArticleChainDiagram(links, caption: caption)
+        case .isnad(let caption, let isnad):
+            ArticleIsnadCard(caption, isnad: isnad)
         case .checklist(let items, let title, let icon):
             ArticleChecklist(items, title: title, systemImage: icon)
         case .versus(let left, let right, let quranic):
@@ -1629,6 +1679,8 @@ struct ArticleSearchChrome: ViewModifier {
     let handle: ArticleScrollHandle
     let disableNowPlayingInset: Bool
     let topContentMargin: CGFloat
+    /// The page is mid-landing and stays hidden (see `ArticleScroll`).
+    var veiled = false
     /// The page's own sections, scanned in place of the corpus article when the corpus has none for
     /// `articleID` (a generated page). Its headings are the page's `ArticleHeader`s, so a hit still
     /// scrolls to its section. Nil on the catalog pages, which the corpus carries.
@@ -1647,12 +1699,17 @@ struct ArticleSearchChrome: ViewModifier {
         let searching = !query.isEmpty
         content
             // Faded rather than removed: the page keeps its scroll position and its measured rows, so the
-            // scroll to a picked section starts from where the reader was.
-            .opacity(searching ? 0 : 1)
+            // scroll to a picked section starts from where the reader was. It stays faded through the
+            // landing and comes back on the heading.
+            .opacity(searching || veiled ? 0 : 1)
+            .animation(.easeOut(duration: 0.2), value: veiled)
             .overlay {
                 if searching {
                     ArticleSearchResults(articleID: articleID, query: query, search: search) { heading in
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        // Hidden in the same update that clears the search, or the page starts fading
+                        // back in at the old spot before the landing hides it again.
+                        _ = handle.beginLanding()
                         withAnimation { searchText = "" }
                         scrollTarget = heading
                     }
@@ -1681,6 +1738,7 @@ struct ArticleSearchChrome: ViewModifier {
                     if ProcessInfo.processInfo.arguments.contains("-articleSearchPick") {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
                             guard let first = search.articleHits.first else { return }
+                            _ = handle.beginLanding()
                             withAnimation { searchText = "" }
                             scrollTarget = first.section.heading
                         }
@@ -2466,6 +2524,9 @@ enum ArticleSources {
             ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
             ArticleSource(title: "Sharh Usul I'tiqad Ahl as-Sunnah", subtitle: "Al-Lalaka'i, the creed of the Salaf with chains"),
             ArticleSource(title: "Al-Ibanah an Usul ad-Diyanah", subtitle: "Abu al-Hasan al-Ash'ari, his final creed"),
+            ArticleSource(title: "Khalq Af'al al-'Ibad", subtitle: "Al-Bukhari, against the Jahmiyyah"),
+            ArticleSource(title: "Minhaj as-Sunnah an-Nabawiyyah and at-Tis'iniyyah", subtitle: "Ibn Taymiyyah, on the two senses of Ahl as-Sunnah and the degrees of the Jahmiyyah"),
+            ArticleSource(title: "Shifa' al-'Alil", subtitle: "Ibn al-Qayyim, the four levels of the decree"),
             ArticleSource(title: "Who are the Ash'aris? Are they among Ahl as-Sunnah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/226290"),
             ArticleSource(title: "Differences between Maturidis and Ahl as-Sunnah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/205836"),
         ],
@@ -2560,6 +2621,8 @@ enum ArticleSources {
             ArticleSource(title: "Usul as-Sunnah", subtitle: "Ahmad ibn Hanbal, the creed of the Salaf in his own words"),
             ArticleSource(title: "Sharh as-Sunnah", subtitle: "Al-Barbahari"),
             ArticleSource(title: "Ad-Durar as-Saniyyah", subtitle: "The letters and creed of Muhammad ibn Abd al-Wahhab and the scholars of Najd"),
+            ArticleSource(title: "Al-Ansab", subtitle: "As-Sam'ani, the entry on the ascription “as-Salafi”"),
+            ArticleSource(title: "Siyar A'lam an-Nubala'", subtitle: "Adh-Dhahabi, the imams he called Salafi"),
             ArticleSource(title: "Who are the Wahhaabis and what is their message?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10867"),
             ArticleSource(title: "Muhammad ibn 'Abd al-Wahhaab – a reformer concerning whom many malicious lies have been told", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/36616"),
         ],
@@ -2738,6 +2801,18 @@ enum ArticleSources {
             ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
             ArticleSource(title: "Is the khutbah a condition of Jumu`ah prayer being valid?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/290308"),
             ArticleSource(title: "Conditions of Friday Khutbah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/115854"),
+            ArticleSource(title: "Is Talking during Khutbah Permissible?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/45651"),
+            ArticleSource(title: "What Are the Recommended Acts of Worship on Friday?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/13815"),
+        ],
+        "KhutbahView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in his khutbahs"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Khutbat al-Hajah", subtitle: "Al-Albani, the opening the Prophet taught his Companions"),
+            ArticleSource(title: "Al-Ajwibah an-Nafi'ah", subtitle: "Al-Albani, on the Friday Adhan and khutbah"),
+            ArticleSource(title: "Conditions of Friday Khutbah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/115854"),
+            ArticleSource(title: "Friday khutbah in languages other than Arabic", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/112041"),
+            ArticleSource(title: "What is your opinion of a Jumu’ah khutbah that, along with the prayer, lasts ten minutes?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/112084"),
         ],
         "AdhanOtherView": [
             ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
@@ -2746,6 +2821,8 @@ enum ArticleSources {
             ArticleSource(title: "Sifat Salat an-Nabi", subtitle: "Al-Albani, the Prophet's prayer described from the sahih hadith"),
             ArticleSource(title: "How to Call Adhan", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/21376"),
             ArticleSource(title: "Is it valid to recite the adhan with thirteen phrases, including two takbirs at the beginning and without tarji` (repeating) of the Shahadatayn?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/340598"),
+            ArticleSource(title: "Who Should Give Adhan?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/196257"),
+            ArticleSource(title: "Is It Permissible to Give Recorded Adhan from Radio?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/48990"),
         ],
         "IqamahView": [
             ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
@@ -2754,6 +2831,7 @@ enum ArticleSources {
             ArticleSource(title: "Sifat Salat an-Nabi", subtitle: "Al-Albani, the Prophet's prayer described from the sahih hadith"),
             ArticleSource(title: "Iqamah: How Is It Done?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10458"),
             ArticleSource(title: "Is it prescribed to repeat the phrases of the iqaamah twice?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/111893"),
+            ArticleSource(title: "Is there a set time for the iqaamah (call immediately before the prayer)?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/97009"),
         ],
         "RawatibView": [
             ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
@@ -2907,6 +2985,19 @@ enum ArticleSources {
             ArticleSource(title: "Hisn al-Muslim", subtitle: "Sa'id ibn Ali al-Qahtani, the authentic adhkar and duas"),
             ArticleSource(title: "How to Make Du'a", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/36902"),
             ArticleSource(title: "Times When Du`a Is Accepted", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/22438"),
+        ],
+        "RuqyahView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Kitab at-Tawhid", subtitle: "Muhammad ibn Abd al-Wahhab, the chapters on ruqyah, amulets and nushrah"),
+            ArticleSource(title: "Al-Qawl al-Mufid 'ala Kitab at-Tawhid", subtitle: "Ibn al-Uthaymin, its explanation"),
+            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, on the conditions of ruqyah"),
+            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's medicine"),
+            ArticleSource(title: "Majmu' Fatawa Ibn Baz", subtitle: "Ibn Baz, on ruqyah and the treatment of magic"),
+            ArticleSource(title: "Selection of Verses and Supplications for Incantation Purposes", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/175189"),
+            ArticleSource(title: "What conditions should be met by a “raaqi”?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/7874"),
+            ArticleSource(title: "“Recite your ruqyahs to me. There is nothing wrong with a ruqyah that does not involve shirk”", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/209745"),
+            ArticleSource(title: "Taking payment for reciting Qur’aan over a sick person", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12627"),
+            ArticleSource(title: "UnIslamic ruqyah may be a cause of harm", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/180492"),
         ],
     ]
 }

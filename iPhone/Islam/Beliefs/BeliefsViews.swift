@@ -414,11 +414,13 @@ struct GhuslView: View {
 }
 
 struct JumuahView: View {
+    @Environment(\.appearance) private var appearance
+
     var body: some View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    ArticleLead("In short: Jumuah is the Friday congregational prayer that replaces Dhuhr: a sermon followed by two rak'ah, obligatory on Muslim men who are able.")
+                    ArticleLead("In short: Jumuah is the Friday congregational prayer that takes the place of Dhuhr: two khutbahs, then two rak'ah recited aloud. It is an obligation on every Muslim man who is adult, sane, resident and free of an excuse, and it is only Jumuah when it is prayed in its time, in congregation, in a settled community, after the khutbah.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -430,8 +432,6 @@ struct JumuahView: View {
 
                     ArticleParagraph(articleMarkdown: "Jumuah prayer consists of a sermon (**Khutbah, خُطبَة**) followed by a two-rak’ah Salah led by the Imam. It is obligatory for Muslim men who can attend, though it is not obligatory for women. The Prophet (peace and blessings be upon him) said:")
                     ScriptureQuote(hadith: "abudawud:1067", cite: "Sunan Abi Dawud 1067; graded sahih by al-Albani", arabic: 34...51, english: 4...28)
-
-                    ArticleParagraph(verbatim: "If Jumuah is missed at the mosque, one performs the full Dhuhr prayer (4 rak’ahs).")
                 }
 
                 Section(header: ArticleHeader("IMPORTANCE")) {
@@ -440,6 +440,73 @@ struct JumuahView: View {
                     ScriptureQuote(hadith: "muslim:854a", cite: "Sahih Muslim 854", arabic: 30...45, english: 0...30)
 
                     ArticleParagraph(verbatim: "Friday is considered the best day of the week in Islam. It unites the community, strengthens social bonds, and serves as a weekly reminder of our responsibilities toward Allah (Glorified and Exalted be He) and humanity.")
+                }
+
+                Section(header: ArticleHeader("WHO MUST ATTEND")) {
+                    ArticleParagraph(verbatim: "Jumuah is an obligation on every Muslim man who is:")
+                    ArticleBullet("• **Adult and sane.**")
+                    ArticleBullet("• **Resident**, not travelling. A traveller prays Dhuhr, shortened; if he attends Jumuah, it counts for him.")
+                    ArticleBullet("• **Free of a real excuse**: an illness that makes going hard, fear for himself or his family, heavy rain or mud, or caring for a sick person who cannot be left.")
+                    ArticleParagraph(verbatim: "As the hadith above says, it is not an obligation on women, children or the sick. Nor is it on travellers: the Prophet did not pray Jumuah on his journeys, and at Arafah, on a Friday, he prayed Dhuhr and Asr (Sahih Muslim 1218). A woman who attends and prays it with the imam has prayed it, and it takes the place of her Dhuhr.")
+                    ArticleParagraph(verbatim: "Leaving it without an excuse is a major sin. The Prophet (peace and blessings be upon him) said from his minbar:")
+                    ScriptureQuote(hadith: "muslim:865", cite: "Sahih Muslim 865", arabic: 45...58, english: 0...21)
+                    ScriptureQuote(hadith: "abudawud:1052", cite: "Sunan Abi Dawud 1052; graded hasan sahih by al-Albani", arabic: 33...42, english: 4...25)
+                }
+
+                Section(header: ArticleHeader("WHAT MAKES IT VALID")) {
+                    ArticleParagraph(verbatim: "Four conditions, on top of those of every prayer. If one is missing, what was prayed is not Jumuah, and Dhuhr is prayed instead:")
+                    ArticleStep("1. **Its time.** Jumuah is prayed in the time of Dhuhr, once the sun has passed its height. The Hanbali school allows it earlier in the day as well, but praying it after the zawal is the way every school accepts:")
+                    ScriptureQuote(hadith: "bukhari:904", cite: "Sahih al-Bukhari 904", arabic: 30...35, english: 0...11)
+                    ArticleStep("2. **A congregation.** Jumuah is never prayed alone. The scholars differ over the least number: forty in the Shafi'i and Hanbali schools, and three, one to give the khutbah and two to hear it, in the view Ibn Taymiyyah and Ibn al-Uthaymin held strongest.")
+                    ArticleStep("3. **A settled community.** It is held in a town or village where people live, not by travellers camped on the road; that is why the Prophet prayed Dhuhr at Arafah.")
+                    ArticleStep("4. **The khutbah before it.** The Prophet never prayed Jumuah without a khutbah, and the ayah commands hastening to “the remembrance of Allah”, which the scholars explained as the khutbah. A Jumuah prayed without one is not Jumuah.")
+                    ArticleParagraph(verbatim: "Jumuah is not made up. Whoever misses it, with an excuse or without, prays Dhuhr. And it cannot be prayed at home behind a screen: a khutbah followed over a broadcast does not make a congregation.")
+                }
+
+                Section(header: ArticleHeader("THE ADHAN OF JUMUAH")) {
+                    ArticleParagraph(verbatim: "In the Prophet's time Jumuah had one Adhan, called as the imam sat on the minbar; Uthman (may Allah be pleased with him) added an earlier one when Madinah grew:")
+                    ScriptureQuote(hadith: "bukhari:912", cite: "Sahih al-Bukhari 912", arabic: 14...53, english: 0...45)
+                    ArticleParagraph(verbatim: "The second Adhan, the one called as the imam sits, is the call meant in the ayah: from it, buying and selling stop for those who must attend. How the two calls are given, and what the scholars said about Uthman's, is in the guide to the Adhan.")
+                }
+
+                Section(header: ArticleHeader("STEP BY STEP")) {
+                    ArticleStep("1. **Take a ghusl**, clean yourself, wear your best clean clothes, use the siwak, and (for men) put on perfume. The Prophet said:")
+                    ScriptureQuote(hadith: "bukhari:879", cite: "Sahih al-Bukhari 879", arabic: 35...41, english: 5...24)
+                    ArticleParagraph(verbatim: "Most scholars took “compulsory” here as strongly emphasised, because he also said that whoever makes wudhu for Jumuah has done well, and the ghusl is better (Sunan Abi Dawud 354; graded hasan by al-Albani). Ibn al-Uthaymin held it to be obligatory on whoever attends, though the prayer is not void without it. Either way, do not leave it.")
+                    ArticleStep("2. **Go early, walking if you can, and sit near the imam.** The earlier you arrive, the greater the reward, and when the imam comes out the angels close their records and sit to listen (Sahih al-Bukhari 881):")
+                    ScriptureQuote(hadith: "abudawud:345", cite: "Sunan Abi Dawud 345; graded sahih by al-Albani", arabic: 34...59, english: 8...67)
+                    ArticleStep("3. **On entering, pray two rak'ah before you sit**, even if the khutbah has begun; then keep them short. The Prophet stopped his khutbah for a man who sat down without them:")
+                    ScriptureQuote(hadith: "muslim:875a", cite: "Sahih Muslim 875", arabic: 26...57, english: 0...19)
+                    ArticleStep("4. **Then pray what you can** until the imam comes out, or recite Quran and remember Allah. There is no fixed sunnah before Jumuah; the hadith says only that he “prayed what was fixed for him”:")
+                    ScriptureQuote(hadith: "muslim:857a", cite: "Sahih Muslim 857", arabic: 29...56, english: 0...51)
+                    ArticleStep("5. **Do not step over people, and do not move anyone from his place.** Fill the front rows as you arrive, and sit where there is room:")
+                    ScriptureQuote(hadith: "abudawud:1118", cite: "Sunan Abi Dawud 1118; graded sahih by al-Albani", arabic: 40...64, english: 32...60)
+                    ArticleStep("6. **Once the imam begins, listen in silence.** Do not talk, do not tell anyone else to be quiet, and leave your phone, your clothes and the carpet alone; he said that whoever fiddles with the pebbles has engaged in idle talk (Sahih Muslim 857).")
+                    ScriptureQuote(hadith: "bukhari:934", cite: "Sahih al-Bukhari 934", arabic: 31...40, english: 5...30)
+                    ArticleStep("7. **Pray the two rak'ah behind the imam**, then the sunnah after it, as below.")
+                }
+
+                Section(header: ArticleHeader("THE KHUTBAH AND THE PRAYER")) {
+                    ArticleParagraph(verbatim: "The imam climbs the minbar, greets the people and sits while the Adhan is called. He then stands for the first khutbah, sits briefly, and stands for the second:")
+                    ScriptureQuote(hadith: "muslim:862a", cite: "Sahih Muslim 862", arabic: 27...39, english: 0...18)
+                    ArticleParagraph(verbatim: "When he comes down, the Iqamah is given and he leads two rak'ah, reciting aloud. In both Eids and in Jumuah the Prophet would recite al-A'la and al-Ghashiyah:")
+                    ScriptureQuote(hadith: "muslim:878a", cite: "Sahih Muslim 878", arabic: 40...76, english: 0...43)
+                    ArticleParagraph(verbatim: "Or al-Jumu'ah in the first rak'ah and al-Munafiqun in the second:")
+                    ScriptureQuote(hadith: "muslim:877a", cite: "Sahih Muslim 877", arabic: 73...84, english: 73...86)
+                }
+
+                Section(header: ArticleHeader("IF YOU ARRIVE LATE")) {
+                    ArticleParagraph(verbatim: "If you reach the imam before he rises from the bowing of the second rak'ah, you have caught Jumuah: after his taslim, stand and pray one more rak'ah.")
+                    ScriptureQuote(hadith: "ibnmajah:1121", cite: "Sunan Ibn Majah 1121; graded sahih by al-Albani", arabic: 34...41, english: 0...12)
+                    ArticleParagraph(verbatim: "If you join after that bowing, in the prostrations or the tashahhud, you have missed Jumuah: join him with the intention of Dhuhr, and after his taslim complete four rak'ah. If you missed it altogether, pray Dhuhr, four rak'ah.")
+                }
+
+                Section(header: ArticleHeader("AFTER THE PRAYER")) {
+                    ArticleParagraph(verbatim: "Pray four rak'ah in the mosque, or two at home. Both are from him:")
+                    ScriptureQuote(hadith: "muslim:881a", cite: "Sahih Muslim 881", arabic: 26...32, english: 0...19)
+                    ScriptureQuote(hadith: "bukhari:937", cite: "Sahih al-Bukhari 937", arabic: 37...45, english: 38...58)
+                    ArticleParagraph(verbatim: "Ibn Taymiyyah and Ibn al-Qayyim joined the two: four when they are prayed in the mosque, two when they are prayed at home. Do not join the obligatory prayer straight onto the sunnah; speak, or move to another place first, as Mu'awiyah reported the Prophet commanded (Sahih Muslim 883). Then go out and seek Allah's bounty:")
+                    ScriptureQuote(quran: "62:10")
                 }
 
                 Section(header: ArticleHeader("RECOMMENDED PRACTICES")) {
@@ -460,18 +527,25 @@ struct JumuahView: View {
                     ScriptureQuote(hadith: "nasai:1389", cite: "Sunan an-Nasa'i 1389; graded sahih by al-Albani", arabic: 53...73, english: 6...38)
                 }
 
-                Section(header: ArticleHeader("ETIQUETTE")) {
-                    ArticleParagraph(verbatim: "Observing proper etiquette during Jumuah is essential:")
-
-                    ArticleStep(verbatim: "1. Arrive early to the mosque and sit attentively during the Khutbah.")
-
-                    ArticleStep(verbatim: "2. Wear clean and modest clothing as Friday is a day of significance.")
-
-                    ArticleStep(verbatim: "3. Avoid distractions, such as using phones, during the sermon.")
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
+                    ArticleParagraph(articleMarkdown: "**Eid falls on a Friday.** Whoever prayed the Eid prayer has a concession to leave Jumuah and pray Dhuhr instead; the imam still holds Jumuah for those who come, and attending is better. Zayd ibn Arqam was asked what the Prophet did:")
+                    ScriptureQuote(hadith: "abudawud:1070", cite: "Sunan Abi Dawud 1070; graded sahih by al-Albani", arabic: 47...60, english: 45...68)
+                    ArticleParagraph(articleMarkdown: "**I keep falling asleep in the khutbah.** Move to another place; the movement wakes you:")
+                    ScriptureQuote(hadith: "tirmidhi:526", cite: "Jami' at-Tirmidhi 526; graded sahih by al-Albani", arabic: 29...37, english: 3...21)
+                    ArticleParagraph(articleMarkdown: "**May I say ameen or send blessings during the khutbah?** Under your breath, yes: send blessings on the Prophet when he is mentioned, and say ameen silently to the imam's dua. Do not answer a greeting or start a conversation.")
+                    ArticleParagraph(articleMarkdown: "**Does my job excuse me?** Work alone is not an excuse; arrange to attend, even at the cost of an unpaid hour. The scholars excused only those whose work cannot be left without harm to others, such as a guard on duty or a doctor with a patient, and they pray Dhuhr.")
+                    ArticleParagraph(articleMarkdown: "**Is there a sunnah before Jumuah?** No fixed one. Pray the two rak'ah on entering, then whatever you can until the imam comes out.")
+                    ArticleParagraph(articleMarkdown: "**Can more than one Jumuah be held in a town?** Where one mosque cannot hold everyone, yes. Without that need the scholars disliked dividing a town's Jumuah.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    ArticleClosing("Friday is the best day of the week: a weekly gathering for remembrance, with special reward in reciting Surah al-Kahf and sending salawat upon the Prophet.")
+                    ArticleClosing("Friday is the best day of the week. Prepare for it with a ghusl, come early, pray what you can, listen in silence, and pray the two rak'ah behind the imam, then the sunnah after it. Jumuah stands on four things: its time, a congregation, a settled community, and the khutbah before it.")
+
+                    NavigationLink(destination: LazyDestination { KhutbahView() }) {
+                        Label("Next: How to Give the Khutbah", systemImage: "building.columns")
+                            .font(.body)
+                            .foregroundColor(appearance.accent)
+                    }
                 }
 
                 ArticleSourcesSection(article: "JumuahView")
@@ -490,7 +564,7 @@ struct AdhanOtherView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    ArticleLead("In short: the Adhan is the melodious call announcing each of the five daily prayers, first given in Madinah and famously called by Bilal ibn Rabah.")
+                    ArticleLead("In short: the Adhan is the call that announces each of the five daily prayers, first given in Madinah by Bilal ibn Rabah. It counts when it is called after the prayer's time has entered, in its own Arabic words and order, without a break, aloud, by a Muslim man. On Friday it is called as the imam sits on the minbar.")
                 }
 
                 Section(header: ArticleHeader("HISTORY")) {
@@ -575,8 +649,37 @@ struct AdhanOtherView: View {
                     ScriptureQuote(hadith: "nasai:647", cite: "Sunan an-Nasa'i 647; graded sahih by al-Albani", arabic: 20...52, english: 0...67)
                 }
 
-                Section(header: ArticleHeader("IN SUMMARY")) {
-                    ArticleClosing("Its words proclaim the greatness and oneness of Allah and the messengership of Muhammad, calling the believers to prayer and to success.")
+                Section(header: ArticleHeader("WHAT MAKES IT VALID")) {
+                    ArticleParagraph(verbatim: "The Adhan is an act of worship with conditions of its own. A call that misses one of them is not the Adhan, and it is given again:")
+                    ArticleStep("1. **The time has entered.** The Adhan announces a prayer whose time has come, so a call given before the time is repeated once it begins. The one exception is Fajr, which may have a first call in the last part of the night and a second at true dawn:")
+                    ScriptureQuote(hadith: "bukhari:617", cite: "Sahih al-Bukhari 617", arabic: 27...50, english: 8...47)
+                    ArticleStep("2. **Its own Arabic words, in their order.** The phrases are said as the Prophet (peace and blessings be upon him) taught them, none dropped and none moved. A translation is not the Adhan, and neither is a slip that changes the meaning, such as turning “Allahu” into a question, “Aallahu”, or stretching “Akbar” into “Akbaar”, which means drums.")
+                    ArticleStep("3. **One unbroken call, by one caller.** The phrases follow each other without a long pause, and one person says all of them. Two callers who each say half have not given an Adhan.")
+                    ArticleStep("4. **The caller is a Muslim man of sound mind.** A boy old enough to understand what he is doing may call it. The Adhan for men is not given by a woman.")
+                    ArticleStep("5. **It is called aloud, by someone present.** It is meant to be heard, so it is raised as far as the voice will carry. A recording played at prayer time is not an Adhan, as the Standing Committee and Ibn al-Uthaymin explained: the Adhan is worship a person performs, not a sound that is played.")
+                    ArticleParagraph(verbatim: "In the Hanbali school, and in the fatwas of Ibn Baz and Ibn al-Uthaymin, calling it is a collective obligation (fard kifayah) on the men of a town or a travelling group: once some call it, the rest are free of the duty. The Prophet told a group going home to their people:")
+                    ScriptureQuote(hadith: "bukhari:628", cite: "Sahih al-Bukhari 628", arabic: 46...53, english: 50...79)
+                }
+
+                Section(header: ArticleHeader("HOW TO CALL IT")) {
+                    ArticleStep("1. **Be in wudhu** if you can. It is the better state for remembering Allah, though an Adhan called without wudhu still counts.")
+                    ArticleStep("2. **Stand, facing the qiblah**, somewhere the call will carry: a raised place, or a loudspeaker. When the Companions settled on calling people to prayer, the Prophet told Bilal to get up and call it (Sahih al-Bukhari 604).")
+                    ArticleStep("3. **Put your index fingers in your ears.** Bilal did, and the scholars mention two benefits: the voice rises further, and someone too far away to hear can see that the Adhan is being called.")
+                    ArticleStep("4. **Turn your face to the right at “Hayya ala as-salah” and to the left at “Hayya ala al-falah”**, keeping your feet and chest toward the qiblah:")
+                    ScriptureQuote(hadith: "tirmidhi:197", cite: "Jami' at-Tirmidhi 197; graded sahih by al-Albani", arabic: 18...30, english: 0...23)
+                    ArticleStep("5. **Raise your voice**, clear and unhurried, pausing after each phrase. Make it beautiful without singing it; the scholars disliked stretching the words into a tune that changes them. Everything that hears it will testify for you:")
+                    ScriptureQuote(hadith: "bukhari:609", cite: "Sahih al-Bukhari 609", arabic: 40...66, english: 14...65)
+                    ArticleStep("6. **For Fajr**, add “As-salatu khayrun mina-nawm” twice after “Hayya ala al-falah”, as above.")
+                    ArticleStep("7. **Add nothing to it.** No recitation or dhikr broadcast before it, no “sayyiduna” inside it, and no blessing on the Prophet chanted over the loudspeaker afterward as though it belonged to the call. After it the muadhin, like everyone who heard it, sends blessings on the Prophet quietly and asks Allah to grant him the Wasilah.")
+                }
+
+                Section(header: ArticleHeader("THE ADHAN FOR JUMUAH")) {
+                    ArticleParagraph(verbatim: "The Friday Adhan has the same words as the others, without the Fajr line. In the Prophet's time there was one, called when the imam sat on the minbar, and Uthman (may Allah be pleased with him) added an earlier call when Madinah grew:")
+                    ScriptureQuote(hadith: "bukhari:912", cite: "Sahih al-Bukhari 912", arabic: 14...53, english: 0...45)
+                    ArticleParagraph(articleMarkdown: "The narration calls Uthman's call the **third** because it counts the Iqamah as a call too. So a Friday runs:")
+                    ArticleStep("1. **The first Adhan**, Uthman's, some time before the khutbah, to tell people that Jumuah is near. Ibn Baz and Ibn al-Uthaymin held it to be a Sunnah of a rightly guided caliph, whose way the Prophet told us to hold to (Sunan Abi Dawud 4607; graded sahih by al-Albani). Al-Albani kept to the single Adhan of the Prophet's time, since the reason Uthman added it, people spread far through the markets, no longer applies where everyone keeps the time. Both are followed among the people of the Sunnah, and neither is a reason to quarrel.")
+                    ArticleStep("2. **The second Adhan**, the one of the Prophet's time: the imam comes out, greets the people and sits on the minbar, and the muadhin calls. This is the call meant in Surat al-Jumu'ah, after which buying and selling stop for those who must attend.")
+                    ArticleStep("3. **The khutbah**, then the **Iqamah** as the imam comes down, then the two rak'ah.")
                 }
 
                 Section(header: ArticleHeader("THE VIRTUE OF THE ADHAN")) {
@@ -590,6 +693,20 @@ struct AdhanOtherView: View {
                     ArticleParagraph(verbatim: "Except at “Hayya ala as-salah” and “Hayya ala al-falah,” where you say “La hawla wa la quwwata illa billah” (there is no might nor power except with Allah), as Umar (may Allah be pleased with him) reported from him (Sahih Muslim 385).")
                     ArticleParagraph(verbatim: "Then send blessings on the Prophet (peace and blessings be upon him), and say:")
                     ScriptureQuote(hadith: "bukhari:614", cite: "Sahih al-Bukhari 614", arabic: 29...54, english: 4...88)
+                }
+
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
+                    ArticleParagraph(articleMarkdown: "**I pray alone, at home or on a journey. Do I call the Adhan?** It is Sunnah to call the Adhan and the Iqamah even alone, even where no one will hear but the land and what lives on it:")
+                    ScriptureQuote(hadith: "abudawud:1203", cite: "Sunan Abi Dawud 1203; graded sahih by al-Albani", arabic: 31...60, english: 8...58)
+                    ArticleParagraph(articleMarkdown: "**The mosque's Adhan reaches my home. Must I call again?** No. The town's Adhan covers whoever hears it. Giving the Iqamah before you pray is still the Sunnah.")
+                    ArticleParagraph(articleMarkdown: "**Do women call the Adhan?** It is not required of women. Women praying together may give the Iqamah, and the scholars saw no harm in an Adhan among themselves, in a voice that does not reach men.")
+                    ArticleParagraph(articleMarkdown: "**I am joining two prayers, or making up several.** Call one Adhan, then an Iqamah before each prayer. At Arafah the Prophet had the Adhan called once, with an Iqamah for Dhuhr and another for Asr (Sahih Muslim 1218); and when they slept through Fajr on a journey, Bilal called the Adhan once they woke, and they prayed (Sahih Muslim 681).")
+                    ArticleParagraph(articleMarkdown: "**Bilal's Adhan or Abu Mahdhurah's?** Both are Sunnah. The words above are Bilal's. In Abu Mahdhurah's, whom the Prophet taught in Makkah, the two testimonies are said in a low voice and then repeated aloud, the **tarji'** (Sahih Muslim 379). A muadhin may call either.")
+                    ArticleParagraph(articleMarkdown: "**Can the Adhan be called in English?** No. Its words are fixed Arabic, the same in every land. Teach their meaning beside it, as this page does.")
+                }
+
+                Section(header: ArticleHeader("IN SUMMARY")) {
+                    ArticleClosing("Its words proclaim the greatness and oneness of Allah and the messengership of Muhammad, calling the believers to prayer and to success. Call it in its time, in its own words, aloud and unbroken; on Friday, as the imam sits on the minbar.")
                 }
 
                 ArticleSourcesSection(article: "AdhanOtherView")
@@ -608,7 +725,7 @@ struct IqamahView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    ArticleLead("In short: the Iqamah is the second, shorter call given just before the congregation stands, signaling that the prayer is about to begin.")
+                    ArticleLead("In short: the Iqamah is the second, shorter call, given when the imam is ready and the prayer is about to begin. Like the Adhan, it counts only after the time has entered, in its Arabic words and order, without a break; it is joined to the prayer that follows it.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -676,8 +793,25 @@ struct IqamahView: View {
                     ArticleCallout("The noon of “an” melts into the laam after it (idgham), so “an la ilaha” is said “allaa ilaaha”, and “illa Allah” runs together as “illallah”: Ashhadu allaa ilaaha illallah. “Rasool Allah” joins the same way, rasoolullah, and so does the closing line, La ilaha illallah.", title: "How it is said", systemImage: "waveform")
                 }
 
-                Section(header: ArticleHeader("IN SUMMARY")) {
-                    ArticleClosing("Where the Adhan calls the community to gather, the Iqamah announces that the prayer has been established and the rows are to be formed.")
+                Section(header: ArticleHeader("WHAT MAKES IT VALID")) {
+                    ArticleParagraph(verbatim: "The Iqamah keeps the Adhan's conditions and adds one of its own:")
+                    ArticleStep("1. **The time has entered**, with no exception this time: even the Iqamah of Fajr comes after true dawn.")
+                    ArticleStep("2. **Its Arabic words, in their order**, said without a break by one person.")
+                    ArticleStep("3. **A Muslim of sound mind gives it.** For men a man gives it; women praying together may give their own, quietly.")
+                    ArticleStep("4. **It is joined to the prayer.** It announces that the prayer is starting now, so the prayer follows it. A short delay does not undo it:")
+                    ScriptureQuote(hadith: "bukhari:642", cite: "Sahih al-Bukhari 642", arabic: 20...38, english: 0...42)
+                    ArticleParagraph(verbatim: "If a long time passes, or the people leave and come back, the scholars said it is given again before the prayer.")
+                    ArticleParagraph(verbatim: "Its ruling is that of the Adhan: a collective obligation on the men of a town in the Hanbali school and the fatwas of Ibn Baz and Ibn al-Uthaymin, and a confirmed Sunnah for someone praying alone. A prayer prayed without it is still valid.")
+                }
+
+                Section(header: ArticleHeader("WHEN IT IS GIVEN")) {
+                    ArticleParagraph(verbatim: "The scholars put it this way: the muadhin decides the time of the Adhan, and the imam decides the time of the Iqamah. Bilal called the Adhan as soon as the time came in, then waited for the Prophet:")
+                    ScriptureQuote(hadith: "muslim:606", cite: "Sahih Muslim 606", arabic: 19...38, english: 0...28)
+                    ArticleParagraph(verbatim: "So the Iqamah is given when the imam is present and ready, or at the time the mosque has fixed with his consent. The time between the two calls is for a voluntary prayer and for dua, which is not turned back then (Sunan Abi Dawud 521; graded sahih by al-Albani):")
+                    ScriptureQuote(hadith: "bukhari:624", cite: "Sahih al-Bukhari 624", arabic: 27...35, english: 5...24)
+                    ArticleParagraph(verbatim: "When the imam is coming from elsewhere, the congregation waits to see him before standing:")
+                    ScriptureQuote(hadith: "bukhari:637", cite: "Sahih al-Bukhari 637", arabic: 29...35, english: 7...26)
+                    ArticleParagraph(articleMarkdown: "On **Friday** there is no waiting: the imam finishes the second khutbah and comes down from the minbar, and the Iqamah is given at once.")
                 }
 
                 Section(header: ArticleHeader("AFTER THE IQAMAH")) {
@@ -689,6 +823,18 @@ struct IqamahView: View {
                     ScriptureQuote(hadith: "bukhari:723", cite: "Sahih al-Bukhari 723, Sahih Muslim 433", arabic: 19...26, english: 4...19)
                     ArticleParagraph(verbatim: "Walk to the prayer calmly. He said:")
                     ScriptureQuote(hadith: "bukhari:636", cite: "Sahih al-Bukhari 636, Sahih Muslim 602", arabic: 40...56, english: 4...36)
+                }
+
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
+                    ArticleParagraph(articleMarkdown: "**Is the Iqamah said once or twice?** The words above are Bilal's: each phrase once, with “Qad qamatis-salah” twice. The Prophet taught Abu Mahdhurah an Iqamah with its phrases doubled (Sunan Abi Dawud 502; graded hasan sahih by al-Albani). Both are Sunnah.")
+                    ArticleParagraph(articleMarkdown: "**Must the one who called the Adhan give the Iqamah?** No, anyone suitable may give it. The narration “whoever calls the Adhan gives the Iqamah” is weak (Jami' at-Tirmidhi 199), though most scholars still prefer that the muadhin give it when he is there.")
+                    ArticleParagraph(articleMarkdown: "**Do I answer the Iqamah?** Many scholars said to repeat its words as you do the Adhan's, since it is a call too. Saying “Aqamaha Allahu wa adamaha” at “Qad qamatis-salah” comes in a weak narration (Sunan Abi Dawud 528), so it is not relied on.")
+                    ArticleParagraph(articleMarkdown: "**I pray alone. Do I give the Iqamah?** Yes, it is Sunnah, even when you heard the mosque's Adhan and did not call your own.")
+                    ArticleParagraph(articleMarkdown: "**The Iqamah was called while I was praying a sunnah.** Ibn al-Uthaymin's guidance: if you are in the second rak'ah, finish it lightly; if you are still in the first, break it off and join the imam. A new voluntary prayer is never started after the Iqamah.")
+                }
+
+                Section(header: ArticleHeader("IN SUMMARY")) {
+                    ArticleClosing("Where the Adhan calls the community to gather, the Iqamah announces that the prayer has been established and the rows are to be formed. It comes after the time, at the imam's word, and the prayer follows it.")
                 }
 
                 ArticleSourcesSection(article: "IqamahView")
@@ -1135,6 +1281,11 @@ struct CompileView: View {
                     ArticleParagraph(verbatim: "This standardization did not remove revelation; rather, it unified the community upon the verified mushaf, whose skeletal rasm supported the seven Ahruf, and ensured consistent public recitation.")
                 }
 
+                Section(header: ArticleHeader("FROM THE PROPHET ﷺ TO THE CITIES")) {
+                    ArticleParagraph(verbatim: "The whole road at a glance, from the revelation to the copies that reached each city and the readers who taught from them:")
+                    ArticleIsnadCard("The Quran, the speech of Allah, brought down by Jibril to the Prophet ﷺ, who taught it to his Companions, among them the four he named (Sahih al-Bukhari 4999) with Zayd ibn Thabit and ‘Ali; gathered into one volume by Zayd at Abu Bakr’s order in 12 AH and kept by Hafsah (Sahih al-Bukhari 4986); copied under ‘Uthman by Zayd, ‘Abdullah ibn az-Zubayr, Sa‘id ibn al-‘As and ‘Abd ar-Rahman ibn al-Harith (Sahih al-Bukhari 4987); and sent to Madinah, Makkah, Sham, Basra and Kufa, where the ten readers taught.", isnad: .quranCompilation)
+                }
+
                 Section(header: ArticleHeader("CONSENSUS OF THE COMPANIONS")) {
                     ArticleParagraph(verbatim: "The Companions, foremost memorizers and teachers, accepted the compilation and the Uthmanic copies, and the Ummah has been united upon them ever since. Ali (may Allah be pleased with him) said that Uthman did nothing regarding the copies except in consultation with them (Ibn Abi Dawud, Kitab al-Masahif; Ibn Hajar graded its chain sahih in Fath al-Bari). Abdullah ibn Mas'ud (may Allah be pleased with him) at first disliked that Zayd ibn Thabit was given the task over him and told the people of Iraq to keep their own copies, and az-Zuhri reports that the most virtuous of the Companions disliked that view of his (Jami' at-Tirmidhi 3104; graded sahih by al-Albani); the scholars report that he later came back to the agreement of the rest.")
 
@@ -1520,7 +1671,9 @@ struct AhrufView: View {
                 Section(header: ArticleHeader("WHAT ABOUT THE 10 QIRAAT?")) {
                     ArticleParagraph(verbatim: "The 10 Qiraat are the mass-transmitted (mutawatir) methods that show how the Ahruf were preserved through the Uthmanic mushaf and teaching traditions.")
 
-                    ArticleParagraph(verbatim: "Each Qiraah has an unbroken chain (isnad) from the reciter → to his teacher → back to Prophet Muhammad (peace and blessings be upon him).")
+                    ArticleParagraph(verbatim: "Each Qiraah has an unbroken chain (isnad) from the reciter to his teacher, and his teacher's teacher, back to Prophet Muhammad (peace and blessings be upon him). Here is the chain of the reading of ‘Asim, which divides into his two narrators, Hafs and Shu‘bah:")
+
+                    ArticleIsnadCard("The reading of ‘Asim: from the Prophet ﷺ through ‘Uthman, ‘Ali, Ibn Mas‘ud, Ubayy and Zayd ibn Thabit, and ‘Asim’s teachers Abu ‘Abd ar-Rahman as-Sulami, Zirr ibn Hubaysh and Abu ‘Amr ash-Shaybani, to ‘Asim (d. 127 AH), where it divides into Hafs (d. 180 AH) and Shu‘bah (d. 193 AH).", isnad: .hafsReading)
 
                     Text(verbatim: "Learn more in the next section: 10 Qiraat (Canonical Recitations).")
                         .font(.body)
@@ -2491,6 +2644,7 @@ struct MadhabView: View {
             .text("None of the four imams formally founded an institution. Each taught a methodology that his students preserved and systematized into a school over the generations, so historians distinguish between the life of the imam and the emergence of the madhhab."),
             .text("The Hanafi school began in Kufa during Abu Hanifa’s lifetime and was firmly established by his students Abu Yusuf (d. 182 AH) and Muhammad al-Shaybani (d. 189 AH). The Maliki school developed in Madinah through Imam Malik’s teaching circle and Al-Muwatta. The Shafi‘i school crystallized in Egypt in Imam al-Shafi‘i’s final years (his “new” madhhab) and spread after him through students like al-Muzani and al-Buwayti. The Hanbali school was collected and systematized after Imam Ahmad’s death by his sons and students such as al-Khallal."),
             .text("The four imams form an unbroken chain of teacher and student: Imam Malik taught al-Shafi‘i, who in turn taught Ahmad ibn Hanbal. Imam Malik was also a contemporary of Abu Hanifa, and al-Shafi‘i was born in the very year Abu Hanifa passed away (150 AH)."),
+            .isnad("Where the four imams learned. In Kufa, from ‘Abdullah ibn Mas‘ud through ‘Alqamah ibn Qays, Ibrahim an-Nakha‘i and Hammad ibn Abi Sulayman to Abu Hanifa, and on to his students Abu Yusuf and Muhammad ash-Shaybani. In Madinah, from ‘Abdullah ibn ‘Umar through Nafi‘ to Malik, his student al-Shafi‘i, and al-Shafi‘i’s student Ahmad ibn Hanbal. Each imam had many teachers; these are the best known roads, and they crossed: al-Shafi‘i also studied in Iraq with Muhammad ash-Shaybani.", .madhhabImams),
         ]),
         ArticleSection("UNITY THROUGH DIVERSITY", [
             .text("All four madhahib are valid and respected paths within Ahl al-Sunnah wa al-Jama‘ah (أَهل السُّنَّة وَالجَمَاعَة). Though they may differ in legal rulings, they are united in the same ‘aqeedah (عَقِيدَة), the core beliefs regarding Allah, His names and attributes, prophethood, the Quran, the unseen, and the Afterlife."),

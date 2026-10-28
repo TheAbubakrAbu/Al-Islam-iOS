@@ -1,23 +1,6 @@
 #if os(iOS)
 import SwiftUI
 
-/// The one owner of `isIdleTimerDisabled` (Phase 5 step 12): the display stays awake while a Quran
-/// reader is on screen (reading, or following a recitation), and only on the full tier. Playback
-/// used to own it, which kept the screen on while audio played from any tab.
-@MainActor
-enum ScreenAwake {
-    static var readerVisible = false {
-        didSet { apply() }
-    }
-
-    static func apply() {
-        let wanted = readerVisible && PerformanceProfile.shared.tier != .reduced
-        if UIApplication.shared.isIdleTimerDisabled != wanted {
-            UIApplication.shared.isIdleTimerDisabled = wanted
-        }
-    }
-}
-
 /// Whether anything modal is up over the app's windows: a sheet, a share sheet, an alert, a
 /// confirmation dialog. The "leaving the app" behaviours (the Quran tab re-opening the mushaf on
 /// `didEnterBackground`) must not run while one is presented: a share sheet that hands off to
@@ -333,6 +316,12 @@ enum MemoryTrim {
         #if HAS_HADITH
         // The long-narration chunk memo (rebuilt per row on demand).
         HadithArabicChunks.purgeCache()
+        // The decompressed chains of narrators (a book's first row inflates its own again).
+        HadithChainStore.shared.purge()
+        // The decompressed similar-narration lists, the same way.
+        SimilarHadithsStore.shared.purge()
+        HadithNarratorStore.shared.purge()
+        HadithIsnadTreeStore.shared.purge()
         #endif
         #if HAS_QURAN
         // The explorer's computed place tables and counts.

@@ -856,8 +856,17 @@ struct AyahContextMenuModifier: ViewModifier {
         if settings.isHafsDisplay {
             Divider()
 
-            // Who is reciting first, then the reader rows' playback list: Play This Ayah last, the
-            // primary action nearest the thumb.
+            // Play This Ayah on the menu itself, one tap from the hold (Abu, 2026-10-27: "For the menu
+            // long hold ayah replace play ayah with play this ayah"); it was the last row of a Play Ayah
+            // submenu. The rest of the reader rows' playback list stays one submenu below it, who is
+            // reciting first, since no ▶ sits beside a Quran tab row to hold it.
+            Button {
+                settings.hapticFeedback()
+                quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah)
+            } label: {
+                Label("Play This Ayah", systemImage: "play.circle")
+            }
+
             Menu {
                 chooseReciterButton
 
@@ -899,15 +908,8 @@ struct AyahContextMenuModifier: ViewModifier {
                 } label: {
                     Label("Play From Ayah", systemImage: "play.circle.fill")
                 }
-
-                Button {
-                    settings.hapticFeedback()
-                    quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah)
-                } label: {
-                    Label("Play This Ayah", systemImage: "play.circle")
-                }
             } label: {
-                Label("Play Ayah", systemImage: "play.circle")
+                Label("Ayah Playback", systemImage: "music.note.list")
             }
         }
 

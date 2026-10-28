@@ -173,6 +173,7 @@ enum IslamArticles {
         case "TaraweehView": return AnyView(TaraweehView())
         case "JanazahView": return AnyView(JanazahView())
         case "IstikharahView": return AnyView(IstikharahView())
+        case "KhutbahView": return AnyView(KhutbahView())
         case "TravelPrayerView": return AnyView(TravelPrayerView())
         case "SickPrayerView": return AnyView(SickPrayerView())
         case "MissedPrayerView": return AnyView(MissedPrayerView())
@@ -184,6 +185,7 @@ enum IslamArticles {
         case "BecomeMuslimView": return AnyView(BecomeMuslimView())
         case "TawbahView": return AnyView(TawbahView())
         case "MakeDuaView": return AnyView(MakeDuaView())
+        case "RuqyahView": return AnyView(RuqyahView())
         default: return nil
         }
     }

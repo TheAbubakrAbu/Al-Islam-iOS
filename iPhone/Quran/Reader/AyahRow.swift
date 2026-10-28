@@ -1768,7 +1768,7 @@ struct AyahRow: View, Equatable {
     /// if need be put menus in menus"; since 2026-10-23 the ⋯ menu no longer repeats them as a Play
     /// Ayah submenu). Play This Ayah sits at the visual bottom, the primary action nearest the thumb, as
     /// Play Surah does in the surah menus. Play Custom Range appears once: it used to end the Repeat
-    /// submenu as well. Choose Reciter leads, as in the Quran tab's Play Ayah submenu and the actions
+    /// submenu as well. Choose Reciter leads, as in the Quran tab's Ayah Playback submenu and the actions
     /// sheet's reciter row (Abu, 2026-10-25); the host presents the list (`AyahSecondarySheet.reciter`).
     @ViewBuilder
     private func ayahPlaybackItems() -> some View {
@@ -2022,7 +2022,7 @@ struct AyahRow: View, Equatable {
     /// (bookmark, highlight, note), study (tafsir, the Study Ayah submenu, the per-ayah settings),
     /// and text (select, copy, share); playback is the ▶ button beside the menu. The Quran tab's ayah
     /// menu (`AyahContextMenuModifier`) is this list block for block (user rule 2026-09-05), plus the
-    /// surah and a Play Ayah submenu, since no ▶ sits beside a Quran tab row.
+    /// surah, Play This Ayah and an Ayah Playback submenu, since no ▶ sits beside a Quran tab row.
     @ViewBuilder
     private func menuBlock(isBookmarked: Bool) -> some View {
         #if os(iOS)

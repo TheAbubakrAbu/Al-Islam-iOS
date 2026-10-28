@@ -1109,8 +1109,8 @@ enum CrossLanguageWordHighlight {
 /// justification, the tap hit-testing, which already subtracts `textContainerInset`), and the overhang
 /// lands inside the view's own surface. This host is the column: the frame SwiftUI or the page's
 /// scroll view lays out, and the box a touch has to be inside, since a point outside a view's bounds
-/// never hit-tests into its subviews. The text view hangs out of it by `bleed` on both sides, as
-/// drawing only.
+/// never hit-tests into its subviews. The text view hangs out of it by `bleed` on both sides (and by
+/// `verticalBleed` above and below), as drawing only.
 final class ArabicInkBleedHost: UIView {
     /// The faces' largest measured overhang is about 7% of the point size (the left side), and the
     /// reader's largest Arabic is 75pt (the sheet card tops out near 80): 12pt covers every size with
@@ -1118,14 +1118,25 @@ final class ArabicInkBleedHost: UIView {
     /// so the ink never reaches past the paint those already reserve.
     static let bleed: CGFloat = 12
 
+    /// How far the text view also hangs above and below the column. The list rows and the sheets keep
+    /// the face's whole line box, whose air already holds the tallest mark stack, and need none. The
+    /// fitted mushaf page squeezes its line box to 0.90 of that (`MushafPageComposer.lineBoxScale`), so
+    /// its first line's tallest marks rise above the column: the ۖ over ٱلصِّدِّيقُونَ reaches 1.7pt past
+    /// the box at 60pt, and at the top of its page (57:19) it lost the top of its ṣād (Abu, 2026-10-27:
+    /// "the sillee is cut off"). The page asks for `bleed` here, which covers its last line's
+    /// descenders the same way.
+    let verticalBleed: CGFloat
+
     let textView: UITextView
 
-    init(textView: UITextView) {
+    init(textView: UITextView, verticalBleed: CGFloat = 0) {
         self.textView = textView
+        self.verticalBleed = verticalBleed
         super.init(frame: .zero)
         clipsToBounds = false
         backgroundColor = .clear
-        textView.textContainerInset = UIEdgeInsets(top: 0, left: Self.bleed, bottom: 0, right: Self.bleed)
+        textView.textContainerInset = UIEdgeInsets(top: verticalBleed, left: Self.bleed,
+                                                   bottom: verticalBleed, right: Self.bleed)
         addSubview(textView)
     }
 
@@ -1133,11 +1144,11 @@ final class ArabicInkBleedHost: UIView {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
     /// The text view's frame for a host box: the box, plus the bleed on each side.
-    static func textFrame(in bounds: CGRect) -> CGRect { bounds.insetBy(dx: -bleed, dy: 0) }
+    func textFrame(in bounds: CGRect) -> CGRect { bounds.insetBy(dx: -Self.bleed, dy: -verticalBleed) }
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        let target = Self.textFrame(in: bounds)
+        let target = textFrame(in: bounds)
         // Same box, left alone. A non-scrolling text view resyncs its container to any frame change,
         // and a container resize throws the whole typesetting away (see `MushafPageTextView`), so
         // SwiftUI's pixel rounding of the same box must not count as a change.

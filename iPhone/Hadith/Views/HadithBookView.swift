@@ -837,13 +837,19 @@ struct HadithBookView: View {
                     if showsGrid {
                         Section {
                             // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a
-                            // different height on each self-sizing pass, which iOS 26 traps on.
-                            SummaryTileGrid(columns: 2) {
-                                ForEach(shownChapters) { chapter in
-                                    chapterGridTile(chapter, data: data)
+                            // different height on each self-sizing pass, which iOS 26 traps on. One
+                            // grid row per List row (`tileGridChunk`), each with an id the chapter
+                            // rail lands on; it was every chapter in one row (Bukhari's 97 tiles).
+                            let chunk = tileGridChunk(columns: Self.chapterGridColumns)
+                            ForEach(Array(stride(from: 0, to: shownChapters.count, by: chunk)), id: \.self) { start in
+                                SummaryTileGrid(columns: Self.chapterGridColumns) {
+                                    ForEach(shownChapters[start..<min(start + chunk, shownChapters.count)]) { chapter in
+                                        chapterGridTile(chapter, data: data)
+                                    }
                                 }
+                                .tileGridChunkRow(start: start, count: shownChapters.count, chunk: chunk)
+                                .id(Self.chapterGridRowID(start))
                             }
-                            .padding(.vertical, 4)
                         }
                     } else {
                         ForEach(shownChapters) { chapter in
@@ -860,6 +866,17 @@ struct HadithBookView: View {
         // Playing bar - suppress the duplicate here (same rule as the catalog and the Quran sidebar).
         .applyConditionalListStyle(disableNowPlayingInset: usesColumnNavigation)
         .compactListSectionSpacing()
+        #if os(iOS)
+        // The chapter numbers down the edge, in the list and the grid alike; not while searching.
+        .jumpIndexRail(isSearchActive ? [] : Self.chapterRailItems(shownChapters, data: data, book: book),
+                       accessibilityName: String(localized: "Chapter index"), proxy: scrollProxy) { item -> String? in
+            guard shownChapters.indices.contains(item.id) else { return nil }
+            let chunk = tileGridChunk(columns: Self.chapterGridColumns)
+            return showsGrid
+                ? Self.chapterGridRowID(item.id - item.id % chunk)
+                : "hadith-chapter-\(shownChapters[item.id].id)"
+        }
+        #endif
         // No pinned book header here: the navigation title already names the book, and the CHAPTERS
         // header carries the counts - a floating bar was pure repetition on this screen.
         // The grid/list flip animates, same as the catalog.
@@ -878,6 +895,11 @@ struct HadithBookView: View {
             // The order and the Show choices are one preference shared with the tab root and the
             // chapter screen; coming back from either picks up what was chosen there.
             searchFilters.adoptStoredPreferences()
+            // This book's chains of narrators (HadithChains.swift), inflated off the main thread while
+            // the reader picks a chapter, so its rows' first question is a lookup.
+            HadithChainStore.shared.prewarm(slug: book.slug)
+            // Likewise this book's similar-narration lists (SimilarHadiths.swift).
+            SimilarHadithsStore.shared.prewarm(slug: book.slug)
 
             #if DEBUG
             // `-hadithBookSearch <term>` (with `-launchHadithBook <slug>`): the in-book search, headless.
@@ -1501,6 +1523,28 @@ struct HadithBookView: View {
         }
         .contentShape(Rectangle())
     }
+
+    /// The chapter grid's columns, on every width.
+    private static let chapterGridColumns = 2
+
+    /// A chapter grid row's id: the index of its first tile.
+    private static func chapterGridRowID(_ start: Int) -> String { "hadith-chapter-row-\(start)" }
+
+    #if os(iOS)
+    /// The chapter rail's stops by chapter number (1, 5, 10 ... 95, 97 in Bukhari), for a book of 30
+    /// chapters or more. An opening introduction (number 0) is the row above chapter 1, not a stop.
+    /// Each stop's id is its chapter's index in `chapters`.
+    private static func chapterRailItems(_ chapters: [HadithBookData.Chapter], data: HadithBookData,
+                                         book: HadithCatalogBook) -> [JumpIndexItem] {
+        let offset = chapters.first.map { data.position(of: $0) == 0 ? 1 : 0 } ?? 0
+        let numbered = Array(chapters.dropFirst(offset))
+        guard numbered.count >= 30 else { return [] }
+        return JumpIndexItem.numberedStops(numbered.map { data.position(of: $0) },
+                                           title: { String(localized: "Chapter \(data.position(of: numbered[$0]))") },
+                                           subtitle: { numbered[$0].displayTitle(in: book) })
+            .map { JumpIndexItem(id: $0.id + offset, label: $0.label, title: $0.title, subtitle: $0.subtitle) }
+    }
+    #endif
 
     /// The chapter as a grid card - the SurahRow grid tile's shape: Arabic on top, English and the
     /// span below, favorites tinted with the corner star.
@@ -2776,6 +2820,14 @@ struct HadithChapterView: View {
         // via the list's top content margin, not a phantom spacer row.
         .applyConditionalListStyle(topContentMargin: 11, readingWidth: true)
         .compactListSectionSpacing()
+        #if os(iOS)
+        // The hadiths' places in the chapter down the edge, the surah reader's ayah rail: the
+        // numbers the rows lead with, the book's own citation in the bubble.
+        .jumpIndexRail(!isSearchActive && textReady ? hadithRailItems : [],
+                       accessibilityName: String(localized: "Hadith index"), proxy: scrollProxy) { item in
+            allChapterHadiths.indices.contains(item.id) ? "chapter-hadith-\(allChapterHadiths[item.id].idInBook)" : nil
+        }
+        #endif
         .onAppear {
             if textReady { scheduleArrivalScroll(scrollProxy) }
         }
@@ -2820,6 +2872,17 @@ struct HadithChapterView: View {
         }
         }
     }
+
+    #if os(iOS)
+    /// The hadith rail's stops, by place in the chapter (1, 10, 20 ...), for a chapter of 20 or more.
+    private var hadithRailItems: [JumpIndexItem] {
+        let hadiths = allChapterHadiths
+        guard hadiths.count >= 20 else { return [] }
+        return JumpIndexItem.numberedStops(Array(1...hadiths.count),
+                                           title: { String(localized: "Hadith \($0 + 1)") },
+                                           subtitle: { book.displayReference(hadiths[$0].displayNumber) })
+    }
+    #endif
 
     // MARK: Multi-select (the surah reader's bulk actions, for hadiths)
 

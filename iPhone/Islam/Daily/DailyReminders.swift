@@ -190,11 +190,14 @@ enum DailyReminderTarget: Equatable {
 final class DailyReminderStore: ObservableObject {
     static let shared = DailyReminderStore()
 
-    static var packURL: URL? {
+    /// Looked up once, by the first reader: `prewarm()`'s `isBundled` check at app init, on the main
+    /// thread. It was a computed property, so the parse looked the pack up again on its background
+    /// thread at launch, and that lookup crashed once (SIGILL inside NSBundle's file-name conversion,
+    /// 2026-10-27, iOS 27 simulator) while the main thread was installing the accessibility runtime.
+    static let packURL: URL? =
         Bundle.main.url(forResource: "DailyReminders", withExtension: "json.xz", subdirectory: "Data/Islam")
             ?? Bundle.main.url(forResource: "DailyReminders", withExtension: "json.xz", subdirectory: "Islam")
             ?? Bundle.main.url(forResource: "DailyReminders", withExtension: "json.xz")
-    }
 
     static let isBundled: Bool = packURL != nil
 
@@ -654,6 +657,12 @@ enum IslamOpenTarget: Equatable {
     case names(Int?)
 }
 
+/// A narration to open in its book on the Hadith tab: a study sheet's "Open in Book".
+struct HadithOpenTarget: Equatable {
+    let slug: String
+    let idInBook: Int
+}
+
 /// Cross-tab navigation requests. A card's "Open" or a control has no view in hand; it drops the
 /// target here, the tab view switches tabs on the publish, and the tab pushes and clears it.
 /// `@Published` replays its value to a late subscriber, so a cold launch from a card still lands.
@@ -666,6 +675,14 @@ final class AppNavigation: ObservableObject {
     /// `MainTabView` switches to the tab on the publish, and the tab opens the matching sheet and
     /// clears it, so a control reaches the SAME sheet a tile does rather than a second copy of it.
     @Published var pendingAdhan: AdhanOpenTarget?
+
+    /// The Hadith tab's pending narration (a study sheet's "Open in Book"): MainTabView switches tabs,
+    /// HadithView opens the book at it and clears it.
+    @Published var pendingHadith: HadithOpenTarget?
+
+    func openHadith(slug: String, idInBook: Int) {
+        pendingHadith = HadithOpenTarget(slug: slug, idInBook: idInBook)
+    }
 
     func openAdhan(_ target: AdhanOpenTarget) {
         pendingAdhan = target

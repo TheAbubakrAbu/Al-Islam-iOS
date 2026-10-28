@@ -12,42 +12,8 @@ import SwiftUI
 // consistent with the death years the app already ships in `Settings.Riwayah` and `QiraatProfiles`.
 // Where a narrator's students are not listed with confidence, the layer is simply left out.
 
-struct IsnadNode: Identifiable, Hashable {
-    enum Role: Hashable {
-        case prophet, companion, successor, imam, link, narrator, student
-    }
-
-    let name: String
-    let arabic: String
-    var detail: String? = nil
-    var role: Role = .link
-
-    var id: String { name + "|" + arabic }
-}
-
-struct IsnadLayer: Identifiable {
-    let title: String
-    let nodes: [IsnadNode]
-    var id: String { title }
-}
-
-/// One riwayah's road below its imam: the links between them (where there are any), the narrator,
-/// and the students who carried his narration on, top to bottom.
-struct IsnadBranch: Identifiable {
-    /// The narrator's riwayah tag.
-    let id: String
-    /// The narrator whose page this is (or both, on the imam's page): drawn filled.
-    let highlighted: Bool
-    let layers: [IsnadLayer]
-}
-
-/// A reading's whole chain: the Prophet ﷺ down to the imam, shared, then the imam's two narrators
-/// side by side, each with his own road (Abu, 2026-09-26: "show two different chains for each
-/// riwayah and how it got to both, and if I see it for one riwayah show the other one too").
-struct IsnadChain {
-    let top: [IsnadLayer]
-    let branches: [IsnadBranch]
-}
+// The model (IsnadNode, IsnadLayer, IsnadBranch, IsnadChain), the diagram and the share button
+// live in Islam/Content/IsnadDiagram.swift, which the articles share (2026-10-27).
 
 enum QiraatIsnad {
     // MARK: - The people
@@ -390,299 +356,13 @@ enum QiraatIsnad {
 
 }
 
-// MARK: - The diagram
-
-/// The chain as a vertical diagram: one row per generation, connected top to bottom, the Prophet ﷺ
-/// at the top and the narrator (or the two narrators) highlighted. Draws the same on the page and in
-/// the shared image.
-struct QiraatIsnadDiagram: View {
-    @Environment(\.appearance) private var appearance
-
-    let chain: IsnadChain
-    /// The rendered image's fixed light look (the page follows the app's theme).
-    var forImage = false
-
-    private var accent: Color { appearance.accent }
-
-    /// The gap between the two branch columns; `IsnadBranchSplit` aims its legs at their centres.
-    private static let columnSpacing: CGFloat = 10
-
-    var body: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(chain.top.enumerated()), id: \.element.id) { index, layer in
-                layerBlock(layer)
-                if index < chain.top.count - 1 {
-                    connector
-                }
-            }
-
-            if chain.branches.count == 1, let branch = chain.branches.first {
-                connector
-                branchColumn(branch)
-            } else if chain.branches.count > 1 {
-                // The imam's two narrators, side by side, each with his own road: the split below the
-                // imam is where the one chain becomes two.
-                IsnadBranchSplit(columns: chain.branches.count, spacing: Self.columnSpacing)
-                    .stroke(accent.opacity(0.45), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-                    .frame(height: 26)
-                    .padding(.top, 2)
-
-                HStack(alignment: .top, spacing: Self.columnSpacing) {
-                    ForEach(chain.branches) { branch in
-                        branchColumn(branch)
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-            }
-        }
-        .padding(.vertical, 6)
-    }
-
-    /// One narrator's road, top-down: a chevron from the split, then each layer stacked (a column is
-    /// too narrow to set two people side by side).
-    private func branchColumn(_ branch: IsnadBranch) -> some View {
-        VStack(spacing: 0) {
-            Image(systemName: "chevron.down")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(accent.opacity(0.7))
-                .padding(.bottom, 4)
-
-            ForEach(Array(branch.layers.enumerated()), id: \.element.id) { index, layer in
-                VStack(spacing: 6) {
-                    Text(layer.title)
-                        .font(.caption2.weight(.bold))
-                        .tracking(0.6)
-                        .foregroundStyle(forImage ? Color.black.opacity(0.55) : Color.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-
-                    ForEach(layer.nodes) { node in
-                        nodeChip(node)
-                    }
-                }
-                if index < branch.layers.count - 1 {
-                    connector
-                }
-            }
-        }
-        // The fellow narrator's road on a narrator's page: present, but a step back.
-        .opacity(branch.highlighted ? 1 : 0.8)
-    }
-
-    private var connector: some View {
-        VStack(spacing: 0) {
-            Rectangle()
-                .fill(accent.opacity(0.45))
-                .frame(width: 2, height: 14)
-            Image(systemName: "chevron.down")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(accent.opacity(0.7))
-            Rectangle()
-                .fill(accent.opacity(0.45))
-                .frame(width: 2, height: 14)
-        }
-        .padding(.vertical, 2)
-    }
-
-    private func layerBlock(_ layer: IsnadLayer) -> some View {
-        VStack(spacing: 8) {
-            Text(layer.title)
-                .font(.caption2.weight(.bold))
-                .tracking(0.8)
-                .foregroundStyle(forImage ? Color.black.opacity(0.55) : Color.secondary)
-
-            if layer.nodes.count == 1, let node = layer.nodes.first {
-                nodeChip(node)
-                    .frame(maxWidth: 300)
-            } else if #available(iOS 16.0, *) {
-                // Centered rows (Abu, 2026-09-25: "some arent centered"). The adaptive grid this
-                // replaced made as many columns as the width allowed and filled them from the
-                // leading edge, so on an iPad or Mac a pair of narrators sat at the left of a
-                // wide row while every single-person layer sat in the middle.
-                IsnadCenteredRows(spacing: 8) {
-                    ForEach(layer.nodes) { node in
-                        nodeChip(node)
-                            .frame(maxHeight: .infinity)
-                    }
-                }
-            } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 132, maximum: 200), spacing: 8)], spacing: 8) {
-                    ForEach(layer.nodes) { node in
-                        nodeChip(node)
-                    }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private func nodeChip(_ node: IsnadNode) -> some View {
-        let filled = node.role == .prophet || node.role == .narrator
-        let outlined = node.role == .imam || node.role == .companion
-        let primaryText: Color = forImage ? .black : .primary
-        let secondaryText: Color = forImage ? Color.black.opacity(0.6) : .secondary
-
-        return VStack(spacing: 3) {
-            Text(node.arabic)
-                .font(appearance.islamArabicFont(base: node.role == .prophet ? 22 : 17, relativeTo: .body))
-                .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
-                .foregroundColor(filled ? .white : accent)
-                .lineLimit(2)
-                .minimumScaleFactor(0.7)
-                .multilineTextAlignment(.center)
-
-            Text(node.name)
-                .font(.caption.weight(.semibold))
-                .foregroundColor(filled ? .white : primaryText)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
-                .multilineTextAlignment(.center)
-
-            if let detail = node.detail {
-                Text(detail)
-                    .font(.caption2)
-                    .foregroundColor(filled ? Color.white.opacity(0.85) : secondaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(filled
-                      ? AnyShapeStyle(LinearGradient(colors: [accent, accent.opacity(0.75)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                      : AnyShapeStyle(accent.opacity(node.role == .student ? 0.06 : 0.1)))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(accent.opacity(outlined ? 0.55 : 0), lineWidth: 1.5)
-        )
-    }
-}
-
-/// The fork below the imam: one stem down from the centre, a bar across, and a leg down to the centre
-/// of each branch column (columns equal width, `spacing` apart).
-struct IsnadBranchSplit: Shape {
-    let columns: Int
-    let spacing: CGFloat
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        guard columns > 0 else { return path }
-        let columnWidth = (rect.width - spacing * CGFloat(columns - 1)) / CGFloat(columns)
-        let centres = (0..<columns).map { rect.minX + columnWidth / 2 + CGFloat($0) * (columnWidth + spacing) }
-        let bar = rect.minY + rect.height * 0.45
-        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.midX, y: bar))
-        if let first = centres.first, let last = centres.last {
-            path.move(to: CGPoint(x: first, y: bar))
-            path.addLine(to: CGPoint(x: last, y: bar))
-        }
-        for x in centres {
-            path.move(to: CGPoint(x: x, y: bar))
-            path.addLine(to: CGPoint(x: x, y: rect.maxY))
-        }
-        return path
-    }
-}
-
-/// One generation of the chain with more than one person in it: equal-width cards in as many columns
-/// as fit (never more than there are people), each ROW centered, and the cards of a row stretched to
-/// the row's tallest so a two-line name does not leave its neighbour short.
-@available(iOS 16.0, *)
-private struct IsnadCenteredRows: Layout {
-    var spacing: CGFloat = 8
-    var minItemWidth: CGFloat = 132
-    var maxItemWidth: CGFloat = 200
-
-    private func metrics(width: CGFloat, count: Int) -> (columns: Int, itemWidth: CGFloat) {
-        guard count > 0 else { return (1, 0) }
-        let fit = max(1, Int((width + spacing) / (minItemWidth + spacing)))
-        let columns = min(count, fit)
-        let itemWidth = min(maxItemWidth, (width - spacing * CGFloat(columns - 1)) / CGFloat(columns))
-        return (columns, max(0, itemWidth))
-    }
-
-    private func rows(_ subviews: Subviews, columns: Int, itemWidth: CGFloat) -> [(range: Range<Int>, height: CGFloat)] {
-        stride(from: 0, to: subviews.count, by: columns).map { start in
-            let range = start..<min(start + columns, subviews.count)
-            let height = range.map {
-                subviews[$0].sizeThatFits(ProposedViewSize(width: itemWidth, height: nil)).height
-            }.max() ?? 0
-            return (range, height)
-        }
-    }
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let width = proposal.width
-            ?? (maxItemWidth * CGFloat(subviews.count) + spacing * CGFloat(max(0, subviews.count - 1)))
-        let (columns, itemWidth) = metrics(width: width, count: subviews.count)
-        let heights = rows(subviews, columns: columns, itemWidth: itemWidth).map(\.height)
-        let height = heights.reduce(0, +) + spacing * CGFloat(max(0, heights.count - 1))
-        return CGSize(width: width, height: height)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let (columns, itemWidth) = metrics(width: bounds.width, count: subviews.count)
-        var y = bounds.minY
-        for row in rows(subviews, columns: columns, itemWidth: itemWidth) {
-            let rowWidth = itemWidth * CGFloat(row.range.count) + spacing * CGFloat(row.range.count - 1)
-            var x = bounds.midX - rowWidth / 2
-            for index in row.range {
-                subviews[index].place(at: CGPoint(x: x, y: y),
-                                      proposal: ProposedViewSize(width: itemWidth, height: row.height))
-                x += itemWidth + spacing
-            }
-            y += row.height + spacing
-        }
-    }
-}
-
-/// The diagram framed for sharing: a title, the chain, and the app's name at the foot, on paper.
-struct QiraatIsnadShareCard: View {
-    let title: String
-    let subtitle: String
-    let chain: IsnadChain
-
-    var body: some View {
-        VStack(spacing: 14) {
-            VStack(spacing: 4) {
-                Text(title)
-                    .font(.title3.weight(.bold))
-                    .foregroundColor(.black)
-                Text(subtitle)
-                    .font(.footnote)
-                    .foregroundColor(Color.black.opacity(0.6))
-            }
-            .multilineTextAlignment(.center)
-
-            QiraatIsnadDiagram(chain: chain, forImage: true)
-
-            Text("\(AppIdentifiers.displayName) · The Ten Qiraat")
-                .font(.caption2.weight(.semibold))
-                .foregroundColor(Color.black.opacity(0.45))
-        }
-        .padding(24)
-        .frame(width: 560)
-        .background(Color(red: 0.99, green: 0.98, blue: 0.95))
-    }
-}
-
 /// The chain section on a narrator's or an imam's page: the sentence, the diagram, and the way to
-/// share it as an image (iOS 16+, rendered on demand).
+/// share it as an image (iOS 16+, one tap: `IsnadShareButton`).
 struct QiraatIsnadSection: View {
-    @Environment(\.appearance) private var appearance
-    @Environment(\.layoutDirection) private var layoutDirection
-
     let title: String
     let subtitle: String
     let sentence: String?
     let chain: IsnadChain
-
-    @State private var rendered: UIImage?
-    @State private var rendering = false
 
     var body: some View {
         Section {
@@ -693,11 +373,12 @@ struct QiraatIsnadSection: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            QiraatIsnadDiagram(chain: chain)
+            IsnadDiagram(chain: chain)
                 .padding(.vertical, 4)
 
             if #available(iOS 16.0, *) {
-                shareRow
+                IsnadShareButton(label: String(localized: "Share the Chain as an Image"), title: title, subtitle: subtitle,
+                                 footer: String(localized: "\(AppIdentifiers.displayName) · The Ten Qiraat"), chain: chain)
                     // The chain's last row: `-scrollToChainEnd` lands here, where the chain forks.
                     .id("isnad-chain-end")
             }
@@ -706,50 +387,6 @@ struct QiraatIsnadSection: View {
         } footer: {
             Text("From the Prophet ﷺ down through the Companions and the imam's own teachers (for the later imams, the generations between those teachers and the Companions are not drawn) to the imam himself, where the chain divides: his two narrators side by side, each with the link between them where there is one, and the students who carried each narration on. The isnad as the classical record gives it (al-Nashr, Ghayat al-Nihayah, and the turuq of al-Shatibiyyah and al-Durrah).")
         }
-    }
-
-    @available(iOS 16.0, *)
-    private var shareRow: some View {
-        Group {
-            if let rendered {
-                ShareLink(item: Image(uiImage: rendered), preview: SharePreview(title, image: Image(uiImage: rendered))) {
-                    Label("Share the Chain as an Image", systemImage: "square.and.arrow.up")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(appearance.accent)
-                }
-            } else {
-                Button {
-                    Settings.shared.hapticFeedback()
-                    render()
-                } label: {
-                    HStack {
-                        Label("Share the Chain as an Image", systemImage: "square.and.arrow.up")
-                            .font(.subheadline.weight(.medium))
-                        Spacer()
-                        if rendering { ProgressView() }
-                    }
-                    .foregroundColor(appearance.accent)
-                }
-                .buttonStyle(.plain)
-                .disabled(rendering)
-            }
-        }
-    }
-
-    @available(iOS 16.0, *)
-    @MainActor
-    private func render() {
-        rendering = true
-        let card = QiraatIsnadShareCard(title: title, subtitle: subtitle, chain: chain)
-            .environment(\.injectedAppearance, appearance)
-            // The renderer starts from a default environment: without this the image would lay the two
-            // narrators' columns out left to right while the page beside it reads right to left.
-            .environment(\.layoutDirection, layoutDirection)
-        let renderer = ImageRenderer(content: card)
-        renderer.scale = 3
-        renderer.proposedSize = ProposedViewSize(width: 560, height: nil)
-        rendered = renderer.uiImage
-        rendering = false
     }
 }
 

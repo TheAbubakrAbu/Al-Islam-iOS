@@ -9,7 +9,7 @@ enum AyahSecondarySheet: String, Identifiable {
     /// on their menu while the ayah offered it only inside the tafsir and comparison sheets).
     case summarize
     /// The reciter list, for the reader row's ▶ menu (Choose Reciter at its top, as in the Quran tab's
-    /// Play Ayah submenu). The actions sheet opens its own copy on top of itself instead, so picking a
+    /// Ayah Playback submenu). The actions sheet opens its own copy on top of itself instead, so picking a
     /// voice never closes the sheet you were about to play from.
     case reciter
     var id: String { rawValue }
@@ -982,7 +982,7 @@ struct AyahActionsSheet: View {
         }
 
         if settings.isHafsDisplay {
-            // The ▶ menu's playback list in its order (and the Quran tab's Play Ayah submenu): Repeat
+            // The ▶ menu's playback list in its order (and the Quran tab's Ayah Playback submenu): Repeat
             // Ayah, Play Custom Range, Play From Ayah, then Play This Ayah, the primary action, lowest and
             // nearest the thumb. Who recites is the Choose Reciter row under the grid. Repeat and Play
             // This close the sheet unless Keep Sheet Open While Playing is on (`closeAfterPlaying`);

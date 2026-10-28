@@ -45,8 +45,13 @@ final class WordOfDayStore: @unchecked Sendable {
     static let shared = WordOfDayStore()
     private init() {}
 
+    /// Looked up once, on the main thread at app init (`prewarm()` checks `isBundled` first), so the
+    /// launch parse never looks the pack up on its background thread: that lookup crashed once for the
+    /// Reminder of the Day beside it (`DailyReminderStore.packURL`).
+    static let packURL: URL? = ThemesPack.url("WordOfDay")
+
     /// A cheap URL lookup, so the settings toggle and the summary grid can gate on it without a parse.
-    static let isBundled: Bool = ThemesPack.url("WordOfDay") != nil
+    static let isBundled: Bool = packURL != nil
 
     private let lock = NSLock()
     private var loaded: [WordOfDayEntry]?
@@ -164,7 +169,7 @@ final class WordOfDayStore: @unchecked Sendable {
 
     private static func load() -> [WordOfDayEntry]? {
         PackTrace.measure("WordOfDay") { () -> (result: [WordOfDayEntry]?, bytes: Int) in
-            guard let json = ThemesPack.data("WordOfDay") else { return (nil, 0) }
+            guard let url = packURL, let json = ThemesPack.data(at: url) else { return (nil, 0) }
             return (parse(json), json.count)
         }
     }

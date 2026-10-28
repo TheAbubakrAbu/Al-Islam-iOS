@@ -335,6 +335,12 @@ private struct MainTabView: View {
                     selectedTab = .islam
                 }
             }
+            // A study sheet's "Open in Book" (HadithResolvedList.swift) lands on the Hadith tab; the
+            // tab's own `.onReceive` opens the narration in its book from there.
+            .onReceive(AppNavigation.shared.$pendingHadith) { target in
+                guard target != nil else { return }
+                selectedTab = .hadith
+            }
             // Launch warmups, one .task per app domain (like AppLifecycle's sections): when this
             // root is copied into a companion app, delete the domains it doesn't ship.
             // Shared: the tab walk behind the launch cover.

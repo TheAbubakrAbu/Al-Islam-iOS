@@ -83,6 +83,10 @@ TERM_RE = re.compile(r"(?:(?<![\w.])ArticleTermCard\(|(?<!\w)\.term\()\s*(" + ST
 STAT_RE = re.compile(r"ArticleStat\(\s*(" + STR + r")\s*,\s*(" + STR + r")\s*\)", re.S)
 CHAIN_LINK_RE = re.compile(r"ArticleChainLink\(\s*(" + STR + r")(?:\s*,\s*(" + STR + r"))?\s*\)", re.S)
 CHAIN_CAPTION_RE = re.compile(r"(?:(?<![\w.])ArticleChainDiagram\(|(?<!\w)\.chain\()\s*\[.*?\]\s*,\s*caption:\s*(" + STR + r")", re.S)
+# A chain of transmission drawn as the isnad diagram (iPhone/Islam/Content/IsnadDiagram.swift, 2026-10-27):
+# `.isnad("caption", .bukhariFirst)` in a data-backed article, `ArticleIsnadCard("caption", isnad: ...)` in
+# a view-based one. The caption names the chain's people in order, so it is the chain's text here.
+ISNAD_RE = re.compile(r"(?:(?<![\w.])ArticleIsnadCard\(|(?<!\w)\.isnad\()\s*(" + STR + r")\s*,", re.S)
 CHECKLIST_RE = re.compile(r"(?:(?<![\w.])ArticleChecklist\(|(?<!\w)\.checklist\()\s*\[(.*?)\]\s*,\s*title:\s*(" + STR + r")", re.S)
 SIDE_RE = re.compile(r"ArticleVersus\.Side\(\s*(" + STR + r")(?:\s*,\s*arabic:\s*(" + STR + r"))?\s*,\s*caption:\s*(" + STR + r")\s*\)", re.S)
 LADDER_RE = re.compile(r"HadithGradeLadder\(\)|(?<!\w)\.gradeLadder\b")
@@ -345,6 +349,8 @@ def articles():
             for m in CHAIN_LINK_RE.finditer(body):
                 detail = f", {unquote(m.group(2))}" if m.group(2) and unquote(m.group(2)) else ""
                 hits.append((m.start(1), "computed", f"{unquote(m.group(1))}{detail}."))
+            for m in ISNAD_RE.finditer(body):
+                hits.append((m.start(1), "computed", unquote(m.group(1))))
             for m in CHECKLIST_RE.finditer(body):
                 items = [unquote(item) for item in re.findall(STR, m.group(1))]
                 hits.append((m.start(), "computed", f"{unquote(m.group(2))}: " + " ".join(items)))

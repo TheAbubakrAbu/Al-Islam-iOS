@@ -772,6 +772,10 @@ struct ArabicView: View {
         case "maqsurahYaa": MaqsurahOrYaaView()
         case "maqsurahPractice": MaqsurahPracticeView(mode: .letter)
         case "maqsurahLength": MaqsurahPracticeView(mode: .length)
+        case "wasl": HamzatulWaslView()
+        case "waslStart": HamzatulWaslPracticeView(mode: .start)
+        case "waslTanween": HamzatulWaslPracticeView(mode: .tanween)
+        case "waslReadOn": HamzatulWaslPracticeView(mode: .readOn)
         case "families": LetterFamiliesView()
         case "soundAlikes": SoundAlikeLettersView()
         case "quiz": LetterQuizView()
@@ -880,6 +884,8 @@ struct ArabicView: View {
 
             letterShapesSection
 
+            hamzatulWaslSection
+
             // Tashkeel, Default Tashkeel and Basic Grammar used to be link rows here too. They are
             // Explore tiles at the top now (Abu, 2026-09-22), so everything there is to STUDY is in
             // one place; the two shape pages stayed behind, next to the letters they are made of.
@@ -928,6 +934,32 @@ struct ArabicView: View {
             .tint(settings.accentColor.color)
         } header: {
             Text("LETTER SHAPES")
+        }
+    }
+
+    /// Hamzatul waSl and its drills, after the letter shapes (Abu, 2026-10-27: "have a whole hamzatul
+    /// wasl section in Arabic alphabet with exercises especially tanween then hamzatul wasl"). The page
+    /// first, then each drill on a row of its own, so the practice is one tap from the alphabet.
+    private var hamzatulWaslSection: some View {
+        Section {
+            NavigationLink(destination: LazyDestination { HamzatulWaslView() }) {
+                ArabicTopicLinkLabel(specimen: HamzatulWaslView.specimen,
+                                     title: String(localized: "Hamzatul WaSl"),
+                                     caption: String(localized: "The hamza you only say at a start"),
+                                     face: .uthmani)
+            }
+            .tint(settings.accentColor.color)
+
+            #if os(iOS)
+            ForEach(HamzatulWaslPracticeView.Mode.allCases) { mode in
+                NavigationLink(destination: LazyDestination { HamzatulWaslPracticeView(mode: mode) }) {
+                    ArabicTopicLinkLabel(specimen: mode.specimen, title: mode.title, caption: mode.caption, face: .uthmani)
+                }
+                .tint(settings.accentColor.color)
+            }
+            #endif
+        } header: {
+            Text("HAMZATUL WASL")
         }
     }
 

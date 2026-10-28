@@ -3820,9 +3820,9 @@ final class QuranPlayer: ObservableObject {
     }
     
     /// Playback no longer owns the idle timer (Phase 5 step 12). It used to keep the screen awake
-    /// while audio played from ANY tab, phone in pocket included; `ScreenAwake` (Globals.swift) now
-    /// keeps it awake only while a reader is on screen, and never on the reduced tier. Kept as a
-    /// no-op so the eleven call sites stay where they document the playback transitions.
+    /// while audio played from ANY tab, phone in pocket included; `ScreenWakeLock` now keeps it awake
+    /// for the moving highlight and for the Keep Screen On setting. Kept as a no-op so the eleven call
+    /// sites stay where they document the playback transitions.
     func idleTimerSet(_ disabled: Bool) {}
 }
 

@@ -877,6 +877,9 @@ struct HadithPillarView: View {
                     ArticleStep("1. **Isnad (إِسنَاد), the Chain of Transmission:** The sequence of narrators who transmitted the hadith. This ensures a direct link back to the Prophet (peace and blessings be upon him).")
                     ArticleStep("2. **Matn (مَتن), the Text:** The content of the hadith itself, which is examined for consistency with established Islamic teachings and linguistic accuracy.")
 
+                    ArticleParagraph(verbatim: "Here is a real isnad: the first hadith of Sahih al-Bukhari, “actions are by intentions,” which Imam Muslim also narrates by another road that meets al-Bukhari’s at the same narrator:")
+                    ArticleIsnadCard("Sahih al-Bukhari 1 and Sahih Muslim 1907: from the Prophet ﷺ through ‘Umar ibn al-Khattab, ‘Alqamah ibn Waqqas and Muhammad ibn Ibrahim at-Taymi to Yahya ibn Sa‘id al-Ansari, where the chain divides into al-Bukhari’s road (Sufyan ibn ‘Uyaynah, al-Humaydi) and Muslim’s (Malik, al-Qa‘nabi).", isnad: .bukhariFirst)
+
                     ArticleParagraph(verbatim: "The rigorous analysis of isnad and matn is crucial because some individuals attempted to fabricate sayings of the Prophet (peace and blessings be upon him). To safeguard against such corruption, scholars developed a meticulous science of hadith authentication. The Prophet (peace and blessings be upon him) warned:")
                     ScriptureQuote(hadith: "bukhari:108", cite: "Sahih al-Bukhari 108", arabic: 27...34, english: 20...35)
 

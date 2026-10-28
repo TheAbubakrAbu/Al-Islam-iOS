@@ -83,8 +83,16 @@ struct JuzHeader: View {
     @State private var showInfo = false
     #endif
 
+    /// Every surah the juz runs through, except in the two lists that file a surah under the juz it
+    /// opens in (Simple Juz, Khatm's Juz grouping): there it counts the rows beneath the header, so
+    /// juz 2 and 5 no longer claim a surah over an empty section.
     private var surahCount: Int {
-        quranData.surahs(inJuz: juz.id).count
+        #if os(iOS)
+        if settings.quranSortMode == .simpleJuz || settings.quranSortMode == .khatm {
+            return quranData.quran.filter { ($0.firstJuz ?? $0.ayahs.first?.juz) == juz.id }.count
+        }
+        #endif
+        return quranData.surahs(inJuz: juz.id).count
     }
 
     var body: some View {
@@ -108,7 +116,9 @@ struct JuzHeader: View {
             Spacer()
 
             // Simple Mode drops the count and the shuffle, as `SurahsHeader` does; the info button stays.
-            surahCountBadge
+            if surahCount > 0 {
+                surahCountBadge
+            }
             infoButton
             // Khatm's Juz grouping is about tracking a full read-through, so the random "shuffle to a surah"
             // jump doesn't belong there - hide it in khatm mode.

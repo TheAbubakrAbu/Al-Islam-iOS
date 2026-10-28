@@ -951,6 +951,107 @@ struct IstikharahView: View {
     }
 }
 
+// MARK: - Jumuah: the khutbah
+
+/// The khatib's half of Jumuah (Abu, 2026-10-27: "how to give khutbah and jummuah and adhan for
+/// jummuah"): what makes the khutbah valid, how the Prophet gave it, its opening, and what to avoid.
+/// The congregation's half is JumuahView, which links here; the two Friday calls are in AdhanOtherView.
+struct KhutbahView: View {
+    var body: some View {
+        List {
+            Group {
+                Section(header: ArticleHeader("SUMMARY")) {
+                    ArticleLead(articleMarkdown: "In short: the Jumuah **khutbah (خُطبَة)** is two addresses given standing on the minbar after the Adhan, with a short sitting between them, before the prayer. Open with the praise of Allah and the testimony, send blessings on the Prophet, counsel the people to fear Allah with the Quran and the authentic Sunnah, keep it short, then come down and lead two rak'ah aloud.")
+                }
+
+                Section(header: ArticleHeader("ITS PLACE")) {
+                    ArticleParagraph(verbatim: "The khutbah is part of Jumuah itself, a condition of it rather than an extra. The Prophet (peace and blessings be upon him) never prayed Jumuah without it, and the scholars explained “the remembrance of Allah” the believers are told to hasten to as the khutbah and the prayer. It was two khutbahs, with Quran and counsel in them:")
+                    ScriptureQuote(hadith: "muslim:862a", cite: "Sahih Muslim 862", arabic: 27...39, english: 0...18)
+                    ArticleParagraph(verbatim: "He gave it standing, and the Quran mentions it, of the people who left in the middle of it for a caravan's trade:")
+                    ScriptureQuote(quran: "62:11")
+                }
+
+                Section(header: ArticleHeader("WHAT MAKES IT VALID")) {
+                    ArticleStep("1. **In the prayer's time, and before the prayer.** A khutbah given before the time of Jumuah, or after the prayer, does not count. Unlike Eid, Jumuah's khutbah comes first.")
+                    ArticleStep("2. **Two khutbahs.** This is the Sunnah the Prophet kept without exception, and the Shafi'i and Hanbali schools make both a condition; the Hanafis held that one suffices. Give two and you are safe in every view.")
+                    ArticleStep("3. **Aloud, to the congregation that will pray.** It is given so that the people hear it, by someone who is with them. A recording or a broadcast does not count.")
+                    ArticleStep("4. **What it says.** The Hanbali school names four pillars for each khutbah: praising Allah, sending blessings on the Prophet, reciting at least one ayah, and counselling the people to fear Allah. Others, Ibn Taymiyyah among them, held that no fixed list binds it, only what truly makes it a khutbah: the praise of Allah, the testimony, and real counsel. Keep all of them and your khutbah is valid in every view.")
+                    ArticleStep("5. **Joined to the prayer.** The two khutbahs follow each other, and the prayer follows them, without a long break.")
+                }
+
+                Section(header: ArticleHeader("STEP BY STEP")) {
+                    ArticleStep("1. **Prepare.** Take a ghusl, wear clean clothes, and be in wudhu, since you will lead the prayer. Choose one subject the people need, and gather its ayat and authentic hadith beforehand.")
+                    ArticleStep("2. **Come out when it is time, climb the minbar and face the people.** Greet them with salam; Jabir reported that the Prophet did so when he climbed the minbar (Sunan Ibn Majah 1109; graded hasan by al-Albani).")
+                    ArticleStep("3. **Sit while the muadhin calls the Adhan**, the Adhan of the Prophet's time (Sahih al-Bukhari 912).")
+                    ArticleStep("4. **Stand and begin with the praise of Allah.** You may lean on a staff or a bow:")
+                    ScriptureQuote(hadith: "abudawud:1096", cite: "Sunan Abi Dawud 1096; graded hasan by al-Albani", arabic: 84...97, english: 103...123)
+                    ArticleParagraph(verbatim: "The opening the Prophet taught, Khutbat al-Hajah, is below. After it, say “Amma ba'd” and come to your subject.")
+                    ArticleStep("5. **Speak as a warner, with feeling.** This is how Jabir described him on the minbar:")
+                    ScriptureQuote(hadith: "muslim:867a", cite: "Sahih Muslim 867", arabic: 22...45, english: 0...49)
+                    ArticleStep("6. **Recite Quran in it.** A woman of the Ansar learned a whole surah from his khutbahs:")
+                    ScriptureQuote(hadith: "muslim:873a", cite: "Sahih Muslim 873", arabic: 25...41, english: 27...62)
+                    ArticleStep("7. **Sit briefly, in silence**, then stand for the second khutbah:")
+                    ScriptureQuote(hadith: "muslim:862b", cite: "Sahih Muslim 862", arabic: 14...37, english: 0...48)
+                    ArticleStep("8. **In the second khutbah**, praise Allah again, send blessings on the Prophet, add a brief reminder, and supplicate for the Muslims. Point with your forefinger as you supplicate; do not raise both hands:")
+                    ScriptureQuote(hadith: "muslim:873c", cite: "Sahih Muslim 874", arabic: 18...49, english: 0...23)
+                    ArticleStep("9. **Come down.** The Iqamah is given at once, and you lead two rak'ah aloud: al-A'la and al-Ghashiyah, or al-Jumu'ah and al-Munafiqun.")
+                }
+
+                Section(header: ArticleHeader("THE OPENING: KHUTBAT AL-HAJAH")) {
+                    ArticleParagraph(verbatim: "The Prophet opened his addresses with this praise. When Dimad, who treated the possessed with incantations, came offering to “cure” him, these words alone brought him to Islam:")
+                    ScriptureQuote(hadith: "muslim:868", cite: "Sahih Muslim 868", arabic: 98...129, english: 101...169)
+                    ArticleParagraph(verbatim: "Its fuller form, which Ibn Mas'ud reported (Sunan Abi Dawud 2118; graded sahih by al-Albani), adds that we seek His forgiveness and take refuge in Him from the evil within ourselves, and then recites three ayat:")
+                    ScriptureQuote(quran: "3:102")
+                    ScriptureQuote(quran: "4:1")
+                    ScriptureQuote(quran: "33:70-71")
+                    ArticleParagraph(verbatim: "Then he would say “Amma ba'd” and go on:")
+                    ScriptureQuote(hadith: "muslim:867a", cite: "Sahih Muslim 867", arabic: 62...78, english: 78...114)
+                }
+
+                Section(header: ArticleHeader("SHORT KHUTBAH, LONG PRAYER")) {
+                    ArticleParagraph(verbatim: "Ammar ibn Yasir gave a short, eloquent khutbah. Asked why he had not gone on longer, he said:")
+                    ScriptureQuote(hadith: "muslim:869", cite: "Sahih Muslim 869", arabic: 51...67, english: 53...88)
+                    ScriptureQuote(hadith: "muslim:866a", cite: "Sahih Muslim 866", arabic: 20...33, english: 0...19)
+                    ArticleParagraph(verbatim: "Short is measured against the prayer. A khutbah that runs past what the people can hold, followed by a prayer rushed to make up the time, turns the Sunnah around.")
+                }
+
+                Section(header: ArticleHeader("WHAT TO SAY")) {
+                    ArticleBullet("• **One subject, built on revelation.** Tawhid and the danger of shirk, the prayer, the rights of parents, spouses and neighbours, honesty in trade, the Hereafter, and the rulings of a season that is near: Ramadan, Hajj, the sacred months.")
+                    ArticleBullet("• **Only what is authentic.** Quote the Quran and the authentic Sunnah, and say where a hadith comes from. A weak or invented narration said from the minbar travels further than any correction.")
+                    ArticleBullet("• **What the people in front of you need.** His khutbahs taught, warned and gave glad tidings; leave them with something to act on this week.")
+                    ArticleBullet("• **A language they understand.** See the first question below.")
+                }
+
+                Section(header: ArticleHeader("WHAT TO AVOID")) {
+                    ArticleBullet("• **Length**, until the people tire and the prayer is hurried.")
+                    ArticleBullet("• **Raising both hands in the khutbah's dua**, and the congregation raising theirs with you. The Sunnah is the forefinger. The one exception is asking for rain, when he raised both hands on the minbar (Sahih al-Bukhari 1029).")
+                    ArticleBullet("• **Stories with no source**, dreams, and narrations you have not checked.")
+                    ArticleBullet("• **A fixed second khutbah** recited from memory every week, with no counsel in it.")
+                    ArticleBullet("• **Turning the minbar into a platform** for insults, rumours, or matters you have no knowledge of. It is a place of reminder.")
+                }
+
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
+                    ArticleParagraph(articleMarkdown: "**May the khutbah be in English, or the people's own language?** The Prophet and the Companions gave it in Arabic, and some scholars require Arabic. Ibn Baz and Ibn al-Uthaymin allowed it in the people's language where they do not understand Arabic, since its purpose is to teach and remind. Say the opening praise, the testimony and the ayat in Arabic, then explain in their language; giving it in Arabic and then translating it avoids the difference altogether.")
+                    ArticleParagraph(articleMarkdown: "**May someone else lead the prayer?** The Sunnah is that the khatib leads it. Another may lead when there is a need, such as the khatib's wudhu breaking.")
+                    ArticleParagraph(articleMarkdown: "**May I read from paper or a screen?** Yes. What matters is that it is heard and understood, not that it is memorised.")
+                    ArticleParagraph(articleMarkdown: "**May I speak to someone during it?** Yes. The Prophet stopped to tell a man who sat down without praying to stand and pray two rak'ah (Sahih Muslim 875), and the one addressed may answer. It is the congregation who may not talk among themselves.")
+                    ArticleParagraph(articleMarkdown: "**Must the khatib be in wudhu?** It is not a condition of the khutbah in the stronger view, but he leads the prayer straight after it, so he needs it anyway.")
+                    ArticleParagraph(articleMarkdown: "**Must it end with “Inna Allaha ya'muru bil-'adl” (16:90)?** No. It is an ayah, so reciting it is good, but making it the fixed ending is a later custom, not something the Prophet did.")
+                }
+
+                Section(header: ArticleHeader("IN SUMMARY")) {
+                    ArticleClosing("Climb the minbar, greet the people and sit for the Adhan. Stand, praise Allah, bear witness, send blessings on the Prophet, and counsel with the Quran and the authentic Sunnah. Sit briefly, give a shorter second khutbah with dua for the Muslims, then come down and lead two rak'ah. Short words, a long prayer.")
+                }
+
+                ArticleSourcesSection(article: "KhutbahView")
+            }
+            .themedListRowBackground()
+        }
+        .englishArticle().selectableArticleList(article: "KhutbahView")
+        .navigationTitle("How to Give the Khutbah")
+    }
+}
+
 // MARK: - Prayer in special cases
 
 struct TravelPrayerView: View {
@@ -1627,6 +1728,191 @@ struct MakeDuaView: View {
         }
         .englishArticle().selectableArticleList(article: "MakeDuaView")
         .navigationTitle("How to Make Dua")
+    }
+}
+
+// MARK: - Ruqyah
+
+/// Ruqyah as the Sunnah teaches it (Abu, 2026-10-27: "Add how to do ruqya. Make sure salafi Sunni
+/// based"): the Quran and the authentic supplications recited over oneself or another, by anyone,
+/// with the heart on Allah alone; the evil eye and magic; and what the scholars of the Sunnah (Ibn
+/// Baz, Ibn al-Uthaymin, the Standing Committee, al-Albani) warned against: amulets, fortune-tellers,
+/// jinn talk, harm and seclusion. The supplications are `GuideDuaRow`s, so each one can be heard and
+/// copied as on the Dua screen.
+struct RuqyahView: View {
+    var body: some View {
+        List {
+            Group {
+                Section(header: ArticleHeader("SUMMARY")) {
+                    ArticleLead(articleMarkdown: "In short: **ruqyah (رُقيَة)** is reciting the Quran and the Prophet's supplications over someone who is ill or afflicted, yourself first of all, and asking Allah alone for the cure. It is Sunnah when its words are Allah's words, His names or the authentic supplications, understood, and free of shirk, with the heart certain that only Allah cures. It needs no specialist, no amulet and no conversation with the jinn, and it goes hand in hand with medicine.")
+                }
+
+                Section(header: ArticleHeader("WHAT IT IS")) {
+                    ArticleParagraph(verbatim: "The Quran was sent down as a healing:")
+                    ScriptureQuote(quran: "17:82")
+                    ScriptureQuote(quran: "10:57")
+                    ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) recited ruqyah over himself and his family, Jibril recited it over him, and he approved the ruqyah of others once he had heard it:")
+                    ScriptureQuote(hadith: "muslim:2200", cite: "Sahih Muslim 2200", arabic: 23...48, english: 0...32)
+                    ArticleParagraph(verbatim: "The one who cures is Allah. Ibrahim (peace be upon him) said it plainly:")
+                    ScriptureQuote(quran: "26:80")
+                }
+
+                Section(header: ArticleHeader("ITS CONDITIONS")) {
+                    ArticleParagraph(verbatim: "Ibn Hajar reported that the scholars agree ruqyah is permitted when three conditions are met (Fath al-Bari):")
+                    ArticleStep("1. **Its words are Allah's words, or His names and attributes**, or the supplications the Prophet taught.")
+                    ArticleStep("2. **It is in Arabic, or in words whose meaning is understood.** Mumbled syllables, unknown names and secret letters are not ruqyah: what cannot be understood cannot be trusted to be free of shirk.")
+                    ArticleStep("3. **The heart holds that the ruqyah does nothing by itself.** It is a means, and the cure comes by Allah's decree alone.")
+                    ArticleParagraph(verbatim: "So the heart leans on Allah, not on the words, the water or the person reciting.")
+                }
+
+                Section(header: ArticleHeader("DO YOUR OWN FIRST")) {
+                    ArticleParagraph(verbatim: "Anyone can recite ruqyah: over yourself, your children, your parents, your spouse. You do not need a specialist, and the best ruqyah is the one you recite yourself. Among those who enter Paradise without reckoning are those who do not ask others for it:")
+                    ScriptureQuote(hadith: "bukhari:6472", cite: "Sahih al-Bukhari 6472", arabic: 35...51, english: 4...39)
+                    ArticleParagraph(verbatim: "Ibn Taymiyyah explained that what they leave is the asking, not the ruqyah. Reciting over yourself and over others was the Prophet's own practice and is a kindness, and asking a righteous person to recite over you is permitted; leaving the asking and reciting yourself is the higher station.")
+                }
+
+                Section(header: ArticleHeader("STEP BY STEP")) {
+                    ArticleStep("1. **Turn to Allah.** Renew your trust in Him, make wudhu if you can (it is better, not required), and sit somewhere calm.")
+                    ArticleStep("2. **Put your hand on the place of pain**, say “Bismillah” three times, and then seven times “A'udhu billahi wa qudratihi min sharri ma ajidu wa uhadhir”:")
+                    ScriptureQuote(hadith: "muslim:2202", cite: "Sahih Muslim 2202", arabic: 53...76, english: 0...54)
+                    ArticleStep("3. **Recite al-Fatihah**, then blow lightly: a breath with a trace of moisture. A Companion recited it over a chief stung by a scorpion:")
+                    ScriptureQuote(hadith: "bukhari:5749", cite: "Sahih al-Bukhari 5749", arabic: 112...129, english: 191...224)
+                    ScriptureQuote(hadith: "bukhari:5749", cite: "Sahih al-Bukhari 5749", arabic: 159...175, english: 280...310)
+                    ArticleStep("4. **Recite Ayat al-Kursi** (2:255) and **the last two ayat of al-Baqarah** (2:285-286), and any other ayat you wish; all of the Quran is healing.")
+                    ArticleStep("5. **Recite al-Ikhlas, al-Falaq and an-Nas**, blow into your cupped hands, and wipe them over as much of your body as you can reach, beginning with the head and face. Do it three times. The Prophet did this every night (Sahih al-Bukhari 5017), and in his last illness:")
+                    ScriptureQuote(hadith: "bukhari:5735", cite: "Sahih al-Bukhari 5735", arabic: 25...44, english: 0...55)
+                    ArticleStep("6. **Say the Prophet's supplications for healing**, below, with your right hand on the place of pain.")
+                    ArticleStep("7. **Repeat it** as long as the need lasts, morning and evening or whenever the pain returns, without counts or schedules the Sunnah did not set. Take your medicine too, and leave the outcome with Allah.")
+                    ArticleParagraph(verbatim: "Over someone else it is the same: your hand on the place of pain, the recitation, and a light breath. A man recites over a woman only if she is his mahram, or with her mahram present and without touching her.")
+                }
+
+                Section(header: ArticleHeader("THE PROPHET'S SUPPLICATIONS FOR HEALING")) {
+                    GuideDuaRow(DuaItem(
+                        hadith: "bukhari:5743", cite: "Sahih al-Bukhari 5743", arabic: 37...52, english: 24...57,
+                        transliteration: "Allahumma Rabban-nas, adhhibil-ba's, ishfihi wa antash-Shafi, la shifa'a illa shifa'uk, shifa'an la yughadiru saqama.",
+                        note: "With the right hand over the place of pain"
+                    ))
+                    GuideDuaRow(DuaItem(
+                        hadith: "muslim:2186", cite: "Sahih Muslim 2186", arabic: 38...56, english: 12...52,
+                        transliteration: "Bismillahi arqik, min kulli shay'in yu'dhik, min sharri kulli nafsin aw 'ayni hasid, Allahu yashfik, bismillahi arqik.",
+                        note: "Jibril's ruqyah over the Prophet"
+                    ))
+                    GuideDuaRow(DuaItem(
+                        hadith: "abudawud:3106", cite: "Sunan Abi Dawud 3106; graded sahih by al-Albani", arabic: 40...47, english: 22...35,
+                        transliteration: "As'alullahal-'Azim, Rabbal-'Arshil-'Azim, an yashfiyak.",
+                        note: "Seven times, beside someone who is ill"
+                    ))
+                    GuideDuaRow(DuaItem(
+                        hadith: "bukhari:5745", cite: "Sahih al-Bukhari 5745", arabic: 33...42, english: 9...28,
+                        transliteration: "Bismillah, turbatu ardina, bi-riqati ba'dina, yushfa saqimuna, bi-idhni Rabbina.",
+                        note: "For a wound or sore: a little saliva on the forefinger, touched to the earth, then to the place"
+                    ))
+                    GuideDuaRow(DuaItem(
+                        hadith: "bukhari:3371", cite: "Sahih al-Bukhari 3371", arabic: 43...54, english: 33...55,
+                        transliteration: "A'udhu bi-kalimatillahit-tammah, min kulli shaytanin wa hammah, wa min kulli 'aynin lammah.",
+                        note: "Said over children, as he said it over al-Hasan and al-Husayn"
+                    ))
+                    ArticleParagraph(verbatim: "Over yourself, the scholars allowed “ishfini” (heal me) in place of “ishfihi” (heal him) in the first; Anas's wording of it, “ishfi”, names no one at all (Sahih al-Bukhari 5742). Aisha described the finger and the earth of the fourth in Sahih Muslim 2194.")
+                }
+
+                Section(header: ArticleHeader("THE EVIL EYE")) {
+                    ArticleParagraph(verbatim: "The eye is real: harm that comes, by Allah's leave, from a look of envy, or of admiration that forgets Allah. Ibn Kathir took this ayah as evidence for it:")
+                    ScriptureQuote(quran: "68:51", words: 0...5)
+                    ScriptureQuote(hadith: "muslim:2188", cite: "Sahih Muslim 2188", arabic: 43...54, english: 0...45)
+                    ArticleParagraph(verbatim: "Its cure is ruqyah, which he commanded for it:")
+                    ScriptureQuote(hadith: "bukhari:5739", cite: "Sahih al-Bukhari 5739", arabic: 55...59, english: 18...32)
+                    ArticleParagraph(verbatim: "When the one who gave the eye is known, he is asked to wash, and the water is poured over the one he struck:")
+                    ScriptureQuote(hadith: "ibnmajah:3509", cite: "Sunan Ibn Majah 3509; graded sahih by al-Albani", arabic: 16...101, english: 0...126)
+                    ArticleParagraph(verbatim: "Prevent it with a blessing. When something of yours or someone else's pleases you, say “Barakallahu fih” (may Allah bless it), or “Ma sha' Allah, la quwwata illa billah”, as the believer told his companion in the garden:")
+                    ScriptureQuote(quran: "18:39", words: 0...11)
+                    ArticleParagraph(verbatim: "And do not accuse people. Suspicion without proof breaks ties that no ruqyah repairs; if you suspect someone, you may ask them kindly to wash, and say nothing more.")
+                }
+
+                Section(header: ArticleHeader("MAGIC (SIHR)")) {
+                    ArticleParagraph(verbatim: "Magic is real, and practising it is kufr, yet it harms no one except by Allah's permission:")
+                    ScriptureQuote(quran: "2:102", words: 42...50)
+                    ArticleParagraph(verbatim: "The Prophet himself was affected by magic, and Allah cured him and showed him where it had been hidden; the well was then filled in (Sahih al-Bukhari 5763). Its treatment is the same ruqyah, with patience and trust:")
+                    ArticleStep("1. **Recite the ruqyah above**, with al-Fatihah, Ayat al-Kursi, al-Falaq and an-Nas, often.")
+                    ArticleStep("2. **Recite the ayat in which Allah undoes the magicians' work**: al-A'raf 7:117-119, Yunus 10:79-82 and Ta Ha 20:65-69. Ibn Baz described reciting them, with Ayat al-Kursi and the surahs of refuge, into water with crushed lote-tree (sidr) leaves, then drinking some of it and washing with the rest.")
+                    ScriptureQuote(quran: "10:81-82")
+                    ArticleStep("3. **If the object of the magic is found**, destroy it, reciting as you do.")
+                    ArticleStep("4. **Never undo magic with magic.** Going to a magician to lift it is forbidden, whatever is promised:")
+                    ScriptureQuote(hadith: "abudawud:3868", cite: "Sunan Abi Dawud 3868; graded sahih by al-Albani", arabic: 23...38, english: 0...25)
+                    ArticleParagraph(verbatim: "And for protection, the Prophet named seven 'ajwah dates in the morning:")
+                    ScriptureQuote(hadith: "bukhari:5445", cite: "Sahih al-Bukhari 5445", arabic: 27...41, english: 4...25)
+                }
+
+                Section(header: ArticleHeader("WATER, OIL AND HONEY")) {
+                    ArticleParagraph(verbatim: "Reciting into water or olive oil, then drinking it or wiping with it, was permitted by Ibn Baz and the Standing Committee and done by some of the Salaf. Reciting directly over the person and blowing is better, as the Sunnah shows. Blowing into water to take the reciter's own blessing, rather than the Quran's, is forbidden.")
+                    ArticleParagraph(verbatim: "Take the cures the Sunnah names as well. Honey:")
+                    ScriptureQuote(quran: "16:69", words: 9...17)
+                    ArticleParagraph(verbatim: "And the black seed:")
+                    ScriptureQuote(hadith: "bukhari:5688", cite: "Sahih al-Bukhari 5688", arabic: 33...41, english: 6...16)
+                }
+
+                Section(header: ArticleHeader("PROTECTION BEFORE AFFLICTION")) {
+                    ArticleParagraph(verbatim: "The strongest ruqyah is the one recited before anything happens: the morning and evening remembrances.")
+                    ScriptureQuote(hadith: "abudawud:5082", cite: "Sunan Abi Dawud 5082; graded hasan by al-Albani", arabic: 84...99, english: 72...93)
+                    GuideDuaRow(DuaItem(
+                        hadith: "abudawud:5088", cite: "Sunan Abi Dawud 5088; graded sahih by al-Albani", arabic: 34...49, english: 25...50,
+                        transliteration: "Bismillahil-ladhi la yadurru ma'a ismihi shay'un fil-ardi wa la fis-sama'i wa huwas-Sami'ul-'Alim",
+                        note: "Three times, morning and evening"
+                    ))
+                    GuideDuaRow(DuaItem(
+                        hadith: "muslim:2708a", cite: "Sahih Muslim 2708", arabic: 63...70, english: 16...32,
+                        transliteration: "A'udhu bikalimatillahit-tammati min sharri ma khalaq",
+                        note: "When stopping at a place; nothing will harm you until you move on"
+                    ))
+                    ArticleParagraph(verbatim: "Recite Ayat al-Kursi when you lie down to sleep: a guardian from Allah stays with you until morning (Sahih al-Bukhari 2311). And the last two ayat of al-Baqarah at night:")
+                    ScriptureQuote(hadith: "bukhari:5009", cite: "Sahih al-Bukhari 5009", arabic: 31...40, english: 4...21)
+                }
+
+                Section(header: ArticleHeader("WHAT TO AVOID")) {
+                    ArticleBullet("• **Amulets and charms**, whatever is written in them. The Prophet said that whoever hangs an amulet has committed shirk (Musnad Ahmad 17422; graded sahih by al-Albani), and:")
+                    ScriptureQuote(hadith: "abudawud:3883", cite: "Sunan Abi Dawud 3883; graded sahih by al-Albani", arabic: 42...46, english: 19...24)
+                    ArticleParagraph(verbatim: "The ruqyah meant there is the kind with shirk in it; the same narration ends with Ibn Mas'ud teaching his wife the Prophet's own ruqyah instead. Amulets of Quran are left too: the companions of Ibn Mas'ud disliked them all, and Ibn Baz and Ibn al-Uthaymin forbade them, because they open the door to the rest and the Quran was sent down to be recited, not hung.")
+                    ArticleBullet("• **Fortune-tellers and “healers”** who ask for your mother's name, write numbers and squares, tell you who did it, read cups or palms, or ask for an animal slaughtered in a certain way. Going to them is a sin, and believing them is worse:")
+                    ScriptureQuote(hadith: "muslim:2230", cite: "Sahih Muslim 2230", arabic: 36...47, english: 0...20)
+                    ArticleBullet("• **Talking with the jinn**, taking their word, or accusing a relative because a jinn named them. The jinn lie, and the Sunnah never made them witnesses.")
+                    ArticleBullet("• **Harming the patient**: beating, choking, shouting into the ear, electric shocks. None of it is from the Sunnah.")
+                    ArticleBullet("• **Seclusion with a woman, or touching her**, in the name of treatment:")
+                    ScriptureQuote(hadith: "bukhari:5233", cite: "Sahih al-Bukhari 5233", arabic: 23...30, english: 4...20)
+                    ArticleBullet("• **Leaving medicine.** Treatment does not contradict trust in Allah; the Prophet commanded it:")
+                    ScriptureQuote(hadith: "abudawud:3855", cite: "Sunan Abi Dawud 3855; graded sahih by al-Albani", arabic: 38...60, english: 33...73)
+                    ArticleBullet("• **Blaming everything on the eye, magic or the jinn.** Illness, sadness, anxiety and failure have ordinary causes too, and doctors and counsellors treat them. Recite ruqyah, and see the doctor.")
+                    ArticleBullet("• **Invented counts and schedules**: a surah forty-one times at a set hour, ruqyah “programs”, rituals the Sunnah never taught. What is fixed is fixed by revelation, and adding to it is innovation.")
+                }
+
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
+                    ArticleParagraph(articleMarkdown: "**Do I need a raqi?** No. Your own ruqyah is the Sunnah and the best of it. If you ask someone, choose a person of sound belief and practice who recites the Quran and the authentic supplications, and stays away from everything above.")
+                    ArticleParagraph(articleMarkdown: "**Can a woman recite ruqyah?** Yes: over herself, her children, other women and her mahrams. Aisha recited it over the Prophet in his last illness, as above.")
+                    ArticleParagraph(articleMarkdown: "**And during her period?** The supplications are always open to her. Reciting the ayat from memory during her period is permitted in the view of Ibn Taymiyyah and Ibn al-Uthaymin, above all for a need like this.")
+                    ArticleParagraph(articleMarkdown: "**Can I recite over a non-Muslim?** Yes. The chief the Companions recited al-Fatihah over was not a Muslim.")
+                    ArticleParagraph(articleMarkdown: "**May the one who recites take payment?** Yes, the Prophet allowed it, though the scholars warned against making it a trade with fixed prices and promises of cure:")
+                    ScriptureQuote(hadith: "bukhari:5737", cite: "Sahih al-Bukhari 5737", arabic: 111...118, english: 142...155)
+                    ArticleParagraph(articleMarkdown: "**Does playing a recording count?** Listening to the Quran brings calm and reward, but a recording is not ruqyah, which is recited with intention and breath by someone present. Ibn al-Uthaymin said the same of a recording of al-Baqarah played in a home.")
+                    ArticleParagraph(articleMarkdown: "**How do I know whether it is the eye, magic or the jinn?** You do not need to. The treatment is the same: ruqyah, the morning and evening remembrances, the prayer, medicine and patience. Chasing a diagnosis is how people end up at the fortune-teller's door.")
+                }
+
+                Section(header: ArticleHeader("KEY TERMS")) {
+                    ArticleTermCard("Ruqyah", arabic: "رُقْيَة", meaning: "Recitation over the sick or afflicted, seeking cure from Allah. With the Quran and the authentic supplications it is Sunnah; with shirk or unknown words it is forbidden.")
+                    ArticleTermCard("Nafth", arabic: "نَفْث", meaning: "Light blowing with a trace of moisture after reciting, over the person or into the hands: more than a breath, less than spitting.")
+                    ArticleTermCard("Al-'ayn", arabic: "العَيْن", meaning: "The evil eye: harm that strikes, by Allah's leave, from a look of envy, or of admiration that does not remember Allah.")
+                    ArticleTermCard("Sihr", arabic: "السِّحْر", meaning: "Magic: real, learned from the devils, and kufr to practise. It harms no one except by Allah's permission.")
+                    ArticleTermCard("Tamimah", arabic: "تَمِيمَة", meaning: "An amulet or charm hung or worn for protection. Shirk when it is relied on, and forbidden even when Quran is written in it, in the view the scholars of the Sunnah took.")
+                    ArticleTermCard("Nushrah", arabic: "نُشْرَة", meaning: "Undoing magic. With ruqyah and lawful medicine it is allowed; with magic it is the work of the devil.")
+                }
+
+                Section(header: ArticleHeader("IN SUMMARY")) {
+                    ArticleClosing("Ruqyah is the Quran and the Prophet's supplications, recited by you over yourself and those you love, with the heart on Allah alone. Recite al-Fatihah, Ayat al-Kursi and the surahs of refuge, blow lightly, say his words for healing, keep the morning and evening remembrances, take your medicine, and stay far from amulets, fortune-tellers and anyone who mixes the Quran with what Allah did not send down.")
+                }
+
+                ArticleSourcesSection(article: "RuqyahView")
+            }
+            .themedListRowBackground()
+        }
+        .englishArticle().selectableArticleList(article: "RuqyahView")
+        .navigationTitle("How to Do Ruqyah")
     }
 }
 

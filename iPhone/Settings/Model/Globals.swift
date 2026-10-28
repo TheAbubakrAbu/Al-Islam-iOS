@@ -980,6 +980,104 @@ extension Font {
     }
 }
 
+// MARK: - Quranic marks inside other text
+
+/// Arabic that carries the mushaf's own marks (the wasl alef ٱ, the Uthmani sukoon, the small high and
+/// low signs, the imalah dot, the open tanween) inside English prose or a label. The system face has no
+/// proper glyphs for most of them and drew the wasl alef as a Latin-looking "Î" on Riwayat on the Page
+/// (Abu, 2026-10-27: "why not use Arabic text?"), so a run carrying one is set in the Hafs Uthmani face
+/// the app's Quran is drawn in, a little larger because that face draws small for its point size.
+/// Plain Arabic (a term like جُمُعَة) keeps the system face, which draws it well.
+enum QuranicInline {
+    static let scale: CGFloat = 1.3
+
+    static func isQuranicMark(_ value: UInt32) -> Bool {
+        switch value {
+        case 0x0671, 0x0657, 0x065C, 0x065E, 0x06D6...0x06ED, 0x08F0...0x08FF: return true
+        default: return false
+        }
+    }
+
+    private static func isArabic(_ value: UInt32) -> Bool {
+        switch value {
+        case 0x0600...0x06FF, 0x0750...0x077F, 0x08A0...0x08FF, 0xFB50...0xFDFF, 0xFE70...0xFEFF: return true
+        default: return false
+        }
+    }
+
+    /// The UTF-16 ranges of the Arabic runs in `text` that carry a Quranic mark. Words joined by a single
+    /// space are one run, so a phrase is set in one face.
+    static func ranges(in text: String) -> [NSRange] {
+        guard text.unicodeScalars.contains(where: { isQuranicMark($0.value) }) else { return [] }
+        let scalars = Array(text.unicodeScalars)
+        var result: [NSRange] = []
+        var offset = 0
+        var i = 0
+        while i < scalars.count {
+            guard isArabic(scalars[i].value) else {
+                offset += scalars[i].utf16.count
+                i += 1
+                continue
+            }
+            let start = offset
+            var marked = false
+            while i < scalars.count {
+                let value = scalars[i].value
+                if isArabic(value) {
+                    marked = marked || isQuranicMark(value)
+                } else if !(value == 0x20 && i + 1 < scalars.count && isArabic(scalars[i + 1].value)) {
+                    break
+                }
+                offset += scalars[i].utf16.count
+                i += 1
+            }
+            if marked { result.append(NSRange(location: start, length: offset - start)) }
+        }
+        return result
+    }
+
+    #if canImport(UIKit)
+    /// The same over a UIKit string: each Quranic run takes the Uthmani face at its own size times `scale`.
+    /// (Holding the lines to the text's own height to close the gap the taller face opens made TextKit
+    /// overlap the lines, 2026-10-27; the slightly taller line is the lesser cost.)
+    static func apply(to string: NSMutableAttributedString) {
+        for range in ranges(in: string.string) {
+            let size = (string.attribute(.font, at: range.location, effectiveRange: nil) as? UIFont)?.pointSize ?? 17
+            guard let face = UIFont(name: Settings.hafsUthmaniFontName, size: size * scale) else { continue }
+            string.addAttribute(.font, value: face, range: range)
+        }
+    }
+    #endif
+}
+
+extension Text {
+    /// `text` as written, with any Arabic run that carries Quranic marks set in the Uthmani face
+    /// (`QuranicInline`); `size` is the point size of the text around it. Built by concatenating
+    /// segments, each with its own font: font runs in an `AttributedString` were not drawn (2026-10-27).
+    init(quranicInline text: String, size: CGFloat, relativeTo style: Font.TextStyle = .body) {
+        let found = QuranicInline.ranges(in: text)
+        guard !found.isEmpty else {
+            self.init(verbatim: text)
+            return
+        }
+        let string = text as NSString
+        let face = Font.custom(Settings.hafsUthmaniFontName, size: size * QuranicInline.scale, relativeTo: style)
+        var result = Text(verbatim: "")
+        var cursor = 0
+        for range in found {
+            if range.location > cursor {
+                result = result + Text(verbatim: string.substring(with: NSRange(location: cursor, length: range.location - cursor)))
+            }
+            result = result + Text(verbatim: string.substring(with: range)).font(face)
+            cursor = range.location + range.length
+        }
+        if cursor < string.length {
+            result = result + Text(verbatim: string.substring(from: cursor))
+        }
+        self = result
+    }
+}
+
 #if canImport(UIKit)
 extension UIFont {
     /// The rounded system face. The `fontDesign` environment only reaches SwiftUI text, so the UIKit-drawn surfaces
