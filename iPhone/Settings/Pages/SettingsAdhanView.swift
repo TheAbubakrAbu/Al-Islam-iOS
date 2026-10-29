@@ -322,8 +322,9 @@ struct SettingsAdhanView: View {
             adhanPageLink(.prayerCalculation) { prayerCalculationDestination }
             #if os(iOS)
             // The tracker's own page (History & Insights). Simple Mode shows the tab's tracker only to
-            // someone who marked a prayer in the last fourteen days, so this is its door the rest of the
-            // time (Docs/Product/Simple Mode Guide.md, rule 3); in Full Mode it is a second way in.
+            // someone who marked a prayer in the last fourteen days, and ON THE ADHAN TAB below can put
+            // it away in either mode, so this is its door the rest of the time (Docs/Product/Simple Mode
+            // Guide.md, rule 3); with the tracker on the tab it is a second way in.
             NavigationLink(destination: LazyDestination { PrayerTrackerView() }) {
                 SettingsRowLabel(title: String(localized: "Prayer Tracker"), systemImage: "checklist",
                                  subtitle: String(localized: "History, streaks and insights"), tint: SettingsTint.prayer)
@@ -342,6 +343,10 @@ struct SettingsAdhanView: View {
         Section(header: Text("SKY")) {
             adhanPageLink(.sky, tint: SettingsTint.sky) { skyDestination }
         }
+
+        // The tab's foldable sections, a switch each (TabSections.swift): PRAYER TRACKER and AT A
+        // GLANCE. In Simple Mode too, where this is the way At a Glance comes back.
+        TabSectionsSettingsSection(area: .adhan)
 
         // No PRAYER TRACKER section here: the tracker's one switch ("Mark Only After the Time
         // Begins") moved onto the tracker itself in September 2026 and became its only behaviour on
@@ -1889,6 +1894,8 @@ extension SettingsSearchEntry {
 
     static let adhanEntries: [SettingsSearchEntry] = weatherEntries + [
         .init(title: "Prayer Settings", path: "Al-Adhan", keywords: "salah salat times adhan", destination: .prayerSettings),
+        .init(title: "Prayer Tracker on the Adhan Tab", path: "Prayer Settings", keywords: "prayer tracker show hide remove collapse fold put away card streak checklist marks adhan tab", destination: .prayerSettings),
+        .init(title: "At a Glance on the Adhan Tab", path: "Prayer Settings", keywords: "at a glance tiles show hide remove collapse fold put away qibla daylight fasting moon distance simple mode adhan tab", destination: .prayerSettings),
         .init(title: "Need a Hand? on the Adhan Tab", path: "Prayer Settings", keywords: "need a hand help shortcuts questions show hide adhan tab need help praying traveling sky nagging", destination: .prayerSettings, isAvailable: { !Settings.shared.hides(.pageHelpDoors) }),
         .init(title: "Prayer Times Layout", path: "Prayer Settings", keywords: "tiles grid list split layout columns prayer times view display", destination: .prayerSettings),
         .init(title: "Traveling Mode (Qasr)", path: "Prayer Settings → Traveling Mode", keywords: "travel shorten combine journey safar 48 miles automatic", destination: .prayerPage(.travelingMode)),

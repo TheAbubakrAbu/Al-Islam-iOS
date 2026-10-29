@@ -109,6 +109,26 @@ final class SkyWeatherTests: XCTestCase {
         XCTAssertNil(SkyWeather.freshCached(in: suite, at: now.addingTimeInterval(5 * 3600)), "stale readings are not served")
     }
 
+    /// A reader's 4.6.5 report: Weather turned off and on again left the card without weather until the
+    /// app was quit. Turning it off drops the reading, so nothing should hold back the request that
+    /// turning it on makes; a failure's back-off still stands.
+    @MainActor
+    func testTurningWeatherBackOnAsksAtOnce() {
+        #if HAS_WEATHER
+        let store = SkyWeatherStore.shared
+        let now = Date()
+        store.debugRecordAttempt(at: now.addingTimeInterval(-60), failed: false)
+        XCTAssertTrue(store.holdsBack(at: now), "a reading a minute old holds Refresh back")
+        store.clear()
+        XCTAssertFalse(store.holdsBack(at: now), "switched off, the next request is not held back")
+
+        store.debugRecordAttempt(at: now.addingTimeInterval(-60), failed: true)
+        store.clear()
+        XCTAssertTrue(store.holdsBack(at: now), "a failure's back-off outlives the switch")
+        store.debugRecordAttempt(at: .distantPast, failed: false)
+        #endif
+    }
+
     // MARK: The widgets
 
     func testWidgetSignatureIgnoresSmallChanges() {

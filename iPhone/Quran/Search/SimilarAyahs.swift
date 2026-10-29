@@ -220,7 +220,7 @@ struct SimilarAyahsSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             Group {
                 if let matches {
                     List {
@@ -293,7 +293,6 @@ struct SimilarAyahsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
-        .navigationViewStyle(.stack)
         .smallMediumSheetPresentation()
         .task {
             let surah = surahNumber, ayah = ayahNumber

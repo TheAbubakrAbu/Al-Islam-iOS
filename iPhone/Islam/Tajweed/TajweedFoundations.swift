@@ -299,10 +299,9 @@ struct TajweedFoundationsView: View {
         }
         #if HAS_QURAN
         .sheet(isPresented: $showTajweedLegend) {
-            NavigationView {
+            SheetNavigationContainer {
                 TajweedLegendView()
             }
-            .navigationViewStyle(.stack)
             .smallMediumSheetPresentation()
         }
         #endif

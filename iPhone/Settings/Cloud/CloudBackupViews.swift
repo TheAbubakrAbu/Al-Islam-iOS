@@ -458,6 +458,9 @@ struct CloudRestoreSheet: View {
 
     @ObservedObject private var manager = CloudBackupManager.shared
     @Environment(\.dismiss) private var dismiss
+    /// The accent off the environment, so an accent change redraws this view (a bare `Settings` read
+    /// in a view that observes nothing kept the old colour).
+    @Environment(\.appearance) private var appearance
 
     let source: Source
     var claimAfterwards: Bool
@@ -506,7 +509,7 @@ struct CloudRestoreSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             List {
                 Section {
                     CloudProfileCard(profile: card, isOwn: !isFile && manager.isOwn(card), selected: false)
@@ -631,7 +634,7 @@ struct CloudRestoreSheet: View {
                 }
                 Spacer()
                 Image(systemName: mode == value ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(mode == value ? Settings.shared.accentColor.color : Color.secondary.opacity(0.5))
+                    .foregroundColor(mode == value ? appearance.accent : Color.secondary.opacity(0.5))
             }
             .contentShape(Rectangle())
         }
@@ -701,6 +704,9 @@ struct CloudComparisonRow: View {
 /// The row under Your Progress and About You.
 struct CloudBackupSettingsRow: View {
     @ObservedObject private var manager = CloudBackupManager.shared
+    /// The accent off the environment, so an accent change redraws this view (a bare `Settings` read
+    /// in a view that observes nothing kept the old colour).
+    @Environment(\.appearance) private var appearance
     var tint: Color? = nil
     var secondaryTint: Color? = nil
 
@@ -711,7 +717,7 @@ struct CloudBackupSettingsRow: View {
                              tint: tint, secondaryTint: secondaryTint,
                              value: manager.isEnabled ? String(localized: "On") : String(localized: "Off"))
         }
-        .tint(Settings.shared.accentColor.color)
+        .tint(appearance.accent)
     }
 }
 
@@ -751,6 +757,8 @@ struct CloudBackupSettingsView: View {
             fileSection
             aboutSection
         }
+        // A plain List (no `applyConditionalListStyle`), so the sheet bar comes from here.
+        .sheetNowPlayingBar()
         .navigationTitle("iCloud Backup")
         .navigationBarTitleDisplayMode(.inline)
         .task { await refresh() }
@@ -1139,6 +1147,8 @@ struct CloudContentsView: View {
                 }
             }
         }
+        // A plain List (no `applyConditionalListStyle`), so the sheet bar comes from here.
+        .sheetNowPlayingBar()
         .navigationTitle("What's Included")
         .navigationBarTitleDisplayMode(.inline)
         .task { inventory = ContentInventory.current() }
@@ -1172,6 +1182,9 @@ struct CloudContentsView: View {
 /// Every save, skipped save, restore, export, failure and change of claim: the last 30, on this device.
 struct CloudHistoryView: View {
     @ObservedObject private var manager = CloudBackupManager.shared
+    /// The accent off the environment, so an accent change redraws this view (a bare `Settings` read
+    /// in a view that observes nothing kept the old colour).
+    @Environment(\.appearance) private var appearance
 
     var body: some View {
         List {
@@ -1183,7 +1196,7 @@ struct CloudHistoryView: View {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: event.systemImage)
                             .font(.body)
-                            .foregroundColor(event.isProblem ? .orange : Settings.shared.accentColor.color)
+                            .foregroundColor(event.isProblem ? .orange : appearance.accent)
                             .frame(width: 26, alignment: .center)
                             .padding(.top, 1)
                         VStack(alignment: .leading, spacing: 2) {
@@ -1195,6 +1208,8 @@ struct CloudHistoryView: View {
                 }
             }
         }
+        // A plain List (no `applyConditionalListStyle`), so the sheet bar comes from here.
+        .sheetNowPlayingBar()
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.inline)
     }

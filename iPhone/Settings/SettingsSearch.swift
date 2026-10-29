@@ -915,16 +915,14 @@ struct SettingsDeepLink<Destination: View>: ViewModifier {
 /// iOS 16, the stack-style `NavigationView` these sheets always used (`.stack` matters on iPad: a
 /// regular-width sheet would otherwise show two columns with an empty detail pane). Al-Islam's floor is
 /// iOS 16 since 2026-10-09; the iOS 15 branch stays for Al-Quran and Al-Adhan, which share this file.
+///
+/// The sheet container proper (`SheetNavigationContainer`), which also keeps the page clear of the Now
+/// Playing bar the sheet host draws around it.
 struct SettingsSheetStack<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        if #available(iOS 16.0, *) {
-            NavigationStack { content() }
-        } else {
-            NavigationView { content() }
-                .navigationViewStyle(.stack)
-        }
+        SheetNavigationContainer { content() }
     }
 }
 #endif

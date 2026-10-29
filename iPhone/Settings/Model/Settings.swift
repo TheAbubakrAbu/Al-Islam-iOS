@@ -196,6 +196,7 @@ enum AdhanWidgetKind: String, CaseIterable {
     case SimpleSkyWidget
     case PrayerListSmallSkyWidget
     case PrayersSkyWidget
+    case PrayerTilesSkyWidget
     case Prayers2SkyWidget
     case FastingCountdownSkyWidget
     case PrayerGlanceWidget
@@ -208,6 +209,7 @@ enum AdhanWidgetKind: String, CaseIterable {
     case SimpleWidget
     case PrayerListSmallWidget
     case PrayersWidget
+    case PrayerTilesWidget
     case Prayers2Widget
     case FastingCountdownWidget
     case PrayerProgressRingWidget
@@ -3921,6 +3923,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// header (the arrow beside NEED A HAND?).
     @Setting("helpDoorsHidden") var helpDoorsHiddenRaw: String = ""
     @Setting("helpDoorsCollapsed") var helpDoorsCollapsedRaw: String = ""
+    /// The tabs' foldable sections (TabSections.swift: the Adhan tab's PRAYER TRACKER and AT A GLANCE
+    /// so far). The reader's own choice per section, "adhan.glance:1,adhan.tracker:0" (a section with
+    /// no entry follows its default: shown, or Simple Mode's rule where it has one), and the sections
+    /// folded down to their header, comma separated.
+    @Setting("tabSectionChoices") var tabSectionChoicesRaw: String = ""
+    @Setting("tabSectionsCollapsed") var tabSectionsCollapsedRaw: String = ""
 
     // The tab the app opens on (Abu, 2026-09-21: "would be cool to also be able to choose whether one
     // wants adhan quran hadith or islam to be the start"). Raw `LaunchTab` (SettingsView.swift). It

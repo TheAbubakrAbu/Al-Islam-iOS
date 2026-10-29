@@ -22,8 +22,16 @@ struct AdhanView: View {
     /// sheet was built with the target still at its old value (logged 2026-09-05), whereas an item
     /// sheet hands the content the exact value that presented it.
     @State private var settingsSheet: SettingsSheetTarget?
-    /// The sheet a glance tile opened, if any.
-    @State private var glanceSheet: GlanceSheet?
+    /// The sheet a glance tile opened, if any. DEBUG launch argument `-openQiblaSheet` opens the 220 pt
+    /// Qibla sheet on launch, the same way `-showBigQibla` expands the row compass (taps are not
+    /// scriptable in the simulator).
+    @State private var glanceSheet: GlanceSheet? = {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-openQiblaSheet") ? .qibla(bearing: nil, distance: nil) : nil
+        #else
+        nil
+        #endif
+    }()
     /// The calendar a glance tile pushed, if any (the two calendars are pushes, like the toolbar's).
     @State private var pushedCalendar: GlancePush?
     #endif
@@ -172,12 +180,15 @@ struct AdhanView: View {
         }
     }
 
-    /// Simple Mode shows the tracker to someone who tracks: any prayer marked in the last
-    /// `SimpleMode.trackerWindowDays` (Docs/Product/Simple Mode Guide.md). Marking one from a prayer's detail
-    /// brings it back. At most fourteen lookups into the cached tracker, so the countdown tick can ask.
+    /// The reader's own choice (Prayer Settings' ON THE ADHAN TAB switch, or the folded header's trash),
+    /// else the default: shown, except that Simple Mode shows it only to someone who marked a prayer in
+    /// the last `SimpleMode.trackerWindowDays` (TabSections.swift, `TabSection.simpleModeHides`). The
+    /// watch has no tracker section.
+    #if os(iOS)
     private var showsTracker: Bool {
-        !settings.hides(.prayerTracker, unless: settings.trackerMarkedRecently())
+        settings.showsTabSection(.adhanTracker)
     }
+    #endif
 
     #if os(iOS)
     /// The sky under the whole tab (`Settings.skyFillsAdhanTab`, SkyPageBackground.swift): only with
@@ -275,11 +286,15 @@ struct AdhanView: View {
                 // See HelpDoors.swift.
                 HelpDoorsSection(area: .adhan)
 
-                // Simple Mode leaves the glance wall out: each tile is a shortcut to a door the tab
-                // already has (the calendar button, the compass, the city pill, the sky's moon).
-                if !settings.hides(.atAGlance) {
-                    Section(header: SectionIconHeader(String(localized: "AT A GLANCE"), icon: "rectangle.grid.2x2.fill")) {
-                        GlanceCard(onSelect: handleGlance)
+                // The glance wall folds from its header and can be put away (TabSections.swift).
+                // Simple Mode leaves it out until Prayer Settings turns it on: each tile is a shortcut
+                // to a door the tab already has (the calendar button, the compass, the city pill, the
+                // sky's moon). Folded, the card is not in the List at all.
+                if settings.showsTabSection(.adhanGlance) {
+                    Section(header: TabSectionHeader(.adhanGlance)) {
+                        if settings.tabSectionExpanded(.adhanGlance) {
+                            GlanceCard(onSelect: handleGlance)
+                        }
                     }
                 }
                 #else
@@ -435,11 +450,10 @@ struct AdhanView: View {
         .sheet(item: $glanceSheet) { sheet in
             switch sheet {
             case .cityPrayerTimes:
-                NavigationView {
+                SheetNavigationContainer {
                     PrayerTimesMapView()
                         .environmentObject(settings)
                 }
-                .navigationViewStyle(.stack)
                 .smallMediumSheetPresentation()
             case .homeLocation:
                 MapView(choosingPrayerTimes: false)
@@ -1205,11 +1219,10 @@ private struct CurrentLocationRow: View {
         }
         #endif
         .sheet(isPresented: $showingPrayerTimesMap) {
-            NavigationView {
+            SheetNavigationContainer {
                 PrayerTimesMapView()
                     .environmentObject(settings)
             }
-            .navigationViewStyle(.stack)
             .smallMediumSheetPresentation()
         }
         #endif
@@ -1520,7 +1533,7 @@ private struct QiblaSheet: View {
     let distance: String?
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             VStack(spacing: 18) {
                 QiblaView(size: 220)
                     .padding(.top, 12)
@@ -1553,7 +1566,6 @@ private struct QiblaSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
-        .navigationViewStyle(.stack)
         .smallMediumSheetPresentation()
     }
 }

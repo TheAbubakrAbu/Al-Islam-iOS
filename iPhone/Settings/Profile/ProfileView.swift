@@ -363,6 +363,7 @@ struct ProfileView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
+        .sheetNowPlayingBar()
         .navigationTitle("Your Progress")
         .navigationBarTitleDisplayMode(.inline)
         .accentWashedBackground()
@@ -885,7 +886,7 @@ private struct BadgeDetailSheet: View {
         let (value, goal) = badge.progress(stats)
         let tint = earned ? settings.accentColor.color : Color.secondary
 
-        NavigationView {
+        SheetNavigationContainer {
             VStack(spacing: 16) {
                 ZStack {
                     Circle()
@@ -987,7 +988,6 @@ private struct BadgeDetailSheet: View {
             .sheetDismissToolbar()
             .accentWashedBackground()
         }
-        .navigationViewStyle(.stack)
         // Half-height where the API exists; iOS 15 gets the full sheet, which the layout already fits.
         .mediumDetentIfAvailable()
     }

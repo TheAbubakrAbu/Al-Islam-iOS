@@ -236,6 +236,9 @@ struct AskAIChatView: View {
                 proxy.scrollTo("bottom", anchor: .bottom)
             }
         }
+        // In a sheet (or pushed inside one), the Now Playing bar rides above the field, on top of the
+        // bottom stack as on every screen with controls at its foot.
+        .sheetNowPlayingBar()
         // The app's floating bottom-bar grammar (safeAreaBar under Liquid Glass, a plain inset before
         // it), not a flat `.bar` strip: the field and its send button read like every search bar.
         .adaptiveSafeArea(edge: .bottom) { inputBar }
@@ -478,7 +481,7 @@ struct AskAIChatSheet: View {
     var initialQuestion: String? = nil
 
     var body: some View {
-        NavigationStack {
+        SheetNavigationContainer {
             AskAIChatView(initialQuestion: initialQuestion, presentedAsSheet: true)
         }
         // Sized here, not at the six call sites: every screen that offers Ask AI presents this one

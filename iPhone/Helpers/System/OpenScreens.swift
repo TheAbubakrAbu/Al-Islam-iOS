@@ -61,6 +61,9 @@ enum OpenScreen: String, Hashable, CaseIterable {
     case letterFamily
     case letterFamilies
     case soundAlikes
+    /// The alphabet's grammar pages, by id ("pronouns", "noun", "verb", "harf", and "basics" for Basic
+    /// Grammar): each one's foot links to the others.
+    case arabicGrammar
     /// A lesson of the tajweed course (by lesson id: "qalqalah", "mudood-chart"...). A lesson shows its
     /// letters as tiles and its letter families as rows, and a letter's or a family's page links back
     /// to the lesson that explains its rule.
@@ -98,6 +101,7 @@ enum OpenScreen: String, Hashable, CaseIterable {
         case .letterFamily:        return String(localized: "You are on this family's page")
         case .letterFamilies:      return String(localized: "You are in Letter Families")
         case .soundAlikes:         return String(localized: "You are in Sound-Alike Letters")
+        case .arabicGrammar:       return String(localized: "You came here from this page")
         case .tajweedLesson:       return String(localized: "You came here from this lesson")
         case .islamArticle:           return String(localized: "You came here from this article")
         case .miraclesLibrary:        return String(localized: "You came here from Miracles of the Quran")

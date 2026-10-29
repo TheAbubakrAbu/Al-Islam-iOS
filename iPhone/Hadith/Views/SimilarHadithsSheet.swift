@@ -125,6 +125,9 @@ struct SimilarHadithsSheet: View {
 /// The door to the narrations carried by the same chain, the one row the similar sheet and the chain
 /// sheet share: a button through a push door (`pushDestination`), drawn like a link.
 struct HadithSameChainDoor: View {
+    /// The accent off the environment, so an accent change redraws this view (a bare `Settings` read
+    /// in a view that observes nothing kept the old colour).
+    @Environment(\.appearance) private var appearance
     private let settings = Settings.shared
 
     let others: Int
@@ -146,7 +149,7 @@ struct HadithSameChainDoor: View {
                     }
                 } icon: {
                     Image(systemName: "point.3.filled.connected.trianglepath.dotted")
-                        .foregroundColor(settings.accentColor.color)
+                        .foregroundColor(appearance.accent)
                 }
                 Spacer()
                 Image(systemName: "chevron.forward")

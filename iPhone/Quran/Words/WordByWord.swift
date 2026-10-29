@@ -1129,9 +1129,14 @@ final class ArabicInkBleedHost: UIView {
 
     let textView: UITextView
 
-    init(textView: UITextView, verticalBleed: CGFloat = 0) {
+    /// Keep the text container's height unbounded through frame changes (see `layoutSubviews`). The
+    /// word-tappable runs ask for it; the mushaf page sizes its container to the page on purpose.
+    let keepsContainerOpen: Bool
+
+    init(textView: UITextView, verticalBleed: CGFloat = 0, keepsContainerOpen: Bool = false) {
         self.textView = textView
         self.verticalBleed = verticalBleed
+        self.keepsContainerOpen = keepsContainerOpen
         super.init(frame: .zero)
         clipsToBounds = false
         backgroundColor = .clear
@@ -1156,6 +1161,15 @@ final class ArabicInkBleedHost: UIView {
         if abs(current.minX - target.minX) > 0.5 || abs(current.minY - target.minY) > 0.5
             || abs(current.width - target.width) > 0.5 || abs(current.height - target.height) > 0.5 {
             textView.frame = target
+        }
+        // That resync also sets the container's HEIGHT to the frame's. The run measures itself with an
+        // open container, so only the width is the layout's business: a frame that GROWS (the ayah
+        // card's size stepper animates its height up through every in-between value) was typeset into
+        // the shorter container, and its last line, dropped there, never came back once the container
+        // caught up. 58:2 at 115% lost "لَعَفُوٌّ غَفُورٌ" under an empty band of the right height (Abu,
+        // 2026-10-28; logged: container 217pt, used rect still 163pt). Reopened, nothing is dropped.
+        if keepsContainerOpen, textView.textContainer.size.height < .greatestFiniteMagnitude {
+            textView.textContainer.size.height = .greatestFiniteMagnitude
         }
     }
 }
@@ -1215,7 +1229,7 @@ struct WordByWordTextView: UIViewRepresentable {
         context.coordinator.textView = view
         tap.delegate = context.coordinator
         view.addGestureRecognizer(tap)
-        return ArabicInkBleedHost(textView: view)
+        return ArabicInkBleedHost(textView: view, keepsContainerOpen: true)
     }
 
     func updateUIView(_ host: ArabicInkBleedHost, context: Context) {
@@ -2933,7 +2947,7 @@ struct WordMeaningSheet: View {
         let here = current ?? tapped
         let focus = here.flatMap { self.focus(at: $0, tapped: $0 == tapped) }
 
-        return NavigationView {
+        return SheetNavigationContainer {
             Group {
                 if let focus {
                     studyBody(focus)
@@ -2954,7 +2968,6 @@ struct WordMeaningSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
-        .navigationViewStyle(.stack)
         // Opens halfway like every other viewer (Abu, 2026-10-04: a double tap should not take over
         // the screen). The strip and the tabs sit below a medium fold, so drag up for the full card.
         .smallMediumSheetPresentation()
@@ -3491,7 +3504,7 @@ struct RiwayahWordSheet: View {
     private var riwayahFontName: String { settings.quranArabicFontName(for: tag) }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             ScrollView {
                 ScrollViewReader { proxy in
                 VStack(spacing: 20) {
@@ -3630,7 +3643,6 @@ struct RiwayahWordSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
-        .navigationViewStyle(.stack)
         .smallMediumSheetPresentation()
         .onDisappear { ArabicSpeech.shared.stop() }
     }

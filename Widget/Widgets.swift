@@ -20,6 +20,7 @@ struct Widgets: WidgetBundle {
         SimpleSkyWidget()
         PrayerListSmallSkyWidget()
         PrayersSkyWidget()
+        PrayerTilesSkyWidget()
         Prayers2SkyWidget()
         FastingCountdownSkyWidget()
 
@@ -33,6 +34,7 @@ struct Widgets: WidgetBundle {
         SimpleWidget()
         PrayerListSmallWidget()
         PrayersWidget()
+        PrayerTilesWidget()
         Prayers2Widget()
         FastingCountdownWidget()
         #endif

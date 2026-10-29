@@ -1277,6 +1277,10 @@ struct HadithArabicText: View {
     /// which the Equatable parents compare, and the other parents observe Settings themselves. Observing
     /// here bypassed those gates and re-rendered every long-narration chunk on every publish.
     private var settings: Settings { .shared }
+    /// Snapshotted too: the parent re-rendering is not enough on its own, because SwiftUI skips this
+    /// body when every field it holds compares equal, and an accent, face or Allah-highlight change
+    /// leaves `text`, `term` and `font` as they were. The signature makes that change a field change.
+    var renderSettingsSignature: String = Settings.shared.hadithRenderSettingsSignature
 
     let text: String
     let term: String
@@ -1326,6 +1330,10 @@ struct HadithArabicText: View {
 struct HadithArabicPreview: View {
     /// Read, not observed: see `HadithArabicText`.
     private var settings: Settings { .shared }
+    /// Snapshotted too: the parent re-rendering is not enough on its own, because SwiftUI skips this
+    /// body when every field it holds compares equal, and an accent, face or Allah-highlight change
+    /// leaves `text`, `term` and `font` as they were. The signature makes that change a field change.
+    var renderSettingsSignature: String = Settings.shared.hadithRenderSettingsSignature
 
     let text: String
     var size: CGFloat = 15
@@ -2103,7 +2111,7 @@ struct HadithShareSheet: View {
     var body: some View {
         let text = hadith.allText
 
-        NavigationView {
+        SheetNavigationContainer {
             VStack {
                 Spacer()
 
@@ -2225,7 +2233,6 @@ struct HadithShareSheet: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accentWashedBackground()
         }
-        .navigationViewStyle(.stack)
         .accentColor(settings.accentColor.color)
         .onAppear {
             guard !didInit else { return }
@@ -2718,7 +2725,7 @@ struct SelectHadithTextSheet: View {
 
     var body: some View {
         let text = hadith.allText
-        NavigationView {
+        SheetNavigationContainer {
             List {
                 Group {
                     if !text.arabic.isEmpty {
@@ -2747,7 +2754,6 @@ struct SelectHadithTextSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
-        .navigationViewStyle(.stack)
     }
 
     @ViewBuilder

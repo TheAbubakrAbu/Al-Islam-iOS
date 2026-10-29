@@ -1527,7 +1527,7 @@ struct TipsTourView: View {
     private var cards: [AppTip] { tips ?? TipCatalog.tour(in: area) }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             VStack(spacing: 0) {
                 TabView(selection: $page) {
                     ForEach(Array(cards.enumerated()), id: \.element.id) { index, tip in
@@ -1545,7 +1545,6 @@ struct TipsTourView: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
-        .navigationViewStyle(.stack)
     }
 
     private var footer: some View {

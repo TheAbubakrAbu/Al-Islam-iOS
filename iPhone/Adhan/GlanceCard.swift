@@ -535,8 +535,11 @@ private struct GlanceTile: View, Equatable {
                         Image(systemName: tile.icon)
                             .font(.caption2)
                             .foregroundStyle(accent)
-                            // The Qibla arrow points at the actual bearing.
+                            // The Qibla arrow points at the actual bearing, clockwise from north in every
+                            // language: a right-to-left layout mirrored the rotation, so in Arabic and Urdu
+                            // a 58° bearing drew pointing to 302° (2026-10-28).
                             .rotationEffect(.degrees(tile.iconRotation ?? 0))
+                            .environment(\.layoutDirection, .leftToRight)
                     }
                 }
 

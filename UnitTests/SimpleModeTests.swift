@@ -265,6 +265,88 @@ final class SimpleModeTests: XCTestCase {
         XCTAssertTrue(SettingsSearchEntry.available().contains { $0.title.hasPrefix("Need a Hand? on the") })
     }
 
+    // MARK: - Tab sections (TabSections.swift; the guide's rule 10)
+
+    /// The choices string: malformed entries are skipped, a key this build does not know survives a
+    /// write, and the same choices always store as the same string.
+    func testTabSectionStoreRoundTrip() {
+        let parsed = TabSectionStore.choices("adhan.tracker:0,adhan.glance:1,quran.later:1,broken,bad:2")
+        XCTAssertEqual(parsed, ["adhan.tracker": false, "adhan.glance": true, "quran.later": true])
+        XCTAssertEqual(TabSectionStore.choicesRaw(parsed), "adhan.glance:1,adhan.tracker:0,quran.later:1")
+        XCTAssertEqual(TabSectionStore.choices(""), [:])
+        XCTAssertEqual(TabSectionStore.keysRaw(TabSectionStore.keys("adhan.tracker,adhan.glance")), "adhan.glance,adhan.tracker")
+    }
+
+    /// Rule 10: the reader's choice wins in both modes; with none, Simple Mode's rule decides.
+    func testTabSectionChoiceWinsOverSimpleMode() {
+        XCTAssertTrue(TabSectionStore.shows(choice: nil) { false }, "no choice, nothing hiding it: shown")
+        XCTAssertFalse(TabSectionStore.shows(choice: nil) { true }, "no choice: Simple Mode's rule")
+        XCTAssertTrue(TabSectionStore.shows(choice: true) { true }, "turned on: shown where Simple would leave it out")
+        XCTAssertFalse(TabSectionStore.shows(choice: false) { false }, "put away: gone in Full too")
+    }
+
+    /// The same through `Settings`, as the Adhan tab and the ON THE ADHAN TAB switches read it. Flipping
+    /// Simple folds the Advanced switches (rule 9); put them back.
+    func testTabSectionsThroughSettings() {
+        let settings = Settings.shared
+        let storedAdvanced = Self.storedAdvancedKeys()
+        let storedChoices = settings.tabSectionChoicesRaw
+        let storedCollapsed = settings.tabSectionsCollapsedRaw
+        defer {
+            restoreSimpleMode()
+            Self.restoreAdvancedKeys(storedAdvanced)
+            settings.tabSectionChoicesRaw = storedChoices
+            settings.tabSectionsCollapsedRaw = storedCollapsed
+        }
+        settings.tabSectionChoicesRaw = ""
+        settings.tabSectionsCollapsedRaw = ""
+
+        settings.simpleMode = true
+        XCTAssertFalse(settings.showsTabSection(.adhanGlance), "Simple leaves At a Glance out by default")
+        settings.setTabSectionChoice(.adhanGlance, true)
+        XCTAssertTrue(settings.showsTabSection(.adhanGlance), "turned on, At a Glance shows in Simple")
+        XCTAssertEqual(settings.tabSectionChoicesRaw, "adhan.glance:1")
+        XCTAssertTrue(settings.showsTabSection(.hadithSummary), "Simple keeps the Hadith tab's summary")
+        XCTAssertTrue(settings.showsTabSection(.hadithAbout), "Simple keeps the About doors")
+
+        settings.simpleMode = false
+        XCTAssertTrue(settings.showsTabSection(.adhanTracker), "Full shows the tracker by default")
+        settings.setTabSectionChoice(.adhanTracker, false)
+        XCTAssertFalse(settings.showsTabSection(.adhanTracker), "put away, the tracker stays away in Full")
+        settings.setTabSectionChoice(.adhanTracker, nil)
+        XCTAssertTrue(settings.showsTabSection(.adhanTracker), "with the choice forgotten, Full shows it again")
+
+        settings.setTabSectionExpanded(.adhanGlance, false)
+        XCTAssertFalse(settings.tabSectionExpanded(.adhanGlance))
+        XCTAssertTrue(settings.tabSectionExpanded(.adhanTracker), "folding one section leaves the other open")
+        settings.setTabSectionChoice(.adhanGlance, false)
+        settings.setTabSectionChoice(.adhanGlance, true)
+        XCTAssertTrue(settings.tabSectionExpanded(.adhanGlance), "a section brought back comes back open")
+    }
+
+    /// Each tab's switches list its sections in the order the tab shows them.
+    func testTabSectionsPerTab() {
+        XCTAssertEqual(TabSection.sections(on: .adhan), [.adhanTracker, .adhanGlance])
+        XCTAssertEqual(TabSection.sections(on: .hadith), [.hadithSummary, .hadithAbout])
+        XCTAssertEqual(Set(TabSection.allCases.map(\.key)).count, TabSection.allCases.count, "every key is its own")
+    }
+
+    /// The switches are found by the words someone tidying a tab would type.
+    func testTabSectionSwitchesAreSearchable() {
+        let titles = [
+            ("Prayer Tracker on the Adhan Tab", SettingsSearchEntry.adhanEntries),
+            ("At a Glance on the Adhan Tab", SettingsSearchEntry.adhanEntries),
+            ("Your Summary on the Hadith Tab", SettingsSearchEntry.hadithEntries),
+            ("About Hadith & the Sunnah on the Hadith Tab", SettingsSearchEntry.hadithEntries),
+        ]
+        for (title, entries) in titles {
+            let entry = entries.first { $0.englishTitle == title }
+            XCTAssertNotNil(entry, "no \(title) entry in Settings search")
+            XCTAssertTrue(entry?.keywords.contains("hide") == true)
+            XCTAssertTrue(entry?.keywords.contains("collapse") == true)
+        }
+    }
+
     private static func changedKeys(_ before: [String: Any], _ after: [String: Any]) -> Set<String> {
         Set(before.keys).union(after.keys).filter { key in
             switch (before[key], after[key]) {

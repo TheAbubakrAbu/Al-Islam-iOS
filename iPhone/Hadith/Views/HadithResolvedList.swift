@@ -355,6 +355,11 @@ extension View {
 /// copies, shares.
 struct HadithListRow: View {
     private var settings: Settings { .shared }
+    /// Snapshotted at creation (the `HadithRow` rule): this view observes no settings, so it only redraws
+    /// when a field it holds changes. The signature folds every hadith display setting its body reads
+    /// (Arabic/English shown, sizes, face, accent, Allah highlight); without it a size or accent change
+    /// left the visible rows as they were (2026-10-28).
+    var renderSettingsSignature: String = Settings.shared.hadithRenderSettingsSignature
     @ObservedObject private var userData = HadithUserData.shared
     @Environment(\.hadithOpenInBook) private var openInBook
 

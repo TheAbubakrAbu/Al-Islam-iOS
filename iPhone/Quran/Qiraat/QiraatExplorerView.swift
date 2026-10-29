@@ -21,6 +21,10 @@ import SwiftUI
 struct QiraatExplorerView: View {
     @Environment(\.appearance) private var appearance
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// Each riwayah's face (`quranArabicFontName(for:)`) and the reader's riwayah are read straight off
+    /// `Settings` in the body. Observed, so a face or script change made in Settings while this page sits
+    /// in the Quran tab's stack redraws it instead of waiting for the next tap here (2026-10-28).
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
 
     enum Mode: String {
         /// Every riwayah at one place, against Hafs.

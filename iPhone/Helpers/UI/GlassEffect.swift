@@ -224,9 +224,12 @@ struct SheetPresentationModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         detents(content)
+            .environment(\.nowPlayingInSheet, true)
             .interactiveDismissDisabled(settling || dismissDisabled)
             .onPreferenceChange(NowPlayingBarProvidedKey.self) { listDrawsNowPlaying = $0 }
-            .safeAreaInset(edge: .bottom) { nowPlayingInset }
+            // A bar, not a bare inset: the scroll edge fades the sheet's text under the player instead
+            // of letting it run on behind it in full ink (see `nowPlayingInSheet`).
+            .adaptiveSafeArea(edge: .bottom) { nowPlayingInset }
             .onAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDuration) { settling = false }
             }
@@ -235,7 +238,9 @@ struct SheetPresentationModifier: ViewModifier {
     /// The Now Playing bar at the foot of the sheet while a recitation plays (Abu, 2026-10-26: "put
     /// now playing view in hold down ayah sheet, put it in every sheet"), the inset every list draws
     /// (`ConditionalListStyle`), for a sheet built on a `ScrollView`: the ayah actions sheet, the
-    /// tafsir and word cards, Share Ayah. A sheet whose List already draws the bar gets nothing here.
+    /// tafsir and word cards, Share Ayah. A sheet whose List already draws the bar gets nothing here, and
+    /// neither does one in a `SheetNavigationContainer`, whose screens draw their own (`sheetNowPlayingBar()`):
+    /// this copy would sit outside the navigation stack, where its inset never reaches the content.
     @ViewBuilder
     private var nowPlayingInset: some View {
         if !listDrawsNowPlaying, playback.showsNowPlaying, let bar = playback.barContent {

@@ -18,6 +18,10 @@ import SwiftUI
 /// permissions sheet and page and the iCloud offer all end this way; they used to carry their own
 /// copies, already drifting in padding and weight.
 struct WelcomeActionBar: View {
+    /// The accent off the environment, so an accent change redraws this view (a bare `Settings` read
+    /// in a view that observes nothing kept the old colour).
+    @Environment(\.appearance) private var appearance
+
     let primaryTitle: String
     var primaryEnabled = true
     /// A spinner leads the title and both buttons wait (a permission being asked, a backup saving).
@@ -48,7 +52,7 @@ struct WelcomeActionBar: View {
                 .padding(.vertical, 8)
             }
             .buttonStyle(.borderedProminent)
-            .tint(Settings.shared.accentColor.color)
+            .tint(appearance.accent)
             .disabled(!primaryEnabled || primaryBusy)
             .modifier(OptionalIdentifier(identifier: primaryIdentifier))
 
@@ -81,7 +85,7 @@ struct WelcomeActionBar: View {
             .font(.subheadline.weight(.medium))
             // The accent, as a text link under a prominent button reads on the system's own sheets
             // ("Not Now" under "Continue").
-            .foregroundColor(Settings.shared.accentColor.color)
+            .foregroundColor(appearance.accent)
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())

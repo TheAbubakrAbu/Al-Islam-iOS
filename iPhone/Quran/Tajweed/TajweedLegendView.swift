@@ -20,6 +20,12 @@ struct TajweedLegendView: View {
     @AppStorage("tajweedCompareGrouping") private var compareByRule = false
     /// The by-rule index, built once (off-main) the first time By Rule is opened.
     @State private var ruleSections: [CompareRuleSection]?
+    /// The full page (quick-guide grid, detail cards, colors, signs, riwayat) instead of the basic list.
+    /// Every open starts basic (Abu, 2026-10-28: "a basic tajweed view in legend by default ... look at
+    /// how small and easy it is to see, especially for simple mode").
+    @State private var showsFullLegend = false
+    /// The basic list's open rows, by rule id.
+    @State private var expandedRules: Set<String> = []
 
     /// Every riwayah that ships a print-derived color pack - a cheap static check (`fileName`, no pack
     /// load), so building the picker menu never parses 19 packs.
@@ -863,7 +869,9 @@ struct TajweedLegendView: View {
 
                     Text(compareOnlyMode
                          ? "Every riwayah's printed color code, side by side."
-                         : "Use the colors as a quick guide, then read the longer notes below for what each rule is doing in recitation.")
+                         : showsFullLegend
+                         ? "Use the colors as a quick guide, then read the longer notes below for what each rule is doing in recitation."
+                         : "Each color marks a tajweed rule. Tap a rule to see what it means.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -875,8 +883,11 @@ struct TajweedLegendView: View {
                     riwayahPreviewCard
 
                     compareAllSection(scroll: scroll)
-                } else {
+                } else if showsFullLegend {
+                    legendModeButton(scroll: scroll)
                     fullLegendContent(scroll: scroll)
+                } else {
+                    basicLegendContent(scroll: scroll)
                 }
             }
             .padding(.horizontal, 20)
@@ -884,6 +895,8 @@ struct TajweedLegendView: View {
             .padding(.bottom, 28)
         }
         }
+        // Pushed inside the Quran settings sheet as well as presented as one: its own bar either way.
+        .sheetNowPlayingBar()
         .accentWashedBackground()
         .navigationTitle("Legend")
         .navigationBarTitleDisplayMode(.inline)
@@ -903,41 +916,253 @@ struct TajweedLegendView: View {
         }
     }
 
+    /// "Show Tajweed colors", the switch both the basic list and the full page lead with.
+    private var masterToggleCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle(isOn: Binding(
+                get: { settings.showTajweedColors },
+                set: { newValue in
+                    settings.hapticFeedback()
+                    withAnimation {
+                        settings.showTajweedColors = newValue
+                        // Mirror the master switch onto every category so the legend below visibly
+                        // reflects on/off (all rules go gray when off).
+                        TajweedLegendCategory.allCases.forEach {
+                            settings.setTajweedCategory($0, visible: newValue)
+                        }
+                    }
+                }
+            )) {
+                Text("Show Tajweed colors")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .tint(settings.accentColor.color)
+
+            // The reader's Legend button stays up with the colors off (grey dots), so this switch
+            // stays one tap away; only Simple Mode folds the button while nothing is colored.
+            Text(settings.hides(.legendPill) && ThemeHighlights.shared.isEmpty
+                 ? "Simple Mode hides the Legend button while nothing is colored. To turn this back on, go to Quran Settings → Arabic Text"
+                 : "The Legend button stays in the reader with the colors off, so you can turn this back on from there")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .conditionalGlassEffect(rectangle: true)
+    }
+
+    // MARK: Basic legend
+
+    /// One row of the basic list, for a Hafs category and a riwayah rule alike.
+    private struct BasicRule: Identifiable {
+        let id: String
+        let color: Color
+        let title: String
+        let subtitle: String
+        let count: String?
+        let detail: String
+        let letters: String?
+        let visible: Bool
+        let setVisible: (Bool) -> Void
+    }
+
+    private func basicRule(_ item: TajweedLegendCategory) -> BasicRule {
+        BasicRule(
+            id: item.id, color: item.color,
+            title: item.transliteration, subtitle: item.exactEnglishTranslation,
+            count: item.countLabel?.localizedDigits, detail: item.shortDescription,
+            letters: item.applicableLettersDetail,
+            visible: settings.isTajweedCategoryVisible(item),
+            setVisible: { settings.setTajweedCategory(item, visible: $0) }
+        )
+    }
+
+    private func basicRule(_ entry: QiraahTajweedStore.LegendEntry) -> BasicRule {
+        BasicRule(
+            id: entry.id, color: entry.color,
+            title: entry.english.localizedDisplay, subtitle: entry.arabic,
+            count: nil, detail: entry.shortDescription, letters: nil,
+            visible: settings.isRiwayahTajweedRuleVisible(entry.key),
+            setVisible: { settings.setRiwayahTajweedRule(entry.key, visible: $0) }
+        )
+    }
+
+    /// The default page: the switch, then every rule as one short row (a color, its name, what the
+    /// name means), grouped by section, each opening in place to its one-line note and its show/hide.
+    /// Everything else (the quick-guide cards, the long notes, custom colors, the mushaf signs, the
+    /// riwayat comparison) is one tap away behind Full Legend.
+    @ViewBuilder
+    private func basicLegendContent(scroll: ScrollViewProxy) -> some View {
+        masterToggleCard
+
+        if let riwayahTag = effectiveLegendTag {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("The colors follow \(optionLabel(forTag: riwayahTag))'s printed mushaf: each word or letter is colored exactly where that print colors it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                basicRuleList(QiraahTajweedStore.shared.legend(for: riwayahTag).map(basicRule))
+            }
+        } else {
+            ForEach(sections) { section in
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(section.section.title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .padding(.leading, 4)
+
+                    basicRuleList(section.items.map(basicRule))
+                }
+            }
+        }
+
+        legendModeButton(scroll: scroll)
+    }
+
+    /// The rows in one bordered block, hairlines between them.
+    private func basicRuleList(_ rules: [BasicRule]) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        return VStack(spacing: 0) {
+            ForEach(Array(rules.enumerated()), id: \.element.id) { index, rule in
+                if index > 0 {
+                    Divider()
+                }
+                basicRuleRow(rule)
+            }
+        }
+        .background(shape.fill(Color.primary.opacity(0.04)))
+        .clipShape(shape)
+        .overlay(shape.stroke(Color.primary.opacity(0.12), lineWidth: 1))
+    }
+
+    private static let basicSwatchWidth: CGFloat = 48
+
+    private func basicRuleRow(_ rule: BasicRule) -> some View {
+        let expanded = expandedRules.contains(rule.id)
+        return VStack(alignment: .leading, spacing: 0) {
+            Button {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    if expanded { expandedRules.remove(rule.id) } else { expandedRules.insert(rule.id) }
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(rule.visible ? rule.color : Color.secondary.opacity(0.55))
+                        .frame(width: 14, height: 14)
+                        .frame(width: Self.basicSwatchWidth)
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(rule.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Text(rule.subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 9)
+
+                    Spacer(minLength: 6)
+
+                    if let count = rule.count {
+                        Text(count)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(rule.visible ? rule.color : .secondary)
+                            .lineLimit(1)
+                    }
+
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(expanded ? 180 : 0))
+                        .padding(.trailing, 14)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityHint(expanded ? "Hides the rule's note" : "Shows the rule's note")
+            .accessibilityValue(rule.visible ? "" : String(localized: "Hidden"))
+
+            if expanded {
+                VStack(alignment: .leading, spacing: 8) {
+                    if !rule.detail.isEmpty {
+                        Text(rule.detail)
+                            .font(.caption)
+                            .foregroundStyle(.primary)
+                    }
+
+                    if let letters = rule.letters {
+                        Text(letters)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation { rule.setVisible(!rule.visible) }
+                    } label: {
+                        Label(rule.visible ? "Hide" : "Show",
+                              systemImage: rule.visible ? "eye.slash" : "eye")
+                            .font(.caption.weight(.semibold))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(settings.accentColor.color)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, Self.basicSwatchWidth + 12)
+                .padding(.trailing, 14)
+                .padding(.bottom, 12)
+                .transition(.opacity)
+            }
+        }
+        // The rule's color as a column down the whole row, an open row's note included.
+        .background(alignment: .leading) {
+            rule.color.opacity(rule.visible ? 0.14 : 0.05)
+                .frame(width: Self.basicSwatchWidth)
+        }
+        .opacity(rule.visible ? 1 : 0.6)
+    }
+
+    /// Full Legend under the basic list, Basic Legend above the full page.
+    private func legendModeButton(scroll: ScrollViewProxy) -> some View {
+        Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showsFullLegend.toggle()
+                if !showsFullLegend {
+                    // The basic list explains what is being read, never a previewed riwayah.
+                    previewTag = nil
+                    compareAll = false
+                }
+                // The other page starts at its top, not wherever this one was scrolled to.
+                scroll.scrollTo(Self.legendTopAnchorID, anchor: .top)
+            }
+        } label: {
+            Label(showsFullLegend ? "Basic Legend" : "Full Legend",
+                  systemImage: showsFullLegend ? "list.bullet" : "text.book.closed")
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(settings.accentColor.color)
+        .conditionalGlassEffect(rectangle: true)
+    }
+
     /// The ordinary legend page: master toggle, preview card, the applicable legend, signs and
     /// stops - and, with qiraah details on, the full riwayat comparison always at the very bottom.
     @ViewBuilder
     private func fullLegendContent(scroll: ScrollViewProxy?) -> some View {
-                VStack(alignment: .leading, spacing: 6) {
-                    Toggle(isOn: Binding(
-                        get: { settings.showTajweedColors },
-                        set: { newValue in
-                            settings.hapticFeedback()
-                            withAnimation {
-                                settings.showTajweedColors = newValue
-                                // Mirror the master switch onto every category so the legend below visibly
-                                // reflects on/off (all rules go gray when off).
-                                TajweedLegendCategory.allCases.forEach {
-                                    settings.setTajweedCategory($0, visible: newValue)
-                                }
-                            }
-                        }
-                    )) {
-                        Text("Show Tajweed colors")
-                            .font(.subheadline.weight(.semibold))
-                    }
-                    .tint(settings.accentColor.color)
-
-                    // The reader's Legend button stays up with the colors off (grey dots), so this switch
-                    // stays one tap away; only Simple Mode folds the button while nothing is colored.
-                    Text(settings.hides(.legendPill) && ThemeHighlights.shared.isEmpty
-                         ? "Simple Mode hides the Legend button while nothing is colored. To turn this back on, go to Quran Settings → Arabic Text"
-                         : "The Legend button stays in the reader with the colors off, so you can turn this back on from there")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .conditionalGlassEffect(rectangle: true)
+                masterToggleCard
 
                 // With qiraah details on: preview ANY riwayah's color code from here, and a compare
                 // mode that lays every riwayah's rules out one after another (user rule) - without

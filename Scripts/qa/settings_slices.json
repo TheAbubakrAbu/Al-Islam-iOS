@@ -527,7 +527,9 @@
    "launchTabRaw",
    "simpleMode",
    "startHereHidden",
-   "startHereVisitedRaw"
+   "startHereVisitedRaw",
+   "tabSectionChoicesRaw",
+   "tabSectionsCollapsedRaw"
   ],
   "keys": [
    "THEfirstLaunch",
@@ -548,7 +550,9 @@
    "quranGridMode",
    "simpleMode",
    "startHereHidden",
-   "startHereVisited"
+   "startHereVisited",
+   "tabSectionChoices",
+   "tabSectionsCollapsed"
   ]
  }
 }

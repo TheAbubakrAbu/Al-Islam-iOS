@@ -123,7 +123,7 @@ struct MapView: View {
     }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             interactiveMap
                 .edgesIgnoringSafeArea(.all)
                 .overlay(alignment: .top) {
@@ -168,7 +168,6 @@ struct MapView: View {
                 }
                 .preferredColorScheme(scheme)
         }
-        .navigationViewStyle(.stack)
         .accentColor(settings.accentColor.color)
         .tint(settings.accentColor.color)
     }

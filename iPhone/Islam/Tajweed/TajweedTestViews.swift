@@ -204,6 +204,10 @@ struct TajweedTestTierView: View {
     @Environment(\.appearance) private var appearance
     @ObservedObject private var progress = TajweedTestProgress.shared
     @ObservedObject private var lessonProgress = TajweedLessonProgress.shared
+    /// The reader's tajweed rule switches decide which skills `skills` offers. Observed, so turning a
+    /// rule on or off in Settings redraws the practice list instead of leaving it as it was when the
+    /// page opened (2026-10-28). A session reads the switches itself when its round starts.
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
 
     let tier: TajweedTestTier
     let tiers: [TajweedTestTier]

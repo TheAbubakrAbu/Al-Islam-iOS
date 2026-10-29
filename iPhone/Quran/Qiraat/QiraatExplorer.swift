@@ -735,7 +735,7 @@ struct QiraatPlacePickerSheet: View {
 
     var body: some View {
         let _ = RenderCounter.hit("QiraatPlacePickerSheet")
-        NavigationView {
+        SheetNavigationContainer {
             List {
                 Group {
                     if tab == 0 {
@@ -772,7 +772,6 @@ struct QiraatPlacePickerSheet: View {
             .sheetDismissToolbar()
             .accentWashedBackground()
         }
-        .navigationViewStyle(.stack)
         .smallMediumSheetPresentation()
     }
 

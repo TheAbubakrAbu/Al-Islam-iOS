@@ -120,7 +120,7 @@ final class AppearanceSettings: ObservableObject, SettingsSlice {
     }
 }
 
-/// App-wide switches no tab owns: onboarding flags, Simple Mode, Advanced, haptics, keep screen on, the launch tab, grid modes, help doors, the daily rollover hour.
+/// App-wide switches no tab owns: onboarding flags, Simple Mode, Advanced, haptics, keep screen on, the launch tab, grid modes, help doors, tab sections, the daily rollover hour.
 final class SystemSettings: ObservableObject, SettingsSlice {
     static let shared = SystemSettings()
     static let label = "SystemSettings"
@@ -129,7 +129,8 @@ final class SystemSettings: ObservableObject, SettingsSlice {
         "dailyRolloverAtFajr", "gridModeArabicRaw", "gridModeIslamRaw", "gridModeNamesRaw",
         "gridModeSettingsRaw", "hapticOn", "helpDoorsCollapsed", "helpDoorsHidden",
         "keepScreenOn", "launchTab", "launchTabChosen", "quranGridMode",
-        "simpleMode", "startHereHidden", "startHereVisited",
+        "simpleMode", "startHereHidden", "startHereVisited", "tabSectionChoices",
+        "tabSectionsCollapsed",
     ]
 
     private init() { ObjectPublishCounter.attach(self, label: Self.label) }
@@ -231,6 +232,16 @@ final class SystemSettings: ObservableObject, SettingsSlice {
     var startHereVisitedRaw: String {
         get { Settings.shared.startHereVisitedRaw }
         set { Settings.shared.startHereVisitedRaw = newValue }
+    }
+
+    var tabSectionChoicesRaw: String {
+        get { Settings.shared.tabSectionChoicesRaw }
+        set { Settings.shared.tabSectionChoicesRaw = newValue }
+    }
+
+    var tabSectionsCollapsedRaw: String {
+        get { Settings.shared.tabSectionsCollapsedRaw }
+        set { Settings.shared.tabSectionsCollapsedRaw = newValue }
     }
 }
 

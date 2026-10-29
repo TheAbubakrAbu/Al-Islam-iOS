@@ -81,6 +81,20 @@ final class TajweedPaintTests: XCTestCase {
         try await assertRule(Site(surah: 2, ayah: 258, word: "\u{0623}\u{064E}\u{0646}\u{064E}\u{0627}\u{06E0}", scalar: 0x0627), is: .droppedLetter)
     }
 
+    /// The four that END an ayah are read at the stop and stay unpainted (J2). After a heavy raa the alif
+    /// took the raa's weight instead: قَوَارِيرَا۠ (76:15) was the one alif in the Quran drawn heavy blue
+    /// until 2026-10-28 (Abu's screenshot).
+    func testAyahFinalAlifUnderTheUprightZeroStaysUnpainted() async throws {
+        // قَوَارِيرَا۠, after a heavy raa
+        let qawareera = Site(surah: 76, ayah: 15, word: "\u{0642}\u{064E}\u{0648}\u{064E}\u{0627}\u{0631}\u{0650}\u{064A}\u{0631}\u{064E}\u{0627}\u{06E0}", scalar: 0x0627, occurrence: 1)
+        let found = try await rules(at: qawareera)
+        XCTAssertEqual(found, [], "\(qawareera.reference): found \(found.map(\.rawValue))")
+        // ٱلظُّنُونَا۠, after a light noon
+        let thunoona = Site(surah: 33, ayah: 10, word: "\u{0671}\u{0644}\u{0638}\u{064F}\u{0651}\u{0646}\u{064F}\u{0648}\u{0646}\u{064E}\u{0627}\u{06E0}", scalar: 0x0627)
+        let other = try await rules(at: thunoona)
+        XCTAssertEqual(other, [], "\(thunoona.reference): found \(other.map(\.rawValue))")
+    }
+
     /// J4 and J5: a saakin raa is heavy after hamzatul-wasl, and after a kasra when an open isti'la
     /// letter follows it in the same word. A kasra on that letter leaves the choice open, and the
     /// painter keeps it light.
@@ -126,7 +140,8 @@ final class TajweedPaintTests: XCTestCase {
     /// Where KFGQPC HAFS draws the meem inside a bigger glyph, the paint covers that glyph, since a glyph
     /// takes one colour: the kasra and meem of قِۭ, or the whole letter of طُۢ and رِۭ (`tinyMeemPaintRanges`).
     func testIqlabPaintsTheSmallMeemsGlyph() async throws {
-        guard Settings.shared.fontArabic == Settings.hafsUthmaniFontName else {
+        guard Settings.quranArabicFontName(selectedFontName: Settings.shared.fontArabic, qiraah: nil,
+                                           style: Settings.shared.arabicScriptStyle) == Settings.hafsUthmaniFontName else {
             throw XCTSkip("the glyph split is KFGQPC HAFS's; this simulator reads another face")
         }
         func check(_ surah: Int, _ ayah: Int, _ word: String, letter: UInt32, occurrence: Int = 0,
@@ -385,6 +400,50 @@ final class TajweedPaintTests: XCTestCase {
         XCTAssertEqual(drawn(yeh), tiny, "2:124: the small high yeh is not Tiny Madd")
     }
 
+    /// A glyph shows only its first character's colour, so a rule painted on a later character of a
+    /// ligature never showed (the madd inside the lam-alif of ٱلۡأٓخِرَةِ, the alif of بِـَٔا). Where the
+    /// glyph's first character is plain, the whole glyph now takes that rule's colour; where it has a rule
+    /// of its own (the heavy raa of رَٰءۡ 2:72), it keeps it (`paintWholeGlyphs`, 2026-10-27).
+    func testARuleInsideALigatureColoursTheGlyph() async throws {
+        guard Settings.quranArabicFontName(selectedFontName: Settings.shared.fontArabic, qiraah: nil,
+                                           style: Settings.shared.arabicScriptStyle) == Settings.hafsUthmaniFontName else {
+            throw XCTSkip("the ligatures are KFGQPC HAFS's; this simulator reads another face")
+        }
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        guard TajweedLegendCategory.allCases.allSatisfy(Settings.shared.isTajweedCategoryVisible) else {
+            throw XCTSkip("a tajweed category is hidden in this simulator's settings")
+        }
+        let traits = UITraitCollection(userInterfaceStyle: .light)
+        func rgba(_ color: UIColor?) -> [CGFloat] {
+            var r: CGFloat = -1, g: CGFloat = -1, b: CGFloat = -1, a: CGFloat = -1
+            color?.resolvedColor(with: traits).getRed(&r, green: &g, blue: &b, alpha: &a)
+            return [r, g, b, a].map { ($0 * 255).rounded() }
+        }
+        func drawn(_ surah: Int, _ ayah: Int, at sequence: [UInt16], offset: Int) throws -> [CGFloat] {
+            let raw = try XCTUnwrap(data.ayah(surah: surah, ayah: ayah)).rawArabicText(surahId: surah, qiraahOverride: "")
+            let units = Array(raw.utf16)
+            let start = try XCTUnwrap(units.indices.first { units[$0...].starts(with: sequence) }, "\(surah):\(ayah): sequence not found")
+            let styled = try XCTUnwrap(TajweedStore.shared.attributedText(surah: surah, ayah: ayah, text: raw, removeArabicDots: false))
+            return rgba(NSAttributedString(styled).attribute(.foregroundColor, at: start + offset, effectiveRange: nil) as? UIColor)
+        }
+        let madd = rgba(UIColor(TajweedLegendCategory.maddNatural.color))
+        // ٱلۡأٓخِرَةِ: the laam of the lam-alif glyph carries the madd of its alif
+        XCTAssertEqual(try drawn(2, 4, at: [0x0644, 0x06E1, 0x0623, 0x0653], offset: 0), madd, "2:4: the lam-alif does not show its madd")
+        // بِـَٔايَٰتِنَآ: the baa of the بِـَٔا glyph carries the madd of its alif
+        XCTAssertEqual(try drawn(2, 39, at: [0x0628, 0x0650, 0x0640, 0x0654, 0x064E, 0x0627], offset: 0), madd, "2:39: بِـَٔا does not show its madd")
+        // رَٰءۡ: the glyph's raa is heavy and stays heavy
+        XCTAssertEqual(try drawn(2, 72, at: [0x0631, 0x064E, 0x0670, 0x0621, 0x06E1], offset: 0),
+                       rgba(UIColor(TajweedLegendCategory.tafkhim.color)), "2:72: the heavy raa lost its colour")
+        // The sajdah words of 19:58 are each one glyph, overline included, and the line is never coloured
+        // (Abu, 2026-10-28): خَرُّواْۤ drew heavy blue end to end, سُجَّدٗاۤ grey ("not pronounced")
+        let plain = rgba(UIColor.label)
+        XCTAssertEqual(try drawn(19, 58, at: [0x062E, 0x064E, 0x0631, 0x0651, 0x064F, 0x0648, 0x0627, 0x0652, 0x06E4], offset: 0),
+                       plain, "19:58: خَرُّواْۤ draws its sajdah line in a colour")
+        XCTAssertEqual(try drawn(19, 58, at: [0x0633, 0x064F, 0x062C, 0x0651, 0x064E, 0x062F, 0x0657, 0x0627, 0x06E4], offset: 0),
+                       plain, "19:58: سُجَّدٗاۤ draws its sajdah line in a colour")
+    }
+
     /// Not a rule check: writes the whole Quran's painted rules, one JSON line per ayah
     /// (`{"s","a","t","c":[[cluster, [rule ids]], ...]}`, one entry per grapheme cluster of the raw
     /// text), to the file named by TAJWEED_DUMP_PATH (TEST_RUNNER_TAJWEED_DUMP_PATH on the xcodebuild
@@ -414,6 +473,42 @@ final class TajweedPaintTests: XCTestCase {
                 let object: [String: Any] = ["s": surah.id, "a": ayah.id, "t": raw, "c": clusters]
                 let json = try JSONSerialization.data(withJSONObject: object)
                 lines.append(String(decoding: json, as: UTF8.self))
+            }
+        }
+        try lines.joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)
+    }
+
+    /// Every ayah's DRAWN colours for the glyph audit (2026-10-27): a glyph takes the colour of its first
+    /// character, so a colour on any later character of a ligature never shows. Writes one JSON line per
+    /// ayah, the painted text and its foreground runs as [start, length, "RRGGBB"] in UTF-16, for a
+    /// CoreText script to shape against the font. Opt in with TEST_RUNNER_TAJWEED_COLOR_DUMP_PATH.
+    func testDumpWholeQuranColorsWhenAsked() async throws {
+        guard let path = ProcessInfo.processInfo.environment["TAJWEED_COLOR_DUMP_PATH"], !path.isEmpty else {
+            throw XCTSkip("set TEST_RUNNER_TAJWEED_COLOR_DUMP_PATH to write the dump")
+        }
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        guard TajweedLegendCategory.allCases.allSatisfy(Settings.shared.isTajweedCategoryVisible) else {
+            throw XCTSkip("a tajweed category is hidden in this simulator's settings")
+        }
+        func hex(_ color: UIColor) -> String {
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            color.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light)).getRed(&r, green: &g, blue: &b, alpha: &a)
+            return String(format: "%02X%02X%02X", Int((r * 255).rounded()), Int((g * 255).rounded()), Int((b * 255).rounded()))
+        }
+        var lines: [String] = []
+        for surah in data.quran {
+            for ayah in surah.ayahs {
+                let raw = ayah.rawArabicText(surahId: surah.id, qiraahOverride: "")
+                guard let painted = TajweedStore.shared.attributedText(surah: surah.id, ayah: ayah.id, text: raw) else { continue }
+                let ns = NSAttributedString(painted)
+                var runs: [[Any]] = []
+                ns.enumerateAttribute(.foregroundColor, in: NSRange(location: 0, length: ns.length)) { value, range, _ in
+                    guard let color = value as? UIColor else { return }
+                    runs.append([range.location, range.length, hex(color)])
+                }
+                let object: [String: Any] = ["s": surah.id, "a": ayah.id, "t": ns.string, "r": runs]
+                lines.append(String(decoding: try JSONSerialization.data(withJSONObject: object), as: UTF8.self))
             }
         }
         try lines.joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)

@@ -176,6 +176,43 @@ func prayerTierColor(for prayer: Prayer, in prayers: [Prayer], entry: PrayersPro
     return skyStyle ? .white.opacity(0.8) : .primary
 }
 
+/// True when this prayer is the one the day is currently in, by the same name match the app's own
+/// layouts use (`currentPrayerName`), so a widget fills exactly the tile the tab does.
+func isCurrentPrayer(_ prayer: Prayer, entry: PrayersProvider.Entry) -> Bool {
+    guard let current = entry.currentPrayer?.nameTransliteration else { return false }
+    return current == prayer.nameTransliteration
+}
+
+/// The rounded well under a Prayer Tiles cell, from the app's `PrayerCellWell` (iPhone/Adhan/Prayers/
+/// PrayerList.swift). The current prayer's well fills with the accent at 20% behind a 45% border; every
+/// other gets a bare 5% neutral so the grid still reads as tiles. Over a sky gradient the accent is
+/// unreadable, so there the fill is white and the neutral drops out (the gradient IS the background).
+///
+/// Only Prayer Tiles wears it. Prayer Grid and Prayer Split had it from 2026-10-05 and went back to their
+/// flat 4.6.4 cells on 2026-10-19; the tiled look came back on 2026-10-28 as a widget of its own.
+///
+/// No `softShadow` (the app's well carries one): a widget is a still archived image and the shadow
+/// cost a visible halo on the gradient without adding depth.
+struct PrayerWidgetCellWell: View {
+    let isCurrent: Bool
+    let accent: Color
+    var cornerRadius: CGFloat = 10
+    var skyStyle: Bool = false
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        let fill: Color = isCurrent
+            ? (skyStyle ? Color.white.opacity(0.22) : accent.opacity(0.2))
+            : (skyStyle ? .clear : Color.primary.opacity(0.05))
+        let border: Color = isCurrent
+            ? (skyStyle ? Color.white.opacity(0.55) : accent.opacity(0.45))
+            : .clear
+        shape
+            .fill(fill)
+            .overlay(shape.strokeBorder(border, lineWidth: 1))
+    }
+}
+
 /// Three-ish letters so a prayer name survives tiny lock-screen surfaces; combined traveling rows keep
 /// only their first member's abbreviation.
 func prayerAbbreviation(_ prayer: Prayer) -> String {
@@ -933,9 +970,13 @@ struct NextPrayerBoardView: View {
 
                     // The day's solar arc fills what used to be dead space between the countdown
                     // and the progress bar - nothing below moved, the flexible gap just draws now.
+                    // Lowest priority, so it takes only what the lines above leave. At equal priority the stack
+                    // split the spare height between the arc and the date-and-city pair, and with the weather on
+                    // (a fixed-size chip, so the city line cannot give) the date shrank to its 0.6 floor (2026-10-28).
                     SolarArcGraph(entry: entry, skyStyle: skyStyle, compact: true)
                         .frame(minHeight: 20, maxHeight: .infinity)
                         .padding(.vertical, 1)
+                        .layoutPriority(-1)
 
                     PrayerIntervalProgressBar(
                         current: current,

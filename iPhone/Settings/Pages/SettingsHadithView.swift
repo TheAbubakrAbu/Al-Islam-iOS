@@ -104,6 +104,10 @@ struct SettingsHadithView: View {
                 hadithPageLink(.englishText) { englishTextDestination }
             }
 
+            // The tab's foldable sections, a switch each (TabSections.swift): YOUR SUMMARY and ABOUT
+            // HADITH & THE SUNNAH, here because a section put away from the tab comes back only here.
+            TabSectionsSettingsSection(area: .hadith)
+
             // Last on the page (Abu, 2026-10-10): a page opens on its own settings, and the tips and
             // the Need a Hand? switch wait at the foot.
             TipsSection(area: .hadith, resolve: resolveSearchDestination)
@@ -244,6 +248,8 @@ struct SettingsHadithView: View {
 extension SettingsSearchEntry {
     static let hadithEntries: [SettingsSearchEntry] = [
         .init(title: "Hadith Settings", path: "Al-Hadith", keywords: "bukhari muslim books", destination: .hadithSettings),
+        .init(title: "Your Summary on the Hadith Tab", path: "Hadith Settings", keywords: "your summary tiles show hide remove collapse fold put away hadith of the day last read today hadith tab", destination: .hadithSettings),
+        .init(title: "About Hadith & the Sunnah on the Hadith Tab", path: "Hadith Settings", keywords: "about hadith sunnah show hide remove collapse fold put away sciences preserved rejectors hadith tab", destination: .hadithSettings),
         .init(title: "Need a Hand? on the Hadith Tab", path: "Hadith Settings", keywords: "need a hand help shortcuts questions show hide hadith tab one language arabic english allah red", destination: .hadithSettings, isAvailable: { !Settings.shared.hides(.pageHelpDoors) }),
         .init(title: "Show Hadith Arabic", path: "Hadith Settings → Arabic Text", keywords: "hadith arabic text toggle display", destination: .hadithPage(.arabicText)),
         .init(title: "Hadith Arabic Font & Size", path: "Hadith Settings → Arabic Text", keywords: "hadith arabic font face size slider system device", destination: .hadithPage(.arabicText)),

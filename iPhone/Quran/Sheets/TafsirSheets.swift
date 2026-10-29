@@ -503,9 +503,10 @@ struct AyahTafsirSheet: View {
     @ViewBuilder
     private var arabicAyahsCard: some View {
         if let surah = quranData.surah(surahNumber) {
-            // No size stepper here (Abu, 2026-10-22: "for tafsir dont have + or -"); the card keeps
-            // the scale the actions sheet's stepper remembers, so the two still look the same.
-            AyahPreviewCard(surah: surah, ayahs: tafsirArabicAyahs, showsSizeStepper: false)
+            // No size stepper here (Abu, 2026-10-22: "for tafsir dont have + or -"), and a FIXED 80%
+            // (Abu, 2026-10-28: "it is so big make it like 80% and make it fixed not able to be
+            // changed"): it no longer follows the actions sheet's remembered scale.
+            AyahPreviewCard(surah: surah, ayahs: tafsirArabicAyahs, fixedScale: 0.8)
                 .animation(.easeInOut, value: tafsirRangeTitle)
         }
     }
@@ -760,7 +761,7 @@ struct SurahInfoSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             Group {
                 if sources.isEmpty {
                     ScrollView {
@@ -929,7 +930,6 @@ struct SurahInfoSheet: View {
             }
             #endif
         }
-        .navigationViewStyle(.stack)
         .modifier(SheetPresentationModifier())
     }
 

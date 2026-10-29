@@ -742,16 +742,62 @@ extension View {
 /// Traveling Mode or Prayer Calculation) push through `navigationDestination(isPresented:)`, which
 /// only a `NavigationStack` honours; a legacy `NavigationLink(isActive:)` that is already true when a
 /// `NavigationView` mounts never pushes at all (2026-09-05, seen on iOS 26).
+///
+/// It also carries the sheet's Now Playing bar. A safe-area inset applied OUTSIDE a `NavigationStack` /
+/// `NavigationView` never reaches the scroll view inside it, so the bar the sheet host
+/// (`SheetPresentationModifier`) drew around the container floated over the content: the ayah actions
+/// sheet scrolled its last row of topic chips under the player with no way to bring it out (Abu,
+/// 2026-10-28: "when I scroll down in a sheet it doesn't seem to be a safe area inset, it seems to cut off
+/// stuff"; the tafsir sheet only looked fine because its search bar happens to sit at the foot of its own
+/// stack). So the root screen draws the bar as its OWN bottom bar (`sheetNowPlayingBar()`), the way every
+/// list already does, and claims it, so the host draws none.
 struct SheetNavigationContainer<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
         if #available(iOS 16.0, *) {
-            NavigationStack { content() }
+            NavigationStack { content().sheetNowPlayingBar() }
         } else {
-            NavigationView { content() }
+            NavigationView { content().sheetNowPlayingBar() }
                 .navigationViewStyle(.stack)
         }
+    }
+}
+
+extension View {
+    /// The Now Playing bar as this screen's own bottom bar while it sits in a sheet: for a sheet's root
+    /// screen (`SheetNavigationContainer` applies it) and for every non-list screen PUSHED inside a sheet,
+    /// which the root's bar never reaches either (each pushed screen is its own safe-area world). Lists
+    /// carry the same bar through `applyConditionalListStyle`. Inert outside a sheet, so a screen that is
+    /// pushed on a tab as well as in a sheet takes it unconditionally.
+    func sheetNowPlayingBar() -> some View {
+        modifier(SheetNowPlayingBar())
+    }
+}
+
+/// See `sheetNowPlayingBar()`. Draws the bar (a `safeAreaBar` on iOS 26: the content ends above it and
+/// fades under it) unless something inside already does (a list, or a nested screen with this modifier),
+/// and reports it through `NowPlayingBarProvidedKey`, which stands the sheet host's own copy down.
+private struct SheetNowPlayingBar: ViewModifier {
+    @Environment(\.nowPlayingInSheet) private var inSheet
+    @ObservedObject private var playback = PlaybackVisibility.shared
+    @State private var innerDrawsNowPlaying = false
+
+    func body(content: Content) -> some View {
+        content
+            .onPreferenceChange(NowPlayingBarProvidedKey.self) { innerDrawsNowPlaying = $0 }
+            .adaptiveSafeArea(edge: .bottom) {
+                if inSheet, !innerDrawsNowPlaying, playback.showsNowPlaying, let bar = playback.barContent {
+                    VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+                        bar()
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, BottomBarCushion.standard)
+                    .background(Color.white.opacity(0.00001))
+                    .animation(.easeInOut, value: playback.showsNowPlaying)
+                }
+            }
+            .preference(key: NowPlayingBarProvidedKey.self, value: inSheet)
     }
 }
 #endif
@@ -789,6 +835,24 @@ struct AdaptiveSafeArea<InsetContent: View>: ViewModifier {
         #endif
     }
 }
+
+#if os(iOS)
+/// A list's Now Playing inset: a `safeAreaBar` in a sheet (see `nowPlayingInSheet`), the plain inset
+/// on a tab screen. `inSheet` never changes for a mounted list, so the branch never swaps under it.
+struct NowPlayingListInset<Bar: View>: ViewModifier {
+    let inSheet: Bool
+    @ViewBuilder let bar: () -> Bar
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if inSheet {
+            content.adaptiveSafeArea(edge: .bottom) { bar() }
+        } else {
+            content.safeAreaInset(edge: .bottom) { bar() }
+        }
+    }
+}
+#endif
 
 extension View {
     func adaptiveSafeArea<InsetContent: View>(
@@ -1041,14 +1105,33 @@ final class PlaybackVisibility: ObservableObject {
     }
 }
 
-/// True wherever a `ConditionalListStyle` list sits: that list manages the Now Playing bar itself
-/// (shows it, or was told not to), so a sheet host (`SheetPresentationModifier`) adds none of its own.
+/// True wherever a `ConditionalListStyle` list sits, or a sheet screen that draws its own bar
+/// (`sheetNowPlayingBar()`, which every `SheetNavigationContainer` root has): that screen manages the Now
+/// Playing bar itself (shows it, or was told not to), so a sheet host (`SheetPresentationModifier`) adds
+/// none of its own.
 /// The bar reaches the sheets built on a `ScrollView` (the ayah actions sheet, the tafsir and word
 /// cards, Share Ayah) through the host instead (Abu, 2026-10-26: "put now playing view in hold down
 /// ayah sheet, put it in every sheet").
 struct NowPlayingBarProvidedKey: PreferenceKey {
     static var defaultValue = false
     static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
+}
+
+/// True inside a sheet's content (`SheetPresentationModifier` sets it). A list there draws its Now
+/// Playing bar as a `safeAreaBar` on iOS 26 (`adaptiveSafeArea`), the way the sheet host draws its
+/// own: under a plain `safeAreaInset` the bar's ground is clear, so a sheet's text scrolled on behind
+/// and around the player in full ink (Abu, 2026-10-28: "when I scroll down in a sheet it doesn't
+/// seem to be a safe area inset, it seems to cut off stuff"). The bar fades the content under it
+/// instead, the scroll edge every other bar in the app has. Tab screens keep their inset as it is.
+private struct NowPlayingInSheetKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var nowPlayingInSheet: Bool {
+        get { self[NowPlayingInSheetKey.self] }
+        set { self[NowPlayingInSheetKey.self] = newValue }
+    }
 }
 
 /// The top-of-screen accent wash: a quiet radial glow bleeding down from the top, gone by mid-screen.
@@ -1362,6 +1445,9 @@ private struct ReadingColumnMargins: ViewModifier {
 
 struct ConditionalListStyle: ViewModifier {
     @Environment(\.appearance) private var appearance
+    #if os(iOS)
+    @Environment(\.nowPlayingInSheet) private var inSheet
+    #endif
     @ObservedObject private var playback = PlaybackVisibility.shared
 
     let disableNowPlayingInset: Bool
@@ -1407,19 +1493,24 @@ struct ConditionalListStyle: ViewModifier {
         #if os(iOS)
         // This list manages the bar (shown, or deliberately not): a sheet around it adds none.
         .preference(key: NowPlayingBarProvidedKey.self, value: true)
-        .safeAreaInset(edge: .bottom) {
-            if !disableNowPlayingInset && shouldShowNowPlaying, let bar = playback.barContent {
-                VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                    bar()
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, BottomBarCushion.standard)
-                .background(Color.white.opacity(0.00001))
-                .animation(.easeInOut, value: shouldShowNowPlaying)
-            }
-        }
+        .modifier(NowPlayingListInset(inSheet: inSheet) { nowPlayingBar })
         #endif
     }
+
+    #if os(iOS)
+    @ViewBuilder
+    private var nowPlayingBar: some View {
+        if !disableNowPlayingInset && shouldShowNowPlaying, let bar = playback.barContent {
+            VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+                bar()
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, BottomBarCushion.standard)
+            .background(Color.white.opacity(0.00001))
+            .animation(.easeInOut, value: shouldShowNowPlaying)
+        }
+    }
+    #endif
 
     #if os(iOS)
     // Single, structurally-constant modifier chain (only the VALUES change with the theme). Switching to/from
@@ -3096,13 +3187,32 @@ struct SectionPillHeader: View {
                 .hiddenInSimple(.sectionShuffles)
         }
 
+        if let isExpanded {
+            SectionFoldControls(title: title, isExpanded: isExpanded, onRemove: onRemove)
+        }
+    }
+}
+
+/// The end of a collapsible header's trailing cluster: the trash while the section is folded (when
+/// the section can be removed at all), then the fold arrow. `SectionPillHeader` draws it after its
+/// count and buttons; a header with a read-out of its own (the prayer tracker's streak) puts it in a
+/// `SectionHeaderLine`'s controls, so every foldable section folds and removes the same way.
+struct SectionFoldControls: View {
+    @Environment(\.appearance) private var appearance
+
+    let title: String
+    let isExpanded: Binding<Bool>
+    /// Puts the whole section away. The owner confirms before removing anything.
+    var onRemove: (() -> Void)? = nil
+
+    var body: some View {
         // Only while folded: an open section's cards are still in use, and the arrow is the way to put
         // them out of sight. The shuffle's circle, so the cluster reads as one family.
-        if let onRemove, isExpanded?.wrappedValue == false {
+        if let onRemove, !isExpanded.wrappedValue {
             Image(systemName: "trash")
                 .font(.caption2.weight(.semibold))
                 .foregroundColor(appearance.accent)
-                .frame(width: Self.pillHeight, height: Self.pillHeight)
+                .frame(width: SectionPillHeader.pillHeight, height: SectionPillHeader.pillHeight)
                 .conditionalGlassEffect(circle: true)
                 .onTapGesture {
                     Settings.shared.hapticFeedback()
@@ -3113,19 +3223,17 @@ struct SectionPillHeader: View {
                 .accessibilityAddTraits(.isButton)
         }
 
-        if let isExpanded {
-            Image(systemName: isExpanded.wrappedValue ? "chevron.down.circle" : "chevron.up.circle")
-                .foregroundColor(appearance.accent)
-                .padding(4)
-                .conditionalGlassEffect()
-                .onTapGesture {
-                    Settings.shared.hapticFeedback()
-                    withAnimation { isExpanded.wrappedValue.toggle() }
-                }
-                .accessibilityLabel(isExpanded.wrappedValue ? String(localized: "Collapse \(title.lowercased())") : String(localized: "Expand \(title.lowercased())"))
-                .accessibilityRemoveTraits(.isImage)
-                .accessibilityAddTraits(.isButton)
-        }
+        Image(systemName: isExpanded.wrappedValue ? "chevron.down.circle" : "chevron.up.circle")
+            .foregroundColor(appearance.accent)
+            .padding(4)
+            .conditionalGlassEffect()
+            .onTapGesture {
+                Settings.shared.hapticFeedback()
+                withAnimation { isExpanded.wrappedValue.toggle() }
+            }
+            .accessibilityLabel(isExpanded.wrappedValue ? String(localized: "Collapse \(title.lowercased())") : String(localized: "Expand \(title.lowercased())"))
+            .accessibilityRemoveTraits(.isImage)
+            .accessibilityAddTraits(.isButton)
     }
 }
 

@@ -3845,7 +3845,8 @@ extension Settings {
     }
 
     /// Starts or ends the menses pause. Ending it writes every day of the finished range into the
-    /// exempt-days set, so the pause is remembered by the history views after it is over. Both
+    /// exempt-days set (`pauseDaysToRecord`: none for a pause ended the day it began), so the pause
+    /// is remembered by the history views after it is over. Both
     /// directions rebuild notifications, because the pause silences nagging reminders.
     func setMensesPause(_ active: Bool) {
         guard active != mensesPauseActive else { return }
@@ -3854,20 +3855,34 @@ extension Settings {
             mensesPauseActive = true
         } else {
             var days = loadExemptDays()
-            var day = Calendar.current.startOfDay(for: mensesPauseStartDate ?? Date())
-            let today = Calendar.current.startOfDay(for: Date())
-            while day <= today {
+            for day in Self.pauseDaysToRecord(from: mensesPauseStartDate ?? Date(), endingAt: Date()) {
                 days.insert(prayerTrackerKey(for: day))
-                guard let next = Calendar.current.date(byAdding: .day, value: 1, to: day) else { break }
-                // Re-anchored: where the clocks skip midnight the running date drifts to 01:00 and
-                // the last day (today) was never reached, so it was left out of the exempt range.
-                day = Calendar.current.startOfDay(for: next)
             }
             saveExemptDays(days)
             mensesPauseActive = false
             mensesPauseStartStamp = 0
         }
         fetchPrayerTimes(notification: true)
+    }
+
+    /// The days a pause ending at `end` writes into the exempt set: each day from its start through
+    /// the day it ends, whose earlier prayers fell inside the period (that last day's card offers
+    /// Track Today). A pause ended the day it began writes nothing: no period is shorter than a day,
+    /// so it was a mistaken tap or a look, and until 2026-10-28 it left that whole day exempt (a
+    /// reader's 4.6.5 report: on and off again, and the Adhan tab still read "Tracking paused").
+    static func pauseDaysToRecord(from start: Date, endingAt end: Date, calendar: Calendar = .current) -> [Date] {
+        var days: [Date] = []
+        var day = calendar.startOfDay(for: start)
+        let last = calendar.startOfDay(for: end)
+        guard day < last else { return [] }
+        while day <= last {
+            days.append(day)
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+            // Re-anchored: where the clocks skip midnight the running date drifts to 01:00 and
+            // the last day (today) was never reached, so it was left out of the exempt range.
+            day = calendar.startOfDay(for: next)
+        }
+        return days
     }
 
     /// Manual per-day correction from the history views. Days inside the ACTIVE pause range can't be

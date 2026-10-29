@@ -640,7 +640,7 @@ struct QuranPlannerView: View {
     }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             List {
                 if !settings.isHafsDisplay {
                     riwayahNotice
@@ -667,7 +667,6 @@ struct QuranPlannerView: View {
             .navigationTitle("Quran Planner")
             .sheetDismissToolbar()
         }
-        .navigationViewStyle(.stack)
         .onAppear {
             settings.settleQuranPlan(totalCompleted: totalCompleted, totalAyahs: totalAyahs)
             settings.settleQuranRevisionPlan(quran: quranData.quran)

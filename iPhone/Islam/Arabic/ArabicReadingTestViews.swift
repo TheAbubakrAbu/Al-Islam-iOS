@@ -44,6 +44,9 @@ struct ReadingMissedEntry: Hashable {
 struct ReadingTestView: View {
     @Environment(\.appearance) private var appearance
     @ObservedObject private var progress = ReadingTestProgress.shared
+    /// The tier tiles draw their specimens in the chosen sukoon (`drawnSpecimen`): observed, so "Use
+    /// Quranic Sukoon" flipped in Settings redraws them instead of leaving the old mark until reopened.
+    @ObservedObject private var islamSettings = IslamSettings.shared
 
     @State private var session: ReadingSessionView.Mode?
     @State private var showKey = false
@@ -247,6 +250,9 @@ struct ReadingTierView: View {
     @Environment(\.appearance) private var appearance
     @ObservedObject private var progress = ReadingTestProgress.shared
     @ObservedObject private var speech = ArabicSpeech.shared
+    /// The hero and the examples draw in the chosen sukoon (`style`, `drawnSpecimen`), so this page
+    /// follows the setting live like the letter pages do.
+    @ObservedObject private var islamSettings = IslamSettings.shared
 
     let tier: ReadingTier
 
@@ -259,7 +265,7 @@ struct ReadingTierView: View {
     private var accent: Color { appearance.accent }
 
     private var style: ReadingTextStyle {
-        ReadingTextStyle(tier: tier, mushafSukoon: Settings.shared.quranicSukoonInLetterPractice)
+        ReadingTextStyle(tier: tier, mushafSukoon: islamSettings.quranicSukoonInLetterPractice)
     }
 
     var body: some View {
@@ -1438,7 +1444,7 @@ private struct ReadingKeySheet: View {
     @Environment(\.appearance) private var appearance
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             List {
                 Group {
                     Section {
@@ -1470,7 +1476,6 @@ private struct ReadingKeySheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
-        .navigationViewStyle(.stack)
     }
 
     private func keyRow(sign: String, letter: String?, note: String) -> some View {

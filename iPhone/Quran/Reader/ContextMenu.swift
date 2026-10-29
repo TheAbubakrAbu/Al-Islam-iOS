@@ -1336,7 +1336,7 @@ struct NoteEditorSheet: View {
     private var isEmpty: Bool { text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             VStack(spacing: 12) {
                 let cardFill   = Color(UIColor.secondarySystemBackground)
                 let cardStroke = Color.primary.opacity(0.12)
@@ -1442,7 +1442,6 @@ struct NoteEditorSheet: View {
                 }
             }
         }
-        .navigationViewStyle(.stack)
     }
 }
 
@@ -1642,7 +1641,7 @@ struct SelectAyahTextSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             List {
                 Group {
                     // The riwayah whose Arabic is being selected stays a row: it picks the content.
@@ -1720,7 +1719,6 @@ struct SelectAyahTextSheet: View {
             }
             .sheetDismissToolbar()
         }
-        .navigationViewStyle(.stack)
     }
 
     /// What shapes the Arabic block, as the toolbar options menu: the face (six, so a submenu), the

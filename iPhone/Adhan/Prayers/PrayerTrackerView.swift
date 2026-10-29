@@ -507,6 +507,8 @@ struct PrayerTrackerSection: View {
     @ObservedObject private var adhanSettings = AdhanSettings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @ObservedObject private var prayerTracker = PrayerTracker.shared
+    /// The folded state lives with the other tab-section keys (TabSections.swift).
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
 
@@ -535,36 +537,38 @@ struct PrayerTrackerSection: View {
         if live.prayers != nil {
             let day = trackerDay
             Section(header: header) {
-                if settings.isTrackerExempt(on: day) {
-                    pausedCard
-                } else {
-                    trackerCard(day: day)
-                }
-
-                NavigationLink {
-                    LazyDestination {
-                        PrayerTrackerView()
+                // Folded from the header's arrow, the rows are not in the List at all: the header and
+                // its streak stay, and Prayer Settings' Prayer Tracker row still opens the history.
+                if settings.tabSectionExpanded(.adhanTracker) {
+                    if settings.isTrackerExempt(on: day) {
+                        exemptCard(day: day)
+                    } else {
+                        trackerCard(day: day)
                     }
-                } label: {
-                    HStack(spacing: 12) {
-                        AccentIconChip(systemImage: "chart.bar.xaxis", tint: settings.accentColor.accent2, size: 26)
 
-                        Text("History & Insights")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.primary)
+                    NavigationLink {
+                        LazyDestination {
+                            PrayerTrackerView()
+                        }
+                    } label: {
+                        HStack(spacing: 12) {
+                            AccentIconChip(systemImage: "chart.bar.xaxis", tint: settings.accentColor.accent2, size: 26)
+
+                            Text("History & Insights")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.primary)
+                        }
+                        .padding(.vertical, 2)
                     }
-                    .padding(.vertical, 2)
                 }
             }
         }
     }
 
+    /// The tab-section header (TabSections.swift): the fold arrow, the trash while folded, and the
+    /// streak as the section's read-out, which stays in sight while the rows are folded away.
     private var header: some View {
-        HStack {
-            SectionIconHeader(String(localized: "PRAYER TRACKER"), icon: "checkmark.circle.fill", accentTitle: true)
-
-            Spacer()
-
+        TabSectionHeader(.adhanTracker) {
             let streak = settings.trackerStats.currentStreak
             if streak > 0 {
                 HStack(spacing: 3) {
@@ -618,8 +622,14 @@ struct PrayerTrackerSection: View {
         .padding(.vertical, 8)
     }
 
-    private var pausedCard: some View {
-        HStack(spacing: 14) {
+    /// The card while the day is exempt. With the pause on it says so and where to end it. With the
+    /// pause off the day was recorded exempt (the last day of a longer pause, or by hand in the Day
+    /// view), and Track Today undoes that here: until 2026-10-28 this card read "Tracking paused" with
+    /// the switch already off and offered no way back (a reader's 4.6.5 report).
+    private func exemptCard(day: Date) -> some View {
+        let paused = settings.mensesPauseActive
+        let isToday = Calendar.current.isDateInToday(day)
+        return HStack(spacing: 14) {
             Image(systemName: "moon.zzz.fill")
                 .font(.title2)
                 .foregroundColor(settings.accentColor.accent2)
@@ -627,18 +637,28 @@ struct PrayerTrackerSection: View {
                 .background(Circle().fill(settings.accentColor.accent2.opacity(0.15)))
 
             VStack(alignment: .leading, spacing: 3) {
-                Text("Tracking paused")
+                Text(paused ? "Tracking paused" : (isToday ? "Today is exempt" : "Yesterday is exempt"))
                     .font(.subheadline.weight(.semibold))
 
-                Text(settings.mensesPauseActive
+                Text(paused
                      ? "Exempt days never count against your streaks. Resume any time in History & Insights."
-                     : "Today is marked exempt. It won't count against your streaks.")
+                     : "It won't count against your streaks.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer(minLength: 0)
+
+            if !paused, settings.canEditExemption(on: day) {
+                Button(isToday ? "Track Today" : "Track Yesterday") {
+                    settings.hapticFeedback()
+                    // Plain write, as the Day view's exempt switch: the card swaps for the tracker,
+                    // and that structural change must not animate.
+                    settings.setTrackerExempt(false, on: day)
+                }
+                .buttonStyle(.accentChip(tint: settings.accentColor.accent2))
+            }
         }
         .padding(.vertical, 8)
     }

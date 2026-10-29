@@ -10,6 +10,9 @@ import SwiftUI
 
 /// The door to the tree, the row the three pages share: drawn like the same-chain door.
 struct HadithIsnadTreeDoor: View {
+    /// The accent off the environment, so an accent change redraws this view (a bare `Settings` read
+    /// in a view that observes nothing kept the old colour).
+    @Environment(\.appearance) private var appearance
     private let settings = Settings.shared
 
     let summary: HadithIsnadTreesPack.Summary
@@ -31,7 +34,7 @@ struct HadithIsnadTreeDoor: View {
                     }
                 } icon: {
                     Image(systemName: "arrow.triangle.branch")
-                        .foregroundColor(settings.accentColor.color)
+                        .foregroundColor(appearance.accent)
                 }
                 Spacer()
                 Image(systemName: "chevron.forward")
@@ -457,7 +460,7 @@ struct HadithIsnadTreeView: View {
             Image(systemName: "slider.horizontal.3")
         }
         .fixedMenuOrder()
-        .tint(settings.accentColor.color)
+        .tint(appearance.accent)
         .accessibilityLabel("Tree options")
     }
 

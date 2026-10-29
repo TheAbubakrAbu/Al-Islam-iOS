@@ -678,12 +678,11 @@ struct AboutYouSettingsView: View {
         .applyConditionalListStyle()
         .navigationTitle("About You")
         .sheet(isPresented: $showWelcome) {
-            NavigationView {
+            SheetNavigationContainer {
                 AboutYouView(presentedAsSheet: true)
                     .navigationBarTitleDisplayMode(.inline)
                     .sheetDismissToolbar()
             }
-            .navigationViewStyle(.stack)
         }
     }
 

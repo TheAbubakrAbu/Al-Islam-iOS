@@ -64,7 +64,9 @@ struct CalendarView: View {
         applyToolbar(to:
             Group {
                 if mode == .calendar {
+                    // A ScrollView, not a list: the Now Playing bar in a sheet comes from here.
                     HijriMonthCalendarView()
+                        .sheetNowPlayingBar()
                 } else {
                     eventsList
                 }

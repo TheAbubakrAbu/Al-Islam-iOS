@@ -2373,7 +2373,7 @@ struct SurahView: View {
             // Detents: the sheet's own (it opens at full height).
         }
         .sheet(isPresented: $showReciterPickerSheet) {
-            NavigationView {
+            SheetNavigationContainer {
                 ReciterListView(dismissAfterSelectingReciter: true)
                     .environmentObject(settings)
                     .toolbar {
@@ -2389,7 +2389,6 @@ struct SurahView: View {
                         }
                     }
             }
-            .navigationViewStyle(.stack)
             .smallMediumSheetPresentation()
         }
         .confirmationDialog(
@@ -5409,7 +5408,7 @@ private struct ReaderLegendSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             Group {
                 switch page {
                 case .tajweed:
@@ -5435,7 +5434,6 @@ private struct ReaderLegendSheet: View {
             }
             .sheetDismissToolbar()
         }
-        .navigationViewStyle(.stack)
         .onChange(of: page) { newPage in
             settings.hapticFeedback()
             lastPage = newPage.rawValue

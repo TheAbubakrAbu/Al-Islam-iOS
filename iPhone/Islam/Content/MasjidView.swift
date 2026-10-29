@@ -284,6 +284,7 @@ struct PlaceLocatorView: View {
             .overlay(alignment: .top) {
                 searchOverlay
             }
+            .sheetNowPlayingBar()
             .adaptiveSafeArea(edge: .bottom) {
                 actionInset
             }

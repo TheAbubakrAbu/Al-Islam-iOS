@@ -563,7 +563,7 @@ struct ShareAyahSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             VStack {
                 Spacer()
 
@@ -699,7 +699,6 @@ struct ShareAyahSheet: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accentWashedBackground()
         }
-        .navigationViewStyle(.stack)
         .accentColor(settings.accentColor.color)
         .onAppear {
             guard !didInit else { return }

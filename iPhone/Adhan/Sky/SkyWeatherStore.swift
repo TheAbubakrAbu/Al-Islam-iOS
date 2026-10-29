@@ -109,10 +109,7 @@ final class SkyWeatherStore: ObservableObject {
             return
         }
         let now = Date()
-        if let lastAttemptAt {
-            let floor: TimeInterval = lastAttemptFailed ? Self.retryAfterFailure : 5 * 60
-            if now.timeIntervalSince(lastAttemptAt) < floor { return }
-        }
+        if holdsBack(at: now) { return }
         guard task == nil else { return }
         lastAttemptAt = now
         isFetching = true
@@ -132,13 +129,25 @@ final class SkyWeatherStore: ObservableObject {
         }
     }
 
-    /// The switch went off: the reading is dropped everywhere, the widgets included.
+    /// Whether the last request still holds the next one back: ten minutes after a failure, five after
+    /// a success.
+    func holdsBack(at now: Date) -> Bool {
+        guard let lastAttemptAt else { return false }
+        let floor: TimeInterval = lastAttemptFailed ? Self.retryAfterFailure : 5 * 60
+        return now.timeIntervalSince(lastAttemptAt) < floor
+    }
+
+    /// The switch went off: the reading is dropped everywhere, the widgets included. A success's
+    /// five-minute hold goes with it: it keeps Refresh from asking again for a reading already on
+    /// screen, and switched back on there is none (a reader's 4.6.5 report: off and on again left the
+    /// card without weather until the app was quit). A failure's back-off stays.
     func clear() {
         task?.cancel()
         task = nil
         isFetching = false
         weather = nil
         preview = nil
+        if !lastAttemptFailed { lastAttemptAt = nil }
         Self.store?.removeObject(forKey: SkyWeather.storageKey)
         Settings.shared.reloadWidgets(deferred: true)
     }
@@ -210,6 +219,12 @@ final class SkyWeatherStore: ObservableObject {
     }
 
     #if DEBUG
+    /// For SkyWeatherTests: a request on record, as `refreshIfNeeded` and `fetch` leave it.
+    func debugRecordAttempt(at date: Date, failed: Bool) {
+        lastAttemptAt = date
+        lastAttemptFailed = failed
+    }
+
     /// `-fakeWeather <preset>[,<celsius>]` (see `SkyWeather.fake`).
     private static func debugFake() -> SkyWeather? {
         let arguments = ProcessInfo.processInfo.arguments

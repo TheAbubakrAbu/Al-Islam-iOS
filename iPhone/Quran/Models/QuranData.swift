@@ -602,41 +602,124 @@ struct Ayah: Codable, Identifiable, Equatable {
     // Use `displayArabicText(surahId:clean:qiraahOverride:)`.)
 }
 
-/// Where a face begins the glyph that draws each small iqlab meem of a word (see
-/// `TajweedStore.tinyMeemPaintRanges`). Shaped once per word and face; about 600 words ever ask.
-enum TinyMeemGlyphs {
+/// Where a face begins each glyph of a word. A glyph is drawn in the colour of its FIRST character only
+/// (CoreText keeps a ligature across colour-only attribute runs), so any colour on a later character of
+/// a ligature never shows: the painter reads this to put the colour where it can (see
+/// `TajweedStore.tinyMeemPaintRanges` and `paintWholeGlyphs`). Shaped once per word and face.
+enum FontGlyphs {
     private static let lock = NSLock()
-    nonisolated(unsafe) private static var cache: [String: [Int: Int]] = [:]
+    nonisolated(unsafe) private static var cache: [String: [Int]] = [:]
+    /// The Quran has about 18,000 distinct word forms; past this the cache just starts over.
+    private static let capacity = 40_000
 
-    /// For each small meem (ۢ U+06E2, ۭ U+06ED) of `word`, by its UTF-16 offset, the offset of the first
-    /// character of the glyph that draws it in `fontName`: itself when the meem is a glyph of its own.
-    /// A face that does not load answers that way too, so the meem alone is painted.
-    static func glyphStarts(word: String, fontName: String) -> [Int: Int] {
+    /// The UTF-16 offsets in `word` where `fontName` starts a glyph, ascending. A face that does not
+    /// load answers every offset, so nothing counts as shared and the paint is left as it is.
+    static func starts(word: String, fontName: String) -> [Int] {
         let key = fontName + "|" + word
         lock.lock()
         if let hit = cache[key] { lock.unlock(); return hit }
         lock.unlock()
 
-        let units = Array(word.utf16)
-        let meems = units.indices.filter { units[$0] == 0x06E2 || units[$0] == 0x06ED }
-        var starts: [Int] = []
-        if !meems.isEmpty, let font = QuranFontCache.font(name: fontName, size: 40) {
+        let length = word.utf16.count
+        var starts: [Int]
+        if let font = QuranFontCache.font(name: fontName, size: 40) {
+            var found = Set<Int>()
             let line = CTLineCreateWithAttributedString(NSAttributedString(string: word, attributes: [.font: font]))
             for run in (CTLineGetGlyphRuns(line) as? [CTRun]) ?? [] {
                 let count = CTRunGetGlyphCount(run)
                 var indices = [CFIndex](repeating: 0, count: count)
                 CTRunGetStringIndices(run, CFRange(location: 0, length: count), &indices)
-                starts += indices.map { Int($0) }
+                indices.forEach { found.insert(Int($0)) }
+            }
+            starts = found.sorted()
+            if starts.first != 0 { starts.insert(0, at: 0) }
+        } else {
+            starts = Array(0..<length)
+        }
+        lock.lock()
+        if cache.count >= capacity { cache.removeAll(keepingCapacity: true) }
+        cache[key] = starts
+        lock.unlock()
+        return starts
+    }
+
+    /// Where a glyph's first character is plain (`painted` false) and every painted character inside it
+    /// has the same colour, the whole glyph takes that colour, so the rule shows on the glyph that carries
+    /// it. A glyph whose first character has a colour of its own, or that carries two, can show only one
+    /// and keeps the first. Words split on spaces; only a word with a plain character before a painted
+    /// one is shaped at all. A colour `staysOnItsLetters` names is never spread.
+    static func colourWholeGlyphs(_ attributed: NSMutableAttributedString, painted: [Bool], fontName: String,
+                                  staysOnItsLetters: (AnyObject) -> Bool = { _ in false }) {
+        let text = attributed.string as NSString
+        let length = text.length
+        guard painted.count == length else { return }
+        var wordStart = 0
+        for end in 0...length where end == length || text.character(at: end) == 0x20 {
+            defer { wordStart = end + 1 }
+            guard end - wordStart > 1 else { continue }
+            var sawPlain = false, plainThenPainted = false
+            for i in wordStart..<end {
+                if !painted[i] { sawPlain = true } else if sawPlain { plainThenPainted = true; break }
+            }
+            guard plainThenPainted else { continue }
+            let glyphStarts = starts(word: text.substring(with: NSRange(location: wordStart, length: end - wordStart)),
+                                     fontName: fontName)
+            for (k, start) in glyphStarts.enumerated() {
+                let glyphStart = wordStart + start
+                let glyphEnd = wordStart + (k + 1 < glyphStarts.count ? glyphStarts[k + 1] : end - wordStart)
+                guard glyphEnd - glyphStart > 1, !painted[glyphStart] else { continue }
+                var colour: AnyObject?
+                var mixed = false
+                for i in (glyphStart + 1)..<glyphEnd where painted[i] {
+                    guard let here = attributed.attribute(.foregroundColor, at: i, effectiveRange: nil) as AnyObject? else { continue }
+                    if let colour, !colour.isEqual(here) { mixed = true; break }
+                    colour = here
+                }
+                if let colour, !mixed, !staysOnItsLetters(colour) {
+                    attributed.addAttribute(.foregroundColor, value: colour,
+                                            range: NSRange(location: glyphStart, length: glyphEnd - glyphStart))
+                }
             }
         }
+    }
+
+    /// The sajdah overline (U+06E4, on the 26 words that call for the prostration) is drawn plain. The
+    /// face bakes most of those words, line included, into ONE glyph, and a glyph takes one colour, so a
+    /// coloured word drew a coloured line: خَرُّواْ heavy blue end to end, ٱسۡجُدۡ grey (Abu, 2026-10-28:
+    /// "just dont make the line colored ... keep it for now"). The glyph carrying the line goes plain; a
+    /// letter the face leaves outside it (the وَ of وَٱسۡجُدُواْ) keeps its colour.
+    static func plainSajdahLine(_ attributed: NSMutableAttributedString, fontName: String, plain: AnyObject) {
+        let text = attributed.string as NSString
+        let length = text.length
+        var wordStart = 0
+        for end in 0...length where end == length || text.character(at: end) == 0x20 {
+            defer { wordStart = end + 1 }
+            let lines = (wordStart..<end).filter { text.character(at: $0) == 0x06E4 }
+            guard !lines.isEmpty else { continue }
+            let glyphStarts = starts(word: text.substring(with: NSRange(location: wordStart, length: end - wordStart)),
+                                     fontName: fontName)
+            for line in lines {
+                let offset = line - wordStart
+                let start = glyphStarts.last { $0 <= offset } ?? offset
+                let next = glyphStarts.first { $0 > offset } ?? (end - wordStart)
+                attributed.addAttribute(.foregroundColor, value: plain,
+                                        range: NSRange(location: wordStart + start, length: next - start))
+            }
+        }
+    }
+
+    /// For each small iqlab meem (ۢ U+06E2, ۭ U+06ED) of `word`, by its UTF-16 offset, the offset of the
+    /// first character of the glyph that draws it: itself when the meem is a glyph of its own.
+    static func tinyMeemGlyphStarts(word: String, fontName: String) -> [Int: Int] {
+        let units = Array(word.utf16)
+        let meems = units.indices.filter { units[$0] == 0x06E2 || units[$0] == 0x06ED }
+        guard !meems.isEmpty else { return [:] }
+        let glyphStarts = starts(word: word, fontName: fontName)
         var result: [Int: Int] = [:]
         for meem in meems {
             // The glyph holding the meem is the one that starts last at or before it.
-            result[meem] = starts.filter { $0 <= meem }.max() ?? meem
+            result[meem] = glyphStarts.last { $0 <= meem } ?? meem
         }
-        lock.lock()
-        cache[key] = result
-        lock.unlock()
         return result
     }
 }
@@ -812,9 +895,9 @@ final class TajweedStore {
         waslSign: Settings.WaslSignStyle = .print
     ) -> NSString {
         let requestedDisplayDigest = requestedDisplayText.map(Self.stableTextDigest) ?? 0
-        // The face too: where the iqlab meem's colour can go depends on how the face draws it
-        // (`tinyMeemPaintRanges`).
-        return "\(surah):\(ayah):\(Self.stableTextDigest(text)):\(requestedDisplayDigest):\(cleanDisplayText ? 1 : 0):\(beginnerSpacing ? 1 : 0):\(removeArabicDots ? 1 : 0):\(waslSign.rawValue):\(visibilitySignature):\(settings.fontArabic)" as NSString
+        // The face too: where a colour can go depends on which characters the face draws as one glyph
+        // (`tinyMeemPaintRanges`, `paintWholeGlyphs`).
+        return "\(surah):\(ayah):\(Self.stableTextDigest(text)):\(requestedDisplayDigest):\(cleanDisplayText ? 1 : 0):\(beginnerSpacing ? 1 : 0):\(removeArabicDots ? 1 : 0):\(waslSign.rawValue):\(visibilitySignature):\(drawingFontName)" as NSString
     }
 
     /// What the caches know about one ayah's paint, for a row that must not paint in its body.
@@ -1101,6 +1184,8 @@ final class TajweedStore {
             if settled { unpaintedKeys.setObject(NSNumber(value: true), forKey: cacheKey) }
             return (nil, ops)
         }
+        paintWholeGlyphs(attributed, priorities: priorityPerUTF16)
+        FontGlyphs.plainSajdahLine(attributed, fontName: drawingFontName, plain: platformLabelColor())
 
         let result = AttributedString(attributed)
         if settled { attributedCache.setObject(AttributedStringBox(result), forKey: cacheKey) }
@@ -2959,6 +3044,30 @@ final class TajweedStore {
         return !hasAnyTashkeel(clusters[index]) || clusters[index].contains(Self.smallHighUprightRectangularZero)
     }
 
+    /// A face draws some runs of characters as ONE glyph, and a glyph shows only its first character's
+    /// colour, so a rule painted on a later character of it never showed. A whole-Quran audit against
+    /// KFGQPC HAFS (2026-10-27) found 738 such characters: the madd of the alif inside every lam-alif
+    /// (لۡأٓ of ٱلۡأٓخِرَةِ, about 270 places), the alif of بِـَٔا (بِـَٔايَٰتِنَا, 119), and a handful of word bakes
+    /// (the dagger-alif forms, the sajdah words). Where the glyph's first character is plain and every
+    /// painted character inside it has the same colour, the whole glyph takes that colour, so the rule
+    /// shows on the glyph that carries it. A glyph whose first character has a rule of its own, or that
+    /// carries two different rules (رَٰءۡ 2:72, some sajdah words), can show only one and keeps the first.
+    private func paintWholeGlyphs(_ attributed: NSMutableAttributedString, priorities: [Int]) {
+        // The greys say "not pronounced": spread over a glyph they would silence letters that are read
+        // (the sajdah word سُجَّدٗاۤ 19:58 went grey from end to end), so they stay on their own letters.
+        let silent = [TajweedLegendCategory.hamzatWaslSilent, .droppedLetter, .idghamBilaGhunnah]
+            .map { platformTajweedColor($0.color) }
+        FontGlyphs.colourWholeGlyphs(attributed, painted: priorities.map { $0 > 0 }, fontName: drawingFontName,
+                                     staysOnItsLetters: { colour in silent.contains { $0.isEqual(colour) } })
+    }
+
+    /// The face the Hafs text is actually drawn in: the reader's pick resolved through the script style
+    /// (Maghribi sets even Hafs in the Warsh face), the same choke point every renderer reads. Which
+    /// characters share a glyph is the face's to decide.
+    private var drawingFontName: String {
+        Settings.quranArabicFontName(selectedFontName: settings.fontArabic, qiraah: nil, style: settings.arabicScriptStyle)
+    }
+
     /// The iqlab colour goes on the small meem itself, above (ۢ) or below (ۭ), and the letter carrying it
     /// keeps its own rule (Abu, 2026-10-27: "it was just supposed to be bottom and top meem"). The whole
     /// letter was painted from 4.4.0, which hid the weight of 33 raas (بَصِيرُۢ) and 14 isti'la letters.
@@ -2978,8 +3087,8 @@ final class TajweedStore {
         while first > 0, !isWhitespaceOnly(clusters[first - 1]) { first -= 1 }
         while last + 1 < clusters.count, !isWhitespaceOnly(clusters[last + 1]) { last += 1 }
         let wordStart = clusters[first].utf16Range.lowerBound
-        let glyphStarts = TinyMeemGlyphs.glyphStarts(word: clusters[first...last].map(\.text).joined(),
-                                                     fontName: settings.fontArabic)
+        let glyphStarts = FontGlyphs.tinyMeemGlyphStarts(word: clusters[first...last].map(\.text).joined(),
+                                                         fontName: drawingFontName)
         var ranges: [NSRange] = []
         var offset = cluster.utf16Range.lowerBound
         for scalar in cluster.text.unicodeScalars {
@@ -3557,6 +3666,11 @@ final class TajweedStore {
         }
 
         if TajweedRules.alifFollowerLetters.contains(base), index > 0 {
+            // The alif under the small upright zero (U+06E0) is dropped in connected reading, and the four
+            // that end an ayah are left unpainted (`appendBareConsonantSilentPaintOps`). After a heavy raa
+            // it took the raa's weight instead: قَوَارِيرَا۠ (76:15) was the one alif in the Quran drawn heavy
+            // until 2026-10-28.
+            if clusters[index].contains(Self.smallHighUprightRectangularZero) { return false }
             if let previous = previousArabicLetterClusterIndex(clusters: clusters, before: index),
                hasFathatayn(clusters[previous]),
                isSilentFinalLetter(clusters: clusters, index: index) {

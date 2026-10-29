@@ -246,9 +246,18 @@ struct QiblaView: View {
                 GlassyQiblaRing(size: size, tint: ringColor, alignmentScore: alignmentScore)
                     .animation(.easeInOut(duration: 0.2), value: ringColor)
 
+                if let north = northAngle {
+                    cardinalLetters(north: north)
+                }
+
                 pointerStack
                     .rotationEffect(.degrees(compass.direction))
             }
+            // A compass points at the world, not along the reading direction. A right-to-left layout
+            // mirrors its rotations, so in Arabic and Urdu the needle stood as far LEFT of straight up as
+            // the Qibla was to the right ("Turn right 28°" under a needle leaning left), and East sat on
+            // the left (found 2026-10-28 when the N/E/S/W letters arrived). The dial never mirrors.
+            .environment(\.layoutDirection, .leftToRight)
             .conditionalGlassEffect()
             // A rotating needle says nothing to VoiceOver, so the turn instruction is the label and
             // updates as the user turns. `.updatesFrequently` lets VoiceOver re-announce it while
@@ -332,6 +341,42 @@ struct QiblaView: View {
         // stack's own bounds - which have no horizontal padding, so it clipped the two shadows it
         // was added to make cheap. `softShadow` already drops both on the reduced tier, which is
         // where that cost mattered. (The same Metal path is why `GlassyQiblaRing` below is not one.)
+    }
+
+    /// Where north sits on the dial, in degrees clockwise from the top, on the big compasses only (100 pt
+    /// and up): the 50 pt row compass stays the bare needle (Abu, 2026-10-28: "while keeping it simple
+    /// when big can we include NESW"). Nil until a real heading lands, like every other claim here, and
+    /// inside the Haram, where the bearing it is derived from is noise.
+    private var northAngle: Double? {
+        guard size >= 100, compass.hasHeading, !isAtKaaba, let bearing = compass.bearingDegrees else { return nil }
+        return compass.direction - bearing
+    }
+
+    /// N, E, S and W just inside the rim, turning with the phone and always upright. N carries the
+    /// weight; the rest stay quiet so the needle remains the thing to read. The same localized keys as
+    /// the Glance tile's bearing ("58° ENE"); Urdu's are whole words, so each sits in a slot that
+    /// shrinks it to fit.
+    private func cardinalLetters(north: Double) -> some View {
+        let fontSize = max(9, size * 0.075)
+        let slot = fontSize * 2.4
+        let radius = size / 2 - max(1, size * 0.045) - fontSize * 0.95
+        let points = [String(localized: "N"), String(localized: "E"), String(localized: "S"), String(localized: "W")]
+        return ZStack {
+            ForEach(points.indices, id: \.self) { index in
+                let angle = north + Double(index) * 90
+                Text(points[index])
+                    .font(.system(size: fontSize, weight: index == 0 ? .bold : .medium, design: .rounded))
+                    .foregroundStyle(index == 0 ? Color.primary : Color.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .frame(width: slot)
+                    .rotationEffect(.degrees(-angle))
+                    .offset(y: -radius)
+                    .rotationEffect(.degrees(angle))
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
     }
 
     private var qiblaInfoCard: some View {
@@ -605,6 +650,11 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
     private var started = false
     /// The Qibla bearing for the last coordinate it was computed for.
     private var cachedBearing: (latitude: Double, longitude: Double, degrees: Double)?
+
+    /// The bearing `direction` is measured from, so the dial can place north at `direction - bearing`
+    /// (the needle's own smoothing then carries the letters too). Not published: it moves only with the
+    /// location, and every heading sample republishes `direction` anyway.
+    var bearingDegrees: Double? { cachedBearing?.degrees }
     /// Continuous (unwrapped) low-pass accumulator of the heading→qibla delta. Published `direction`
     /// is this normalized to 0..<360. Smoothing here keeps the needle sharp but free of compass jitter.
     private var smoothedDelta: Double?
@@ -651,6 +701,20 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
     }
 
     func start() {
+        #if DEBUG
+        // The simulator has no magnetometer, so nothing on the dial that waits for a heading ever draws
+        // there. `-fakeHeading 30` (degrees true) pins one for screenshots.
+        if let fake = UserDefaults.standard.string(forKey: "fakeHeading").flatMap(Double.init),
+           let location = usableLocation() {
+            var target = qiblaBearing(latitude: location.latitude, longitude: location.longitude) - fake
+            target.formTruncatingRemainder(dividingBy: 360)
+            if target < 0 { target += 360 }
+            direction = target
+            accuracyDegrees = 5
+            hasHeading = true
+            return
+        }
+        #endif
         guard !started, CLLocationManager.headingAvailable() else { return }
         started = true
         #if os(iOS)

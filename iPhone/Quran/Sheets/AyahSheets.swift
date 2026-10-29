@@ -336,6 +336,11 @@ struct AyahPreviewCard: View {
     /// The minus | % | plus size stepper. The tafsir sheet's card turns it off (Abu, 2026-10-22: "for
     /// tafsir dont have + or -"); the card still draws at the remembered scale, so the two sheets match.
     var showsSizeStepper: Bool = true
+    /// A size of its own instead of the remembered `ayahPreviewCardScale`. The tafsir sheet pins 0.8
+    /// (Abu, 2026-10-28: "for tafsir for the ayah it is so big make it like 80% and make it fixed"):
+    /// the card there sits above pages of commentary, and the actions sheet's stepper at 145% made it
+    /// fill the screen. With a fixed scale the stepper never shows.
+    var fixedScale: Double? = nil
 
     /// Show the ayah as PLAIN standard text - full tashkeel and dots, no tajweed coloring, no Allah
     /// highlight, no beginner spacing - while the reader has any of those shaping it (user rule).
@@ -532,8 +537,11 @@ struct AyahPreviewCard: View {
     /// the same thing whatever the reader is set to.
     private var cardFontSize: CGFloat {
         let base = min(max(CGFloat(settings.fontArabicSize), 20), 36)
-        return (base * CGFloat(settings.ayahPreviewCardScale)).rounded()
+        return (base * CGFloat(fixedScale ?? settings.ayahPreviewCardScale)).rounded()
     }
+
+    /// The stepper only where the size is the reader's to change.
+    private var showsStepper: Bool { showsSizeStepper && fixedScale == nil }
 
     private func stepScale(_ direction: Double) {
         let range = Settings.ayahPreviewScaleRange
@@ -597,9 +605,9 @@ struct AyahPreviewCard: View {
             // as written (full marks, no coloring) without touching the reader's settings. The size
             // stepper shares the line (Abu, 2026-09-19): the card's Arabic is the thing being read, and
             // the reader's own size is not always the right one inside a sheet.
-            if showsSizeStepper || anyModified {
+            if showsStepper || anyModified {
                 HStack(spacing: 10) {
-                    if showsSizeStepper {
+                    if showsStepper {
                         sizeStepper
                     }
 
@@ -1315,7 +1323,7 @@ struct AyahActionsSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             ScrollView {
                 VStack(spacing: 14) {
                     // The ayah itself, so the sheet says what you tapped rather than only naming it - the
@@ -1348,7 +1356,6 @@ struct AyahActionsSheet: View {
             .sheetDismissToolbar()
             .accentWashedBackground()
         }
-        .navigationViewStyle(.stack)
         // "Keep Screen On": held while this sheet is up, including under a sheet stacked on it, and
         // let go the moment it closes (`KeepScreenAwake` releases on disappear).
         .keepScreenAwake(while: quranDisplay.ayahSheetKeepsScreenOn)

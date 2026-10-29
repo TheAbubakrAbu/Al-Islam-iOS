@@ -185,7 +185,7 @@ struct PrayersProvider: TimelineProvider {
 
     // MARK: Per-process memo
     //
-    // Every Adhan kind (`Settings.AdhanWidgetKind`, 37 on iOS; 2 on the watch) has its own provider, and after a reload WidgetKit
+    // Every Adhan kind (`Settings.AdhanWidgetKind`, 39 on iOS; 2 on the watch) has its own provider, and after a reload WidgetKit
     // asks each placed one for a timeline in one burst - each of which re-seeded Settings from the App
     // Group, re-ran the prayer computation and rebuilt the boundary timeline. The inputs are the same
     // for all of them, so the first build is cached and the rest return it. Keyed on every App Group

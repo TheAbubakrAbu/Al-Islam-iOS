@@ -253,13 +253,12 @@ struct CreditsView: View {
 
     var body: some View {
         if presentedAsSheet {
-            NavigationView {
+            SheetNavigationContainer {
                 creditsList
                     // Dismisses through the same X every other sheet uses, instead of a full-width "Done"
                     // button pinned over the bottom of the content.
                     .sheetDismissToolbar()
             }
-            .navigationViewStyle(.stack)
         } else {
             creditsList
         }
@@ -691,7 +690,7 @@ struct AboutAppView: View {
     }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             List {
                 Section {
                     VStack(alignment: .center, spacing: 10) {
@@ -774,7 +773,6 @@ struct AboutAppView: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
-        .navigationViewStyle(.stack)
     }
 
     /// One door: the symbol in the accent, the title, and an optional second line (the address a

@@ -18,12 +18,17 @@ struct ArabicBasicsView: View {
                 dualSection
                 pluralsSection
                 casesSection
+                #if os(iOS)
+                // The four grammar pages of the alphabet's GRAMMAR section (2026-10-28).
+                ArabicGrammarLinksSection(current: nil)
+                #endif
             }
             .themedListRowBackground()
 
         }
         .selectableArticleList()
         .navigationTitle("Basic Grammar")
+        .openScreen(.arabicGrammar, id: "basics")
         .onDisappear {
             ArabicSpeech.shared.stop()
             ArabicPracticeSelection.shared.clear()

@@ -91,7 +91,7 @@ struct SummarizeSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             Group {
                 if OnDeviceAsk.isAvailable {
                     ScrollViewReader { proxy in
@@ -126,7 +126,6 @@ struct SummarizeSheet: View {
             .sheetDismissToolbar()
             .accentWashedBackground()
         }
-        .navigationViewStyle(.stack)
         // Sized here, not at each call site: the ayah, surah, tafsir, riwayah and hadith screens all
         // present this one type.
         .smallMediumSheetPresentation()

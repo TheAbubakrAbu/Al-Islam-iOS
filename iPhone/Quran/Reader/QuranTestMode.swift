@@ -301,6 +301,9 @@ struct QuranTestModeMenuGate<Content: View>: View {
     let settings: Settings
     @ViewBuilder let content: () -> Content
     @ObservedObject private var testMode = QuranTestMode.shared
+    /// `hides` reads the Test Mode choices (`quranTestModeHides` and friends), which publish here: without
+    /// it, changing what Test Mode hides left a menu built before the change showing the old set.
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
 
     var body: some View {
         if !settings.hides(.playTestMode, unless: testMode.isOn) {

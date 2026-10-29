@@ -2205,7 +2205,7 @@ struct QuranView: View {
             }
         }
         .sheet(isPresented: $showReciterPickerSheet) {
-            NavigationView {
+            SheetNavigationContainer {
                 ReciterListView(dismissAfterSelectingReciter: true)
                     .environmentObject(settings)
                     .toolbar {
@@ -2221,7 +2221,6 @@ struct QuranView: View {
                         }
                     }
             }
-            .navigationViewStyle(.stack)
             .smallMediumSheetPresentation()
         }
         .onDisappear {
@@ -4484,7 +4483,9 @@ struct QuranView: View {
         switch settings.quranSortMode {
         case .juz:
             return JuzRailLanding(id: Self.juzRowAnchor(juz), headers: 1)
-        case .simpleJuz, .khatm where settings.khatmGroupByJuz:
+        // Simple Juz always; Khatm only when it groups by juz (the `where` is the second pattern's alone).
+        case .simpleJuz,
+             .khatm where settings.khatmGroupByJuz:
             // A surah sits under the juz it opens in, so juz 2 and 5 are a bare header: those land on
             // the first surah of the next juz down the list (3 and 6, or 1 and 4 reading backwards)
             // and bring both headers down.

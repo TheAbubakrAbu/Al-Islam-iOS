@@ -29,9 +29,9 @@ SLICES = {
          'classicLookInLowPower', 'showAccentGlow', 'alIslamGlow', 'colorSchemeString', 'userBackgroundRaw'}),
     'SystemSettings': (
         'App-wide switches no tab owns: onboarding flags, Simple Mode, Advanced, haptics, keep screen on, '
-        'the launch tab, grid modes, help doors, the daily rollover hour.',
+        'the launch tab, grid modes, help doors, tab sections, the daily rollover hour.',
         {'firstLaunch', 'aboutYouVersionSeen', 'cloudOfferVersionSeen', 'startHereHidden', 'startHereVisitedRaw',
-         'helpDoorsHiddenRaw', 'helpDoorsCollapsedRaw', 'launchTabRaw', 'launchTabChosen', 'hapticOn', 'keepScreenOnRaw',
+         'helpDoorsHiddenRaw', 'helpDoorsCollapsedRaw', 'tabSectionChoicesRaw', 'tabSectionsCollapsedRaw', 'launchTabRaw', 'launchTabChosen', 'hapticOn', 'keepScreenOnRaw',
          'advancedSettings', 'simpleMode', 'gridMode', 'gridModeArabicRaw', 'gridModeNamesRaw', 'gridModeIslamRaw',
          'gridModeSettingsRaw', 'dailyRolloverAtFajr'}),
     'AdhanSettings': (

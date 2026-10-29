@@ -3195,7 +3195,7 @@ struct HadithChapterPickerSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             ScrollViewReader { proxy in
             List {
                 let counts = countsByChapter
@@ -3263,7 +3263,6 @@ struct HadithChapterPickerSheet: View {
             .onAppear { scrollToCurrentChapter(proxy) }
             }
         }
-        .navigationViewStyle(.stack)
         .accentColor(settings.accentColor.color)
     }
 }

@@ -21,7 +21,7 @@ struct WeatherDetailSheet: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             List {
                 Group {
                     if let weather = store.weather {
@@ -127,7 +127,6 @@ struct WeatherDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
-        .navigationViewStyle(.stack)
         .smallMediumSheetPresentation()
         .onAppear { store.refreshIfNeeded() }
         .onDisappear {

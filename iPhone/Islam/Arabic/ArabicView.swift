@@ -520,7 +520,7 @@ struct ArabicView: View {
                     .first(where: { $0.letter == letter }) else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { gridSelection = match }
         }
-        // "-arabicTopic tashkeel|defaultTashkeel|baaHaa|laamAlif|maqsurahYaa|maqsurahPractice|maqsurahLength|basics|families|soundAlikes|quiz|readingTest|family:<id>",
+        // "-arabicTopic tashkeel|defaultTashkeel|baaHaa|laamAlif|maqsurahYaa|maqsurahPractice|maqsurahLength|basics|pronouns|noun|verb|harf|families|soundAlikes|quiz|readingTest|vowelLetters|vowelPractice|vowelPracticeWaaw|family:<id>",
         // and "-arabicGrouping <axis raw value>" to land on a grouping (every raw value goes through
         // `Grouping(raw:)`, "-arabicFamily <id>" narrows it to one family): push one of the topic pages.
         // Their rows sit below the fold of a list that cannot be scrolled from a script.
@@ -540,6 +540,11 @@ struct ArabicView: View {
             // since the alphabet sits under the hero and the Explore shelf, below the fold.
             if arguments.contains("-arabicScrollGrouping") {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { scrollTarget = Self.groupingTopID }
+            }
+            // "-arabicScrollTo <id>": any row id, e.g. "pronouns" (the GRAMMAR section's ForEach ids).
+            if let idx = arguments.firstIndex(of: "-arabicScrollTo"), arguments.indices.contains(idx + 1) {
+                let target = arguments[idx + 1]
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { scrollTarget = target }
             }
             guard Self.debugTopic != nil else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { debugTopicOpen = true }
@@ -776,10 +781,19 @@ struct ArabicView: View {
         case "waslStart": HamzatulWaslPracticeView(mode: .start)
         case "waslTanween": HamzatulWaslPracticeView(mode: .tanween)
         case "waslReadOn": HamzatulWaslPracticeView(mode: .readOn)
+        case "pronouns": ArabicPronounsView()
+        case "noun": ArabicNounView()
+        case "verb": ArabicVerbView()
+        case "harf": ArabicHarfView()
         case "families": LetterFamiliesView()
         case "soundAlikes": SoundAlikeLettersView()
         case "quiz": LetterQuizView()
         case "readingTest": ReadingTestView()
+        #if os(iOS)
+        case "vowelLetters": VowelLettersView()
+        case "vowelPractice": VowelOrConsonantPracticeView(letter: nil)
+        case "vowelPracticeWaaw": VowelOrConsonantPracticeView(letter: VowelLetterRoles.waaw)
+        #endif
         case let topic? where topic.hasPrefix("family:"):
             // "-arabicTopic family:safeer": one family's page.
             if let family = LetterTraits.family(id: String(topic.dropFirst("family:".count))) {
@@ -884,7 +898,13 @@ struct ArabicView: View {
 
             letterShapesSection
 
+            #if os(iOS)
+            vowelLettersSection
+            #endif
+
             hamzatulWaslSection
+
+            grammarSection
 
             // Tashkeel, Default Tashkeel and Basic Grammar used to be link rows here too. They are
             // Explore tiles at the top now (Abu, 2026-09-22), so everything there is to STUDY is in
@@ -937,6 +957,27 @@ struct ArabicView: View {
         }
     }
 
+    #if os(iOS)
+    /// Alif, waaw and yaa as vowels or consonants, after the letter shapes (Abu, 2026-10-28: "make a
+    /// section for vowel letters"). The page, then its practice, one link per row. iPhone only, like
+    /// the Reading Test bank every example on it comes from.
+    private var vowelLettersSection: some View {
+        Section {
+            NavigationLink(destination: LazyDestination { VowelLettersView() }) {
+                ArabicTopicLinkLabel(specimen: VowelLettersView.specimen,
+                                     title: String(localized: "Vowel Letters"),
+                                     caption: String(localized: "When alif, waaw and yaa are vowels, and when consonants"),
+                                     face: .plain)
+            }
+            .tint(settings.accentColor.color)
+
+            VowelOrConsonantPracticeLink(letter: nil)
+        } header: {
+            Text("VOWEL LETTERS")
+        }
+    }
+    #endif
+
     /// Hamzatul waSl and its drills, after the letter shapes (Abu, 2026-10-27: "have a whole hamzatul
     /// wasl section in Arabic alphabet with exercises especially tanween then hamzatul wasl"). The page
     /// first, then each drill on a row of its own, so the practice is one tap from the alphabet.
@@ -960,6 +1001,23 @@ struct ArabicView: View {
             #endif
         } header: {
             Text("HAMZATUL WASL")
+        }
+    }
+
+    /// The grammar pages, after hamzatul waSl (Abu, 2026-10-28: "Create another section in Arabic
+    /// Alphabet that is focused on pronouns and endings. And basic noun ... Basic verb. Basic harf").
+    /// One link per row; Basic Grammar stays the Explore tile it was, and each page links to it.
+    private var grammarSection: some View {
+        Section {
+            ForEach(ArabicGrammarTopic.allCases) { topic in
+                NavigationLink(destination: LazyDestination { topic.destination }) {
+                    ArabicTopicLinkLabel(specimen: topic.specimen, title: topic.title, caption: topic.caption,
+                                         preview: topic.preview)
+                }
+                .tint(settings.accentColor.color)
+            }
+        } header: {
+            Text("GRAMMAR")
         }
     }
 

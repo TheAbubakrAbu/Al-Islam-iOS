@@ -107,10 +107,9 @@ struct TajweedLessonDetailView: View {
             }
         }
         .sheet(isPresented: $showLegend) {
-            NavigationView {
+            SheetNavigationContainer {
                 TajweedLegendView()
             }
-            .navigationViewStyle(.stack)
             .smallMediumSheetPresentation()
         }
     }
@@ -1085,6 +1084,10 @@ private struct TajweedExampleCard: View {
     @Environment(\.appearance) private var appearance
     @ObservedObject private var quranData = QuranData.shared
     @ObservedObject private var nowPlaying = QuranPlayer.shared.nowPlaying
+    /// The translation choice (Saheeh or Mustafa) is read in `translation(of:)`. Observed, so switching
+    /// translations in Settings redraws an open lesson's examples: the card used to read `Settings.shared`
+    /// with nothing to tell it the choice had changed (2026-10-28).
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
 
     let example: TajweedLessonExample
     let accent: Color
@@ -1209,8 +1212,7 @@ private struct TajweedExampleCard: View {
 
     /// The reader's English translation (Hafs text, whatever the reader shows).
     private func translation(of ayah: Ayah) -> String? {
-        let settings = Settings.shared
-        let text = (settings.showEnglishSaheeh || !settings.showEnglishMustafa) ? ayah.textEnglishSaheeh : ayah.textEnglishMustafa
+        let text = (quranDisplay.showEnglishSaheeh || !quranDisplay.showEnglishMustafa) ? ayah.textEnglishSaheeh : ayah.textEnglishMustafa
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }

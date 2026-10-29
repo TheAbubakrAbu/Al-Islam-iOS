@@ -318,7 +318,7 @@ struct PermissionsSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             VStack(spacing: 0) {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 18) {
@@ -354,7 +354,6 @@ struct PermissionsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
-        .navigationViewStyle(.stack)
         .smallMediumSheetPresentation(startLarge: true, dismissDisabled: asker.asking)
         .task { await asker.refresh() }
     }

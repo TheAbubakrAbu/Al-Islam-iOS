@@ -1898,8 +1898,8 @@ enum LetterWordExamples {
     }
 
     /// The tiers in the order a learner meets them. Every word in these carries its full marks; the
-    /// unmarked tiers and the phrases are left out.
-    private static let tierOrder = [
+    /// unmarked tiers and the phrases are left out. `VowelLetterRoles` walks the same ladder.
+    static let tierOrder = [
         "spaced", "vowels", "long", "tanween", "leen", "sukoon", "shaddah", "small", "mixed",
         "article", "wasl", "silent", "waqf",
     ]
@@ -1982,6 +1982,191 @@ enum LetterWordExamples {
         }
         cache[key] = out
         return out
+    }
+}
+
+// MARK: - Vowel or consonant
+
+/// Whether alif, waaw or yaa is a vowel or a consonant where it stands, and the rule that decides it
+/// (Abu, 2026-10-28: "a section to tell whether the 3 vowel letters are vowels or consonants with
+/// examples ... explain why and when waw and yaa are vowels/consonants"). Read off the marks around
+/// the letter, the way a reader has to, over the Reading Test's verified bank: nothing here types a
+/// word, and every example and quiz question is a bank word with its own reading and reference.
+enum VowelLetterRoles {
+    /// The one rule that settles a letter. Each is something a reader can check by eye.
+    enum Reason: CaseIterable, Hashable {
+        /// Waaw or yaa opening the word: no Arabic word begins on a vowel.
+        case opensWord
+        /// Waaw or yaa carrying a fatha, kasra, damma or tanween of its own.
+        case ownVowel
+        /// Waaw or yaa with a shaddah: the letter said twice.
+        case shaddah
+        /// Waaw or yaa with a sukoon after a fatha: the leen letter, a soft consonant the vowel glides into.
+        case leen
+        /// Waaw or yaa with no mark, after its matching short vowel (damma, kasra): the long vowel.
+        case longVowel
+        /// The same with the madd sign over it: the long vowel held longer.
+        case maddVowel
+        /// Alif after a fatha: the long "aa".
+        case alifLong
+        /// Alif with the madd sign: the long "aa" held longer.
+        case alifMadd
+        /// A hamza on or under an alif: the hamza is the consonant, the alif only its seat.
+        case hamzaSeat
+
+        var isVowel: Bool {
+            switch self {
+            case .longVowel, .maddVowel, .alifLong, .alifMadd: return true
+            case .opensWord, .ownVowel, .shaddah, .leen, .hamzaSeat: return false
+            }
+        }
+    }
+
+    struct Occurrence: Hashable {
+        let item: ReadingItem
+        /// Where the letter sits, counted the way `ReadingTestText.letters` counts.
+        let letterIndex: Int
+        /// The letter as the alphabet keys it (ا و ي, or the hamza seat أ إ), for the tint.
+        let letter: String
+        let reason: Reason
+        /// The mark the rule turns on: the vowel on the letter itself (opensWord, ownVowel, hamzaSeat)
+        /// or on the letter before it (longVowel, maddVowel). Nil where the rule names its own mark.
+        let mark: Unicode.Scalar?
+        /// The syllable the letter is read in, from the bank's own sounding-out, when it lines up.
+        let syllable: ReadingItem.SoundedPart?
+    }
+
+    static let alif = "\u{0627}"
+    static let waaw = "\u{0648}"
+    static let yaa = "\u{064A}"
+    private static let hamzaOnAlif: Unicode.Scalar = "\u{0623}"
+    private static let hamzaUnderAlif: Unicode.Scalar = "\u{0625}"
+
+    private static let ownMarks: Set<Unicode.Scalar> = [
+        ReadingTestText.fatha, ReadingTestText.kasra, ReadingTestText.damma,
+        ReadingTestText.fathatan, ReadingTestText.kasratan, ReadingTestText.dammatan,
+    ]
+
+    /// The rule for the letter at `index`, or nil when it is none of the three letters, or one the
+    /// quiz should not ask about: a silent letter (the circle), a waaw or yaa carrying a dagger alif
+    /// (ٱلصَّلَوٰةَ), the alif seat after an "an" tanween, or anything the rules above do not settle.
+    static func reason(in letters: [String], at index: Int) -> (reason: Reason, mark: Unicode.Scalar?)? {
+        guard letters.indices.contains(index) else { return nil }
+        let scalars = Array(letters[index].unicodeScalars)
+        guard let base = scalars.first else { return nil }
+        let marks = Set(scalars.dropFirst())
+        let previous = index > 0 ? Set(letters[index - 1].unicodeScalars) : []
+
+        switch base {
+        case ReadingTestText.waw, ReadingTestText.yaa:
+            if marks.contains(ReadingTestText.circle) || marks.contains(ReadingTestText.dagger) { return nil }
+            if marks.contains(ReadingTestText.shaddah) { return (.shaddah, nil) }
+            if let own = marks.first(where: ownMarks.contains) {
+                return (index == 0 ? .opensWord : .ownVowel, own)
+            }
+            if marks == [ReadingTestText.mushafSukoon] {
+                return previous.contains(ReadingTestText.fatha) ? (.leen, nil) : nil
+            }
+            let partner = base == ReadingTestText.waw ? ReadingTestText.damma : ReadingTestText.kasra
+            guard index > 0, marks.isSubset(of: [ReadingTestText.maddah]), previous.contains(partner) else { return nil }
+            return (marks.isEmpty ? .longVowel : .maddVowel, partner)
+        case ReadingTestText.alif:
+            guard index > 0, marks.isSubset(of: [ReadingTestText.maddah]),
+                  previous.contains(ReadingTestText.fatha) else { return nil }
+            return (marks.isEmpty ? .alifLong : .alifMadd, nil)
+        case hamzaOnAlif, hamzaUnderAlif:
+            guard let own = marks.first(where: { ownMarks.contains($0) || $0 == ReadingTestText.mushafSukoon }) else { return nil }
+            return (.hamzaSeat, own)
+        default:
+            return nil
+        }
+    }
+
+    /// The bank's sounding-out part that holds letter `index`, when the parts spell the whole word.
+    private static func syllable(of item: ReadingItem, letterCount: Int, at index: Int) -> ReadingItem.SoundedPart? {
+        var start = 0
+        for part in item.sounded {
+            let count = ReadingTestText.letters(part.arabic).count
+            if index < start + count { return start + count <= letterCount ? part : nil }
+            start += count
+        }
+        return nil
+    }
+
+    /// Every settled occurrence in the bank, simplest tiers first, each word once.
+    static let all: [Occurrence] = {
+        var out: [Occurrence] = []
+        var seen = Set<String>()
+        for tier in LetterWordExamples.tierOrder {
+            for item in ReadingTestBank.words[tier] ?? [] where !item.arabic.contains(" ") && seen.insert(item.arabic).inserted {
+                let letters = ReadingTestText.letters(item.arabic)
+                guard (2...7).contains(letters.count) else { continue }
+                for index in letters.indices {
+                    guard let found = reason(in: letters, at: index),
+                          let base = letters[index].unicodeScalars.first else { continue }
+                    out.append(Occurrence(item: item, letterIndex: index, letter: String(base), reason: found.reason,
+                                          mark: found.mark, syllable: syllable(of: item, letterCount: letters.count, at: index)))
+                }
+            }
+        }
+        return out
+    }()
+
+    /// The occurrences of one letter (ا, و, ي; `alif` also takes the hamza seats) for one rule.
+    static func occurrences(of letter: String, reason: Reason) -> [Occurrence] {
+        all.filter { $0.reason == reason && (letter == alif && reason == .hamzaSeat ? true : $0.letter == letter) }
+    }
+
+    /// The rules a letter can follow, vowel rules first: the order the pages teach them in.
+    static func reasons(for letter: String) -> [Reason] {
+        switch letter {
+        case alif: return [.alifLong, .alifMadd, .hamzaSeat]
+        default: return [.longVowel, .maddVowel, .opensWord, .ownVowel, .shaddah, .leen]
+        }
+    }
+
+    /// One example per rule for `letter` (the first the bank offers, so a page always shows the same
+    /// words), skipping a rule the bank has no word for.
+    static func examples(for letter: String, perReason count: Int = 1) -> [Occurrence] {
+        reasons(for: letter).flatMap { occurrences(of: letter, reason: $0).prefix(count) }
+    }
+
+    /// A practice round of `size`: half vowels and half consonants for waaw or yaa, the consonants
+    /// dealt across their four rules so each turns up; alif's round mixes the long "aa" with the hamza
+    /// seats it is mistaken for; nil mixes all three letters. Never the same word twice in a round.
+    static func round(for letter: String?, size: Int = 10) -> [Occurrence] {
+        var used = Set<String>()
+        func deal(_ pools: [[Occurrence]], _ count: Int) -> [Occurrence] {
+            var shuffled = pools.map { $0.shuffled() }
+            var picked: [Occurrence] = []
+            while picked.count < count, shuffled.contains(where: { !$0.isEmpty }) {
+                for index in shuffled.indices where picked.count < count {
+                    while let next = shuffled[index].popLast() {
+                        if used.insert(next.item.arabic).inserted { picked.append(next); break }
+                    }
+                }
+            }
+            return picked
+        }
+        func vowels(_ letter: String) -> [[Occurrence]] {
+            reasons(for: letter).filter(\.isVowel).map { occurrences(of: letter, reason: $0) }
+        }
+        func consonants(_ letter: String) -> [[Occurrence]] {
+            reasons(for: letter).filter { !$0.isVowel }.map { occurrences(of: letter, reason: $0) }
+        }
+        let picked: [Occurrence]
+        if let letter, letter == alif {
+            // Alif is a vowel every time, so its round asks it against the hamza seats that look like it.
+            picked = deal(vowels(alif), size - size * 2 / 5) + deal(consonants(alif), size * 2 / 5)
+        } else if let letter {
+            picked = deal(vowels(letter), size / 2) + deal(consonants(letter), size - size / 2)
+        } else {
+            let each = size / 5
+            picked = deal(vowels(waaw), each) + deal(consonants(waaw), each)
+                + deal(vowels(yaa), each) + deal(consonants(yaa), each)
+                + deal(vowels(alif), size - 4 * each - 1) + deal(consonants(alif), 1)
+        }
+        return picked.shuffled()
     }
 }
 

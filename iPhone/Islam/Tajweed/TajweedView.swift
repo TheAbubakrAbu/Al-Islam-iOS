@@ -173,10 +173,9 @@ struct TajweedCourseView: View {
             course = await Task.detached(priority: .userInitiated) { TajweedLessonsStore.shared.course() }.value
         }
         .sheet(isPresented: $showTajweedLegend) {
-            NavigationView {
+            SheetNavigationContainer {
                 TajweedLegendView()
             }
-            .navigationViewStyle(.stack)
             .smallMediumSheetPresentation()
         }
         #if DEBUG

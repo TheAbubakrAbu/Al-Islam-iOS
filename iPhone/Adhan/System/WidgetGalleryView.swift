@@ -6,7 +6,7 @@ import WidgetKit
 ///
 /// WidgetKit can't be driven from simctl (nothing places a widget on the simulator's home or lock screen
 /// headlessly), so this is how a layout change gets looked at before it ships: `-widgetGallery <page>`
-/// opens a page after the reveal (pages: glance, solar, day, grid, large, largesky, small, lock, dates)
+/// opens a page after the reveal (pages: glance, solar, day, grid, tiles, large, largesky, small, lock, dates)
 /// and `-widgetCity "<name>"` swaps in a city, since long names are what break footers. The layouts are
 /// the widget files' own entry views (the Widget/Adhan sources compile into the app for this), fed an
 /// entry built from the app's live prayers the way the provider builds one.
@@ -34,11 +34,11 @@ struct WidgetGalleryView: View {
     }
 
     var body: some View {
-        NavigationView {
+        SheetNavigationContainer {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if items.isEmpty {
-                        Text("No page named \"\(page)\". Pages: glance, solar, day, grid, large, largesky, small, lock, dates.")
+                        Text("No page named \"\(page)\". Pages: glance, solar, day, grid, tiles, large, largesky, small, lock, dates.")
                             .font(.footnote)
                             .foregroundColor(.secondary)
                     }
@@ -58,7 +58,6 @@ struct WidgetGalleryView: View {
             // The house X, not a text "Done" (Abu, 2026-09-18).
             .sheetDismissToolbar()
         }
-        .navigationViewStyle(.stack)
     }
 
     // MARK: The entry
@@ -203,6 +202,13 @@ struct WidgetGalleryView: View {
                 Item("Prayer Grid Sky, medium", .systemMedium, sky: true) { PrayersEntryView(entry: entry, skyStyle: true).modifier(PrayerSkyChrome(entry: entry)) },
                 Item("Prayer Countdown, medium", .systemMedium) { CountdownEntryView(entry: entry) },
                 Item("Fasting Countdown, medium", .systemMedium) { FastingCountdownView(entry: entry) },
+            ]
+        case "tiles":
+            return [
+                Item("Prayer Tiles, medium", .systemMedium) { PrayerTilesEntryView(entry: entry) },
+                Item("Prayer Tiles Sky, medium", .systemMedium, sky: true) { PrayerTilesEntryView(entry: entry, skyStyle: true).modifier(PrayerSkyChrome(entry: entry)) },
+                Item("Prayer Grid, medium", .systemMedium) { PrayersEntryView(entry: entry) },
+                Item("Prayer Grid Sky, medium", .systemMedium, sky: true) { PrayersEntryView(entry: entry, skyStyle: true).modifier(PrayerSkyChrome(entry: entry)) },
             ]
         case "large":
             return [

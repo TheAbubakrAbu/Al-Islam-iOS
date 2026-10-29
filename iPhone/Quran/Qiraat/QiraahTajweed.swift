@@ -280,7 +280,7 @@ final class QiraahTajweedStore: @unchecked Sendable {
                         hiddenRules: Set<String> = [],
                         fullText: String? = nil) -> AttributedString? {
         let hidden = hiddenRules.isEmpty ? "" : hiddenRules.sorted().joined(separator: ",")
-        let key = "\(tag)|\(surah)|\(ayah)|\(Self.textDigest(displayText))|\(fullText.map(Self.textDigest) ?? 0)|\(beginnerSpacing ? 1 : 0)|\(hidden)|\(TajweedColorOverrides.shared.signature)" as NSString
+        let key = "\(tag)|\(surah)|\(ayah)|\(Self.textDigest(displayText))|\(fullText.map(Self.textDigest) ?? 0)|\(beginnerSpacing ? 1 : 0)|\(hidden)|\(TajweedColorOverrides.shared.signature)|\(Self.drawingFontName(tag: tag))" as NSString
         if let hit = paintCache.object(forKey: key) { return hit.value }
         let painted = computeAttributedText(tag: tag, surah: surah, ayah: ayah, displayText: displayText,
                                             beginnerSpacing: beginnerSpacing, hiddenRules: hiddenRules,
@@ -329,6 +329,7 @@ final class QiraahTajweedStore: @unchecked Sendable {
 
         let units = Array(displayText.utf16)
         var painted = false
+        var paintedUnits = [Bool](repeating: false, count: units.count)
         for (tokenIndex, token) in Self.tokenSpans(in: units, beginnerSpacing: beginnerSpacing).enumerated() {
             let (start, end) = token
             for rule in rules[tokenIndex] ?? [] {
@@ -360,12 +361,23 @@ final class QiraahTajweedStore: @unchecked Sendable {
                     for run in Self.subrangesExcludingStopSigns(range, in: units) {
                         ns.addAttribute(.foregroundColor, value: Self.uiColor(forRule: key, letter: rule.letter), range: run)
                         painted = true
+                        for i in run.location..<min(NSMaxRange(run), units.count) { paintedUnits[i] = true }
                     }
                 }
             }
         }
         guard painted else { return nil }
+        // A glyph shows only its first character's colour, so a rule on a later character of a ligature
+        // (a lam-alif's madd) would not show; the whole glyph takes it where it can (2026-10-27).
+        FontGlyphs.colourWholeGlyphs(ns, painted: paintedUnits, fontName: Self.drawingFontName(tag: tag))
+        FontGlyphs.plainSajdahLine(ns, fontName: Self.drawingFontName(tag: tag), plain: UIColor.label)
         return AttributedString(ns)
+    }
+
+    /// The face this riwayah is drawn in, resolved the way every renderer resolves it.
+    private static func drawingFontName(tag: String) -> String {
+        Settings.quranArabicFontName(selectedFontName: Settings.shared.fontArabic, qiraah: tag,
+                                     style: Settings.shared.arabicScriptStyle)
     }
 
     /// `range` minus any stop-sign ornaments inside it, as the contiguous runs between them - so a rule

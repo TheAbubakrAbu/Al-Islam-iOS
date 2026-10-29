@@ -659,8 +659,9 @@ struct HadithView: View {
                         // removed Summary Mode setting). The three doors (topics, the encyclopedia,
                         // history) hung off the bottom of this section from 2026-09-07 to 2026-10-11;
                         // they are items of the ⋯ More menu now, in both modes, so with no tile to show
-                        // there is nothing left in the section.
-                        if showSummaryTiles {
+                        // there is nothing left in the section. Its arrow folds it and its trash puts it away
+                        // (TabSections.swift).
+                        if showSummaryTiles && settings.showsTabSection(.hadithSummary) {
                             boxed(summaryTilesSection)
                         }
                         // Need a Hand?: one language or both, and the name of Allah in red, right
@@ -724,7 +725,7 @@ struct HadithView: View {
                         }
                     }
 
-                    if searchText.isEmpty {
+                    if searchText.isEmpty && settings.showsTabSection(.hadithAbout) {
                         boxed(aboutHadithSection)
                     }
                 }
@@ -1110,10 +1111,12 @@ struct HadithView: View {
         // broke it into "YOUR / SUM- / MARY" beside "To- / da / y"). Simple Mode keeps the tiles alone:
         // Today moves into the More menu, and the history expanders step aside
         // (Docs/Product/Simple Mode Guide.md).
+        // The fold arrow and, folded, the trash sit after the Today pill (`TabSectionHeader`); folded,
+        // the header and its pill are all that is left.
         let expandersHidden = settings.hides(.historyExpanders)
+        let expanded = settings.tabSectionExpanded(.hadithSummary)
         Section(header:
-            SectionHeaderLine(String(localized: "YOUR SUMMARY"), icon: "sparkles", accentTitle: true,
-                              forceStacked: dynamicTypeSize.isAccessibilitySize) {
+            TabSectionHeader(.hadithSummary, forceStacked: dynamicTypeSize.isAccessibilitySize) {
                 // Everything of the day on one screen (2026-09-16): the door every daily card carries.
                 if !settings.hides(.hadithTodayPill) {
                     NavigationLink(destination: LazyDestination { DailyHubView() }) {
@@ -1125,7 +1128,7 @@ struct HadithView: View {
         ) {
             // The grid only when there is something in it: an empty grid would still draw its own
             // padded row.
-            if showSummaryTiles {
+            if expanded && showSummaryTiles {
                 // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height
                 // on each self-sizing pass, which iOS 26 traps on.
                 SummaryTileGrid(columns: 2) {
@@ -1187,7 +1190,7 @@ struct HadithView: View {
             // The one open expansion, unfolded as plain rows right under the tiles (the Quran tab's
             // `summaryHistoryRows`). "Today" and the current book keep full brightness: they ARE the
             // tile's own hadith, not history.
-            if !expandersHidden, let kind = summaryHistoryExpansion {
+            if expanded, !expandersHidden, let kind = summaryHistoryExpansion {
                 switch kind {
                 case .daily:
                     ForEach(Array(dailyHistory.enumerated()), id: \.element.dayKey) { index, entry in
@@ -1440,14 +1443,24 @@ struct HadithView: View {
     /// grammar. BUTTONS, not links: each pushes through `openDoor` and the List's one destination,
     /// since a NavigationLink activates with every other link in its row (2026-09-19 audit), and a
     /// row of its own per door keeps the rows pressable.
+    /// The header folds it and, folded, puts it away (TabSections.swift); folded, the footer goes with
+    /// the rows.
     private var aboutHadithSection: some View {
-        Section(header: SectionIconHeader(String(localized: "ABOUT HADITH & THE SUNNAH"), icon: "text.book.closed.fill"),
-                footer: Text("Learn more under Al-Islam → Pillars and Beliefs.")) {
-            aboutDoorRow(String(localized: "What is the Sunnah?"), systemImage: "sun.max.fill", door: .sunnah)
-            aboutDoorRow(String(localized: "What are Hadiths?"), systemImage: "text.quote", door: .hadithPillar)
-            aboutDoorRow(String(localized: "The Sciences of Hadith"), systemImage: "graduationcap.fill", door: .hadithSciences)
-            aboutDoorRow(String(localized: "How the Hadith Were Preserved"), systemImage: "archivebox.fill", door: .hadithPreservation)
-            aboutDoorRow(String(localized: "Answering the Hadith Rejectors"), systemImage: "checkmark.shield.fill", door: .hadithRejectors)
+        let expanded = settings.tabSectionExpanded(.hadithAbout)
+        return Section {
+            if expanded {
+                aboutDoorRow(String(localized: "What is the Sunnah?"), systemImage: "sun.max.fill", door: .sunnah)
+                aboutDoorRow(String(localized: "What are Hadiths?"), systemImage: "text.quote", door: .hadithPillar)
+                aboutDoorRow(String(localized: "The Sciences of Hadith"), systemImage: "graduationcap.fill", door: .hadithSciences)
+                aboutDoorRow(String(localized: "How the Hadith Were Preserved"), systemImage: "archivebox.fill", door: .hadithPreservation)
+                aboutDoorRow(String(localized: "Answering the Hadith Rejectors"), systemImage: "checkmark.shield.fill", door: .hadithRejectors)
+            }
+        } header: {
+            TabSectionHeader(.hadithAbout)
+        } footer: {
+            if expanded {
+                Text("Learn more under Al-Islam → Pillars and Beliefs.")
+            }
         }
     }
 
