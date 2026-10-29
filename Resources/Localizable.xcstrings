@@ -1775,6 +1775,22 @@
         }
       }
     },
+    "%@ does not count these words as an ayah, so the Hafs text is shown." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا تعدّ رواية %@ هذه الكلمات آيةً، لذا يُعرض نص حفص."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "روایتِ %@ میں یہ الفاظ آیت شمار نہیں ہوتے، اس لیے حفص کا متن دکھایا گیا ہے۔"
+          }
+        }
+      }
+    },
     "%@ does things no other app does, like %@." : {
       "localizations" : {
         "ar" : {
@@ -30285,6 +30301,22 @@
         }
       }
     },
+    "Allow Notifications is off in Notification Settings, so this reminder cannot arrive until it is on." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خيار «السماح بالإشعارات» متوقف في إعدادات الإشعارات، فلن يصل هذا التذكير حتى يُفعَّل."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اطلاعات کی ترتیبات میں اطلاعات کی اجازت بند ہے، اس لیے جب تک یہ آن نہ ہو یہ یاد دہانی نہیں پہنچ سکتی۔"
+          }
+        }
+      }
+    },
     "Allowed" : {
       "localizations" : {
         "ar" : {
@@ -35433,7 +35465,8 @@
             "value" : "روایات میں آیات کی گنتی مختلف ہو سکتی ہے: کوئی آیت کبھی غائب نہیں ہوتی، لیکن بعض آیات مختلف انداز سے ملائی یا الگ کی جاتی ہیں (مثلاً «الم» اور «ذلك الكتاب…» اکثر قراءات میں ایک ہی آیت ہیں)۔ آیات کی ذہین مماثلت آف ہو تو ٹیپ کیا گیا نمبر جوں کا توں شیئر ہوتا ہے۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently. Smart Ayah Matching follows the words, so the matching ayah is shared even where numbering differs." : {
       "localizations" : {
@@ -35449,7 +35482,8 @@
             "value" : "روایات میں آیات کی گنتی مختلف ہو سکتی ہے: کوئی آیت کبھی غائب نہیں ہوتی، لیکن بعض آیات مختلف انداز سے ملائی یا الگ کی جاتی ہیں۔ آیات کی ذہین مماثلت الفاظ کی پیروی کرتی ہے، اس لیے گنتی مختلف ہونے پر بھی وہی آیت شیئر ہوتی ہے جس میں یہ الفاظ ہیں۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Ayah numbering is itself one of the things that differs, so nothing was compared ayah against ayah. Each riwayah's whole text was flattened into one ordered list of words, and that list was aligned against Hafs's 77,430 words. The alignment does not care where anyone puts an ayah boundary." : {
       "localizations" : {
@@ -41276,6 +41310,22 @@
         }
       }
     },
+    "CENTERED TILES" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مربعات مُوسَّطة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مرکزی ٹائلز"
+          }
+        }
+      }
+    },
     "CHAIN TO THE COMPANIONS" : {
       "localizations" : {
         "ar" : {
@@ -43966,6 +44016,22 @@
         }
       }
     },
+    "Clocks go back %@ tomorrow at %@. Prayer times will be about %@ earlier." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تتأخر الساعة غدًا بمقدار %1$@ عند %2$@، فتتقدم مواقيت الصلاة نحو %3$@."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آئندہ کل %2$@ پر گھڑیاں %1$@ پیچھے ہو جائیں گی۔ نماز کے اوقات تقریباً %3$@ پہلے ہو جائیں گے۔"
+          }
+        }
+      }
+    },
     "Clocks go forward %@ at %@. Prayer times will be about %@ later." : {
       "localizations" : {
         "ar" : {
@@ -43978,6 +44044,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%2$@ پر گھڑیاں %1$@ آگے ہو جائیں گی۔ نماز کے اوقات تقریباً %3$@ بعد میں ہو جائیں گے۔"
+          }
+        }
+      }
+    },
+    "Clocks go forward %@ tomorrow at %@. Prayer times will be about %@ later." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تتقدم الساعة غدًا بمقدار %1$@ عند %2$@، فتتأخر مواقيت الصلاة نحو %3$@."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آئندہ کل %2$@ پر گھڑیاں %1$@ آگے ہو جائیں گی۔ نماز کے اوقات تقریباً %3$@ بعد میں ہو جائیں گے۔"
           }
         }
       }
@@ -50464,6 +50546,22 @@
         }
       }
     },
+    "Daylight Saving Time begins tomorrow: clocks go forward %@ at %@. Prayer times will be about %@ later." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يبدأ التوقيت الصيفي غدًا: تتقدم الساعة بمقدار %1$@ عند %2$@، فتتأخر مواقيت الصلاة نحو %3$@."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ڈے لائٹ سیونگ ٹائم آئندہ کل شروع ہوگا: %2$@ پر گھڑیاں %1$@ آگے ہو جائیں گی۔ نماز کے اوقات تقریباً %3$@ بعد میں ہو جائیں گے۔"
+          }
+        }
+      }
+    },
     "Daylight Saving Time ends on %@" : {
       "localizations" : {
         "ar" : {
@@ -50508,6 +50606,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ڈے لائٹ سیونگ ٹائم آئندہ کل ختم ہوگا"
+          }
+        }
+      }
+    },
+    "Daylight Saving Time ends tomorrow: clocks go back %@ at %@. Prayer times will be about %@ earlier." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ينتهي التوقيت الصيفي غدًا: تتأخر الساعة بمقدار %1$@ عند %2$@، فتتقدم مواقيت الصلاة نحو %3$@."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ڈے لائٹ سیونگ ٹائم آئندہ کل ختم ہوگا: %2$@ پر گھڑیاں %1$@ پیچھے ہو جائیں گی۔ نماز کے اوقات تقریباً %3$@ پہلے ہو جائیں گے۔"
           }
         }
       }
@@ -141871,7 +141985,8 @@
             "value" : "آیات کی ذہین مماثلت: اس روایت میں یہ الفاظ آیت %lld میں ہیں (روایات میں آیات کی گنتی مختلف ہے)، اس لیے وہی آیت شیئر کی جاتی ہے۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Smart Comparison" : {
       "localizations" : {
@@ -173205,6 +173320,22 @@
         }
       }
     },
+    "The ⋯ menu at the top of the Adhan tab switches between Prayer Tiles, Prayer Centered Tiles, Prayer Grid, Prayer List, and Prayer Split. Prayer Settings offers the same choice." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تبدّل قائمة ⋯ أعلى تبويب الأذان بين «مربعات» و«مربعات مُوسَّطة» و«شبكة» و«قائمة» و«مقسّم». وتقدّم إعدادات الصلاة الخيار نفسه."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اذان ٹیب کے اوپر ⋯ مینو «ٹائلز»، «مرکزی ٹائلز»، «گرڈ»، «فہرست» اور «تقسیم» کے درمیان بدلتا ہے۔ «نماز کی ترتیبات» میں بھی یہی انتخاب ملتا ہے۔"
+          }
+        }
+      }
+    },
     "The ⋯ menu at the top of the Adhan tab switches between Prayer Tiles, Prayer Grid, Prayer List, and Prayer Split. Prayer Settings offers the same choice." : {
       "localizations" : {
         "ar" : {
@@ -173219,7 +173350,8 @@
             "value" : "اذان ٹیب کے اوپر ⋯ مینو «نمازوں کے خانے»، «نمازوں کا گرڈ»، «نمازوں کی فہرست» اور «نمازیں دو کالموں میں» کے درمیان بدلتا ہے۔ «نماز کی ترتیبات» میں بھی یہی انتخاب ملتا ہے۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "The ▶ button on each ayah" : {
       "localizations" : {

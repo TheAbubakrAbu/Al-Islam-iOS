@@ -244,13 +244,7 @@ struct SheetPresentationModifier: ViewModifier {
     @ViewBuilder
     private var nowPlayingInset: some View {
         if !listDrawsNowPlaying, playback.showsNowPlaying, let bar = playback.barContent {
-            VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                bar()
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, BottomBarCushion.standard)
-            .background(Color.white.opacity(0.00001))
-            .animation(.easeInOut, value: playback.showsNowPlaying)
+            NowPlayingBarStack(bar: bar, shown: playback.showsNowPlaying)
         }
     }
 

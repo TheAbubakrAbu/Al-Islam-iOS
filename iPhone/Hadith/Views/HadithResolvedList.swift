@@ -338,7 +338,25 @@ extension View {
     /// The sheet's root: rows beneath it can close it and open their narration in its book. The push
     /// waits for the sheet to be gone, so it lands on the tab's stack, not on a container on its way out.
     func hadithOpenInBook(dismiss: DismissAction) -> some View {
-        environment(\.hadithOpenInBook) { slug, idInBook in
+        modifier(HadithOpenInBookRoot(dismiss: dismiss))
+    }
+}
+
+/// See `hadithOpenInBook(dismiss:)`.
+private struct HadithOpenInBookRoot: ViewModifier {
+    /// The request of the study sheet this one was opened over (a chain sheet raised from a row of
+    /// the similar sheet), nil for the first sheet.
+    @Environment(\.hadithOpenInBook) private var outer
+    let dismiss: DismissAction
+
+    func body(content: Content) -> some View {
+        content.environment(\.hadithOpenInBook) { slug, idInBook in
+            // Over another study sheet, the request goes to that one: closing it closes this one too.
+            // Closing only this one left the first sheet standing over the book it opened.
+            if let outer {
+                outer(slug, idInBook)
+                return
+            }
             dismiss()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
                 AppNavigation.shared.openHadith(slug: slug, idInBook: idInBook)

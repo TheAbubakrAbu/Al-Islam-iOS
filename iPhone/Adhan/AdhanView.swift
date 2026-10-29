@@ -600,7 +600,9 @@ struct AdhanView: View {
     /// the Moon and Next Islamic Date tiles make). Nothing near, no row.
     @ViewBuilder
     private var eventSection: some View {
-        if let occurrence = IslamicEventBanner.occurrence(now: eventNow, settings: settings) {
+        let moment = eventMoment
+        if let occurrence = IslamicEventBanner.occurrence(now: moment.reference, nightsBegun: moment.nightsBegun,
+                                                          settings: settings) {
             Section {
                 IslamicEventBanner(occurrence: occurrence) { handleGlance(.hijriCalendar) }
                     .listRowInsets(EdgeInsets())
@@ -611,12 +613,15 @@ struct AdhanView: View {
     }
 
     /// The Hijri reference moment the banner reads the day from: after Maghrib with the date switch
-    /// on it is already tomorrow, as the date row above says. `-adhanToday` stands in for now (DEBUG).
-    private var eventNow: Date {
+    /// on it is already tomorrow, as the date row above says, and tonight's night has begun
+    /// (`nightsBegun`). `-adhanToday` stands in for now (DEBUG).
+    private var eventMoment: (reference: Date, nightsBegun: Bool) {
+        var now = Date()
         #if DEBUG
-        if let today = AdhanDebugClock.today { return settings.effectiveHijriReferenceDate(now: today) }
+        if let today = AdhanDebugClock.today { now = today }
         #endif
-        return settings.effectiveHijriReferenceDate()
+        let reference = settings.effectiveHijriReferenceDate(now: now)
+        return (reference, reference != now)
     }
 
     /// The traveling-mode row: what Qasr changed, how far from home, and the door to Travel Settings

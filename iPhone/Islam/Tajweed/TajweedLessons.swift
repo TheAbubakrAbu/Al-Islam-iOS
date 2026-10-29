@@ -1228,6 +1228,11 @@ private struct TajweedExampleText: View {
     let fontName: String
     let size: CGFloat
 
+    /// The rule switches and custom colours publish here. Observed, and their signature is part of the
+    /// paint's task id, so hiding a rule in the lesson's legend sheet repaints the examples instead of
+    /// leaving them in the colours they had when the lesson opened.
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+
     @State private var styled: AttributedString?
 
     var body: some View {
@@ -1244,11 +1249,14 @@ private struct TajweedExampleText: View {
         .frame(maxWidth: .infinity, alignment: .trailing)
         // The ayah's lines on the right, as the reader sets them, in either interface.
         .environment(\.layoutDirection, .leftToRight)
-        .task(id: "\(surah):\(ayah)") {
+        .task(id: "\(surah):\(ayah)|\(Settings.shared.tajweedCategoryVisibilitySignature)") {
             let surah = surah, ayah = ayah, text = text
-            styled = await Task.detached(priority: .userInitiated) {
+            let painted = await Task.detached(priority: .userInitiated) {
                 TajweedStore.shared.attributedText(surah: surah, ayah: ayah, text: text)
             }.value
+            // A paint the next toggle overtook must not land over the newer one.
+            guard !Task.isCancelled else { return }
+            styled = painted
         }
     }
 }

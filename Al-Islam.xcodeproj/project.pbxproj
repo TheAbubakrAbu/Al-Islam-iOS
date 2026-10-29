@@ -425,9 +425,13 @@
 		72F7DB6A2F030A2D0037B059 /* QuranStructs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F7DB672F030A2D0037B059 /* QuranStructs.swift */; };
 		72F7DB6B2F030A2D0037B059 /* QuranStructs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F7DB672F030A2D0037B059 /* QuranStructs.swift */; };
 		72F7DB6D2F030A630037B059 /* AdhanStructs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F7DB6C2F030A630037B059 /* AdhanStructs.swift */; };
+		9004FC162B7C41FD91939ABC /* ClockChange.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D288A4C7D4D449ABE52DBEF /* ClockChange.swift */; };
 		72F7DB6E2F030A630037B059 /* AdhanStructs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F7DB6C2F030A630037B059 /* AdhanStructs.swift */; };
+		CFD8F660C41B481B9DE0F02B /* ClockChange.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D288A4C7D4D449ABE52DBEF /* ClockChange.swift */; };
 		72F7DB6F2F030A630037B059 /* AdhanStructs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F7DB6C2F030A630037B059 /* AdhanStructs.swift */; };
+		46DB56B3AD9E4D9B814D97C2 /* ClockChange.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D288A4C7D4D449ABE52DBEF /* ClockChange.swift */; };
 		72F7DB702F030A630037B059 /* AdhanStructs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F7DB6C2F030A630037B059 /* AdhanStructs.swift */; };
+		1BA185DE74E14641A4992BA4 /* ClockChange.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D288A4C7D4D449ABE52DBEF /* ClockChange.swift */; };
 		72F7DB722F03FEE50037B059 /* AppReview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F7DB712F03FEE50037B059 /* AppReview.swift */; };
 		72F7DB752F0431740037B059 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 72F7DB742F0431740037B059 /* Assets.xcassets */; };
 		72F7DB762F0431740037B059 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 72F7DB742F0431740037B059 /* Assets.xcassets */; };
@@ -1137,6 +1141,7 @@
 		72F000032F7A000000AAF800 /* SkyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyView.swift; sourceTree = "<group>"; };
 		72F7DB672F030A2D0037B059 /* QuranStructs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranStructs.swift; sourceTree = "<group>"; };
 		72F7DB6C2F030A630037B059 /* AdhanStructs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdhanStructs.swift; sourceTree = "<group>"; };
+		0D288A4C7D4D449ABE52DBEF /* ClockChange.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClockChange.swift; sourceTree = "<group>"; };
 		72F7DB712F03FEE50037B059 /* AppReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppReview.swift; sourceTree = "<group>"; };
 		72F7DB742F0431740037B059 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		72FA0001AB5F4C7D00000001 /* ZakahView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZakahView.swift; sourceTree = "<group>"; };
@@ -2409,6 +2414,7 @@
 				72A7C0012FB1000000AA1001 /* PrayerTrackerView.swift */,
 				72FB00012F7B000000AAF900 /* CustomPrayerNames.swift */,
 				72F7DB6C2F030A630037B059 /* AdhanStructs.swift */,
+				0D288A4C7D4D449ABE52DBEF /* ClockChange.swift */,
 			);
 			path = Prayers;
 			sourceTree = "<group>";
@@ -2865,6 +2871,7 @@
 				72BE7A012F90000000AAFF11 /* QiraahTajweed.swift in Sources */,
 				7283C8D6301EC88C00AED881 /* MoonPhase.swift in Sources */,
 				72F7DB702F030A630037B059 /* AdhanStructs.swift in Sources */,
+				1BA185DE74E14641A4992BA4 /* ClockChange.swift in Sources */,
 				723CE34E2FAF0E9900E83F5A /* Highlighted.swift in Sources */,
 				725AA9582F89710400F15098 /* TajweedRules.swift in Sources */,
 				FACE00022F89710400F15098 /* Muqattaat.swift in Sources */,
@@ -2941,6 +2948,7 @@
 				7C5E00000000000000000C02 /* VerseSearchPack.swift in Sources */,
 				7205C1EB2D796DFD001D4979 /* LockScreenFirst3Widget.swift in Sources */,
 				72F7DB6F2F030A630037B059 /* AdhanStructs.swift in Sources */,
+				46DB56B3AD9E4D9B814D97C2 /* ClockChange.swift in Sources */,
 				725B42282AA00660009C8C91 /* Widgets.swift in Sources */,
 				725B42262AA00660009C8C91 /* LockScreenPrayerWidget.swift in Sources */,
 				72C7DD762D79A59B00FC6058 /* CountdownSimpleWidget.swift in Sources */,
@@ -3077,6 +3085,7 @@
 				72E6F1E22FB275DD006376FB /* PrayerMapView.swift in Sources */,
 				72CCAEA92D42DF9D00871A6A /* MapView.swift in Sources */,
 				72F7DB6D2F030A630037B059 /* AdhanStructs.swift in Sources */,
+				9004FC162B7C41FD91939ABC /* ClockChange.swift in Sources */,
 				7260D5F32F7CB0D80066FBA9 /* TajweedLegendView.swift in Sources */,
 				7260D5F72F7CB0E10066FBA9 /* TajweedRules.swift in Sources */,
 				FACE00042F7CB0E10066FBA9 /* Muqattaat.swift in Sources */,
@@ -3330,6 +3339,7 @@
 				72DD9A132F900000AAC103 /* WatchSkyStrip.swift in Sources */,
 				72AC94182E3F4DA900F7B2DF /* NowPlayingView.swift in Sources */,
 				72F7DB6E2F030A630037B059 /* AdhanStructs.swift in Sources */,
+				CFD8F660C41B481B9DE0F02B /* ClockChange.swift in Sources */,
 				72574CC92E49EE7F00BFF138 /* AppIntents.swift in Sources */,
 				72BE7A022F90000000AAFF02 /* BetaQiraat.swift in Sources */,
 				7BD0000000000000000000B4 /* WordByWord.swift in Sources */,

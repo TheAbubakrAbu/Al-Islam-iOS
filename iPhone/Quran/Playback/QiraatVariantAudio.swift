@@ -209,8 +209,13 @@ final class QiraatClipPlayer: ObservableObject {
         }
         if let startMs = clip.startMs {
             let start = CMTime(value: CMTimeValue(startMs), timescale: 1000)
-            player.seek(to: start, toleranceBefore: .zero, toleranceAfter: .zero) { _ in
-                player.play()
+            // Started only while it is still the clip playing: a stop, or the other reading tapped, during
+            // the seek into a streamed surah left this completion to start a player already let go.
+            player.seek(to: start, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self, weak player] _ in
+                Task { @MainActor in
+                    guard let self, let player, self.player === player else { return }
+                    player.play()
+                }
             }
         } else {
             player.play()

@@ -1362,6 +1362,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     ] + AdvancedScreen.retiredStorageKeys + [
         // Today's picks: tomorrow they are wrong anyway.
         "hijriDate", "ayahOfTheDayHiddenDate", "ayahOfTheDayOverride", "hadithOfTheDayHiddenDate", "hadithOfTheDayOverride", "hadithOfTheDayResolved",
+        // DEBUG screenshot overrides read back from the launch arguments (`-fakeHeading`, QiblaView).
+        "fakeHeading",
     ]
 
     /// Whole families that are device-only: the watch sync's bookkeeping, and the backup's own

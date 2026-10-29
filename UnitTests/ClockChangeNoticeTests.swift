@@ -3,7 +3,7 @@ import XCTest
 
 /// The clock-change notice under the prayer times (`ClockChange`): found within the week before a
 /// daylight-saving change and on its day, worded by the size and direction of the jump, absent
-/// otherwise. Los Angeles 2026: clocks go forward at 02:00 on Sunday 8 March (to 03:00 PDT), back at
+/// otherwise; and the notification the evening before it. Los Angeles 2026: clocks go forward at 02:00 on Sunday 8 March (to 03:00 PDT), back at
 /// 02:00 PDT on Sunday 1 November (to 01:00 PST).
 final class ClockChangeNoticeTests: XCTestCase {
 
@@ -134,5 +134,103 @@ final class ClockChangeNoticeTests: XCTestCase {
         let spring = try XCTUnwrap(change(at: moment(2026, 3, 7)))
         XCTAssertEqual(spring.offsetBefore, -8 * 3600, "PST before the spring change")
         XCTAssertEqual(plain(spring.clockReading(formatter)), "2:00 AM")
+    }
+
+    // MARK: - The evening-before notification
+
+    private func calendar(in zone: TimeZone) -> Calendar {
+        var calendar = gregorian
+        calendar.timeZone = zone
+        return calendar
+    }
+
+    private func usFormatter(_ zone: TimeZone) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US")
+        formatter.calendar = gregorian
+        formatter.timeZone = zone
+        formatter.timeStyle = .short
+        formatter.dateStyle = .none
+        return formatter
+    }
+
+    private func plain(_ text: String) -> String {
+        text.replacingOccurrences(of: "\u{202F}", with: " ").replacingOccurrences(of: "\u{00A0}", with: " ")
+    }
+
+    /// The heads-up lands at 6 PM the evening before, like the day-before Islamic date reminders:
+    /// Saturday 31 October (PDT) for the fall change, Saturday 7 March (PST) for the spring one.
+    func testHeadsUpIsSixInTheEveningTheDayBefore() throws {
+        let fall = try XCTUnwrap(change(at: moment(2026, 10, 25)))
+        XCTAssertEqual(fall.headsUpDate(calendar: calendar(in: losAngeles)), moment(2026, 10, 31, 18))
+        let spring = try XCTUnwrap(change(at: moment(2026, 3, 2)))
+        XCTAssertEqual(spring.headsUpDate(calendar: calendar(in: losAngeles)), moment(2026, 3, 7, 18))
+    }
+
+    /// Santiago changes at midnight. Its fall change (00:00 on Sunday 5 April 2026, back to 23:00
+    /// Saturday) is announced Saturday evening, the day before on the OLD clock, not Friday, which the
+    /// instant's new-clock reading would give; the spring one (00:00 Sunday 6 September, forward to
+    /// 01:00, so that day has no midnight) on Saturday 5 September.
+    func testMidnightChangesAreAnnouncedTheEveningBeforeOnTheOldClock() throws {
+        let santiago = TimeZone(identifier: "America/Santiago")!
+        let local = calendar(in: santiago)
+        let fall = try XCTUnwrap(ClockChange.next(after: moment(2026, 4, 1, zone: santiago), in: santiago, calendar: gregorian))
+        XCTAssertEqual(fall.date, utc(2026, 4, 5, 3))
+        XCTAssertEqual(fall.headsUpDate(calendar: local), moment(2026, 4, 4, 18, zone: santiago))
+        let spring = try XCTUnwrap(ClockChange.next(after: moment(2026, 9, 1, zone: santiago), in: santiago, calendar: gregorian))
+        XCTAssertEqual(spring.date, utc(2026, 9, 6, 4))
+        XCTAssertEqual(spring.headsUpDate(calendar: local), moment(2026, 9, 5, 18, zone: santiago))
+    }
+
+    /// The heads-up's wording, said from the evening before: the event reminder's "X is tomorrow: ..."
+    /// shape for daylight saving, the plain direction for any other move of the clocks.
+    func testHeadsUpWording() throws {
+        let formatter = usFormatter(losAngeles)
+        let fall = try XCTUnwrap(change(at: moment(2026, 10, 25)))
+        XCTAssertEqual(plain(fall.headsUpBody(timeFormatter: formatter)),
+                       "Daylight Saving Time ends tomorrow: clocks go back 1 hour at 2:00 AM. Prayer times will be about 1 hour earlier.")
+        let spring = try XCTUnwrap(change(at: moment(2026, 3, 2)))
+        XCTAssertEqual(plain(spring.headsUpBody(timeFormatter: formatter)),
+                       "Daylight Saving Time begins tomorrow: clocks go forward 1 hour at 2:00 AM. Prayer times will be about 1 hour later.")
+
+        let utcFormatter = usFormatter(TimeZone(identifier: "UTC")!)
+        let instant = utc(2026, 6, 1, 0)
+        XCTAssertEqual(plain(ClockChange(date: instant, delta: 3600, beginsDaylightSaving: nil, offsetBefore: 0)
+                                .headsUpBody(timeFormatter: utcFormatter)),
+                       "Clocks go forward 1 hour tomorrow at 12:00 AM. Prayer times will be about 1 hour later.")
+        XCTAssertEqual(plain(ClockChange(date: instant, delta: -1800, beginsDaylightSaving: nil, offsetBefore: 0)
+                                .headsUpBody(timeFormatter: utcFormatter)),
+                       "Clocks go back 30 minutes tomorrow at 12:00 AM. Prayer times will be about 30 minutes earlier.")
+    }
+
+    /// The scheduler's request: built only while some prayer notification is on, at the heads-up's
+    /// moment in the device's zone, under the "Event-" prefix the prune owns; nil once that evening has
+    /// passed. Run in the simulator's own zone; skipped where it has no change ahead.
+    func testSchedulerBuildsTheHeadsUpWhilePrayerNotificationsAreOn() throws {
+        let zone = TimeZone.current
+        let local = calendar(in: zone)
+        guard let transition = zone.nextDaylightSavingTimeTransition(after: Date()) else {
+            throw XCTSkip("\(zone.identifier) has no clock change ahead")
+        }
+        let now = transition.addingTimeInterval(-3 * 86_400)
+        let change = try XCTUnwrap(ClockChange.next(after: now, in: zone, horizonDays: Settings.adhanHorizonDays, calendar: local))
+        let headsUp = try XCTUnwrap(change.headsUpDate(calendar: local))
+        let settings = Settings.shared
+        let anyOn = [settings.notificationFajr, settings.notificationSunrise, settings.notificationDhuhr,
+                     settings.notificationAsr, settings.notificationMaghrib, settings.notificationIsha,
+                     settings.notificationDuha, settings.notificationIslamicMidnight, settings.notificationLastThird]
+            .contains(true)
+
+        let built = settings.makeClockChangeNotificationRequest(now: now)
+        guard anyOn else {
+            XCTAssertNil(built, "no prayer notification is on, so no heads-up")
+            return
+        }
+        let request = try XCTUnwrap(built)
+        XCTAssertEqual(request.date, headsUp)
+        XCTAssertTrue(request.spec.identifier.hasPrefix("Event-ClockChange-"))
+        XCTAssertEqual(request.spec.trigger.hour, 18)
+        XCTAssertNil(settings.makeClockChangeNotificationRequest(now: headsUp.addingTimeInterval(60)),
+                     "the evening has passed: the prayer list's footer says it from then on")
     }
 }

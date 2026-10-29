@@ -633,7 +633,7 @@ struct SettingsQuranView: View {
                 .disabled(!tajweedCanRenderNow)
 
             #if os(iOS)
-            NavigationLink(destination: LazyDestination { TajweedLegendView(showsDismissButton: false) }) {
+            NavigationLink(destination: LazyDestination { TajweedLegendView(showsDismissButton: false, opensFullLegend: true) }) {
                 SettingsRowLabel(title: String(localized: "Customize Tajweed Colors"), systemImage: "paintpalette.fill", tint: SettingsTint.quran)
             }
             .tint(settings.accentColor.color)

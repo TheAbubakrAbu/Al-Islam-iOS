@@ -822,6 +822,12 @@ struct NamesView: View {
             // A new query starts back on the AI list.
             showKeywordResults = false
             runAISearch(query: newValue)
+            // A search covers all 99: the theme chips are hidden while it runs, so a theme left lit
+            // filtered the results out of sight ("No names match" for a name outside it), and a
+            // result's tap scrolled to a row the themed list did not have.
+            if activeTheme != nil, !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                activeTheme = nil
+            }
             #endif
         }
         #if os(iOS)

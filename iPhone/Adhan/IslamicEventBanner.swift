@@ -49,8 +49,13 @@ enum IslamicEventLookup {
     ///
     /// `hijriOffset` is the reader's adjustment of the Hijri date; `hijriCalendar` is the app's Umm
     /// al-Qura calendar and `calendar` the civil one, both in the zone the days are counted in.
+    ///
+    /// `nightsBegun`: `now` was already moved a day forward because Maghrib has passed with the date
+    /// switch on (`effectiveHijriReferenceDate`). Tonight's night then belongs to the day `now` reads,
+    /// its own Hijri date, rather than to the civil day before it: anchored the usual way, the 27th
+    /// night vanished at the Maghrib that opens it, and the evening before it read "Tonight".
     static func current(now: Date, hijriCalendar: Calendar, hijriOffset: Int, calendar: Calendar,
-                        horizonDays: Int = horizonDays) -> IslamicEventOccurrence? {
+                        horizonDays: Int = horizonDays, nightsBegun: Bool = false) -> IslamicEventOccurrence? {
         let today = calendar.startOfDay(for: now)
         // The Hijri year of today as the reader sees it (offset-adjusted, like `Settings.specialEvents`).
         let adjusted = hijriCalendar.date(byAdding: .day, value: hijriOffset, to: now) ?? now
@@ -78,8 +83,11 @@ enum IslamicEventLookup {
                 let isNight = Settings.nightEventTitles.contains(event.0)
                 // A night begins at Maghrib on the civil day before the Hijri date it is listed under.
                 guard let start = isNight ? calendar.date(byAdding: .day, value: -1, to: day) : day else { continue }
+                // Counted from the day `now` reads it on: after that Maghrib, with `nightsBegun`, `now`
+                // already reads the Hijri date's own day.
+                let countedFrom = isNight && nightsBegun ? day : start
                 let span = span(of: event.0, hijriYear: hijriYear, hijriCalendar: hijriCalendar)
-                guard let daysUntil = calendar.dateComponents([.day], from: today, to: start).day else { continue }
+                guard let daysUntil = calendar.dateComponents([.day], from: today, to: countedFrom).day else { continue }
                 let timing: IslamicEventOccurrence.Timing
                 if daysUntil <= 0, -daysUntil < span {
                     let dayNumber = 1 - daysUntil
@@ -284,20 +292,21 @@ struct IslamicEventBanner: View {
 
     /// The event to show now, resolved once per civil day, Hijri adjustment and Maghrib switch:
     /// walking the list costs an Umm al-Qura conversion per event (24 a year, three years), and the
-    /// tab's body re-runs on every Settings publish.
-    private static var cache: (day: Date, offset: Int, occurrence: IslamicEventOccurrence?)?
+    /// tab's body re-runs on every Settings publish. `nightsBegun` is part of the key: the evening
+    /// before a day and the morning of it read the same reference day, with different nights.
+    private static var cache: (day: Date, offset: Int, nightsBegun: Bool, occurrence: IslamicEventOccurrence?)?
 
     /// The occurrence the banner shows at `now`, or nil when nothing is near. `now` is the Hijri
     /// reference moment: after Maghrib with the date switch on it is already tomorrow, as the date row
-    /// above the banner says.
-    static func occurrence(now: Date, settings: Settings) -> IslamicEventOccurrence? {
+    /// above the banner says, and `nightsBegun` says so (see `IslamicEventLookup.current`).
+    static func occurrence(now: Date, nightsBegun: Bool, settings: Settings) -> IslamicEventOccurrence? {
         let calendar = Calendar.current
         let day = calendar.startOfDay(for: now)
         let offset = settings.hijriOffset
-        if let cache, cache.day == day, cache.offset == offset { return cache.occurrence }
+        if let cache, cache.day == day, cache.offset == offset, cache.nightsBegun == nightsBegun { return cache.occurrence }
         let found = IslamicEventLookup.current(now: now, hijriCalendar: settings.hijriCalendar,
-                                               hijriOffset: offset, calendar: calendar)
-        cache = (day, offset, found)
+                                               hijriOffset: offset, calendar: calendar, nightsBegun: nightsBegun)
+        cache = (day, offset, nightsBegun, found)
         return found
     }
 }

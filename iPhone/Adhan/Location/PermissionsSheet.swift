@@ -310,7 +310,10 @@ struct PermissionsSheet: View {
         let notifications = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
         return shouldPresent(
             locationUndetermined: Settings.locationManager.authorizationStatus == .notDetermined,
-            notificationsUndetermined: notifications == .notDetermined,
+            // Allow Notifications off: the permission is not asked for (`notificationAuthorizationResult`),
+            // so the card's Allow did nothing and the sheet came back every day for a question the
+            // reader had already answered in the app.
+            notificationsUndetermined: notifications == .notDetermined && settings.notificationsEnabled,
             locationSnoozedUntil: settings.locationAlertSnoozedUntil,
             notificationSnoozedUntil: settings.notificationAlertSnoozedUntil,
             locationNeverAskAgain: settings.locationNeverAskAgain,

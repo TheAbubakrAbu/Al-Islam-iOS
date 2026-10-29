@@ -788,13 +788,7 @@ private struct SheetNowPlayingBar: ViewModifier {
             .onPreferenceChange(NowPlayingBarProvidedKey.self) { innerDrawsNowPlaying = $0 }
             .adaptiveSafeArea(edge: .bottom) {
                 if inSheet, !innerDrawsNowPlaying, playback.showsNowPlaying, let bar = playback.barContent {
-                    VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                        bar()
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, BottomBarCushion.standard)
-                    .background(Color.white.opacity(0.00001))
-                    .animation(.easeInOut, value: playback.showsNowPlaying)
+                    NowPlayingBarStack(bar: bar, shown: playback.showsNowPlaying)
                 }
             }
             .preference(key: NowPlayingBarProvidedKey.self, value: inSheet)
@@ -850,6 +844,26 @@ struct NowPlayingListInset<Bar: View>: ViewModifier {
         } else {
             content.safeAreaInset(edge: .bottom) { bar() }
         }
+    }
+}
+
+/// The Now Playing bar as every bottom inset lays it out: the player, its side margins, the cushion
+/// under it and a ground that takes touches. One copy for the lists (`ConditionalListStyle`), the sheet
+/// host (`SheetPresentationModifier`) and the sheet screens (`sheetNowPlayingBar()`), so the three
+/// never drift apart.
+struct NowPlayingBarStack: View {
+    let bar: () -> AnyView
+    /// The visibility the bar animates on.
+    let shown: Bool
+
+    var body: some View {
+        VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+            bar()
+        }
+        .padding(.horizontal, 24)
+        .padding(.bottom, BottomBarCushion.standard)
+        .background(Color.white.opacity(0.00001))
+        .animation(.easeInOut, value: shown)
     }
 }
 #endif
@@ -1501,13 +1515,7 @@ struct ConditionalListStyle: ViewModifier {
     @ViewBuilder
     private var nowPlayingBar: some View {
         if !disableNowPlayingInset && shouldShowNowPlaying, let bar = playback.barContent {
-            VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                bar()
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, BottomBarCushion.standard)
-            .background(Color.white.opacity(0.00001))
-            .animation(.easeInOut, value: shouldShowNowPlaying)
+            NowPlayingBarStack(bar: bar, shown: shouldShowNowPlaying)
         }
     }
     #endif

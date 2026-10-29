@@ -679,6 +679,16 @@ private final class MushafPagerBandBox {
     /// mid-expand must win over the expand's delayed half, and the other way round.
     var playerGeneration = 0
     var selectGeneration = 0
+    /// Bumped by every programmatic turn (`turnPage`), every page change, and a find step that settles
+    /// on the page already showing: a turn still waiting on its landing page's render checks it, so a
+    /// newer turn, a swipe or such a step overtakes it. Checking only "not on that page yet" let an
+    /// overtaken turn land anyway: the find bar stepping down to a cold page and back up to a match on
+    /// this one slid the reader to the cold page with no match lit, and over the facsimile (every turn
+    /// waits out the render's 0.4 s) the left then the right arrow went forward one and back two.
+    var turnGeneration = 0
+    /// The page the latest programmatic turn is headed for, with its generation, while it waits: the
+    /// next arrow press steps on from there, not from the page it is about to leave.
+    var turnTarget: (index: Int, generation: Int)?
 }
 
 /// The chrome changes the pager takes in one step, each with its own learned twin geometry
@@ -1955,6 +1965,9 @@ struct SurahPageReader<Controls: View>: View {
             // its own page, and the landing never outlives the change that follows it.
             let landing = pendingLanding
             if landing != nil { pendingLanding = nil }
+            // The page moved (a swipe, a seed, a turn's own write): a programmatic turn still waiting on
+            // its render is overtaken and must not pull the reader somewhere else after it.
+            pagerBand.turnGeneration &+= 1
             // Which way the reader is moving, for the ring's order: a run of swipes keeps the pages
             // AHEAD of it warm first. A seed or a far jump (no previous page yet) stays symmetric.
             let direction = previousPageIndex >= 0 ? (index - previousPageIndex).signum() : 0
@@ -2133,6 +2146,10 @@ struct SurahPageReader<Controls: View>: View {
         #if DEBUG
         MushafPagerProbe.trace("turn to=\(target) from=\(pageIndex) spread=\(spreadActive ? 1 : 0)")
         #endif
+        // Every request overtakes a turn still waiting on its render, a request for the page already
+        // showing included (`turnGeneration`).
+        pagerBand.turnGeneration &+= 1
+        let generation = pagerBand.turnGeneration
         guard pages.indices.contains(target), target != pageIndex else { return }
         // The other page of the spread already open: nothing turns, the reader's position just moves
         // onto it (footer, last read). Same latch contract as a real turn.
@@ -2141,6 +2158,7 @@ struct SurahPageReader<Controls: View>: View {
             pageIndex = target
             return
         }
+        pagerBand.turnTarget = (target, generation)
         // Compose the destination BEFORE the turn starts, so what slides in is the page rather than its
         // loading spinner. (`.onChange(of: pageIndex)` prewarms too, but that runs as the turn begins.)
         MushafPageRenderCache.prewarm(pages: pages, around: target, radius: 1, includeCenter: true)
@@ -2154,7 +2172,8 @@ struct SurahPageReader<Controls: View>: View {
             MushafPagerProbe.trace("turn fired to=\(target) idx=\(pageIndex)")
             #endif
             // The reader may have moved on while the fit ran (a swipe, a newer jump).
-            guard pages.indices.contains(target), target != pageIndex else { return }
+            guard pagerBand.turnGeneration == generation, pages.indices.contains(target), target != pageIndex
+            else { return }
             // A follow/seed is not a user page turn - it must not wipe the mark or the selections. A
             // DELIBERATE jump (the page/juz pickers) passes false: there a new page is a fresh start,
             // exactly as if it had been swiped to. Latched HERE, not before the wait: a turn that the
@@ -2167,7 +2186,7 @@ struct SurahPageReader<Controls: View>: View {
             if facsimileDocument != nil {
                 DispatchQueue.main.async { MushafFacsimileFocus.release() }
             }
-            scheduleTurnWrite(to: target)
+            scheduleTurnWrite(to: target, generation: generation)
         }
     }
 
@@ -2177,10 +2196,10 @@ struct SurahPageReader<Controls: View>: View {
     /// without the animated transaction - the page SNAPPED instead of sliding (verified
     /// frame-by-frame: one giant scene step, zero intermediates). Hopping to the next tick puts the
     /// write in a fresh transaction whose animation the pager honors.
-    private func scheduleTurnWrite(to target: Int) {
+    private func scheduleTurnWrite(to target: Int, generation: Int) {
         DispatchQueue.main.async {
-            // The reader may have moved on meanwhile (a swipe, a newer jump).
-            guard target != pageIndex else { return }
+            // The reader may have moved on meanwhile (a swipe, a newer jump: `turnGeneration`).
+            guard pagerBand.turnGeneration == generation, target != pageIndex else { return }
             withAnimation(.easeInOut(duration: 0.35)) { pageIndex = target }
             #if DEBUG
             MushafPagerProbe.trace("turn wrote to=\(target) idx=\(pageIndex)")
@@ -2197,11 +2216,14 @@ struct SurahPageReader<Controls: View>: View {
     /// `.hidden()` one does not receive it). They stand down while the find field is typing (the arrows
     /// move its caret), while the page or juz wheel is up, and while a turn is still sliding.
     private func arrowKeyPageTurns(pages: [MushafPage]) -> some View {
+        // `.withoutMirroring`: the default localization swaps the arrow keys in a right-to-left interface,
+        // and the pager keeps forward on the LEFT in every interface language (`MushafPagerView`), so in
+        // Arabic and Urdu the left arrow went back, against the page it points at.
         ZStack {
             Button("Next Page") { arrowKeyTurn(forward: true, in: pages) }
-                .keyboardShortcut(.leftArrow, modifiers: [])
+                .keyboardShortcut(.leftArrow, modifiers: [], localization: .withoutMirroring)
             Button("Previous Page") { arrowKeyTurn(forward: false, in: pages) }
-                .keyboardShortcut(.rightArrow, modifiers: [])
+                .keyboardShortcut(.rightArrow, modifiers: [], localization: .withoutMirroring)
         }
         .opacity(0)
         .frame(width: 0, height: 0)
@@ -2212,7 +2234,13 @@ struct SurahPageReader<Controls: View>: View {
     private func arrowKeyTurn(forward: Bool, in pages: [MushafPage]) {
         guard !pages.isEmpty, activePicker == nil, !pageSearchFocused,
               !MushafPagerProbe.shared.isTurning else { return }
-        let onScreen = visiblePageIndices(around: pageIndex, in: pages)
+        // From the page a turn still waiting on its render is headed for, when one is (`turnTarget`):
+        // from the page on screen, a left then a right before the first landed went forward one and
+        // back two. Back at the page on screen, `turnPage` turns nothing and drops the waiting turn.
+        let waiting = pagerBand.turnTarget.flatMap {
+            $0.generation == pagerBand.turnGeneration && pages.indices.contains($0.index) ? $0.index : nil
+        }
+        let onScreen = visiblePageIndices(around: waiting ?? pageIndex, in: pages)
         guard let first = onScreen.first, let last = onScreen.last else { return }
         // Back lands on the previous spread's FIRST page, where a swipe back lands.
         let target = forward ? last + 1 : spreadLeading(first - 1, in: pages)
@@ -2309,6 +2337,10 @@ struct SurahPageReader<Controls: View>: View {
         // Guide G6).
         if findSurahID != nil, match.pageIndex != pageIndex, pages.indices.contains(match.pageIndex) {
             turnPage(to: match.pageIndex, in: pages, suppressClear: true)
+        } else if findSurahID != nil, match.pageIndex == pageIndex {
+            // The match is on this page: a turn to an earlier match, still waiting on its render, must
+            // not carry the reader off it (`turnGeneration`).
+            pagerBand.turnGeneration &+= 1
         }
     }
 
@@ -2326,6 +2358,10 @@ struct SurahPageReader<Controls: View>: View {
         }
         if match.pageIndex != pageIndex, pages.indices.contains(match.pageIndex) {
             turnPage(to: match.pageIndex, in: pages, suppressClear: true)
+        } else {
+            // Back on this page: the step to a match elsewhere, if its turn still waits on the render,
+            // is overtaken (`turnGeneration`).
+            pagerBand.turnGeneration &+= 1
         }
     }
 
@@ -6297,6 +6333,11 @@ enum MushafPageRenderCache {
             // Was missing: toggling "Hide Arabic Dots" did not change the key, so every already-composed page
             // kept serving its dotted text until the 24-entry cache happened to evict it.
             s.removeArabicDots ? "d" : "-",
+            // The hamzat al-wasl notation the composer splices in (`MushafComposeConfig.waslSign`), the
+            // RESOLVED one (the Warsh face keeps the print's dot whatever the picker says). Missing, a
+            // switch of the picker kept serving every composed page in the old notation while pages
+            // composed afterwards took the new one; the fit numbers (`metricsKey`) already carried it.
+            s.waslSign(for: s.displayQiraahForArabic).rawValue,
             s.beginnerMode ? "b" : "-",
             s.mushafFitPage ? "f" : "-",
             s.mushafPageLanguage,

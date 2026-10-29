@@ -27,6 +27,13 @@ struct TajweedLegendView: View {
     /// The basic list's open rows, by rule id.
     @State private var expandedRules: Set<String> = []
 
+    /// `opensFullLegend`: a door that leads to something only the full page has (Customize Tajweed
+    /// Colors: the color pickers sit on the full page's rule cards) opens there instead of on the basic list.
+    init(showsDismissButton: Bool = true, opensFullLegend: Bool = false) {
+        self.showsDismissButton = showsDismissButton
+        _showsFullLegend = State(initialValue: opensFullLegend)
+    }
+
     /// Every riwayah that ships a print-derived color pack - a cheap static check (`fileName`, no pack
     /// load), so building the picker menu never parses 19 packs.
     nonisolated private static let packOptions: [Settings.Riwayah.Option] = Settings.Riwayah.allOptions.filter {

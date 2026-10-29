@@ -140,14 +140,17 @@ final class SkyWeatherStore: ObservableObject {
     /// The switch went off: the reading is dropped everywhere, the widgets included. A success's
     /// five-minute hold goes with it: it keeps Refresh from asking again for a reading already on
     /// screen, and switched back on there is none (a reader's 4.6.5 report: off and on again left the
-    /// card without weather until the app was quit). A failure's back-off stays.
+    /// card without weather until the app was quit). A failure's back-off stays. A fetch still in flight
+    /// has not failed: `lastAttemptFailed` is the request BEFORE it (whose back-off had already run out,
+    /// or this one could not have started), so dropping it leaves no hold either.
     func clear() {
+        let droppedInFlight = task != nil
         task?.cancel()
         task = nil
         isFetching = false
         weather = nil
         preview = nil
-        if !lastAttemptFailed { lastAttemptAt = nil }
+        if droppedInFlight || !lastAttemptFailed { lastAttemptAt = nil }
         Self.store?.removeObject(forKey: SkyWeather.storageKey)
         Settings.shared.reloadWidgets(deferred: true)
     }

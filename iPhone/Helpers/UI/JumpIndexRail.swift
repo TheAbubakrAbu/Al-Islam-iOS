@@ -181,7 +181,10 @@ struct JumpIndexRail: View {
         .accessibilityHint(Text("Swipe up or down to jump."))
         .accessibilityAdjustableAction { direction in
             guard !items.isEmpty else { return }
-            let current = lastIndex ?? -1
+            // `lastIndex` outlives a change of `items`: the list reader swaps its surah in place, so a
+            // stop from al-Baqarah's 30 can meet Al Imran's 21, and stepping down from it indexed past
+            // the end. A stop the list no longer has counts as none.
+            let current = lastIndex.flatMap { items.indices.contains($0) ? $0 : nil } ?? -1
             let next: Int
             switch direction {
             case .increment: next = min(items.count - 1, current + 1)

@@ -442,7 +442,10 @@ struct StrongestSection<Item: Identifiable, Row: View>: View {
                         withAnimation(.easeInOut) { showAll.toggle() }
                     } label: {
                         HStack {
-                            (showAll ? Text(verbatim: AppLanguage.article("Show fewer")) : Text("Show \(items.count - Self.collapsedCount) more"))
+                            // Both halves English with the library around them: the bare literal was
+                            // looked up as "Show %lld more" and read Arabic beside an English "Show fewer".
+                            Text(verbatim: showAll ? AppLanguage.article("Show fewer")
+                                                   : AppLanguage.article("Show \(items.count - Self.collapsedCount) more"))
                                 .font(.subheadline.weight(.medium))
                             Spacer()
                             Image(systemName: showAll ? "chevron.up" : "chevron.down")
@@ -654,7 +657,9 @@ struct ProphetMiraclesHost: ViewModifier {
                 get: { openEntry != nil },
                 set: { if !$0 { openEntry = nil } }
             )) {
-                if let openEntry { ProphetMiracleArticleView(entry: openEntry) }
+                // Hung outside the prophet page's own search chrome, so it would inherit the section
+                // the page was opened on and open hidden, looking for a heading it does not have.
+                if let openEntry { ProphetMiracleArticleView(entry: openEntry).environment(\.articleScrollTarget, nil) }
             }
     }
 }

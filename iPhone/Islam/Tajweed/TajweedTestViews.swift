@@ -11,6 +11,9 @@ import SwiftUI
 struct TajweedTestView: View {
     @Environment(\.appearance) private var appearance
     @ObservedObject private var progress = TajweedTestProgress.shared
+    /// The reader's rule switches decide which missed Find It questions can be asked now
+    /// (`reviewableMissed`): observed, so a rule turned back on puts its questions back in the count.
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
 
     @State private var course: TajweedLessonsStore.Course? = TajweedLessonsStore.shared.courseIfLoaded
     @State private var session: TajweedTestSessionView.Mode?
@@ -30,11 +33,21 @@ struct TajweedTestView: View {
 
     private var tiers: [TajweedTestTier] { course.map(TajweedTestLadder.tiers(in:)) ?? [] }
 
+    /// A factory with the reader's rules as they are now, for what the missed bank can ask.
+    private func readerFactory(_ tiers: [TajweedTestTier]) -> TajweedTestFactory {
+        var factory = TajweedTestFactory(tiers: tiers, quran: QuranData.shared)
+        factory.visibleCategories = Set(TajweedLegendCategory.allCases.filter(Settings.shared.isTajweedCategoryVisible))
+        return factory
+    }
+
     var body: some View {
         let tiers = self.tiers
+        // Only what a Practice Missed round could ask now is counted or offered: a door to an empty
+        // round otherwise (a missed Find It whose rule was switched off, 2026-10-28).
+        let toReview = progress.missed.isEmpty || tiers.isEmpty ? 0 : progress.reviewableMissed(readerFactory(tiers)).count
         List {
             Group {
-                introSection(tiers)
+                introSection(tiers, toReview: toReview)
 
                 if let course {
                     ForEach(Array(TajweedTestLadder.stages(in: course).enumerated()), id: \.offset) { index, group in
@@ -52,7 +65,7 @@ struct TajweedTestView: View {
                         }
                     }
 
-                    reviewSection(tiers)
+                    reviewSection(tiers, toReview: toReview)
                     moreSection
                 } else if TajweedLessonsStore.isBundled {
                     Section {
@@ -70,8 +83,15 @@ struct TajweedTestView: View {
         .navigationTitle("Tajweed Test")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            guard course == nil, TajweedLessonsStore.isBundled else { return }
-            course = await Task.detached(priority: .userInitiated) { TajweedLessonsStore.shared.course() }.value
+            var loaded = course
+            if loaded == nil, TajweedLessonsStore.isBundled {
+                loaded = await Task.detached(priority: .userInitiated) { TajweedLessonsStore.shared.course() }.value
+                course = loaded
+            }
+            // A missed question whose lesson the pack no longer has could never be answered right.
+            if let loaded, !progress.missed.isEmpty {
+                progress.forgetUnrebuildableMissed(readerFactory(TajweedTestLadder.tiers(in: loaded)))
+            }
         }
         .pushDestination(isPresented: Binding(get: { session != nil }, set: { if !$0 { session = nil } })) {
             if let session { TajweedTestSessionView(mode: session, tiers: tiers) }
@@ -116,7 +136,7 @@ struct TajweedTestView: View {
     // MARK: Sections
 
     /// The ladder's `ResourceHero`: the figures, the progress and the two ways in as its footer.
-    private func introSection(_ tiers: [TajweedTestTier]) -> some View {
+    private func introSection(_ tiers: [TajweedTestTier], toReview: Int) -> some View {
         let total = tiers.count
         let passed = progress.passedCount(in: tiers)
         let started = passed > 0 || progress.placement != nil || !progress.records.isEmpty
@@ -129,7 +149,7 @@ struct TajweedTestView: View {
             stats: started && total > 0 ? [
                 ResourceHeroStat("\(passed)", String(localized: "of \(total) passed")),
                 ResourceHeroStat("\(progress.masteredCount(in: tiers))", String(localized: "mastered")),
-                ResourceHeroStat("\(progress.missed.count)", String(localized: "to review")),
+                ResourceHeroStat("\(toReview)", String(localized: "to review")),
             ] : []
         ) {
             if !tiers.isEmpty {
@@ -156,7 +176,7 @@ struct TajweedTestView: View {
         })
     }
 
-    private func reviewSection(_ tiers: [TajweedTestTier]) -> some View {
+    private func reviewSection(_ tiers: [TajweedTestTier], toReview: Int) -> some View {
         let passed = progress.passedCount(in: tiers)
         return Section {
             StudyActionRow(title: String(localized: "Final Review"), systemImage: "shuffle",
@@ -164,17 +184,17 @@ struct TajweedTestView: View {
                 session = .review
             }
 
-            if !progress.missed.isEmpty {
+            if toReview > 0 {
                 StudyActionRow(title: String(localized: "Practice Missed Questions"), systemImage: "arrow.uturn.backward.circle",
                                caption: String(localized: "The questions you missed in scored tests, until you get them right"),
-                               detail: "\(progress.missed.count)") {
+                               detail: "\(toReview)") {
                     session = .missed(nil)
                 }
             }
         } header: {
             StudySectionHeader(String(localized: "REVIEW"), systemImage: "arrow.triangle.2.circlepath")
         } footer: {
-            if !progress.missed.isEmpty {
+            if toReview > 0 {
                 Text("A question leaves the review list once you answer it right in a review or a scored test.")
             }
         }
@@ -836,8 +856,17 @@ struct TajweedTestSessionView: View {
         let percent = total == 0 ? 0 : Int((Double(right) / Double(total) * 100).rounded())
         let passed = percent >= TajweedTestProgress.passMark
         let tier: TajweedTestTier? = { if case .test(let tier) = mode { return tier } else { return nil } }()
-        let outcome: StudyOutcome? = tier == nil ? nil : (right == total && hints == 0) ? .mastered : passed ? .passed : .failed
+        // A round that built no questions scored nothing: 0 of 0 is never Mastered (nor recorded).
+        let outcome: StudyOutcome? = tier == nil || total == 0 ? nil : (right == total && hints == 0) ? .mastered : passed ? .passed : .failed
         let next = tier.flatMap { current in tiers.firstIndex(of: current).flatMap { tiers.indices.contains($0 + 1) ? tiers[$0 + 1] : nil } }
+        // A missed round with nothing missed goes again over the whole bank, which may have nothing
+        // left to ask now: no door to an empty round.
+        let againIsEmpty: Bool = {
+            guard case .missed = mode, missed.isEmpty else { return false }
+            var factory = TajweedTestFactory(tiers: tiers, quran: QuranData.shared)
+            factory.visibleCategories = Set(TajweedLegendCategory.allCases.filter(Settings.shared.isTajweedCategoryVisible))
+            return progress.reviewableMissed(factory).isEmpty
+        }()
 
         return Section {
             StudyScoreCard(right: right, total: total, outcome: outcome,
@@ -859,10 +888,12 @@ struct TajweedTestSessionView: View {
                 }
             }
 
-            StudyResultButton(title: tier != nil && !passed ? String(localized: "Try Again") : String(localized: "Go Again"), systemImage: "arrow.clockwise",
-                              prominent: tier != nil && !passed && missed.isEmpty) {
-                if case .missed = mode, missed.isEmpty { mode = .missed(nil) }
-                start()
+            if !againIsEmpty {
+                StudyResultButton(title: tier != nil && !passed ? String(localized: "Try Again") : String(localized: "Go Again"), systemImage: "arrow.clockwise",
+                                  prominent: tier != nil && !passed && missed.isEmpty) {
+                    if case .missed = mode, missed.isEmpty { mode = .missed(nil) }
+                    start()
+                }
             }
 
             StudyResultButton(title: String(localized: "Back"), systemImage: "chevron.backward") {

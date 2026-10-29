@@ -971,14 +971,16 @@ struct LastReadAyahRow: View {
                             bookmarkedSurah: surah.id,
                             bookmarkedAyah: ayah.id
                         )
+                        // No `lastRead:` here, as on the listening history's rows: that flag leads the
+                        // menu with Remove, which clears the LAST READ position, so holding an older
+                        // history entry and tapping Remove wiped the card above and kept the entry.
                         .ayahContextMenuModifier(
                             surah: surah.id,
                             ayah: ayah.id,
                             favoriteSurahs: favoriteSurahs,
                             bookmarkedAyahs: bookmarkedAyahs,
                             searchText: $searchText,
-                            scrollToSurahID: $scrollToSurahID,
-                            lastRead: true
+                            scrollToSurahID: $scrollToSurahID
                         )
                     }
                 }

@@ -75,7 +75,10 @@ struct IsnadDiagram: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ForEach(Array(chain.top.enumerated()), id: \.element.id) { index, layer in
+            // By place, not by `IsnadLayer.id`: one road can hold two equal generations ("عن أبيه" twice
+            // in the chain of tirmidhi:1081, Ibrahim ibn Sa'd from his father and 'Umar ibn Abi Salamah
+            // from his), and a chain never reorders under the diagram.
+            ForEach(Array(chain.top.enumerated()), id: \.offset) { index, layer in
                 layerBlock(layer)
                 if index < chain.top.count - 1 {
                     connector
@@ -111,7 +114,7 @@ struct IsnadDiagram: View {
                 } else {
                     connector
                 }
-                ForEach(Array(chain.bottom.enumerated()), id: \.element.id) { index, layer in
+                ForEach(Array(chain.bottom.enumerated()), id: \.offset) { index, layer in
                     layerBlock(layer)
                     if index < chain.bottom.count - 1 {
                         connector
@@ -154,7 +157,7 @@ struct IsnadDiagram: View {
                 .foregroundColor(accent.opacity(0.7))
                 .padding(.bottom, 4)
 
-            ForEach(Array(branch.layers.enumerated()), id: \.element.id) { index, layer in
+            ForEach(Array(branch.layers.enumerated()), id: \.offset) { index, layer in
                 VStack(spacing: 6) {
                     layerTitle(layer.title, tracking: 0.6)
 
@@ -508,6 +511,9 @@ struct IsnadShareButton<Card: View>: View {
             }.value
             preparing = false
             guard let file else { return }
+            // One file per title: another look of it cached before (the tree's other scope, another
+            // accent or direction) no longer has its image there, so it renders again when asked.
+            IsnadShareCache.files = IsnadShareCache.files.filter { $0.value != file }
             IsnadShareCache.files[key] = file
             presentSystemShareSheet(items: [file])
         }

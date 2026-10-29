@@ -332,6 +332,8 @@ enum QuranPlannerMath {
 /// on toggle/time/goal changes never stacks duplicates.
 enum QuranPlannerReminder {
     static let identifier = "quran-planner-daily"
+    /// The planner's Daily Reminder switch (`QuranPlannerView.reminderEnabled`).
+    static let enabledKey = "quranPlannerReminderEnabled"
     /// 6:00 PM, stored as minutes past midnight (matches the @AppStorage key's Int encoding).
     static let defaultMinutes = 18 * 60
 
@@ -392,15 +394,31 @@ enum QuranPlannerReminder {
     }
 
     /// Re-adds the reminder as it was last scheduled, if one was and it has not been cancelled since.
+    /// The switch decides, not the kept copy: a Reset (which spares the device-only copy) or an iCloud
+    /// restore can turn the switch off without cancelling, and an OFF switch must mean no reminder.
     static func rearmIfKept() {
+        guard UserDefaults.standard.bool(forKey: enabledKey) else {
+            cancel()
+            return
+        }
         guard let last = UserDefaults.standard.dictionary(forKey: lastScheduledKey),
               let minutes = last["minutes"] as? Int, let body = last["body"] as? String else { return }
         add(minutes: minutes, body: body)
     }
 
     static func cancel() {
-        UserDefaults.standard.removeObject(forKey: lastScheduledKey)
+        // Only when there is a copy: a defaults write republishes Settings, and this runs on every
+        // planner open with the reminder off (and at launch).
+        if UserDefaults.standard.object(forKey: lastScheduledKey) != nil {
+            UserDefaults.standard.removeObject(forKey: lastScheduledKey)
+        }
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
+    }
+
+    /// At launch: a reminder still pending (or kept) under a switch that reads off goes (see `rearmIfKept`).
+    static func dropIfSwitchedOff() {
+        guard !UserDefaults.standard.bool(forKey: enabledKey) else { return }
+        cancel()
     }
 
     private static func body(plan: QuranPlan, todayTarget: Int?, pagesEquivalent: Int?) -> String {
@@ -611,7 +629,7 @@ struct QuranPlannerView: View {
     @State private var showingEndRevisionConfirmation = false
 
     // Daily reminder (local to the planner - Settings is owned elsewhere, so plain @AppStorage keys)
-    @AppStorage("quranPlannerReminderEnabled") private var reminderEnabled = false
+    @AppStorage(QuranPlannerReminder.enabledKey) private var reminderEnabled = false
     @AppStorage("quranPlannerReminderMinutes") private var reminderMinutes = QuranPlannerReminder.defaultMinutes
     @State private var showingReminderDeniedAlert = false
 
@@ -689,7 +707,9 @@ struct QuranPlannerView: View {
             }
             // The notification body is frozen at schedule time; refresh it each visit so "today's
             // target" tracks the plan's self-correcting amount (also cancels if the plan is gone).
-            if reminderEnabled { rescheduleReminder() }
+            // Unconditionally: with the switch off it cancels, which clears a request a Reset or an
+            // iCloud restore turned the switch off under without cancelling.
+            rescheduleReminder()
         }
     }
 
@@ -1191,10 +1211,17 @@ struct QuranPlannerView: View {
                                 doneToday: doneToday, leftToday: leftToday, span: span)
     }
 
-    /// Pages a span covers, from its first to its last page.
-    private func pages(of span: QuranPlannerMath.TodaySpan) -> Int? {
-        guard let start = span.startPage, let end = span.endPage else { return nil }
-        return max(1, end - start + 1)
+    /// Distinct mushaf pages of the ayahs today's span names: the next `leftToday` unrevised ayahs of
+    /// the set, the walk `QuranRevisionMath.todaySpan` makes. First page to last overcounted a set with
+    /// gaps (a surah list, or ayahs already revised out of order): the end of Al-Kahf through Al-Mulk
+    /// read as "~259 pages".
+    private func todayPages(_ progress: RevisionProgress) -> Int? {
+        guard progress.span != nil else { return nil }
+        let today = progress.refs.lazy
+            .filter { !settings.isRevisionAyahRevised(surah: $0.surahID, ayah: $0.ayahID) }
+            .prefix(max(1, progress.leftToday))
+        let pages = QuranRevisionMath.pageCount(of: Array(today))
+        return pages > 0 ? pages : nil
     }
 
     @ViewBuilder
@@ -1567,6 +1594,17 @@ struct QuranPlannerView: View {
                     Text("Notifications are turned off for this app. Allow them in Settings to get a daily reading reminder.")
                 }
 
+            // On while Allow Notifications is off: the reminder is kept and held (`QuranPlannerReminder.add`)
+            // until that switch comes back on (`rearmIfKept`). The Sunnah Reminders screen's bell.slash
+            // caption, worded for this one reminder.
+            if reminderEnabled && !adhanSettings.notificationsEnabled {
+                Label("Allow Notifications is off in Notification Settings, so this reminder cannot arrive until it is on.", systemImage: "bell.slash")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .listRowSeparator(.hidden)
+            }
+
             if reminderEnabled {
                 DatePicker(
                     "Time",
@@ -1596,7 +1634,15 @@ struct QuranPlannerView: View {
                     return
                 }
                 Task { @MainActor in
-                    if await settings.requestNotificationAuthorization() {
+                    // With the app's own Allow Notifications off the system is never asked (the request
+                    // reports false before any prompt), so the iOS "Allow them in Settings" dialog named
+                    // the wrong switch. The choice is kept instead, as every reminder keeps it while that
+                    // switch is off: `add` holds the request and `rearmIfKept` adds it when it comes on.
+                    var allowed = true
+                    if settings.notificationsEnabled {
+                        allowed = await settings.requestNotificationAuthorization()
+                    }
+                    if allowed {
                         withAnimation { reminderEnabled = true }
                         rescheduleReminder()
                     } else {
@@ -1645,7 +1691,7 @@ struct QuranPlannerView: View {
             let progress = revisionProgress(plan: plan)
             revisionLine = QuranPlannerReminder.RevisionLine(
                 todayTarget: progress.target,
-                pages: progress.span.flatMap(pages(of:)),
+                pages: todayPages(progress),
                 setLabel: QuranRevisionMath.scopeLabel(plan.scope, quran: quranData.quran)
             )
         }

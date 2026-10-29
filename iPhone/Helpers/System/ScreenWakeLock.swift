@@ -106,12 +106,23 @@ private struct KeepScreenAwake: ViewModifier {
     /// Whether THIS modifier instance is holding the lock, so appear/disappear and value changes can
     /// never double-acquire or double-release.
     @State private var holding = false
+    /// Whether the view is on screen. A reader under a pushed page or on another tab stays mounted and
+    /// still sees `active` change (a pause and resume from the lock screen), so the lock is taken only
+    /// while it shows: taken from there it held the display on the other screen, and a pop to the root
+    /// over the hidden reader then dropped the view with the lock still counted.
+    @State private var onScreen = false
 
     func body(content: Content) -> some View {
         content
-            .onAppear { sync(to: active) }
-            .onDisappear { sync(to: false) }
-            .onChange(of: active) { sync(to: $0) }
+            .onAppear {
+                onScreen = true
+                sync(to: active)
+            }
+            .onDisappear {
+                onScreen = false
+                sync(to: false)
+            }
+            .onChange(of: active) { sync(to: $0 && onScreen) }
     }
 
     private func sync(to wanted: Bool) {

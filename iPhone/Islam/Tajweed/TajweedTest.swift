@@ -443,9 +443,10 @@ struct TajweedTestFactory {
     }
 
     /// The missed bank asked again, each source once, in a fresh shuffle of its wrong answers.
+    /// A key that cannot be rebuilt now (its rule switched off) does not cost the round a place.
     mutating func review(ofMissed keys: [(key: String, tier: String)], length: Int = 15) -> [TajweedTestQuestion] {
         var out: [TajweedTestQuestion] = []
-        for (key, tierID) in shuffled(keys).prefix(length) {
+        for (key, tierID) in shuffled(keys) where out.count < length {
             guard let tier = tiers.first(where: { $0.id == tierID }),
                   let question = question(fromSourceKey: key, in: tier) else { continue }
             out.append(question)
@@ -484,6 +485,31 @@ struct TajweedTestFactory {
         guard parts.count == 3, let skill = TajweedTestSkill(rawValue: parts[1]), let index = Int(parts[2]),
               let lesson = tier.lessons.first(where: { $0.id == parts[0] }) else { return nil }
         return build(lesson: lesson, in: tier, skill: skill, index: index)
+    }
+
+    /// Whether the question a missed-bank key names can be asked again, judged the way `lessonSupports`
+    /// judges a skill, without building it (the ladder asks as it draws): true now; false not now (a
+    /// Find It whose rule's colours are off, back when they are); nil never (the pack has no such
+    /// chapter, lesson or source any more).
+    func canRebuild(sourceKey key: String, tier tierID: String) -> Bool? {
+        let parts = key.split(separator: "|", omittingEmptySubsequences: false).map(String.init)
+        guard parts.count == 3, let skill = TajweedTestSkill(rawValue: parts[1]), let index = Int(parts[2]), index >= 0,
+              let tier = tiers.first(where: { $0.id == tierID }),
+              let lesson = tier.lessons.first(where: { $0.id == parts[0] }) else { return nil }
+        let sources = sources(for: lesson)
+        switch skill {
+        case .recall: return sources.recall.indices.contains(index) ? true : nil
+        case .name: return sources.arabic.indices.contains(index) ? !sources.arabic[index].arabic(in: quran).isEmpty : nil
+        case .spot:
+            guard sources.spot.indices.contains(index), let rule = sources.spot[index].rule,
+                  let paint = TajweedTestSources.spotRules[rule] else { return nil }
+            return quran != nil && paint.categories.isSubset(of: visibleCategories)
+        case .letters: return sources.letterSets.indices.contains(index / 2) ? true : nil
+        case .count:
+            return sources.countFragments.indices.contains(index) ? !sources.countFragments[index].arabic(in: quran).isEmpty : nil
+        case .fix: return sources.mistakes.indices.contains(index) ? true : nil
+        case .term: return lesson.definition.map { !$0.literal.isEmpty && !$0.termAr.isEmpty } == true ? true : nil
+        }
     }
 
     static func sourceKey(lesson: String, skill: TajweedTestSkill, index: Int) -> String {
@@ -786,6 +812,20 @@ final class TajweedTestProgress: StudyLadderProgress {
 
     func recordPractice(_ tier: TajweedTestTier, skill: TajweedTestSkill, right: Int, of total: Int) {
         recordPractice(id: tier.id, skill: skill.rawValue, right: right, of: total)
+    }
+
+    /// The missed questions `factory` can ask again now, newest first: what Practice Missed Questions
+    /// counts and opens. A Find It whose rule is switched off stays in the bank, out of the count,
+    /// until the reader turns the rule back on.
+    func reviewableMissed(_ factory: TajweedTestFactory) -> [StudyMissedItem] {
+        missed.filter { factory.canRebuild(sourceKey: $0.id, tier: $0.tier) == true }
+    }
+
+    /// Forgets the missed questions the pack can never rebuild (a lesson an update renamed): nothing
+    /// could answer them right. Only with the course loaded, or every key would look unknown.
+    func forgetUnrebuildableMissed(_ factory: TajweedTestFactory) {
+        guard !factory.tiers.isEmpty else { return }
+        forgetMissed { factory.canRebuild(sourceKey: $0.id, tier: $0.tier) == nil }
     }
 
     func setPlacement(_ tier: TajweedTestTier) { setPlacement(id: tier.id) }

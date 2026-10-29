@@ -25,6 +25,13 @@ that cannot be merged, and any chain naming someone who appears fewer than three
 chains on the shelf (a misread piece of matn never recurs; a real narrator does). Measured 2026-10-27:
 about 70% of al-Bukhari, 50-60% of the other books; every audited sample matched its text.
 
+Nor, since 2026-10-28, a chain with a second road the text hangs nowhere (`second_road`): "عن أم سلمة،
+وعمرو، ويحيى بن سعيد، عن الزهري" was drawn as Umm Salamah narrating beside Amr and Yahya, the Companion
+again in the middle of her own chain (51 chains), or a road opened by a "و" set apart from its word
+(`apart`: "عن علي، و عن الشعبي" drew a narrator with no name, 4 chains of the Musnad). Every one of the
+55 was read against its text; three joint generations beside a namesake stay drawn (nasai:4110,
+darimi:210, darimi:229).
+
     python3 Scripts/build_hadith_chains.py            # writes the pack and UnitTests/HadithChainSamples.swift
     python3 Scripts/build_hadith_chains.py --stats    # coverage per book, nothing written
 
@@ -148,12 +155,29 @@ class Node:
         self.aside = None
         self.joint = False
         self.beside = False
+        # The generation was closed by the text's own word for narrators side by side ("قالا",
+        # "كلاهما", "جميعا"): a joint generation by the narration's say, never a second road.
+        self.closed = False
     def key(self, keys): return ' '.join(k for k in keys[self.first:self.last+1] if k)
+
+
+def close_joint(road):
+    """"قالا" / "كلاهما" / "جميعا" after a generation: its narrators are side by side by the text's word."""
+    if road:
+        for node in road[-1]:
+            node.closed = True
+
 
 def parse(arabic, max_scan=140):
     raw = arabic.split()
     keys = [key(t) for t in raw]
     n = len(raw)
+    # A lone "و" (the shelf sometimes sets the conjunction apart) is never a narrator nor part of one.
+    # Before a name it joins that name to the generation ("شَيْبَةَ، وَ أَبُو كُرَيْبٍ"); before a word
+    # of transmission it opens another road: "عَنْ عَلِيٍّ، و عَنِ الشَّعْبِيِّ" (Habib's second road to
+    # Ali), "زِيَادٍ، و حَدَّثَنِي عَبَّادُ" (Abdullah ibn Ahmad's own second road, inside a row of the
+    # Musnad). The text does not say where such a road hangs, so the chain is not drawn (`apart`).
+    apart = False
     roads = []            # list of lists of Node (layers may hold several Nodes: joint narrators)
     road = []             # current road: list of layers (list of Node)
     i = 0
@@ -175,6 +199,12 @@ def parse(arabic, max_scan=140):
                 i = j + 1; continue
             return None, 'dash'
         if not k:
+            i += 1; continue
+        if k == 'و':
+            # a lone و between two pieces of the isnad: on the shelf (2026-10-28) five rows of the Musnad,
+            # "ح و حَدَّثَنَا", none drawn before either; three of them (766, 893, 1081) are roads heard by
+            # Abdullah ibn Ahmad, which a diagram with Ahmad at its foot would hang under his father
+            apart = apart or bool(road or roads)
             i += 1; continue
         h = honorific(keys, i)
         if h:
@@ -204,6 +234,8 @@ def parse(arabic, max_scan=140):
                 prophet_verb = i; ended = 'prophet'; break
             verb = i; i += 1; continue
         if k in SAY:
+            if k in JOINT_END:
+                close_joint(road)
             # who-said-what clause: قال يحيى أخبرنا وقال الآخران حدثنا
             if k == 'قال' and road and i + 2 < n and keys[i+2] in STRONG and keys[i+1] not in STRONG:
                 j = i + 3
@@ -214,6 +246,10 @@ def parse(arabic, max_scan=140):
                         verb = j; i = j + 1; continue
             nxt = i + 1
             while nxt < n and not keys[nxt]: nxt += 1
+            if road and nxt + 1 < n and keys[nxt] == 'و' and keys[nxt + 1] in STRONG:
+                # "قَالَ و حَدَّثَنِي سُفْيَانُ بْنُ وَكِيعٍ": another road, its و set apart
+                apart = True
+                nxt += 1
             if nxt < n and (keys[nxt] in STRONG):
                 i = nxt; continue
             if road and k == 'قال':
@@ -254,6 +290,7 @@ def parse(arabic, max_scan=140):
             ended = 'prophet'; break
         if k in JOINT_END:
             if road: joint_at.setdefault(id(road), len(road))
+            close_joint(road)
             i += 1; continue
         # a name: read until the next marker
         if verb is None:
@@ -272,10 +309,17 @@ def parse(arabic, max_scan=140):
         verbs_joint = []
         epithet_aside = []
         cur_start = i
+        waw_apart = False   # a lone "و" was met and no word of a name has followed it yet
         while i < n:
             kk = keys[i]
             if raw[i].strip('‏‎') in DELIMS: break
             if not kk: i += 1; continue
+            if kk == 'و':
+                # the next name, if one follows, stands beside this one; it begins after the و
+                if i > cur_start:
+                    names.append((cur_start, i - 1)); kinds.append('apart')
+                cur_start = i + 1; waw_apart = True
+                i += 1; continue
             if kk == 'وعن':
                 # "from X, and from Y": a second source beside X, the same generation
                 j = i + 1
@@ -299,7 +343,10 @@ def parse(arabic, max_scan=140):
             if kk.startswith('و') and i > cur_start and raw[i-1].endswith(('،', ',')) \
                and not (i - cur_start == 1 and keys[cur_start] in KIN) and kk not in ('وكيع','وهب','واصل','وائل','ورقاء','وهيب','واقد','وبرة','وراد'):
                 names.append((cur_start, i - 1)); cur_start = i; kinds.append('waw')
+            waw_apart = False
             i += 1
+        if waw_apart:
+            apart = True
         if cur_start is not None:
             names.append((cur_start, i - 1))
         layer = []
@@ -349,7 +396,7 @@ def parse(arabic, max_scan=140):
         if keys[j] in ('بهذا', 'باسناده', 'باسناد', 'الاسناد'): return None, 'refers'
         if keys[j] in REFERS and ended != 'prophet' and not implied: return None, 'refers'
     return {'roads': roads, 'joints': joints, 'prophet': ended == 'prophet' or implied, 'explicit': ended == 'prophet',
-            'prophet_verb': prophet_verb, 'ended': ended, 'end_at': i}, 'ok'
+            'prophet_verb': prophet_verb, 'ended': ended, 'end_at': i, 'apart': apart}, 'ok'
 
 def validate(chain, keys, raw):
     """Shape checks; returns reason or None."""
@@ -358,8 +405,51 @@ def validate(chain, keys, raw):
             for node in layer:
                 ks = [k for k in keys[node.first:node.last+1] if k]
                 if not ks or len(ks) > 8: return 'length'
+                # a conjunction alone is no one: "و" set apart before a word the reading did not join it to
+                if ks == ['و'] or not node_key(node, keys): return 'empty'
                 if any(k in STOP for k in ks if k not in STOP_ALLOW_IN_NAME) and not (len(ks) >= 2 and ks[0] == 'عبد'): return 'stop:' + ' '.join(ks)
     return None
+
+
+def second_road(chain, keys):
+    """True when a generation read as narrators side by side ("، وفلان", "وعن فلان") is in fact the
+    head of a second road: "عن معمر، عن الزهري، عن هند، عن أم سلمة، وعمرو، ويحيى بن سعيد، عن
+    الزهري، عن هند، عن أم سلمة" is Ibn Uyaynah's second road through Amr and Yahya, not Umm Salamah
+    narrating beside them. The road then names again someone it has already passed: a partner is a
+    narrator below the generation ("عن عبد الله، والأعمش، عن أبي صالح"), or a narrator above it is the
+    first of the generation ("شعبة، وحجاج، قال سمعت شعبة") or the one right below it, whom they would
+    have taught ("عن عطاء، عن يعلى بن أمية، وهشيم، عن الحجاج، عن عطاء"). A name from further below met
+    again above is more often two men: in al-Bukhari's "أخبرنا عبد الله، أخبرنا موسى بن عقبة، عن سالم،
+    ونافع، عن عبد الله" the foot is Ibn al-Mubarak and the top Ibn Umar, and that chain is drawn.
+
+    The text names only the upper part of such a road, and who heard its head is the reader's
+    knowledge (Ibn Uyaynah heard Amr; Ishaq heard Waki' in nasai:969 though Ishaq stands directly
+    below the rejoined Sufyan there), so the chain is not drawn, as a road that cannot be merged is
+    not. Its names still count for `known`: they are names, only the road's place is unwritten.
+
+    A generation the text closes with its own word ("قالا", "كلاهما", "جميعا") is joint by the
+    narration's say, so only one sign counts there: its first narrator named again right above it,
+    Ahmad's "حدثنا عبد الرحمن، حدثنا سفيان، وعبد الرزاق، قالا حدثنا سفيان" (Ahmad heard the two;
+    Sufyan is restated). A name met again further up stays: ad-Darimi's "حدثنا حجاج، وعفان، قالا
+    حدثنا حماد، عن الحجاج" names two men called Hajjaj."""
+    for road in chain['roads']:
+        for p, layer in enumerate(road):
+            if len(layer) < 2:
+                continue
+            first = narrator_key(node_key(layer[0], keys))
+            above = road[p + 1] if p + 1 < len(road) else []
+            if first and any(narrator_key(node_key(node, keys)) == first for node in above):
+                return True
+            if any(node.closed for node in layer):
+                continue
+            below = {narrator_key(node_key(node, keys)) for lower in road[:p] for node in lower} - {None}
+            if any(narrator_key(node_key(node, keys)) in below for node in layer[1:]):
+                return True
+            taught = {narrator_key(node_key(node, keys)) for node in road[p - 1]} if p else set()
+            passed = (taught | {first}) - {None}
+            if any(narrator_key(node_key(node, keys)) in passed for upper in road[p + 1:] for node in upper):
+                return True
+    return False
 
 
 # MARK: - Roads, names and the pack
@@ -506,6 +596,10 @@ def read_all():
                         for layer in road:
                             for node in layer:
                                 counts[node_key(node, keys)] += 1
+                    # Its names are still names met on the shelf (they count above, for `known`);
+                    # only where its second road hangs is not written, so it is not drawn.
+                    if chain['apart'] or second_road(chain, keys):
+                        chain, why = None, 'second-road'
             out.append((it, raw, keys, chain, why))
         rows[slug] = out
     return rows, counts

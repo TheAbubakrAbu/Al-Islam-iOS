@@ -301,12 +301,12 @@ final class SimpleModeUITests: XCTestCase {
             XCTAssertTrue(app.buttons[item].waitForExistence(timeout: 5), "the Adhan More menu has no \(item)")
         }
         // The layout is a submenu (Abu: "have it be a menu that opens the other"): its row names the
-        // layout in use, and the four choices wait inside it.
+        // layout in use, and the five choices wait inside it.
         let layoutRow = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Prayer Times Layout'")).firstMatch
         XCTAssertTrue(layoutRow.waitForExistence(timeout: 5), "the Adhan More menu has no Prayer Times Layout submenu")
         XCTAssertFalse(app.buttons["Tiles"].exists, "the layouts are listed in the menu itself, not behind the submenu")
         layoutRow.tap()
-        for item in ["Tiles", "Grid", "List", "Split"] {
+        for item in ["Tiles", "Centered Tiles", "Grid", "List", "Split"] {
             XCTAssertTrue(app.buttons[item].waitForExistence(timeout: 5), "the Prayer Times Layout submenu has no \(item)")
         }
         attachScreenshot("adhan-layout-submenu")

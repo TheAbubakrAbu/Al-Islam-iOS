@@ -700,6 +700,8 @@ private struct MainTabView: View {
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
                 guard !Task.isCancelled else { return }
                 await ReminderScheduler.rearmAfterLaunch()
+                // A planner reminder left pending under a switch a Reset or a restore turned off.
+                QuranPlannerReminder.dropIfSwitchedOff()
             }
             // Allow Notifications turned back on (`Settings.notificationsEnabledDidChange`, which cleared
             // every pending request when it went off): the same pass now, plus the planner's kept

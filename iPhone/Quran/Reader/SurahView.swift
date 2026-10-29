@@ -3039,7 +3039,10 @@ struct SurahView: View {
                 rebuildQiraahCaches()
                 visibility.resetScrollTracking()
                 didScrollDown = false
-                visibility.nextSurahButtonVisible = false
+                // `nextSurahButtonVisible` is left to the footer pair's own onAppear / onDisappear. That
+                // Section is not keyed by surah, so it survives the swap: forcing false here while it
+                // stayed on screen (Quraysh -> Next -> Al-Ma'un, both one screen long) left the bar at
+                // the empty anchor fill, since its onAppear never fires again to set it back.
                 let prepared = Self.preparedCache(for: surah, settings: settings)
                 if let sel = ayah, let target = nearestExistingAyahID(sel, in: prepared.ayahs.map { $0.id }) {
                     visibility.setAnchor(target)

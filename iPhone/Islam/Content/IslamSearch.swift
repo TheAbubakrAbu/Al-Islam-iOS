@@ -443,7 +443,10 @@ enum IslamArticleCatalog {
         if let section, !section.isEmpty {
             return AnyView(view.environment(\.articleScrollTarget, section).openScreen(.islamArticle, id: id))
         }
-        return AnyView(view.openScreen(.islamArticle, id: id))
+        // Cleared, not left unset: the environment carries down the navigation stack, so an article
+        // pushed without a section from one opened on "SUMMARY" (a door row, an OTHER ARTICLES result)
+        // inherited that heading, opened hidden and landed on its OWN "SUMMARY" instead of the top.
+        return AnyView(view.environment(\.articleScrollTarget, nil).openScreen(.islamArticle, id: id))
     }
 }
 
@@ -1698,6 +1701,10 @@ struct ArticleSearchChrome: ViewModifier {
     func body(content: Content) -> some View {
         let searching = !query.isEmpty
         content
+            // The section this page opened on is the page's own to land on (`SelectableArticleList` has
+            // read it above here). Cleared inside, so nothing the page pushes (a door to a library or a
+            // prophecy, a link in the prose) inherits it down the stack and lands on a heading of its own.
+            .environment(\.articleScrollTarget, nil)
             // Faded rather than removed: the page keeps its scroll position and its measured rows, so the
             // scroll to a picked section starts from where the reader was. It stays faded through the
             // landing and comes back on the heading.

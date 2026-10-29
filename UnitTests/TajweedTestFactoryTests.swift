@@ -189,6 +189,29 @@ final class TajweedTestFactoryTests: XCTestCase {
         XCTAssertEqual(missed.count, 5)
     }
 
+    /// The missed bank counts only what can be asked now: a Find It whose rule is off waits (not now),
+    /// a key the pack no longer has can never come back, and neither costs a review round a place.
+    func testMissedKeysThatCannotBeRebuiltNow() {
+        var factory = factory(seed: 4)
+        var spot: TajweedTestQuestion?
+        for tier in tiers where spot == nil { spot = factory.round(for: tier, length: 1, only: .spot).first }
+        guard let spot else { return XCTFail("no chapter offers Find It") }
+        XCTAssertEqual(factory.canRebuild(sourceKey: spot.sourceKey, tier: spot.tier.id), true)
+        factory.visibleCategories = []
+        XCTAssertEqual(factory.canRebuild(sourceKey: spot.sourceKey, tier: spot.tier.id), false)
+        XCTAssertTrue(factory.review(ofMissed: [(spot.sourceKey, spot.tier.id)]).isEmpty)
+        XCTAssertNil(factory.canRebuild(sourceKey: "no-such-lesson|recall|0", tier: spot.tier.id))
+        XCTAssertNil(factory.canRebuild(sourceKey: spot.sourceKey, tier: "no-such-chapter"))
+
+        factory.visibleCategories = Set(TajweedLegendCategory.allCases)
+        let asked = factory.review(of: tiers, length: 6)
+        for question in asked {
+            XCTAssertEqual(factory.canRebuild(sourceKey: question.sourceKey, tier: question.tier.id), true, question.sourceKey)
+        }
+        let keys = [(key: "no-such-lesson|recall|0", tier: tiers[0].id)] + asked.map { (key: $0.sourceKey, tier: $0.tier.id) }
+        XCTAssertEqual(factory.review(ofMissed: keys, length: asked.count).count, asked.count)
+    }
+
     func testHiddenRulesTakeFindItOffTheTable() {
         var factory = factory(seed: 2)
         factory.visibleCategories = []

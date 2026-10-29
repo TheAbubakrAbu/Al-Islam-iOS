@@ -134,7 +134,9 @@ struct HamzatulWaslView: View {
             }
             .padding(.vertical, 4)
 
-            waslRow(Self.ihdinaSirat)
+            // The same phrase is a row of AFTER A LONG VOWEL too: its own selection id, so one tap
+            // never selects both.
+            waslRow(Self.ihdinaSirat, selectionScope: "twoHamzas")
         } header: {
             Text("TWO KINDS OF HAMZA")
         } footer: {
@@ -353,13 +355,14 @@ struct HamzatulWaslView: View {
                        highlightsWasla: true)
     }
 
-    private func waslRow(_ phrase: WaslData.Phrase) -> some View {
+    private func waslRow(_ phrase: WaslData.Phrase, selectionScope: String = "") -> some View {
         WaslExampleRow(arabic: phrase.arabic,
                        reading: phrase.reading,
                        note: "\(phrase.gloss) (\(phrase.reference.localizedDigits))",
                        saidAs: phrase.kind == .tanween ? phrase.saidAs : nil,
                        spoken: phrase.spoken,
-                       highlightsWasla: true)
+                       highlightsWasla: true,
+                       selectionScope: selectionScope)
     }
 
     private static let ihdinaSirat = WaslData.phrases.first { $0.reference == "1:6" } ?? WaslData.phrases[0]
@@ -383,6 +386,8 @@ private struct WaslExampleRow: View {
     let saidAs: String?
     let spoken: String
     var highlightsWasla = false
+    /// Set where a phrase is shown twice on the page, so the two rows keep separate selections.
+    var selectionScope = ""
 
     private var arabicText: Text {
         guard highlightsWasla else { return Text(arabic) }
@@ -396,7 +401,7 @@ private struct WaslExampleRow: View {
     }
 
     var body: some View {
-        let id = "wasl:" + arabic
+        let id = "wasl:" + selectionScope + arabic
         let isSelected = selection.isSelected(id)
 
         return HStack(alignment: .center, spacing: 12) {

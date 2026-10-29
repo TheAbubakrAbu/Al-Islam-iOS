@@ -493,6 +493,9 @@ extension Settings {
         // The custom-method angles travel WITH the method label (`prayerCalculation` syncs above):
         // without them a watch receiving "Custom Angles" computed with the 18/17 defaults forever.
         "customFajrAngle", "customIshaAngle",
+        // Allow Notifications, the master switch over every kind below: it syncs like the per-prayer
+        // switches it governs. Never written raw on arrival; `applyWatchSyncSnapshot` runs its setter.
+        "notificationsEnabled",
         "calculationAutomatic", "switchHijriDateAtMaghrib", "dateNotifications",
         "naggingMode", "naggingStartOffset", "adhanNotificationSound", "showPrayerInfo",
         // The nagging options (2026-09-20). Not `naggingPausedUntil`: a pause is a moment, not a
@@ -673,6 +676,8 @@ extension Settings {
             // explicit choice.
             if Self.phoneAuthoritativeSyncKeys.contains(key) { continue }
             #endif
+            // Through its setter after this loop, never a raw write (see below).
+            if key == "notificationsEnabled" { continue }
             guard let rawIncoming = dict[key] else { continue }
             #if os(watchOS)
             // Reading themes never land on the watch: an older phone build may still send "sepia"/
@@ -693,6 +698,10 @@ extension Settings {
             let current = store.object(forKey: key)
             // NSObject equality covers every plist type the snapshot can carry (numbers, strings, arrays, dicts).
             if let current = current as? NSObject, let incoming = incoming as? NSObject, current == incoming { continue }
+            // The raw write tells no slice, and since the slices refactor no view observes `Settings`
+            // itself, so the owning slice publishes here (what a `@Setting` setter does before its write)
+            // or an open page keeps showing the value the peer just replaced.
+            SettingsSlices.willChange(key)
             store.set(incoming, forKey: key)
             changed = true
         }
@@ -705,6 +714,20 @@ extension Settings {
         // `Settings.appGroupMirroredStorageKeys`; this block used to name eight of them by hand and
         // missed the two custom angles, which the watch does receive.
         remirrorAppGroupPreferences()
+
+        // Allow Notifications goes through its setter, so the receiving device does exactly what a flip
+        // on it does (`notificationsEnabledDidChange`): off supersedes a queued pass and clears pending and
+        // delivered requests; on reschedules and posts `notificationsEnabledDidChangeNotification`, which
+        // re-arms the phone's reminders and planner; either way the AdhanSettings slice publishes, so an
+        // open Notification Settings page follows. It runs after the raw writes on purpose: the pass it
+        // starts reads every other key this payload carried. Only on a real change, because a didSet
+        // fires on every assignment, equal or not. It leaves `changed` alone: the didSet's pass is the
+        // reschedule, and nothing the forced fetch below recomputes reads the switch. No echo: the manager
+        // records the applied value as already pushed in this same main-actor pass (`processIncoming`), so
+        // the debounced send the setter's publish schedules finds nothing new to stamp or send back.
+        if let enabled = dict["notificationsEnabled"] as? Bool, enabled != notificationsEnabled {
+            notificationsEnabled = enabled
+        }
 
         guard changed else { return }
 

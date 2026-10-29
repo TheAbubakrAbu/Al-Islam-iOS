@@ -781,6 +781,8 @@ struct AyahActionsSheet: View {
     /// The reciter list, presented ON this sheet rather than swapped for it, so the voice can be
     /// changed and the ayah played without leaving the actions (Abu, 2026-10-25).
     @State private var showReciterPicker = false
+    /// The displayed riwayah changed under this sheet (see `closeAfterRiwayahChange`).
+    @State private var riwayahChanged = false
 
     let surah: Surah
     let ayah: Ayah
@@ -806,6 +808,17 @@ struct AyahActionsSheet: View {
     /// through here either; its own sheet plays and closes.
     private func closeAfterPlaying() {
         if !settings.keepAyahSheetOpenOnPlay { dismiss() }
+    }
+
+    /// A reciter of another riwayah picked on top of this sheet switches the display off Hafs, and
+    /// `ayah` is a NUMBER: under the new riwayah the card shows that riwayah's ayah of the number
+    /// (other words where the counts differ) and Bookmark and Note file under it. The sheet closes
+    /// instead, once nothing is presented on top of it (a presenter dismissed while its child is
+    /// still leaving is ignored), a beat later as the hosts' own sheet swaps wait.
+    private func closeAfterRiwayahChange() {
+        guard riwayahChanged, !showReciterPicker, sheetStack.pending == nil else { return }
+        riwayahChanged = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { dismiss() }
     }
 
     /// Whether the sheet opens at the large detent. The preview card reads at the reader's size
@@ -1371,6 +1384,12 @@ struct AyahActionsSheet: View {
             )
             .modifier(StackedSecondaryPresentation(kind: secondary, ayah: ayah))
         }
+        .onChange(of: quranDisplay.displayQiraah) { _ in
+            riwayahChanged = true
+            closeAfterRiwayahChange()
+        }
+        .onChange(of: showReciterPicker) { _ in closeAfterRiwayahChange() }
+        .onChange(of: sheetStack.pending == nil) { _ in closeAfterRiwayahChange() }
     }
 }
 

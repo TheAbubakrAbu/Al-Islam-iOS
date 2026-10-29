@@ -235,28 +235,35 @@ final class QiraahTajweedStore: @unchecked Sendable {
     /// The print palette, adjusted per appearance for on-screen legibility.
     /// r red, b blue, m magenta, c cyan, o orange, g green, e sea green, l royal, y olive.
     static func uiColor(for letter: Character) -> UIColor {
+        palette[letter] ?? .label
+    }
+
+    /// Built once, so every run of one rule carries the SAME instance: a dynamic colour equals only
+    /// itself, and `FontGlyphs.colourWholeGlyphs` tells one rule from two by `isEqual` (a fresh colour
+    /// per run left a ligature painted by two runs of one rule "mixed", the rule hidden inside it).
+    /// A `static let` is initialized once under a lock, and the painters run off main too.
+    private static let palette: [Character: UIColor] = {
         func dyn(_ light: (CGFloat, CGFloat, CGFloat), _ dark: (CGFloat, CGFloat, CGFloat)) -> UIColor {
             UIColor { traits in
                 let c = traits.userInterfaceStyle == .dark ? dark : light
                 return UIColor(red: c.0, green: c.1, blue: c.2, alpha: 1)
             }
         }
-        switch letter {
-        case "m": return dyn((0.78, 0.00, 0.58), (1.00, 0.38, 0.86))
-        case "b": return dyn((0.05, 0.20, 0.88), (0.42, 0.60, 1.00))
-        case "r": return dyn((0.82, 0.06, 0.06), (1.00, 0.42, 0.36))
-        case "c": return dyn((0.00, 0.52, 0.66), (0.30, 0.83, 1.00))
-        case "o": return dyn((0.85, 0.42, 0.00), (1.00, 0.64, 0.22))
-        case "g": return dyn((0.00, 0.58, 0.12), (0.32, 0.88, 0.42))
-        // Deeper and bluer than "g" on purpose: the two Abu Jaʿfar volumes are the only
-        // ones that use both, and the print itself separates them the same way
-        // (#00ff00 for the sakt, #00b050 for the waṣl dot).
-        case "e": return dyn((0.00, 0.45, 0.33), (0.20, 0.80, 0.62))
-        case "l": return dyn((0.32, 0.42, 0.95), (0.60, 0.72, 1.00))
-        case "y": return dyn((0.55, 0.53, 0.00), (0.82, 0.80, 0.28))
-        default:  return .label
-        }
-    }
+        return [
+            "m": dyn((0.78, 0.00, 0.58), (1.00, 0.38, 0.86)),
+            "b": dyn((0.05, 0.20, 0.88), (0.42, 0.60, 1.00)),
+            "r": dyn((0.82, 0.06, 0.06), (1.00, 0.42, 0.36)),
+            "c": dyn((0.00, 0.52, 0.66), (0.30, 0.83, 1.00)),
+            "o": dyn((0.85, 0.42, 0.00), (1.00, 0.64, 0.22)),
+            "g": dyn((0.00, 0.58, 0.12), (0.32, 0.88, 0.42)),
+            // Deeper and bluer than "g" on purpose: the two Abu Jaʿfar volumes are the only
+            // ones that use both, and the print itself separates them the same way
+            // (#00ff00 for the sakt, #00b050 for the waṣl dot).
+            "e": dyn((0.00, 0.45, 0.33), (0.20, 0.80, 0.62)),
+            "l": dyn((0.32, 0.42, 0.95), (0.60, 0.72, 1.00)),
+            "y": dyn((0.55, 0.53, 0.00), (0.82, 0.80, 0.28)),
+        ]
+    }()
 
     // MARK: - Coloring
 

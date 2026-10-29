@@ -2403,6 +2403,10 @@ extension Settings {
         if notificationsEnabled {
             scheduleNotifications(deferred: true)
         } else {
+            // A pass already handed to `notificationBuildQueue` is superseded first: it was still current
+            // and added its requests after the clearing below, bringing the adhans back under a switch
+            // that reads off (the watch's hand-over path does the same).
+            _ = Self.nextNotificationPassGeneration()
             let center = UNUserNotificationCenter.current()
             center.removeAllPendingNotificationRequests()
             center.removeAllDeliveredNotifications()
@@ -2675,7 +2679,8 @@ extension Settings {
     }
 
     /// The identifier namespaces this scheduler OWNS and may prune: its prayer requests
-    /// ("<name>-<minutes>-Y-M-D", one prefix per `notifTable` name), Hijri-event reminders ("Event-")
+    /// ("<name>-<minutes>-Y-M-D", one prefix per `notifTable` name), Hijri-event reminders and the
+    /// clock-change heads-up ("Event-")
     /// and refresh nags ("RefreshReminder-"). Every other pending identifier belongs to another
     /// feature and must be left alone - the blanket "not in desiredIDs → stale" prune used to delete
     /// the Quran planner's daily reminder on every prayer reschedule (i.e. every launch), because the
@@ -3022,6 +3027,7 @@ extension Settings {
             // is cleared here too, so a pass raised while it is off (a location fix, a settings change, a
             // launch) can never bring an alert back.
             logger.debug("Prayer schedule skipped: Allow Notifications is off")
+            _ = Self.nextNotificationPassGeneration()
             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
             completion?()
             return
@@ -3170,6 +3176,9 @@ extension Settings {
                                                    to: Calendar.current.startOfDay(for: Date())) ?? .distantFuture
             eventRequests.removeAll { $0.date > horizonEnd }
         }
+        // The evening before the clocks change, while any prayer notification is on: tier 3 with the
+        // day-before Islamic date reminders it is modelled on. Needs no location, like them.
+        if let built = makeClockChangeNotificationRequest() { eventRequests.append(built) }
 
         var nagRequests: [(spec: PendingNotificationSpec, date: Date)] = []
         if naggingMode, let built = makeRefreshNagRequest(inDays: 1) { nagRequests.append(built) }
@@ -3438,6 +3447,10 @@ extension Settings {
     }
 
     private func isForegroundAdhanEligible(_ name: String) -> Bool {
+        // The in-app adhan stands in for the at-time notification, so Allow Notifications off silences it
+        // too ("no prayer alerts or adhan"): with the switch off and the app open at Dhuhr, the full
+        // recording still played, and opening the app after a prayer still played or offered it.
+        guard notificationsEnabled else { return false }
         guard Self.adhanEligiblePrayerNames.contains(name) else { return false }
         // A prayer whose adhan sound is off gets the system notification sound; playing the recording in-app
         // anyway would be the exact thing the user turned off.
@@ -4713,7 +4726,36 @@ extension Settings {
         return (spec, finalDate)
     }
 
-    
+    /// The heads-up for a clock change inside the schedule's horizon (Abu, 2026-10-28: "for daylight
+    /// savings give a notification if any prayer notifications are true the day before so its like a
+    /// normal islamic hijri calendar notification but the day before"). 6 PM the evening before, like
+    /// the day-before Islamic date reminders, and only while some prayer notification is on: those are
+    /// the alerts the change moves. Nil once that evening has passed; the prayer list's footer
+    /// (`ClockChangeFooter`) says it from then on.
+    func makeClockChangeNotificationRequest(now: Date = Date()) -> (spec: PendingNotificationSpec, date: Date)? {
+        guard Self.notifTable.values.contains(where: { self[keyPath: $0.enabled] }) else { return nil }
+        let calendar = Calendar(identifier: .gregorian)
+        guard let change = ClockChange.next(after: now, in: calendar.timeZone, horizonDays: Self.adhanHorizonDays,
+                                            calendar: calendar),
+              let fireDate = change.headsUpDate(calendar: calendar), fireDate > now
+        else { return nil }
+        var comps = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+        // Zone and calendar pinned as on the event requests (see `makeEventNotificationRequest`).
+        comps.timeZone = calendar.timeZone
+        comps.calendar = calendar
+        // Under "Event-", so the owned-prefix prune removes it once the change is behind us.
+        let id = "Event-ClockChange-\(comps.year ?? 0)-\(comps.month ?? 0)-\(comps.day ?? 0)"
+        let spec = PendingNotificationSpec(
+            identifier: id,
+            body: change.headsUpBody(timeFormatter: .timeEN).localizedDigits,
+            soundFile: nil,
+            categoryIdentifier: nil,
+            intendedFireDate: fireDate,
+            trigger: comps
+        )
+        return (spec, fireDate)
+    }
+
     @inline(__always)
     private func binding<T>(_ key: ReferenceWritableKeyPath<Settings, T>, default value: T) -> Binding<T> {
         Binding(

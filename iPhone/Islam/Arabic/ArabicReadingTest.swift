@@ -1019,19 +1019,21 @@ struct ReadingQuestionFactory {
 
     /// A review of what was missed: each item once, asked the way its tier asks (read, spell or build;
     /// never the listening or hands-on skills, which need the voice or a special layout).
+    /// Every word in the bank is in the Practice Missed count, so each one is asked: a joined shape with
+    /// no look-alike spellings to choose from is tapped together instead, and a place goes to the next
+    /// word rather than staying empty.
     mutating func review(ofMissed items: [(tier: ReadingTier, item: ReadingItem)], length: Int = 15) -> [ReadingQuestion] {
         var out: [ReadingQuestion] = []
-        for (tier, item) in shuffled(items).prefix(length) {
+        for (tier, item) in shuffled(items) where out.count < length {
             let skills = tier.skills.filter { $0 == .read || $0 == .spell || $0 == .stop || $0 == .takeApart }
-            guard !skills.isEmpty else { continue }
+            var built: ReadingQuestion?
             var tries = 0
-            while tries < 4 {
+            while built == nil, !skills.isEmpty, tries < 4 {
                 tries += 1
-                if let question = question(item, in: tier, skill: skills[Int(next(upTo: skills.count))]) {
-                    out.append(question)
-                    break
-                }
+                built = question(item, in: tier, skill: skills[Int(next(upTo: skills.count))])
             }
+            if built == nil, tier.skills.contains(.build) { built = buildQuestion(item, in: tier) }
+            if let built { out.append(built) }
         }
         return out
     }
@@ -2193,11 +2195,19 @@ final class ReadingTestProgress: StudyLadderProgress {
 
     /// The words missed in scored tests, newest first, each with its tier: the Practice Missed round.
     var missedItems: [(tier: ReadingTier, item: ReadingItem)] {
-        missed.compactMap { entry in
-            guard let tier = ReadingTier.tier(id: entry.tier),
-                  let item = ReadingTestBank.items(for: tier).first(where: { $0.arabic == entry.id }) else { return nil }
-            return (tier, item)
-        }
+        missed.compactMap(Self.resolve)
+    }
+
+    /// Forgets the missed words this bank no longer has (a regenerated bank dropped the word, or the
+    /// tier was renamed): they are out of `missedItems`, so nothing could ever read them right.
+    func forgetUnresolvableMissed() {
+        forgetMissed { Self.resolve($0) == nil }
+    }
+
+    private static func resolve(_ entry: StudyMissedItem) -> (tier: ReadingTier, item: ReadingItem)? {
+        guard let tier = ReadingTier.tier(id: entry.tier),
+              let item = ReadingTestBank.items(for: tier).first(where: { $0.arabic == entry.id }) else { return nil }
+        return (tier, item)
     }
 
     /// Files a finished round. `hints` and `missed` decide mastery; the best score only ever rises.

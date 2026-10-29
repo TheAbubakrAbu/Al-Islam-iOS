@@ -66,6 +66,10 @@ struct ReadingTestView: View {
 
     private var accent: Color { appearance.accent }
 
+    /// The missed words a Practice Missed round can ask: only words the bank still has, so the count
+    /// never opens an empty round.
+    private var toReview: Int { progress.missed.isEmpty ? 0 : progress.missedItems.count }
+
     var body: some View {
         List {
             Group {
@@ -92,6 +96,8 @@ struct ReadingTestView: View {
         .applyConditionalListStyle()
         .navigationTitle("Reading Test")
         .navigationBarTitleDisplayMode(.inline)
+        // A missed word the bank no longer has could never be read right.
+        .task { if !progress.missed.isEmpty { progress.forgetUnresolvableMissed() } }
         .pushDestination(isPresented: sessionBinding) {
             if let session { ReadingSessionView(mode: session) }
         }
@@ -150,7 +156,7 @@ struct ReadingTestView: View {
             stats: started ? [
                 ResourceHeroStat("\(progress.passedCount)", String(localized: "of \(total) passed")),
                 ResourceHeroStat("\(progress.masteredCount)", String(localized: "mastered")),
-                ResourceHeroStat("\(progress.missed.count)", String(localized: "to review")),
+                ResourceHeroStat("\(toReview)", String(localized: "to review")),
             ] : []
         ) {
             VStack(alignment: .leading, spacing: 10) {
@@ -207,17 +213,17 @@ struct ReadingTestView: View {
                 session = .speed
             }
 
-            if !progress.missed.isEmpty {
+            if toReview > 0 {
                 StudyActionRow(title: String(localized: "Practice Missed Words"), systemImage: "arrow.uturn.backward.circle",
                                caption: String(localized: "The words you missed in scored tests, until you get them right"),
-                               detail: "\(progress.missed.count)") {
+                               detail: "\(toReview)") {
                     session = .missed(nil)
                 }
             }
         } header: {
             StudySectionHeader(String(localized: "REVIEW"), systemImage: "arrow.triangle.2.circlepath")
         } footer: {
-            if !progress.missed.isEmpty {
+            if toReview > 0 {
                 Text("A word leaves the review list once you read it right in a review or a scored test.")
             }
         }
@@ -907,6 +913,10 @@ struct ReadingSessionView: View {
                 }
             )
         })
+        // The board keeps its locked pairs in its own state and every question's pairs are ids 0-3:
+        // without a fresh identity a second Match Pairs in a row (a practice round is ten of them)
+        // opens with every pair already locked and nothing left to tap.
+        .id(question.id)
     }
 
     // MARK: Read aloud
@@ -1313,7 +1323,14 @@ struct ReadingSessionView: View {
         let percent = total == 0 ? 0 : Int((Double(right) / Double(total) * 100).rounded())
         let passed = percent >= ReadingTestProgress.passMark
         let tier: ReadingTier? = { if case .test(let tier) = mode { return tier } else { return nil } }()
-        let outcome: StudyOutcome? = tier == nil ? nil : (right == total && hints == 0) ? .mastered : passed ? .passed : .failed
+        // A round that built no questions scored nothing: 0 of 0 is never Mastered (nor recorded).
+        let outcome: StudyOutcome? = tier == nil || total == 0 ? nil : (right == total && hints == 0) ? .mastered : passed ? .passed : .failed
+        // A missed round with nothing missed goes again over the whole bank, which may be empty now:
+        // no door to an empty round.
+        let againIsEmpty: Bool = {
+            guard case .missed = mode, missed.isEmpty else { return false }
+            return progress.missedItems.isEmpty
+        }()
 
         return Section {
             StudyScoreCard(right: right, total: total, outcome: outcome,
@@ -1335,10 +1352,12 @@ struct ReadingSessionView: View {
                 }
             }
 
-            StudyResultButton(title: tier != nil && !passed ? String(localized: "Try Again") : String(localized: "Go Again"), systemImage: "arrow.clockwise",
-                              prominent: tier != nil && !passed && missed.isEmpty) {
-                if case .missed = mode, missed.isEmpty { mode = .missed(nil) }
-                start()
+            if !againIsEmpty {
+                StudyResultButton(title: tier != nil && !passed ? String(localized: "Try Again") : String(localized: "Go Again"), systemImage: "arrow.clockwise",
+                                  prominent: tier != nil && !passed && missed.isEmpty) {
+                    if case .missed = mode, missed.isEmpty { mode = .missed(nil) }
+                    start()
+                }
             }
 
             StudyResultButton(title: String(localized: "Back"), systemImage: "chevron.backward") {

@@ -370,7 +370,12 @@ struct HadithIsnadTreeView: View {
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                         if let drawn {
-                            Text([String(localized: "\(summary.narrations) narrations"), String(localized: "\(summary.books) books"),
+                            // The counts of the tree as drawn: the pack's while it is whole, the pruned
+                            // tree's own once the similar wording is left out (the roads always were).
+                            let pruned = scope == .sameText && !similar.isEmpty ? drawn.tree.refs : nil
+                            let narrations = pruned?.count ?? summary.narrations
+                            let books = pruned.map { Set($0.map(\.slug)).count } ?? summary.books
+                            Text([String(localized: "\(narrations) narrations"), String(localized: "\(books) books"),
                                   String(localized: "\(drawn.layout.roads) roads")].joined(separator: " · "))
                                 .font(.caption.weight(.semibold))
                                 .foregroundColor(appearance.accent)

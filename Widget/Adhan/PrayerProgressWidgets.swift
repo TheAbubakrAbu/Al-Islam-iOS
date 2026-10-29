@@ -470,7 +470,7 @@ struct PrayerDayView: View {
     }
 
     private func isCurrent(_ prayer: Prayer) -> Bool {
-        entry.currentPrayer?.nameTransliteration == prayer.nameTransliteration
+        isCurrentPrayer(prayer, entry: entry)
     }
 
     var body: some View {
@@ -750,7 +750,7 @@ struct PrayerRowLockView: View {
         } else {
             HStack(alignment: .center, spacing: 4) {
                 ForEach(rowPrayers, id: \.nameTransliteration) { prayer in
-                    let isCurrent = entry.currentPrayer?.nameTransliteration == prayer.nameTransliteration
+                    let isCurrent = isCurrentPrayer(prayer, entry: entry)
 
                     VStack(spacing: 2) {
                         Text(prayerAbbreviation(prayer))

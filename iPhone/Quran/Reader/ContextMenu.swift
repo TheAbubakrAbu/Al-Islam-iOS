@@ -1591,8 +1591,40 @@ struct SelectAyahTextSheet: View {
         return surah.ayahs.first(where: { $0.id == anchorHafsAyah }) ?? ayah
     }
 
+    /// Smart matching finds the tapped words unnumbered in the selected riwayah: its alignment maps
+    /// their Hafs ayah to nothing (the basmalah in the Madani count of al-Fatiha). `QiraahAyahResolver`
+    /// calls that unavailable; `arabicAyah` falling back to the tapped number served that riwayah's
+    /// unrelated ayah instead (Warsh 1:1's al-hamd under the basmalah's translation).
+    private var anchorUnnumberedInSelectedQiraah: Bool {
+        guard smartAyahMatching else { return false }
+        let tag = Settings.Riwayah.canonicalTag(selectedQiraah)
+        guard !tag.isEmpty,
+              let alignment = QiraahComparison.alignment(surahID: surah.id, tag: tag, quranData: QuranData.shared) else { return false }
+        return alignment.riwayahNumberForHafs[anchorHafsAyah] == nil
+    }
+
+    /// The rest of a split ayah: the selected riwayah's ayahs after `arabicAyah` that carry the same
+    /// ONE Hafs ayah (al-Fatiha's last ayah is two in the Madani count), joined after it as
+    /// `QiraahAyahResolver` joins them, so the Arabic block covers the whole translation below it.
+    private var arabicSplitTail: [Ayah] {
+        guard smartAyahMatching else { return [] }
+        let tag = Settings.Riwayah.canonicalTag(selectedQiraah)
+        guard !tag.isEmpty,
+              let alignment = QiraahComparison.alignment(surahID: surah.id, tag: tag, quranData: QuranData.shared) else { return [] }
+        let anchor = anchorHafsAyah
+        var tail: [Ayah] = []
+        var last = arabicAyah.id
+        while alignment.hafsRangeForRiwayah[last + 1] == anchor...anchor,
+              let piece = surah.ayahs.first(where: { $0.id == last + 1 }),
+              piece.existsInQiraah(tag, surahID: surah.id) {
+            tail.append(piece)
+            last += 1
+        }
+        return tail
+    }
+
     private var ayahExistsInSelectedQiraah: Bool {
-        arabicAyah.existsInQiraah(selectedQiraah, surahID: surah.id)
+        !anchorUnnumberedInSelectedQiraah && arabicAyah.existsInQiraah(selectedQiraah, surahID: surah.id)
     }
 
     /// Smart Ayah Matching only matters once the sheet's riwayah has moved away from the one the
@@ -1607,14 +1639,18 @@ struct SelectAyahTextSheet: View {
         // comparison sheets do. Passing `clean: hideTashkeel` would route through textCleanArabic, which
         // reads the READER's global Hide Dots itself - so the sheet's Hide Tashkeel would also strip dots
         // and its Hide Dots toggle couldn't restore them.
-        var text = arabicAyah.displayArabicText(
-            surahId: surah.id,
-            clean: false,
-            removeDots: false,
-            qiraahOverride: selectedQiraah
-        )
+        // Words the selected riwayah does not number are shown in Hafs, as the share sheet shares them
+        // (`unnumberedNotice`), not as that riwayah's ayah of the same number.
+        let unnumbered = anchorUnnumberedInSelectedQiraah
+        let base = unnumbered ? hafsAyah : arabicAyah
+        var text = (unnumbered ? [base] : [base] + arabicSplitTail)
+            .map {
+                $0.displayArabicText(surahId: surah.id, clean: false, removeDots: false,
+                                     qiraahOverride: unnumbered ? Settings.Riwayah.hafsTag : selectedQiraah)
+            }
+            .joined(separator: " ")
         if hideTashkeel {
-            if surah.id == 1 && arabicAyah.id == 1 && Ayah.opensWithTaawwudh(text) {
+            if surah.id == 1 && base.id == 1 && Ayah.opensWithTaawwudh(text) {
                 text = Ayah.bismillahCleanArabic
             } else {
                 text = text.removingArabicDiacriticsAndSigns
@@ -1640,6 +1676,14 @@ struct SelectAyahTextSheet: View {
         return String(localized: "Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat). With Smart Ayah Matching off, the exact tapped number is shown as-is.")
     }
 
+    /// The share sheet's notice for words the selected riwayah does not count as an ayah (the
+    /// basmalah in the Madani count of al-Fatiha): they are not a neighbouring ayah's words, so the
+    /// "not separate" line would be wrong, and the block below shows them in Hafs.
+    private var unnumberedNotice: String {
+        let riwayah = Settings.Riwayah.option(for: selectedQiraah).displayLabel(omitsDefaultSuffix: true)
+        return String(localized: "\(riwayah) does not count these words as an ayah, so the Hafs text is shown.")
+    }
+
     var body: some View {
         SheetNavigationContainer {
             List {
@@ -1652,13 +1696,15 @@ struct SelectAyahTextSheet: View {
                         Section {
                             ArabicTextRiwayahPicker(selection: $selectedQiraah, useMenuRow: true)
                         } footer: {
-                            if selectedQiraahDiffersFromOrigin {
+                            if anchorUnnumberedInSelectedQiraah {
+                                Text(unnumberedNotice)
+                            } else if selectedQiraahDiffersFromOrigin {
                                 Text(riwayahFooterText)
                             }
                         }
                     }
 
-                    if ayahExistsInSelectedQiraah {
+                    if ayahExistsInSelectedQiraah || anchorUnnumberedInSelectedQiraah {
                         selectableBlock(
                             title: String(localized: "ARABIC"),
                             text: arabicText,

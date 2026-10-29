@@ -54,8 +54,13 @@ struct PrayerList: View {
     // they had saved under the old "prayerDisplayMode" key.
     @AppStorage("prayerDisplayModeV2") private var prayerDisplayModeRawValue: String = PrayerDisplayMode.tiles.rawValue
 
+    /// Two tile boards since 2026-10-28 (Abu: "add a second tiles option. First tiles option is the old
+    /// tiles option we have. Second is the one that we have now"): Tiles is the glass board 4.6.5
+    /// shipped, so everyone on the default keeps what they had; Centered Tiles is the welled board
+    /// Tiles wore from 2026-10-26.
     enum PrayerDisplayMode: String, CaseIterable, Identifiable {
         case tiles = "Prayer Tiles"
+        case centeredTiles = "Prayer Centered Tiles"
         case grid = "Prayer Grid"
         case list = "Prayer List"
         case split = "Prayer Split"
@@ -65,6 +70,7 @@ struct PrayerList: View {
         var displayName: String {
             switch self {
             case .tiles: return String(localized: "TILES")
+            case .centeredTiles: return String(localized: "CENTERED TILES")
             case .grid: return String(localized: "GRID")
             case .list: return String(localized: "LIST")
             case .split: return String(localized: "SPLIT")
@@ -77,9 +83,19 @@ struct PrayerList: View {
         var menuSymbol: String {
             switch self {
             case .tiles: return "square.grid.2x2"
+            case .centeredTiles: return "rectangle.grid.2x2"
             case .grid: return "tablecells"
             case .list: return "list.bullet"
             case .split: return "rectangle.split.2x1"
+            }
+        }
+
+        /// The layouts whose rows or tiles carry the notification bell, so an opened prayer's detail
+        /// does not draw a second one.
+        var drawsCellBells: Bool {
+            switch self {
+            case .tiles, .centeredTiles, .list: return true
+            case .grid, .split: return false
             }
         }
     }
@@ -531,6 +547,9 @@ struct PrayerList: View {
             splitContent(prayers: prayers, isComparisonBaseline: isComparisonBaseline, highlightsCurrent: highlightsCurrent)
         case .tiles:
             tilesContent(prayers: prayers, isComparisonBaseline: isComparisonBaseline, highlightsCurrent: highlightsCurrent)
+        case .centeredTiles:
+            tilesContent(prayers: prayers, centered: true, isComparisonBaseline: isComparisonBaseline,
+                         highlightsCurrent: highlightsCurrent)
         }
     }
 
@@ -587,8 +606,9 @@ struct PrayerList: View {
     @ViewBuilder
     private func gridContent(prayers: [Prayer], isComparisonBaseline: Bool = false, highlightsCurrent: Bool = true) -> some View {
         // The 4.6.4 table, back since 2026-10-26 (Abu: "grid and tiles a lot of overlap ... bring back
-        // old grid"): wide gaps, nothing drawn behind a cell. The welled cell of 2026-10-03 is the Tiles'
-        // now (`PrayerTile`). The current prayer is the plain accent: there is no tint under it here.
+        // old grid"): wide gaps, nothing drawn behind a cell. The welled cell of 2026-10-03 is the
+        // Centered Tiles' now (`PrayerCenteredTile`). The current prayer is the plain accent: there is no
+        // tint under it here.
         let columns = Array(
             repeating: GridItem(.flexible(), spacing: 12),
             count: prayers.count == 4 ? 2 : 3
@@ -701,8 +721,12 @@ struct PrayerList: View {
         .frame(maxWidth: .infinity, alignment: .top)
     }
 
+    /// Both tile boards: `centered` picks the welled cell (Centered Tiles) over the glass one (Tiles).
+    /// The grid around them, the colours and the gestures are the same; the watch draws its own tile
+    /// either way.
     @ViewBuilder
-    private func tilesContent(prayers: [Prayer], isComparisonBaseline: Bool = false, highlightsCurrent: Bool = true) -> some View {
+    private func tilesContent(prayers: [Prayer], centered: Bool = false, isComparisonBaseline: Bool = false,
+                              highlightsCurrent: Bool = true) -> some View {
         #if os(watchOS)
         // Tighter on the watch: the icon shares the name's line instead of taking one of its own, and the
         // padding comes down - that's what lets six prayers fit a screen at a readable size.
@@ -726,9 +750,9 @@ struct PrayerList: View {
         // The current tile's TEXT; its tint and glow keep the plain accent.
         let textAccent = tileTextAccent(accent)
 
-        // Plain shapes, no glass (`PrayerCellWell`, the cell the Grid layout wore from 2026-10-03 to
-        // 2026-10-26): a GlassEffectContainer re-rendered the tiles flatter and lost the glow when it
-        // was tried, and the A11-A13 devices that stutter never run iOS 26 anyway.
+        // Not wrapped in an iOS 26 `GlassEffectContainer`: tried, and it re-rendered the glass tiles
+        // flatter and dropped the current tile's glow. The flat pre-26 fill is the win that matters
+        // (the A11-A13 devices that stutter never run iOS 26).
         // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
         // each self-sizing pass, which iOS 26 traps on.
         SummaryTileGrid(columns: columns.count, spacing: tileSpacing) {
@@ -739,7 +763,7 @@ struct PrayerList: View {
                 let isCurrent = highlightsCurrent && !isComparisonBaseline
                     && (currentName?.contains(prayer.nameTransliteration) ?? false)
 
-                tileCell(for: prayer, color: color, isCurrent: isCurrent, accent: accent,
+                tileCell(for: prayer, centered: centered, color: color, isCurrent: isCurrent, accent: accent,
                          isComparisonBaseline: isComparisonBaseline)
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -770,11 +794,11 @@ struct PrayerList: View {
         expandedPrayerDetail(for: prayers)
     }
 
-    /// One tile of the Tiles layout. iOS: `PrayerTile`, the centred welled cell with the bell in its
-    /// corner. The watch keeps its own tighter stack (icon beside the name, caption type, the one tinted
-    /// tile), which is what lets six prayers fit a face at a readable size.
+    /// One tile of either tile board. iOS: `PrayerGlassTile` (Tiles) or `PrayerCenteredTile` (Centered
+    /// Tiles), both with the bell. The watch keeps its own tighter stack (icon beside the name, caption
+    /// type, the one tinted tile), which is what lets six prayers fit a face at a readable size.
     @ViewBuilder
-    private func tileCell(for prayer: Prayer, color: Color, isCurrent: Bool, accent: Color,
+    private func tileCell(for prayer: Prayer, centered: Bool, color: Color, isCurrent: Bool, accent: Color,
                           isComparisonBaseline: Bool) -> some View {
         #if os(watchOS)
         VStack(alignment: .leading, spacing: 2) {
@@ -820,10 +844,20 @@ struct PrayerList: View {
         .softShadow(color: isCurrent ? accent.opacity(0.35) : .clear,
                     radius: isCurrent ? 8 : 0, x: 0, y: 2)
         #else
-        PrayerTile(prayer: prayer, color: color, isCurrent: isCurrent, accent: accent,
-                   trackerMark: isComparisonBaseline ? nil : trackerMark(for: prayer)) {
-            if !isComparisonBaseline {
-                prayerBell(for: prayer, rowColor: color)
+        let mark = isComparisonBaseline ? nil : trackerMark(for: prayer)
+        if centered {
+            PrayerCenteredTile(prayer: prayer, color: color, isCurrent: isCurrent, accent: accent,
+                               trackerMark: mark) {
+                if !isComparisonBaseline {
+                    prayerBell(for: prayer, rowColor: color)
+                }
+            }
+        } else {
+            PrayerGlassTile(prayer: prayer, color: color, isCurrent: isCurrent, accent: accent,
+                            trackerMark: mark) {
+                if !isComparisonBaseline {
+                    prayerBell(for: prayer, rowColor: color)
+                }
             }
         }
         #endif
@@ -849,7 +883,7 @@ struct PrayerList: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 #if os(iOS)
-                if prayerDisplayMode != .list && prayerDisplayMode != .tiles {
+                if !prayerDisplayMode.drawsCellBells {
                     prayerBell(for: prayer, rowColor: .primary)
                 }
                 #endif
@@ -1582,13 +1616,69 @@ private extension Prayer {
     }
 }
 
-/// One tile of the Tiles layout, the default board: icon over name over time, centred in a rounded
-/// well. The current prayer's well takes the accent (fill, hairline, glow); the rest are a faint
-/// neutral well so the board reads as one grid instead of floating text. This was the Grid layout's
-/// cell from 2026-10-03 (the Tilawa grid) until 2026-10-26, when Abu asked for the tiles to be
-/// "inspired from grid too" and the Grid to go back to its flat table (`PrayerGridCell`): two welled
-/// boards were one too many. The bell keeps its corner; it is what makes Tiles the full board.
-private struct PrayerTile<Bell: View>: View {
+/// One tile of the Tiles layout, the default board as 4.6.5 shipped it: the icon and the bell across
+/// the top, then the name and the time, all leading, on clear glass. Only the CURRENT prayer's tile is
+/// tinted, so the one that matters reads at a glance instead of competing with five other filled
+/// boxes, and its soft accent glow lifts it off the board (the tint says "different", the glow says
+/// "now"). Gone from 2026-10-26 to 2026-10-28, when `PrayerCenteredTile` stood in for it.
+private struct PrayerGlassTile<Bell: View>: View {
+    let prayer: Prayer
+    let color: Color
+    let isCurrent: Bool
+    let accent: Color
+    var trackerMark: PrayerMark? = nil
+    @ViewBuilder let bell: () -> Bell
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .top) {
+                Image(systemName: prayer.image)
+                    .font(.subheadline)
+                    .foregroundColor(color)
+                    .accessibilityHidden(true)
+
+                Spacer()
+
+                bell()
+            }
+
+            HStack(spacing: 5) {
+                Text(prayer.compactDisplayName)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(color)
+
+                // The tracker is the phone's; the watch compiles this struct but never draws it.
+                #if os(iOS)
+                PrayerMarkDot(mark: trackerMark)
+                #endif
+            }
+
+            Text(prayer.time, style: .time)
+                .font(.subheadline.monospacedDigit())
+                .foregroundColor(color)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .conditionalGlassEffect(
+            clear: !isCurrent,
+            rectangle: true,
+            useColor: isCurrent ? 0.25 : nil,
+            customTint: isCurrent ? accent : nil,
+            flat: true
+        )
+        .softShadow(color: isCurrent ? accent.opacity(0.35) : .clear,
+                    radius: isCurrent ? 8 : 0, x: 0, y: 2)
+    }
+}
+
+/// One tile of the Centered Tiles layout: icon over name over time, centred in a rounded well. The
+/// current prayer's well takes the accent (fill, hairline, glow); the rest are a faint neutral well so
+/// the board reads as one grid instead of floating text. This was the Grid layout's cell from
+/// 2026-10-03 (the Tilawa grid) until 2026-10-26, when Abu asked for the tiles to be "inspired from
+/// grid too" and the Grid to go back to its flat table (`PrayerGridCell`); it was the Tiles' cell
+/// until 2026-10-28, when the glass tile (`PrayerGlassTile`) came back as Tiles and this one became a
+/// layout of its own. The bell keeps its corner, as on the glass tile.
+private struct PrayerCenteredTile<Bell: View>: View {
     let prayer: Prayer
     let color: Color
     let isCurrent: Bool

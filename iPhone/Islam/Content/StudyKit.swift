@@ -104,6 +104,7 @@ class StudyLadderProgress: ObservableObject {
         missed = storedMissed ?? []
         speedBest = defaults.integer(forKey: speedKey)
         hasSaved = storedRecords != nil || storedPlacement != nil || storedMissed != nil
+            || defaults.object(forKey: speedKey) != nil
 
         // "Erase Everything" removes the whole defaults domain while this object still holds the
         // ladder. Settings.swift compiles into targets this file is not in, so it cannot call in
@@ -116,7 +117,9 @@ class StudyLadderProgress: ObservableObject {
         // half of a deadlock that froze and then killed the app on Mac (2026-10-05, see
         // [[viewedlog-ioqueue-deadlock]]). The work below is a few defaults reads and a decision; it
         // needs no main thread, and the published properties are set on main explicitly.
-        let keys = [key, placementKey, missedKey]
+        // The Speed Round's key too: without it a ladder whose only record was a Speed Round looked
+        // erased on the very write that saved it, and its best went back to 0 in memory.
+        let keys = [key, placementKey, missedKey, speedKey]
         defaultsObserver = NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification, object: nil, queue: nil
         ) { [weak self] _ in
@@ -144,7 +147,7 @@ class StudyLadderProgress: ObservableObject {
         let storedPlacement = defaults.string(forKey: placementKey)
         let storedMissed = defaults.data(forKey: missedKey).flatMap { try? JSONDecoder().decode([StudyMissedItem].self, from: $0) } ?? []
         let storedSpeed = defaults.integer(forKey: speedKey)
-        hasSaved = stored != nil || storedPlacement != nil || !storedMissed.isEmpty
+        hasSaved = stored != nil || storedPlacement != nil || !storedMissed.isEmpty || storedSpeed != 0
         if records != stored ?? [:] { records = stored ?? [:] }
         if placement != storedPlacement { placement = storedPlacement }
         if missed != storedMissed { missed = storedMissed }
@@ -240,6 +243,16 @@ class StudyLadderProgress: ObservableObject {
         let gone = Set(ids)
         let kept = missed.filter { !($0.tier == tier && gone.contains($0.id)) }
         if kept.count != missed.count { missed = kept }
+    }
+
+    /// Forgets the missed items `unreachable` names: ones the test can never ask again (a pack or bank
+    /// update renamed or dropped what they point at), which no right answer could ever clear. Writes
+    /// only when something goes.
+    func forgetMissed(where unreachable: (StudyMissedItem) -> Bool) {
+        let kept = missed.filter { !unreachable($0) }
+        guard kept.count != missed.count else { return }
+        missed = kept
+        save()
     }
 
     func setPlacement(id: String) {
@@ -915,11 +928,13 @@ struct StudyScoreCard: View {
                     .foregroundColor(outcome == .failed ? .secondary : accent)
             }
 
-            Text(message)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+            if !message.isEmpty {
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             if let speedBest, speedBest > 0 {
                 StudyIconText(String(localized: "Best so far: \(speedBest)"), systemImage: "flame.fill")
@@ -938,8 +953,10 @@ struct StudyScoreCard: View {
         .listRowSeparator(.hidden)
     }
 
-    /// The sentence under a scored round's outcome, the same on both ladders.
+    /// The sentence under a scored round's outcome, the same on both ladders. None for a round that
+    /// had no questions: there was nothing to get right.
     static func message(right: Int, total: Int, outcome: StudyOutcome?, passMark: Int) -> String {
+        guard total > 0 else { return "" }
         switch outcome {
         case .mastered: return String(localized: "Every answer right, and no hints. This tier is yours.")
         case .passed:

@@ -150,6 +150,13 @@ struct VowelLettersView: View {
 struct VowelRoleSection: View {
     @Environment(\.appearance) private var appearance
 
+    /// Snapshotted at creation and handed to the rows. This section observes nothing, so when its page
+    /// redraws for a setting, SwiftUI runs this body again only if one of its fields changed: without
+    /// these, Hide English, the size slider and Use Quranic Sukoon left the rows as they were.
+    var letterSizeSteps: Int = Settings.shared.arabicLetterSizeIndex
+    var hideEnglish: Bool = Settings.shared.hideEnglishInArabicLetters
+    var quranicSukoon: Bool = Settings.shared.quranicSukoonInLetterPractice
+
     let letter: String
     /// On a letter's own page: the topic page and the practice, each on a List row of its own.
     var showsLinks = false
@@ -178,7 +185,8 @@ struct VowelRoleSection: View {
     var body: some View {
         Section {
             ForEach(VowelLetterRoles.examples(for: letter), id: \.self) { occurrence in
-                VowelRoleRow(occurrence: occurrence)
+                VowelRoleRow(letterSizeSteps: letterSizeSteps, hideEnglish: hideEnglish,
+                             quranicSukoon: quranicSukoon, occurrence: occurrence)
             }
 
             if showsLinks {

@@ -1058,12 +1058,16 @@ struct AyahSearchResultRow: View, Equatable {
     ///
     /// The bindings and `onSelectAyah` are deliberately absent: a `Binding` is not `Equatable` and the
     /// closure is recreated per pass, so including them would defeat the comparison entirely. They feed
-    /// actions, never the drawing. Bookmark/favorite state is absent for the same reason it is on
-    /// `SurahAyahRow`: it lives in observed `Settings`, whose publish invalidates this row directly.
+    /// actions, never the drawing. The two sets are compared for THIS row only (its surah's star, its
+    /// ayah's bookmark): the swipe actions and the context menu draw their icons and the Bookmark /
+    /// Unbookmark label from the sets handed in here, so ignoring them left a bookmarked page row
+    /// offering "Bookmark Ayah" until it scrolled off. One lookup each keeps the 604-row sort cheap.
     static func == (l: Self, r: Self) -> Bool {
         l.surah.id == r.surah.id && l.ayah.id == r.ayah.id &&
         l.disableTajweedColors == r.disableTajweedColors &&
         l.compactArabic == r.compactArabic &&
+        l.favoriteSurahs.contains(l.surah.id) == r.favoriteSurahs.contains(r.surah.id) &&
+        l.isBookmarked == r.isBookmarked &&
         l.renderSettingsSignature == r.renderSettingsSignature
     }
 

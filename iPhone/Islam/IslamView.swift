@@ -994,10 +994,16 @@ struct IslamView: View {
 
         ForEach(resourceSections(foldsSimple: true)) { section in
             Section(header: SectionPillHeader(title: section.title, count: section.items.count, icon: section.systemImage)) {
-                resourceItems(section.items)
-                    // The section's one grid row, so a scroll can land on a section that the lazy
-                    // List has not built yet (a tile's own id is unknown until its row exists).
-                    .id(Self.sectionRowID(section.id))
+                if settings.islamGridMode {
+                    resourceItems(section.items)
+                        // The section's one grid row, so a scroll can land on a section that the lazy
+                        // List has not built yet (a tile's own id is unknown until its row exists).
+                        .id(Self.sectionRowID(section.id))
+                } else {
+                    // Not on the list's rows: on a ForEach it lands on EVERY row as its outer id, over
+                    // the `resource_` id that Scroll To lands on.
+                    resourceItems(section.items)
+                }
             }
         }
 
@@ -1483,14 +1489,17 @@ struct IslamView: View {
             PillarsView()
         case .howToGuides:
             GuidesView()
+        // Each library declares itself open, as Proving Islam does, so a door back to it further down
+        // this stack (the What is the Sunnah? page's RESOURCES row, Proving Islam's library rows) greys
+        // instead of pushing a second copy of the library.
         case .miraclesOfQuran:
-            MiraclesView()
+            MiraclesView().openScreen(.miraclesLibrary)
         case .propheciesOfProphet:
-            PropheciesView()
+            PropheciesView().openScreen(.propheciesLibrary)
         case .miraclesOfProphets:
-            ProphetMiraclesView()
+            ProphetMiraclesView().openScreen(.prophetMiraclesLibrary)
         case .sunnahsOfProphet:
-            SunnahView()
+            SunnahView().openScreen(.sunnahLibrary)
         case .provingIslam:
             ProvingIslamView().openScreen(.provingIslamLibrary)
         case .journal:

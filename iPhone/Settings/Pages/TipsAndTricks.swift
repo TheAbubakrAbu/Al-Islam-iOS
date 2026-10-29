@@ -425,7 +425,7 @@ enum TipCatalog {
                place: InterfaceText("Adhan tab"), tour: true),
         AppTip(id: "adhan.layouts", area: .adhan, group: InterfaceText("THE PRAYER LIST"), systemImage: "square.grid.2x2",
                title: InterfaceText("Four layouts for the prayer list"),
-               detail: InterfaceText("The ⋯ menu at the top of the Adhan tab switches between Prayer Tiles, Prayer Grid, Prayer List, and Prayer Split. Prayer Settings offers the same choice."),
+               detail: InterfaceText("The ⋯ menu at the top of the Adhan tab switches between Prayer Tiles, Prayer Centered Tiles, Prayer Grid, Prayer List, and Prayer Split. Prayer Settings offers the same choice."),
                place: InterfaceText("Adhan tab")),
         AppTip(id: "adhan.optionalpill", area: .adhan, group: InterfaceText("THE PRAYER LIST"), systemImage: "moon.stars",
                title: InterfaceText("Optional times without leaving the tab"),

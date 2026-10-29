@@ -301,11 +301,12 @@ struct GlanceCard: View {
         return String(localized: "\(phase.name)\n\(phase.illuminationPercent)% illuminated")
     }
 
-    /// The winning (event, date) pair, resolved once per civil day + hijri year. Walking
-    /// `specialEvents` costs an Umm-al-Qura `date(from:)` conversion per event (~24 with the year
-    /// roll-over retries), and this card rebuilds on every Settings publish - the answer only changes
-    /// when the day (or the hijri reference year, at Maghrib near a year boundary) does.
-    private static var nextEventCache: (day: Date, hijriYear: Int, best: (name: String, date: Date)?)?
+    /// The winning (event, date) pair, resolved once per civil day + hijri year + Hijri adjustment.
+    /// Walking `specialEvents` costs an Umm-al-Qura `date(from:)` conversion per event (~24 with the
+    /// year roll-over retries), and this card rebuilds on every Settings publish; the answer only
+    /// changes when the day (or the hijri reference year, at Maghrib near a year boundary, or the
+    /// adjustment) does.
+    private static var nextEventCache: (day: Date, hijriYear: Int, offset: Int, best: (name: String, date: Date)?)?
 
     /// The soonest upcoming entry from the app's Islamic-date list, rolled into next Hijri year if this
     /// year's occurrence has already passed.
@@ -313,17 +314,22 @@ struct GlanceCard: View {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let hijri = settings.hijriCalendar
+        let offset = settings.hijriOffset
         let hijriYear = hijri.component(.year, from: settings.effectiveHijriReferenceDate())
 
         let best: (name: String, date: Date)?
-        if let cached = Self.nextEventCache, cached.day == today, cached.hijriYear == hijriYear {
+        if let cached = Self.nextEventCache, cached.day == today, cached.hijriYear == hijriYear, cached.offset == offset {
             best = cached.best
         } else {
             var found: (name: String, date: Date)?
             for (name, components, _, _) in settings.specialEvents {
                 var components = components
                 for _ in 0...1 {
-                    guard let date = hijri.date(from: components) else { break }
+                    guard let unadjusted = hijri.date(from: components) else { break }
+                    // The listed date is the ADJUSTED one the reader sees: its civil day reverses the
+                    // Hijri adjustment, as the Hijri calendar, the event banner and the reminders place
+                    // it. Unreversed, an adjusted reader's tile said "Today" a day off from all three.
+                    let date = hijri.date(byAdding: .day, value: -offset, to: unadjusted) ?? unadjusted
                     let day = calendar.startOfDay(for: date)
                     if day >= today {
                         if found == nil || day < found!.date { found = (name, day) }
@@ -332,7 +338,7 @@ struct GlanceCard: View {
                     components.year = (components.year ?? hijriYear) + 1
                 }
             }
-            Self.nextEventCache = (today, hijriYear, found)
+            Self.nextEventCache = (today, hijriYear, offset, found)
             best = found
         }
 

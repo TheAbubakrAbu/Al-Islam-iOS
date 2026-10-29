@@ -142,6 +142,13 @@ final class ReadingTestFactoryTests: XCTestCase {
         let review = factory.review(ofMissed: missed)
         XCTAssertEqual(review.count, missed.count)
         XCTAssertEqual(Set(review.map(\.item)), Set(missed.map(\.1)))
+
+        // Every joined shape in the bank is asked too: one with no look-alike spellings is tapped
+        // together rather than dropped, since Practice Missed Words counts it.
+        if let forms = ReadingTier.tier(id: "forms") {
+            let shapes = ReadingTestBank.items(for: forms).map { (forms, $0) }
+            XCTAssertEqual(factory.review(ofMissed: shapes, length: shapes.count).count, shapes.count)
+        }
     }
 
     func testEveryTierNamesWhatItCatches() {
@@ -195,5 +202,12 @@ final class ReadingTestFactoryTests: XCTestCase {
         XCTAssertEqual(twin.missed, progress.missed)
         XCTAssertEqual(twin.placement, "c")
         XCTAssertEqual(twin.speedBest, 12)
+
+        // What no right answer could ever clear is forgotten, on disk too.
+        progress.forgetMissed { $0.id == "y" }
+        XCTAssertTrue(progress.missed.isEmpty)
+        let third = StudyLadderProgress(key: progress.key, placementKey: progress.placementKey,
+                                        missedKey: progress.missedKey, speedKey: progress.speedKey)
+        XCTAssertTrue(third.missed.isEmpty)
     }
 }

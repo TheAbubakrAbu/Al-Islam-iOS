@@ -3055,7 +3055,9 @@ final class TajweedStore {
     private func paintWholeGlyphs(_ attributed: NSMutableAttributedString, priorities: [Int]) {
         // The greys say "not pronounced": spread over a glyph they would silence letters that are read
         // (the sajdah word سُجَّدٗاۤ 19:58 went grey from end to end), so they stay on their own letters.
-        let silent = [TajweedLegendCategory.hamzatWaslSilent, .droppedLetter, .idghamBilaGhunnah]
+        // Lam shamsiyah too: its grey is the same "not pronounced", and with the other three greys
+        // recolored it would otherwise be the one grey left free to spread.
+        let silent = [TajweedLegendCategory.hamzatWaslSilent, .droppedLetter, .idghamBilaGhunnah, .lamShamsiyah]
             .map { platformTajweedColor($0.color) }
         FontGlyphs.colourWholeGlyphs(attributed, painted: priorities.map { $0 > 0 }, fontName: drawingFontName,
                                      staysOnItsLetters: { colour in silent.contains { $0.isEqual(colour) } })

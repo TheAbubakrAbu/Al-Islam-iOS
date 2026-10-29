@@ -1,82 +1,10 @@
 import SwiftUI
 
-/// A change of the clock in the prayer times' zone: the start or end of daylight saving time, or a
-/// zone moving its offset outright. The prayer list shows the coming one under the times for the week
-/// before it and on the day itself, because every time on the list jumps by an hour that morning and
-/// a reader who did not expect it takes the jump for a wrong calculation (Abu, 2026-10-25: "add when
-/// is daylight savings and when there is a new big change in time ... underneath prayer times").
-///
-/// A value, so `ClockChangeNoticeTests` can run it over real zones and dates.
-struct ClockChange: Equatable {
-    /// The instant the clocks change.
-    let date: Date
-    /// The zone's offset after the change minus its offset before: positive when the clocks go forward
-    /// (every prayer then reads later than the day before), negative when they go back.
-    let delta: TimeInterval
-    /// true when the change BEGINS daylight saving time, false when it ends it, nil when daylight saving
-    /// is not what changes (a government moving the zone's standard offset).
-    let beginsDaylightSaving: Bool?
-    /// The zone's offset from GMT, in seconds, just before the change: the clock the change is
-    /// announced on. "Clocks go back at 2:00 AM" names the reading before the jump; the instant
-    /// itself, formatted in the zone, already reads 1:00 AM.
-    let offsetBefore: Int
-
-    var goesForward: Bool { delta > 0 }
-    var isDaylightSaving: Bool { beginsDaylightSaving != nil }
-
-    /// Whole days from the start of `today` to the change's civil day: 0 on the day itself (whether the
-    /// change is still ahead or already behind), 1 for tomorrow.
-    func daysAway(from today: Date, calendar: Calendar) -> Int {
-        calendar.dateComponents([.day], from: calendar.startOfDay(for: today), to: calendar.startOfDay(for: date)).day ?? 0
-    }
-
-    /// The change on or after the civil day of `now` that falls within `horizonDays` days of it, or nil.
-    /// Today's change is still found after it has happened (the notice stays up for the day, worded in
-    /// the past), which is why the search starts at the start of the day rather than at `now`.
-    static func next(after now: Date, in zone: TimeZone = .current, horizonDays: Int = 7,
-                     calendar base: Calendar = Calendar(identifier: .gregorian)) -> ClockChange? {
-        var calendar = base
-        calendar.timeZone = zone
-        let startOfToday = calendar.startOfDay(for: now)
-        // A transition at the very first second of the day is "after" one second before it.
-        guard let transition = zone.nextDaylightSavingTimeTransition(after: startOfToday.addingTimeInterval(-1)),
-              let limit = calendar.date(byAdding: .day, value: horizonDays + 1, to: startOfToday),
-              transition < limit
-        else { return nil }
-        let before = transition.addingTimeInterval(-1)
-        let offsetBefore = zone.secondsFromGMT(for: before)
-        let delta = TimeInterval(zone.secondsFromGMT(for: transition) - offsetBefore)
-        guard delta != 0 else { return nil }
-        let wasSaving = zone.isDaylightSavingTime(for: before)
-        let isSaving = zone.isDaylightSavingTime(for: transition)
-        return ClockChange(date: transition, delta: delta,
-                           beginsDaylightSaving: wasSaving == isSaving ? nil : isSaving,
-                           offsetBefore: offsetBefore)
-    }
-
-    /// The change's instant as the clock read it before the jump (see `offsetBefore`), in the app's
-    /// time style: "2:00 AM" for both of the US changes.
-    func clockReading(_ formatter: DateFormatter) -> String {
-        guard let old = formatter.copy() as? DateFormatter else { return formatter.string(from: date) }
-        old.timeZone = TimeZone(secondsFromGMT: offsetBefore) ?? formatter.timeZone
-        return old.string(from: date)
-    }
-
-    /// "1 hour", "2 hours", "30 minutes": the size of the jump, as whole sentences keyed for the catalog.
-    var amountText: String {
-        let seconds = Int(abs(delta).rounded())
-        if seconds % 3600 == 0 {
-            let hours = seconds / 3600
-            return hours == 1 ? String(localized: "1 hour") : String(localized: "\(hours) hours")
-        }
-        return String(localized: "\(seconds / 60) minutes")
-    }
-}
-
 #if os(iOS)
 /// The row under the prayer times: the glyph, the headline ("Daylight Saving Time ends on Sunday,
 /// November 1") and what it does to the clocks and the times. Shown while a change is within the
-/// week, and on its day. See `ClockChange`.
+/// week, and on its day. See `ClockChange` (ClockChange.swift), which also words the scheduler's
+/// heads-up notification the evening before.
 struct ClockChangeFooter: View {
     private let settings = Settings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
