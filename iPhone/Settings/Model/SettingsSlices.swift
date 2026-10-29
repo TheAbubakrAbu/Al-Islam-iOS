@@ -149,15 +149,19 @@ final class SystemSettings: ObservableObject, SettingsSlice {
         set { Settings.shared.advancedSettings = newValue }
     }
 
+    #if HAS_ICLOUD_BACKUP
     var cloudOfferVersionSeen: Int {
         get { Settings.shared.cloudOfferVersionSeen }
         set { Settings.shared.cloudOfferVersionSeen = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var dailyRolloverAtFajr: Bool {
         get { Settings.shared.dailyRolloverAtFajr }
         set { Settings.shared.dailyRolloverAtFajr = newValue }
     }
+    #endif
 
     var firstLaunch: Bool {
         get { Settings.shared.firstLaunch }
@@ -285,525 +289,731 @@ final class AdhanSettings: ObservableObject, SettingsSlice {
 
     func publish() { objectWillChange.send() }
 
+    #if HAS_ADHAN
     var adhanAutoPlayInApp: Bool {
         get { Settings.shared.adhanAutoPlayInApp }
         set { Settings.shared.adhanAutoPlayInApp = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var adhanNotificationSound: String {
         get { Settings.shared.adhanNotificationSound }
         set { Settings.shared.adhanNotificationSound = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var adhanOverridesSilentMode: Bool {
         get { Settings.shared.adhanOverridesSilentMode }
         set { Settings.shared.adhanOverridesSilentMode = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var adhanSoundAsr: Bool {
         get { Settings.shared.adhanSoundAsr }
         set { Settings.shared.adhanSoundAsr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var adhanSoundDhuhr: Bool {
         get { Settings.shared.adhanSoundDhuhr }
         set { Settings.shared.adhanSoundDhuhr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var adhanSoundFajr: Bool {
         get { Settings.shared.adhanSoundFajr }
         set { Settings.shared.adhanSoundFajr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var adhanSoundIsha: Bool {
         get { Settings.shared.adhanSoundIsha }
         set { Settings.shared.adhanSoundIsha = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var adhanSoundMaghrib: Bool {
         get { Settings.shared.adhanSoundMaghrib }
         set { Settings.shared.adhanSoundMaghrib = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var alertToneSound: String {
         get { Settings.shared.alertToneSound }
         set { Settings.shared.alertToneSound = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var calculationAutoAnsweredCountryCode: String {
         get { Settings.shared.calculationAutoAnsweredCountryCode }
         set { Settings.shared.calculationAutoAnsweredCountryCode = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var calculationAutoAnsweredMethod: String {
         get { Settings.shared.calculationAutoAnsweredMethod }
         set { Settings.shared.calculationAutoAnsweredMethod = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var calculationAutoChanged: Bool {
         get { Settings.shared.calculationAutoChanged }
         set { Settings.shared.calculationAutoChanged = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var calculationAutoDetectedCountryCode: String {
         get { Settings.shared.calculationAutoDetectedCountryCode }
         set { Settings.shared.calculationAutoDetectedCountryCode = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var calculationAutoDetectedMethod: String {
         get { Settings.shared.calculationAutoDetectedMethod }
         set { Settings.shared.calculationAutoDetectedMethod = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var calculationAutoPreviousMethod: String {
         get { Settings.shared.calculationAutoPreviousMethod }
         set { Settings.shared.calculationAutoPreviousMethod = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var calculationAutomatic: Bool {
         get { Settings.shared.calculationAutomatic }
         set { Settings.shared.calculationAutomatic = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var changedDate: Bool {
         get { Settings.shared.changedDate }
         set { Settings.shared.changedDate = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var currentCountryCode: String {
         get { Settings.shared.currentCountryCode }
         set { Settings.shared.currentCountryCode = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var customFajrAngle: Double {
         get { Settings.shared.customFajrAngle }
         set { Settings.shared.customFajrAngle = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var customIshaAngle: Double {
         get { Settings.shared.customIshaAngle }
         set { Settings.shared.customIshaAngle = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var customPrayerNames: [String: String] {
         get { Settings.shared.customPrayerNames }
         set { Settings.shared.customPrayerNames = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var dateFullPrayers: [Prayer]? {
         get { Settings.shared.dateFullPrayers }
         set { Settings.shared.dateFullPrayers = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var dateNotifications: Bool {
         get { Settings.shared.dateNotifications }
         set { Settings.shared.dateNotifications = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var dateNotificationsDayBefore: Bool {
         get { Settings.shared.dateNotificationsDayBefore }
         set { Settings.shared.dateNotificationsDayBefore = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var datePrayers: [Prayer]? {
         get { Settings.shared.datePrayers }
         set { Settings.shared.datePrayers = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var favoriteLocations: [Location] {
         get { Settings.shared.favoriteLocations }
         set { Settings.shared.favoriteLocations = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var hanafiMadhab: Bool {
         get { Settings.shared.hanafiMadhab }
         set { Settings.shared.hanafiMadhab = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var highLatitudeRule: String {
         get { Settings.shared.highLatitudeRule }
         set { Settings.shared.highLatitudeRule = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var hijriOffset: Int {
         get { Settings.shared.hijriOffset }
         set { Settings.shared.hijriOffset = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var homeLocation: Location? {
         get { Settings.shared.homeLocation }
         set { Settings.shared.homeLocation = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var locationAlertSnoozedUntil: Double {
         get { Settings.shared.locationAlertSnoozedUntil }
         set { Settings.shared.locationAlertSnoozedUntil = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var locationNeverAskAgain: Bool {
         get { Settings.shared.locationNeverAskAgain }
         set { Settings.shared.locationNeverAskAgain = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var naggingAsr: Bool {
         get { Settings.shared.naggingAsr }
         set { Settings.shared.naggingAsr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var naggingAyahInLastCall: Bool {
         get { Settings.shared.naggingAyahInLastCall }
         set { Settings.shared.naggingAyahInLastCall = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var naggingDeadlineStartsData: Data {
         get { Settings.shared.naggingDeadlineStartsData }
         set { Settings.shared.naggingDeadlineStartsData = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var naggingDhuhr: Bool {
         get { Settings.shared.naggingDhuhr }
         set { Settings.shared.naggingDhuhr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var naggingDuha: Bool {
         get { Settings.shared.naggingDuha }
         set { Settings.shared.naggingDuha = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var naggingFajr: Bool {
         get { Settings.shared.naggingFajr }
         set { Settings.shared.naggingFajr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var naggingFollowUpMinutes: Int {
         get { Settings.shared.naggingFollowUpMinutes }
         set { Settings.shared.naggingFollowUpMinutes = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var naggingInterval: Int {
         get { Settings.shared.naggingInterval }
         set { Settings.shared.naggingInterval = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var naggingIsha: Bool {
         get { Settings.shared.naggingIsha }
         set { Settings.shared.naggingIsha = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var naggingIslamicMidnight: Bool {
         get { Settings.shared.naggingIslamicMidnight }
         set { Settings.shared.naggingIslamicMidnight = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var naggingLastCallsRaw: String {
         get { Settings.shared.naggingLastCallsRaw }
         set { Settings.shared.naggingLastCallsRaw = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var naggingLastThird: Bool {
         get { Settings.shared.naggingLastThird }
         set { Settings.shared.naggingLastThird = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var naggingLoudLastCall: Bool {
         get { Settings.shared.naggingLoudLastCall }
         set { Settings.shared.naggingLoudLastCall = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var naggingMaghrib: Bool {
         get { Settings.shared.naggingMaghrib }
         set { Settings.shared.naggingMaghrib = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var naggingMode: Bool {
         get { Settings.shared.naggingMode }
         set { Settings.shared.naggingMode = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var naggingPausedUntil: Double {
         get { Settings.shared.naggingPausedUntil }
         set { Settings.shared.naggingPausedUntil = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var naggingPerDeadlineStart: Bool {
         get { Settings.shared.naggingPerDeadlineStart }
         set { Settings.shared.naggingPerDeadlineStart = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var naggingSound: String {
         get { Settings.shared.naggingSound }
         set { Settings.shared.naggingSound = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var naggingStartOffset: Int {
         get { Settings.shared.naggingStartOffset }
         set { Settings.shared.naggingStartOffset = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var naggingSunrise: Bool {
         get { Settings.shared.naggingSunrise }
         set { Settings.shared.naggingSunrise = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var notificationAlertSnoozedUntil: Double {
         get { Settings.shared.notificationAlertSnoozedUntil }
         set { Settings.shared.notificationAlertSnoozedUntil = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var notificationAsr: Bool {
         get { Settings.shared.notificationAsr }
         set { Settings.shared.notificationAsr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var notificationDhuhr: Bool {
         get { Settings.shared.notificationDhuhr }
         set { Settings.shared.notificationDhuhr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var notificationDuha: Bool {
         get { Settings.shared.notificationDuha }
         set { Settings.shared.notificationDuha = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var notificationFajr: Bool {
         get { Settings.shared.notificationFajr }
         set { Settings.shared.notificationFajr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var notificationIsha: Bool {
         get { Settings.shared.notificationIsha }
         set { Settings.shared.notificationIsha = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var notificationIslamicMidnight: Bool {
         get { Settings.shared.notificationIslamicMidnight }
         set { Settings.shared.notificationIslamicMidnight = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var notificationLastThird: Bool {
         get { Settings.shared.notificationLastThird }
         set { Settings.shared.notificationLastThird = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var notificationMaghrib: Bool {
         get { Settings.shared.notificationMaghrib }
         set { Settings.shared.notificationMaghrib = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var notificationNeverAskAgain: Bool {
         get { Settings.shared.notificationNeverAskAgain }
         set { Settings.shared.notificationNeverAskAgain = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var notificationSunrise: Bool {
         get { Settings.shared.notificationSunrise }
         set { Settings.shared.notificationSunrise = newValue }
     }
+    #endif
 
     var notificationsEnabled: Bool {
         get { Settings.shared.notificationsEnabled }
         set { Settings.shared.notificationsEnabled = newValue }
     }
 
+    #if HAS_ADHAN
     var offsetAsr: Int {
         get { Settings.shared.offsetAsr }
         set { Settings.shared.offsetAsr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var offsetDhuhr: Int {
         get { Settings.shared.offsetDhuhr }
         set { Settings.shared.offsetDhuhr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var offsetFajr: Int {
         get { Settings.shared.offsetFajr }
         set { Settings.shared.offsetFajr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var offsetIsha: Int {
         get { Settings.shared.offsetIsha }
         set { Settings.shared.offsetIsha = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var offsetMaghrib: Int {
         get { Settings.shared.offsetMaghrib }
         set { Settings.shared.offsetMaghrib = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var offsetSunrise: Int {
         get { Settings.shared.offsetSunrise }
         set { Settings.shared.offsetSunrise = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var prayerCalculation: String {
         get { Settings.shared.prayerCalculation }
         set { Settings.shared.prayerCalculation = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var prayerNotificationEnglishNames: Bool {
         get { Settings.shared.prayerNotificationEnglishNames }
         set { Settings.shared.prayerNotificationEnglishNames = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var preNotificationAsr: Int {
         get { Settings.shared.preNotificationAsr }
         set { Settings.shared.preNotificationAsr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var preNotificationDhuhr: Int {
         get { Settings.shared.preNotificationDhuhr }
         set { Settings.shared.preNotificationDhuhr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var preNotificationDuha: Int {
         get { Settings.shared.preNotificationDuha }
         set { Settings.shared.preNotificationDuha = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var preNotificationFajr: Int {
         get { Settings.shared.preNotificationFajr }
         set { Settings.shared.preNotificationFajr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var preNotificationIsha: Int {
         get { Settings.shared.preNotificationIsha }
         set { Settings.shared.preNotificationIsha = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var preNotificationIslamicMidnight: Int {
         get { Settings.shared.preNotificationIslamicMidnight }
         set { Settings.shared.preNotificationIslamicMidnight = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var preNotificationLastThird: Int {
         get { Settings.shared.preNotificationLastThird }
         set { Settings.shared.preNotificationLastThird = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var preNotificationMaghrib: Int {
         get { Settings.shared.preNotificationMaghrib }
         set { Settings.shared.preNotificationMaghrib = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var preNotificationSunrise: Int {
         get { Settings.shared.preNotificationSunrise }
         set { Settings.shared.preNotificationSunrise = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var shortAdhanAsr: Bool {
         get { Settings.shared.shortAdhanAsr }
         set { Settings.shared.shortAdhanAsr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var shortAdhanDhuhr: Bool {
         get { Settings.shared.shortAdhanDhuhr }
         set { Settings.shared.shortAdhanDhuhr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var shortAdhanFajr: Bool {
         get { Settings.shared.shortAdhanFajr }
         set { Settings.shared.shortAdhanFajr = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var shortAdhanIsha: Bool {
         get { Settings.shared.shortAdhanIsha }
         set { Settings.shared.shortAdhanIsha = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var shortAdhanMaghrib: Bool {
         get { Settings.shared.shortAdhanMaghrib }
         set { Settings.shared.shortAdhanMaghrib = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var showDuha: Bool {
         get { Settings.shared.showDuha }
         set { Settings.shared.showDuha = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var showIslamicMidnight: Bool {
         get { Settings.shared.showIslamicMidnight }
         set { Settings.shared.showIslamicMidnight = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var showLastThird: Bool {
         get { Settings.shared.showLastThird }
         set { Settings.shared.showLastThird = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var showLocationAlert: Bool {
         get { Settings.shared.showLocationAlert }
         set { Settings.shared.showLocationAlert = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var showNotificationAlert: Bool {
         get { Settings.shared.showNotificationAlert }
         set { Settings.shared.showNotificationAlert = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var showPrayerInfo: Bool {
         get { Settings.shared.showPrayerInfo }
         set { Settings.shared.showPrayerInfo = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var showSkyScene: Bool {
         get { Settings.shared.showSkyScene }
         set { Settings.shared.showSkyScene = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var showSkyView: Bool {
         get { Settings.shared.showSkyView }
         set { Settings.shared.showSkyView = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var skyFillsAdhanTab: Bool {
         get { Settings.shared.skyFillsAdhanTab }
         set { Settings.shared.skyFillsAdhanTab = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var skyGradientsJSON: String {
         get { Settings.shared.skyGradientsJSON }
         set { Settings.shared.skyGradientsJSON = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var skySceneStyle: String {
         get { Settings.shared.skySceneStyle }
         set { Settings.shared.skySceneStyle = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var skyShowsWeather: Bool {
         get { Settings.shared.skyShowsWeather }
         set { Settings.shared.skyShowsWeather = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var switchHijriDateAtMaghrib: Bool {
         get { Settings.shared.switchHijriDateAtMaghrib }
         set { Settings.shared.switchHijriDateAtMaghrib = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var travelAutomatic: Bool {
         get { Settings.shared.travelAutomatic }
         set { Settings.shared.travelAutomatic = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var travelTurnOffAutomatic: Bool {
         get { Settings.shared.travelTurnOffAutomatic }
         set { Settings.shared.travelTurnOffAutomatic = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var travelTurnOnAutomatic: Bool {
         get { Settings.shared.travelTurnOnAutomatic }
         set { Settings.shared.travelTurnOnAutomatic = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var travelingMode: Bool {
         get { Settings.shared.travelingMode }
         set { Settings.shared.travelingMode = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN && HAS_ADHAN
     var travelingShowFullPrayers: Bool {
         get { Settings.shared.travelingShowFullPrayers }
         set { Settings.shared.travelingShowFullPrayers = newValue }
     }
+    #endif
 }
 
 /// The prayer tracker marks and the menses pause: written from the tracker and the notification actions while the user is anywhere.
@@ -820,25 +1030,33 @@ final class PrayerTracker: ObservableObject, SettingsSlice {
 
     func publish() { objectWillChange.send() }
 
+    #if HAS_ADHAN
     var mensesPauseActive: Bool {
         get { Settings.shared.mensesPauseActive }
         set { Settings.shared.mensesPauseActive = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var mensesPauseStartStamp: Double {
         get { Settings.shared.mensesPauseStartStamp }
         set { Settings.shared.mensesPauseStartStamp = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var prayerTrackerData: Data {
         get { Settings.shared.prayerTrackerData }
         set { Settings.shared.prayerTrackerData = newValue }
     }
+    #endif
 
+    #if HAS_ADHAN
     var trackerExemptDaysData: Data {
         get { Settings.shared.trackerExemptDaysData }
         set { Settings.shared.trackerExemptDaysData = newValue }
     }
+    #endif
 }
 
 /// How the Quran reads: fonts and sizes, tajweed, translations, word by word, page mode, riwayah, the reciter, sort and list options, test mode.
@@ -1065,10 +1283,12 @@ final class QuranDisplay: ObservableObject, SettingsSlice {
         set { Settings.shared.removeArabicDots = newValue }
     }
 
+    #if HAS_QURAN
     var riwayahTajweedHiddenRules: String {
         get { Settings.shared.riwayahTajweedHiddenRules }
         set { Settings.shared.riwayahTajweedHiddenRules = newValue }
     }
+    #endif
 
     var saveLastListenedAyah: Bool {
         get { Settings.shared.saveLastListenedAyah }

@@ -174,3 +174,10 @@ private struct LeftToRightContentModifier: ViewModifier {
         content.environment(\.layoutDirection, isEnglish ? .leftToRight : inherited)
     }
 }
+
+/// Separators for text joined in CODE rather than through a catalog key, in the interface's punctuation:
+/// the catalog writes the middle dot as a bullet in Arabic, and a line built outside it should match.
+enum JoinSeparator {
+    /// " · ", or " • " in Arabic.
+    static var dot: String { AppLanguage.isArabicScript ? " • " : " · " }
+}

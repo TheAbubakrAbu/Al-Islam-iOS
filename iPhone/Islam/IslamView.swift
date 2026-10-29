@@ -110,8 +110,12 @@ struct IslamView: View {
         case zakahCalculator
         case inheritanceCalculator
         case hijriCalendarConverter
+        // The two location tools come with the prayer times' location (not in Al-Quran); every switch
+        // below gates their arms the same way.
+        #if HAS_ADHAN
         case masjidLocator
         case halalFoodLocator
+        #endif
         case islamicWallpapers
         // FAITH & PROOFS, one section since 2026-10-24 (Abu: pillars, beliefs and how-to "should be
         // with" the miracles, the prophecies and Proving Islam). Two rows of tiles in the order Abu
@@ -159,8 +163,10 @@ struct IslamView: View {
             case .inheritanceCalculator: return "Inheritance Calculator"
             case .namesOfAllah: return "99 Names of Allah"
             case .hijriCalendarConverter: return "Hijri Date Converter"
+            #if HAS_ADHAN
             case .masjidLocator: return "Masjid Locator"
             case .halalFoodLocator: return "Halal Food Locator"
+            #endif
             case .islamicWallpapers: return "Islamic Wallpapers"
             case .pillarsAndBasics: return "Pillars & Beliefs"
             case .howToGuides: return "How-To Guides"
@@ -188,8 +194,10 @@ struct IslamView: View {
             case .inheritanceCalculator: return String(localized: "Inheritance Calculator")
             case .namesOfAllah: return String(localized: "99 Names of Allah")
             case .hijriCalendarConverter: return String(localized: "Hijri Date Converter")
+            #if HAS_ADHAN
             case .masjidLocator: return String(localized: "Masjid Locator")
             case .halalFoodLocator: return String(localized: "Halal Food Locator")
+            #endif
             case .islamicWallpapers: return String(localized: "Islamic Wallpapers")
             case .pillarsAndBasics: return String(localized: "Pillars & Beliefs")
             case .howToGuides: return String(localized: "How-To Guides")
@@ -216,8 +224,10 @@ struct IslamView: View {
             case .inheritanceCalculator: return "divide.circle"
             case .namesOfAllah: return "signature"
             case .hijriCalendarConverter: return "calendar"
+            #if HAS_ADHAN
             case .masjidLocator: return "mappin.and.ellipse"
             case .halalFoodLocator: return "fork.knife"
+            #endif
             case .islamicWallpapers: return "photo.on.rectangle"
             case .pillarsAndBasics: return "moon.stars"
             case .howToGuides: return "list.bullet.rectangle"
@@ -246,8 +256,10 @@ struct IslamView: View {
             case .inheritanceCalculator: return "Divide an estate by the Quranic shares"
             case .namesOfAllah: return "Asma ul-Husna with meanings"
             case .hijriCalendarConverter: return "Convert Hijri and Gregorian dates"
+            #if HAS_ADHAN
             case .masjidLocator: return "Find mosques near you"
             case .halalFoodLocator: return "Find halal food near you"
+            #endif
             case .islamicWallpapers: return "Beautiful wallpapers to save"
             case .pillarsAndBasics: return "The Five Pillars and Six Beliefs"
             case .howToGuides: return "Wudu, salah, Jumuah, and more"
@@ -276,8 +288,10 @@ struct IslamView: View {
             case .inheritanceCalculator: return String(localized: "Divide an estate by the Quranic shares")
             case .namesOfAllah: return String(localized: "Asma ul-Husna with meanings")
             case .hijriCalendarConverter: return String(localized: "Convert Hijri and Gregorian dates")
+            #if HAS_ADHAN
             case .masjidLocator: return String(localized: "Find mosques near you")
             case .halalFoodLocator: return String(localized: "Find halal food near you")
+            #endif
             case .islamicWallpapers: return String(localized: "Beautiful wallpapers to save")
             case .pillarsAndBasics: return String(localized: "The Five Pillars and Six Beliefs")
             case .howToGuides: return String(localized: "Wudu, salah, Jumuah, and more")
@@ -313,8 +327,10 @@ struct IslamView: View {
             case .inheritanceCalculator: return String(localized: "Inheritance\nCalculator")
             case .namesOfAllah: return String(localized: "99 Names\nof Allah")
             case .hijriCalendarConverter: return String(localized: "Hijri Date\nConverter")
+            #if HAS_ADHAN
             case .masjidLocator: return String(localized: "Masjid\nLocator")
             case .halalFoodLocator: return String(localized: "Halal Food\nLocator")
+            #endif
             case .islamicWallpapers: return String(localized: "Islamic\nWallpapers")
             case .pillarsAndBasics: return String(localized: "Pillars &\nBeliefs")
             case .howToGuides: return String(localized: "How-To\nGuides")
@@ -351,8 +367,10 @@ struct IslamView: View {
             case .inheritanceCalculator: return ["faraid", "mirath", "estate", "heirs", "shares", "will", "wasiyyah", "bequest", "awl", "radd", "asabah"]
             case .namesOfAllah: return ["asma", "husna", "asmaul husna", "attributes", "ar-rahman"]
             case .hijriCalendarConverter: return ["calendar", "date", "islamic date", "gregorian", "converter"]
+            #if HAS_ADHAN
             case .masjidLocator: return ["mosque", "masjid", "near me", "map", "prayer place"]
             case .halalFoodLocator: return ["restaurant", "halal", "food", "eat", "map"]
+            #endif
             case .islamicWallpapers: return ["wallpaper", "background", "lock screen", "calligraphy"]
             case .pillarsAndBasics: return ["beliefs", "aqeedah", "articles", "basics", "iman", "faith"]
             case .howToGuides: return ["how to", "guide", "steps", "wudu", "salah", "ghusl"]
@@ -410,12 +428,23 @@ struct IslamView: View {
         /// Islam again (2026-10-26, Abu: "then do a full row of proving Islam"): the Sunnahs tile took
         /// its place in the rows, and the one case built from every piece above it reads best as the
         /// row under them. Ask AI closes the whole list.
-        static let bannerResources: [IslamDestination] = [.journal, .namesOfAllah, .provingIslam, .askAI]
+        ///
+        /// Where the Tajweed Course is not bundled (Al-Adhan), the journal is no banner: the letters, the
+        /// rules and the journal are the Learn row of three tiles. That is Al-Adhan's rule, written down
+        /// under "Target-specific navigation chrome" in Docs/Engineering/Sibling Sync Guide.md.
+        static var bannerResources: [IslamDestination] {
+            TajweedLessonsStore.isBundled
+                ? [.journal, .namesOfAllah, .provingIslam, .askAI]
+                : [.namesOfAllah, .provingIslam, .askAI]
+        }
 
         /// The banners the one ISLAMIC RESOURCES section folds into its closing row of TILES: every
         /// banner but Ask AI, which stays a full row there too (Abu, 2026-10-26: "have ask ai be full
-        /// row"). Three, so with the eighteen tiles of the groups the grid is seven clean rows.
-        static let closingRowResources: [IslamDestination] = [.journal, .namesOfAllah, .provingIslam]
+        /// row"). Three, so with the eighteen tiles of the groups the grid is seven clean rows. Without
+        /// the course there are only two, which would leave that row ragged, so none: they stay banners.
+        static var closingRowResources: [IslamDestination] {
+            TajweedLessonsStore.isBundled ? [.journal, .namesOfAllah, .provingIslam] : []
+        }
 
         /// Every title, so the iPad sidebar's grid can fit them all to one size (`SidebarResourceGrid`).
         /// The banners' too: in the one-section view they are tiles (`bannerResources(in:)`).
@@ -1479,10 +1508,12 @@ struct IslamView: View {
             NamesView()
         case .hijriCalendarConverter:
             DateView()
+        #if HAS_ADHAN
         case .masjidLocator:
             PlaceLocatorView(profile: .masjid)
         case .halalFoodLocator:
             PlaceLocatorView(profile: .halalFood)
+        #endif
         case .islamicWallpapers:
             WallpaperView()
         case .pillarsAndBasics:
@@ -1557,6 +1588,7 @@ struct IslamView: View {
                 DateView()
             }
 
+            #if HAS_ADHAN
             resourceLink(title: String(localized: "Masjid Locator"), systemImage: "mappin.and.ellipse") {
                 PlaceLocatorView(profile: .masjid)
             }
@@ -1564,6 +1596,7 @@ struct IslamView: View {
             resourceLink(title: String(localized: "Halal Food Locator"), systemImage: "fork.knife") {
                 PlaceLocatorView(profile: .halalFood)
             }
+            #endif
             #endif
 
             resourceLink(title: String(localized: "Pillars & Beliefs"), systemImage: "moon.stars") {

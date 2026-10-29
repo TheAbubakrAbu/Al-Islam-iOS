@@ -225,6 +225,10 @@ struct WelcomeDiscoverPage: View {
 
             tipsCard
 
+            // Al-Islam only: the companions skip the question at the first launch and keep Full (Abu,
+            // 2026-10-14, in Al-Quran's splash); Simple Mode is still in their Settings. The flag is the
+            // one his gate used, since no flag names Al-Islam itself.
+            #if HAS_ICLOUD_BACKUP
             VStack(alignment: .leading, spacing: 10) {
                 Text("HOW MUCH WOULD YOU LIKE TO SEE?")
                     .font(.caption.weight(.semibold))
@@ -243,6 +247,7 @@ struct WelcomeDiscoverPage: View {
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
+            #endif
         }
         .sheet(isPresented: $showTour) {
             TipsTourView(area: .app, tips: TipCatalog.spotlight, title: String(localized: "Only in \(AppIdentifiers.displayName)"))

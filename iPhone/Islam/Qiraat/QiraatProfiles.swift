@@ -922,10 +922,13 @@ struct RiwayahNarratorDetailView: View {
                                    chain: QiraatIsnad.chain(narrator: profile.id))
                     .id("riwayah-chain")
 
+                #if HAS_QURAN
+                // Counted from the app's own 20 texts (iPhone/Quran/Qiraat): not in Al-Adhan.
                 if !profile.id.isEmpty {
                     RiwayahDifferencesSection(tag: profile.id, name: profile.name.localizedDisplay)
                         .id("riwayah-differences")
                 }
+                #endif
                 #endif
 
                 Section(header: Text("RECITED TODAY")) {

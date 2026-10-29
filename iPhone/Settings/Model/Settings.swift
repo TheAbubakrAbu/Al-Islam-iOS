@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreLocation
+import UserNotifications
 import WidgetKit
 import Combine
 import os
@@ -1566,6 +1567,55 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     }
 
 
+    // MARK: - Allow Notifications (every app)
+
+    /// The one switch over every notification the app sends: Notification Settings, "Allow Notifications"
+    /// (Abu, 2026-10-26: "a notification setting to turn off all notifications"). Off, no kind schedules
+    /// anything (the prayers and the adhan, nagging, the Islamic dates, the Sunnah, Quran and planner
+    /// reminders, the auto-change banners), whatever is pending is cleared, and the app neither asks for
+    /// the system permission nor nags about it; every per-kind choice stays as it was, so turning it back
+    /// on restores the same schedule. `notificationsEnabledDidChange` (below) lists the gates.
+    @Setting("notificationsEnabled") var notificationsEnabled: Bool = true {
+        didSet { self.notificationsEnabledDidChange() }
+    }
+
+    /// Posted on the main queue after `notificationsEnabled` changes, for the schedulers this file
+    /// does not name: the Quran reminders and the planner re-arm from it (Al-IslamApp.swift).
+    static let notificationsEnabledDidChangeNotification = Notification.Name("Settings.notificationsEnabledDidChange")
+
+    /// (Here rather than in SettingsAdhan.swift, 2026-10-29: Al-Quran has the switch but not that file.)
+    /// `notificationsEnabled` flipped (Notification Settings, "Allow Notifications"). Off: every pending
+    /// request goes, this scheduler's and the reminders' alike, and so does what is already in Notification
+    /// Center. On: the prayer pass runs again and the reminder kinds re-arm from the choices that were
+    /// kept. While it is off, the gates that keep a later pass from scheduling anything are
+    /// `schedulePrayerTimeNotifications`, `postAutoChangeNotification`, `notificationAuthorizationResult`
+    /// (no prompt, no "Notifications Off" dialog), `SunnahReminderStore.rearm`, `ExtraRemindersStore.rebuild`
+    /// and `QuranPlannerReminder`, which keeps a copy of its request for the switch to bring back.
+    func notificationsEnabledDidChange() {
+        guard Settings.isAppProcess else { return }
+        #if os(iOS) || os(watchOS)
+        if notificationsEnabled {
+            #if HAS_ADHAN
+            scheduleNotifications(deferred: true)
+            #endif
+        } else {
+            // A pass already handed to `notificationBuildQueue` is superseded first: it was still current
+            // and added its requests after the clearing below, bringing the adhans back under a switch
+            // that reads off (the watch's hand-over path does the same).
+            #if HAS_ADHAN
+            _ = Self.nextNotificationPassGeneration()
+            #endif
+            let center = UNUserNotificationCenter.current()
+            center.removeAllPendingNotificationRequests()
+            center.removeAllDeliveredNotifications()
+        }
+        #endif
+        NotificationCenter.default.post(name: Self.notificationsEnabledDidChangeNotification, object: nil)
+    }
+
+    // The prayer side, through the optional prayer times below: Al-Quran has no prayer times and keeps
+    // none of it, and the generated slices carry this gate onto every forwarder (2026-10-29).
+    #if HAS_ADHAN
     /// Forwarded to `LiveState` (see its comment): same name, but the publish reaches only the views
     /// that observe `LiveState`.
     var prayersData: Data {
@@ -1629,6 +1679,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         }
     }
 
+    #if HAS_ADHAN
     @Published var homeLocation: Location? {
         willSet { SettingsSlices.willChange("homeLocation") }
         didSet {
@@ -1658,6 +1709,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
             }
         }
     }
+    #endif
 
     @Published var hanafiMadhab: Bool {
         willSet { SettingsSlices.willChange("hanafiMadhab") }
@@ -1802,8 +1854,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         }
     }
 
+    #if HAS_ADHAN
     @Published var datePrayers: [Prayer]? { willSet { SettingsSlices.willChange("datePrayers") } }
     @Published var dateFullPrayers: [Prayer]? { willSet { SettingsSlices.willChange("dateFullPrayers") } }
+    #endif
     @Published var changedDate = false { willSet { SettingsSlices.willChange("changedDate") } }
 
     var hijriCalendar: Calendar = {
@@ -1901,16 +1955,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     @Setting("lastScheduledHijriYear") private var lastScheduledHijriYear: Int = 0
 
     // MARK: - [Al-Adhan] Prayer - @Setting (notifications, travel, calculation, alerts)
-
-    /// The one switch over every notification the app sends: Notification Settings, "Allow Notifications"
-    /// (Abu, 2026-10-26: "a notification setting to turn off all notifications"). Off, no kind schedules
-    /// anything (the prayers and the adhan, nagging, the Islamic dates, the Sunnah, Quran and planner
-    /// reminders, the auto-change banners), whatever is pending is cleared, and the app neither asks for
-    /// the system permission nor nags about it; every per-kind choice stays as it was, so turning it back
-    /// on restores the same schedule. `notificationsEnabledDidChange` (SettingsAdhan.swift) lists the gates.
-    @Setting("notificationsEnabled") var notificationsEnabled: Bool = true {
-        didSet { self.notificationsEnabledDidChange() }
-    }
 
     @Setting("dateNotifications") var dateNotifications = true {
         didSet { self.fetchPrayerTimesDebounced(notification: true) }
@@ -2010,6 +2054,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     }
     #endif
 
+    #if HAS_ADHAN
     @Setting("adhanNotificationSound") var adhanNotificationSound: String = Settings.defaultAdhanSoundID {
         didSet {
             #if os(iOS)
@@ -2030,6 +2075,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     @Setting("alertToneSound") var alertToneSound: String = Settings.defaultAlertToneID {
         didSet { self.fetchPrayerTimesDebounced(notification: true) }
     }
+    #endif
 
     // Per-prayer adhan length. iOS caps a notification sound at 30 seconds, so "full" means the 30-second cut
     // and "short" means a ~5-15s excerpt. Defaults to the full cut, which is what every existing user already
@@ -2430,6 +2476,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
 
     /// Names of optional/informational prayer times shown in the app, but not widgets.
     static let optionalPrayerNames: Set<String> = ["Duhaa", "Islamic Midnight", "Last Third"]
+
+    #endif
 
     // MARK: - [Al-Quran] Quran - @Setting
 
@@ -2871,6 +2919,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// Day key for which the Hadith of the Day tile has been hidden via "Hide for Today".
     @Setting("hadithOfTheDayHiddenDate") var hadithOfTheDayHiddenDate: String = ""
     @Setting("showWordOfTheDay") var showWordOfTheDay: Bool = true
+    #if HAS_ADHAN
     /// Every "of the day" feature turns over at Fajr (from the prayer calculation) rather than at
     /// midnight; see `DailyRollover`. Off, or with no location, the boundary is midnight.
     @Setting("dailyRolloverAtFajr") var dailyRolloverAtFajr: Bool = true
@@ -2878,6 +2927,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// 30-day table per day, both read on the main thread only. Plain stored vars: never published.
     var dailyFajrMemo: (day: Date, signature: String, fajr: Date?)?
     var fajrTableMemo: (day: Date, days: Int, signature: String, table: [String: TimeInterval])?
+    #endif
 
     /// Stable yyyy-MM-dd key for a date: the daily boundary (DailyRollover.swift), the activity log and
     /// the Ayah of the Day all key on it. Here, not in SettingsQuran.swift, because the daily boundary

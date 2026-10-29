@@ -16,18 +16,26 @@ struct DailyHubView: View {
     @ObservedObject private var quranContent = QuranContent.shared
     @ObservedObject private var quranDisplay = QuranDisplay.shared
     @ObservedObject private var systemSettings = SystemSettings.shared
+    #if HAS_QURAN
     @ObservedObject private var quranData = QuranData.shared
+    #endif
+    #if HAS_HADITH
     @ObservedObject private var hadithStore = HadithStore.shared
+    #endif
     @ObservedObject private var names = NamesViewModel.shared
 
+    #if HAS_QURAN
     /// Opens an ayah in the reader; nil where there is no reader in the stack, in which case the hub
     /// lands on the Quran tab through `AppNavigation`.
     var onOpenAyah: ((Int, Int) -> Void)? = nil
+    #endif
 
     /// The Fortress of the Muslim, parsed off the main thread on appear (the Dua screen's pattern).
     @State private var hisnLibrary: HisnDuasStore.Library?
+    #if HAS_QURAN
     /// Whether the Word of the Day corpus is in memory (see `WordOfDayStore.isLoaded`).
     @State private var wordReady = WordOfDayStore.shared.isLoaded
+    #endif
     /// The living line under today's Name, from the names' depth pack (parsed off-main once).
     @State private var nameLiving: String?
     /// The Reminder card's header door, pushed from this List (G2).
@@ -39,9 +47,13 @@ struct DailyHubView: View {
         List {
             Group {
                 dateSection
+                #if HAS_QURAN
                 ayahSection
                 wordSection
+                #endif
+                #if HAS_HADITH
                 hadithSection
+                #endif
                 duaSection
                 nameSection
                 // Only on a Sunnah or dhikr day: on the other four the reminder IS one of the picks above.
@@ -59,10 +71,12 @@ struct DailyHubView: View {
             if hisnLibrary == nil, HisnDuasStore.isBundled {
                 hisnLibrary = await Task.detached(priority: .userInitiated) { HisnDuasStore.shared.loaded() }.value
             }
+            #if HAS_QURAN
             if !wordReady, WordOfDayStore.isBundled {
                 await WordOfDayStore.shared.waitUntilLoaded()
                 wordReady = true
             }
+            #endif
             if nameLiving == nil, let number = todaysName?.number {
                 nameLiving = await Task.detached(priority: .utility) { NamesDetailsStore.shared.detail(number)?.living ?? "" }.value
             }
@@ -78,12 +92,14 @@ struct DailyHubView: View {
                 // a Hijri date here, above the Hijri line.
                 Text(Date().formatted(Date.FormatStyle(date: .complete, time: .omitted, calendar: Calendar(identifier: .gregorian))))
                     .font(.headline)
+                #if HAS_ADHAN
                 if let hijri = settings.hijriDate {
                     // The Arabic Hijri date in an Arabic interface, the English one otherwise.
                     Text(hijri.interfaceLine)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+                #endif
                 Text("Everything of the day, in one place. Each card opens where it lives.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -107,13 +123,16 @@ struct DailyHubView: View {
 
     /// "Turns over at Fajr, 5:46 AM" or "at midnight", from the same boundary every daily feature uses.
     private var rolloverLine: String {
+        #if HAS_ADHAN
         let next = settings.nextDailyRollover()
         if settings.dailyRolloverAtFajr, settings.dailyFajr(for: next) != nil {
             return String(localized: "Everything here turns over at Fajr, \(settings.formatDate(next)).")
         }
+        #endif
         return String(localized: "Everything here turns over at midnight.")
     }
 
+    #if HAS_QURAN
     // MARK: Ayah
 
     @ViewBuilder
@@ -211,7 +230,9 @@ struct DailyHubView: View {
             }
         }
     }
+    #endif
 
+    #if HAS_HADITH
     // MARK: Hadith
 
     @ViewBuilder
@@ -253,6 +274,7 @@ struct DailyHubView: View {
             }
         }
     }
+    #endif
 
     // MARK: Dua
 
@@ -418,6 +440,7 @@ struct DailyHubView: View {
         .buttonStyle(.plain)
     }
 
+    #if HAS_QURAN
     private func openAyah(_ surah: Int, _ ayah: Int) {
         if let onOpenAyah {
             onOpenAyah(surah, ayah)
@@ -425,6 +448,7 @@ struct DailyHubView: View {
             AppNavigation.shared.open(.ayah(surah, ayah))
         }
     }
+    #endif
 }
 
 extension View {

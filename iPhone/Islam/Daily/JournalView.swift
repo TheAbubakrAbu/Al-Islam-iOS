@@ -422,7 +422,9 @@ struct JournalView: View {
     @ObservedObject private var quranContent = QuranContent.shared
     @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var store = JournalStore.shared
+    #if HAS_QURAN
     @ObservedObject private var quranData = QuranData.shared
+    #endif
 
     enum Filter: Hashable {
         case all, pinned, kind(JournalKind), tag(String), marginNotes
@@ -469,6 +471,7 @@ struct JournalView: View {
     /// The notes the reader left on bookmarked ayahs and hadiths, read from the bookmark records.
     private func marginNotes() -> [JournalMarginNote] {
         var notes: [JournalMarginNote] = []
+        #if HAS_QURAN
         for bookmark in settings.bookmarkedAyahs {
             guard let note = bookmark.note?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty else { continue }
             let name = quranData.surah(bookmark.surah)?.nameTransliteration ?? String(localized: "Surah \(bookmark.surah)")
@@ -477,6 +480,8 @@ struct JournalView: View {
                                            source: .ayah(surah: bookmark.surah, ayah: bookmark.ayah),
                                            title: "\(name) \(bookmark.surah):\(bookmark.ayah)", text: note, preview: preview))
         }
+        #endif
+        #if HAS_HADITH
         for bookmark in HadithUserData.shared.bookmarks {
             guard let note = bookmark.note?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty else { continue }
             notes.append(JournalMarginNote(id: "hadith-\(bookmark.slug)-\(bookmark.idInBook)",
@@ -484,6 +489,7 @@ struct JournalView: View {
                                            title: bookmark.reference, text: note,
                                            preview: bookmark.englishPreview ?? bookmark.preview))
         }
+        #endif
         return notes
     }
 
@@ -869,11 +875,21 @@ struct JournalView: View {
     /// interface's language, the numbers in its digits. `title` stays the English the search folds.
     private func marginNoteTitle(_ note: JournalMarginNote) -> String {
         switch note.source {
+        #if HAS_QURAN
         case .ayah(let surah, let ayah):
             let name = quranData.surah(surah)?.displayName ?? String(localized: "Surah \(surah)")
             return "\(name) \(surah):\(ayah)".localizedDigits
+        #else
+        case .ayah:
+            return note.title.localizedDigits
+        #endif
+        #if HAS_HADITH
         case .hadith(let slug, _):
             return HadithCatalogBook.displayReference(stored: note.title, slug: slug)
+        #else
+        case .hadith:
+            return note.title
+        #endif
         }
     }
 
@@ -1098,7 +1114,7 @@ struct JournalAttachmentCard: View {
                     .font(.caption.weight(.bold))
                 Spacer()
                 if !attachment.subtitle.isEmpty {
-                    Text(attachment.kind == .hadith ? HadithCatalogBook.displayNumber(attachment.subtitle) : attachment.subtitle)
+                    Text(displaySubtitle)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -1139,16 +1155,32 @@ struct JournalAttachmentCard: View {
     private var displayTitle: String {
         switch attachment.kind {
         case .ayah:
+            #if HAS_QURAN
             if let reference = QuranQuoteReference(attachment.refID), let surah = QuranData.shared.surah(reference.surah) {
                 return "\(surah.displayName) \(reference.text)".localizedDigits
             }
+            #else
+            break
+            #endif
         case .hadith:
+            #if HAS_HADITH
             let slug = attachment.refID.split(separator: ":").first.map(String.init) ?? ""
             return HadithCatalogBook.displayReference(stored: attachment.title, slug: slug)
+            #else
+            break
+            #endif
         case .dua, .name:
             break
         }
         return attachment.title.localizedDisplay.localizedDigits
+    }
+
+    /// A hadith's number in the interface's digits; the rest as stored.
+    private var displaySubtitle: String {
+        #if HAS_HADITH
+        if attachment.kind == .hadith { return HadithCatalogBook.displayNumber(attachment.subtitle) }
+        #endif
+        return attachment.subtitle
     }
 
     private var symbol: String {
@@ -1166,7 +1198,6 @@ struct JournalAttachmentCard: View {
 struct JournalEditorSheet: View {
     @Environment(\.appearance) private var appearance
     @ObservedObject private var store = JournalStore.shared
-    @ObservedObject private var quranData = QuranData.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var entry: JournalEntry
@@ -1325,7 +1356,9 @@ struct JournalEditorSheet: View {
 /// Carry something in: an ayah by reference, a bookmarked hadith, or a dua from the app's collections.
 struct JournalAttachSheet: View {
     @Environment(\.appearance) private var appearance
+    #if HAS_QURAN
     @ObservedObject private var quranData = QuranData.shared
+    #endif
     @Environment(\.dismiss) private var dismiss
 
     let onPick: (JournalAttachment) -> Void
@@ -1338,12 +1371,14 @@ struct JournalAttachSheet: View {
 
     private var accent: Color { appearance.accent }
 
+    #if HAS_QURAN
     private var resolvedAyah: (surah: Surah, ayah: Ayah)? {
         let parts = reference.normalizingArabicIndicDigitsToWestern.replacingOccurrences(of: " ", with: "").split(separator: ":").compactMap { Int($0) }
         guard parts.count == 2, let surah = quranData.surah(parts[0]),
               let ayah = quranData.ayah(surah: parts[0], ayah: parts[1]) else { return nil }
         return (surah, ayah)
     }
+    #endif
 
     private static func duaMatches(for raw: String) -> [DuaItem] {
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1365,6 +1400,7 @@ struct JournalAttachSheet: View {
         SheetNavigationContainer {
             List {
                 Group {
+                    #if HAS_QURAN
                     Section(header: Text("AN AYAH"), footer: Text("Type the reference, surah:ayah.")) {
                         TextField("2:255", text: $reference)
                             .keyboardType(.numbersAndPunctuation)
@@ -1401,7 +1437,9 @@ struct JournalAttachSheet: View {
                             .buttonStyle(.plain)
                         }
                     }
+                    #endif
 
+                    #if HAS_HADITH
                     let bookmarks = HadithUserData.shared.bookmarks
                     if !bookmarks.isEmpty {
                         Section(header: SectionPillHeader(title: String(localized: "BOOKMARKED HADITHS"), count: bookmarks.count)) {
@@ -1432,6 +1470,7 @@ struct JournalAttachSheet: View {
                             }
                         }
                     }
+                    #endif
 
                     Section(header: Text("A DUA"), footer: Text("Search the app's dua collections.")) {
                         TextField("Search duas", text: $duaQuery)

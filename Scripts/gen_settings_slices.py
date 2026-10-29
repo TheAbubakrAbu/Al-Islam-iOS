@@ -107,6 +107,20 @@ PUBLISHED = re.compile(r'^\s*@Published\s*((?:private\(set\) )?)var\s+([A-Za-z0-
                        r'(?::\s*([A-Za-z?\[\]: ]+?))?\s*(?:=\s*([^{]*?))?\s*(\{.*)?\s*$')
 CLASS_START = re.compile(r'^final class Settings\b')
 CLASS_END = re.compile(r'^}\s*$')
+# A field declared inside `#if HAS_ADHAN` (or any other condition) gets the same condition around its
+# forwarder, so a companion app that compiles the field out compiles the forwarder out too (2026-10-29).
+IF_RE = re.compile(r'^\s*#if\s+(.+?)\s*$')
+ELSEIF_RE = re.compile(r'^\s*#elseif\s+(.+?)\s*$')
+ELSE_RE = re.compile(r'^\s*#else\s*$')
+ENDIF_RE = re.compile(r'^\s*#endif\s*$')
+
+
+def negate(cond):
+    return f'!({cond})' if re.search(r'[\s|&]', cond) else f'!{cond}'
+
+
+def joined(conds):
+    return ' && '.join(f'({c})' if re.search(r'[\s|]', c) else c for c in conds) or None
 
 
 def infer_type(default):
@@ -122,21 +136,29 @@ def infer_type(default):
 def parse():
     fields = []
     inside = False
+    conds = []   # the open `#if` conditions at the current line
     for line in open(SOURCE, encoding='utf-8'):
         if CLASS_START.match(line): inside = True; continue
         if inside and CLASS_END.match(line): break
         if not inside: continue
+        m = IF_RE.match(line)
+        if m: conds.append(m.group(1)); continue
+        m = ELSEIF_RE.match(line)
+        if m: conds[-1] = f'{negate(conds[-1])} && {m.group(1)}'; continue
+        if ELSE_RE.match(line): conds[-1] = negate(conds[-1]); continue
+        if ENDIF_RE.match(line): conds.pop(); continue
         m = SETTING.match(line)
         if m:
             key, mod, name, typ, default, _ = m.groups()
             fields.append(dict(name=name, key=key, type=(typ or infer_type(default)).strip(),
-                               private='private' in mod, kind='setting'))
+                               private='private' in mod, kind='setting', cond=joined(conds)))
             continue
         m = PUBLISHED.match(line)
         if m:
             mod, name, typ, default, _ = m.groups()
             fields.append(dict(name=name, key=name, type=(typ or infer_type(default)).strip(),
-                               private='private' in mod, kind='published'))
+                               private='private' in mod, kind='published', cond=joined(conds)))
+    if conds: raise SystemExit(f'unbalanced #if in Settings.swift: {conds}')
     return fields
 
 
@@ -234,10 +256,12 @@ def emit(by_slice):
         for f in sorted(fields + extra, key=lambda f: f['name']):
             if f['private']: continue
             w('')
+            if f.get('cond'): w(f"    #if {f['cond']}")
             w(f"    var {f['name']}: {f['type']} {{")
             w(f"        get {{ Settings.shared.{f['name']} }}")
             w(f"        set {{ Settings.shared.{f['name']} = newValue }}")
             w('    }')
+            if f.get('cond'): w('    #endif')
         w('}')
     return '\n'.join(out) + '\n'
 

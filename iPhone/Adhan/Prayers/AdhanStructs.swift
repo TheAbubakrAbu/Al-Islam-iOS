@@ -209,13 +209,6 @@ extension Text {
     }
 }
 
-/// Separators for text joined in CODE rather than through a catalog key, in the interface's punctuation:
-/// the catalog writes the middle dot as a bullet in Arabic, and a line built outside it should match.
-enum JoinSeparator {
-    /// " · ", or " • " in Arabic.
-    static var dot: String { AppLanguage.isArabicScript ? " • " : " · " }
-}
-
 /// A count and its unit as ONE localized phrase ("**12** days"), for a tile that draws the number large and
 /// the unit small beside it. Arabic makes the noun agree with the number (١ يوم، يومان، ٣ أيام، ١١ يومًا),
 /// so a unit cannot be a key of its own: the phrase is a key with an integer argument, which a catalog can

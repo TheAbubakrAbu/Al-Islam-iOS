@@ -17,14 +17,21 @@ import UIKit
 ///
 /// Progress on a locked badge is still live: an unearned tile shows how far along the underlying
 /// number is right now, which is the only thing that makes rendering a locked tile worthwhile.
+// Each family ships with its domain: the prayer badges with the prayer times (HAS_ADHAN), the Quran,
+// listening and library badges with the Quran (HAS_QURAN), the hadith badges with the Hadith tab
+// (HAS_HADITH); only the dhikr badges are in every app. Every switch below is gated the same way, so
+// Al-Adhan and Al-Quran compile this file as it is.
 enum AlIslamBadge: String, CaseIterable, Identifiable {
+    #if HAS_ADHAN
     // Prayer - streaks, perfect days, lifetime totals, coverage.
     case firstPrayer, threeDayStreak, weekOfSalah, fortnightOfSalah, monthOfSalah, fiftyDayStreak
     case steadfast, halfYearOfSalah, yearOfSalah
     case perfectDay, perfectTen, perfectFifty, perfectHundred, perfectYear
     case prayers100, prayers500, prayers1000, prayers5000
     case monthRecorded, yearRecorded, consistency
+    #endif
 
+    #if HAS_QURAN
     // Quran - reading, completion, the planner.
     case openedTheBook, ayahs100, ayahs500
     case juzDone, fiveJuz, tenJuz, halfway, twentyJuz, threeQuarters, khatm
@@ -41,10 +48,13 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
     case firstNote, annotator, commentator, scribe
     case firstHighlight, highlighter, illuminator, fullPalette
     case keptClose, wellLoved
+    #endif
 
+    #if HAS_HADITH
     // Hadith
     case firstHadithBook, hadithReader, hadithShelf, wholeShelf
     case firstHadithBookmark, hadithScholar, hadithArchivist, hadithFavorites
+    #endif
 
     // Dhikr
     case oneTasbih, dhikrHundred, dhikrFiveHundred, dhikrThousand
@@ -55,6 +65,7 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        #if HAS_ADHAN
         case .firstPrayer:          return String(localized: "First Steps")
         case .threeDayStreak:       return String(localized: "Getting Going")
         case .weekOfSalah:          return String(localized: "Week of Salah")
@@ -76,7 +87,9 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         case .monthRecorded:        return String(localized: "A Month Recorded")
         case .yearRecorded:         return String(localized: "A Year Recorded")
         case .consistency:          return String(localized: "Consistency")
+        #endif
 
+        #if HAS_QURAN
         case .openedTheBook:        return String(localized: "Opened the Book")
         case .ayahs100:             return String(localized: "A Hundred Ayahs")
         case .ayahs500:             return String(localized: "Five Hundred Ayahs")
@@ -122,7 +135,9 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         case .fullPalette:          return String(localized: "Full Palette")
         case .keptClose:            return String(localized: "Kept Close")
         case .wellLoved:            return String(localized: "Well Loved")
+        #endif
 
+        #if HAS_HADITH
         case .firstHadithBook:      return String(localized: "First Collection")
         case .hadithReader:         return String(localized: "Hadith Reader")
         case .hadithShelf:          return String(localized: "Shelf Reader")
@@ -131,6 +146,7 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         case .hadithScholar:        return String(localized: "Hadith Scholar")
         case .hadithArchivist:      return String(localized: "Hadith Archivist")
         case .hadithFavorites:      return String(localized: "Favorite Collections")
+        #endif
 
         case .oneTasbih:            return String(localized: "One Tasbih")
         case .dhikrHundred:         return String(localized: "A Hundred Remembrances")
@@ -148,6 +164,7 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
 
     var detail: String {
         switch self {
+        #if HAS_ADHAN
         case .firstPrayer:          return String(localized: "Mark your first prayer")
         case .threeDayStreak:       return String(localized: "A 3-day prayer streak")
         case .weekOfSalah:          return String(localized: "A 7-day prayer streak")
@@ -169,7 +186,9 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         case .monthRecorded:        return String(localized: "30 days in the prayer tracker")
         case .yearRecorded:         return String(localized: "365 days in the prayer tracker")
         case .consistency:          return String(localized: "80% coverage over at least 30 days")
+        #endif
 
+        #if HAS_QURAN
         case .openedTheBook:        return String(localized: "Mark your first ayah read")
         case .ayahs100:             return String(localized: "Read 100 ayahs")
         case .ayahs500:             return String(localized: "Read 500 ayahs")
@@ -215,7 +234,9 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         case .fullPalette:          return String(localized: "Use every highlight color")
         case .keptClose:            return String(localized: "Favorite 5 surahs")
         case .wellLoved:            return String(localized: "Favorite 25 surahs")
+        #endif
 
+        #if HAS_HADITH
         case .firstHadithBook:      return String(localized: "Start reading a hadith book")
         case .hadithReader:         return String(localized: "Start reading 3 hadith books")
         case .hadithShelf:          return String(localized: "Start reading 10 hadith books")
@@ -224,6 +245,7 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         case .hadithScholar:        return String(localized: "25 bookmarked hadiths")
         case .hadithArchivist:      return String(localized: "100 bookmarked hadiths")
         case .hadithFavorites:      return String(localized: "Favorite 3 hadith collections")
+        #endif
 
         case .oneTasbih:            return String(localized: "33 counted on the tasbih")
         case .dhikrHundred:         return String(localized: "100 counted on the tasbih")
@@ -243,6 +265,7 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
     /// glyphs (`medal.fill`, `laurel.leading`, `flag.checkered`) render as a blank box on iOS 15.
     var systemImage: String {
         switch self {
+        #if HAS_ADHAN
         case .firstPrayer:          return "figure.stand"
         case .threeDayStreak:       return "arrow.up.right"
         case .weekOfSalah:          return "calendar"
@@ -264,7 +287,9 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         case .monthRecorded:        return "chart.bar.fill"
         case .yearRecorded:         return "chart.bar.doc.horizontal"
         case .consistency:          return "scope"
+        #endif
 
+        #if HAS_QURAN
         case .openedTheBook:        return "book"
         case .ayahs100:             return "text.alignleft"
         case .ayahs500:             return "text.justify"
@@ -311,7 +336,9 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         case .fullPalette:          return "paintpalette.fill"
         case .keptClose:            return "heart.fill"
         case .wellLoved:            return "star.fill"
+        #endif
 
+        #if HAS_HADITH
         case .firstHadithBook:      return "text.book.closed"
         case .hadithReader:         return "books.vertical.fill"
         case .hadithShelf:          return "square.stack.3d.up.fill"
@@ -320,6 +347,7 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         case .hadithScholar:        return "bookmark.circle.fill"
         case .hadithArchivist:      return "folder.fill"
         case .hadithFavorites:      return "star.circle.fill"
+        #endif
 
         case .oneTasbih:            return "circle.hexagonpath"
         case .dhikrHundred:         return "circle.dashed"
@@ -338,11 +366,17 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
     /// The family a badge belongs to, so the cabinet groups them instead of presenting one long
     /// undifferentiated wall of tiles.
     enum Family: String, CaseIterable, Identifiable {
+        #if HAS_ADHAN
         case prayer = "Prayer"
+        #endif
+        #if HAS_QURAN
         case quran = "Quran"
         case listening = "Listening"
         case library = "Library"
+        #endif
+        #if HAS_HADITH
         case hadith = "Hadith"
+        #endif
         case dhikr = "Dhikr"
 
         var id: String { rawValue }
@@ -350,22 +384,34 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         /// The family's name as the reader sees it (the raw value stays English).
         var title: String {
             switch self {
+            #if HAS_ADHAN
             case .prayer:    return String(localized: "Prayer")
+            #endif
+            #if HAS_QURAN
             case .quran:     return String(localized: "Quran")
             case .listening: return String(localized: "Listening")
             case .library:   return String(localized: "Library")
+            #endif
+            #if HAS_HADITH
             case .hadith:    return String(localized: "Hadith")
+            #endif
             case .dhikr:     return String(localized: "Dhikr")
             }
         }
 
         var systemImage: String {
             switch self {
+            #if HAS_ADHAN
             case .prayer:    return "safari.fill"
+            #endif
+            #if HAS_QURAN
             case .quran:     return "character.book.closed.ar"
             case .listening: return "headphones"
             case .library:   return "bookmark.fill"
+            #endif
+            #if HAS_HADITH
             case .hadith:    return "text.book.closed.fill"
+            #endif
             case .dhikr:     return "circle.hexagonpath.fill"
             }
         }
@@ -373,13 +419,16 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
 
     var family: Family {
         switch self {
+        #if HAS_ADHAN
         case .firstPrayer, .threeDayStreak, .weekOfSalah, .fortnightOfSalah, .monthOfSalah,
              .fiftyDayStreak, .steadfast, .halfYearOfSalah, .yearOfSalah,
              .perfectDay, .perfectTen, .perfectFifty, .perfectHundred, .perfectYear,
              .prayers100, .prayers500, .prayers1000, .prayers5000,
              .monthRecorded, .yearRecorded, .consistency:
             return .prayer
+        #endif
 
+        #if HAS_QURAN
         case .openedTheBook, .ayahs100, .ayahs500,
              .juzDone, .fiveJuz, .tenJuz, .halfway, .twentyJuz, .threeQuarters, .khatm,
              .firstSurahComplete, .tenSurahsComplete, .thirtySurahsComplete, .sixtySurahsComplete,
@@ -396,10 +445,13 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
              .firstHighlight, .highlighter, .illuminator, .fullPalette,
              .keptClose, .wellLoved:
             return .library
+        #endif
 
+        #if HAS_HADITH
         case .firstHadithBook, .hadithReader, .hadithShelf, .wholeShelf,
              .firstHadithBookmark, .hadithScholar, .hadithArchivist, .hadithFavorites:
             return .hadith
+        #endif
 
         case .oneTasbih, .dhikrHundred, .dhikrFiveHundred, .dhikrThousand,
              .dhikrFiveThousand, .dhikrTenThousand, .dhikrHundredThousand,
@@ -413,10 +465,15 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
     func progress(_ stats: ProfileStats) -> (value: Int, goal: Int) {
         // A streak badge counts the BEST run, not the current one - a broken streak shouldn't
         // un-approach a badge you were two days from.
+        #if HAS_ADHAN
         let streak = max(stats.prayer.currentStreak, stats.prayer.bestStreak)
+        #endif
+        #if HAS_QURAN
         let total = max(1, stats.khatmTotal)
+        #endif
 
         switch self {
+        #if HAS_ADHAN
         case .firstPrayer:          return (stats.prayer.totalPrayed, 1)
         case .threeDayStreak:       return (streak, 3)
         case .weekOfSalah:          return (streak, 7)
@@ -444,7 +501,9 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
                 ? Int((stats.prayerCoverageFraction * 100).rounded())
                 : 0
             return (pct, 80)
+        #endif
 
+        #if HAS_QURAN
         case .openedTheBook:        return (stats.khatmCompleted, 1)
         case .ayahs100:             return (stats.khatmCompleted, 100)
         case .ayahs500:             return (stats.khatmCompleted, 500)
@@ -490,7 +549,9 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         case .fullPalette:          return (stats.highlightColorsUsed, AyahHighlightColor.allCases.count)
         case .keptClose:            return (stats.favoriteSurahs, 5)
         case .wellLoved:            return (stats.favoriteSurahs, 25)
+        #endif
 
+        #if HAS_HADITH
         case .firstHadithBook:      return (stats.hadithBooksStarted, 1)
         case .hadithReader:         return (stats.hadithBooksStarted, 3)
         case .hadithShelf:          return (stats.hadithBooksStarted, 10)
@@ -499,6 +560,7 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         case .hadithScholar:        return (stats.hadithBookmarks, 25)
         case .hadithArchivist:      return (stats.hadithBookmarks, 100)
         case .hadithFavorites:      return (stats.hadithFavoriteBooks, 3)
+        #endif
 
         case .oneTasbih:            return (stats.dhikrTotal, 33)
         case .dhikrHundred:         return (stats.dhikrTotal, 100)
@@ -645,10 +707,12 @@ final class AchievementsStore: ObservableObject {
         trackingStarted = true
 
         await AppReveal.waitUntilRevealed()
+        #if HAS_HADITH
         // The hadith last-read table is loaded lazily by whichever screen asks first; the seed needs
         // it loaded, so ask here rather than letting `ProfileStats.current` kick off its deferred
         // load and then read the still-empty dictionary in the same pass.
         HadithStore.shared.loadLastRead()
+        #endif
         try? await Task.sleep(nanoseconds: 2_500_000_000)
 
         #if DEBUG
@@ -681,6 +745,7 @@ final class AchievementsStore: ObservableObject {
     }
 
     private func performRefresh() {
+        #if HAS_QURAN
         let quranData = QuranData.shared
         guard quranData.quran.count >= 114 else {
             // Packs still loading. Retry a bounded number of times - if the Quran never loads, the
@@ -692,6 +757,9 @@ final class AchievementsStore: ObservableObject {
         }
         loadRetries = 0
         sync(stats: ProfileStats.current(settings: .shared, quranData: quranData))
+        #else
+        sync(stats: ProfileStats.current(settings: .shared))
+        #endif
     }
 
     /// Folds the currently-satisfied thresholds into the ledger, announcing whatever is new.
@@ -1050,19 +1118,27 @@ private struct AchievementWatcher: View {
     @ObservedObject private var islamSettings = IslamSettings.shared
     @ObservedObject private var prayerTracker = PrayerTracker.shared
     @ObservedObject private var quranContent = QuranContent.shared
+    #if HAS_QURAN
     @ObservedObject private var quranData = QuranData.shared
+    #endif
     @ObservedObject private var tasbih = TasbihCounters.shared
+    #if HAS_HADITH
     @ObservedObject private var hadithUserData = HadithUserData.shared
     @ObservedObject private var hadithStore = HadithStore.shared
+    #endif
 
     private var signature: Int {
         var hasher = Hasher()
         hasher.combine(settings.profileStatsStamp)
+        #if HAS_QURAN
         hasher.combine(quranData.quran.count)
+        #endif
         hasher.combine(tasbih.totalCount)
+        #if HAS_HADITH
         hasher.combine(hadithUserData.bookmarks.count)
         hasher.combine(hadithUserData.favoriteSlugs.count)
         hasher.combine(hadithStore.lastReadByBook.count)
+        #endif
         return hasher.finalize()
     }
 

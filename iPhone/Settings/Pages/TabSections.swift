@@ -1,4 +1,6 @@
-#if os(iOS)
+// Only where a tab has a foldable section (the Adhan and Hadith tabs today): in Al-Quran every case
+// below compiles out, and an enum with no cases made each function here "will never be executed".
+#if os(iOS) && (HAS_ADHAN || HAS_HADITH)
 import SwiftUI
 
 // Sections a tab can fold or put away (Abu, 2026-10-28, from a reader's 4.6.5 feedback: a way to hide

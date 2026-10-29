@@ -2386,35 +2386,6 @@ extension Settings {
     /// finds it allowed again reschedules.
     static var notificationsDeliverable: Bool?
 
-    /// Posted on the main queue after `notificationsEnabled` changes, for the schedulers this file
-    /// cannot name: the Quran reminders and the planner re-arm from it (Al-IslamApp.swift).
-    static let notificationsEnabledDidChangeNotification = Notification.Name("Settings.notificationsEnabledDidChange")
-
-    /// `notificationsEnabled` flipped (Notification Settings, "Allow Notifications"). Off: every pending
-    /// request goes, this scheduler's and the reminders' alike, and so does what is already in Notification
-    /// Center. On: the prayer pass runs again and the reminder kinds re-arm from the choices that were
-    /// kept. While it is off, the gates that keep a later pass from scheduling anything are
-    /// `schedulePrayerTimeNotifications`, `postAutoChangeNotification`, `notificationAuthorizationResult`
-    /// (no prompt, no "Notifications Off" dialog), `SunnahReminderStore.rearm`, `ExtraRemindersStore.rebuild`
-    /// and `QuranPlannerReminder`, which keeps a copy of its request for the switch to bring back.
-    func notificationsEnabledDidChange() {
-        guard Settings.isAppProcess else { return }
-        #if os(iOS) || os(watchOS)
-        if notificationsEnabled {
-            scheduleNotifications(deferred: true)
-        } else {
-            // A pass already handed to `notificationBuildQueue` is superseded first: it was still current
-            // and added its requests after the clearing below, bringing the adhans back under a switch
-            // that reads off (the watch's hand-over path does the same).
-            _ = Self.nextNotificationPassGeneration()
-            let center = UNUserNotificationCenter.current()
-            center.removeAllPendingNotificationRequests()
-            center.removeAllDeliveredNotifications()
-        }
-        #endif
-        NotificationCenter.default.post(name: Self.notificationsEnabledDidChangeNotification, object: nil)
-    }
-
     /// `askIfUndetermined`: false leaves an unanswered permission alone (reports false) instead of
     /// raising the system prompt. The Adhan tab passes false while the permissions sheet's Not Now
     /// stands (`PermissionsSheet`), so the sheet is the one door to that prompt; Settings' Request
@@ -2582,7 +2553,7 @@ extension Settings {
 
     /// Bumps the pass generation and returns the new value; a build stage that finds a newer
     /// generation when it runs has been superseded and adds nothing.
-    private static func nextNotificationPassGeneration() -> Int {
+    static func nextNotificationPassGeneration() -> Int {
         notificationPassGenerationLock.lock()
         defer { notificationPassGenerationLock.unlock() }
         notificationPassGeneration += 1

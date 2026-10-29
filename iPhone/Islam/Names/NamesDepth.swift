@@ -195,7 +195,9 @@ struct NameThemeChips: View {
 /// other names it goes by, and every verse that names it, the word tinted.
 struct NameDetailView: View {
     @Environment(\.appearance) private var appearance
+    #if HAS_QURAN
     @ObservedObject private var quranData = QuranData.shared
+    #endif
 
     let name: NameOfAllah
     /// True when presented as a sheet (the Names list's "More about this name"), which is the only
@@ -339,6 +341,7 @@ struct NameDetailView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
+                #if HAS_QURAN
                 ForEach(verses) { verse in
                     if let surah = quranData.surah(verse.surah),
                        let ayah = quranData.ayah(surah: verse.surah, ayah: verse.ayah) {
@@ -349,6 +352,23 @@ struct NameDetailView: View {
                         }
                     }
                 }
+                #else
+                // Without the Quran text (Al-Adhan) there is no verse to print or reader to open, so the
+                // names are cited by reference alone.
+                ForEach(verses) { verse in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Quran \("\(verse.surah):\(verse.ayah)".localizedDigits)")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(accent)
+                        if verse.tokens.isEmpty {
+                            Text("Named in another form here")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+                #endif
             }
         }
     }

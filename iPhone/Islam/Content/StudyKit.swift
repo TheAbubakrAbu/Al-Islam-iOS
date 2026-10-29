@@ -1062,7 +1062,7 @@ struct StudyMatchBoard<Left: View, Right: View>: View {
         let leftPair = pair(side: .left, slot: leftSlot)
         let rightPair = pair(side: .right, slot: rightSlot)
         if let leftPair, leftPair.id == rightPair?.id {
-            withAnimation(.easeInOut(duration: 0.2)) { locked.insert(leftPair.id) }
+            withAnimation(.easeInOut(duration: 0.2)) { _ = locked.insert(leftPair.id) }
             pickedLeft = nil
             pickedRight = nil
             if locked.count == pairs.count { onFinish(wrongCount) }

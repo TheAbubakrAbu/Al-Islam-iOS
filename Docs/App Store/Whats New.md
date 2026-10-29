@@ -5,9 +5,9 @@ the product page for the current release. Changing it requires a new build (unli
 
 ## Guidelines
 
-- **Hard cap 4,000 characters**: count the release section only (the `# Version 4.6.5` heading and
+- **Hard cap 4,000 characters**: count the release section only (the `# Version 4.6.6` heading and
   the `**n / 4,000**` tally line are for this file, not the store). Verify before shipping:
-  `awk '/^# Version 4.6.5$/{f=1;next} /^# Version /{f=0} f' "Docs/App Store/Whats New.md" | grep -v '^\*\*' | wc -m`
+  `awk '/^# Version 4.6.6$/{f=1;next} /^# Version /{f=0} f' "Docs/App Store/Whats New.md" | grep -v '^\*\*' | wc -m`
 - **Aim for ~2,000-2,500.** Nobody reads a wall of text on a phone; the description sells the app,
   this field just says what changed. Shorter beats complete.
 - **One line per bullet, one idea per line.** Cut "now", "new", and every clause after a dash that
@@ -18,6 +18,53 @@ the product page for the current release. Changing it requires a new build (unli
 - Lead with a one-sentence summary of the release, then the biggest feature first.
 - Plain text only: no markdown, emoji, or links; the store renders none of it.
 - Keep past versions below for reference; only the top section ships.
+
+# Version 4.6.6
+
+Arabic and Urdu, chains of narrators for every hadith, a Tajweed Test, and the Islamic date on your prayer sky.
+
+Languages:
+- Al-Islam now speaks Arabic and Urdu: the whole app follows your iPhone's language, from the Quran reader to the widgets. The Islam tab's long articles stay English for now.
+
+Al-Quran:
+- Hamzat al-Wasl your way: follow the print, or show a saad or a dot, in all 20 riwayat.
+- A juz rail on the right edge of the Quran tab, and numbered rails on long lists.
+- The Play Range sheet rebuilt: ayahs or pages, repeats or forever, and your reciter in one place.
+- Double tap an ayah to play it; the play button opens the playback menu.
+- Each riwayah's profile now says what stands out in it.
+- Smoother page turns in page mode, and a one-row find bar.
+- Tajweed colors fixed inside ligatures and on a final raa.
+
+Al-Hadith:
+- Chains of narrators: tap a hadith's isnad to see every narrator in Arabic, then open a narrator's page.
+- Tree of Narrators: every chain of a narration and its similar narrations in one diagram.
+- Similar Hadiths: the same text through other chains, and close wordings.
+
+Al-Adhan:
+- Today's Islamic date, or this week's, under the countdown, with a notice the day before the clocks change.
+- "Did you pray?" buttons on every prayer notification.
+- Allow Notifications: one switch over everything the app sends.
+- Notification, prayer notification and Nagging Mode settings rebuilt, with a page per prayer.
+- The in-app adhan respects Silent Mode and offers a Play button instead.
+- Weather that moves: rain falls, snow sways, clouds drift.
+- Five prayer layouts, including glass tiles and centered tiles.
+
+Islamic Tools:
+- Sunnahs of the Prophet: 129 daily sunnahs with their sources.
+- Arabic Alphabet: Hamzat al-Wasl, Vowel Letters, Alif Maqsurah or Yaa, and a Grammar section, each with drills.
+- Tajweed Test: a 10-chapter ladder of questions generated from the course.
+- New guides for the Khutbah and Ruqyah, and a fuller Jumuah guide.
+- Fold or hide a tab's sections, and a search bar on every resource.
+
+Settings:
+- Every settings page in one grammar, with a caption under each control.
+- Islam Settings, with Sunnah Reminders.
+- An Update Available notice when a newer version is on the App Store.
+
+Bug fixes and optimizations:
+- Faster settings screens, lag-free menus, and about 60 fixes across iPhone, iPad, Mac and Apple Watch.
+
+**2,387 / 4,000 characters.**
 
 # Version 4.6.5
 

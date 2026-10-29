@@ -37,7 +37,7 @@ MEMORIZE AND REVISE
 
 THE MAJOR HADITH COLLECTIONS
 - The Nine books (Bukhari, Muslim, an-Nasa'i, Abu Dawud, at-Tirmidhi, Ibn Majah, Muwatta Malik, ad-Darimi, Musnad Ahmad), the forty-hadith collections, and classics like Riyad as-Salihin.
-- Arabic with English translation and narrator chains, a Hadith of the Day, bookmarks, and lookups like "Bukhari 5".
+- Arabic with English translation, chains of narrators and their pages, a Hadith of the Day, bookmarks, and lookups like "Bukhari 5".
 - Search one book or all 50,000+ hadiths. Every collection is built in and works offline.
 
 ON-DEVICE AI
@@ -55,10 +55,11 @@ DAILY WORSHIP AND LEARNING
 - Today: the ayah, hadith, dua, and Name of the day, a daily reminder card, and Sunnah Reminders.
 - Adhkar, Hisn al-Muslim, and dua collections with sources and audio, a tasbih counter, and a journal.
 - The 99 Names in depth, Miracles of the Quran, Proving Islam, and Hadith & Its Sciences.
-- Learn the Arabic alphabet with a 21-level Reading Test, and tajweed with a 58-lesson course.
+- Learn the Arabic alphabet with a 21-level Reading Test, and tajweed with a 58-lesson course and a Tajweed Test.
 - How-To Guides, the Pillars of Islam and Faith, Zakah and inheritance calculators, the Hijri calendar, and Masjid and Halal Food locators.
 
 MADE YOUR WAY
+- English, Arabic, or Urdu, following your iPhone's language.
 - Simple Mode keeps the essentials on screen. Switch to Full any time.
 - Back up named profiles to your own iCloud and restore them on any device.
 - Text sizes, Arabic fonts, accent and sky colors, and a search on every settings page.
@@ -69,4 +70,4 @@ Al-Islam is completely free. No ads, no accounts, no subscriptions, and no track
 
 Whether you seek prayer times, the Quran, the Hadith of the Prophet Muhammad (peace be upon him), or a deeper understanding of Islam, download Al-Islam today.
 
-**3,678 / 4,000 characters.**
+**3,777 / 4,000 characters.**

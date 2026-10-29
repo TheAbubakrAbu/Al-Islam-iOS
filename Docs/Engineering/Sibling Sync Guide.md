@@ -191,8 +191,8 @@ simulator, iPhone + Watch + Widget, and Al-Adhan's Complication). Each was run o
 simulator ("Claude Sync Quran", "Claude Sync Adhan"). Every shared fix found while building was mirrored
 back into Al-Islam, which builds green with all of it.
 
-**Still to do (step 10):** commit Al-Islam's gates, then write that commit into BOTH siblings' `.sync-base`
-(not `522c2f3`: the gates landed after it). Until then a dry run re-reports this whole port.
+**Step 10 was done on 2026-10-29** (section 9): both `.sync-base` files now say `9858a35`, the first commit after
+the port, which holds the gates.
 
 Store copy the port did NOT make true (step 11, Abu to decide): both siblings' Whats New say "150 Tips &
 Tricks" (Al-Quran shows 78, Al-Adhan 83); Al-Adhan's "a Free Palestine poster with the Dome of the Rock" is
@@ -225,7 +225,7 @@ Al-Quran's القرآن and photo prompt; a second run changed nothing. Its only
 phrases above, which the real merge removes. No Urdu AppShortcuts.strings: Siri has no Urdu. Urdu store
 listings are staged beside the Arabic ones (`Urdu Listing.md`).
 
-The whole sync's dry run that day: Al-Adhan 131 LEAKs and 107 conflicts, Al-Quran 87 and 130. Every LEAK
+The whole sync's dry run that day: Al-Adhan 131 LEAKs and 107 conflicts, Al-Quran 87 and 130 (superseded by section 9). Every LEAK
 sits on a line changed since HEAD; most are Arabic rewrites (`return "Khatm"` became `String(localized:)`) of
 lines a sibling had stripped, in `Achievements.swift` (101 / 56) and `ProfileView.swift` (18 / 7): resolve
 by keeping the sibling's deletion and taking Al-Islam's wording for the lines it kept, or gate the badges
@@ -272,3 +272,148 @@ Al-Adhan's Learn section has exactly three grid tiles: Arabic Alphabet, Tajweed
 Foundations, and Islamic Journal. Al-Adhan does not currently ship the Tajweed Course.
 Islamic Journal should not be rendered as a separate full-width Learn banner. Keep this
 rule synchronized if the companion Islam resource catalog is copied or regenerated.
+
+## 9. The 2026-10-29 prep: what the next port starts from
+
+Abu (2026-10-29, 4.6.6 Save 10 committed, clean tree): "make sure everything is good in Al Islam ... then double
+check all syncing files and get to work"; the port itself goes to another session. Everything below is
+UNCOMMITTED in Al-Islam (and the two `.sync-base` files in the siblings) until Abu commits.
+
+**Al-Islam verified green that day:** Debug build of every target for the simulator, Release build for
+`generic/platform=iOS` (0 errors; the 4 warnings are old: two unused `withAnimation` results, two
+`joined` actor-isolation notes), UnitTests 507 passed, 5 skipped by design, 0 failures; `localize_catalog.py
+check` 0 problems in Arabic and Urdu and `todo` 0 keys in both (the 115 riwayah profile texts from
+QiraatProfiles.swift were translated that day); `verify_islam_corpus.py` OK; `check_cloud_manifest.py` every
+key classified; `build_sibling_quote_packs.py --check` OK for both siblings' current packs (rebuild them after
+the apply all the same, their Islam sources change).
+
+**The base.** `.sync-base` was still `60cd3c0` (09-16) in both siblings, so a dry run re-reported the whole
+10-13 port. Evidence for the new base: of Al-Adhan's 280 shared files, 246 are byte-identical to Al-Islam at
+`9858a35` ("Version 4.6.5", 10-14) against 216 at `522c2f3`; Al-Quran 203 against 171; the one file identical
+to the older commit only is `Resources/Data/Hadith/manifest.json`, which the siblings keep their own copy of
+anyway. Both files now hold the full hash of `9858a35`.
+
+**The dry runs after the prep (from `~/Downloads/Islam`, `./sync_from_islam.sh quran; ./sync_from_islam.sh adhan`):**
+
+| | Al-Quran | Al-Adhan |
+|---|---|---|
+| LEAK | 0 (was 87) | 0 (was 131) |
+| NEW | 23 | 21 |
+| UPDATE / MERGE / CONFLICT | 159 / 6 / 12 | 135 / 4 / 10 |
+| DELETE | 2 | 1 |
+| FLAG-ERROR / ROOT-ERROR / LOC-ERROR | 0 / 0 / 0 | 0 / 0 / 0 |
+| ROOT-WARN | `.appUpdatePrompt(...)` | `.appUpdatePrompt(...)` |
+
+Both exit 0. Read `sync-report-<app>.txt` again before applying; Al-Islam may have moved.
+
+**How the LEAKs went to 0 (all in Al-Islam, no-ops there since it defines every flag):**
+- `Achievements.swift`: the badge families are gated, cases and every switch arm (`#if HAS_ADHAN` prayer,
+  `#if HAS_QURAN` Quran + listening + library, `#if HAS_HADITH` hadith; dhikr everywhere), the `Family` enum
+  too, `AchievementsStore.performRefresh` and `AchievementWatcher`. A sibling takes this file AS IS.
+- `ProfileView.swift`: `ProfileStats` fields, computed fractions and `==` gated by family;
+  `ProfileStats.current(settings:quranData:)` exists under `HAS_QURAN` and `current(settings:)` without it
+  (SettingsView already called both); `compute(settings:)` holds the prayer, hadith and dhikr numbers and
+  `compute(settings:quranData:)` adds the Quran's on top. The row caption and the hero rings carry the
+  siblings' variants (`#elseif`: the plan streak and "prayers marked", the Coverage ring). Take Al-Islam's side.
+- `DailyHub.swift` and `JournalView.swift`: the Quran and hadith stores, sections, margin notes and the attach
+  sheet gated; `JournalMarginNote.Source` keeps both cases everywhere, the title switch has `#else` arms.
+- `IslamView.swift`: the two locators (`masjidLocator`, `halalFoodLocator`) gated `#if HAS_ADHAN` at the cases
+  and all 10 arms (they ride with the prayer side's location; Al-Quran had stripped them).
+- `Settings.swift`: `homeLocation`, `favoriteLocations`, `datePrayers`, `dateFullPrayers`,
+  `adhanNotificationSound`, `alertToneSound` under `#if HAS_ADHAN`; `notificationsEnabledDidChange()` and its
+  notification name MOVED here from SettingsAdhan.swift (Al-Quran has the switch, not that file), the two
+  prayer-scheduler calls inside gated (`nextNotificationPassGeneration` is internal now, not private).
+- `Scripts/gen_settings_slices.py` carries a field's `#if` onto its forwarder; `SettingsSlices.swift`
+  regenerated (46 lines of `#if HAS_ADHAN`). Rerun the generator after any Settings.swift field change.
+- `SimpleTrims.swift`: `markedRecently` (takes `PrayerMark`) under `#if HAS_ADHAN`.
+- `JoinSeparator` moved from AdhanStructs.swift to `iPhone/Helpers/System/Localization.swift` (every target;
+  CustomRangeSheet uses it). `QiraatProfiles.swift`: `RiwayahDifferencesSection` under `#if HAS_QURAN`.
+- Manifests: both EXCLUDE the four hadith study packs (`HadithChains.qpk`, `HadithNarrators.qpk`,
+  `HadithIsnadTrees.qpk`, `SimilarHadiths.qpk`); no reader for them outside the Hadith tab.
+- Deleted two dead files no target compiled (`iPhone/Quran/TajweedColors.swift`,
+  `iPhone/Helpers/WatchSearchField.swift`, 4.3.1 leftovers); the siblings hold the same unregistered copies,
+  the sync reports them as DELETE.
+
+**Still by hand during the port (section 5 as written, plus):**
+- Roots (step 7): `git -C Al-Islam-iOS diff 9858a35 HEAD -- iPhone/Al-IslamApp.swift` is 25 lines:
+  `.appUpdatePrompt()` above `.appReviewPrompt()` (the ROOT-WARN; `AppUpdateCheck.swift` is NEW for both and
+  looks the app up by bundle id, so both roots take it), three `@ObservedObject` slices on `MainTabView`
+  (`AdhanSettings`, `QuranDisplay`, `SystemSettings`), the `AppNavigation.shared.$pendingHadith` receiver
+  (Al-Islam only), `QuranPlannerReminder.dropIfSwitchedOff()` after `rearmAfterLaunch()` and the
+  `notificationsEnabledDidChangeNotification` receiver that re-arms (Al-Quran needs both; Al-Adhan the
+  re-arm without the planner line), and the DEBUG `-launchTabAdhan` argument. The watch root is unchanged.
+- Conflicts: the 12 / 10 files are the gated ones above plus `SplashScreen`, `CreditsView`, `Globals`,
+  `RemovalConfirmation`, `SunnahReminders`, `MushafReader` (Al-Quran) and `NamesDepth`, `QiraatProfiles`
+  (Al-Adhan). Where Al-Islam's side is gated, take it whole: that is the point of the gates.
+- Strings only a sibling compiles, for `localize_catalog.py sibling <dd> --add` after its first green build:
+  "Your reading and badges" (Al-Quran), "Your prayers and badges" and "%lld prayers marked" (Al-Adhan), and
+  whatever else that build lists. Translate in Al-Islam, then `../sync_localization.py <app> --apply`.
+- The hadith quote packs (step 4), the NEW-file registration command in each report (step 5), the privacy
+  manifests only if a new required-reason API arrived (none did since the base), and the store copy (step 11
+  and 6b's Arabic and Urdu listings).
+- Step 10 afterwards: the base for both siblings is Al-Islam's HEAD at the moment of the apply.
+
+
+## 10. The 2026-10-29 port (base `9858a35` -> Al-Islam `228c2f4` plus that day's uncommitted gates)
+
+Abu: "okay lets go port al islam to al adhan al quran". Applied, resolved, built and launched; nothing committed
+in any of the three repos. Rollback clones of both siblings as they were before the apply: the session
+scratchpad's `pre-port/` (APFS `cp -cR`, with the two manifests).
+
+**Step 10 is still open.** The base must name a commit that holds the gates below, and they are uncommitted.
+Once Abu commits Al-Islam, write that commit's full hash into `Al-Quran-iOS/.sync-base` and
+`Al-Adhan-iOS/.sync-base` (both still say `9858a35`). Until then a dry run re-reports the intentional
+differences: Al-Quran 4 CONFLICT / 4 MERGE (Globals, Settings, CreditsView, SunnahReminders), Al-Adhan
+2 CONFLICT / 3 MERGE (Globals, CreditsView), both with 0 NEW, 0 UPDATE, 0 LEAK, 0 ROOT and 0 LOC lines.
+
+**Gated in Al-Islam during the port (no-ops there; every Al-Islam target defines every flag):**
+- `Settings.swift`: the whole prayer section, from `prayersData` through the optional prayer times, is one
+  `#if HAS_ADHAN` block, and `dailyRolloverAtFajr` with its two memos is another. The Allow Notifications
+  switch (`notificationsEnabled`, its notification name, `notificationsEnabledDidChange()`) moved above the
+  block, since every app has it. `SettingsSlices.swift` regenerated (`gen_settings_slices.py`).
+- `TabSections.swift`: the file compiles under `os(iOS) && (HAS_ADHAN || HAS_HADITH)`. In Al-Quran every case
+  compiled out and the empty enum raised 16 "will never be executed" warnings.
+- `WelcomePages.swift`: the Simple or Full question on the Discover page is `#if HAS_ICLOUD_BACKUP`, the flag
+  Abu's own 2026-10-14 sibling gate used (both siblings skipped the question at first launch).
+- `IslamView.swift`: `bannerResources` and `closingRowResources` follow `TajweedLessonsStore.isBundled`. Without
+  the course (Al-Adhan) the journal is a Learn tile, not a banner, per "Target-specific navigation chrome"
+  above, and the ungrouped grid keeps its banners rather than close on a ragged row of two.
+- `NamesDepth.swift`: the verse list is `#if HAS_QURAN`, with Al-Adhan's by-reference rows as the `#else`.
+- `StudyKit.swift`: the unused `withAnimation` result (an old warning in all three apps).
+
+**Resolved by hand:**
+- Taken whole from Al-Islam (their stripped lines are behind the new gates): Achievements, ProfileView,
+  DailyHub, JournalView, IslamView, SplashScreen in both; QiraatProfiles and NamesDepth in Al-Adhan;
+  RemovalConfirmation and MushafReader in Al-Quran (Al-Quran's own 10-14 `reportAnchor` save is redundant
+  with Al-Islam's same-page save in `reseedToStartingPage` and was dropped).
+- Kept the sibling's: app names in `Globals.swift` (plus the new `displayName`), the creator line and story in
+  `CreditsView.swift` (now `String(localized:)`), Al-Quran's prayer-free `Settings.swift` (`SettingsHost`,
+  `@Setting`, the Hafs PDF argument and the master switch added) and its own `SunnahReminders.swift`.
+- Roots: `.appUpdatePrompt()` in both; Al-Quran also observes `QuranDisplay` and `SystemSettings`, drops a
+  switched-off planner reminder after `rearmAfterLaunch()`, and re-arms on Allow Notifications; Al-Adhan
+  observes `SystemSettings` (it has no reminder scheduler to re-arm).
+- Al-Adhan's `iPhone/Islam/QiraatIsnad.swift` (a hand-kept copy of Al-Islam's Quran-side file) refreshed: the
+  diagram types now live in the shared `Islam/Content/IsnadDiagram.swift` and duplicated. The other hand-kept
+  copies, `RiwayahIdentity.swift` and `ProfanityFilter.swift`, needed nothing this time; check all three on
+  every port (`find` the sibling's Swift files that have no Al-Islam path).
+- Al-Adhan's Watch target gained `CreditsView.swift` and `SplashScreen.swift` (`membership_diff.py`).
+- Quote packs rebuilt (`build_sibling_quote_packs.py`, `--check` OK). The staged Arabic and Urdu App Store
+  listings copied into both siblings' `Docs/`.
+- 53 strings only a sibling's code has (27 Al-Adhan, 25 Al-Quran, 1 revived) added with `sibling --add`,
+  translated into Arabic and Urdu in Al-Islam's catalog (validate and check: 0 problems), then
+  `sync_localization.py <app> --apply` for both.
+
+**Trap found: the slices hide LEAKs.** `check_feature_isolation.py` reported 0 LEAKs while Al-Quran failed to
+build with 174 errors in `SettingsSlices.swift`: every forwarder declares a property of the same name as the
+`Settings` field it forwards, so the checker found a declaration the sibling compiles. A field the sibling
+stripped from `Settings.swift` must sit under a `#if` there, so the generator gates its forwarder too. Until
+the checker learns to skip the slices file as a declaration site, build each sibling before believing a 0.
+
+**Verified:** both siblings build for the simulator and for `generic/platform=iOS` (Release, widget and watch
+embedded): Al-Quran 0 warnings, Al-Adhan only its old `lock()`/`unlock()` in QuranQuoteSource.swift. Root
+wiring 0 errors, 0 warnings. Al-Islam's build and unit tests after the gates are in the port's report.
+
+**Store copy (step 11):** both siblings are still at 2.6.5 and their What's New describes the 10-13 port, all of
+which is still there. This port brings 4.6.6's features (Arabic and Urdu, the Sunnah library, the grammar and
+letter pages, the welcome pages, Al-Quran's Tajweed Test and custom range sheet, Al-Adhan's clock change notice
+and Islamic date banner); the version bump and a 2.6.6 What's New are Abu's call.

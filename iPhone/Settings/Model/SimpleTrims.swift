@@ -266,6 +266,7 @@ enum SimpleMode {
     /// ignore snoozing make it wait a day"). Never Ask Again stays permanent.
     static let nagSnooze: TimeInterval = 86_400
 
+    #if HAS_ADHAN
     /// Whether any prayer was marked (on time, late or missed) on today or one of the `days - 1` days
     /// before it. At most `days` dictionary lookups: the Adhan tab asks on every countdown tick, so
     /// this never walks the whole history.
@@ -283,6 +284,7 @@ enum SimpleMode {
         }
         return false
     }
+    #endif
 
     /// Whether a dialog snoozed until `until` (seconds since 1970; 0 = never snoozed) is still quiet.
     static func isSnoozed(until: Double, now: Date) -> Bool {

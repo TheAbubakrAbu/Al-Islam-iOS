@@ -14,11 +14,16 @@ import SwiftUI
 /// threshold was crossed - see `AchievementsStore` for why that has to be remembered rather than
 /// re-derived.
 struct ProfileStats: Equatable {
+    // Each group ships with its domain (HAS_ADHAN, HAS_QURAN, HAS_HADITH): Al-Adhan's profile is
+    // prayer and dhikr, Al-Quran's reading, library and dhikr, and this file compiles as it is in both.
+    #if HAS_ADHAN
     // Prayer - all from the tracker's own engine, so the profile and the tracker can never disagree.
     var prayer = PrayerTrackerStats()
     var todayCovered = 0
     var todayTrackable = 0
+    #endif
 
+    #if HAS_QURAN
     // Quran
     var khatmCompleted = 0
     var khatmTotal = 0
@@ -41,11 +46,14 @@ struct ProfileStats: Equatable {
     var highlightsByColor: [AyahHighlightColor: Int] = [:]
     var favoriteSurahs = 0
     var favoriteReciters = 0
+    #endif
 
+    #if HAS_HADITH
     // Hadith
     var hadithBooksStarted = 0
     var hadithBookmarks = 0
     var hadithFavoriteBooks = 0
+    #endif
 
     // Dhikr
     /// Lifetime count (never lowered by a reset), today's count, and the day streaks.
@@ -55,6 +63,7 @@ struct ProfileStats: Equatable {
     var dhikrBestStreak = 0
     var dhikrActiveDays = 0
 
+    #if HAS_QURAN
     /// Distinct highlight colors the reader has actually reached for.
     var highlightColorsUsed: Int {
         highlightsByColor.reduce(0) { $0 + ($1.value > 0 ? 1 : 0) }
@@ -64,12 +73,14 @@ struct ProfileStats: Equatable {
         khatmTotal > 0 ? min(1, Double(khatmCompleted) / Double(khatmTotal)) : 0
     }
 
-    var todayPrayerFraction: Double {
-        todayTrackable > 0 ? min(1, Double(todayCovered) / Double(todayTrackable)) : 0
-    }
-
     var planFraction: Double {
         planTarget > 0 ? min(1, Double(planDoneToday) / Double(planTarget)) : 0
+    }
+    #endif
+
+    #if HAS_ADHAN
+    var todayPrayerFraction: Double {
+        todayTrackable > 0 ? min(1, Double(todayCovered) / Double(todayTrackable)) : 0
     }
 
     /// Prayer coverage across every countable day - the honest denominator (exempt days are excluded by
@@ -78,23 +89,33 @@ struct ProfileStats: Equatable {
         let possible = prayer.trackedDays * Settings.canonicalObligatoryPrayers.count
         return possible > 0 ? min(1, Double(prayer.totalPrayed) / Double(possible)) : 0
     }
+    #endif
 
     static func == (l: ProfileStats, r: ProfileStats) -> Bool {
-        l.prayer == r.prayer &&
-        l.todayCovered == r.todayCovered && l.todayTrackable == r.todayTrackable &&
-        l.khatmCompleted == r.khatmCompleted && l.khatmTotal == r.khatmTotal &&
-        l.planStreak == r.planStreak && l.planDoneToday == r.planDoneToday && l.planTarget == r.planTarget &&
-        l.surahsOpened == r.surahsOpened && l.surahsCompleted == r.surahsCompleted &&
-        l.totalOpens == r.totalOpens && l.totalPlays == r.totalPlays &&
-        l.mostReadSurah?.id == r.mostReadSurah?.id && l.mostReadSurah?.count == r.mostReadSurah?.count &&
-        l.mostPlayedSurah?.id == r.mostPlayedSurah?.id && l.mostPlayedSurah?.count == r.mostPlayedSurah?.count &&
-        l.bookmarks == r.bookmarks && l.notes == r.notes && l.highlights == r.highlights &&
-        l.highlightsByColor == r.highlightsByColor &&
-        l.favoriteSurahs == r.favoriteSurahs && l.favoriteReciters == r.favoriteReciters &&
-        l.hadithBooksStarted == r.hadithBooksStarted && l.hadithBookmarks == r.hadithBookmarks &&
-        l.hadithFavoriteBooks == r.hadithFavoriteBooks &&
-        l.dhikrTotal == r.dhikrTotal && l.dhikrToday == r.dhikrToday && l.dhikrStreak == r.dhikrStreak &&
-        l.dhikrBestStreak == r.dhikrBestStreak && l.dhikrActiveDays == r.dhikrActiveDays
+        var same = l.dhikrTotal == r.dhikrTotal && l.dhikrToday == r.dhikrToday && l.dhikrStreak == r.dhikrStreak &&
+            l.dhikrBestStreak == r.dhikrBestStreak && l.dhikrActiveDays == r.dhikrActiveDays
+        #if HAS_ADHAN
+        same = same && l.prayer == r.prayer &&
+            l.todayCovered == r.todayCovered && l.todayTrackable == r.todayTrackable
+        #endif
+        #if HAS_QURAN
+        same = same &&
+            l.khatmCompleted == r.khatmCompleted && l.khatmTotal == r.khatmTotal &&
+            l.planStreak == r.planStreak && l.planDoneToday == r.planDoneToday && l.planTarget == r.planTarget &&
+            l.surahsOpened == r.surahsOpened && l.surahsCompleted == r.surahsCompleted &&
+            l.totalOpens == r.totalOpens && l.totalPlays == r.totalPlays &&
+            l.mostReadSurah?.id == r.mostReadSurah?.id && l.mostReadSurah?.count == r.mostReadSurah?.count &&
+            l.mostPlayedSurah?.id == r.mostPlayedSurah?.id && l.mostPlayedSurah?.count == r.mostPlayedSurah?.count &&
+            l.bookmarks == r.bookmarks && l.notes == r.notes && l.highlights == r.highlights &&
+            l.highlightsByColor == r.highlightsByColor &&
+            l.favoriteSurahs == r.favoriteSurahs && l.favoriteReciters == r.favoriteReciters
+        #endif
+        #if HAS_HADITH
+        same = same &&
+            l.hadithBooksStarted == r.hadithBooksStarted && l.hadithBookmarks == r.hadithBookmarks &&
+            l.hadithFavoriteBooks == r.hadithFavoriteBooks
+        #endif
+        return same
     }
 
     /// Cache slot for `current(settings:quranData:)`, keyed by a stamp of everything the stats derive
@@ -105,8 +126,23 @@ struct ProfileStats: Equatable {
     private static var cache: (stamp: Int, surahCount: Int, hadith: Int, dhikr: Int, stats: ProfileStats)?
 
     /// The memoized entry point. Call this, not `compute`, from view code.
+    #if HAS_QURAN
     @MainActor
     static func current(settings: Settings, quranData: QuranData) -> ProfileStats {
+        current(settings: settings, surahCount: quranData.quran.count) { compute(settings: settings, quranData: quranData) }
+    }
+    #else
+    /// No Quran in this app: the surah count in the key stays 0.
+    @MainActor
+    static func current(settings: Settings) -> ProfileStats {
+        current(settings: settings, surahCount: 0) { compute(settings: settings) }
+    }
+    #endif
+
+    /// The memo itself. `surahCount` is part of the key because the Quran packs load after the first pass.
+    @MainActor
+    private static func current(settings: Settings, surahCount: Int, compute: () -> ProfileStats) -> ProfileStats {
+        #if HAS_HADITH
         // The last-read table loads lazily and only the Hadith tab used to trigger it - without this,
         // a profile opened before the Hadith tab counted zero "books started" (and the Hadith Reader
         // badge read unearned) until the user happened to visit that tab. Deferred a runloop because
@@ -122,26 +158,31 @@ struct ProfileStats: Equatable {
         let hadithStamp = HadithUserData.shared.bookmarks.count
             &+ (HadithUserData.shared.favoriteSlugs.count &* 1_000)
             &+ (HadithStore.shared.lastReadByBook.count &* 1_000_000)
+        #else
+        let hadithStamp = 0
+        #endif
         let dhikrStamp = TasbihCounters.shared.lifetimeCount &+ TasbihCounters.shared.currentStreak &* 1_000_003
         let stamp = settings.profileStatsStamp
 
         if let cached = cache,
            cached.stamp == stamp,
-           cached.surahCount == quranData.quran.count,
+           cached.surahCount == surahCount,
            cached.hadith == hadithStamp,
            cached.dhikr == dhikrStamp {
             return cached.stats
         }
 
-        let stats = compute(settings: settings, quranData: quranData)
-        cache = (stamp, quranData.quran.count, hadithStamp, dhikrStamp, stats)
+        let stats = compute()
+        cache = (stamp, surahCount, hadithStamp, dhikrStamp, stats)
         return stats
     }
 
+    /// Every number but the Quran's: the prayer tracker, the hadith stores and the tasbih counters.
     @MainActor
-    static func compute(settings: Settings, quranData: QuranData) -> ProfileStats {
+    static func compute(settings: Settings) -> ProfileStats {
         var stats = ProfileStats()
 
+        #if HAS_ADHAN
         // Prayer
         stats.prayer = settings.trackerStats
         let slots = settings.trackableSlots(for: Date())
@@ -149,6 +190,35 @@ struct ProfileStats: Equatable {
             ? Settings.canonicalObligatoryPrayers.count
             : Set(slots.flatMap { Settings.canonicalCoverage(of: $0.nameTransliteration) }).count
         stats.todayCovered = settings.coveredCanonicalPrayers(on: Date()).count
+
+        #endif
+
+        #if HAS_HADITH
+        // Hadith
+        let hadith = HadithUserData.shared
+        stats.hadithBookmarks = hadith.bookmarks.count
+        stats.hadithFavoriteBooks = hadith.favoriteSlugs.count
+        stats.hadithBooksStarted = HadithStore.shared.lastReadByBook.count
+
+        #endif
+
+        // Dhikr
+        let tasbih = TasbihCounters.shared
+        stats.dhikrTotal = tasbih.lifetimeCount
+        stats.dhikrToday = tasbih.todayCount
+        stats.dhikrStreak = tasbih.currentStreak
+        stats.dhikrBestStreak = tasbih.bestStreak
+        stats.dhikrActiveDays = tasbih.activeDayCount
+
+        return stats
+    }
+
+    #if HAS_QURAN
+    /// The Quran's numbers on top of `compute(settings:)`: the khatm, the plan, the surah counters and
+    /// the library.
+    @MainActor
+    static func compute(settings: Settings, quranData: QuranData) -> ProfileStats {
+        var stats = compute(settings: settings)
 
         // Quran. The khatm set is Hafs-only (its keys are Hafs ayah numbers), so a reader on another
         // riwayah gets a khatm card that honestly reads zero rather than a number computed against
@@ -225,22 +295,9 @@ struct ProfileStats: Equatable {
         stats.favoriteSurahs = settings.favoriteSurahs.count
         stats.favoriteReciters = settings.favoriteReciterIDs.count
 
-        // Hadith
-        let hadith = HadithUserData.shared
-        stats.hadithBookmarks = hadith.bookmarks.count
-        stats.hadithFavoriteBooks = hadith.favoriteSlugs.count
-        stats.hadithBooksStarted = HadithStore.shared.lastReadByBook.count
-
-        // Dhikr
-        let tasbih = TasbihCounters.shared
-        stats.dhikrTotal = tasbih.lifetimeCount
-        stats.dhikrToday = tasbih.todayCount
-        stats.dhikrStreak = tasbih.currentStreak
-        stats.dhikrBestStreak = tasbih.bestStreak
-        stats.dhikrActiveDays = tasbih.activeDayCount
-
         return stats
     }
+    #endif
 }
 
 // MARK: - Entry point
@@ -250,33 +307,61 @@ struct ProfileStats: Equatable {
 struct ProfileSettingsRow: View {
     private let settings = Settings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    #if HAS_QURAN
     @ObservedObject private var quranData = QuranData.shared
+    #endif
+    #if HAS_HADITH
     /// Observed so the deferred `loadLastRead()` (see `ProfileStats.current`) re-renders this row when
     /// the count lands - without a subscription the caption's badge tally would stay stale until some
     /// unrelated settings publish happened by.
     @ObservedObject private var hadithStore = HadithStore.shared
+    #endif
     /// Observed so a badge unlocked elsewhere in the app bumps the caption's tally immediately.
     @ObservedObject private var achievements = AchievementsStore.shared
 
     private var stats: ProfileStats {
+        #if HAS_QURAN
         ProfileStats.current(settings: settings, quranData: quranData)
+        #else
+        ProfileStats.current(settings: settings)
+        #endif
     }
 
     private func caption(_ stats: ProfileStats) -> String {
         var parts: [String] = []
+        #if HAS_ADHAN
         if stats.prayer.currentStreak > 0 {
             parts.append(String(localized: "\(stats.prayer.currentStreak)-day streak"))
         }
+        #elseif HAS_QURAN
+        // No prayer tracker: the reading plan's streak is the one streak this app keeps.
+        if let streak = stats.planStreak, streak > 0 {
+            parts.append(String(localized: "\(streak)-day streak"))
+        }
+        #endif
+        #if HAS_QURAN
         if stats.khatmCompleted > 0 {
             parts.append(String(localized: "\(Int((stats.khatmFraction * 100).rounded()))% of the Quran"))
         }
+        #elseif HAS_ADHAN
+        if stats.prayer.totalPrayed > 0 {
+            parts.append(String(localized: "\(stats.prayer.totalPrayed) prayers marked"))
+        }
+        #endif
         let earned = achievements.unlockedCount(stats)
         if earned > 0 {
             parts.append(earned == 1 ? String(localized: "1 badge") : String(localized: "\(earned) badges"))
         }
         // Nothing recorded yet: say what the screen is FOR rather than showing three zeros.
         // Joined through the catalog: a middle dot beside Arabic-Indic digits reads as a zero ("٠").
-        return parts.isEmpty ? String(localized: "Your prayers, reading, and badges")
+        #if HAS_ADHAN && HAS_QURAN
+        let empty = String(localized: "Your prayers, reading, and badges")
+        #elseif HAS_QURAN
+        let empty = String(localized: "Your reading and badges")
+        #else
+        let empty = String(localized: "Your prayers and badges")
+        #endif
+        return parts.isEmpty ? empty
             : parts.dropFirst().reduce(parts[0]) { String(localized: "\($0) · \($1)") }
     }
 
@@ -311,12 +396,16 @@ struct ProfileView: View {
     private let settings = Settings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @ObservedObject private var systemSettings = SystemSettings.shared
+    #if HAS_QURAN
     @ObservedObject private var quranData = QuranData.shared
+    #endif
     /// Observed so a count tapped on the tasbih screen is reflected the next time this one appears.
     @ObservedObject private var tasbih = TasbihCounters.shared
+    #if HAS_HADITH
     @ObservedObject private var hadithUserData = HadithUserData.shared
     /// See `ProfileSettingsRow` - the deferred last-read load must be able to re-render this screen.
     @ObservedObject private var hadithStore = HadithStore.shared
+    #endif
     @ObservedObject private var achievements = AchievementsStore.shared
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -342,7 +431,11 @@ struct ProfileView: View {
     }
 
     private var stats: ProfileStats {
+        #if HAS_QURAN
         ProfileStats.current(settings: settings, quranData: quranData)
+        #else
+        ProfileStats.current(settings: settings)
+        #endif
     }
 
     var body: some View {
@@ -351,12 +444,20 @@ struct ProfileView: View {
         ScrollView {
             VStack(spacing: 16) {
                 RingHero(stats: stats)
+                #if HAS_ADHAN
                 streakStrip(stats)
+                #endif
                 ActivityDashboardCard()
+                #if HAS_ADHAN
                 prayerCard(stats)
+                #endif
+                #if HAS_QURAN
                 quranCard(stats)
                 libraryCard(stats)
+                #endif
+                #if HAS_HADITH
                 hadithCard(stats)
+                #endif
                 dhikrCard(stats)
                 badgesSection(stats)
             }
@@ -374,6 +475,7 @@ struct ProfileView: View {
 
     // MARK: Cards
 
+    #if HAS_ADHAN
     private func streakStrip(_ stats: ProfileStats) -> some View {
         HStack(spacing: 10) {
             miniStat("\(stats.prayer.currentStreak)".localizedDigits, String(localized: "Current"), systemImage: "flame.fill",
@@ -406,7 +508,9 @@ struct ProfileView: View {
             }
         }
     }
+    #endif
 
+    #if HAS_QURAN
     private func quranCard(_ stats: ProfileStats) -> some View {
         ProfileCard(title: String(localized: "Quran"), systemImage: "character.book.closed.ar") {
             statRow(String(localized: "Ayahs read"), value: String(localized: "\(formatted(stats.khatmCompleted)) of \(formatted(stats.khatmTotal))"))
@@ -472,7 +576,9 @@ struct ProfileView: View {
             }
         }
     }
+    #endif
 
+    #if HAS_HADITH
     private func hadithCard(_ stats: ProfileStats) -> some View {
         ProfileCard(title: String(localized: "Hadith"), systemImage: "text.book.closed.fill") {
             statRow(String(localized: "Books started"), value: formatted(stats.hadithBooksStarted))
@@ -480,6 +586,7 @@ struct ProfileView: View {
             statRow(String(localized: "Favorite books"), value: formatted(stats.hadithFavoriteBooks))
         }
     }
+    #endif
 
     private func dhikrCard(_ stats: ProfileStats) -> some View {
         ProfileCard(title: String(localized: "Dhikr"), systemImage: "circle.hexagonpath.fill") {
@@ -626,11 +733,13 @@ struct ProfileView: View {
         value.formatted(.number)
     }
 
+    #if HAS_QURAN
     /// "Al-Baqarah · 12×": one whole phrase from the catalog, so Arabic can name the count its own way
     /// (a "·" beside Arabic-Indic digits reads as a zero), with the surah's Arabic name there.
     private func mostLine(_ surah: Surah, count: Int) -> String {
         String(localized: "\(surah.displayName) · \(count)×")
     }
+    #endif
 }
 
 // MARK: - Hero
@@ -657,16 +766,24 @@ private struct RingHero: View {
         // Numbers in the interface's digits and its percent sign ("٣/٥", "٥٢٪" in Arabic): a plain
         // interpolation drew Western digits beside the Arabic-Indic ones around them.
         func count(_ value: Int) -> String { value.formatted(.number.grouping(.never)) }
-        var list: [(Double, Color, String, String)] = [
-            (stats.todayPrayerFraction, accent, String(localized: "Today"),
-             "\(count(stats.todayCovered))/\(count(stats.todayTrackable))"),
-            (stats.khatmFraction, settings.accentColor.accent2.opacity(0.75), String(localized: "Quran"),
-             Int((stats.khatmFraction * 100).rounded()).formatted(.percent)),
-        ]
+        var list: [(Double, Color, String, String)] = []
+        #if HAS_ADHAN
+        list.append((stats.todayPrayerFraction, accent, String(localized: "Today"),
+                     "\(count(stats.todayCovered))/\(count(stats.todayTrackable))"))
+        #endif
+        #if HAS_QURAN
+        // The outermost ring is the full accent: the khatm takes it where there is no prayer ring (Al-Quran).
+        list.append((stats.khatmFraction, list.isEmpty ? accent : settings.accentColor.accent2.opacity(0.75),
+                     String(localized: "Quran"), Int((stats.khatmFraction * 100).rounded()).formatted(.percent)))
         if stats.planTarget > 0 {
             list.append((stats.planFraction, accent.opacity(0.5), String(localized: "Plan"),
                          "\(count(stats.planDoneToday))/\(count(stats.planTarget))"))
         }
+        #elseif HAS_ADHAN
+        // No Quran (Al-Adhan): lifetime prayer coverage takes the khatm's ring.
+        list.append((stats.prayerCoverageFraction, settings.accentColor.accent2.opacity(0.75), String(localized: "Coverage"),
+                     Int((stats.prayerCoverageFraction * 100).rounded()).formatted(.percent)))
+        #endif
         return list.map { (fraction: $0.0, color: $0.1, label: $0.2, value: $0.3) }
     }
 

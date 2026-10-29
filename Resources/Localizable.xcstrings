@@ -481,6 +481,23 @@
         }
       }
     },
+    "\"adhan\", \"qibla\" or \"widget\"" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«الأذان» أو «القبلة» أو «أداة»"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«اذان»، «قبلہ» یا «ویجیٹ»"
+          }
+        }
+      }
+    },
     "\"adhan\", \"tajweed\" or \"widget\"" : {
       "localizations" : {
         "ar" : {
@@ -493,6 +510,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "«اذان»، «تجوید» یا «ویجیٹ»"
+          }
+        }
+      }
+    },
+    "\"tajweed\", \"reciter\" or \"widget\"" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«التجويد» أو «القارئ» أو «أداة»"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«تجوید»، «قاری» یا «ویجیٹ»"
           }
         }
       }
@@ -1344,6 +1378,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ قرآن مجید اور حدیث کی کتابیں اپنا اپنا فونٹ رکھتی ہیں۔"
+          }
+        }
+      }
+    },
+    "%@ The Quran keeps its own." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ أما القرآن فله خطه الخاص."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ قرآن مجید اپنا فونٹ رکھتا ہے۔"
           }
         }
       }
@@ -7904,6 +7955,65 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "نماز کے %lld دن"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld prayers marked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "صلاة واحدة مسجَّلة"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "صلاتان مسجَّلتان"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld صلوات مسجَّلة"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld صلاة مسجَّلة"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld صلاة مسجَّلة"
+                }
+              }
+            }
+          }
+        },
+        "ur" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld نماز درج کی گئی"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld نمازیں درج کی گئیں"
                 }
               }
             }
@@ -16506,7 +16616,22 @@
       },
       "extractionState" : "stale"
     },
-    "A considered selection (ikhtiyar) drawn mostly from the Kufan readings: close to Hamzah in many places, but with its own settled choices." : {},
+    "A considered selection (ikhtiyar) drawn mostly from the Kufan readings: close to Hamzah in many places, but with its own settled choices." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختيارٌ متأنٍّ مأخوذ في أكثره من قراءات الكوفيين: قريب من حمزة في مواضع كثيرة، لكن له اختياراته المستقرة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایک سوچا سمجھا اختیار جو زیادہ تر کوفی قراءتوں سے لیا گیا ہے: بہت سے مقامات پر حمزہ کے قریب، مگر اپنے طے شدہ اختیارات کے ساتھ۔"
+          }
+        }
+      }
+    },
     "A count is your own steady beat; what matters is that all your counts match." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -17478,6 +17603,40 @@
     "A few questions on each tab, each with the setting that answers it: Need Help Praying? on the prayer times opens Nagging Mode, and Need Help Reading? on the Quran opens Arabic Beginner Mode." : {
       "extractionState" : "stale"
     },
+    "A few questions on each tab, each with the setting that answers it: Need Help Praying? on the prayer times opens Nagging Mode. Each tab also has its own switch, on its settings page." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بضعة أسئلة في كل تبويب، ولكل منها الإعداد الذي يجيب عنه: «هل تحتاج إلى عون على الصلاة؟» في مواقيت الصلاة يفتح وضع التذكير المتكرر. ولكل تبويب أيضًا مفتاحه الخاص في صفحة إعداداته."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر ٹیب پر چند سوالات، اور ہر ایک کے ساتھ وہ ترتیب جو اس کا جواب دیتی ہے: نماز کے اوقات پر “نماز میں مدد چاہیے؟” بار بار یاد دہانی کا موڈ کھولتا ہے۔ ہر ٹیب کا اپنا سوئچ بھی ہے، اس کی ترتیبات کے صفحے پر۔"
+          }
+        }
+      }
+    },
+    "A few questions on each tab, each with the setting that answers it: Need Help Reading? on the Quran answers with Arabic Beginner Mode. Each tab also has its own switch, on its settings page." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بضعة أسئلة في كل تبويب، ولكل منها الإعداد الذي يجيب عنه: «هل تحتاج إلى مساعدة في القراءة؟» في القرآن يجيب بوضع المبتدئ في العربية. ولكل تبويب أيضًا مفتاحه الخاص في صفحة إعداداته."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر ٹیب پر چند سوالات، اور ہر ایک کے ساتھ وہ ترتیب جو اس کا جواب دیتی ہے: قرآن پر “پڑھنے میں مدد چاہیے؟” کا جواب عربی مبتدی موڈ ہے۔ ہر ٹیب کا اپنا سوئچ بھی ہے، اس کی ترتیبات کے صفحے پر۔"
+          }
+        }
+      }
+    },
     "A fifth, straight away: وَفِى ٱلرِّكَازِ ٱلخُمُسُ (al-Bukhari 1499). No threshold and no year to wait." : {
       "localizations" : {
         "ar" : {
@@ -17746,8 +17905,38 @@
         }
       }
     },
-    "A half tilt (taqlil) for Warsh on words ending in ى and on ٱلدُّنۡيَا, مُوس۪ىٰ, ٱلۡهُد۪ىٰ, ٱلنّ۪ارِ, ٱلۡكٰ۪فِرِينَ; Qalun reads them level." : {},
-    "A half tilt (taqlil) on words ending in ى and on ٱلدُّنۡيَا, مُوس۪ىٰ, ٱلۡهُد۪ىٰ, ٱلنّ۪ارِ, ٱلۡكٰ۪فِرِينَ, about 2,500 places." : {},
+    "A half tilt (taqlil) for Warsh on words ending in ى and on ٱلدُّنۡيَا, مُوس۪ىٰ, ٱلۡهُد۪ىٰ, ٱلنّ۪ارِ, ٱلۡكٰ۪فِرِينَ; Qalun reads them level." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تقليل (إمالة بين بين) عند ورش في الكلمات المختومة بـ ى وفي ٱلدُّنۡيَا، مُوس۪ىٰ، ٱلۡهُد۪ىٰ، ٱلنّ۪ارِ، ٱلۡكٰ۪فِرِينَ؛ ويقرؤها قالون بالفتح."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ورش کے ہاں ى پر ختم ہونے والے الفاظ اور ٱلدُّنۡيَا، مُوس۪ىٰ، ٱلۡهُد۪ىٰ، ٱلنّ۪ارِ، ٱلۡكٰ۪فِرِينَ میں تقلیل (آدھا امالہ)؛ قالون انہیں فتح کے ساتھ پڑھتے ہیں۔"
+          }
+        }
+      }
+    },
+    "A half tilt (taqlil) on words ending in ى and on ٱلدُّنۡيَا, مُوس۪ىٰ, ٱلۡهُد۪ىٰ, ٱلنّ۪ارِ, ٱلۡكٰ۪فِرِينَ, about 2,500 places." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تقليل (إمالة بين بين) في الكلمات المختومة بـ ى وفي ٱلدُّنۡيَا، مُوس۪ىٰ، ٱلۡهُد۪ىٰ، ٱلنّ۪ارِ، ٱلۡكٰ۪فِرِينَ، في نحو ٢٥٠٠ موضع."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ى پر ختم ہونے والے الفاظ اور ٱلدُّنۡيَا، مُوس۪ىٰ، ٱلۡهُد۪ىٰ، ٱلنّ۪ارِ، ٱلۡكٰ۪فِرِينَ میں تقلیل (آدھا امالہ)، تقریباً 2,500 مقامات پر۔"
+          }
+        }
+      }
+    },
     "A half-said noon is neither idgham nor idh-har; it is the sound of a reader who has not committed to the rule." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -18098,7 +18287,22 @@
         }
       }
     },
-    "A hamzah's vowel moved onto the resting letter before it, قَدَ اَفۡلَحَ, وَبِالَاخِرَةِ, and every resting hamzah turned into a long vowel, يُومِنُونَ, اَ۬لۡمُومِنُونَ: his mushaf has 4,600 fewer hamzah signs than Hafs's." : {},
+    "A hamzah's vowel moved onto the resting letter before it, قَدَ اَفۡلَحَ, وَبِالَاخِرَةِ, and every resting hamzah turned into a long vowel, يُومِنُونَ, اَ۬لۡمُومِنُونَ: his mushaf has 4,600 fewer hamzah signs than Hafs's." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نقل حركة الهمزة إلى الساكن قبلها، قَدَ اَفۡلَحَ، وَبِالَاخِرَةِ، وإبدال كل همزة ساكنة حرف مد، يُومِنُونَ، اَ۬لۡمُومِنُونَ: في مصحفه ٤٦٠٠ علامة همزة أقل من مصحف حفص."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہمزہ کی حرکت اس سے پہلے کے ساکن حرف پر منتقل، قَدَ اَفۡلَحَ، وَبِالَاخِرَةِ، اور ہر ساکن ہمزہ حرفِ مد میں بدلا ہوا، يُومِنُونَ، اَ۬لۡمُومِنُونَ: اس کے مصحف میں حفص کے مصحف سے 4,600 ہمزہ کی علامتیں کم ہیں۔"
+          }
+        }
+      }
+    },
     "A hamzah, then a madd letter: ءَا, أُو, إِي" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -18447,6 +18651,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ہمزۂ وصل سے غلط حرکت کے ساتھ ابتدا کی گئی"
+          }
+        }
+      }
+    },
+    "A journal of your own" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يوميات خاصة بك"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آپ کی اپنی ڈائری"
           }
         }
       }
@@ -19599,7 +19820,22 @@
         }
       }
     },
-    "A markedly flowing, connected sound as a result, with the separated madd kept short." : {},
+    "A markedly flowing, connected sound as a result, with the separated madd kept short." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ومن ثَمّ صوتٌ متصل منساب على نحو ظاهر، مع قصر المد المنفصل."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نتیجتاً نمایاں طور پر رواں اور جڑی ہوئی آواز، اور مد منفصل قصر کے ساتھ۔"
+          }
+        }
+      }
+    },
     "A markedly flowing, connected sound as a result." : {
       "localizations" : {
         "ar" : {
@@ -20403,7 +20639,22 @@
     "A prayer can only be marked once its time has come in, so the row shows what is still left to pray. Off, the whole day can be marked at any time. Past days can always be filled in either way." : {
       "extractionState" : "stale"
     },
-    "A printed mushaf shows only part of this. The rest is passed on by ear, which is why a reading is learned with a teacher." : {},
+    "A printed mushaf shows only part of this. The rest is passed on by ear, which is why a reading is learned with a teacher." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا يُظهر المصحف المطبوع إلا بعض هذا. والباقي يُنقل بالسماع، ولذلك تُؤخذ القراءة عن شيخ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "چھپا ہوا مصحف اس کا صرف کچھ حصہ دکھاتا ہے۔ باقی سماعت سے منتقل ہوتا ہے، اسی لیے قراءت استاد سے سیکھی جاتی ہے۔"
+          }
+        }
+      }
+    },
     "A pronoun stands in for a name: I, you, he, they. Arabic writes each one in two ways: as a word on its own (هُوَ, he) and as an ending joined to another word (رَبُّهُ, his Lord)." : {
       "localizations" : {
         "ar" : {
@@ -20498,6 +20749,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "کوئی سوال، کوئی ضمنی سوال، کوئی “اس کا مطلب کیا ہے”: Apple Intelligence اس ایپ کے اپنے قرآن مجید، احادیث، تفسیر، مضامین اور دعاؤں سے جواب دیتی ہے، اور جواب کے نیچے ہر ماخذ کا اقتباس اور ایک سطر ہوتی ہے کہ وہ کہاں سے لیا گیا ہے۔"
+          }
+        }
+      }
+    },
+    "A question, a follow-up, a “what does this mean”: answered by Apple Intelligence from this app’s own Quran, tafsir, articles and duas, with every source quoted beneath the reply and a line saying where it comes from." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سؤال، أو متابعة، أو «ما معنى هذا؟»: تجيب عنه Apple Intelligence من القرآن والتفسير والمقالات والأدعية الموجودة في هذا التطبيق، مع اقتباس كل مصدر أسفل الرد وسطر يبيّن من أين جاء."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کوئی سوال، کوئی ضمنی سوال، کوئی “اس کا مطلب کیا ہے”: Apple Intelligence اس ایپ کے اپنے قرآن مجید، تفسیر، مضامین اور دعاؤں سے جواب دیتی ہے، اور جواب کے نیچے ہر ماخذ کا اقتباس اور ایک سطر ہوتی ہے کہ وہ کہاں سے لیا گیا ہے۔"
+          }
+        }
+      }
+    },
+    "A question, a follow-up, a “what does this mean”: answered by Apple Intelligence from this app’s own prayer times, articles, duas, Names of Allah and tips, with every source quoted beneath the reply and a line saying where it comes from." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سؤال، أو متابعة، أو «ما معنى هذا؟»: تجيب عنه Apple Intelligence من مواقيت الصلاة والمقالات والأدعية وأسماء الله الحسنى والنصائح الموجودة في هذا التطبيق، مع اقتباس كل مصدر أسفل الرد وسطر يبيّن من أين جاء."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کوئی سوال، کوئی ضمنی سوال، کوئی “اس کا مطلب کیا ہے”: Apple Intelligence اس ایپ کے اپنے نماز کے اوقات، مضامین، دعاؤں، اللہ کے ناموں اور تجاویز سے جواب دیتی ہے، اور جواب کے نیچے ہر ماخذ کا اقتباس اور ایک سطر ہوتی ہے کہ وہ کہاں سے لیا گیا ہے۔"
           }
         }
       }
@@ -21140,7 +21425,22 @@
     "A sakt (brief pause without breath) before certain hamzahs, through Khalaf." : {
       "extractionState" : "stale"
     },
-    "A sakt (brief pause without breath) before the hamzah of أل, of شَيۡء and of a detached word, through Khalaf; Khallad has it both ways on the first two." : {},
+    "A sakt (brief pause without breath) before the hamzah of أل, of شَيۡء and of a detached word, through Khalaf; Khallad has it both ways on the first two." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سكت (وقفة يسيرة من غير تنفس) قبل همزة أل وشَيۡء والكلمة المفصولة، من طريق خلف؛ ولخلاد الوجهان في الأولَين."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أل، شَيۡء اور الگ کلمے کے ہمزہ سے پہلے سکتہ (سانس لیے بغیر مختصر ٹھہراؤ)، خلف کے طریق سے؛ خلاد کے ہاں پہلے دو میں دونوں وجہیں ہیں۔"
+          }
+        }
+      }
+    },
     "A sakta happens only at ayah ends" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -22863,7 +23163,22 @@
         }
       }
     },
-    "A thick lam after ص, ط and ظ, ٱلصَّلَوٰةَ, and a thin ra after a kasra." : {},
+    "A thick lam after ص, ط and ظ, ٱلصَّلَوٰةَ, and a thin ra after a kasra." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تغليظ اللام بعد ص وط وظ، ٱلصَّلَوٰةَ، وترقيق الراء بعد الكسرة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ص، ط اور ظ کے بعد لام کی تغلیظ، ٱلصَّلَوٰةَ، اور کسرہ کے بعد را کی ترقیق۔"
+          }
+        }
+      }
+    },
     "A thick two-count hum with no noon contact, then قَبْلُ" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -25469,7 +25784,22 @@
         }
       }
     },
-    "Abu Amr's imalah, ٱلنَّٜاسِ, ٱلنَّٜارِ, ٱلۡكَٰٜفِرِينَ, أُخۡرٜىٰ, with the half tilt on ٱلدُّنۡيَا and مُوسَىٰ, and the slurred vowels of يَأۡمُرۡكُمۡ, بَارِئۡكُمۡ." : {},
+    "Abu Amr's imalah, ٱلنَّٜاسِ, ٱلنَّٜارِ, ٱلۡكَٰٜفِرِينَ, أُخۡرٜىٰ, with the half tilt on ٱلدُّنۡيَا and مُوسَىٰ, and the slurred vowels of يَأۡمُرۡكُمۡ, بَارِئۡكُمۡ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إمالة أبي عمرو، ٱلنَّٜاسِ، ٱلنَّٜارِ، ٱلۡكَٰٜفِرِينَ، أُخۡرٜىٰ، مع التقليل في ٱلدُّنۡيَا ومُوسَىٰ، واختلاس حركة يَأۡمُرۡكُمۡ، بَارِئۡكُمۡ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ابو عمرو کا امالہ، ٱلنَّٜاسِ، ٱلنَّٜارِ، ٱلۡكَٰٜفِرِينَ، أُخۡرٜىٰ، ٱلدُّنۡيَا اور مُوسَىٰ میں تقلیل کے ساتھ، اور يَأۡمُرۡكُمۡ، بَارِئۡكُمۡ کی حرکت کا اختلاس۔"
+          }
+        }
+      }
+    },
     "Abu Amr's other narrator, through al-Yazidi." : {
       "localizations" : {
         "ar" : {
@@ -26691,6 +27021,23 @@
         }
       }
     },
+    "Adhan and Islam tabs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تبويب الأذان وتبويب الإسلام"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اذان اور اسلام ٹیبز"
+          }
+        }
+      }
+    },
     "Adhan calculations: Batoul Apps" : {
       "localizations" : {
         "ar" : {
@@ -27660,7 +28007,22 @@
         }
       }
     },
-    "Al-Bazzi doubles the ta of a set of verbs, وَلَا تَّفَرَّقُواْ, and carries the takbir, Allahu akbar, before the basmalah of every surah from ad-Duha to the end." : {},
+    "Al-Bazzi doubles the ta of a set of verbs, وَلَا تَّفَرَّقُواْ, and carries the takbir, Allahu akbar, before the basmalah of every surah from ad-Duha to the end." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يشدّد البزي تاء طائفة من الأفعال، وَلَا تَّفَرَّقُواْ، ويروي التكبير، الله أكبر، قبل بسملة كل سورة من الضحى إلى آخر القرآن."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بزی افعال کے ایک گروہ کی تا کو مشدد پڑھتے ہیں، وَلَا تَّفَرَّقُواْ، اور الضحیٰ سے آخر تک ہر سورت کی بسملہ سے پہلے تکبیر، اللہ اکبر، روایت کرتے ہیں۔"
+          }
+        }
+      }
+    },
     "Al-Bazzi was the muezzin of the Sacred Mosque in Makkah for around forty years and the leading teacher of the Makkan reading in his generation. He received Ibn Kathir's reading through intermediate teachers, Ibn Kathir having died half a century before his birth." : {
       "localizations" : {
         "ar" : {
@@ -27787,6 +28149,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "الاسلام کی چمک"
+          }
+        }
+      }
+    },
+    "Al-Islam does everything Al-Quran and Al-Adhan do, plus iCloud Backup, weather on the sky and iMessage stickers. Tap an app below to see it on the App Store." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يقدّم تطبيق الإسلام كل ما يقدّمه تطبيقا القرآن والأذان، ومعه النسخ الاحتياطي على iCloud والطقس على السماء وملصقات iMessage. اضغط على أي تطبيق أدناه لعرضه في App Store."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الاسلام ایپ وہ سب کچھ کرتی ہے جو القرآن ایپ اور الاذان ایپ کرتی ہیں، اور ساتھ میں iCloud بیک اپ، آسمان پر موسم اور iMessage اسٹیکرز بھی۔ کسی ایپ کو App Store پر دیکھنے کے لیے نیچے اس پر ٹیپ کریں۔"
           }
         }
       }
@@ -27975,7 +28354,22 @@
         }
       }
     },
-    "Al-Kisai's imalah with a few more words than Abu al-Harith tilts, about 1,950 places against 1,600." : {},
+    "Al-Kisai's imalah with a few more words than Abu al-Harith tilts, about 1,950 places against 1,600." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إمالة الكسائي مع كلمات تزيد قليلًا على ما يميله أبو الحارث، نحو ١٩٥٠ موضعًا مقابل ١٦٠٠."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کسائی کا امالہ، ابو الحارث کے امالے سے چند الفاظ زیادہ میں، تقریباً 1,950 مقامات بمقابلہ 1,600۔"
+          }
+        }
+      }
+    },
     "Al-Mu'awwidhat in the Evening" : {
       "localizations" : {
         "ar" : {
@@ -30353,7 +30747,22 @@
       },
       "extractionState" : "stale"
     },
-    "Almost no imalah: Hafs has one, مَجۡرٜىٰهَا in Hud; Shu'bah a handful, أَدۡرٜىٰكَ, رٜءَا, and the opening letters حٜمٓ and الٓرٜ." : {},
+    "Almost no imalah: Hafs has one, مَجۡرٜىٰهَا in Hud; Shu'bah a handful, أَدۡرٜىٰكَ, رٜءَا, and the opening letters حٜمٓ and الٓرٜ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تكاد الإمالة تنعدم: لحفص موضع واحد، مَجۡرٜىٰهَا في هود؛ ولشعبة كلمات معدودة، أَدۡرٜىٰكَ، رٜءَا، وفواتح السور حٜمٓ والٓرٜ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "امالہ تقریباً نہ ہونے کے برابر: حفص کے ہاں ایک مقام، سورۂ ہود میں مَجۡرٜىٰهَا؛ شعبہ کے ہاں چند الفاظ، أَدۡرٜىٰكَ، رٜءَا، اور حروفِ مقطعات حٜمٓ اور الٓرٜ۔"
+          }
+        }
+      }
+    },
     "Aloud when listeners are present and you are the one opening; quietly when alone, when reciting silently, in salah, and when someone before you in a circle has already begun." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -33986,6 +34395,40 @@
         }
       }
     },
+    "Ask about prayer or Islam" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اسأل عن الصلاة أو الإسلام"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نماز یا اسلام کے بارے میں پوچھیں"
+          }
+        }
+      }
+    },
+    "Ask about the Quran or Islam" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اسأل عن القرآن أو الإسلام"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن یا اسلام کے بارے میں پوچھیں"
+          }
+        }
+      }
+    },
     "Ask about the Quran, hadith, or Islam" : {
       "localizations" : {
         "ar" : {
@@ -34360,8 +34803,38 @@
         }
       }
     },
-    "At a pause a soft ha is added to هُوَ and هِيَ, هُوَهۡ, هِيَهۡ, so the vowel is heard." : {},
-    "At a pause the feminine ta (ة) tilts as well: ٱلۡجَنَّةَ is heard as al-jannih. This is al-Kisai's alone among the ten, and nothing marks it on the page." : {},
+    "At a pause a soft ha is added to هُوَ and هِيَ, هُوَهۡ, هِيَهۡ, so the vowel is heard." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عند الوقف تُلحَق هاء السكت بـ هُوَ وهِيَ، هُوَهۡ، هِيَهۡ، لتُسمَع الحركة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقف کے وقت هُوَ اور هِيَ کے ساتھ ہائے سکتہ لگائی جاتی ہے، هُوَهۡ، هِيَهۡ، تاکہ حرکت سنائی دے۔"
+          }
+        }
+      }
+    },
+    "At a pause the feminine ta (ة) tilts as well: ٱلۡجَنَّةَ is heard as al-jannih. This is al-Kisai's alone among the ten, and nothing marks it on the page." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عند الوقف تُمال تاء التأنيث (ة) أيضًا: فتُسمَع ٱلۡجَنَّةَ «الجنّيهْ». وهذا للكسائي وحده بين العشرة، ولا تدل عليه علامة في الصفحة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقف کے وقت تائے تانیث (ة) میں بھی امالہ ہوتا ہے: ٱلۡجَنَّةَ «الجنّیہ» سنائی دیتا ہے۔ یہ دس قاریوں میں صرف کسائی کا ہے، اور صفحے پر اس کی کوئی علامت نہیں۔"
+          }
+        }
+      }
+    },
     "At a stop the cause is gone. Read two counts and stop." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -36928,8 +37401,38 @@
         }
       }
     },
-    "Basmalah between every two surahs, and the text of almost every printed mushaf today, through Hafs." : {},
-    "Basmalah between every two surahs." : {},
+    "Basmalah between every two surahs, and the text of almost every printed mushaf today, through Hafs." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "البسملة بين كل سورتين، ونصّ أكثر المصاحف المطبوعة اليوم، من طريق حفص."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر دو سورتوں کے درمیان بسملہ، اور آج کے تقریباً ہر چھپے ہوئے مصحف کا متن، حفص کے طریق سے۔"
+          }
+        }
+      }
+    },
+    "Basmalah between every two surahs." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "البسملة بين كل سورتين."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر دو سورتوں کے درمیان بسملہ۔"
+          }
+        }
+      }
+    },
     "Basra" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -39528,7 +40031,22 @@
         }
       }
     },
-    "Between two surahs three ways are transmitted: the basmalah, a breath-less pause, or running straight on." : {},
+    "Between two surahs three ways are transmitted: the basmalah, a breath-less pause, or running straight on." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بين السورتين ثلاثة أوجه مروية: البسملة، أو السكت من غير تنفس، أو الوصل."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دو سورتوں کے درمیان تین وجہیں منقول ہیں: بسملہ، سانس لیے بغیر سکتہ، یا وصل۔"
+          }
+        }
+      }
+    },
     "Beyond light and dark there are Gray and Sepia themes, and under Custom Colors a background color of your own, with any accent color to match." : {
       "localizations" : {
         "ar" : {
@@ -41991,10 +42509,70 @@
       },
       "extractionState" : "stale"
     },
-    "Carries Hamzah's six-count madd, his imalah, مُوسٜىٰ, جٜآءَ, and the damma of عَلَيۡهُمۡ." : {},
-    "Carries Ibn Kathir's drawn-out pronoun ha, عَنۡهُۥ, and the joined plural mim, قُلُوبِهِمُۥ." : {},
-    "Carries Ibn Kathir's drawn-out pronoun ha, فِيهِۦ, مِنۡهُۥ, and the joined plural mim, رَزَقۡنَٰهُمُۥ." : {},
-    "Carries Ya'qub's damma in عَلَيۡهُمۡ and his soft ha at a pause on هُوَ and هِيَ." : {},
+    "Carries Hamzah's six-count madd, his imalah, مُوسٜىٰ, جٜآءَ, and the damma of عَلَيۡهُمۡ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يحمل مدّ حمزة بست حركات، وإمالته، مُوسٜىٰ، جٜآءَ، وضمّ هاء عَلَيۡهُمۡ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حمزہ کا چھ حرکات کا مد، ان کا امالہ، مُوسٜىٰ، جٜآءَ، اور عَلَيۡهُمۡ کی ہا کا ضمہ رکھتا ہے۔"
+          }
+        }
+      }
+    },
+    "Carries Ibn Kathir's drawn-out pronoun ha, عَنۡهُۥ, and the joined plural mim, قُلُوبِهِمُۥ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يحمل صلة هاء الكناية عند ابن كثير، عَنۡهُۥ، وصلة ميم الجمع، قُلُوبِهِمُۥ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ابن کثیر کی ہائے کنایہ کا صلہ، عَنۡهُۥ، اور میم جمع کا صلہ، قُلُوبِهِمُۥ، رکھتا ہے۔"
+          }
+        }
+      }
+    },
+    "Carries Ibn Kathir's drawn-out pronoun ha, فِيهِۦ, مِنۡهُۥ, and the joined plural mim, رَزَقۡنَٰهُمُۥ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يحمل صلة هاء الكناية عند ابن كثير، فِيهِۦ، مِنۡهُۥ، وصلة ميم الجمع، رَزَقۡنَٰهُمُۥ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ابن کثیر کی ہائے کنایہ کا صلہ، فِيهِۦ، مِنۡهُۥ، اور میم جمع کا صلہ، رَزَقۡنَٰهُمُۥ، رکھتا ہے۔"
+          }
+        }
+      }
+    },
+    "Carries Ya'qub's damma in عَلَيۡهُمۡ and his soft ha at a pause on هُوَ and هِيَ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يحمل ضمّ يعقوب في عَلَيۡهُمۡ وهاء السكت عنده وقفًا على هُوَ وهِيَ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عَلَيۡهُمۡ میں یعقوب کا ضمہ اور هُوَ اور هِيَ پر وقف کے وقت ان کی ہائے سکتہ رکھتا ہے۔"
+          }
+        }
+      }
+    },
     "Carries Ya'qub's distinctive handling of the connecting pronoun." : {
       "localizations" : {
         "ar" : {
@@ -42045,8 +42623,38 @@
       },
       "extractionState" : "stale"
     },
-    "Carries al-Kisai's imalah in full, مُوسٜىٰ, ٱلۡهُدٜىٰ, ٱلدُّنۡيٜا, some 1,600 places, and the feminine ta tilted at a pause." : {},
-    "Carries the Madinan reading of the generation before Nafi, with Abu Ja'far's long vowels for the resting hamzah and the joined plural mim." : {},
+    "Carries al-Kisai's imalah in full, مُوسٜىٰ, ٱلۡهُدٜىٰ, ٱلدُّنۡيٜا, some 1,600 places, and the feminine ta tilted at a pause." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يحمل إمالة الكسائي كاملة، مُوسٜىٰ، ٱلۡهُدٜىٰ، ٱلدُّنۡيٜا، في نحو ١٦٠٠ موضع، وإمالة تاء التأنيث وقفًا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کسائی کا پورا امالہ رکھتا ہے، مُوسٜىٰ، ٱلۡهُدٜىٰ، ٱلدُّنۡيٜا، تقریباً 1,600 مقامات، اور وقف کے وقت تائے تانیث کا امالہ۔"
+          }
+        }
+      }
+    },
+    "Carries the Madinan reading of the generation before Nafi, with Abu Ja'far's long vowels for the resting hamzah and the joined plural mim." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يحمل قراءة المدينة في الطبقة التي قبل نافع، مع إبدال أبي جعفر الهمزة الساكنة حرف مد وصلة ميم الجمع."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نافع سے پہلے کے طبقے کی مدنی قراءت رکھتا ہے، ساکن ہمزہ کے لیے ابو جعفر کے حروفِ مد اور میم جمع کے صلے کے ساتھ۔"
+          }
+        }
+      }
+    },
     "Carries the Madinan reading of the generation before Nafi." : {
       "localizations" : {
         "ar" : {
@@ -44365,7 +44973,22 @@
       },
       "extractionState" : "stale"
     },
-    "Close to Ibn Wardan throughout: the two part in 58 ayahs, the smallest gap between any pair of narrators but one." : {},
+    "Close to Ibn Wardan throughout: the two part in 58 ayahs, the smallest gap between any pair of narrators but one." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قريب من ابن وردان في جميع القرآن: يفترقان في ٥٨ آية، وهو أصغر فرق بين راويين إلا واحدًا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پورے قرآن میں ابن وردان کے قریب: دونوں 58 آیات میں الگ ہوتے ہیں، جو ایک جوڑے کے سوا راویوں کے کسی بھی جوڑے کے درمیان سب سے چھوٹا فرق ہے۔"
+          }
+        }
+      }
+    },
     "Close to the French r in “Paris”: a gargle at the back of the mouth, the voiced partner of khaa." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -47721,6 +48344,40 @@
     "Created by Abubakr Elmallah (أبوبكر الملاح), a 17-year-old high school student when the app launched on July 26, 2023." : {
       "extractionState" : "stale"
     },
+    "Created by Abubakr Elmallah (أبوبكر الملاح), who was a 17-year-old high school student when this app was published on December 26, 2023." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أنشأه أبوبكر الملاح، وكان طالبًا في المرحلة الثانوية في السابعة عشرة من عمره عند نشر هذا التطبيق في ٢٦ ديسمبر ٢٠٢٣."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اسے أبوبكر الملاح نے بنایا، جو 26 دسمبر 2023 کو اس ایپ کی اشاعت کے وقت ہائی اسکول کے 17 سالہ طالب علم تھے۔"
+          }
+        }
+      }
+    },
+    "Created by Abubakr Elmallah (أبوبكر الملاح), who was a 17-year-old high school student when this app was published on December 31, 2023." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أنشأه أبوبكر الملاح، وكان طالبًا في المرحلة الثانوية في السابعة عشرة من عمره عند نشر هذا التطبيق في ٣١ ديسمبر ٢٠٢٣."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اسے أبوبكر الملاح نے بنایا، جو 31 دسمبر 2023 کو اس ایپ کی اشاعت کے وقت ہائی اسکول کے 17 سالہ طالب علم تھے۔"
+          }
+        }
+      }
+    },
     "Created by Abubakr Elmallah (أَبُوبَكر المَلَّاح), a 17-year-old high school student when the app launched on July 26, 2023." : {
       "localizations" : {
         "ar" : {
@@ -50690,6 +51347,23 @@
         }
       }
     },
+    "Days turn over at midnight, with the daily features." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يبدأ اليوم الجديد عند منتصف الليل، مع الميزات اليومية."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نیا دن آدھی رات کو، روزانہ کی خصوصیات کے ساتھ شروع ہوتا ہے۔"
+          }
+        }
+      }
+    },
     "Days turn over with the daily features (at Fajr by default)." : {
       "localizations" : {
         "ar" : {
@@ -51981,7 +52655,22 @@
       },
       "extractionState" : "manual"
     },
-    "Differs from Hafs in roughly five hundred points across the Quran, nearly all a vowel or a dot." : {},
+    "Differs from Hafs in roughly five hundred points across the Quran, nearly all a vowel or a dot." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يخالف حفصًا في نحو خمسمئة موضع في القرآن، جُلّها حركة أو نقطة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پورے قرآن میں حفص سے تقریباً پانچ سو مقامات پر مختلف، جن میں تقریباً سب ایک حرکت یا ایک نقطہ ہیں۔"
+          }
+        }
+      }
+    },
     "Differs from Hafs in roughly five hundred points across the Quran." : {
       "localizations" : {
         "ar" : {
@@ -52033,7 +52722,22 @@
       },
       "extractionState" : "stale"
     },
-    "Differs from al-Bazzi in a modest number of places, the best known being الصراط read with a seen, ٱلصِّۜرَٰطَ." : {},
+    "Differs from al-Bazzi in a modest number of places, the best known being الصراط read with a seen, ٱلصِّۜرَٰطَ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يخالف البزي في مواضع قليلة، أشهرها الصراط بالسين، ٱلصِّۜرَٰطَ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بزی سے چند مقامات پر مختلف، جن میں سب سے مشہور الصراط کو سین سے پڑھنا ہے، ٱلصِّۜرَٰطَ۔"
+          }
+        }
+      }
+    },
     "Differs from al-Bazzi in a modest number of places." : {
       "localizations" : {
         "ar" : {
@@ -54240,7 +54944,22 @@
         }
       }
     },
-    "Drops the first of two hamzahs meeting between words, جَا أَحَدٞ." : {},
+    "Drops the first of two hamzahs meeting between words, جَا أَحَدٞ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يُسقط الأولى من الهمزتين المتلاقيتين بين كلمتين، جَا أَحَدٞ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دو کلموں کے درمیان ملنے والے دو ہمزوں میں سے پہلا گراتا ہے، جَا أَحَدٞ۔"
+          }
+        }
+      }
+    },
     "Dua" : {
       "localizations" : {
         "ar" : {
@@ -55301,6 +56020,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ہر یاد دہانی کے ساتھ وہ حدیث ہے جس پر وہ مبنی ہے۔ اپنی سہولت کا وقت منتخب کریں؛ یاد دہانی پر ٹیپ کرنے سے متعلقہ سورت یا آیات کھل جاتی ہیں۔"
+          }
+        }
+      }
+    },
+    "Each reminder names the hadith it is rooted in. Choose the time that suits you; tapping a reminder opens the surah or ayahs it is about." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يذكر كل تذكير الحديث الذي يستند إليه. اختر الوقت الذي يناسبك، والضغط على التذكير يفتح السورة أو الآيات التي يتناولها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر یاد دہانی اس حدیث کا نام لیتی ہے جس پر وہ مبنی ہے۔ اپنی سہولت کا وقت منتخب کریں؛ یاد دہانی پر ٹیپ کرنے سے وہ سورت یا آیات کھلتی ہیں جن کے بارے میں وہ ہے۔"
           }
         }
       }
@@ -57579,18 +58315,153 @@
         }
       }
     },
-    "Every hamzah in full and almost no imalah: one tilt, مَجۡرٜىٰهَا in Hud, and one softened hamzah, ءَا۬عۡجَمِيّٞ in Fussilat." : {},
-    "Every hamzah in full and four counts on both madds, as Hafs." : {},
-    "Every hamzah in full and four counts on the madd, as Hafs." : {},
-    "Every hamzah in full and no imalah: the most level of Ya'qub's two riwayat." : {},
-    "Every hamzah in full for Ibn Dhakwan. Hisham softens a final hamzah at a stop, and may slip an alef between two hamzahs in one word, ءَٰا۬نتَ." : {},
-    "Every hamzah in full while reading on, eased at a stop: the last word of each ayah sounds hamzah-less in recordings, قَدۡ أَفۡلَحَ ٱلۡمُؤۡمِنُونَ ending in al-muuminoon, while the mushaf keeps it." : {},
+    "Every hamzah in full and almost no imalah: one tilt, مَجۡرٜىٰهَا in Hud, and one softened hamzah, ءَا۬عۡجَمِيّٞ in Fussilat." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحقيق كل همزة وشبه انعدام للإمالة: إمالة واحدة، مَجۡرٜىٰهَا في هود، وهمزة واحدة مسهّلة، ءَا۬عۡجَمِيّٞ في فصلت."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر ہمزہ تحقیق کے ساتھ اور امالہ تقریباً نہ ہونے کے برابر: ایک امالہ، سورۂ ہود میں مَجۡرٜىٰهَا، اور ایک مسہَّل ہمزہ، سورۂ فصلت میں ءَا۬عۡجَمِيّٞ۔"
+          }
+        }
+      }
+    },
+    "Every hamzah in full and four counts on both madds, as Hafs." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحقيق كل همزة وأربع حركات في المدين، كحفص."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر ہمزہ تحقیق کے ساتھ اور دونوں مدوں میں چار حرکات، حفص کی طرح۔"
+          }
+        }
+      }
+    },
+    "Every hamzah in full and four counts on the madd, as Hafs." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحقيق كل همزة وأربع حركات في المد، كحفص."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر ہمزہ تحقیق کے ساتھ اور مد میں چار حرکات، حفص کی طرح۔"
+          }
+        }
+      }
+    },
+    "Every hamzah in full and no imalah: the most level of Ya'qub's two riwayat." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحقيق كل همزة ولا إمالة: أكثر روايتي يعقوب فتحًا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر ہمزہ تحقیق کے ساتھ اور کوئی امالہ نہیں: یعقوب کی دونوں روایتوں میں سب سے زیادہ فتح والی۔"
+          }
+        }
+      }
+    },
+    "Every hamzah in full for Ibn Dhakwan. Hisham softens a final hamzah at a stop, and may slip an alef between two hamzahs in one word, ءَٰا۬نتَ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحقيق كل همزة عند ابن ذكوان. ويسهّل هشام الهمزة المتطرفة وقفًا، وقد يُدخل ألفًا بين الهمزتين في الكلمة الواحدة، ءَٰا۬نتَ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ابن ذکوان کے ہاں ہر ہمزہ تحقیق کے ساتھ۔ ہشام وقف کے وقت آخری ہمزہ کی تسہیل کرتے ہیں، اور ایک ہی کلمے کے دو ہمزوں کے درمیان الف داخل کر سکتے ہیں، ءَٰا۬نتَ۔"
+          }
+        }
+      }
+    },
+    "Every hamzah in full while reading on, eased at a stop: the last word of each ayah sounds hamzah-less in recordings, قَدۡ أَفۡلَحَ ٱلۡمُؤۡمِنُونَ ending in al-muuminoon, while the mushaf keeps it." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحقيق كل همزة وصلًا، وتخفيفها وقفًا: فتُسمَع الكلمة الأخيرة من كل آية في التسجيلات بلا همزة، قَدۡ أَفۡلَحَ ٱلۡمُؤۡمِنُونَ تنتهي بـ «المومنون»، بينما يُثبتها المصحف."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وصل میں ہر ہمزہ تحقیق کے ساتھ، وقف میں تخفیف: ہر آیت کا آخری لفظ ریکارڈنگ میں بغیر ہمزہ سنائی دیتا ہے، قَدۡ أَفۡلَحَ ٱلۡمُؤۡمِنُونَ «المومنون» پر ختم ہوتا ہے، جبکہ مصحف اسے باقی رکھتا ہے۔"
+          }
+        }
+      }
+    },
     "Every hamzah in full while reading on, eased at a stop: the last word of each ayah sounds hamzah-less in recordings." : {
       "extractionState" : "stale"
     },
-    "Every hamzah in full, reading on and at a stop, and four counts on the separated madd, as Hafs." : {},
-    "Every hamzah in full, reading on and at a stop." : {},
-    "Every hamzah pronounced in full, with no softening at a stop. Hafs's one exception is ءَا۬عۡجَمِيّٞ in Fussilat." : {},
+    "Every hamzah in full, reading on and at a stop, and four counts on the separated madd, as Hafs." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحقيق كل همزة وصلًا ووقفًا، وأربع حركات في المد المنفصل، كحفص."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وصل اور وقف دونوں میں ہر ہمزہ تحقیق کے ساتھ، اور مد منفصل میں چار حرکات، حفص کی طرح۔"
+          }
+        }
+      }
+    },
+    "Every hamzah in full, reading on and at a stop." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحقيق كل همزة وصلًا ووقفًا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وصل اور وقف دونوں میں ہر ہمزہ تحقیق کے ساتھ۔"
+          }
+        }
+      }
+    },
+    "Every hamzah pronounced in full, with no softening at a stop. Hafs's one exception is ءَا۬عۡجَمِيّٞ in Fussilat." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحقيق كل همزة، من غير تسهيل وقفًا. واستثناء حفص الوحيد ءَا۬عۡجَمِيّٞ في فصلت."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر ہمزہ تحقیق کے ساتھ، وقف کے وقت کوئی تسہیل نہیں۔ حفص کا واحد استثنا سورۂ فصلت میں ءَا۬عۡجَمِيّٞ ہے۔"
+          }
+        }
+      }
+    },
     "Every haraka is one count. Two counts is the length of a natural madd, which is why a stretched fatha is heard as an alif and can change the word." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -58553,9 +59424,54 @@
         }
       }
     },
-    "Every resting hamzah a long vowel, يُومِنُونَ, and the name إِسۡرَآيلَ without its hamzah." : {},
-    "Every resting hamzah becomes a long vowel: يُؤۡمِنُونَ is read يُومِنُونَ and بِئۡسَ as بِيسَ. The mushaf writes it so, which is why it carries about 1,500 fewer hamzah signs than Hafs's." : {},
-    "Every resting hamzah turned into a long vowel, يُومِنُونَ, تُومَرُونَ, on top of Abu Amr's dropped first hamzah, هَٰؤُلَا إِن." : {},
+    "Every resting hamzah a long vowel, يُومِنُونَ, and the name إِسۡرَآيلَ without its hamzah." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إبدال كل همزة ساكنة حرف مد، يُومِنُونَ، واسم إِسۡرَآيلَ بلا همزة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر ساکن ہمزہ حرفِ مد، يُومِنُونَ، اور نام إِسۡرَآيلَ بغیر ہمزہ۔"
+          }
+        }
+      }
+    },
+    "Every resting hamzah becomes a long vowel: يُؤۡمِنُونَ is read يُومِنُونَ and بِئۡسَ as بِيسَ. The mushaf writes it so, which is why it carries about 1,500 fewer hamzah signs than Hafs's." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تُبدَل كل همزة ساكنة حرف مد: فتُقرأ يُؤۡمِنُونَ يُومِنُونَ وبِئۡسَ بِيسَ. ويكتبها المصحف كذلك، ولذلك فيه نحو ١٥٠٠ علامة همزة أقل من مصحف حفص."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر ساکن ہمزہ حرفِ مد بن جاتا ہے: يُؤۡمِنُونَ کو يُومِنُونَ اور بِئۡسَ کو بِيسَ پڑھا جاتا ہے۔ مصحف اسے اسی طرح لکھتا ہے، اسی لیے اس میں حفص کے مصحف سے تقریباً 1,500 ہمزہ کی علامتیں کم ہیں۔"
+          }
+        }
+      }
+    },
+    "Every resting hamzah turned into a long vowel, يُومِنُونَ, تُومَرُونَ, on top of Abu Amr's dropped first hamzah, هَٰؤُلَا إِن." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إبدال كل همزة ساكنة حرف مد، يُومِنُونَ، تُومَرُونَ، فوق إسقاط أبي عمرو الهمزة الأولى، هَٰؤُلَا إِن."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر ساکن ہمزہ حرفِ مد میں بدلا ہوا، يُومِنُونَ، تُومَرُونَ، ابو عمرو کے پہلے ہمزہ کے اسقاط کے علاوہ، هَٰؤُلَا إِن۔"
+          }
+        }
+      }
+    },
     "Every riwayah's printed color code, side by side." : {
       "localizations" : {
         "ar" : {
@@ -59138,6 +60054,23 @@
     },
     "Everything short of mutawatir is called ahad. Ahad is a count, not a weakness: most of the Sunnah is ahad and sahih, and it is binding." : {
       "extractionState" : "stale"
+    },
+    "Everything stays on your device: no accounts, no tracking, and it works offline." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يبقى كل شيء على جهازك: لا حسابات، ولا تتبّع، ويعمل دون اتصال."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سب کچھ آپ کی ڈیوائس پر رہتا ہے: نہ کوئی اکاؤنٹ، نہ کوئی ٹریکنگ، اور یہ آف لائن بھی چلتی ہے۔"
+          }
+        }
+      }
     },
     "Everything this screen has is shown. Off keeps it to the essentials; what is set here still applies." : {
       "localizations" : {
@@ -64658,7 +65591,22 @@
         }
       }
     },
-    "Four breath-less pauses, عِوَجَاۜ, مَرۡقَدِنَاۜ, مَنۡۜ رَاقٖ, بَلۡۜ رَانَ, and the shaded nun of تَأۡمَ۬نَّا in Yusuf." : {},
+    "Four breath-less pauses, عِوَجَاۜ, مَرۡقَدِنَاۜ, مَنۡۜ رَاقٖ, بَلۡۜ رَانَ, and the shaded nun of تَأۡمَ۬نَّا in Yusuf." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أربع سكتات من غير تنفس، عِوَجَاۜ، مَرۡقَدِنَاۜ، مَنۡۜ رَاقٖ، بَلۡۜ رَانَ، وإشمام نون تَأۡمَ۬نَّا في يوسف."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سانس لیے بغیر چار سکتے، عِوَجَاۜ، مَرۡقَدِنَاۜ، مَنۡۜ رَاقٖ، بَلۡۜ رَانَ، اور سورۂ یوسف میں تَأۡمَ۬نَّا کے نون کا اشمام۔"
+          }
+        }
+      }
+    },
     "Four counts" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -64693,10 +65641,70 @@
         }
       }
     },
-    "Four counts on both madds, as Hafs." : {},
-    "Four counts on both the joined and the separated madd, the middle measure of the ten." : {},
-    "Four counts on both the joined and the separated madd." : {},
-    "Four counts on the separated madd, against Hamzah's six." : {},
+    "Four counts on both madds, as Hafs." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أربع حركات في المدين، كحفص."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دونوں مدوں میں چار حرکات، حفص کی طرح۔"
+          }
+        }
+      }
+    },
+    "Four counts on both the joined and the separated madd, the middle measure of the ten." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أربع حركات في المد المتصل والمنفصل، وهو القدر الوسط بين العشرة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مد متصل اور منفصل دونوں میں چار حرکات، دس قراءتوں میں درمیانی مقدار۔"
+          }
+        }
+      }
+    },
+    "Four counts on both the joined and the separated madd." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أربع حركات في المد المتصل والمنفصل."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مد متصل اور منفصل دونوں میں چار حرکات۔"
+          }
+        }
+      }
+    },
+    "Four counts on the separated madd, against Hamzah's six." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أربع حركات في المد المنفصل، مقابل ستٍّ عند حمزة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مد منفصل میں چار حرکات، حمزہ کی چھ کے مقابلے میں۔"
+          }
+        }
+      }
+    },
     "Four doubled letters. Time every hum against the same two counts." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -67699,6 +68707,23 @@
         }
       }
     },
+    "Grid or rows, Word of the Day" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شبكة أو صفوف، كلمة اليوم"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "گرڈ یا قطاریں، آج کا لفظ"
+          }
+        }
+      }
+    },
     "Grid or rows, Word of the Day, Fajr" : {
       "localizations" : {
         "ar" : {
@@ -67711,6 +68736,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "گرڈ یا قطاریں، آج کا لفظ، فجر"
+          }
+        }
+      }
+    },
+    "Grid or rows, the Fajr turnover" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شبكة أو صفوف، وبداية اليوم عند الفجر"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "گرڈ یا قطاریں، فجر پر نیا دن"
           }
         }
       }
@@ -70341,7 +71383,22 @@
         }
       }
     },
-    "Hamzah's imalah kept: مُوسٜىٰ, ٱلدُّنۡيٜا, جٜآءَ, شٜآءَ, about 1,870 places." : {},
+    "Hamzah's imalah kept: مُوسٜىٰ, ٱلدُّنۡيٜا, جٜآءَ, شٜآءَ, about 1,870 places." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إمالة حمزة محفوظة: مُوسٜىٰ، ٱلدُّنۡيٜا، جٜآءَ، شٜآءَ، في نحو ١٨٧٠ موضعًا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حمزہ کا امالہ برقرار: مُوسٜىٰ، ٱلدُّنۡيٜا، جٜآءَ، شٜآءَ، تقریباً 1,870 مقامات۔"
+          }
+        }
+      }
+    },
     "Hamzat al-Wasl" : {
       "localizations" : {
         "ar" : {
@@ -73965,7 +75022,22 @@
         }
       }
     },
-    "His mushaf prints the separated madd stretched." : {},
+    "His mushaf prints the separated madd stretched." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يطبع مصحفه المد المنفصل ممدودًا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس کا مصحف مد منفصل کو لمبا چھاپتا ہے۔"
+          }
+        }
+      }
+    },
     "His name in red, in Arabic and English." : {
       "localizations" : {
         "ar" : {
@@ -78881,9 +79953,54 @@
       }
     },
     "Image unavailable" : {},
-    "Imalah in a handful of words, أَدۡرٜىٰكَ, رٜءَا, أَعۡمٜىٰ, and in the opening letters حٜمٓ, الٓرٜ, كٓهيٜعٓصٓ." : {},
-    "Imalah in a short list of words: Ibn Dhakwan tilts جٜآءَ and شٜآءَ wherever they occur; Hisham only in a few words and the opening letters الٓرٜ." : {},
-    "Imalah in ٱلۡكَٰٜفِرِينَ only, about ninety places; otherwise level." : {},
+    "Imalah in a handful of words, أَدۡرٜىٰكَ, رٜءَا, أَعۡمٜىٰ, and in the opening letters حٜمٓ, الٓرٜ, كٓهيٜعٓصٓ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إمالة في كلمات معدودة، أَدۡرٜىٰكَ، رٜءَا، أَعۡمٜىٰ، وفي فواتح السور حٜمٓ، الٓرٜ، كٓهيٜعٓصٓ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "چند الفاظ میں امالہ، أَدۡرٜىٰكَ، رٜءَا، أَعۡمٜىٰ، اور حروفِ مقطعات حٜمٓ، الٓرٜ، كٓهيٜعٓصٓ میں۔"
+          }
+        }
+      }
+    },
+    "Imalah in a short list of words: Ibn Dhakwan tilts جٜآءَ and شٜآءَ wherever they occur; Hisham only in a few words and the opening letters الٓرٜ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إمالة في كلمات قليلة: يميل ابن ذكوان جٜآءَ وشٜآءَ حيث وقعتا؛ وهشام في كلمات يسيرة وفي فواتح السور الٓرٜ فقط."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "چند الفاظ میں امالہ: ابن ذکوان جٜآءَ اور شٜآءَ کا جہاں بھی آئیں امالہ کرتے ہیں؛ ہشام صرف چند الفاظ اور حروفِ مقطعات الٓرٜ میں۔"
+          }
+        }
+      }
+    },
+    "Imalah in ٱلۡكَٰٜفِرِينَ only, about ninety places; otherwise level." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إمالة في ٱلۡكَٰٜفِرِينَ وحدها، في نحو تسعين موضعًا؛ والفتح فيما عداها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صرف ٱلۡكَٰٜفِرِينَ میں امالہ، تقریباً نوے مقامات؛ باقی فتح۔"
+          }
+        }
+      }
+    },
     "Imalah is an inclination, not a substitution. Overshooting it changes the vowel instead of colouring it." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -78901,12 +80018,102 @@
         }
       }
     },
-    "Imalah of the alef before a ra with a kasra, ٱلنَّٜاسِ, ٱلنَّٜارِ, ٱلۡكَٰٜفِرِينَ, and of words ending in ى after a ra, أُخۡرٜىٰ, تَرٜىٰ; a half tilt (taqlil) on ٱلدُّنۡيَا and مُوسَىٰ." : {},
-    "Imalah of جٜآءَ and شٜآءَ wherever they occur, about 370 places, which Hisham reads level." : {},
-    "Imalah only in the opening letters الٓرٜ, كٓهيٜعٓصٓ, and a few words such as عٰٜبِدُونَ, where Ibn Dhakwan tilts جَآءَ and شَآءَ throughout." : {},
-    "Imalah only in ٱلۡكَٰٜفِرِينَ, through Ruways; Rawh reads level. Ruways also reads الصراط with a seen, صِۜرَٰطَ." : {},
-    "Imalah wherever a word ends in an alef written as a ya, مُوسٜىٰ, ٱلۡهُدٜىٰ, ٱلدُّنۡيٜا, and in جٜآءَ and شٜآءَ wherever they occur, about 1,900 places." : {},
-    "Imalah wherever a word ends in an alef written as a ya: مُوسٜىٰ, ٱلۡهُدٜىٰ, بَلٜىٰ, وَكَفٜىٰ, and in ٱلدُّنۡيٜا, some 1,600 places in Abu al-Harith's mushaf and 1,950 in ad-Duri's." : {},
+    "Imalah of the alef before a ra with a kasra, ٱلنَّٜاسِ, ٱلنَّٜارِ, ٱلۡكَٰٜفِرِينَ, and of words ending in ى after a ra, أُخۡرٜىٰ, تَرٜىٰ; a half tilt (taqlil) on ٱلدُّنۡيَا and مُوسَىٰ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إمالة الألف قبل الراء المكسورة، ٱلنَّٜاسِ، ٱلنَّٜارِ، ٱلۡكَٰٜفِرِينَ، والكلمات المختومة بـ ى بعد الراء، أُخۡرٜىٰ، تَرٜىٰ؛ وتقليل في ٱلدُّنۡيَا ومُوسَىٰ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مکسور را سے پہلے الف کا امالہ، ٱلنَّٜاسِ، ٱلنَّٜارِ، ٱلۡكَٰٜفِرِينَ، اور را کے بعد ى پر ختم ہونے والے الفاظ کا، أُخۡرٜىٰ، تَرٜىٰ؛ ٱلدُّنۡيَا اور مُوسَىٰ میں تقلیل (آدھا امالہ)۔"
+          }
+        }
+      }
+    },
+    "Imalah of جٜآءَ and شٜآءَ wherever they occur, about 370 places, which Hisham reads level." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إمالة جٜآءَ وشٜآءَ حيث وقعتا، في نحو ٣٧٠ موضعًا، ويقرؤهما هشام بالفتح."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جٜآءَ اور شٜآءَ کا جہاں بھی آئیں امالہ، تقریباً 370 مقامات، جنہیں ہشام فتح کے ساتھ پڑھتے ہیں۔"
+          }
+        }
+      }
+    },
+    "Imalah only in the opening letters الٓرٜ, كٓهيٜعٓصٓ, and a few words such as عٰٜبِدُونَ, where Ibn Dhakwan tilts جَآءَ and شَآءَ throughout." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إمالة في فواتح السور الٓرٜ، كٓهيٜعٓصٓ، وكلمات يسيرة مثل عٰٜبِدُونَ فقط، بينما يميل ابن ذكوان جَآءَ وشَآءَ في جميع القرآن."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صرف حروفِ مقطعات الٓرٜ، كٓهيٜعٓصٓ اور چند الفاظ جیسے عٰٜبِدُونَ میں امالہ، جبکہ ابن ذکوان جَآءَ اور شَآءَ کا پورے قرآن میں امالہ کرتے ہیں۔"
+          }
+        }
+      }
+    },
+    "Imalah only in ٱلۡكَٰٜفِرِينَ, through Ruways; Rawh reads level. Ruways also reads الصراط with a seen, صِۜرَٰطَ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إمالة في ٱلۡكَٰٜفِرِينَ وحدها، من طريق رويس؛ ويقرأ روح بالفتح. ويقرأ رويس أيضًا الصراط بالسين، صِۜرَٰطَ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صرف ٱلۡكَٰٜفِرِينَ میں امالہ، رویس کے طریق سے؛ روح فتح کے ساتھ پڑھتے ہیں۔ رویس الصراط کو سین سے بھی پڑھتے ہیں، صِۜرَٰطَ۔"
+          }
+        }
+      }
+    },
+    "Imalah wherever a word ends in an alef written as a ya, مُوسٜىٰ, ٱلۡهُدٜىٰ, ٱلدُّنۡيٜا, and in جٜآءَ and شٜآءَ wherever they occur, about 1,900 places." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إمالة كل كلمة مختومة بألف مرسومة ياءً، مُوسٜىٰ، ٱلۡهُدٜىٰ، ٱلدُّنۡيٜا، وفي جٜآءَ وشٜآءَ حيث وقعتا، في نحو ١٩٠٠ موضع."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جہاں بھی کلمہ یا کی صورت میں لکھے الف پر ختم ہو وہاں امالہ، مُوسٜىٰ، ٱلۡهُدٜىٰ، ٱلدُّنۡيٜا، اور جٜآءَ اور شٜآءَ میں جہاں بھی آئیں، تقریباً 1,900 مقامات۔"
+          }
+        }
+      }
+    },
+    "Imalah wherever a word ends in an alef written as a ya: مُوسٜىٰ, ٱلۡهُدٜىٰ, بَلٜىٰ, وَكَفٜىٰ, and in ٱلدُّنۡيٜا, some 1,600 places in Abu al-Harith's mushaf and 1,950 in ad-Duri's." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إمالة كل كلمة مختومة بألف مرسومة ياءً: مُوسٜىٰ، ٱلۡهُدٜىٰ، بَلٜىٰ، وَكَفٜىٰ، وفي ٱلدُّنۡيٜا، في نحو ١٦٠٠ موضع في مصحف أبي الحارث و١٩٥٠ في مصحف الدوري."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جہاں بھی کلمہ یا کی صورت میں لکھے الف پر ختم ہو وہاں امالہ: مُوسٜىٰ، ٱلۡهُدٜىٰ، بَلٜىٰ، وَكَفٜىٰ، اور ٱلدُّنۡيٜا میں، ابو الحارث کے مصحف میں تقریباً 1,600 اور دوری کے مصحف میں 1,950 مقامات۔"
+          }
+        }
+      }
+    },
     "Imalah. The only one in this riwayah" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -86782,8 +87989,38 @@
         }
       }
     },
-    "Keeps the hamzah where Warsh drops it, يُؤۡمِنُونَ, and drops the first of two hamzahs meeting between words, جَا أَحَدٞ, هَٰؤُلَآ۟ إِن." : {},
-    "Keeps the resting hamzah, يُؤۡمِنُونَ, where as-Susi turns it into a long vowel, and does not read the large idgham by the Shatibiyyah route." : {},
+    "Keeps the hamzah where Warsh drops it, يُؤۡمِنُونَ, and drops the first of two hamzahs meeting between words, جَا أَحَدٞ, هَٰؤُلَآ۟ إِن." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يُثبت الهمزة حيث يُبدلها ورش، يُؤۡمِنُونَ، ويُسقط الأولى من الهمزتين المتلاقيتين بين كلمتين، جَا أَحَدٞ، هَٰؤُلَآ۟ إِن."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جہاں ورش ہمزہ گراتے ہیں وہاں اسے باقی رکھتا ہے، يُؤۡمِنُونَ، اور دو کلموں کے درمیان ملنے والے دو ہمزوں میں سے پہلا گراتا ہے، جَا أَحَدٞ، هَٰؤُلَآ۟ إِن۔"
+          }
+        }
+      }
+    },
+    "Keeps the resting hamzah, يُؤۡمِنُونَ, where as-Susi turns it into a long vowel, and does not read the large idgham by the Shatibiyyah route." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يُثبت الهمزة الساكنة، يُؤۡمِنُونَ، حيث يُبدلها السوسي حرف مد، ولا يقرأ بالإدغام الكبير من طريق الشاطبية."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ساکن ہمزہ باقی رکھتا ہے، يُؤۡمِنُونَ، جہاں سوسی اسے حرفِ مد میں بدلتے ہیں، اور شاطبیہ کے طریق سے ادغام کبیر نہیں پڑھتا۔"
+          }
+        }
+      }
+    },
     "Kemenag (Kementerian Agama Indonesia)" : {
       "localizations" : {
         "ar" : {
@@ -90638,8 +91875,38 @@
         }
       }
     },
-    "Level reading (fath) throughout, with the separated madd kept short." : {},
-    "Level reading (fath) where Warsh tilts, and the basmalah between every two surahs." : {},
+    "Level reading (fath) throughout, with the separated madd kept short." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الفتح في جميع القرآن، مع قصر المد المنفصل."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پورے قرآن میں فتح (ہموار پڑھنا)، مد منفصل قصر کے ساتھ۔"
+          }
+        }
+      }
+    },
+    "Level reading (fath) where Warsh tilts, and the basmalah between every two surahs." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الفتح حيث يميل ورش، والبسملة بين كل سورتين."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جہاں ورش امالہ کرتے ہیں وہاں فتح، اور ہر دو سورتوں کے درمیان بسملہ۔"
+          }
+        }
+      }
+    },
     "Level two: ق with a fatha. The د, ف, ل and ح around it all stay thin." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -92965,6 +94232,23 @@
         }
       }
     },
+    "Looking through the Quran and articles…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جارٍ البحث في القرآن والمقالات…"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن مجید اور مضامین میں تلاش جاری ہے…"
+          }
+        }
+      }
+    },
     "Looking through the Quran and hadith…" : {
       "extractionState" : "stale"
     },
@@ -92980,6 +94264,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "قرآن مجید، احادیث اور مضامین میں تلاش جاری ہے…"
+          }
+        }
+      }
+    },
+    "Looking through the app’s articles…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جارٍ البحث في مقالات التطبيق…"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایپ کے مضامین میں تلاش جاری ہے…"
           }
         }
       }
@@ -100608,6 +101909,23 @@
         }
       }
     },
+    "Need Help Praying? on the prayer times opens Nagging Mode." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يفتح «هل تحتاج إلى عون على الصلاة؟» في مواقيت الصلاة «وضع التذكير المتكرر»."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نماز کے اوقات پر «نماز میں مدد چاہیے؟» بار بار یاد دہانی موڈ کھولتا ہے۔"
+          }
+        }
+      }
+    },
     "Need Help Reading?" : {
       "localizations" : {
         "ar" : {
@@ -100620,6 +101938,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "پڑھنے میں مدد چاہیے؟"
+          }
+        }
+      }
+    },
+    "Need Help Reading? on the Quran answers with Arabic Beginner Mode." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يجيب «هل تحتاج إلى مساعدة في القراءة؟» في القرآن بـ«وضع المبتدئ في العربية»."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن پر «پڑھنے میں مدد چاہیے؟» عربی مبتدی موڈ سے جواب دیتا ہے۔"
           }
         }
       }
@@ -102061,7 +103396,22 @@
         }
       }
     },
-    "No basmalah between two surahs: the end of one surah runs straight into the next." : {},
+    "No basmalah between two surahs: the end of one surah runs straight into the next." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا بسملة بين السورتين: فيوصَل آخر السورة بأول التي تليها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دو سورتوں کے درمیان بسملہ نہیں: ایک سورت کا آخر سیدھا اگلی سورت سے جا ملتا ہے۔"
+          }
+        }
+      }
+    },
     "No bookmarked ayahs here, long tap an ayah to bookmark it." : {
       "localizations" : {
         "ar" : {
@@ -102659,7 +104009,22 @@
         }
       }
     },
-    "No imalah: the reading stays level (fath) throughout." : {},
+    "No imalah: the reading stays level (fath) throughout." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا إمالة: الفتح في جميع القرآن."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کوئی امالہ نہیں: پورے قرآن میں فتح۔"
+          }
+        }
+      }
+    },
     "No kasra anywhere in this ayah, only fathas and dammas. Keep each to one count and the rhythm settles by itself." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -103427,7 +104792,22 @@
         }
       }
     },
-    "No sakt on a detached word; both ways on أل and شَيۡء." : {},
+    "No sakt on a detached word; both ways on أل and شَيۡء." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا سكت في الكلمة المفصولة؛ والوجهان في أل وشَيۡء."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الگ کلمے پر سکتہ نہیں؛ أل اور شَيۡء میں دونوں وجہیں۔"
+          }
+        }
+      }
+    },
     "No settings changed from their defaults" : {
       "localizations" : {
         "ar" : {
@@ -118346,6 +119726,23 @@
         }
       }
     },
+    "Prayer times and the essentials, with the extras tucked away until you want them." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مواقيت الصلاة والأساسيات، مع إخفاء الإضافات حتى تحتاجها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نماز کے اوقات اور بنیادی چیزیں، جبکہ اضافی چیزیں تب تک چھپی رہتی ہیں جب تک آپ نہ چاہیں۔"
+          }
+        }
+      }
+    },
     "Prayer times aren't available for this day." : {
       "localizations" : {
         "ar" : {
@@ -118821,8 +120218,38 @@
       },
       "extractionState" : "stale"
     },
-    "Preserves Hamzah's demanding pausing rules: the hamzah eased at a stop exactly as Khalaf does." : {},
-    "Preserves Ya'qub's characteristic word-forms and the damma of عَلَيۡهُمۡ." : {},
+    "Preserves Hamzah's demanding pausing rules: the hamzah eased at a stop exactly as Khalaf does." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يحفظ أحكام حمزة الدقيقة في الوقف: تخفيف الهمزة وقفًا كما يفعل خلف تمامًا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حمزہ کے وقف کے باریک قواعد محفوظ رکھتا ہے: وقف کے وقت ہمزہ کی تخفیف بالکل ویسے جیسے خلف کرتے ہیں۔"
+          }
+        }
+      }
+    },
+    "Preserves Ya'qub's characteristic word-forms and the damma of عَلَيۡهُمۡ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يحفظ فرش يعقوب المميّز وضمّ هاء عَلَيۡهُمۡ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یعقوب کی امتیازی لفظی صورتیں اور عَلَيۡهُمۡ کی ہا کا ضمہ محفوظ رکھتا ہے۔"
+          }
+        }
+      }
+    },
     "Preserves Ya'qub's characteristic word-forms." : {
       "localizations" : {
         "ar" : {
@@ -122465,6 +123892,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "قرآن کا تعارفی دورہ"
+          }
+        }
+      }
+    },
+    "Quran and Islam tabs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تبويب القرآن وتبويب الإسلام"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن اور اسلام ٹیبز"
           }
         }
       }
@@ -129349,6 +130793,23 @@
         }
       }
     },
+    "Reset All Settings offers two choices: put every option back and keep your bookmarks, favorites and progress, or erase everything. Both say exactly what they keep and what they remove." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يقدّم «إعادة تعيين كل الإعدادات» خيارين: إعادة كل الخيارات إلى وضعها الافتراضي مع الإبقاء على علاماتك ومفضّلتك وتقدّمك، أو مسح كل شيء. ويبيّن كلاهما بدقة ما يحتفظ به وما يزيله."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«تمام ترتیبات ری سیٹ کریں» دو انتخاب دیتا ہے: ہر اختیار کو پہلے جیسا کر دیں اور اپنے بک مارکس، پسندیدہ اور پیش رفت رکھیں، یا سب کچھ مٹا دیں۔ دونوں صاف بتاتے ہیں کہ کیا رکھتے ہیں اور کیا ہٹاتے ہیں۔"
+          }
+        }
+      }
+    },
     "Reset All Settings offers two choices: put every option back and keep your bookmarks, favorites, progress and this iPhone's iCloud Backup, or erase everything. Both say exactly what they keep and what they remove." : {
       "localizations" : {
         "ar" : {
@@ -129489,6 +130950,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ری سیٹ کرنے سے ہر ترتیب اپنی ڈیفالٹ حالت پر واپس آ جاتی ہے (ظاہری شکل، نماز، اطلاعات، قرآن، حدیث اور اسلام کے اختیارات)، اور آپ کی بنائی ہوئی ہر چیز محفوظ رہتی ہے: %@۔ آپ کا محفوظ کردہ مقام اور اس %@ کا iCloud بیک اپ بھی برقرار رہتا ہے۔\n\nمٹانے سے یہ سب بھی ہٹ جاتا ہے۔"
+          }
+        }
+      }
+    },
+    "Reset puts every setting back to its default and keeps everything you made, like bookmarks, favorites, progress and counters, and your saved location.\n\nErase removes all of that too." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إعادة التعيين تُرجع كل إعداد إلى قيمته الافتراضية وتحتفظ بكل ما صنعته، مثل العلامات والمفضّلة والتقدّم والعدّادات، وبموقعك المحفوظ.\n\nأما المسح فيزيل ذلك كله أيضًا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ری سیٹ کرنے سے ہر ترتیب اپنی ڈیفالٹ حالت پر واپس آ جاتی ہے، اور آپ کی بنائی ہوئی ہر چیز محفوظ رہتی ہے، جیسے بک مارکس، پسندیدہ، پیش رفت اور کاؤنٹر، اور آپ کا محفوظ کردہ مقام۔\n\nمٹانے سے یہ سب بھی ہٹ جاتا ہے۔"
           }
         }
       }
@@ -132589,7 +134067,22 @@
         }
       }
     },
-    "Sakt before the hamzah of أل, of شَيۡء and of a detached word, قَدۡ أَفۡلَحَ, and الصراط with the sad shaded towards a zay (ishmam), a sound the page does not mark." : {},
+    "Sakt before the hamzah of أل, of شَيۡء and of a detached word, قَدۡ أَفۡلَحَ, and الصراط with the sad shaded towards a zay (ishmam), a sound the page does not mark." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سكت قبل همزة أل وشَيۡء والكلمة المفصولة، قَدۡ أَفۡلَحَ، والصراط بإشمام الصاد صوت الزاي، وهو صوت لا تدل عليه علامة في الصفحة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أل، شَيۡء اور الگ کلمے کے ہمزہ سے پہلے سکتہ، قَدۡ أَفۡلَحَ، اور الصراط میں صاد کو زا کی طرف مائل کرنا (اشمام)، ایسی آواز جس کی صفحے پر کوئی علامت نہیں۔"
+          }
+        }
+      }
+    },
     "Sakt before the hamzah of أل, of شَيۡء and of a detached word." : {
       "extractionState" : "stale"
     },
@@ -138262,7 +139755,22 @@
       },
       "extractionState" : "stale"
     },
-    "Shorter madd than Warsh, two counts on the separated madd as his mushaf prints it, and a lighter touch overall." : {},
+    "Shorter madd than Warsh, two counts on the separated madd as his mushaf prints it, and a lighter touch overall." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مدّ أقصر من ورش، حركتان في المد المنفصل كما يطبعه مصحفه، وأداء أخفّ على الجملة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ورش سے چھوٹا مد، مد منفصل میں دو حرکات جیسا اس کا مصحف چھاپتا ہے، اور مجموعی طور پر ہلکا انداز۔"
+          }
+        }
+      }
+    },
     "Shorter, combined prayers away from home." : {
       "localizations" : {
         "ar" : {
@@ -140046,7 +141554,22 @@
         }
       }
     },
-    "Shu'bah differs from Hafs in some five hundred places, nearly all a vowel or a dot, so the pair shows cleanly how two riwayat of one imam can differ." : {},
+    "Shu'bah differs from Hafs in some five hundred places, nearly all a vowel or a dot, so the pair shows cleanly how two riwayat of one imam can differ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يخالف شعبة حفصًا في نحو خمسمئة موضع، جُلّها حركة أو نقطة، فيُظهر الراويان بجلاء كيف تختلف روايتان عن إمام واحد."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شعبہ حفص سے تقریباً پانچ سو مقامات پر مختلف ہیں، جن میں تقریباً سب ایک حرکت یا ایک نقطہ ہیں، چنانچہ یہ جوڑا صاف دکھاتا ہے کہ ایک امام کی دو روایتیں کیسے مختلف ہو سکتی ہیں۔"
+          }
+        }
+      }
+    },
     "Shu'bah read the Quran on Asim three times over and was one of the great worshippers of his age; the reports say he completed the Quran in prayer regularly for decades." : {
       "localizations" : {
         "ar" : {
@@ -141221,7 +142744,22 @@
         }
       }
     },
-    "Six counts on both madds, the longest, and three transmitted lengths on the alef after a hamzah, ءَامَنُواْ (madd al-badal)." : {},
+    "Six counts on both madds, the longest, and three transmitted lengths on the alef after a hamzah, ءَامَنُواْ (madd al-badal)." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ست حركات في المدين، وهو الأطول، وثلاثة أوجه مروية في الألف بعد الهمزة، ءَامَنُواْ (مد البدل)."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دونوں مدوں میں چھ حرکات، سب سے لمبا، اور ہمزہ کے بعد الف پر تین منقول مقداریں، ءَامَنُواْ (مد بدل)۔"
+          }
+        }
+      }
+    },
     "Six counts, because a shaddah follows the madd immediately, inside the same word." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -141589,6 +143127,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "آسمان پوری اسکرین پر"
+          }
+        }
+      }
+    },
+    "Sky Fills the Screen paints the Adhan tab's whole background with the sky: its colors and its stars at night, behind the prayer times and everything under them." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مع «السماء تملأ الشاشة» تُرسم خلفية تبويب الأذان كلها بالسماء: ألوانها، ونجومها ليلًا، خلف مواقيت الصلاة وكل ما تحتها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«آسمان پوری اسکرین پر» اذان ٹیب کے پورے پس منظر کو آسمان سے بھر دیتا ہے: اس کے رنگ اور رات کو اس کے ستارے، نماز کے اوقات اور ان کے نیچے کی ہر چیز کے پیچھے۔"
           }
         }
       }
@@ -142177,9 +143732,54 @@
         }
       }
     },
-    "Softens only the final hamzah of a word at a stop, and may slip an alef between two hamzahs in one word, ءَٰا۬نتَ." : {},
-    "Softens the second of two hamzahs meeting between words where al-Bazzi drops the first." : {},
-    "Softens the second of two hamzahs meeting between words, ٱلسُّفَهَآءُ اَلَآ, and reads الصراط with a seen, صِۜرَٰطَ." : {},
+    "Softens only the final hamzah of a word at a stop, and may slip an alef between two hamzahs in one word, ءَٰا۬نتَ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يسهّل الهمزة المتطرفة وحدها وقفًا، وقد يُدخل ألفًا بين الهمزتين في الكلمة الواحدة، ءَٰا۬نتَ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقف کے وقت صرف کلمے کے آخری ہمزہ کی تسہیل کرتا ہے، اور ایک ہی کلمے کے دو ہمزوں کے درمیان الف داخل کر سکتا ہے، ءَٰا۬نتَ۔"
+          }
+        }
+      }
+    },
+    "Softens the second of two hamzahs meeting between words where al-Bazzi drops the first." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يسهّل الثانية من الهمزتين المتلاقيتين بين كلمتين حيث يُسقط البزي الأولى."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دو کلموں کے درمیان ملنے والے دو ہمزوں میں سے دوسرے کی تسہیل کرتا ہے جہاں بزی پہلا گراتے ہیں۔"
+          }
+        }
+      }
+    },
+    "Softens the second of two hamzahs meeting between words, ٱلسُّفَهَآءُ اَلَآ, and reads الصراط with a seen, صِۜرَٰطَ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يسهّل الثانية من الهمزتين المتلاقيتين بين كلمتين، ٱلسُّفَهَآءُ اَلَآ، ويقرأ الصراط بالسين، صِۜرَٰطَ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دو کلموں کے درمیان ملنے والے دو ہمزوں میں سے دوسرے کی تسہیل، ٱلسُّفَهَآءُ اَلَآ، اور الصراط کو سین سے پڑھتا ہے، صِۜرَٰطَ۔"
+          }
+        }
+      }
+    },
     "Softness" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -145544,6 +147144,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "سکون اور تشدید"
+          }
+        }
+      }
+    },
+    "Stops the screen from dimming and locking on its own. Always: whenever the app is open, which uses more battery." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يمنع الشاشة من الخفوت والقفل تلقائيًا. «دائما»: ما دام التطبيق مفتوحًا، وهذا يستهلك البطارية أكثر."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اسکرین کو خود بخود مدھم ہونے اور لاک ہونے سے روکتا ہے۔ «ہمیشہ»: جب تک ایپ کھلی ہو، اور اس میں بیٹری زیادہ خرچ ہوتی ہے۔"
           }
         }
       }
@@ -153933,8 +155550,38 @@
         }
       }
     },
-    "The Damascus spellings, سَارِعُوٓاْ, فَلَا يَخَافُ, shared with Hisham, and a modest, well-catalogued set of places where the two part." : {},
-    "The Damascus spellings, سَارِعُوٓاْ, فَلَا يَخَافُ, shared with Ibn Dhakwan, and several readings unique to him within the Syrian tradition." : {},
+    "The Damascus spellings, سَارِعُوٓاْ, فَلَا يَخَافُ, shared with Hisham, and a modest, well-catalogued set of places where the two part." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رسم المصحف الشامي، سَارِعُوٓاْ، فَلَا يَخَافُ، مشتركًا مع هشام، ومواضع قليلة مضبوطة يفترقان فيها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دمشقی رسم، سَارِعُوٓاْ، فَلَا يَخَافُ، ہشام کے ساتھ مشترک، اور چند اچھی طرح درج شدہ مقامات جہاں دونوں الگ ہوتے ہیں۔"
+          }
+        }
+      }
+    },
+    "The Damascus spellings, سَارِعُوٓاْ, فَلَا يَخَافُ, shared with Ibn Dhakwan, and several readings unique to him within the Syrian tradition." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رسم المصحف الشامي، سَارِعُوٓاْ، فَلَا يَخَافُ، مشتركًا مع ابن ذكوان، وقراءات عدة انفرد بها في المدرسة الشامية."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دمشقی رسم، سَارِعُوٓاْ، فَلَا يَخَافُ، ابن ذکوان کے ساتھ مشترک، اور شامی روایت کے اندر کئی قراءتیں جو صرف انہی کی ہیں۔"
+          }
+        }
+      }
+    },
     "The Day of Resurrection, its signs and warnings, death, the grave, the reckoning, and scenes of Judgment." : {
       "localizations" : {
         "ar" : {
@@ -154398,6 +156045,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "«اسلامی ڈائری» آیات اور احادیث پر آپ کے لکھے نوٹس کو آپ کے اپنے اندراجات کے ساتھ جمع کرتی ہے۔ %@"
+          }
+        }
+      }
+    },
+    "The Islamic Journal collects the notes you leave on ayahs beside your own entries. %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تجمع «اليوميات الإسلامية» الملاحظات التي تتركها على الآيات إلى جانب مدخلاتك الخاصة. %@"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«اسلامی ڈائری» آیات پر آپ کے لکھے نوٹس کو آپ کے اپنے اندراجات کے ساتھ جمع کرتی ہے۔ %@"
+          }
+        }
+      }
+    },
+    "The Islamic Journal keeps your own entries. %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحفظ «اليوميات الإسلامية» مدخلاتك الخاصة. %@"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«اسلامی ڈائری» آپ کے اپنے اندراجات محفوظ رکھتی ہے۔ %@"
           }
         }
       }
@@ -155146,6 +156827,23 @@
         }
       }
     },
+    "The Quran and the essentials, with the extras tucked away until you want them." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "القرآن الكريم والأساسيات، مع إخفاء الإضافات حتى تحتاجها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن مجید اور بنیادی چیزیں، جبکہ اضافی چیزیں تب تک چھپی رہتی ہیں جب تک آپ نہ چاہیں۔"
+          }
+        }
+      }
+    },
     "The Quran and the hadith books have their own switches, in Quran Settings and Hadith Settings." : {
       "localizations" : {
         "ar" : {
@@ -155227,6 +156925,23 @@
         }
       }
     },
+    "The Quran has its own switch, in Quran Settings." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "للقرآن مفتاحه الخاص، في إعدادات القرآن."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن مجید کا اپنا سوئچ ہے، قرآن کی ترتیبات میں۔"
+          }
+        }
+      }
+    },
     "The Quran in Latin letters beneath each ayah, for reading along before you know the script." : {
       "localizations" : {
         "ar" : {
@@ -155239,6 +156954,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ہر آیت کے نیچے رومن حروف میں قرآن، تاکہ عربی رسم الخط سیکھنے سے پہلے آپ ساتھ ساتھ پڑھ سکیں۔"
+          }
+        }
+      }
+    },
+    "The Quran keeps its own fonts, in Quran Settings." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "للقرآن خطوطه الخاصة، في إعدادات القرآن."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن مجید کے اپنے فونٹ ہیں، قرآن کی ترتیبات میں۔"
+          }
+        }
+      }
+    },
+    "The Quran keeps its own text sizes, in Quran Settings." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "للقرآن أحجام نصه الخاصة، في إعدادات القرآن."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن مجید کے متن کے اپنے سائز ہیں، قرآن کی ترتیبات میں۔"
           }
         }
       }
@@ -158406,7 +160155,22 @@
       },
       "extractionState" : "stale"
     },
-    "The differences between Khalaf and Khallad are few, and the best known is the sakt, the short pause without breath before a hamzah. Khalaf pauses on the consonant before it in أل, in شَيۡء and at the end of a detached word (قَدۡ أَفۡلَحَ); Khallad never pauses on the detached word, and on أل and شَيۡء both ways are transmitted from him, with the pause and without. At a stop he eases the hamzah exactly as Khalaf does, so his recordings also end each ayah without it while the mushaf keeps it." : {},
+    "The differences between Khalaf and Khallad are few, and the best known is the sakt, the short pause without breath before a hamzah. Khalaf pauses on the consonant before it in أل, in شَيۡء and at the end of a detached word (قَدۡ أَفۡلَحَ); Khallad never pauses on the detached word, and on أل and شَيۡء both ways are transmitted from him, with the pause and without. At a stop he eases the hamzah exactly as Khalaf does, so his recordings also end each ayah without it while the mushaf keeps it." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الفروق بين خلف وخلاد قليلة، وأشهرها السكت، وهو الوقفة اليسيرة من غير تنفس قبل الهمزة. يسكت خلف على الساكن قبلها في أل وفي شَيۡء وفي آخر الكلمة المفصولة (قَدۡ أَفۡلَحَ)؛ ولا يسكت خلاد على الكلمة المفصولة البتة، وله في أل وشَيۡء الوجهان، بالسكت وبعدمه. وفي الوقف يخفف الهمزة كما يفعل خلف تمامًا، فتنتهي تسجيلاته أيضًا بكل آية من غير همزة بينما يُثبتها المصحف."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خلف اور خلاد کے درمیان فرق کم ہیں، اور سب سے مشہور سکتہ ہے، یعنی ہمزہ سے پہلے سانس لیے بغیر مختصر ٹھہراؤ۔ خلف أل میں، شَيۡء میں اور الگ کلمے کے آخر میں (قَدۡ أَفۡلَحَ) ہمزہ سے پہلے کے ساکن حرف پر ٹھہرتے ہیں؛ خلاد الگ کلمے پر کبھی نہیں ٹھہرتے، اور أل اور شَيۡء میں ان سے دونوں وجہیں منقول ہیں، سکتے کے ساتھ اور اس کے بغیر۔ وقف کے وقت وہ ہمزہ کی تخفیف بالکل خلف کی طرح کرتے ہیں، اس لیے ان کی ریکارڈنگ بھی ہر آیت بغیر ہمزہ ختم کرتی ہے جبکہ مصحف اسے باقی رکھتا ہے۔"
+          }
+        }
+      }
+    },
     "The differences between the two narrators of Abu Ja'far are relatively few." : {
       "localizations" : {
         "ar" : {
@@ -158522,7 +160286,22 @@
         }
       }
     },
-    "The doubled ta in a defined set of verbs, وَلَا تَّفَرَّقُواْ, when read on from the word before." : {},
+    "The doubled ta in a defined set of verbs, وَلَا تَّفَرَّقُواْ, when read on from the word before." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تشديد التاء في طائفة معلومة من الأفعال، وَلَا تَّفَرَّقُواْ، عند الوصل بما قبلها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "افعال کے ایک متعین گروہ میں مشدد تا، وَلَا تَّفَرَّقُواْ، جب پچھلے لفظ سے ملا کر پڑھا جائے۔"
+          }
+        }
+      }
+    },
     "The doubled ta in a defined set of words." : {
       "localizations" : {
         "ar" : {
@@ -160127,7 +161906,22 @@
       },
       "extractionState" : "stale"
     },
-    "The fullest application of the large idgham (idgham kabir): قَال رَّبُّكَ, رَبِحَت تِّجَٰرَتُهُمۡ, حَيۡث شِّيتُمَا, written at about a thousand places in his mushaf." : {},
+    "The fullest application of the large idgham (idgham kabir): قَال رَّبُّكَ, رَبِحَت تِّجَٰرَتُهُمۡ, حَيۡث شِّيتُمَا, written at about a thousand places in his mushaf." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أتم تطبيق للإدغام الكبير: قَال رَّبُّكَ، رَبِحَت تِّجَٰرَتُهُمۡ، حَيۡث شِّيتُمَا، مكتوبًا في نحو ألف موضع في مصحفه."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ادغام کبیر کا سب سے مکمل اطلاق: قَال رَّبُّكَ، رَبِحَت تِّجَٰرَتُهُمۡ، حَيۡث شِّيتُمَا، اس کے مصحف میں تقریباً ایک ہزار مقامات پر لکھا ہوا۔"
+          }
+        }
+      }
+    },
     "The ghunnah has exactly one exit. If the sound is not leaving through the nose, whatever you are doing is not a ghunnah." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -160293,9 +162087,54 @@
         }
       }
     },
-    "The ha of عَلَيۡهُمۡ, إِلَيۡهُمۡ and لَدَيۡهُمۡ read with a damma, and the lam of هَلۡ and بَلۡ merged into the letter after it, هَل ثُّوِّبَ." : {},
-    "The ha of عَلَيۡهُمۡ, إِلَيۡهُمۡ and لَدَيۡهُمۡ read with a damma, as Hamzah." : {},
-    "The ha of عَلَيۡهِمۡ with a kasra, as Hafs, where Hamzah reads a damma." : {},
+    "The ha of عَلَيۡهُمۡ, إِلَيۡهُمۡ and لَدَيۡهُمۡ read with a damma, and the lam of هَلۡ and بَلۡ merged into the letter after it, هَل ثُّوِّبَ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ضمّ هاء عَلَيۡهُمۡ وإِلَيۡهُمۡ ولَدَيۡهُمۡ، وإدغام لام هَلۡ وبَلۡ فيما بعدها، هَل ثُّوِّبَ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عَلَيۡهُمۡ، إِلَيۡهُمۡ اور لَدَيۡهُمۡ کی ہا ضمہ کے ساتھ، اور هَلۡ اور بَلۡ کی لام اگلے حرف میں مدغم، هَل ثُّوِّبَ۔"
+          }
+        }
+      }
+    },
+    "The ha of عَلَيۡهُمۡ, إِلَيۡهُمۡ and لَدَيۡهُمۡ read with a damma, as Hamzah." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ضمّ هاء عَلَيۡهُمۡ وإِلَيۡهُمۡ ولَدَيۡهُمۡ، كحمزة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عَلَيۡهُمۡ، إِلَيۡهُمۡ اور لَدَيۡهُمۡ کی ہا ضمہ کے ساتھ، حمزہ کی طرح۔"
+          }
+        }
+      }
+    },
+    "The ha of عَلَيۡهِمۡ with a kasra, as Hafs, where Hamzah reads a damma." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كسر هاء عَلَيۡهِمۡ، كحفص، حيث يقرأ حمزة بالضم."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عَلَيۡهِمۡ کی ہا کسرہ کے ساتھ، حفص کی طرح، جہاں حمزہ ضمہ پڑھتے ہیں۔"
+          }
+        }
+      }
+    },
     "The ha of عَنۡهُ carries a kasra" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -160479,7 +162318,22 @@
         }
       }
     },
-    "The hamzah in full at a stop and no sakt, unlike his narration of Hamzah, which is why a Khalaf al-Ashir mushaf and a Khalaf an Hamzah mushaf read differently." : {},
+    "The hamzah in full at a stop and no sakt, unlike his narration of Hamzah, which is why a Khalaf al-Ashir mushaf and a Khalaf an Hamzah mushaf read differently." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحقيق الهمزة وقفًا ولا سكت، بخلاف روايته عن حمزة، ولذلك يختلف مصحف خلف العاشر عن مصحف خلف عن حمزة في القراءة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقف کے وقت ہمزہ تحقیق کے ساتھ اور سکتہ نہیں، حمزہ سے ان کی روایت کے برعکس، اسی لیے خلف العاشر کا مصحف اور خلف عن حمزہ کا مصحف مختلف پڑھے جاتے ہیں۔"
+          }
+        }
+      }
+    },
     "The hamzah in full at a stop and no sakt, unlike his narration of Hamzah." : {
       "extractionState" : "stale"
     },
@@ -160923,7 +162777,22 @@
         }
       }
     },
-    "The joined plural mim, قُلُوبِهِمُۥ, and the softened second hamzah with an alef between, ءَٰا۬نذَرۡتَهُمُۥ." : {},
+    "The joined plural mim, قُلُوبِهِمُۥ, and the softened second hamzah with an alef between, ءَٰا۬نذَرۡتَهُمُۥ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صلة ميم الجمع، قُلُوبِهِمُۥ، وتسهيل الهمزة الثانية مع إدخال ألف بينهما، ءَٰا۬نذَرۡتَهُمُۥ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "میم جمع کا صلہ، قُلُوبِهِمُۥ، اور دوسرے ہمزہ کی تسہیل درمیان میں الف کے ساتھ، ءَٰا۬نذَرۡتَهُمُۥ۔"
+          }
+        }
+      }
+    },
     "The joined هَا particle" : {
       "localizations" : {
         "ar" : {
@@ -161473,9 +163342,54 @@
         }
       }
     },
-    "The lam of هَلۡ and بَلۡ merged into the letter after it, هَل ثُّوِّبَ." : {},
-    "The lam of هَلۡ and بَلۡ merges into the letter after it: هَل ثُّوِّبَ, as Hamzah reads." : {},
-    "The large idgham: a word's last letter merges into the same or a near letter at the start of the next word, قَال رَّبُّكَ, رَبِحَت تِّجَٰرَتُهُمۡ, لَذَهَب بِّسَمۡعِهِمۡ. As-Susi's mushaf writes it at about a thousand places; ad-Duri does not read it by the Shatibiyyah route." : {},
+    "The lam of هَلۡ and بَلۡ merged into the letter after it, هَل ثُّوِّبَ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إدغام لام هَلۡ وبَلۡ فيما بعدها، هَل ثُّوِّبَ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هَلۡ اور بَلۡ کی لام اگلے حرف میں مدغم، هَل ثُّوِّبَ۔"
+          }
+        }
+      }
+    },
+    "The lam of هَلۡ and بَلۡ merges into the letter after it: هَل ثُّوِّبَ, as Hamzah reads." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تُدغَم لام هَلۡ وبَلۡ فيما بعدها: هَل ثُّوِّبَ، كما يقرأ حمزة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هَلۡ اور بَلۡ کی لام اگلے حرف میں مدغم ہوتی ہے: هَل ثُّوِّبَ، جیسے حمزہ پڑھتے ہیں۔"
+          }
+        }
+      }
+    },
+    "The large idgham: a word's last letter merges into the same or a near letter at the start of the next word, قَال رَّبُّكَ, رَبِحَت تِّجَٰرَتُهُمۡ, لَذَهَب بِّسَمۡعِهِمۡ. As-Susi's mushaf writes it at about a thousand places; ad-Duri does not read it by the Shatibiyyah route." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الإدغام الكبير: يُدغَم آخر حرف من الكلمة في مثله أو مقاربه في أول الكلمة التالية، قَال رَّبُّكَ، رَبِحَت تِّجَٰرَتُهُمۡ، لَذَهَب بِّسَمۡعِهِمۡ. يكتبه مصحف السوسي في نحو ألف موضع؛ ولا يقرأ به الدوري من طريق الشاطبية."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ادغام کبیر: کلمے کا آخری حرف اگلے کلمے کے شروع میں اپنے مثل یا قریب حرف میں مدغم ہو جاتا ہے، قَال رَّبُّكَ، رَبِحَت تِّجَٰرَتُهُمۡ، لَذَهَب بِّسَمۡعِهِمۡ۔ سوسی کا مصحف اسے تقریباً ایک ہزار مقامات پر لکھتا ہے؛ دوری شاطبیہ کے طریق سے اسے نہیں پڑھتے۔"
+          }
+        }
+      }
+    },
     "The largest of the five regions: ten exits producing eighteen letters, counted from the back of the tongue forward and described in four zones, the deepest part, the middle, the edges, and the tip." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -162057,7 +163971,22 @@
         }
       }
     },
-    "The letters that open a surah are read with a breath-less pause after each one, and the separated madd is kept short, two counts." : {},
+    "The letters that open a surah are read with a breath-less pause after each one, and the separated madd is kept short, two counts." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تُقرأ فواتح السور بسكتة من غير تنفس بعد كل حرف، ويُقصر المد المنفصل، حركتان."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سورت کے شروع کے حروف ہر حرف کے بعد سانس لیے بغیر سکتے کے ساتھ پڑھے جاتے ہیں، اور مد منفصل قصر کے ساتھ، دو حرکات۔"
+          }
+        }
+      }
+    },
     "The letters that open twenty-nine surahs, read by name" : {
       "localizations" : {
         "ar" : {
@@ -162224,7 +164153,22 @@
       },
       "extractionState" : "stale"
     },
-    "The longest madd of the ten: six counts on both the joined and the separated madd." : {},
+    "The longest madd of the ten: six counts on both the joined and the separated madd." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أطول مدّ بين العشرة: ست حركات في المد المتصل والمنفصل."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دس قراءتوں میں سب سے لمبا مد: مد متصل اور منفصل دونوں میں چھ حرکات۔"
+          }
+        }
+      }
+    },
     "The lower lip against the upper lip, with air escaping at the corners" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -163946,7 +165890,22 @@
         }
       }
     },
-    "The narration whose printed mushaf uses the Maghribi script, with the dot for hamzat al-wasl." : {},
+    "The narration whose printed mushaf uses the Maghribi script, with the dot for hamzat al-wasl." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الرواية التي يُكتب مصحفها المطبوع بالخط المغربي، مع نقطة همزة الوصل."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وہ روایت جس کا چھپا ہوا مصحف مغربی خط میں ہے، ہمزۂ وصل کے نقطے کے ساتھ۔"
+          }
+        }
+      }
+    },
     "The narration whose printed mushaf uses the Maghribi script." : {
       "localizations" : {
         "ar" : {
@@ -165876,9 +167835,54 @@
         }
       }
     },
-    "The plural mim is joined with a waw before a vowel, قُلُوبِهِمُۥ, رَزَقۡنَٰهُمُۥ, as Ibn Kathir reads it." : {},
-    "The plural mim is joined with a waw before a vowel: رَزَقۡنَٰهُمُۥ, قُلُوبِهِمُۥ." : {},
-    "The plural mim may be joined with a waw: both ways are transmitted, and the printed text keeps it closed, عَلَيۡهِمۡ." : {},
+    "The plural mim is joined with a waw before a vowel, قُلُوبِهِمُۥ, رَزَقۡنَٰهُمُۥ, as Ibn Kathir reads it." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صلة ميم الجمع بواو قبل المتحرك، قُلُوبِهِمُۥ، رَزَقۡنَٰهُمُۥ، كما يقرأ ابن كثير."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حرکت والے حرف سے پہلے میم جمع کا صلہ واو کے ساتھ، قُلُوبِهِمُۥ، رَزَقۡنَٰهُمُۥ، جیسے ابن کثیر پڑھتے ہیں۔"
+          }
+        }
+      }
+    },
+    "The plural mim is joined with a waw before a vowel: رَزَقۡنَٰهُمُۥ, قُلُوبِهِمُۥ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صلة ميم الجمع بواو قبل المتحرك: رَزَقۡنَٰهُمُۥ، قُلُوبِهِمُۥ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حرکت والے حرف سے پہلے میم جمع کا صلہ واو کے ساتھ: رَزَقۡنَٰهُمُۥ، قُلُوبِهِمُۥ۔"
+          }
+        }
+      }
+    },
+    "The plural mim may be joined with a waw: both ways are transmitted, and the printed text keeps it closed, عَلَيۡهِمۡ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يجوز صلة ميم الجمع بواو: الوجهان مرويان، والنص المطبوع يُسكّنها، عَلَيۡهِمۡ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "میم جمع کا صلہ واو کے ساتھ ہو سکتا ہے: دونوں وجہیں منقول ہیں، اور چھپا ہوا متن اسے ساکن رکھتا ہے، عَلَيۡهِمۡ۔"
+          }
+        }
+      }
+    },
     "The plural mīm (كُم / هُم / تُم) is given a ḍammah and linked to the next word with a small wāw sound: mīm becomes 'muu' before the following word." : {
       "localizations" : {
         "ar" : {
@@ -166161,7 +168165,22 @@
         }
       }
     },
-    "The pronoun ha is drawn out even after a resting letter: فِيهِۦ, مِنۡهُۥ, عَنۡهُۥ, read fihee, minhoo. No other reading does this throughout." : {},
+    "The pronoun ha is drawn out even after a resting letter: فِيهِۦ, مِنۡهُۥ, عَنۡهُۥ, read fihee, minhoo. No other reading does this throughout." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صلة هاء الكناية حتى بعد الساكن: فِيهِۦ، مِنۡهُۥ، عَنۡهُۥ، تُقرأ «فيهي»، «منهو». ولا تفعل ذلك قراءة أخرى في جميع القرآن."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ساکن حرف کے بعد بھی ہائے کنایہ کا صلہ: فِيهِۦ، مِنۡهُۥ، عَنۡهُۥ، «فیہی»، «منہو» پڑھے جاتے ہیں۔ کوئی دوسری قراءت پورے قرآن میں ایسا نہیں کرتی۔"
+          }
+        }
+      }
+    },
     "The pronoun ha ـه, with a vowelled letter before it and a vowelled letter after it, read in continuation" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -166692,8 +168711,38 @@
         }
       }
     },
-    "The resting nun hidden before خ and غ, مِن غَيۡرِ, and a breath-less pause after each opening letter of a surah." : {},
-    "The resting nun is hidden before خ and غ, مِن غَيۡرِ, where every other reading sounds it clearly." : {},
+    "The resting nun hidden before خ and غ, مِن غَيۡرِ, and a breath-less pause after each opening letter of a surah." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إخفاء النون الساكنة عند خ وغ، مِن غَيۡرِ، وسكتة من غير تنفس بعد كل حرف من فواتح السور."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خ اور غ سے پہلے ساکن نون کا اخفا، مِن غَيۡرِ، اور سورت کے شروع کے ہر حرف کے بعد سانس لیے بغیر سکتہ۔"
+          }
+        }
+      }
+    },
+    "The resting nun is hidden before خ and غ, مِن غَيۡرِ, where every other reading sounds it clearly." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تُخفى النون الساكنة عند خ وغ، مِن غَيۡرِ، حيث تُظهرها كل قراءة أخرى."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خ اور غ سے پہلے ساکن نون کا اخفا، مِن غَيۡرِ، جہاں باقی ہر قراءت اسے صاف ظاہر کرتی ہے۔"
+          }
+        }
+      }
+    },
     "The restriction to fatha-tanween is not arbitrary. Fatha-tanween is the one of the three that is compensated by an alif when you stop; damma-tanween and kasra-tanween simply take a sukoon, so stopping on them produces no lengthening at all: you stop on خُسۡرٍ as khusr, not khusree." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -167099,7 +169148,22 @@
         }
       }
     },
-    "The sakt is his: a short pause without breath on the consonant before a hamzah, in three places. The lam of أل (ٱلۡأَرۡضِ), the word شَيۡء, and a detached consonant ending the word before (قَدۡ أَفۡلَحَ, مِنۡ ءَامَنَ). Khallad never pauses on the detached word, and on the other two both ways are transmitted from him. At a stop both narrators ease the hamzah as Hamzah does, which is why a recording of either ends each ayah without it while the mushaf keeps it." : {},
+    "The sakt is his: a short pause without breath on the consonant before a hamzah, in three places. The lam of أل (ٱلۡأَرۡضِ), the word شَيۡء, and a detached consonant ending the word before (قَدۡ أَفۡلَحَ, مِنۡ ءَامَنَ). Khallad never pauses on the detached word, and on the other two both ways are transmitted from him. At a stop both narrators ease the hamzah as Hamzah does, which is why a recording of either ends each ayah without it while the mushaf keeps it." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "السكت له: وقفة يسيرة من غير تنفس على الساكن قبل الهمزة، في ثلاثة مواضع. لام أل (ٱلۡأَرۡضِ)، وكلمة شَيۡء، والساكن المفصول في آخر الكلمة قبلها (قَدۡ أَفۡلَحَ، مِنۡ ءَامَنَ). ولا يسكت خلاد على الكلمة المفصولة البتة، وله في الموضعين الآخرين الوجهان. وفي الوقف يخفف الراويان الهمزة كما يفعل حمزة، ولذلك ينتهي تسجيل أي منهما بكل آية من غير همزة بينما يُثبتها المصحف."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سکتہ انہی کا ہے: ہمزہ سے پہلے کے ساکن حرف پر سانس لیے بغیر مختصر ٹھہراؤ، تین مقامات پر۔ أل کی لام (ٱلۡأَرۡضِ)، لفظ شَيۡء، اور پچھلے کلمے کے آخر کا الگ ساکن حرف (قَدۡ أَفۡلَحَ، مِنۡ ءَامَنَ)۔ خلاد الگ کلمے پر کبھی نہیں ٹھہرتے، اور باقی دو میں ان سے دونوں وجہیں منقول ہیں۔ وقف کے وقت دونوں راوی حمزہ کی طرح ہمزہ کی تخفیف کرتے ہیں، اسی لیے دونوں میں سے کسی کی بھی ریکارڈنگ ہر آیت بغیر ہمزہ ختم کرتی ہے جبکہ مصحف اسے باقی رکھتا ہے۔"
+          }
+        }
+      }
+    },
     "The same 114 surahs" : {
       "localizations" : {
         "ar" : {
@@ -168347,9 +170411,54 @@
         }
       }
     },
-    "The separated madd is short or medium: ad-Duri's mushaf prints it stretched, as-Susi's short." : {},
-    "The separated madd kept short, two counts, and every hamzah in full; Ruways softens the second of two that meet between words, ٱلسُّفَهَآءُ اَلَآ." : {},
-    "The separated madd kept short, two counts, and no imalah: the reading stays level (fath) throughout." : {},
+    "The separated madd is short or medium: ad-Duri's mushaf prints it stretched, as-Susi's short." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "المد المنفصل قصر أو توسط: يطبعه مصحف الدوري ممدودًا، ومصحف السوسي مقصورًا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مد منفصل قصر یا توسط: دوری کا مصحف اسے لمبا چھاپتا ہے، سوسی کا مختصر۔"
+          }
+        }
+      }
+    },
+    "The separated madd kept short, two counts, and every hamzah in full; Ruways softens the second of two that meet between words, ٱلسُّفَهَآءُ اَلَآ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قصر المد المنفصل، حركتان، وتحقيق كل همزة؛ ويسهّل رويس الثانية من الهمزتين المتلاقيتين بين كلمتين، ٱلسُّفَهَآءُ اَلَآ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مد منفصل قصر کے ساتھ، دو حرکات، اور ہر ہمزہ تحقیق کے ساتھ؛ رویس دو کلموں کے درمیان ملنے والے دو ہمزوں میں سے دوسرے کی تسہیل کرتے ہیں، ٱلسُّفَهَآءُ اَلَآ۔"
+          }
+        }
+      }
+    },
+    "The separated madd kept short, two counts, and no imalah: the reading stays level (fath) throughout." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قصر المد المنفصل، حركتان، ولا إمالة: الفتح في جميع القرآن."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مد منفصل قصر کے ساتھ، دو حرکات، اور کوئی امالہ نہیں: پورے قرآن میں فتح۔"
+          }
+        }
+      }
+    },
     "The separated madd, madd munfasil" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -168367,7 +170476,22 @@
         }
       }
     },
-    "The separated madd: six counts for Warsh, the longest, two for Qalun as his mushaf prints it. Warsh also stretches the alef after a hamzah, ءَامَنُواْ, by three transmitted lengths (madd al-badal)." : {},
+    "The separated madd: six counts for Warsh, the longest, two for Qalun as his mushaf prints it. Warsh also stretches the alef after a hamzah, ءَامَنُواْ, by three transmitted lengths (madd al-badal)." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "المد المنفصل: ست حركات عند ورش، وهو الأطول، وحركتان عند قالون كما يطبعه مصحفه. ويمدّ ورش أيضًا الألف بعد الهمزة، ءَامَنُواْ، بثلاثة أوجه مروية (مد البدل)."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مد منفصل: ورش کے ہاں چھ حرکات، سب سے لمبا، قالون کے ہاں دو جیسا ان کا مصحف چھاپتا ہے۔ ورش ہمزہ کے بعد الف کو بھی، ءَامَنُواْ، تین منقول مقداروں سے کھینچتے ہیں (مد بدل)۔"
+          }
+        }
+      }
+    },
     "The server has no audio file for surah %lld from this reciter." : {
       "localizations" : {
         "ar" : {
@@ -170134,7 +172258,22 @@
       },
       "extractionState" : "stale"
     },
-    "The takbir between the surahs from ad-Duha to the end of the Quran is transmitted through him." : {},
+    "The takbir between the surahs from ad-Duha to the end of the Quran is transmitted through him." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التكبير بين السور من الضحى إلى آخر القرآن مرويّ من طريقه."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الضحیٰ سے قرآن کے آخر تک سورتوں کے درمیان تکبیر انہی کے طریق سے منقول ہے۔"
+          }
+        }
+      }
+    },
     "The tanween of نُوحٌ runs straight into the ب: nuhu-bnahu, with no hamza between them." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -171419,7 +173558,22 @@
         }
       }
     },
-    "The two are taught from different poems. Hamzah's reading, with Khalaf's narration of it, is in ash-Shatibiyyah; Khalaf's own reading is in ad-Durrah al-Mudiyyah, Ibn al-Jazari's poem on the three readings that complete the ten. They part company on the hamzah: as Khalaf al-Ashir he pronounces it in full at a stop as well, and ad-Durrah gives him no sakt. So a mushaf titled Khalaf al-Ashir and one titled Khalaf an Hamzah read differently, although the same man stands behind both." : {},
+    "The two are taught from different poems. Hamzah's reading, with Khalaf's narration of it, is in ash-Shatibiyyah; Khalaf's own reading is in ad-Durrah al-Mudiyyah, Ibn al-Jazari's poem on the three readings that complete the ten. They part company on the hamzah: as Khalaf al-Ashir he pronounces it in full at a stop as well, and ad-Durrah gives him no sakt. So a mushaf titled Khalaf al-Ashir and one titled Khalaf an Hamzah read differently, although the same man stands behind both." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تُؤخذ القراءتان من منظومتين مختلفتين. فقراءة حمزة، برواية خلف عنه، في الشاطبية؛ وقراءة خلف نفسه في الدرة المضية، منظومة ابن الجزري في القراءات الثلاث المتممة للعشر. ويفترقان في الهمزة: فخلف العاشر يحققها وقفًا أيضًا، ولا تعطيه الدرة سكتًا. ولذلك يختلف مصحف عنوانه خلف العاشر عن مصحف عنوانه خلف عن حمزة في القراءة، مع أن وراءهما رجلًا واحدًا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دونوں مختلف منظوموں سے پڑھائی جاتی ہیں۔ حمزہ کی قراءت، خلف کی اس کی روایت کے ساتھ، شاطبیہ میں ہے؛ خلف کی اپنی قراءت الدرۃ المضیۃ میں ہے، جو دس کو مکمل کرنے والی تین قراءتوں پر ابن الجزری کی منظوم ہے۔ دونوں ہمزہ پر الگ ہوتے ہیں: خلف العاشر کی حیثیت سے وہ اسے وقف کے وقت بھی تحقیق کے ساتھ پڑھتے ہیں، اور الدرۃ انہیں کوئی سکتہ نہیں دیتی۔ اس لیے خلف العاشر کے نام کا مصحف اور خلف عن حمزہ کے نام کا مصحف مختلف پڑھے جاتے ہیں، حالانکہ دونوں کے پیچھے ایک ہی شخص ہے۔"
+          }
+        }
+      }
+    },
     "The two categories are defined by which part of the reading failed, not by the size of the consequence." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -172059,7 +174213,22 @@
         }
       }
     },
-    "The vowel of a few verbs is dropped or slurred before كُمۡ: يَأۡمُرۡكُمۡ, بَارِئۡكُمۡ." : {},
+    "The vowel of a few verbs is dropped or slurred before كُمۡ: يَأۡمُرۡكُمۡ, بَارِئۡكُمۡ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إسكان حركة أفعال قليلة أو اختلاسها قبل كُمۡ: يَأۡمُرۡكُمۡ، بَارِئۡكُمۡ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "چند افعال کی حرکت كُمۡ سے پہلے گرا دی یا اختلاس کی جاتی ہے: يَأۡمُرۡكُمۡ، بَارِئۡكُمۡ۔"
+          }
+        }
+      }
+    },
     "The vowel on the letter before it" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -172303,6 +174472,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "صفیر تین طرح سے: سادہ، مجہور، اور مطبق۔"
+          }
+        }
+      }
+    },
+    "The whole Adhan tab wears the sky: its colors and stars behind the prayer times and everything under them, with the rows turned to glass." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يكتسي تبويب الأذان كله بالسماء: ألوانها ونجومها خلف مواقيت الصلاة وكل ما تحتها، مع صفوف زجاجية."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پورا اذان ٹیب آسمان اوڑھ لیتا ہے: نماز کے اوقات اور ان کے نیچے کی ہر چیز کے پیچھے اس کے رنگ اور ستارے، اور قطاریں شیشے جیسی ہو جاتی ہیں۔"
           }
         }
       }
@@ -175139,6 +177325,23 @@
         }
       }
     },
+    "This app was inspired by my desire to help new reverts and non-Muslims learn about Islam and easily access prayer times. I’m deeply grateful to my parents for instilling in me a love for the faith (may Allah reward them).\n\nI also want to express my gratitude to my high school teacher, Mr. Joe Silvey, who, despite not being Muslim, stood with our Muslim Student Association and helped us organize weekly Jumuah prayers." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "استُلهم هذا التطبيق من رغبتي في مساعدة المسلمين الجدد وغير المسلمين على التعرّف على الإسلام والوصول بسهولة إلى مواقيت الصلاة. وأنا ممتنّ جدًا لوالديّ اللذين غرسا فيّ حبّ الدين (جزاهما الله خيرًا).\n\nوأودّ أيضًا أن أعبّر عن امتناني لمعلّمي في المرحلة الثانوية، الأستاذ جو سيلفي، الذي وقف مع جمعية الطلاب المسلمين رغم أنه ليس مسلمًا، وساعدنا على تنظيم صلاة الجمعة كل أسبوع."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہ ایپ میری اس خواہش سے وجود میں آئی کہ نئے مسلمانوں اور غیر مسلموں کو اسلام کے بارے میں جاننے اور نماز کے اوقات تک آسانی سے پہنچنے میں مدد ملے۔ میں اپنے والدین کا تہِ دل سے شکر گزار ہوں جنہوں نے میرے اندر دین کی محبت پیدا کی (اللہ انہیں جزائے خیر دے)۔\n\nمیں اپنے ہائی اسکول کے استاد جناب جو سلوی کا بھی شکریہ ادا کرنا چاہتا ہوں، جنہوں نے مسلمان نہ ہونے کے باوجود ہماری مسلم اسٹوڈنٹ ایسوسی ایشن کا ساتھ دیا اور ہفتہ وار نمازِ جمعہ کے انتظام میں ہماری مدد کی۔"
+          }
+        }
+      }
+    },
     "This app was inspired by my desire to help new reverts and non-Muslims learn about Islam and easily access the Quran and prayer times. I’m deeply grateful to my parents for instilling in me a love for the faith (may Allah reward them).\n\nI also want to express my gratitude to my high school teacher, Mr. Joe Silvey, who, despite not being Muslim, stood with our Muslim Student Association and helped us organize weekly Jumuah prayers." : {
       "localizations" : {
         "ar" : {
@@ -175151,6 +177354,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "یہ ایپ میری اس خواہش سے وجود میں آئی کہ نئے مسلمانوں اور غیر مسلموں کو اسلام کے بارے میں جاننے اور قرآن مجید اور نماز کے اوقات تک آسانی سے پہنچنے میں مدد ملے۔ میں اپنے والدین کا تہِ دل سے شکر گزار ہوں جنہوں نے میرے اندر دین کی محبت پیدا کی (اللہ انہیں جزائے خیر دے)۔\n\nمیں اپنے ہائی اسکول کے استاد جناب جو سلوی کا بھی شکریہ ادا کرنا چاہتا ہوں، جنہوں نے مسلمان نہ ہونے کے باوجود ہماری مسلم اسٹوڈنٹ ایسوسی ایشن کا ساتھ دیا اور ہفتہ وار نمازِ جمعہ کے انتظام میں ہماری مدد کی۔"
+          }
+        }
+      }
+    },
+    "This app was inspired by my desire to help new reverts and non-Muslims learn about Islam and easily access the Quran. I’m deeply grateful to my parents for instilling in me a love for the faith (may Allah reward them).\n\nI also want to express my gratitude to my high school teacher, Mr. Joe Silvey, who, despite not being Muslim, stood with our Muslim Student Association and helped us organize weekly Jumuah prayers." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "استُلهم هذا التطبيق من رغبتي في مساعدة المسلمين الجدد وغير المسلمين على التعرّف على الإسلام والوصول بسهولة إلى القرآن. وأنا ممتنّ جدًا لوالديّ اللذين غرسا فيّ حبّ الدين (جزاهما الله خيرًا).\n\nوأودّ أيضًا أن أعبّر عن امتناني لمعلّمي في المرحلة الثانوية، الأستاذ جو سيلفي، الذي وقف مع جمعية الطلاب المسلمين رغم أنه ليس مسلمًا، وساعدنا على تنظيم صلاة الجمعة كل أسبوع."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہ ایپ میری اس خواہش سے وجود میں آئی کہ نئے مسلمانوں اور غیر مسلموں کو اسلام کے بارے میں جاننے اور قرآن مجید تک آسانی سے پہنچنے میں مدد ملے۔ میں اپنے والدین کا تہِ دل سے شکر گزار ہوں جنہوں نے میرے اندر دین کی محبت پیدا کی (اللہ انہیں جزائے خیر دے)۔\n\nمیں اپنے ہائی اسکول کے استاد جناب جو سلوی کا بھی شکریہ ادا کرنا چاہتا ہوں، جنہوں نے مسلمان نہ ہونے کے باوجود ہماری مسلم اسٹوڈنٹ ایسوسی ایشن کا ساتھ دیا اور ہفتہ وار نمازِ جمعہ کے انتظام میں ہماری مدد کی۔"
+          }
+        }
+      }
+    },
+    "This app won the Swift Student Challenge 2024. View its source code on GitHub here" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فاز هذا التطبيق في مسابقة «Swift Student Challenge» لعام ٢٠٢٤. اعرض شيفرته المصدرية على GitHub من هنا"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہ ایپ «Swift Student Challenge» 2024 میں کامیاب رہی۔ اس کا سورس کوڈ یہاں GitHub پر دیکھیں"
           }
         }
       }
@@ -175579,6 +177816,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "اس سے وہ سب کچھ حذف ہو جاتا ہے جو آپ نے اس %@ پر بنایا: %@، نیز آپ کی تلاش کی تاریخ اور محفوظ کردہ مقامات۔ ایپ ویسی ہی ہو جاتی ہے جیسی نئی انسٹال کرنے پر ہوتی ہے، اور یہ %@ اپنی iCloud بیک اپ پروفائل بھول جاتا ہے (iCloud میں پہلے سے موجود بیک اپ تب تک رہتا ہے جب تک آپ اسے وہاں سے حذف نہ کریں)۔ اسے واپس نہیں کیا جا سکتا۔"
+          }
+        }
+      }
+    },
+    "This deletes everything you made on this device, like bookmarks, favorites, progress and counters, plus your search history and saved locations. The app is left as it was on a fresh install. This cannot be undone." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يحذف هذا كل ما صنعته على هذا الجهاز، مثل العلامات والمفضّلة والتقدّم والعدّادات، إضافة إلى سجل البحث والمواقع المحفوظة. يعود التطبيق كما كان عند تثبيته أول مرة. لا يمكن التراجع عن ذلك."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس سے وہ سب کچھ حذف ہو جاتا ہے جو آپ نے اس ڈیوائس پر بنایا، جیسے بک مارکس، پسندیدہ، پیش رفت اور کاؤنٹر، نیز آپ کی تلاش کی تاریخ اور محفوظ کردہ مقامات۔ ایپ ویسی ہی ہو جاتی ہے جیسی نئی انسٹال کرنے پر ہوتی ہے۔ اسے واپس نہیں کیا جا سکتا۔"
           }
         }
       }
@@ -180823,7 +183077,22 @@
       },
       "extractionState" : "stale"
     },
-    "Transmits Khalaf's own ikhtiyar, not Hamzah's reading: the hamzah in full at a stop, no sakt, four counts on the madd." : {},
+    "Transmits Khalaf's own ikhtiyar, not Hamzah's reading: the hamzah in full at a stop, no sakt, four counts on the madd." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يروي اختيار خلف نفسه، لا قراءة حمزة: تحقيق الهمزة وقفًا، ولا سكت، وأربع حركات في المد."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خلف کا اپنا اختیار روایت کرتا ہے، حمزہ کی قراءت نہیں: وقف کے وقت ہمزہ تحقیق کے ساتھ، کوئی سکتہ نہیں، مد میں چار حرکات۔"
+          }
+        }
+      }
+    },
     "Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas'ud, Abu Musa al-Ash'ari, Abdullah ibn Abbas, Ubayy ibn Ka'b, Zayd ibn Thabit, and Abu Hurayrah (may Allah be pleased with them)." : {
       "localizations" : {
         "ar" : {
@@ -183429,11 +185698,86 @@
         }
       }
     },
-    "Two hamzahs in one word: the second is softened and an alef slipped between them, ءَٰا۬نذَرۡتَهُمُۥ. The name إِسۡرَآيلَ loses its hamzah altogether." : {},
-    "Two hamzahs in one word: the second softened with an alef slipped between, ءَٰا۬نذَرۡتَهُمۡ." : {},
-    "Two hamzahs meeting between words: Qalun drops the first, جَا أَحَدٞ, هَٰؤُلَآ۟ إِن; Warsh softens the second. The plural mim: Qalun may join it with a waw (two ways are transmitted), Warsh only before a hamzah, عَلَيۡهِمُۥٓ ءَآنذَرۡتَهُمُۥٓ." : {},
-    "Two hamzahs meeting between words: al-Bazzi drops the first, جَا أَحَدٞ; Qunbul softens the second. Qunbul also reads الصراط with a seen, ٱلصِّۜرَٰطَ." : {},
-    "Two hamzahs meeting between words: the first is dropped, هَٰٓؤُلَآ إِن. As-Susi also turns every resting hamzah into a long vowel, يُومِنُونَ, تُومَرُونَ; ad-Duri keeps it." : {},
+    "Two hamzahs in one word: the second is softened and an alef slipped between them, ءَٰا۬نذَرۡتَهُمُۥ. The name إِسۡرَآيلَ loses its hamzah altogether." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الهمزتان في كلمة واحدة: تُسهَّل الثانية وتُدخَل ألف بينهما، ءَٰا۬نذَرۡتَهُمُۥ. واسم إِسۡرَآيلَ تسقط همزته البتة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایک کلمے میں دو ہمزے: دوسرے کی تسہیل اور ان کے درمیان الف داخل، ءَٰا۬نذَرۡتَهُمُۥ۔ نام إِسۡرَآيلَ اپنا ہمزہ بالکل کھو دیتا ہے۔"
+          }
+        }
+      }
+    },
+    "Two hamzahs in one word: the second softened with an alef slipped between, ءَٰا۬نذَرۡتَهُمۡ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الهمزتان في كلمة واحدة: تسهيل الثانية مع إدخال ألف بينهما، ءَٰا۬نذَرۡتَهُمۡ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایک کلمے میں دو ہمزے: دوسرے کی تسہیل درمیان میں الف کے ساتھ، ءَٰا۬نذَرۡتَهُمۡ۔"
+          }
+        }
+      }
+    },
+    "Two hamzahs meeting between words: Qalun drops the first, جَا أَحَدٞ, هَٰؤُلَآ۟ إِن; Warsh softens the second. The plural mim: Qalun may join it with a waw (two ways are transmitted), Warsh only before a hamzah, عَلَيۡهِمُۥٓ ءَآنذَرۡتَهُمُۥٓ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الهمزتان المتلاقيتان بين كلمتين: يُسقط قالون الأولى، جَا أَحَدٞ، هَٰؤُلَآ۟ إِن؛ ويسهّل ورش الثانية. وميم الجمع: يجوز لقالون صلتها بواو (الوجهان مرويان)، وورش قبل الهمزة فقط، عَلَيۡهِمُۥٓ ءَآنذَرۡتَهُمُۥٓ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دو کلموں کے درمیان ملنے والے دو ہمزے: قالون پہلا گراتے ہیں، جَا أَحَدٞ، هَٰؤُلَآ۟ إِن؛ ورش دوسرے کی تسہیل کرتے ہیں۔ میم جمع: قالون اسے واو کے ساتھ ملا سکتے ہیں (دونوں وجہیں منقول ہیں)، ورش صرف ہمزہ سے پہلے، عَلَيۡهِمُۥٓ ءَآنذَرۡتَهُمُۥٓ۔"
+          }
+        }
+      }
+    },
+    "Two hamzahs meeting between words: al-Bazzi drops the first, جَا أَحَدٞ; Qunbul softens the second. Qunbul also reads الصراط with a seen, ٱلصِّۜرَٰطَ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الهمزتان المتلاقيتان بين كلمتين: يُسقط البزي الأولى، جَا أَحَدٞ؛ ويسهّل قنبل الثانية. ويقرأ قنبل أيضًا الصراط بالسين، ٱلصِّۜرَٰطَ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دو کلموں کے درمیان ملنے والے دو ہمزے: بزی پہلا گراتے ہیں، جَا أَحَدٞ؛ قنبل دوسرے کی تسہیل کرتے ہیں۔ قنبل الصراط کو سین سے بھی پڑھتے ہیں، ٱلصِّۜرَٰطَ۔"
+          }
+        }
+      }
+    },
+    "Two hamzahs meeting between words: the first is dropped, هَٰٓؤُلَآ إِن. As-Susi also turns every resting hamzah into a long vowel, يُومِنُونَ, تُومَرُونَ; ad-Duri keeps it." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الهمزتان المتلاقيتان بين كلمتين: تُسقَط الأولى، هَٰٓؤُلَآ إِن. ويُبدل السوسي أيضًا كل همزة ساكنة حرف مد، يُومِنُونَ، تُومَرُونَ؛ ويُثبتها الدوري."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دو کلموں کے درمیان ملنے والے دو ہمزے: پہلا گرا دیا جاتا ہے، هَٰٓؤُلَآ إِن۔ سوسی ہر ساکن ہمزہ کو حرفِ مد میں بھی بدلتے ہیں، يُومِنُونَ، تُومَرُونَ؛ دوری اسے باقی رکھتے ہیں۔"
+          }
+        }
+      }
+    },
     "Two harfi mukhaffaf" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -183708,7 +186052,22 @@
         }
       }
     },
-    "Two mushafs carry his name and read differently. One titled Khalaf an Hamzah is Hamzah's reading as ash-Shatibiyyah transmits it; one titled Khalaf al-Ashir is his own reading as ad-Durrah transmits it, with the hamzah in full at a stop and no sakt. A student should check which one the teacher wants. This app carries both." : {},
+    "Two mushafs carry his name and read differently. One titled Khalaf an Hamzah is Hamzah's reading as ash-Shatibiyyah transmits it; one titled Khalaf al-Ashir is his own reading as ad-Durrah transmits it, with the hamzah in full at a stop and no sakt. A student should check which one the teacher wants. This app carries both." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مصحفان يحملان اسمه ويختلفان في القراءة. أحدهما بعنوان خلف عن حمزة، وهو قراءة حمزة كما ترويها الشاطبية؛ والآخر بعنوان خلف العاشر، وهو قراءته هو كما ترويها الدرة، بتحقيق الهمزة وقفًا ومن غير سكت. وعلى الطالب أن يتبيّن أيهما يريد الشيخ. وهذا التطبيق يحمل كليهما."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دو مصحف ان کا نام رکھتے ہیں اور مختلف پڑھے جاتے ہیں۔ ایک خلف عن حمزہ کے نام سے، جو حمزہ کی قراءت ہے جیسے شاطبیہ اسے روایت کرتی ہے؛ دوسرا خلف العاشر کے نام سے، جو ان کی اپنی قراءت ہے جیسے الدرۃ اسے روایت کرتی ہے، وقف کے وقت ہمزہ تحقیق کے ساتھ اور بغیر سکتے کے۔ طالب علم کو دیکھ لینا چاہیے کہ استاد کون سا چاہتے ہیں۔ یہ ایپ دونوں رکھتی ہے۔"
+          }
+        }
+      }
+    },
     "Two of the ten, kaaf and taa, also stop the sound dead (shiddah). The sound is cut first, and a small puff of breath follows it." : {
       "localizations" : {
         "ar" : {
@@ -187632,8 +189991,38 @@
         }
       }
     },
-    "WHAT STANDS OUT IN THIS READING" : {},
-    "WHAT STANDS OUT IN THIS RIWAYAH" : {},
+    "WHAT STANDS OUT IN THIS READING" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ما يميّز هذه القراءة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس قراءت کی نمایاں باتیں"
+          }
+        }
+      }
+    },
+    "WHAT STANDS OUT IN THIS RIWAYAH" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ما يميّز هذه الرواية"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس روایت کی نمایاں باتیں"
+          }
+        }
+      }
+    },
     "WHAT TAJWEED IS" : {
       "localizations" : {
         "ar" : {
@@ -189129,7 +191518,22 @@
       },
       "extractionState" : "stale"
     },
-    "Warsh and Qalun differ more than any other pair of narrators, so Nafi is learned as two readings in practice." : {},
+    "Warsh and Qalun differ more than any other pair of narrators, so Nafi is learned as two readings in practice." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يختلف ورش وقالون أكثر من أي راويين آخرين، ولذلك تُؤخذ قراءة نافع عمليًّا قراءتين."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ورش اور قالون راویوں کے کسی بھی دوسرے جوڑے سے زیادہ مختلف ہیں، اس لیے عملاً نافع کی قراءت دو قراءتوں کے طور پر سیکھی جاتی ہے۔"
+          }
+        }
+      }
+    },
     "Warsh is a later invention" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -189147,7 +191551,22 @@
         }
       }
     },
-    "Warsh moves a hamzah's vowel onto the resting letter before it, قَدَ اَفۡلَحَ, وَبِالَاخِرَةِ, and turns a resting hamzah into a long vowel, يُومِنُونَ; Qalun keeps the hamzah, يُؤۡمِنُونَ." : {},
+    "Warsh moves a hamzah's vowel onto the resting letter before it, قَدَ اَفۡلَحَ, وَبِالَاخِرَةِ, and turns a resting hamzah into a long vowel, يُومِنُونَ; Qalun keeps the hamzah, يُؤۡمِنُونَ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ينقل ورش حركة الهمزة إلى الساكن قبلها، قَدَ اَفۡلَحَ، وَبِالَاخِرَةِ، ويُبدل الهمزة الساكنة حرف مد، يُومِنُونَ؛ ويُثبت قالون الهمزة، يُؤۡمِنُونَ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ورش ہمزہ کی حرکت اس سے پہلے کے ساکن حرف پر منتقل کرتے ہیں، قَدَ اَفۡلَحَ، وَبِالَاخِرَةِ، اور ساکن ہمزہ کو حرفِ مد میں بدلتے ہیں، يُومِنُونَ؛ قالون ہمزہ باقی رکھتے ہیں، يُؤۡمِنُونَ۔"
+          }
+        }
+      }
+    },
     "Warsh reads 2, 4 or 6 here. Hafs reads 2 only." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -189165,7 +191584,22 @@
         }
       }
     },
-    "Warsh thickens the lam after ص, ط and ظ, ٱلصَّلَوٰةَ, and thins the ra after a kasra, sounds a Hafs reader notices at once. Basmalah between every two surahs for Qalun; Warsh has three ways." : {},
+    "Warsh thickens the lam after ص, ط and ظ, ٱلصَّلَوٰةَ, and thins the ra after a kasra, sounds a Hafs reader notices at once. Basmalah between every two surahs for Qalun; Warsh has three ways." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يغلّظ ورش اللام بعد ص وط وظ، ٱلصَّلَوٰةَ، ويرقّق الراء بعد الكسرة، وهي أصوات يلحظها قارئ حفص من فوره. والبسملة بين كل سورتين عند قالون؛ ولورش ثلاثة أوجه."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ورش ص، ط اور ظ کے بعد لام کی تغلیظ کرتے ہیں، ٱلصَّلَوٰةَ، اور کسرہ کے بعد را کی ترقیق، ایسی آوازیں جو حفص کا قاری فوراً محسوس کرتا ہے۔ قالون کے ہاں ہر دو سورتوں کے درمیان بسملہ؛ ورش کے ہاں تین وجہیں۔"
+          }
+        }
+      }
+    },
     "Warsh was Egyptian, and travelled to Madinah to read the whole Quran on Nafi several times over before returning to Egypt to teach. Nafi gave him the nickname Warsh, said to be after a kind of white curd, for his fair complexion." : {
       "localizations" : {
         "ar" : {
@@ -189917,7 +192351,22 @@
         }
       }
     },
-    "What a listener hears is not always what the page writes. Reading on, Hamzah pronounces every hamzah in full. When he stops on a word, a hamzah in its middle or at its end is eased, following the written form: turned into a long vowel, moved onto the letter before it, or softened. Every recording stops at the end of each ayah, so the last word of every ayah is heard without its hamzah (قَدۡ أَفۡلَحَ ٱلۡمُؤۡمِنُونَ ends in al-muuminoon), while a mushaf prints the continuous form and keeps it. The test is the same word mid-ayah, where the reciter keeps going: in 4:92 Khalaf reads li-mu'minin and mu'minan with the hamzah in full." : {},
+    "What a listener hears is not always what the page writes. Reading on, Hamzah pronounces every hamzah in full. When he stops on a word, a hamzah in its middle or at its end is eased, following the written form: turned into a long vowel, moved onto the letter before it, or softened. Every recording stops at the end of each ayah, so the last word of every ayah is heard without its hamzah (قَدۡ أَفۡلَحَ ٱلۡمُؤۡمِنُونَ ends in al-muuminoon), while a mushaf prints the continuous form and keeps it. The test is the same word mid-ayah, where the reciter keeps going: in 4:92 Khalaf reads li-mu'minin and mu'minan with the hamzah in full." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ليس ما يسمعه السامع دائمًا ما تكتبه الصفحة. فحمزة يحقق كل همزة وصلًا. وإذا وقف على كلمة خُففت الهمزة في وسطها أو آخرها على حسب الرسم: فتُبدَل حرف مد، أو تُنقل حركتها إلى الحرف قبلها، أو تُسهَّل. وكل تسجيل يقف على رأس كل آية، فتُسمَع الكلمة الأخيرة من كل آية بلا همزتها (قَدۡ أَفۡلَحَ ٱلۡمُؤۡمِنُونَ تنتهي بـ «المومنون»)، بينما يطبع المصحف صورة الوصل ويُثبتها. والمحكّ هو الكلمة نفسها في وسط الآية حيث يمضي القارئ: ففي ٤:٩٢ يقرأ خلف «لمؤمنٍ» و«مؤمنًا» بتحقيق الهمزة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سننے والا جو سنتا ہے وہ ہمیشہ وہ نہیں جو صفحہ لکھتا ہے۔ وصل میں حمزہ ہر ہمزہ تحقیق کے ساتھ پڑھتے ہیں۔ جب وہ کسی لفظ پر وقف کرتے ہیں تو اس کے درمیان یا آخر کا ہمزہ رسم کے مطابق خفیف ہو جاتا ہے: حرفِ مد میں بدل کر، پچھلے حرف پر منتقل کر کے، یا تسہیل کے ساتھ۔ ہر ریکارڈنگ ہر آیت کے آخر پر رکتی ہے، اس لیے ہر آیت کا آخری لفظ اپنے ہمزہ کے بغیر سنائی دیتا ہے (قَدۡ أَفۡلَحَ ٱلۡمُؤۡمِنُونَ «المومنون» پر ختم ہوتا ہے)، جبکہ مصحف وصل کی صورت چھاپتا ہے اور اسے باقی رکھتا ہے۔ کسوٹی آیت کے درمیان وہی لفظ ہے جہاں قاری پڑھتا چلا جاتا ہے: 4:92 میں خلف «لمؤمنٍ» اور «مؤمنًا» ہمزہ کی تحقیق کے ساتھ پڑھتے ہیں۔"
+          }
+        }
+      }
+    },
     "What a shaddah actually is: a sakin ب, then a ب with a fatha, said as one press." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -196620,7 +199069,22 @@
         }
       }
     },
-    "Word-forms that follow the Damascus mushaf's own spelling: سَارِعُوٓاْ without the waw, فَلَا يَخَافُ for وَلَا يَخَافُ, and a dozen more." : {},
+    "Word-forms that follow the Damascus mushaf's own spelling: سَارِعُوٓاْ without the waw, فَلَا يَخَافُ for وَلَا يَخَافُ, and a dozen more." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فرش يتبع رسم المصحف الشامي نفسه: سَارِعُوٓاْ بلا واو، وفَلَا يَخَافُ مكان وَلَا يَخَافُ، ونحو اثني عشر موضعًا غيرها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایسی لفظی صورتیں جو خود دمشقی مصحف کے رسم کی پیروی کرتی ہیں: سَارِعُوٓاْ بغیر واو، وَلَا يَخَافُ کی جگہ فَلَا يَخَافُ، اور درجن بھر اور۔"
+          }
+        }
+      }
+    },
     "Words" : {
       "localizations" : {
         "ar" : {
@@ -200198,7 +202662,21 @@
       }
     },
     "Your journal stays on this device (it is in the app's Documents, so an iCloud or iTunes backup carries it). Export it as text any time from the menu." : {
-      "extractionState" : "stale"
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تبقى يومياتك على هذا الجهاز (فهي ضمن مستندات التطبيق، فتشملها النسخة الاحتياطية للجهاز على iCloud أو على الكمبيوتر). ويمكنك تصديرها كنص في أي وقت من القائمة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آپ کی ڈائری اسی ڈیوائس پر رہتی ہے (یہ ایپ کی دستاویزات میں ہے، اس لیے ڈیوائس کا iCloud یا کمپیوٹر والا بیک اپ اسے بھی شامل کرتا ہے)۔ مینو سے کسی بھی وقت اسے متن کی صورت میں برآمد کریں۔"
+          }
+        }
+      }
     },
     "Your journal stays on this device (it is in the app's Documents, so an iCloud or iTunes backup carries it, and iCloud Backup in Settings can keep it too). Export it as text any time from the menu." : {
       "localizations" : {
@@ -200312,6 +202790,23 @@
         }
       }
     },
+    "Your prayers and badges" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صلواتك وأوسمتك"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آپ کی نمازیں اور بیجز"
+          }
+        }
+      }
+    },
     "Your prayers, reading, and badges" : {
       "localizations" : {
         "ar" : {
@@ -200344,6 +202839,23 @@
         }
       }
     },
+    "Your question is understood first (a greeting, a how-to, a question about the app), then searched across this app’s own prayer times, articles, duas, Names of Allah and tips." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يُفهم سؤالك أولًا (تحية، أو طريقة لفعل شيء، أو سؤال عن التطبيق)، ثم يُبحث عنه في مواقيت الصلاة والمقالات والأدعية وأسماء الله الحسنى والنصائح الموجودة في هذا التطبيق."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پہلے آپ کا سوال سمجھا جاتا ہے (کوئی سلام، کسی کام کا طریقہ، ایپ کے بارے میں کوئی سوال)، پھر اسے اس ایپ کے اپنے نماز کے اوقات، مضامین، دعاؤں، اللہ کے ناموں اور تجاویز میں تلاش کیا جاتا ہے۔"
+          }
+        }
+      }
+    },
     "Your question is understood first (a greeting, a verse, a how-to, a question about the app), then searched across this app’s own Quran, hadith collections, tafsir, articles, duas, Names of Allah and tips." : {
       "localizations" : {
         "ar" : {
@@ -200356,6 +202868,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "پہلے آپ کا سوال سمجھا جاتا ہے (کوئی سلام، کوئی آیت، کسی کام کا طریقہ، ایپ کے بارے میں کوئی سوال)، پھر اسے اس ایپ کے اپنے قرآن مجید، احادیث کے مجموعوں، تفسیر، مضامین، دعاؤں، اللہ کے ناموں اور تجاویز میں تلاش کیا جاتا ہے۔"
+          }
+        }
+      }
+    },
+    "Your question is understood first (a greeting, a verse, a how-to, a question about the app), then searched across this app’s own Quran, tafsir, articles, duas, Names of Allah and tips." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يُفهم سؤالك أولًا (تحية، أو آية، أو طريقة لفعل شيء، أو سؤال عن التطبيق)، ثم يُبحث عنه في القرآن والتفسير والمقالات والأدعية وأسماء الله الحسنى والنصائح الموجودة في هذا التطبيق."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پہلے آپ کا سوال سمجھا جاتا ہے (کوئی سلام، کوئی آیت، کسی کام کا طریقہ، ایپ کے بارے میں کوئی سوال)، پھر اسے اس ایپ کے اپنے قرآن مجید، تفسیر، مضامین، دعاؤں، اللہ کے ناموں اور تجاویز میں تلاش کیا جاتا ہے۔"
+          }
+        }
+      }
+    },
+    "Your reading and badges" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قراءتك وأوسمتك"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آپ کا مطالعہ اور بیجز"
           }
         }
       }
@@ -205843,6 +208389,23 @@
         }
       }
     },
+    "extras like Need a Hand? step aside" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تتنحّى الإضافات مثل «هل تحتاج إلى مساعدة؟» جانبًا"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«مدد چاہیے؟» جیسی اضافی چیزیں ایک طرف ہو جاتی ہیں"
+          }
+        }
+      }
+    },
     "fa, so (straight after): so pray to your Lord and sacrifice" : {
       "localizations" : {
         "ar" : {
@@ -210337,6 +212900,23 @@
         }
       }
     },
+    "prayer times, the adhan, the Qibla and more, in one place." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مواقيت الصلاة والأذان والقبلة وغير ذلك، في مكان واحد."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نماز کے اوقات، اذان، قبلہ اور بہت کچھ، ایک ہی جگہ پر۔"
+          }
+        }
+      }
+    },
     "prayers" : {
       "localizations" : {
         "ar" : {
@@ -212442,6 +215022,23 @@
       },
       "extractionState" : "stale"
     },
+    "the Islam and Settings tabs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تبويب الإسلام وتبويب الإعدادات"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اسلام اور ترتیبات کے ٹیب"
+          }
+        }
+      }
+    },
     "the Juz and Simple Juz sorts, under the ⋯ menu's Sort" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -212492,6 +215089,23 @@
         }
       }
     },
+    "the Quran and the app's articles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "القرآن الكريم ومقالات التطبيق"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن مجید اور ایپ کے مضامین"
+          }
+        }
+      }
+    },
     "the Quran tab's search" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -212509,6 +215123,23 @@
         }
       }
     },
+    "the Quran with its tajweed, translations and reciters, in one place." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "القرآن الكريم مع تجويده وترجماته وقرّائه، في مكان واحد."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن مجید اپنی تجوید، تراجم اور قاریوں کے ساتھ، ایک ہی جگہ پر۔"
+          }
+        }
+      }
+    },
     "the Quran, Hadith, Islam, and Settings tabs" : {
       "localizations" : {
         "ar" : {
@@ -212521,6 +215152,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "قرآن، حدیث، اسلام اور ترتیبات کے ٹیب"
+          }
+        }
+      }
+    },
+    "the Quran, Islam, and Settings tabs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تبويبات القرآن والإسلام والإعدادات"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن، اسلام اور ترتیبات کے ٹیب"
           }
         }
       }
@@ -212568,6 +215216,23 @@
         }
       },
       "extractionState" : "stale"
+    },
+    "the app's articles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مقالات التطبيق"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایپ کے مضامین"
+          }
+        }
+      }
     },
     "the article al-" : {
       "localizations" : {
