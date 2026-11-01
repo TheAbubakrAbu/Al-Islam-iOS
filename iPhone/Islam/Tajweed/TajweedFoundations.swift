@@ -623,6 +623,24 @@ struct TajweedOverviewView: View {
 
                     ArticleParagraph(verbatim: String(localized: "Together, they ensure that each letter is pronounced distinctly and correctly."))
 
+                    // Abu, 2026-10-31: "give each letter its due haqq and instead of treating letters
+                    // together just go one by one": the principle the two components serve, and the
+                    // two slips it guards against (a vowel leaking into its neighbour; a heavy letter
+                    // weighing down a light one).
+                    ArticleCallout(paragraphs: [
+                        String(localized: "Every letter has its due (haqq): its own makhraj and its own qualities, which it keeps whatever stands beside it. A master of tajweed gives each letter that due one letter at a time, and never lets two letters blur into one sound."),
+                        String(localized: "The common slip is to let a neighbouring letter leak in. In يَوۡم the yaa carries a fathah and the waw is silent: ya, then w, then m. Many readers round the fathah toward the waw and say \"yuwm\", with a small dammah that is not written there. Read the yaa with a plain fathah, then close the lips for the waw."),
+                        String(localized: "The same leak happens between heavy and light letters. In خَلَقَ the khaa and the qaaf are heavy and the laam between them is light: a heavy laam here is its two neighbours marbled into it. Articulate each letter on its own, then join them."),
+                    ], title: String(localized: "One Letter at a Time"), systemImage: "square.stack.3d.up.fill")
+
+                    TajweedWordCard(String(localized: "Letter by letter"), words: [
+                        TajweedWord("يَوۡم", "yawm", note: String(localized: "ya + w + m: no dammah on the yaa")),
+                        TajweedWord("خَلَقَ", "kha-la-qa", note: String(localized: "khaa heavy, laam light, qaaf heavy")),
+                    ])
+
+                    TajweedFix(wrong: String(localized: "\"yuwm\": the waw colouring the yaa"),
+                               right: String(localized: "\"yawm\": a plain fathah, then the silent waw"))
+
                     ArticleParagraph(verbatim: String(localized: "These elements are essential because even slight changes in pronunciation can alter meanings. Tajweed preserves not only the beauty of the Quran, but also its accuracy and integrity. The Quran was revealed to be recited, and Allah commands:"))
 
                     ScriptureQuote(quran: "73:4", words: 3...5)

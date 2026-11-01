@@ -501,7 +501,7 @@ enum TipCatalog {
                place: InterfaceText("Prayer Settings, Traveling Mode"), destination: .prayerPage(.travelingMode), tour: true, card: (InterfaceText("Auto Traveling Mode"), InterfaceText("Notices when you are 48 miles from home and offers to shorten your prayers."))),
         AppTip(id: "adhan.autocalc", area: .adhan, group: InterfaceText("TRAVEL AND CALCULATION"), systemImage: "function",
                title: InterfaceText("The method follows the country"),
-               detail: InterfaceText("With Choose Automatically on, the calculation method changes to the one customary where you are, and asks you first. The list of methods is searchable."),
+               detail: InterfaceText("With Choose Automatically on, the calculation method changes to the one customary where you are, then tells you, so you can keep the one you had. The list of methods is searchable."),
                place: InterfaceText("Prayer Settings, Prayer Calculation"), destination: .prayerPage(.prayerCalculation)),
         AppTip(id: "adhan.angles", area: .adhan, group: InterfaceText("TRAVEL AND CALCULATION"), systemImage: "angle",
                title: InterfaceText("Match your mosque's angles"),
@@ -622,9 +622,24 @@ enum TipCatalog {
                detail: InterfaceText("Test Mode, in the reader's play menu, hides the Quran's text in both readers until you tap an ayah, so you can recite from memory and check yourself. Its settings choose whether the Arabic alone or everything hides, whether a tap shows one ayah or everything before it too, and whether Reveal as It's Recited uncovers each ayah as the reciter reaches it. Hide All Again, in the same menu, starts over."),
                place: InterfaceText("Quran reader, play menu"), destination: .quranPage(.testMode), tour: true, card: (InterfaceText("Test Mode"), InterfaceText("Hide the text, recite from memory, tap an ayah to check."))),
         AppTip(id: "quran.menushortcuts", area: .quran, group: InterfaceText("READING"), systemImage: "hand.tap.fill",
-               title: InterfaceText("Double tap for a shortcut"),
-               detail: InterfaceText("Double tap an ayah's text, anywhere off a word, to play just that ayah. Tap its play button for Choose Reciter, Repeat Ayah, Play From Ayah and Play This Ayah; double tap the button to play from there to the end of the surah, or hold it for a custom range. Double tap its ellipsis to copy; hold to share. The reader's own play button at the bottom opens its menu on a tap: double tap it to play the surah, or hold it for a custom range (Choose Reciter, in a riwayah other than Hafs). Hadith ellipsis buttons use the same copy and share shortcuts. A Copied badge confirms when the copy is ready. With VoiceOver, use the named actions or the menu."),
+               title: InterfaceText("Hold a button for a shortcut"),
+               detail: InterfaceText("Double tap an ayah's text, anywhere off a word, to play just that ayah. Tap its play button for Choose Reciter, Repeat Ayah, Play From Ayah and Play This Ayah, or hold it for a custom range. Hold its ellipsis to share. The reader's own play button at the bottom opens its menu on a tap; hold it for a custom range (Choose Reciter, in a riwayah other than Hafs). Hadith ellipsis buttons share on a hold too. Every menu opens the moment you tap it. With VoiceOver, use the named actions or the menu."),
                place: InterfaceText("Ayah and hadith controls"), isAvailable: { hasMenuShortcuts }),
+        AppTip(id: "quran.pinchzoom", area: .quran, group: InterfaceText("READING"), systemImage: "plus.magnifyingglass",
+               title: InterfaceText("Pinch an ayah to zoom in"),
+               detail: pinchZoomDetail,
+               place: InterfaceText("Quran list reader")),
+        // Checked against `ArabicTextRiwayahPicker.qiraahMenuContent` and `Settings.Riwayah.PickerSort`
+        // (2026-11-01).
+        AppTip(id: "quran.riwayahsort", area: .quran, group: InterfaceText("READING"), systemImage: "arrow.up.arrow.down",
+               title: InterfaceText("Sort the riwayah picker"),
+               detail: InterfaceText("Every riwayah picker ends in Sort By. Default keeps one submenu per qiraah, the imams in alphabetical order. Alphabetical and Most Common list every riwayah in one list, by the narrator's name or by how widely it is recited. Date orders the qiraat by the year each imam died, and 7 + 3 does the same with the Seven before the Three. Hafs an Asim stays the first row in every order."),
+               place: InterfaceText("Riwayah picker"), isAvailable: { Settings.shared.showQiraahDetails }),
+        // Checked against `TajweedLegendExamples` (2026-11-01).
+        AppTip(id: "quran.legendexamples", area: .quran, group: InterfaceText("READING"), systemImage: "text.magnifyingglass",
+               title: InterfaceText("See each tajweed rule in an ayah"),
+               detail: InterfaceText("Open a rule in the Legend, in the basic list or on its full card, and an example ayah follows its note: one ayah in the Quran face with only that rule's letters colored. A riwayah's rules show the earliest short ayah its printed mushaf colors with them, and how many words of its text the rule colors; the comparison of all riwayat carries the same counts."),
+               place: InterfaceText("Tajweed Legend")),
         // The two settings the app was first known for, written down so the Beginner Features list can
         // open them (2026-10-26). Checked against SettingsQuranView (Enable Arabic Beginner Mode on Arabic
         // Text, Show Transliteration on English Text) and `AyahDisplayOption.beginner`.
@@ -1127,6 +1142,16 @@ enum TipCatalog {
         ], separator: " ")
     }
 
+    /// The in-place pinch (`RowZoomPinch`, 2026-11-01): on an ayah row, and on a hadith row where the app
+    /// has hadith.
+    private static var pinchZoomDetail: InterfaceText {
+        #if HAS_HADITH
+        return InterfaceText("Spread two fingers on an ayah in the list reader, or on a hadith, and that one grows in place, up to three times its size; pinch back in to return it to the reader's size. The zoom lasts while the screen is open. The page reader zooms the whole page the same way.")
+        #else
+        return InterfaceText("Spread two fingers on an ayah in the list reader and that one grows in place, up to three times its size; pinch back in to return it to the reader's size. The zoom lasts while the screen is open. The page reader zooms the whole page the same way.")
+        #endif
+    }
+
     /// The tabs whose ⋯ menu answers a hold (`TabMoreMenu(hold:)`); the Adhan tab's does not. A hold and
     /// not a double tap since 2026-10-26: the double tap made every plain tap wait (see `ShortcutMenu`).
     private static var menuShortcutDetail: InterfaceText {
@@ -1255,6 +1280,11 @@ struct TipsSection: View {
 
     var body: some View {
         Section(header: Text("DISCOVER")) {
+            // The tab's tutorial leads (TabTutorials.swift): the basics before what is easy to miss.
+            if let tab = TutorialTab(tipsArea: area) {
+                TutorialDoorRow(tab: tab)
+            }
+
             NavigationLink(destination: LazyDestination { TipsView(area: area, resolve: resolve) }) {
                 SettingsRowLabel(title: String(localized: "Tips & Tricks"), systemImage: "lightbulb.fill",
                                  subtitle: String(localized: "\(TipCatalog.tips(in: area).count) things that are easy to miss"),
@@ -1508,11 +1538,9 @@ struct TipRow: View {
 
 // MARK: - The tour
 
-/// The tutorial: an area's `tour` tips as cards to swipe through, one idea to a card.
+/// The tour: an area's `tour` tips as cards to swipe through, one idea to a card. The pager and the
+/// card are shared with the tab tutorials (TabTutorials.swift), so the two tours look and act alike.
 struct TipsTourView: View {
-    private let settings = Settings.shared
-    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
-    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.dismiss) private var dismiss
 
     let area: TipArea
@@ -1522,35 +1550,69 @@ struct TipsTourView: View {
     /// A title of its own, when the cards are not one area's ("Only in Al-Islam").
     var title: String? = nil
 
-    @State private var page = 0
-
     private var cards: [AppTip] { tips ?? TipCatalog.tour(in: area) }
 
     var body: some View {
+        let cards = cards
         SheetNavigationContainer {
-            VStack(spacing: 0) {
-                TabView(selection: $page) {
-                    ForEach(Array(cards.enumerated()), id: \.element.id) { index, tip in
-                        TipTourCard(tip: tip, index: index, count: cards.count)
-                            .tag(index)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-
-                footer
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
+            TourPager(ids: cards.map(\.id), onFinish: { dismiss() }) { index in
+                let tip = cards[index]
+                TourCard(systemImage: tip.systemImage, tint: tip.area.tint, secondaryTint: tip.area.secondaryTint,
+                         index: index, count: cards.count, title: tip.title, detail: tip.detail, place: tip.place)
             }
             .navigationTitle(title ?? area.tourTitle)
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
     }
+}
+
+/// The page-style pager both tours swipe through: the cards, the dots under them, and Next, which
+/// reads Finish on the last card. `ids` names the cards, so a card keeps its identity as the set
+/// changes; `initialPage` lets a DEBUG launch open on a given card for a screenshot.
+struct TourPager<Card: View>: View {
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
+
+    let ids: [String]
+    let onFinish: () -> Void
+    @ViewBuilder let card: (Int) -> Card
+
+    @State private var page: Int
+
+    init(ids: [String], initialPage: Int = 0, onFinish: @escaping () -> Void, @ViewBuilder card: @escaping (Int) -> Card) {
+        self.ids = ids
+        self.onFinish = onFinish
+        self.card = card
+        _page = State(initialValue: min(max(initialPage, 0), max(ids.count - 1, 0)))
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            TabView(selection: $page) {
+                ForEach(Array(ids.enumerated()), id: \.element) { index, _ in
+                    card(index)
+                        .tag(index)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            // A "Show me" trip can take a card away (Show Sky turned off hides the sky's): the page
+            // stays on a card that exists, or no dot would be lit and the pager would show nothing.
+            .onChange(of: ids) { ids in
+                page = min(page, max(ids.count - 1, 0))
+            }
+
+            footer
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+        }
+    }
 
     private var footer: some View {
         VStack(spacing: 14) {
             HStack(spacing: 6) {
-                ForEach(cards.indices, id: \.self) { index in
+                ForEach(ids.indices, id: \.self) { index in
                     Capsule()
                         .fill(index == page ? settings.accentColor.color : Color.secondary.opacity(0.3))
                         .frame(width: index == page ? 18 : 6, height: 6)
@@ -1561,13 +1623,13 @@ struct TipsTourView: View {
 
             Button {
                 settings.hapticFeedback()
-                if page < cards.count - 1 {
+                if page < ids.count - 1 {
                     withAnimation(.easeInOut) { page += 1 }
                 } else {
-                    dismiss()
+                    onFinish()
                 }
             } label: {
-                Text(page < cards.count - 1 ? String(localized: "Next") : String(localized: "Finish"))
+                Text(page < ids.count - 1 ? String(localized: "Next") : String(localized: "Finish"))
                     .font(.headline)
                     .foregroundColor(.primary)
                     .frame(maxWidth: .infinity)
@@ -1578,41 +1640,87 @@ struct TipsTourView: View {
     }
 }
 
-private struct TipTourCard: View {
-    @Environment(\.appearance) private var appearance
+/// One card of a tour: the icon chip, "N of M", the title, the detail, where it is done, an optional
+/// line of live state (the tutorial's home city), and up to two buttons that open the real thing.
+/// The first wears the Location card's Change capsule; the second is plain accent text.
+struct TourCard: View {
+    struct Action: Identifiable {
+        let id: String
+        let title: String
+        let systemImage: String
+        let perform: () -> Void
+    }
 
-    let tip: AppTip
+    @Environment(\.appearance) private var appearance
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    let systemImage: String
+    let tint: Color
+    var secondaryTint: Color? = nil
     let index: Int
     let count: Int
+    let title: String
+    let detail: String
+    let place: String
+    var status: AnyView? = nil
+    var actions: [Action] = []
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
+        // At the accessibility sizes a card runs past the screen, its buttons below the fold: the
+        // indicator says there is more to scroll to.
+        ScrollView(showsIndicators: dynamicTypeSize.isAccessibilitySize) {
             VStack(spacing: 18) {
-                AccentIconChip(systemImage: tip.systemImage, tint: tip.area.tint,
-                               secondaryTint: tip.area.secondaryTint, size: 92)
+                AccentIconChip(systemImage: systemImage, tint: tint, secondaryTint: secondaryTint, size: 92)
                     .padding(.top, 28)
 
                 Text("\(index + 1) of \(count)")
                     .font(.caption.weight(.semibold))
                     .foregroundColor(.secondary)
 
-                Text(tip.title)
+                Text(title)
                     .font(.title2.bold())
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text(tip.detail.localizedDigits)
+                Text(detail.localizedDigits)
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Label(tip.place, systemImage: "mappin.and.ellipse")
+                Label(place, systemImage: "mappin.and.ellipse")
                     .font(.footnote.weight(.semibold))
                     .foregroundColor(appearance.accent)
                     .padding(.vertical, 7)
                     .padding(.horizontal, 12)
                     .background(Capsule().fill(appearance.accent.opacity(0.12)))
+
+                if let status {
+                    status
+                }
+
+                if !actions.isEmpty {
+                    VStack(spacing: 10) {
+                        ForEach(Array(actions.enumerated()), id: \.element.id) { position, action in
+                            Button {
+                                Settings.shared.hapticFeedback()
+                                action.perform()
+                            } label: {
+                                Label(action.title, systemImage: action.systemImage)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(appearance.accent)
+                                    .multilineTextAlignment(.center)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 9)
+                                    .background(Capsule().fill(appearance.accent.opacity(position == 0 ? 0.14 : 0)))
+                                    .contentShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.top, 2)
+                }
             }
             .padding(.horizontal, 28)
             .padding(.bottom, 24)

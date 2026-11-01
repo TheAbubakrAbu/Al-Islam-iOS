@@ -198,6 +198,32 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
         }
     }
 
+    /// The ayah the legend shows this rule in (Hafs an Asim's text): short, familiar, and carrying
+    /// the rule where the engine colors it; `TajweedLegendExampleTests` holds each to that. Several rules
+    /// share al-Fatihah on purpose, the surah every reader knows by heart.
+    var exampleAyah: (surah: Int, ayah: Int) {
+        switch self {
+        case .lamShamsiyah: return (91, 1)          // وَٱلشَّمْسِ
+        case .droppedLetter: return (2, 5)          // أُولَـٰئِكَ, the silent waw
+        case .hamzatWaslSilent: return (1, 2)       // لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ
+        case .idghamBilaGhunnah: return (2, 2)      // هُدًى لِّلْمُتَّقِينَ
+        case .idghamGhunnah: return (104, 8)        // عَلَيۡهِم مُّؤۡصَدَةٞ (the engine's ghunnah merge: the meem into meem)
+        case .generalGhunnah: return (114, 1)       // ٱلنَّاسِ
+        case .ikhfaaLight: return (2, 3)            // يُنفِقُونَ
+        case .ikhfaaHeavy: return (2, 4)            // مِن قَبْلِكَ
+        case .iqlaab: return (96, 15)               // لَنَسْفَعًا بِٱلنَّاصِيَةِ
+        case .qalqalah: return (85, 1)              // ٱلْبُرُوجِ
+        case .tafkhim: return (1, 1)                // ٱلرَّحْمَـٰنِ
+        case .maddNatural: return (1, 5)            // إِيَّاكَ (1:2's ٱلۡعَـٰلَمِينَ writes its alif as a dagger: a tiny mark)
+        case .maddNaturalMiniature: return (1, 1)   // the dagger alif of ٱلرَّحْمَـٰنِ
+        case .maddSukoon: return (1, 5)             // نَسْتَعِينُ
+        case .maddSeparated: return (108, 1)        // إِنَّآ أَعْطَيْنَـٰكَ
+        case .maddConnected: return (110, 1)        // جَآءَ
+        case .maddNecessary: return (1, 7)          // ٱلضَّآلِّينَ
+        @unknown default: return (1, 1)
+        }
+    }
+
     var countLabel: String? {
         switch self {
         case .maddNatural, .maddNaturalMiniature, .idghamGhunnah, .generalGhunnah, .ikhfaaLight, .ikhfaaHeavy, .iqlaab:

@@ -985,18 +985,25 @@ struct AyahContextMenuModifier: ViewModifier {
 
                         menuItems(surahObj: surahObj)
                     } label: {
+                        // The compact HadithRow's size (a 19 pt glyph in a 22 pt glass square), not the
+                        // reader's 25/28: the reference pill beside it grew to 28 pt on 2026-10-22 and
+                        // this button grew with it, which read as too big next to the hadith results'
+                        // (Abu, 2026-11-01: "for ayah search the 3 ellipses button is too big ... is
+                        // fine with Hadith"). Centered in the 28 pt slot the row reserves, which stays
+                        // the hit target.
                         Image(systemName: "ellipsis.circle")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .frame(width: 25, height: 25)
+                            .frame(width: 19, height: 19)
                             .foregroundColor(settings.accentColor.color)
                             .conditionalGlassEffect()
+                            .frame(width: 22, height: 22)
                             .frame(width: 28, height: 28)
                             .contentShape(Rectangle())
                     }
                     // Lands in the 28pt slot the compact search row reserves at its header's
-                    // trailing edge, the HadithRow's full-size pill-and-ellipsis pair (its 28pt
-                    // reference pill sits beside it); the 2pt matches the row's own vertical padding.
+                    // trailing edge, beside its 28pt reference pill; the 2pt matches the row's own
+                    // vertical padding.
                     .padding(.top, 2)
                 }
             }
@@ -1043,15 +1050,8 @@ struct AyahContextMenuModifier: ViewModifier {
                             surah: surahObj,
                             displayQiraah: settings.displayQiraahForArabic
                         ),
-                        onPlay: { start, end, repAyah, repSec in
-                            quranPlayer.playCustomRange(
-                                surahNumber: surahObj.id,
-                                surahName: surahObj.nameTransliteration,
-                                startAyah: start,
-                                endAyah: end,
-                                repeatPerAyah: repAyah,
-                                repeatSection: repSec
-                            )
+                        onPlay: { selection in
+                            quranPlayer.playCustomRange(selection)
                         },
                         onCancel: { showCustomRangeSheet = false }
                     )

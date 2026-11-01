@@ -293,6 +293,9 @@ private struct MainTabView: View {
                 }
             }
             #endif
+            // Every tab's tutorial, asked for from its ⋯ menu or its nudge: one sheet here instead of
+            // another bridge on each tab (TabTutorials.swift).
+            .tabTutorialPresenter()
             // (A tapped prayer notification's "Did you pray X?" is not hosted here: it is presented
             // over whatever is on screen by `PrayerNotificationPrompt`, AppDelegate.swift.)
             // A Sunnah reminder's tap (or its "Open" row anywhere in Settings) lands on the Quran

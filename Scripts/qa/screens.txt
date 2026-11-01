@@ -12,6 +12,11 @@ adhan-travel|8|-travelingMode 1
 adhan-travel-off|6|-travelingMode 0
 adhan-catchup|8|-adhanCatchUpProbe
 adhan-daily-rollover|8|-dailyRolloverProbe
+tutorial-adhan|9|-tutorial adhan
+tutorial-adhan-homecity|9|-tutorial adhan -tutorialCard 2
+tutorial-quran|9|-launchTabQuran -noAutoOpenMushaf -tutorial quran
+tutorial-hadith|9|-launchTabHadith -tutorial hadith
+tutorial-islam|9|-launchTabIslam -tutorial islam
 quran-list|8|-launchTabQuran -quranListMode -noAutoOpenMushaf
 quran-list-surah|9|-launchTabQuran -quranListMode -lastRead 2:255
 quran-page|10|-launchTabQuran -quranPageMode -lastRead 2:255

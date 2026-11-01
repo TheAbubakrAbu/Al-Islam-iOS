@@ -725,10 +725,14 @@ struct QiraatPlacePickerSheet: View {
     /// `ayah` nil = a surah was picked, else the place.
     let onPick: (_ surah: Int, _ ayah: Int?) -> Void
 
-    @State private var tab = 0
+    /// This Surah | All Surahs, remembered across openings (Abu, 2026-11-01: "the picker should be app
+    /// storage").
+    @AppStorage("qiraatPlacePickerScope") private var tab = 0
     @State private var searchText = ""
 
     private var quranData: QuranData { QuranData.shared }
+
+    private static func surahRowID(_ surah: Int) -> String { "surah-\(surah)" }
 
     private var store: QiraatPlacesStore { QiraatPlacesStore.shared }
     private var accent: Color { appearance.accent }
@@ -736,43 +740,60 @@ struct QiraatPlacePickerSheet: View {
     var body: some View {
         let _ = RenderCounter.hit("QiraatPlacePickerSheet")
         SheetNavigationContainer {
-            List {
-                Group {
-                    if tab == 0 {
-                        thisSurahSection
-                    } else {
-                        surahsSection
+            ScrollViewReader { proxy in
+                List {
+                    Group {
+                        if tab == 0 {
+                            thisSurahSection
+                        } else {
+                            surahsSection
+                        }
+                    }
+                    .themedListRowBackground()
+                }
+                .applyConditionalListStyle(disableNowPlayingInset: true)
+                .compactListSectionSpacing()
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    Picker("Scope", selection: $tab) {
+                        Text("This Surah").tag(0)
+                        Text("All Surahs").tag(1)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial)
+                    .overlay(Divider(), alignment: .bottom)
+                }
+                .adaptiveSafeArea(edge: .bottom) {
+                    if tab == 1 {
+                        SearchBar(text: $searchText, placeholder: String(localized: "Search surahs"))
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, BottomBarCushion.standard)
+                            .background(Color.white.opacity(0.00001))
                     }
                 }
-                .themedListRowBackground()
+                .navigationTitle("Go to a Place")
+                .navigationBarTitleDisplayMode(.inline)
+                .sheetDismissToolbar()
+                .accentWashedBackground()
+                .onAppear { landOnCurrentSurah(proxy) }
+                .onChange(of: tab) { _ in landOnCurrentSurah(proxy) }
             }
-            .applyConditionalListStyle(disableNowPlayingInset: true)
-            .compactListSectionSpacing()
-            .safeAreaInset(edge: .top, spacing: 0) {
-                Picker("Scope", selection: $tab) {
-                    Text("This Surah").tag(0)
-                    Text("All Surahs").tag(1)
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(.ultraThinMaterial)
-                .overlay(Divider(), alignment: .bottom)
-            }
-            .adaptiveSafeArea(edge: .bottom) {
-                if tab == 1 {
-                    SearchBar(text: $searchText, placeholder: String(localized: "Search surahs"))
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, BottomBarCushion.standard)
-                        .background(Color.white.opacity(0.00001))
-                }
-            }
-            .navigationTitle("Go to a Place")
-            .navigationBarTitleDisplayMode(.inline)
-            .sheetDismissToolbar()
-            .accentWashedBackground()
         }
         .smallMediumSheetPresentation()
+    }
+
+    /// All Surahs opens on the surah the explorer is in (Abu, 2026-11-01: "should scroll down to what
+    /// surah I'm in and should highlight it"). Two non-animated jumps: the sheet is still presenting
+    /// when the list first appears, and a scope switch has just swapped the rows.
+    private func landOnCurrentSurah(_ proxy: ScrollViewProxy) {
+        guard tab == 1 else { return }
+        let target = Self.surahRowID(surahID)
+        for delay in [0.25, 0.7] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                proxy.scrollTo(target, anchor: .center)
+            }
+        }
     }
 
     private var thisSurahSection: some View {
@@ -794,6 +815,7 @@ struct QiraatPlacePickerSheet: View {
                     placeRow(ayah)
                 }
                 .buttonStyle(.plain)
+                .rowWash(ayah == hafsAyah ? ReaderRowTint.accent(accent, defaultView: appearance.defaultView) : nil)
             }
         }
     }
@@ -847,6 +869,7 @@ struct QiraatPlacePickerSheet: View {
     private var surahsSection: some View {
         Section(header: Text("SURAHS")) {
             ForEach(filteredSurahs) { surah in
+                let isCurrent = surah.id == surahID
                 Button {
                     Settings.shared.hapticFeedback()
                     onPick(surah.id, nil)
@@ -860,15 +883,25 @@ struct QiraatPlacePickerSheet: View {
                         VStack(alignment: .leading, spacing: 2) {
                             // The Arabic interface names the surah once, in Arabic, where the
                             // transliteration sits (no meaning line, no trailing Arabic name).
-                            if AppLanguage.isArabicScript {
-                                Text(surah.nameArabic)
-                                    .font(.custom(appearance.quranDisplayFace, size: 18))
-                                    .arabicFontDesign(custom: true)
-                                    .foregroundColor(surah.id == surahID ? accent : .primary)
-                            } else {
-                                Text(surah.nameTransliteration)
-                                    .font(.subheadline.weight(surah.id == surahID ? .semibold : .regular))
-                                    .foregroundColor(surah.id == surahID ? accent : .primary)
+                            HStack(spacing: 6) {
+                                if AppLanguage.isArabicScript {
+                                    Text(surah.nameArabic)
+                                        .font(.custom(appearance.quranDisplayFace, size: 18))
+                                        .arabicFontDesign(custom: true)
+                                        .foregroundColor(isCurrent ? accent : .primary)
+                                } else {
+                                    Text(surah.nameTransliteration)
+                                        .font(.subheadline.weight(isCurrent ? .semibold : .regular))
+                                        .foregroundColor(isCurrent ? accent : .primary)
+                                }
+                                // The place rows' pin: the surah the explorer is in.
+                                if isCurrent {
+                                    Image(systemName: "location.fill")
+                                        .font(.caption2)
+                                        .foregroundColor(accent)
+                                }
+                            }
+                            if !AppLanguage.isArabicScript {
                                 Text(surah.nameEnglish)
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
@@ -891,6 +924,9 @@ struct QiraatPlacePickerSheet: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .id(Self.surahRowID(surah.id))
+                // The whole cell, like every "you are here" row in the app (see rowWash).
+                .rowWash(isCurrent ? ReaderRowTint.accent(accent, defaultView: appearance.defaultView) : nil)
             }
         }
     }

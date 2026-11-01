@@ -84,6 +84,8 @@ final class NowPlayingState: ObservableObject {
         var nowPlayingReciter: String?
         var customRangeStartAyah: Int?
         var customRangeEndAyah: Int?
+        var customRangeStartSurahNumber: Int?
+        var customRangeEndSurahNumber: Int?
         var customRangeRepeatPerAyah = 1
         var customRangeRepeatSection = 1
         var customRangeCurrentIndex: Int?
@@ -109,6 +111,8 @@ final class NowPlayingState: ObservableObject {
     var nowPlayingReciter: String? { snapshot.nowPlayingReciter }
     var customRangeStartAyah: Int? { snapshot.customRangeStartAyah }
     var customRangeEndAyah: Int? { snapshot.customRangeEndAyah }
+    var customRangeStartSurahNumber: Int? { snapshot.customRangeStartSurahNumber }
+    var customRangeEndSurahNumber: Int? { snapshot.customRangeEndSurahNumber }
     var customRangeRepeatPerAyah: Int { snapshot.customRangeRepeatPerAyah }
     var customRangeRepeatSection: Int { snapshot.customRangeRepeatSection }
     var customRangeCurrentIndex: Int? { snapshot.customRangeCurrentIndex }
@@ -134,6 +138,7 @@ final class NowPlayingState: ObservableObject {
                 isPlayingSurah: player.isPlayingSurah, isPlayingCustomRange: player.isPlayingCustomRange,
                 nowPlayingTitle: player.nowPlayingTitle, nowPlayingReciter: player.nowPlayingReciter,
                 customRangeStartAyah: player.customRangeStartAyah, customRangeEndAyah: player.customRangeEndAyah,
+                customRangeStartSurahNumber: player.customRangeStartSurahNumber, customRangeEndSurahNumber: player.customRangeEndSurahNumber,
                 customRangeRepeatPerAyah: player.customRangeRepeatPerAyah, customRangeRepeatSection: player.customRangeRepeatSection,
                 customRangeCurrentIndex: player.customRangeCurrentIndex, customRangeTotalItems: player.customRangeTotalItems,
                 customRangeCurrentRepeatWithinAyah: player.customRangeCurrentRepeatWithinAyah,
@@ -248,6 +253,10 @@ final class QuranPlayer: ObservableObject {
 
     @Published private(set) var customRangeStartAyah: Int?
     @Published private(set) var customRangeEndAyah: Int?
+    /// The surahs the playing range spans (2026-10-31: a range may run past its surah into the next
+    /// ones, for a juz). Both nil when no range plays; equal for a range inside one surah.
+    @Published private(set) var customRangeStartSurahNumber: Int?
+    @Published private(set) var customRangeEndSurahNumber: Int?
     @Published private(set) var customRangeRepeatPerAyah: Int = 1
     @Published private(set) var customRangeRepeatSection: Int = 1
     @Published private(set) var customRangeCurrentIndex: Int?
@@ -495,9 +504,10 @@ final class QuranPlayer: ObservableObject {
                 QuranPlayer.shared.logPlaybackProbe()
             }
         }
-        // `-playCustomRange s:a:b[:perAyah[:section]]`: ayah-by-ayah range playback, for verifying the
-        // reader's playback-driven page turns headlessly (pick a range that crosses a page boundary),
-        // and repeats: `112:1:4:2:inf` plays each ayah twice and the range forever.
+        // `-playCustomRange s:a:b[:perAyah[:section[:endSurah]]]`: ayah-by-ayah range playback, for
+        // verifying the reader's playback-driven page turns headlessly (pick a range that crosses a page
+        // boundary), and repeats: `112:1:4:2:inf` plays each ayah twice and the range forever;
+        // `113:1:3:1:1:114` runs from 113:1 to 114:3, across the surah end.
         if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-playCustomRange"),
            ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
             let fields = ProcessInfo.processInfo.arguments[idx + 1].split(separator: ":").map(String.init)
@@ -508,6 +518,7 @@ final class QuranPlayer: ObservableObject {
                     QuranPlayer.shared.playCustomRange(
                         surahNumber: parts[0], surahName: name,
                         startAyah: parts[1], endAyah: parts[2],
+                        endSurahNumber: parts.count > 5 ? parts[5] : nil,
                         repeatPerAyah: parts.count > 3 ? parts[3] : 1,
                         repeatSection: parts.count > 4 ? parts[4] : 1
                     )
@@ -1336,6 +1347,9 @@ final class QuranPlayer: ObservableObject {
         customRangeSurahName = ""
         setIfChanged(\.customRangeStartAyah, nil)
         setIfChanged(\.customRangeEndAyah, nil)
+        setIfChanged(\.customRangeStartSurahNumber, nil)
+        setIfChanged(\.customRangeEndSurahNumber, nil)
+        customRangeAyahCount = 1
         setIfChanged(\.customRangeRepeatPerAyah, 1)
         setIfChanged(\.customRangeRepeatSection, 1)
         setIfChanged(\.customRangeCurrentIndex, nil)
@@ -2030,9 +2044,16 @@ final class QuranPlayer: ObservableObject {
     /// and pushed the real last ayah down into history (2026-10-04). `saveLastListenedAyah` checks it.
     private var isPlayingBismillah = false
 
-    private var customRangeSequence: [(ayahNumber: Int, isBismillah: Bool)] = []
+    /// Every play of the range in order, each with its surah: a range may cross into later surahs
+    /// (a juz, 2026-10-31), so an ayah number alone no longer names an item.
+    private var customRangeSequence: [(surahNumber: Int, ayahNumber: Int, isBismillah: Bool)] = []
+    /// The range's first surah and its stored name (`Surah.displayName(id:stored:)`); the ayahs of
+    /// later surahs take their names from `quranData`.
     private var customRangeSurahNumber: Int = 0
     private var customRangeSurahName: String = ""
+    /// Distinct ayahs in one pass of the range, across its surahs: the items of a section are this
+    /// many times the per-ayah repeats.
+    private var customRangeAyahCount: Int = 1
 
     /// False when a check failed on the spot (the failure is then on its way to the alert, which is
     /// raised a main-queue turn later); true when playback started or is fetching.
@@ -2158,11 +2179,16 @@ final class QuranPlayer: ObservableObject {
         confirmedMinshawiAyahFallbackReciterIDsRaw = ids.joined(separator: Self.minshawiConfirmationSeparator)
     }
 
+    /// `endSurahNumber` lets the range end in a LATER surah than it starts in (2026-10-31, Abu: "allow
+    /// me to go beyond the surah so if I want to review a juz"): one pass then runs from
+    /// `surahNumber:startAyah` through every ayah of the surahs between to `endSurahNumber:endAyah`.
+    /// nil (the default) keeps the range inside `surahNumber`.
     func playCustomRange(
         surahNumber: Int,
         surahName: String,
         startAyah: Int,
         endAyah: Int,
+        endSurahNumber: Int? = nil,
         repeatPerAyah: Int,
         repeatSection: Int,
         initialSequenceIndex: Int = 0,
@@ -2177,12 +2203,17 @@ final class QuranPlayer: ObservableObject {
             presentPlaybackFailure(String(localized: "This surah could not be found. Please try again."))
             return
         }
+        let endSurah = endSurahNumber ?? surahNumber
+        guard endSurah >= surahNumber, let lastSurah = quranData.quran.first(where: { $0.id == endSurah }) else {
+            presentPlaybackFailure(String(localized: "This surah could not be found. Please try again."))
+            return
+        }
         guard startAyah >= 1, startAyah <= surah.numberOfAyahs,
-              endAyah >= 1, endAyah <= surah.numberOfAyahs else {
+              endAyah >= 1, endAyah <= lastSurah.numberOfAyahs else {
             presentPlaybackFailure(String(localized: "The selected ayah range is not valid for this surah."))
             return
         }
-        guard startAyah <= endAyah else {
+        guard endSurah > surahNumber || startAyah <= endAyah else {
             presentPlaybackFailure(String(localized: "The range start cannot be after the range end."))
             return
         }
@@ -2198,11 +2229,18 @@ final class QuranPlayer: ObservableObject {
         let section = loops ? 1 : max(1, repeatSection)
         let repeats = perAyah > 1 || section > 1 || loops
 
-        var sequence: [(ayahNumber: Int, isBismillah: Bool)] = []
+        // One pass of the range: every ayah from its start to its end, surah by surah.
+        let passAyahs = Self.customRangePassAyahs(startSurah: surahNumber, startAyah: startAyah,
+                                                  endSurah: endSurah, endAyah: endAyah) { number in
+            number == surahNumber ? surah.numberOfAyahs
+                : number == endSurah ? lastSurah.numberOfAyahs
+                : (quranData.quran.first(where: { $0.id == number })?.numberOfAyahs ?? 0)
+        }
+        var sequence: [(surahNumber: Int, ayahNumber: Int, isBismillah: Bool)] = []
         for _ in 1...section {
-            for ayah in startAyah...endAyah {
+            for ayah in passAyahs {
                 for _ in 1...perAyah {
-                    sequence.append((ayah, false))
+                    sequence.append((ayah.surahNumber, ayah.ayahNumber, false))
                 }
             }
         }
@@ -2216,13 +2254,16 @@ final class QuranPlayer: ObservableObject {
         // loop to carry: its section is in the index.
         let initialPass = loops ? max(0, initialPass) : 0
         let first = sequence[initialIndex]
+        // The ayah the range starts (or resumes) on may sit in a later surah of the range.
+        guard let firstSurah = first.surahNumber == surahNumber ? surah : quranData.quran.first(where: { $0.id == first.surahNumber })
+        else { return }
 
         // A range that REPEATS plays every ayah from a file downloaded once (Abu, 2026-09-26): the
         // first ayah is fetched before playback starts, the rest in order behind it, and each item of
         // the queue is built from the local copy. The old queue made a fresh streamed item for every
         // repetition, which downloaded the same ayah again each time.
         if repeats, !streamIfUncached,
-           let remote = ayahFileToFetch(forSurah: surah, reciter: reciter, ayahNumber: first.ayahNumber, isBismillah: first.isBismillah) {
+           let remote = ayahFileToFetch(forSurah: firstSurah, reciter: reciter, ayahNumber: first.ayahNumber, isBismillah: first.isBismillah) {
             setupAudioSession()
             isLoading = true
             // A DIFFERENT range that was playing is over now, not once this download lands: its state
@@ -2233,6 +2274,7 @@ final class QuranPlayer: ObservableObject {
             let rebuildsPlayingRange = isPlayingCustomRange
                 && customRangeSurahNumber == surahNumber
                 && customRangeStartAyah == startAyah && customRangeEndAyah == endAyah
+                && customRangeEndSurahNumber == endSurah
                 && customRangeRepeatPerAyah == perAyah
                 && customRangeRepeatSection == (loops ? Self.infiniteRepeat : section)
             if !rebuildsPlayingRange { resetCustomRangeState() }
@@ -2248,7 +2290,7 @@ final class QuranPlayer: ObservableObject {
                 // download; this is that play continuing, so the request is carried across it.
                 let pauseRequested = self.pausedDuringRepeatFetch
                 self.playCustomRange(surahNumber: surahNumber, surahName: surahName, startAyah: startAyah,
-                                     endAyah: endAyah, repeatPerAyah: perAyah, repeatSection: repeatSection,
+                                     endAyah: endAyah, endSurahNumber: endSurah, repeatPerAyah: perAyah, repeatSection: repeatSection,
                                      initialSequenceIndex: initialIndex, initialPass: initialPass,
                                      streamIfUncached: local == nil)
                 self.pausedDuringRepeatFetch = pauseRequested
@@ -2261,7 +2303,8 @@ final class QuranPlayer: ObservableObject {
         customRangeToken = UUID()
         // Another range starts its recovery count afresh; a rebuild of this one (a skip, a jump, a
         // recovery, the fetch-first re-entry) keeps it.
-        if customRangeSurahNumber != surahNumber || customRangeStartAyah != startAyah || customRangeEndAyah != endAyah {
+        if customRangeSurahNumber != surahNumber || customRangeStartAyah != startAyah || customRangeEndAyah != endAyah
+            || customRangeEndSurahNumber != endSurah {
             customRangeRecoveries = [:]
         }
         customRangeSequence = sequence
@@ -2269,6 +2312,9 @@ final class QuranPlayer: ObservableObject {
         customRangeSurahName = surahName
         customRangeStartAyah = startAyah
         customRangeEndAyah = endAyah
+        customRangeStartSurahNumber = surahNumber
+        customRangeEndSurahNumber = endSurah
+        customRangeAyahCount = passAyahs.count
         customRangeRepeatPerAyah = perAyah
         customRangeRepeatSection = loops ? Self.infiniteRepeat : section
         customRangeLoops = loops
@@ -2280,10 +2326,10 @@ final class QuranPlayer: ObservableObject {
         customRangeCurrentIndex = initialIndex + 1
         customRangeTotalItems = sequence.count
         customRangeCurrentRepeatWithinAyah = ((initialIndex % perAyah) + 1)
-        let itemsPerSection = max(1, (endAyah - startAyah + 1) * perAyah)
+        let itemsPerSection = max(1, passAyahs.count * perAyah)
         customRangeRepeatSectionIndex = loops ? initialPass + 1 : (initialIndex / itemsPerSection) + 1
 
-        currentSurahNumber = surahNumber
+        currentSurahNumber = first.surahNumber
         currentAyahNumber = first.ayahNumber
         isPlayingSurah = false
         isPlayingBismillah = false
@@ -2295,12 +2341,14 @@ final class QuranPlayer: ObservableObject {
         setupAudioSession()
         isLoading = true
 
-        guard let firstItem = makeItem(forSurah: surah, reciter: reciter, ayahNumber: first.ayahNumber, isBismillah: first.isBismillah) else {
+        guard let firstItem = makeItem(forSurah: firstSurah, reciter: reciter, ayahNumber: first.ayahNumber, isBismillah: first.isBismillah) else {
             isLoading = false
             presentPlaybackFailure(String(localized: "Unable to prepare the first ayah for this range."), title: String(localized: "Range Playback Failed"))
             customRangeSequence = []
             customRangeStartAyah = nil
             customRangeEndAyah = nil
+            customRangeStartSurahNumber = nil
+            customRangeEndSurahNumber = nil
             return
         }
         firstItem.preferredForwardBufferDuration = ayahStartupBuffer
@@ -2321,12 +2369,13 @@ final class QuranPlayer: ObservableObject {
         observeBuffering(of: q)
 
         if let next = nextCustomRangePosition(after: (initialIndex, initialPass)) {
-            enqueueCustomRangeItem(at: next, in: q, surah: surah, reciter: reciter)
+            enqueueCustomRangeItem(at: next, in: q, reciter: reciter)
         }
         // Every other ayah of the range, fetched in order while the first plays.
         if customRangeFetchesFirst {
-            let rest = (startAyah...endAyah).compactMap {
-                ayahFileToFetch(forSurah: surah, reciter: reciter, ayahNumber: $0, isBismillah: false)
+            let rest = passAyahs.compactMap { ayah -> URL? in
+                guard let ayahSurah = quranData.surah(ayah.surahNumber) else { return nil }
+                return ayahFileToFetch(forSurah: ayahSurah, reciter: reciter, ayahNumber: ayah.ayahNumber, isBismillah: false)
             }
             PlaybackAudioCache.shared.prefetch(rest)
         }
@@ -2349,9 +2398,7 @@ final class QuranPlayer: ObservableObject {
                     }
                     self.isPlaying = !held
                     self.isPaused = held
-                    let (ayahNum, isBismillah) = self.customRangeSequence[initialIndex]
-                    let base = self.customRangeTitle(ayahNum: ayahNum, isBismillah: isBismillah, zeroBasedIndex: initialIndex, pass: initialPass)
-                    self.nowPlayingTitle = base
+                    self.nowPlayingTitle = self.customRangeTitle(at: initialIndex, pass: initialPass)
                     self.nowPlayingReciter = self.ayahNowPlayingReciterName(for: reciter)
                     self.updateNowPlayingInfo()
                 } else if itm.status == .failed {
@@ -2380,7 +2427,7 @@ final class QuranPlayer: ObservableObject {
                     // first. Only a range that has reached its end stops.
                     if let last = self.customRangeLastPosition,
                        let next = self.nextCustomRangePosition(after: last) {
-                        self.recoverCustomRangeItem(at: next, in: qPlayer, surah: surah, reciter: reciter)
+                        self.recoverCustomRangeItem(at: next, in: qPlayer, reciter: reciter)
                         return
                     }
                     self.stop()
@@ -2393,20 +2440,20 @@ final class QuranPlayer: ObservableObject {
                       position.index >= 0, position.index < self.customRangeSequence.count else { return }
                 let zeroBasedIndex = position.index
 
-                let (ayahNum, isBismillah) = self.customRangeSequence[zeroBasedIndex]
+                let entry = self.customRangeSequence[zeroBasedIndex]
                 let perAyah = max(1, self.customRangeRepeatPerAyah)
-                let numAyahsInRange = (self.customRangeEndAyah ?? 1) - (self.customRangeStartAyah ?? 1) + 1
-                let itemsPerSection = numAyahsInRange * perAyah
+                let itemsPerSection = max(1, self.customRangeAyahCount) * perAyah
 
                 self.customRangeLastPosition = position
-                self.currentAyahNumber = ayahNum
+                // The range may have crossed into its next surah with this item.
+                if self.currentSurahNumber != entry.surahNumber { self.currentSurahNumber = entry.surahNumber }
+                self.currentAyahNumber = entry.ayahNumber
                 self.customRangeCurrentIndex = zeroBasedIndex + 1
                 self.customRangeCurrentRepeatWithinAyah = (zeroBasedIndex % perAyah) + 1
                 self.customRangeRepeatSectionIndex = self.customRangeLoops
                     ? position.pass + 1
                     : (zeroBasedIndex / max(1, itemsPerSection)) + 1
-                self.nowPlayingTitle = self.customRangeTitle(ayahNum: ayahNum, isBismillah: isBismillah,
-                                                             zeroBasedIndex: zeroBasedIndex, pass: position.pass)
+                self.nowPlayingTitle = self.customRangeTitle(at: zeroBasedIndex, pass: position.pass)
                 self.nowPlayingReciter = self.ayahNowPlayingReciterName(for: reciter)
                 self.updateNowPlayingInfo()
                 self.saveLastListenedAyah()
@@ -2419,7 +2466,7 @@ final class QuranPlayer: ObservableObject {
                 // Keep only a lightweight queue (current + next) to prevent large-memory lag spikes.
                 if qPlayer.items().count < 2, self.customRangeAwaitedPosition == nil,
                    let next = self.nextCustomRangePosition(after: position) {
-                    self.enqueueCustomRangeItem(at: next, in: qPlayer, surah: surah, reciter: reciter)
+                    self.enqueueCustomRangeItem(at: next, in: qPlayer, reciter: reciter)
                 }
             }
         }
@@ -2464,9 +2511,11 @@ final class QuranPlayer: ObservableObject {
     /// whose first bytes were late at the hand-off froze AVQueuePlayer at 0:00 while it reported playing,
     /// or skipped the ayah's first seconds (see `enqueueContinueItem`, which Play From Ayah shares this
     /// rule with). A failed download still streams that one ayah.
-    private func enqueueCustomRangeItem(at position: (index: Int, pass: Int), in q: AVQueuePlayer, surah: Surah, reciter: Reciter) {
+    private func enqueueCustomRangeItem(at position: (index: Int, pass: Int), in q: AVQueuePlayer, reciter: Reciter) {
         guard position.index < customRangeSequence.count else { return }
         let entry = customRangeSequence[position.index]
+        // The entry's own surah: a range that runs past its first surah queues the next one's ayahs.
+        guard let surah = quranData.surah(entry.surahNumber) else { return }
         let token = customRangeToken
         let insert = { [weak self, weak q] in
             guard let self, let q, self.queuePlayer === q, self.isPlayingCustomRange, self.customRangeToken == token else { return }
@@ -2485,7 +2534,7 @@ final class QuranPlayer: ObservableObject {
                     // The dry-queue branch may have reached it first.
                     if let awaited = self.customRangeAwaitedPosition, awaited == position { return }
                     self.customRangeItemFailureObservers[ObjectIdentifier(itm)] = nil
-                    self.recoverCustomRangeItem(at: position, in: q, surah: surah, reciter: reciter,
+                    self.recoverCustomRangeItem(at: position, in: q, reciter: reciter,
                                                 failedItem: itm, error: itm.error)
                 }
             }
@@ -2502,7 +2551,8 @@ final class QuranPlayer: ObservableObject {
             if let after = self.nextCustomRangePosition(after: position),
                after.index < self.customRangeSequence.count {
                 let upcoming = self.customRangeSequence[after.index]
-                if let remote = self.ayahFileToFetch(forSurah: surah, reciter: reciter, ayahNumber: upcoming.ayahNumber,
+                if let upcomingSurah = self.quranData.surah(upcoming.surahNumber),
+                   let remote = self.ayahFileToFetch(forSurah: upcomingSurah, reciter: reciter, ayahNumber: upcoming.ayahNumber,
                                                      isBismillah: upcoming.isBismillah) {
                     PlaybackAudioCache.shared.fetch(remote) { _ in }
                 }
@@ -2529,13 +2579,17 @@ final class QuranPlayer: ObservableObject {
     /// next item while the current one plays, so the failure lands mid-ayah). A second failure at
     /// the same place means the file is bad at its source or the network is gone: that one raises
     /// the alert, as the first item of a range always did.
-    private func recoverCustomRangeItem(at position: (index: Int, pass: Int), in q: AVQueuePlayer, surah: Surah,
+    private func recoverCustomRangeItem(at position: (index: Int, pass: Int), in q: AVQueuePlayer,
                                         reciter: Reciter, failedItem: AVPlayerItem? = nil, error: Error? = nil) {
         guard isPlayingCustomRange, queuePlayer === q, position.index < customRangeSequence.count else {
             stop()
             return
         }
         let entry = customRangeSequence[position.index]
+        guard let surah = quranData.surah(entry.surahNumber) else {
+            stop()
+            return
+        }
         let key = "\(position.index)-\(position.pass)"
         let attempts = (customRangeRecoveries[key] ?? 0) + 1
         customRangeRecoveries[key] = attempts
@@ -2559,7 +2613,7 @@ final class QuranPlayer: ObservableObject {
         if let failedItem, q.items().contains(where: { $0 === failedItem }) {
             q.remove(failedItem)
         }
-        enqueueCustomRangeItem(at: position, in: q, surah: surah, reciter: reciter)
+        enqueueCustomRangeItem(at: position, in: q, reciter: reciter)
     }
 
     private func customRangeSkipAyah(by delta: Int) {
@@ -2574,7 +2628,7 @@ final class QuranPlayer: ObservableObject {
         }
 
         let perAyah = max(1, customRangeRepeatPerAyah)
-        let ayahCount = max(1, endAyah - startAyah + 1)
+        let ayahCount = max(1, customRangeAyahCount)
         let itemsPerSection = ayahCount * perAyah
         let currentZeroBased = max(0, currentIndex - 1)
         let sectionStartIndex = (currentZeroBased / itemsPerSection) * itemsPerSection
@@ -2588,6 +2642,7 @@ final class QuranPlayer: ObservableObject {
             surahName: customRangeSurahName,
             startAyah: startAyah,
             endAyah: endAyah,
+            endSurahNumber: customRangeEndSurahNumber,
             repeatPerAyah: perAyah,
             repeatSection: customRangeRepeatSection,
             initialSequenceIndex: targetSequenceIndex,
@@ -2635,6 +2690,7 @@ final class QuranPlayer: ObservableObject {
             surahName: customRangeSurahName,
             startAyah: startAyah,
             endAyah: endAyah,
+            endSurahNumber: customRangeEndSurahNumber,
             repeatPerAyah: perAyah,
             repeatSection: customRangeRepeatSection,
             initialSequenceIndex: firstPlayIndex,
@@ -2646,22 +2702,25 @@ final class QuranPlayer: ObservableObject {
     /// range sheet (`CustomRangeAyahsSheet`). The same rebuild as a skip (`customRangeSkipAyah`), so
     /// the reciter, the repeats and the section are all kept; an ayah outside the range, or the one
     /// already playing, is left alone.
-    func customRangeJump(toAyah ayah: Int) {
+    func customRangeJump(toSurah surahNumber: Int, ayah: Int) {
         guard isPlayingCustomRange,
               let currentIndex = customRangeCurrentIndex,
               let startAyah = customRangeStartAyah,
               let endAyah = customRangeEndAyah,
-              ayah >= startAyah, ayah <= endAyah,
               customRangeSurahNumber > 0,
               !customRangeSurahName.isEmpty else {
             return
         }
 
         let perAyah = max(1, customRangeRepeatPerAyah)
-        let itemsPerSection = max(1, (endAyah - startAyah + 1) * perAyah)
+        let itemsPerSection = max(1, customRangeAyahCount * perAyah)
+        // The ayah's first play within a section: every section repeats the first one's order, so
+        // the first section says where it sits.
+        guard let offset = customRangeSequence.prefix(itemsPerSection)
+            .firstIndex(where: { $0.surahNumber == surahNumber && $0.ayahNumber == ayah }) else { return }
         let currentZeroBased = max(0, currentIndex - 1)
         let sectionStartIndex = (currentZeroBased / itemsPerSection) * itemsPerSection
-        let targetSequenceIndex = sectionStartIndex + (ayah - startAyah) * perAyah
+        let targetSequenceIndex = sectionStartIndex + offset
         guard targetSequenceIndex != currentZeroBased else { return }
 
         playCustomRange(
@@ -2669,6 +2728,7 @@ final class QuranPlayer: ObservableObject {
             surahName: customRangeSurahName,
             startAyah: startAyah,
             endAyah: endAyah,
+            endSurahNumber: customRangeEndSurahNumber,
             repeatPerAyah: perAyah,
             repeatSection: customRangeRepeatSection,
             initialSequenceIndex: targetSequenceIndex,
@@ -2693,6 +2753,7 @@ final class QuranPlayer: ObservableObject {
             surahName: customRangeSurahName,
             startAyah: startAyah,
             endAyah: endAyah,
+            endSurahNumber: customRangeEndSurahNumber,
             repeatPerAyah: max(1, customRangeRepeatPerAyah),
             repeatSection: customRangeRepeatSection,
             initialSequenceIndex: max(0, currentIndex - 1),
@@ -2700,20 +2761,70 @@ final class QuranPlayer: ObservableObject {
         )
     }
 
-    private func customRangeTitle(ayahNum: Int, isBismillah: Bool, zeroBasedIndex: Int, pass: Int = 0) -> String {
-        let base = "\(Surah.displayName(id: customRangeSurahNumber, stored: customRangeSurahName)) \(customRangeSurahNumber):\(ayahNum)"
-
+    /// The Control Center / lock screen title of the range item at `index`: "Al-Kahf 18:3 (1–6)
+    /// (Ayah 1/2) (Sec 1/3)", with only the parts that say something (2026-10-31, Abu: "if ayahs are
+    /// repeated just once hide ayah x, if section is played only once hide that, and if we're only
+    /// playing one ayah hide (x–y)"). See `customRangeTitleText`.
+    private func customRangeTitle(at index: Int, pass: Int = 0) -> String {
+        guard customRangeSequence.indices.contains(index) else { return "" }
+        let entry = customRangeSequence[index]
         let perAyah = max(1, customRangeRepeatPerAyah)
-        let repeatWithinAyah = (zeroBasedIndex % perAyah) + 1
-        if customRangeLoops {
-            return base + String(localized: " (Ayah \(repeatWithinAyah)/\(perAyah)) (Sec \(pass + 1)/\u{221E})")
-        }
-        let sectionTotal = max(1, customRangeRepeatSection)
-        let numAyahsInRange = max(1, (customRangeEndAyah ?? 1) - (customRangeStartAyah ?? 1) + 1)
-        let itemsPerSection = max(1, numAyahsInRange * perAyah)
-        let sectionIndex = (zeroBasedIndex / itemsPerSection) + 1
+        let itemsPerSection = max(1, customRangeAyahCount * perAyah)
+        let sectionIndex = customRangeLoops ? pass + 1 : (index / itemsPerSection) + 1
+        return Self.customRangeTitleText(
+            surahName: customRangeSurahDisplayName(entry.surahNumber),
+            surahNumber: entry.surahNumber, ayahNumber: entry.ayahNumber,
+            startSurah: customRangeSurahNumber, startAyah: customRangeStartAyah ?? entry.ayahNumber,
+            endSurah: customRangeEndSurahNumber ?? customRangeSurahNumber, endAyah: customRangeEndAyah ?? entry.ayahNumber,
+            repeatWithinAyah: (index % perAyah) + 1, perAyah: perAyah,
+            sectionIndex: sectionIndex, sectionTotal: max(1, customRangeRepeatSection), loops: customRangeLoops
+        )
+    }
 
-        return base + String(localized: " (Ayah \(repeatWithinAyah)/\(perAyah)) (Sec \(sectionIndex)/\(sectionTotal))")
+    /// The display name of a surah of the playing range: the first surah's stored name, the others'
+    /// from the data.
+    private func customRangeSurahDisplayName(_ number: Int) -> String {
+        if number == customRangeSurahNumber { return Surah.displayName(id: number, stored: customRangeSurahName) }
+        return quranData.surah(number)?.displayName ?? String(localized: "Surah \(number)")
+    }
+
+    /// "Name S:A", then the range's span when it is more than one ayah ("(1–6)", or "(18:75–19:98)"
+    /// across surahs), then "(Ayah i/n)" when each ayah plays more than once, then "(Sec i/n)" when
+    /// the range repeats ("(Sec i/∞)" for ever). A range of one ayah played once says just "Name S:A".
+    static func customRangeTitleText(surahName: String, surahNumber: Int, ayahNumber: Int,
+                                     startSurah: Int, startAyah: Int, endSurah: Int, endAyah: Int,
+                                     repeatWithinAyah: Int, perAyah: Int,
+                                     sectionIndex: Int, sectionTotal: Int, loops: Bool) -> String {
+        var title = "\(surahName) \(surahNumber):\(ayahNumber)"
+        if startSurah != endSurah {
+            title += " (\(startSurah):\(startAyah)\u{2013}\(endSurah):\(endAyah))"
+        } else if startAyah != endAyah {
+            title += " (\(startAyah)\u{2013}\(endAyah))"
+        }
+        if perAyah > 1 {
+            title += String(localized: " (Ayah \(repeatWithinAyah)/\(perAyah))")
+        }
+        if loops {
+            title += String(localized: " (Sec \(sectionIndex)/\u{221E})")
+        } else if sectionTotal > 1 {
+            title += String(localized: " (Sec \(sectionIndex)/\(sectionTotal))")
+        }
+        return title
+    }
+
+    /// The ayahs of one pass of a range, in order: `startSurah:startAyah` through `endSurah:endAyah`,
+    /// every ayah of the surahs between them included. `ayahCount` answers how many ayahs a surah has.
+    static func customRangePassAyahs(startSurah: Int, startAyah: Int, endSurah: Int, endAyah: Int,
+                                     ayahCount: (Int) -> Int) -> [(surahNumber: Int, ayahNumber: Int)] {
+        guard endSurah >= startSurah else { return [] }
+        var ayahs: [(surahNumber: Int, ayahNumber: Int)] = []
+        for number in startSurah...endSurah {
+            let from = number == startSurah ? startAyah : 1
+            let to = number == endSurah ? endAyah : ayahCount(number)
+            guard from <= to else { continue }
+            for ayah in from...to { ayahs.append((number, ayah)) }
+        }
+        return ayahs
     }
 
     private func startAyahPlayback(

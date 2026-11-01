@@ -424,6 +424,9 @@ enum HadithRankedSearch {
         var corrections: [Correction] = []
         /// What the rows should paint (see `Query.highlightQuery`).
         var highlight = ""
+        /// More rows may pass than were kept: the engine stopped at its cap, and under `accept` the
+        /// rows it dropped were never tested, so `total` is then a floor (the Search All card's cue).
+        var hasMore = false
 
         var isEmpty: Bool { rows.isEmpty }
     }
@@ -458,12 +461,15 @@ enum HadithRankedSearch {
         let chosen = relaxed ? partial : strict
         var rows = chosen.sorted().map(\.row)
         var total = chosen.offered
+        var hasMore = chosen.offered > rows.count
         if let accept {
-            rows = Array(rows.filter(accept).prefix(kept))
-            total = rows.count
+            let passed = rows.filter(accept)
+            hasMore = hasMore || passed.count > kept
+            rows = Array(passed.prefix(kept))
+            total = passed.count
         }
         return ScopedOutcome(rows: rows, total: total, relaxed: relaxed,
-                             corrections: parsed.corrections, highlight: parsed.highlightQuery)
+                             corrections: parsed.corrections, highlight: parsed.highlightQuery, hasMore: hasMore)
     }
 
     /// Whether any form of the word (as typed, the other spelling, the stem, the correction) occurs

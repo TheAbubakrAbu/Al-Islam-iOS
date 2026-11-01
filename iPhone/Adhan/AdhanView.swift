@@ -215,6 +215,7 @@ struct AdhanView: View {
             settings.hapticFeedback()
             if pushedCalendar == nil { pushedCalendar = .hijriCalendar }
         }
+        TutorialMenuItem(tab: .adhan)
 
         Divider()
 
@@ -421,14 +422,14 @@ struct AdhanView: View {
             }
         }
         .sheet(item: $settingsSheet) { target in
-            // A stack container, so the sheet can open straight onto a sub-screen (see
-            // `SheetNavigationContainer`).
+            // Traveling Mode and Prayer Calculation open AS the sheet's page, already there as it slides
+            // up. Pushed onto the settings root a beat after appear, the root showed first and the page
+            // switched in mid-slide (Abu, 2026-10-31: "it opens glitchy").
             SheetNavigationContainer {
                 SettingsAdhanView(
                     showNotifications: true,
                     presentedAsSheet: true,
-                    openTravelingMode: target == .travelingMode,
-                    openPrayerCalculation: target == .prayerCalculation
+                    standalonePage: target.page
                 )
             }
             .smallMediumSheetPresentation()
@@ -582,9 +583,13 @@ struct AdhanView: View {
             // a loud card leading the whole tab). With the sky on, the countdown rides in the sky
             // card, so this is the first row beneath it either way.
             travelingSection
+            // The tutorial's one-time nudge, in the notices' slot above the list it explains (and, before
+            // there are times to show, where the list would be): TabTutorials.swift.
+            TutorialNudgeSection(tab: .adhan)
             PrayerList()
         } else {
             travelingSection
+            TutorialNudgeSection(tab: .adhan)
         }
         #else
         if live.prayers != nil {
@@ -1452,6 +1457,15 @@ private enum SettingsSheetTarget: String, Identifiable {
     case root, prayerCalculation, travelingMode
 
     var id: String { rawValue }
+
+    /// The settings page the sheet IS, or nil for the whole Prayer Settings.
+    var page: SettingsAdhanPage? {
+        switch self {
+        case .root: return nil
+        case .prayerCalculation: return .prayerCalculation
+        case .travelingMode: return .travelingMode
+        }
+    }
 }
 
 private enum GlancePush {

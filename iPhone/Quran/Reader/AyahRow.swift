@@ -95,6 +95,17 @@ struct AyahRow: View, Equatable {
     @State private var showWatchPlaybackDialog = false
     #endif
 
+    /// A pinch on the ayah's text zooms THIS ayah in place (Abu, 2026-11-01: "allow me to zoom in for
+    /// specific ayahs", not a sheet): the Arabic, transliteration and translations scale by this, 1 = the
+    /// reader's size, and pinching back in returns to it (`RowZoomPinch`, iOS). The row's own state, so it
+    /// lasts while the reader is open and is gone the next time, like the page's zoom. Declared for
+    /// both platforms: the font sites that read it are shared code, and the watch simply never pinches.
+    @State private var zoomScale: CGFloat = 1
+    @State private var zoomBase: CGFloat?
+
+    /// The reader's Arabic size times this ayah's pinch zoom.
+    private var arabicSize: CGFloat { CGFloat(settings.fontArabicSize) * zoomScale }
+
     let surah: Surah
     let ayah: Ayah
     /// When non-nil (e.g. comparison mode), use this qiraah for Arabic instead of global setting.
@@ -998,7 +1009,7 @@ struct AyahRow: View, Equatable {
         let showEnglishMustafa = hafsOnly
             && (settings.showEnglishMustafa || forcedMustafa || latchedForcedLines[2])
         let highlightQuery = hasSearch ? queryForInlineHighlight(activeTerm) : ""
-        let fontSizeEN = settings.englishFontSize
+        let fontSizeEN = CGFloat(settings.englishFontSize) * zoomScale
 
         // The row's wash (see `wash(...)`). The phone paints it as the row's whole cell from the reader
         // (`SurahView.ayahRowGroup`); the watch draws it here, behind the text.
@@ -1100,20 +1111,17 @@ struct AyahRow: View, Equatable {
                     // Simple Mode folds the play menu into the one ayah menu, whose first action is
                     // Play This Ayah (Docs/Product/Simple Mode Guide.md).
                     //
-                    // A tap opens the playback MENU, a double tap plays from this ayah to the end of
-                    // the surah, and a hold opens Play Custom Range (Abu, 2026-10-23: "return it as a
-                    // menu... if you double tap it play from here until end of Surah but if you hold
-                    // it open custom range"). The ⋯ beside it has the same tap / double tap / hold
-                    // shape (`ShortcutMenu`), so the pair behaves alike. For two days (2026-10-21) the
-                    // tap played and the hold opened the menu. The one ayah stays the text's double
-                    // tap (`ayahDoubleTap`).
+                    // A tap opens the playback MENU and a hold opens Play Custom Range (Abu, 2026-10-23:
+                    // "return it as a menu... if you hold it open custom range"). The ⋯ beside it has the
+                    // same tap / hold shape (`ShortcutMenu`), so the pair behaves alike. For two days
+                    // (2026-10-21) the tap played and the hold opened the menu. Until 2026-11-01 a double
+                    // tap played from here to the end of the surah; it went with every other menu
+                    // button's double tap (Abu: "lag ... check all menus"), because a double-tap shortcut
+                    // made every plain tap wait out UIKit's double-tap interval before the menu opened.
+                    // Play From Ayah is a row of the menu. The one ayah stays the text's double tap
+                    // (`ayahDoubleTap`).
                     if settings.isHafsDisplay, !settings.hides(.ayahPlayMenu) {
                         ShortcutMenu(
-                            doubleTap: MenuShortcut(String(localized: "Play From Ayah")) {
-                                settings.hapticFeedback()
-                                quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id,
-                                                     continueRecitation: true, continueScope: .surah)
-                            },
                             hold: MenuShortcut(String(localized: "Play Custom Range")) {
                                 settings.hapticFeedback()
                                 requestSheet(.secondary(.customRange))
@@ -1132,11 +1140,6 @@ struct AyahRow: View, Equatable {
                     }
 
                     ShortcutMenu(
-                        doubleTap: MenuShortcut(String(localized: "Copy Ayah")) {
-                            settings.hapticFeedback()
-                            ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah.id, ayahNumber: ayah.id,
-                                                              settings: settings, quranData: quranData)
-                        },
                         hold: MenuShortcut(String(localized: "Share Ayah")) {
                             settings.hapticFeedback()
                             requestSheet(.secondary(.share))
@@ -1212,6 +1215,8 @@ struct AyahRow: View, Equatable {
                 // The ayah's two-tap play, on the same surface (see `ayahDoubleTap`): not the header,
                 // whose pill and controls answer taps of their own.
                 .simultaneousGesture(ayahDoubleTap, including: playsOnDoubleTap ? .all : .subviews)
+                // A pinch, same surface, zooms this ayah in place (`zoomScale`).
+                .simultaneousGesture(RowZoomPinch(scale: $zoomScale, base: $zoomBase))
                 #endif
             }
         }
@@ -1474,14 +1479,14 @@ struct AyahRow: View, Equatable {
                 // the chosen bundled face - the ttfs carry real dotless glyphs now (patch_dotless_glyphs.py).
                 let useSystemArabic = settings.quranUsesSystemArabicFont
                 let arabicFont: Font = useSystemArabic
-                    ? .system(size: settings.fontArabicSize, design: .rounded)
+                    ? .system(size: arabicSize, design: .rounded)
                     : .custom(
                         ayahArabicFontName(for: comparisonQiraahOverride ?? settings.displayQiraahForArabic),
-                        size: settings.fontArabicSize
+                        size: arabicSize
                     )
                 // The ayah-end marker is always the Hafs Uthmani face: that font is what renders the digits as the
                 // circled-flower ornament, so falling back to the system font here would print bare digits instead.
-                let suffixFont: Font = .custom(Settings.hafsUthmaniFontName, size: settings.fontArabicSize)
+                let suffixFont: Font = .custom(Settings.hafsUthmaniFontName, size: arabicSize)
                 let preStyled = arabicTajweedText(displayText: arabicSource, beginner: beginner)
                     ?? arabicRiwayahTajweedText(displayText: arabicSource, beginner: beginner)
                     ?? arabicDiffText(displayText: arabicSource, beginner: beginner)
@@ -1531,7 +1536,7 @@ struct AyahRow: View, Equatable {
                             fontName: useSystemArabic
                                 ? nil
                                 : ayahArabicFontName(for: comparisonQiraahOverride ?? settings.displayQiraahForArabic),
-                            fontSize: CGFloat(settings.fontArabicSize),
+                            fontSize: arabicSize,
                             ayahNumberArabic: ayah.idArabic,
                             glosses: glosses,
                             highlightAllahNames: choices.highlightAllah,
@@ -1559,7 +1564,7 @@ struct AyahRow: View, Equatable {
                             fontName: useSystemArabic
                                 ? nil
                                 : ayahArabicFontName(for: comparisonQiraahOverride ?? settings.displayQiraahForArabic),
-                            fontSize: CGFloat(settings.fontArabicSize),
+                            fontSize: arabicSize,
                             ayahNumberArabic: ayah.idArabic,
                             glosses: glosses,
                             highlightAllahNames: choices.highlightAllah,
@@ -1599,7 +1604,7 @@ struct AyahRow: View, Equatable {
                         fontName: useSystemArabic
                             ? nil
                             : ayahArabicFontName(for: comparisonQiraahOverride ?? settings.displayQiraahForArabic),
-                        fontSize: CGFloat(settings.fontArabicSize),
+                        fontSize: arabicSize,
                         ayahNumberArabic: ayah.idArabic,
                         glosses: [],
                         alwaysTappable: true,

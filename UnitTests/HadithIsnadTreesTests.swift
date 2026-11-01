@@ -166,12 +166,17 @@ final class HadithIsnadTreesTests: XCTestCase {
         for placed in layout.placed {
             XCTAssertLessThanOrEqual(placed.center.x, rightmost + 0.01)
             XCTAssertGreaterThanOrEqual(placed.center.x, HadithIsnadTreeLayout.inset)
-            XCTAssertLessThanOrEqual(placed.center.y + HadithIsnadTreeLayout.chipHeight / 2, layout.height)
+            XCTAssertLessThanOrEqual(placed.center.y + layout.chipHeight / 2, layout.height)
         }
         // Pruned to nothing but the own narration's family, the tree keeps at least its own road.
         let kept = try XCTUnwrap(tree.pruned { slug, id in slug == sample.slug && id == sample.idInBook })
         XCTAssertEqual(kept.roads, 1)
         XCTAssertNil(tree.pruned { _, _ in false })
+        // With the English under each name the chips are taller and the generations keep their gap.
+        let english = HadithIsnadTreeLayout(tree: tree, source: (sample.slug, sample.idInBook), english: true)
+        XCTAssertGreaterThan(english.chipHeight, layout.chipHeight)
+        XCTAssertEqual(english.rowPitch - english.chipHeight, layout.rowPitch - layout.chipHeight)
+        XCTAssertEqual(english.roads, layout.roads)
     }
 
     func testTheStoreAnswersAndSurvivesAPurge() throws {

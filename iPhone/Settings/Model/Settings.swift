@@ -1316,7 +1316,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         "calculationAutoAnsweredCountryCode", "calculationAutoAnsweredMethod", "calculationAutoChanged",
         "calculationAutoDetectedCountryCode", "calculationAutoDetectedMethod", "calculationAutoPreviousMethod",
         // Onboarding and permission prompts this install has already been through.
-        "THEfirstLaunch", "aboutYouVersionSeen",
+        "THEfirstLaunch", "aboutYouVersionSeen", "tutorialNudgesSeen",
         "locationNeverAskAgain", "notificationNeverAskAgain", "showLocationAlert", "showNotificationAlert",
         "locationAlertSnoozedUntil", "notificationAlertSnoozedUntil",
         // The last Apple Weather reading for the sky (SkyWeather.swift): this place, this hour.
@@ -3356,8 +3356,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// Dynamic Type size the whole Islam tab renders at, as an index into `IslamTextSize.steps`.
     /// -1 (the default) follows the device's own text size. See `islamTextSize()`.
     @Setting("islamTextSize") var islamTextSize: Int = -1
-    /// Hadith text sizes, independent of the Quran's own sliders.
-    @Setting("hadithArabicFontSize") var hadithArabicFontSize: Double = (Double(UIFont.preferredFont(forTextStyle: .body).pointSize + 4) * Settings.readerDefaultScale).rounded()
+    /// Hadith text sizes, independent of the Quran's own sliders. The Arabic starts 2 pt over the body
+    /// size (it was 4, and the Arabic read large beside the English; Abu, 2026-10-31: "by default make
+    /// the Hadith Arabic smaller"). Only the default: a size the reader has set is kept.
+    @Setting("hadithArabicFontSize") var hadithArabicFontSize: Double = (Double(UIFont.preferredFont(forTextStyle: .body).pointSize + Settings.hadithArabicBodyOffset) * Settings.readerDefaultScale).rounded()
+    /// How far the hadith Arabic's default (and "Use Device Text Size") sits above the body size.
+    static let hadithArabicBodyOffset: CGFloat = 2
     @Setting("hadithEnglishFontSize") var hadithEnglishFontSize: Double = (Double(UIFont.preferredFont(forTextStyle: .body).pointSize) * Settings.readerDefaultScale).rounded()
 
     // MARK: - [Islam tab] Arabic letters & 99 Names
@@ -3975,6 +3979,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// header (the arrow beside NEED A HAND?).
     @Setting("helpDoorsHidden") var helpDoorsHiddenRaw: String = ""
     @Setting("helpDoorsCollapsed") var helpDoorsCollapsedRaw: String = ""
+    /// The tabs whose first-visit tutorial nudge has been answered (TabTutorials.swift): raw
+    /// `TutorialTab`s, comma separated. Written only from a button (Take the Tutorial, the nudge's
+    /// close, the tutorial's Finish, the doors that open it), never from a body or an appear.
+    @Setting("tutorialNudgesSeen") var tutorialNudgesSeenRaw: String = ""
     /// The tabs' foldable sections (TabSections.swift: the Adhan tab's PRAYER TRACKER and AT A GLANCE
     /// so far). The reader's own choice per section, "adhan.glance:1,adhan.tracker:0" (a section with
     /// no entry follows its default: shown, or Simple Mode's rule where it has one), and the sections

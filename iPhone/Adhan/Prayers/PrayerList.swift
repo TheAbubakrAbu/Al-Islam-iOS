@@ -929,10 +929,10 @@ struct PrayerList: View {
             }
             #if os(iOS)
             .sheet(isPresented: $showTravelingModeSettings) {
-                // A stack container, so the sheet opens straight onto Traveling Mode (see
-                // `SheetNavigationContainer`).
+                // Traveling Mode IS the sheet's page, there as it slides up (never pushed onto the
+                // settings root mid-slide; see AdhanView's settings sheet).
                 SheetNavigationContainer {
-                    SettingsAdhanView(showNotifications: false, presentedAsSheet: true, openTravelingMode: true)
+                    SettingsAdhanView(showNotifications: false, presentedAsSheet: true, standalonePage: .travelingMode)
                 }
                 .smallMediumSheetPresentation()
             }

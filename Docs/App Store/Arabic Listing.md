@@ -10,17 +10,17 @@ app calls itself الإسلام, and its sections are القرآن، الأذا�
 |---|---|---|
 | Name | 30 | No |
 | Subtitle | 30 | No |
-| Keywords | 100 | No |
 | Promotional Text | 170 | Yes |
 | Description | 4,000 | No |
 | What's New | 4,000 | No |
+| Keywords | 100 | No |
 
 ## Guidelines
 
 - **Counts are Python `len()`** of the exact text inside each code block (the bold tally lines are for this
   file, not the store). Re-check after any edit:
   `python3 -c 'import re;f=chr(96)*3;t=open("Docs/App Store/Arabic Listing.md").read();[print(len(b)) for b in re.findall(f+"\n(.*?)\n"+f,t,re.S)]'`
-- **Modern Standard Arabic as Apple's own Arabic pages read it**, with the respectful register (النبي محمد ﷺ).
+- **Modern Standard Arabic as Apple's own Arabic pages read it**, with the respectful register (النبي محمد صلى الله عليه وسلم). The honorific is always spelled out: App Store Connect rejects the one-glyph ligature (U+FDFA) as an invalid character.
   Feature names are the labels the app shows (`Resources/Localizable.xcstrings`, see the glossary below).
 - **No em dash, and no spaced hyphen used as a dash.** Use a colon, the Arabic comma ، or a new sentence.
   A leading "- " bullet is fine; the English fields use the same.
@@ -36,10 +36,8 @@ app calls itself الإسلام, and its sections are القرآن، الأذا�
 
 ## 1. Name
 
-Names are unique across the store, so a bare الإسلام will not be accepted. Each option keeps الإسلام first,
+Names are unique across the store, so a bare الإسلام will not be accepted. The name keeps الإسلام first,
 then a short descriptor after a separator, as the English name does with "|".
-
-**Recommended:**
 
 ```
 الإسلام | قرآن، أذان، حديث
@@ -50,30 +48,7 @@ then a short descriptor after a separator, as the English name does with "|".
 The app's three sections as bare words. Each one is a search term of its own (no و attached to it), and the
 forms with ال go in the keyword field.
 
-**Alternate A:**
-
-```
-الإسلام | القرآن والأذان
-```
-
-**24 / 30 characters.**
-
-The app's own section names with the article; reads the most naturally, but drops الحديث.
-
-**Alternate B:**
-
-```
-الإسلام: القرآن ومواقيت الصلاة
-```
-
-**30 / 30 characters.**
-
-Leads with مواقيت الصلاة, the most searched prayer phrase, and sits exactly at the limit. Pair it with a
-subtitle that does not repeat مواقيت or الصلاة, for example الحديث، القبلة، التفسير (23 characters).
-
 ## 2. Subtitle
-
-**Recommended** (with the recommended name):
 
 ```
 مواقيت الصلاة، القبلة، التفسير
@@ -81,45 +56,7 @@ subtitle that does not repeat مواقيت or الصلاة, for example الحد
 
 **30 / 30 characters.**
 
-**Alternate:**
-
-```
-مواقيت الصلاة وتفسير القرآن
-```
-
-**27 / 30 characters.**
-
-Reads as one phrase and adds the القرآن form. With it, drop القرآن from the keyword field and use the
-characters for القبلة.
-
-## 3. Keywords
-
-Written for the recommended name and subtitle. No word repeats one of theirs (الإسلام، قرآن، أذان، حديث،
-مواقيت، الصلاة، القبلة، التفسير); if an alternate ships, re-check that and swap in the words it dropped.
-
-```
-القرآن,القران,الكريم,مصحف,اذان,اوقات,اذكار,دعاء,تفسير,قبلة,البخاري,مسلم,رمضان,تسبيح,تجويد,حفظ,حصن
-```
-
-**97 / 100 characters.**
-
-Why these terms:
-- **القرآن، القران، الكريم:** the name has the bare قرآن; these add the definite form, the spelling without
-  the madda that most people type, and الكريم for "القرآن الكريم", the most common Quran search.
-- **مصحف:** mushaf searches, and the page mode reader.
-- **اذان، اوقات:** أذان as it is usually typed, without the hamza; اوقات pairs with the subtitle's الصلاة for
-  "اوقات الصلاة", searched as often as مواقيت الصلاة.
-- **اذكار، دعاء، تسبيح، رمضان:** the daily worship tools, and the Ramadan season.
-- **تفسير، قبلة:** the subtitle's words without ال.
-- **البخاري، مسلم، حصن:** Sahih al-Bukhari and Sahih Muslim; مسلم also matches the audience, and with حصن it
-  covers "حصن المسلم".
-- **تجويد، حفظ:** the colored tajweed and the 58-lesson course; memorization (Test Mode, the Revision plan).
-
-Left out for room, to rotate in from App Analytics: قران، صلاة، ختمة، مسجد، احاديث، اتجاه (for "اتجاه
-القبلة"). If Apple's Arabic search turns out to fold the hamza and madda (أ and آ to ا), القران and اذان are
-redundant and are the first to swap.
-
-## 4. Promotional Text
+## 3. Promotional Text
 
 Leads with the Arabic interface. Update it with the next release like the English one.
 
@@ -129,7 +66,7 @@ Leads with the Arabic interface. Update it with the next release like the Englis
 
 **149 / 170 characters.**
 
-## 5. Description
+## 4. Description
 
 An Arabic rendering of `App Store Description.md`, section for section, with the English ALL-CAPS headers as
 short Arabic headings on their own lines.
@@ -183,12 +120,12 @@ short Arabic headings on their own lines.
 مجاني، بلا إعلانات، ويحفظ خصوصيتك
 تطبيق الإسلام مجاني تمامًا. لا إعلانات، ولا حسابات، ولا اشتراكات، ولا تتبّع: لا يُجمَع شيء مما تفعله ولا يُشارَك.
 
-سواء كنت تبحث عن مواقيت الصلاة أو القرآن الكريم أو حديث النبي محمد ﷺ أو فهمٍ أعمق للإسلام، حمّل تطبيق الإسلام اليوم.
+سواء كنت تبحث عن مواقيت الصلاة أو القرآن الكريم أو حديث النبي محمد صلى الله عليه وسلم أو فهمٍ أعمق للإسلام، حمّل تطبيق الإسلام اليوم.
 ```
 
-**3,644 / 4,000 characters.**
+**3,661 / 4,000 characters.**
 
-## 6. What's New
+## 5. What's New
 
 The release that adds the Arabic interface. Only the Arabic interface is here so far.
 
@@ -215,6 +152,33 @@ The release that adds the Arabic interface. Only the Arabic interface is here so
 the rest of them and append them below the last line of the block above, under the same headings the English
 uses (القرآن:، الأذان:، الحديث:، الأدوات:، الإعدادات:، إصلاحات وتحسينات:). Keep the Arabic interface first,
 and keep the whole field near the English length (2,000 to 2,500 characters).
+
+## 6. Keywords
+
+Written for the name and subtitle above. No word repeats one of theirs (الإسلام، قرآن، أذان، حديث،
+مواقيت، الصلاة، القبلة، التفسير).
+
+```
+القرآن,القران,الكريم,مصحف,اذان,اوقات,اذكار,دعاء,تفسير,قبلة,البخاري,مسلم,رمضان,تسبيح,تجويد,حفظ,حصن
+```
+
+**97 / 100 characters.**
+
+Why these terms:
+- **القرآن، القران، الكريم:** the name has the bare قرآن; these add the definite form, the spelling without
+  the madda that most people type, and الكريم for "القرآن الكريم", the most common Quran search.
+- **مصحف:** mushaf searches, and the page mode reader.
+- **اذان، اوقات:** أذان as it is usually typed, without the hamza; اوقات pairs with the subtitle's الصلاة for
+  "اوقات الصلاة", searched as often as مواقيت الصلاة.
+- **اذكار، دعاء، تسبيح، رمضان:** the daily worship tools, and the Ramadan season.
+- **تفسير، قبلة:** the subtitle's words without ال.
+- **البخاري، مسلم، حصن:** Sahih al-Bukhari and Sahih Muslim; مسلم also matches the audience, and with حصن it
+  covers "حصن المسلم".
+- **تجويد، حفظ:** the colored tajweed and the 58-lesson course; memorization (Test Mode, the Revision plan).
+
+Left out for room, to rotate in from App Analytics: قران، صلاة، ختمة، مسجد، احاديث، اتجاه (for "اتجاه
+القبلة"). If Apple's Arabic search turns out to fold the hamza and madda (أ and آ to ا), القران and اذان are
+redundant and are the first to swap.
 
 ## Glossary
 

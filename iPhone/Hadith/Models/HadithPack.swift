@@ -672,11 +672,12 @@ final class HadithPack: @unchecked Sendable {
     }
 
     /// `matchingRows` for the search filters: several needles (All Words needs every one in the row,
-    /// Any Word one of them; they must share a script, which words of one query do) and a row test
-    /// run on TEXT matches only. The test is the grade filter, which inflates the row's display
-    /// block, so it is asked last and only of rows that already carry the words.
+    /// Any Word one of them; they must share a script, which words of one query do), the Match
+    /// button's word-edge rule, and a row test run on TEXT matches only. The test is the grade filter
+    /// (and Exact's letter-for-letter check), which inflates the row's display block, so it is asked
+    /// last and only of rows that already carry the words.
     func matchingRows(in range: Range<Int>, queries: [HadithFold.Query], requireAll: Bool, limit: Int,
-                      accept: ((Int) -> Bool)?) -> [Int] {
+                      rule: HadithMatchRule = .contains, accept: ((Int) -> Bool)?) -> [Int] {
         let needles = queries.map(\.bytes).filter { !$0.isEmpty }
         guard let first = queries.first, !needles.isEmpty, limit > 0, !rows.isEmpty else { return [] }
         let lower = max(0, range.lowerBound)
@@ -704,10 +705,9 @@ final class HadithPack: @unchecked Sendable {
                     if slot >= 0, slot < ranges.count {
                         let span = ranges[slot]
                         if span.lowerBound >= 0, span.upperBound <= haystack.count {
+                            let fold = UnsafeBufferPointer(start: base + span.lowerBound, count: span.count)
                             func carries(_ needle: [UInt8]) -> Bool {
-                                span.count >= needle.count && needle.withUnsafeBufferPointer {
-                                    memmem(base + span.lowerBound, span.count, $0.baseAddress!, needle.count) != nil
-                                }
+                                needle.withUnsafeBufferPointer { rule.occurs($0, in: fold) }
                             }
                             let matched = requireAll ? needles.allSatisfy(carries) : needles.contains(where: carries)
                             if matched, accept?(current) ?? true {
@@ -723,6 +723,29 @@ final class HadithPack: @unchecked Sendable {
             row = max(scanEnd, row + 1)
         }
         return found
+    }
+
+    /// `matchingRows` for ONE row: whether this hadith's prebuilt fold carries the needles the way
+    /// the Match rule asks. The ranked lane's hits are re-tested with it under a rule, because that
+    /// lane ranks stems and corrected spellings, which a word-edge rule must not let through.
+    func matches(row: Int, queries: [HadithFold.Query], requireAll: Bool, rule: HadithMatchRule) -> Bool {
+        let needles = queries.map(\.bytes).filter { !$0.isEmpty }
+        guard let first = queries.first, !needles.isEmpty, row >= 0, row < rows.count else { return false }
+        let blockIndex = Int(rows[row].block)
+        guard blockIndex < blocks.count, let block = searchBlock(blockIndex) else { return false }
+        let slot = row - blocks[blockIndex].firstRow
+        let ranges = first.isArabic ? block.arabic : block.english
+        guard slot >= 0, slot < ranges.count else { return false }
+        let span = ranges[slot]
+        guard span.lowerBound >= 0, span.upperBound <= block.bytes.count else { return false }
+        return block.bytes.withUnsafeBufferPointer { haystack -> Bool in
+            guard let base = haystack.baseAddress else { return false }
+            let fold = UnsafeBufferPointer(start: base + span.lowerBound, count: span.count)
+            func carries(_ needle: [UInt8]) -> Bool {
+                needle.withUnsafeBufferPointer { rule.occurs($0, in: fold) }
+            }
+            return requireAll ? needles.allSatisfy(carries) : needles.contains(where: carries)
+        }
     }
 
     /// Visits every row in `range` (book order) with its prebuilt fold as raw bytes: the ranked search's
@@ -849,6 +872,63 @@ final class HadithPack: @unchecked Sendable {
             }
         }
         return written == rawLength ? output : nil
+    }
+}
+
+// MARK: - Match rule
+
+/// How a needle has to sit against the fold's word edges: the search filters' Match button
+/// (`HadithSearchFilters.Match`), as the byte sweep reads it. Exact arrives here as `wholeWord`; its
+/// letter-for-letter half is the row test the caller hands the sweep as `accept`.
+enum HadithMatchRule: Sendable, Equatable {
+    case contains, wholeWord, startsWith, endsWith
+
+    /// A word edge inside the prebuilt folds: whitespace. The Arabic fold is single spaces; the
+    /// English fold keeps its newlines and tabs, and a no-break space survives it as C2 A0.
+    static func isWordEdge(_ byte: UInt8) -> Bool {
+        byte == 0x20 || byte == 0x0A || byte == 0x09 || byte == 0x0D
+    }
+
+    /// Whether `needle` occurs in `fold` the way this rule asks: anywhere, or with a word edge (the
+    /// fold's edge or whitespace) before it, after it, or both. A hit the rule turns down is stepped
+    /// over by ONE byte, not by its length, so a real hit overlapping it is still found (the
+    /// highlighter's `SearchWordRule` does the same over characters).
+    func occurs(_ needle: UnsafeBufferPointer<UInt8>, in fold: UnsafeBufferPointer<UInt8>) -> Bool {
+        guard needle.count > 0, fold.count >= needle.count,
+              let needleBase = needle.baseAddress, let base = fold.baseAddress else { return false }
+        if self == .contains {
+            return memmem(base, fold.count, needleBase, needle.count) != nil
+        }
+        var offset = 0
+        while fold.count - offset >= needle.count {
+            guard let hit = memmem(base + offset, fold.count - offset, needleBase, needle.count) else { return false }
+            let start = UnsafeRawPointer(hit).assumingMemoryBound(to: UInt8.self) - base
+            let end = start + needle.count
+            let leading = start == 0 || Self.isWordEdge(fold[start - 1])
+                || (start >= 2 && fold[start - 1] == 0xA0 && fold[start - 2] == 0xC2)
+            let trailing = end == fold.count || Self.isWordEdge(fold[end])
+                || (end + 1 < fold.count && fold[end] == 0xC2 && fold[end + 1] == 0xA0)
+            switch self {
+            case .contains: return true
+            case .wholeWord: if leading && trailing { return true }
+            case .startsWith: if leading { return true }
+            case .endsWith: if trailing { return true }
+            }
+            offset = start + 1
+        }
+        return false
+    }
+
+    /// The same test over arrays, for callers (and tests) that hold the bytes.
+    func occurs(_ needle: [UInt8], in fold: [UInt8]) -> Bool {
+        needle.withUnsafeBufferPointer { needlePointer in
+            fold.withUnsafeBufferPointer { foldPointer in occurs(needlePointer, in: foldPointer) }
+        }
+    }
+
+    /// The same test over folded text (UTF-8).
+    func occurs(_ needle: String, in fold: String) -> Bool {
+        occurs(Array(needle.utf8), in: Array(fold.utf8))
     }
 }
 

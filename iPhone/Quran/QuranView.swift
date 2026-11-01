@@ -1902,8 +1902,12 @@ struct QuranView: View {
                     if !isPicker {
                         boxed(primaryHistorySections(context: context))
                         #if os(iOS)
-                        // Need a Hand?: reading the script, transliteration, al-Kahf on Friday, right
-                        // under the summary and gone while a search is typed (see HelpDoors.swift).
+                        // The tutorial's one-time nudge, then Need a Hand?: reading the script,
+                        // transliteration, al-Kahf on Friday, right under the summary and gone while a
+                        // search is typed (TabTutorials.swift, HelpDoors.swift).
+                        if !context.isSearching {
+                            boxed(TutorialNudgeSection(tab: .quran))
+                        }
                         boxed(helpDoorsSection(context: context))
                         #endif
                         boxed(bookmarkSection(context: context))
@@ -2672,14 +2676,9 @@ struct QuranView: View {
                     }
                 }
             } else {
+                // Hold only, no double tap (2026-11-01): a double-tap shortcut made every plain tap wait
+                // before the menu opened (`ShortcutMenu`). Play Last Listened is a row of the menu.
                 ShortcutMenu(
-                    doubleTap: settings.lastListenedSurah.map { last in
-                        MenuShortcut(String(localized: "Play Last Listened")) {
-                            settings.hapticFeedback()
-                            quranPlayer.playSurah(surahNumber: last.surahNumber, surahName: last.surahName,
-                                                  certainReciter: true)
-                        }
-                    },
                     hold: MenuShortcut(String(localized: "Choose Reciter")) {
                         settings.hapticFeedback()
                         showReciterPickerSheet = true
@@ -3145,6 +3144,7 @@ struct QuranView: View {
                 Label("Explore", systemImage: "safari")
             }
         }
+        TutorialMenuItem(tab: .quran)
 
         Divider()
 

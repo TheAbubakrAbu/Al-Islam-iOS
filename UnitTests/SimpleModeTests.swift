@@ -327,7 +327,7 @@ final class SimpleModeTests: XCTestCase {
     /// Each tab's switches list its sections in the order the tab shows them.
     func testTabSectionsPerTab() {
         XCTAssertEqual(TabSection.sections(on: .adhan), [.adhanTracker, .adhanGlance])
-        XCTAssertEqual(TabSection.sections(on: .hadith), [.hadithSummary, .hadithAbout])
+        XCTAssertEqual(TabSection.sections(on: .hadith), [.hadithSummary, .hadithNarrators, .hadithAbout])
         XCTAssertEqual(Set(TabSection.allCases.map(\.key)).count, TabSection.allCases.count, "every key is its own")
     }
 

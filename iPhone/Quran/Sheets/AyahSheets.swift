@@ -32,6 +32,9 @@ final class AyahSheetStack: ObservableObject {
 
     /// The sheet the actions sheet should stack on top of itself, cleared when it closes.
     @Published var pending: AyahSecondarySheet?
+    /// Set by a stacked range sheet that played a range wider than the actions sheet's own ayah: the
+    /// actions sheet reads it when `pending` clears and closes itself too (2026-10-31).
+    var closeHostWhenCleared = false
 
     func present(_ sheet: AyahSecondarySheet) {
         pending = sheet
@@ -192,15 +195,16 @@ struct AyahSecondarySheetContent: View {
                     surah: surah,
                     displayQiraah: settings.displayQiraahForArabic
                 ),
-                onPlay: { start, end, repAyah, repSec in
-                    quranPlayer.playCustomRange(
-                        surahNumber: surah.id,
-                        surahName: surah.nameTransliteration,
-                        startAyah: start,
-                        endAyah: end,
-                        repeatPerAyah: repAyah,
-                        repeatSection: repSec
-                    )
+                onPlay: { selection in
+                    quranPlayer.playCustomRange(selection)
+                    // Keep Sheet Open While Playing holds the actions sheet under this one only for a
+                    // range of ITS ayah alone (Abu, 2026-10-31: "it's nice seeing the ayah nice and big
+                    // but it's annoying when the ayah changes, so if many ayahs then dismiss"). Any
+                    // wider range, or a Recent Ranges row, closes the actions sheet once this one is down.
+                    if AyahSheetStack.shared.pending == .customRange,
+                       !(settings.keepAyahSheetOpenOnPlay && selection.isOnly(surah: surah.id, ayah: ayah.id)) {
+                        AyahSheetStack.shared.closeHostWhenCleared = true
+                    }
                     onDismiss()
                 },
                 onCancel: { onDismiss() }
@@ -804,8 +808,9 @@ struct AyahActionsSheet: View {
     /// is on (Abu, 2026-10-25: "sometimes when its playing i want to read the big sheet"). Play From
     /// Ayah does not come through here since 2026-10-26 (Abu: "play from ayah shouldn't count for
     /// keeping sheet opened, only repeat and play this ayah"): the recitation moves on through the page
-    /// or surah, so the sheet's own ayah is not what is playing; it closes. Play Custom Range never came
-    /// through here either; its own sheet plays and closes.
+    /// or surah, so the sheet's own ayah is not what is playing; it closes. Play Custom Range never comes
+    /// through here either: its own sheet plays, and since 2026-10-31 it keeps this sheet only for a
+    /// range of this one ayah (see `AyahSecondarySheetContent`).
     private func closeAfterPlaying() {
         if !settings.keepAyahSheetOpenOnPlay { dismiss() }
     }
@@ -1012,7 +1017,14 @@ struct AyahActionsSheet: View {
 
             list.append(AyahAction(id: "customRange", title: String(localized: "Play Custom Range"), systemImage: "slider.horizontal.3", action: {
                 settings.hapticFeedback()
-                onRequestSheet?(.customRange)
+                // With Keep Sheet Open While Playing on, the range sheet stacks on this one, so a
+                // range of this one ayah can hand the sheet back (see `AyahSecondarySheetContent`);
+                // otherwise the host swaps it in, as for every other secondary sheet.
+                if settings.keepAyahSheetOpenOnPlay {
+                    sheetStack.present(.customRange)
+                } else {
+                    onRequestSheet?(.customRange)
+                }
             }))
 
             // A MENU since 2026-10-07 (Abu: "play from ayah ... it becomes a menu and then theres play
@@ -1102,7 +1114,7 @@ struct AyahActionsSheet: View {
 
                 optionToggle(
                     String(localized: "Keep Sheet Open While Playing"),
-                    caption: String(localized: "Play This Ayah and Repeat Ayah leave this sheet up so you can keep reading. Play From Ayah and Play Custom Range still close it."),
+                    caption: String(localized: "Play This Ayah, Repeat Ayah and a custom range of this one ayah leave this sheet up so you can keep reading. Play From Ayah and wider ranges still close it."),
                     systemImage: "rectangle.stack",
                     isOn: $quranDisplay.keepAyahSheetOpenOnPlay
                 )
@@ -1357,8 +1369,8 @@ struct AyahActionsSheet: View {
                     }
 
                     // What the ayah is about and where it sits: its passage, hizb / ruku / manzil,
-                    // and the topics that annotate it.
-                    AyahInsightsCard(surah: surah, ayah: ayah)
+                    // and the topics that annotate it, headed by what the card is.
+                    AyahInsightsCard(surah: surah, ayah: ayah, explains: true)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
@@ -1389,7 +1401,16 @@ struct AyahActionsSheet: View {
             closeAfterRiwayahChange()
         }
         .onChange(of: showReciterPicker) { _ in closeAfterRiwayahChange() }
-        .onChange(of: sheetStack.pending == nil) { _ in closeAfterRiwayahChange() }
+        .onChange(of: sheetStack.pending == nil) { cleared in
+            closeAfterRiwayahChange()
+            // A custom range wider than this ayah was played from the range sheet stacked here: this
+            // sheet goes too, once that one is down (`AyahSheetStack.closeHostWhenCleared`). A beat
+            // later, so the two do not fight over one dismissal.
+            if cleared, sheetStack.closeHostWhenCleared {
+                sheetStack.closeHostWhenCleared = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { dismiss() }
+            }
+        }
     }
 }
 

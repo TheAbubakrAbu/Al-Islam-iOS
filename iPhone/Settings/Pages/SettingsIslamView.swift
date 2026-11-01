@@ -28,13 +28,14 @@ struct SettingsIslamView: View {
     /// True when presented as a sheet (its own NavigationView + dismiss X); false when PUSHED from the
     /// Settings tab, where the surrounding navigation already provides the chrome.
     var presentedAsSheet: Bool = false
-    /// A sub-screen to push a beat after the root mounts: what a settings search result lands on.
-    var openPage: SettingsIslamPage? = nil
-    /// One sub-screen shown ON ITS OWN, as the root of its stack: a Need a Hand? door's sheet
-    /// (HelpDoors.swift), which opens on the page itself instead of this root.
+    /// One sub-screen shown ON ITS OWN, as the root of its stack: how every door into a sub-screen
+    /// opens (a search result, a tip, a Need a Hand? door), never this root with the page pushed a beat
+    /// later (`SettingsSearchDestinationView`).
     var standalonePage: SettingsIslamPage? = nil
-    @State private var openRequestedPage = false
-    @State private var deepLinkFired = false
+
+    /// The alphabet size step while its slider's thumb is down, for the preview above it; nil reads
+    /// the setting.
+    @State private var liveLetterSteps: Int?
 
     #if DEBUG
     /// Headless visual verification (no tap access on the dev machine): `-launchIslamSettingsArabic`
@@ -58,14 +59,6 @@ struct SettingsIslamView: View {
             }
         } else {
             settingsList
-                .modifier(SettingsDeepLink(isPresented: $openRequestedPage, active: openPage != nil) {
-                    if let page = openPage { islamPageDestination(page) }
-                })
-                .onAppear {
-                    guard !deepLinkFired, openPage != nil else { return }
-                    deepLinkFired = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { openRequestedPage = true }
-                }
                 #if DEBUG
                 .debugPushDestination(isPresented: $autoOpenArabicText) { arabicTextDestination }
                 #endif
@@ -181,17 +174,21 @@ struct SettingsIslamView: View {
         List {
             Group {
                 // The same control as every other size in Settings (Abu, 2026-10-25: the Islam tab's
-                // sizes were "different from all"): the slider with its sample and read-out, then the
-                // device-size switch. The alphabet screens keep their own glass pill, where watching the
-                // letters grow is the point.
+                // sizes were "different from all"): the alphabet's own rows as the preview
+                // (`AlphabetReadingPreview`, moving with the thumb), the slider and its read-out, then
+                // the device-size switch. The alphabet screens keep their own glass pill, where watching
+                // the letters grow is the point.
                 Section(header: Text("ARABIC SIZE"),
                         footer: Text("How much larger the Arabic reads on the alphabet screens. A floor: the letters never render smaller than your device's own text size.")) {
                     VStack(alignment: .leading, spacing: 12) {
+                        AlphabetReadingPreview(size: letterTypeSize(steps: liveLetterSteps ?? settings.arabicLetterSizeIndex))
+                            .onChange(of: islamSettings.arabicLetterSizeIndex) { _ in liveLetterSteps = nil }
+
                         FontSizeSlider(String(localized: "Arabic Size"), value: letterStepsBinding, in: 0...Double(Settings.arabicLetterSizeSteps),
-                                       sample: "ا ب ت ث ج ح خ",
+                                       sample: nil,
                                        fontName: settings.nonQuranArabicFontName, glyph: "ب",
                                        label: { IslamTextSize.name(letterTypeSize(steps: Int($0.rounded()))) },
-                                       sampleTypeSize: { letterTypeSize(steps: Int($0.rounded())) })
+                                       onLiveChange: { liveLetterSteps = Int($0.rounded()) })
 
                         SettingsToggle(String(localized: "Use Device Text Size"), isOn: letterFollowsDeviceBinding)
                     }
@@ -354,6 +351,8 @@ struct IslamTextSizeSettingsView: View {
     private let settings = Settings.shared
     @ObservedObject private var islamSettings = IslamSettings.shared
     @Environment(\.dynamicTypeSize) private var deviceSize
+    /// The slider's step while its thumb is down, for the article preview above it; nil reads the setting.
+    @State private var liveIndex: Int?
 
     private var followsDevice: Bool { IslamTextSize.size(for: settings.islamTextSize) == nil }
     /// The device's own size as a slider step: where the thumb rests while following it, and where
@@ -381,10 +380,16 @@ struct IslamTextSizeSettingsView: View {
                 Section(header: Text("TEXT SIZE"),
                         footer: Text("Applies to everything on the Al-Islam tab: the articles and guides, the duas and dhikr, the 99 Names and the libraries. \(IslamSettingsCopy.ownTextSizes)")) {
                     VStack(alignment: .leading, spacing: 12) {
+                        // An article of the tab as the preview (`IslamReadingPreview`), moving with the
+                        // thumb; following the device it reads at the device's size.
+                        IslamReadingPreview(size: liveIndex.map { IslamTextSize.size(for: $0) ?? .large }
+                                                ?? IslamTextSize.size(for: settings.islamTextSize))
+                            .onChange(of: islamSettings.islamTextSize) { _ in liveIndex = nil }
+
                         FontSizeSlider(String(localized: "Text Size"), value: indexBinding, in: 0...Double(IslamTextSize.steps.count - 1),
-                                       sample: String(localized: "Every article, guide and library on the Al-Islam tab reads at this size."),
+                                       sample: nil,
                                        label: { IslamTextSize.name(IslamTextSize.size(for: Int($0.rounded())) ?? .large) },
-                                       sampleTypeSize: { IslamTextSize.size(for: Int($0.rounded())) ?? .large })
+                                       onLiveChange: { liveIndex = Int($0.rounded()) })
 
                         SettingsToggle(String(localized: "Use Device Text Size"), isOn: followsDeviceBinding)
                     }

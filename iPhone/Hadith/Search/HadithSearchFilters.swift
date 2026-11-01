@@ -52,6 +52,47 @@ struct HadithSearchFilters: Equatable {
         }
     }
 
+    /// How each typed word has to sit in the hadith: the Quran search's Match button (Abu, 2026-10-31:
+    /// "Hadith search should support some things that Quran search supports like exact match").
+    /// The first four are word-edge rules the byte sweep applies to the prebuilt fold
+    /// (`HadithMatchRule`); Exact is Whole Word plus a letter-for-letter check on the row's own text
+    /// (`LetterMatch`), since the fold has already folded hamza forms, taa marbutah and capitals away.
+    enum Match: String, CaseIterable, Identifiable {
+        case contains, wholeWord, startsWith, endsWith, exact
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .contains: return String(localized: "Contains")
+            case .wholeWord: return String(localized: "Whole Word")
+            case .startsWith: return String(localized: "Starts With")
+            case .endsWith: return String(localized: "Ends With")
+            case .exact: return String(localized: "Exact")
+            }
+        }
+
+        var detail: String {
+            switch self {
+            case .contains: return String(localized: "Anywhere, even inside a longer word: رب also finds ربهم")
+            case .wholeWord: return String(localized: "Whole words only: رب finds the word رب, not ربهم")
+            case .startsWith: return String(localized: "A word, or the hadith, begins with it")
+            case .endsWith: return String(localized: "A word, or the hadith, ends with it")
+            case .exact: return String(localized: "Letter for letter: hamza, taa marbutah and alif maqsurah forms in Arabic, capitals in English")
+            }
+        }
+
+        /// The rule as the byte sweep reads it. Exact is whole words first; its letters are checked
+        /// by the row test, on rows that already carry the words.
+        var byteRule: HadithMatchRule {
+            switch self {
+            case .contains: return .contains
+            case .wholeWord, .exact: return .wholeWord
+            case .startsWith: return .startsWith
+            case .endsWith: return .endsWith
+            }
+        }
+    }
+
     enum Words: String, CaseIterable, Identifiable {
         case phrase, allWords, anyWord
         var id: String { rawValue }
@@ -123,6 +164,7 @@ struct HadithSearchFilters: Equatable {
     var books: Set<String> = []
     /// Empty = any grading, and ungraded hadiths too.
     var grades: Set<Grade> = []
+    var match: Match = .contains
     var words: Words = .phrase
 
     // Preferences, persisted.
@@ -148,23 +190,27 @@ struct HadithSearchFilters: Equatable {
     }
     func includes(_ book: HadithCatalogBook) -> Bool { books.isEmpty || books.contains(book.slug) }
 
-    var hasSessionFilters: Bool { !books.isEmpty || !grades.isEmpty || words != .phrase }
+    /// Any filter that belongs to the search in hand (the Reset chip's trigger). Kept, not reset, when
+    /// the field empties: the row comes back carrying them the next time the field is focused.
+    var hasSessionFilters: Bool { !books.isEmpty || !grades.isEmpty || match != .contains || words != .phrase }
 
     var activeCount: Int {
-        [!books.isEmpty, !grades.isEmpty, words != .phrase, !hiddenKinds.isEmpty, sort != .collection]
+        [!books.isEmpty, !grades.isEmpty, match != .contains, words != .phrase, !hiddenKinds.isEmpty, sort != .collection]
             .filter { $0 }.count
     }
 
     /// `activeCount` for one screen: only the controls that screen carries are counted.
     func activeCount(in scope: Scope) -> Int {
         let hidesSomething = scope.kinds.contains { !shows($0, in: scope) }
-        return [scope.choosesBooks && !books.isEmpty, !grades.isEmpty, words != .phrase, hidesSomething, sort != .collection]
+        return [scope.choosesBooks && !books.isEmpty, !grades.isEmpty, match != .contains, words != .phrase,
+                hidesSomething, sort != .collection]
             .filter { $0 }.count
     }
 
     mutating func resetSession() {
         books = []
         grades = []
+        match = .contains
         words = .phrase
     }
 
@@ -212,13 +258,121 @@ struct HadithSearchFilters: Equatable {
 
     // MARK: Words
 
-    /// The query as the byte sweep reads it: one needle for a phrase, one per word otherwise.
-    func needles(for query: String) -> (queries: [HadithFold.Query], requireAll: Bool) {
+    /// The query as the byte sweep reads it: one needle for a phrase, one per word otherwise, and
+    /// the Match button's word-edge rule for every needle.
+    func needles(for query: String) -> (queries: [HadithFold.Query], requireAll: Bool, rule: HadithMatchRule) {
         let whole = HadithFold.query(query)
-        guard words != .phrase else { return ([whole], true) }
+        let rule = match.byteRule
+        guard words != .phrase else { return ([whole], true, rule) }
         let parts = query.split(whereSeparator: { $0.isWhitespace }).map(String.init).filter { $0.count >= 2 }
-        guard parts.count > 1 else { return ([whole], true) }
-        return (parts.map { HadithFold.query($0) }, words == .allWords)
+        guard parts.count > 1 else { return ([whole], true, rule) }
+        return (parts.map { HadithFold.query($0) }, words == .allWords, rule)
+    }
+
+    /// The row test the sweeps run on text matches (off main: it reads the row's text block): the
+    /// grading, and under Exact the letter-for-letter check of the typed words against the row's own
+    /// text. Nil when neither is asked for, so the plain sweep stays the plain sweep.
+    func rowTest(for book: HadithCatalogBook, data: HadithBookData, query: String) -> (@Sendable (Int) -> Bool)? {
+        let grade = gradeTest(for: book, data: data)
+        guard match == .exact else { return grade }
+        let letters = LetterMatch(query, words: words)
+        let pack = data.pack
+        return { row in
+            guard grade?(row) ?? true else { return false }
+            let strings = pack.strings(row: row)
+            return letters.matches(arabic: strings.arabic, english: [strings.narrator, strings.text])
+        }
+    }
+
+    /// The row test the RANKED lane runs on its hits (off main). That lane ranks stems, the other
+    /// spelling and corrected words, so under a Match rule each hit is re-tested against the fold
+    /// with the rule's word edges, then put through `rowTest`. Nil when nothing narrows the lane.
+    func rankedRowTest(for book: HadithCatalogBook, data: HadithBookData, query: String) -> (@Sendable (Int) -> Bool)? {
+        let rows = rowTest(for: book, data: data, query: query)
+        let needles = needles(for: query)
+        guard needles.rule != .contains else { return rows }
+        return { row in
+            data.matches(row: row, queries: needles.queries, requireAll: needles.requireAll, rule: needles.rule)
+                && (rows?(row) ?? true)
+        }
+    }
+
+    /// The Match rule as the highlighter reads it, so the paint follows the rule that chose the rows.
+    /// Exact is whole words, letter for letter, so it paints like Whole Word.
+    var highlightWordRule: SearchWordRule {
+        switch match {
+        case .contains: return .anywhere
+        case .wholeWord, .exact: return .wholeWord
+        case .startsWith: return .startsWith
+        case .endsWith: return .endsWith
+        }
+    }
+
+    // MARK: Exact
+
+    /// The letter-for-letter half of Exact: the typed words against a row's own text, both with the
+    /// marks removed (tashkeel, Quranic signs, punctuation) but every letter kept as written, so أ and
+    /// ا, ة and ه, ى and ي, and a capital and its small letter all stay distinct, as whole words in a
+    /// row. Runs only on rows the folded sweep already matched, so it is never the hot path.
+    struct LetterMatch {
+        /// Groups of consecutive words; the words rule decides whether all groups or one must land.
+        private let groups: [[String]]
+        private let requireAll: Bool
+        let isArabic: Bool
+
+        init(_ query: String, words: Words) {
+            isArabic = HadithFold.isArabicScript(query)
+            let tokens = Self.tokens(query)
+            if words == .phrase || tokens.count < 2 {
+                groups = tokens.isEmpty ? [] : [tokens]
+                requireAll = true
+            } else {
+                groups = tokens.map { [$0] }
+                requireAll = words == .allWords
+            }
+        }
+
+        /// The script picks the field: an Arabic query is read against the Arabic, a Latin one against
+        /// the English lines together (the narrator line is part of the English text, as in the fold).
+        func matches(arabic: String, english: [String]) -> Bool {
+            matches(isArabic ? arabic : english.joined(separator: " "))
+        }
+
+        func matches(_ text: String) -> Bool {
+            guard !groups.isEmpty else { return false }
+            let words = Self.tokens(text)
+            guard !words.isEmpty else { return false }
+            let found: ([String]) -> Bool = { group in
+                guard words.count >= group.count else { return false }
+                for start in 0...(words.count - group.count)
+                where group.indices.allSatisfy({ words[start + $0] == group[$0] }) {
+                    return true
+                }
+                return false
+            }
+            return requireAll ? groups.allSatisfy(found) : groups.contains(where: found)
+        }
+
+        /// Tashkeel, the Quranic annotation signs and the loose marks: the same set the fold strips.
+        private static let strippedMarks: Set<UInt32> = {
+            var set = Set<UInt32>(0x064B...0x065F)
+            set.formUnion(0x06D6...0x06ED)
+            set.formUnion([0x0670, 0x0656, 0x0657, 0x0674, 0x0640])
+            return set
+        }()
+
+        private static let dropped: CharacterSet = CharacterSet.punctuationCharacters.union(.symbols)
+
+        /// The text's words with marks and punctuation gone and letters untouched. Composed first, so
+        /// a decomposed accent and its precomposed twin read the same.
+        static func tokens(_ text: String) -> [String] {
+            var kept = String.UnicodeScalarView()
+            for scalar in text.precomposedStringWithCanonicalMapping.unicodeScalars {
+                if strippedMarks.contains(scalar.value) || dropped.contains(scalar) { continue }
+                kept.append(scalar)
+            }
+            return String(kept).split(whereSeparator: { $0.isWhitespace || $0.isNewline }).map(String.init)
+        }
     }
 
     // MARK: Persistence (preferences only)
@@ -252,8 +406,8 @@ struct HadithSearchFilters: Equatable {
             filters.sort = stored.sort
         }
         #if DEBUG
-        // "-hadithSearchFilters books=bukhari+muslim,grade=sahih+hasan,words=allWords,sort=relevance,
-        // hide=ai": the buttons, pressed headlessly (pair with "-hadithSearch <term>").
+        // "-hadithSearchFilters books=bukhari+muslim,grade=sahih+hasan,match=wholeWord,words=allWords,
+        // sort=relevance,hide=ai": the buttons, pressed headlessly (pair with "-hadithSearch <term>").
         let arguments = ProcessInfo.processInfo.arguments
         if let index = arguments.firstIndex(of: "-hadithSearchFilters"), arguments.indices.contains(index + 1) {
             for pair in arguments[index + 1].split(separator: ",") {
@@ -263,6 +417,7 @@ struct HadithSearchFilters: Equatable {
                 switch parts[0] {
                 case "books": filters.books = Set(values)
                 case "grade": filters.grades = Set(values.compactMap(Grade.init(rawValue:)))
+                case "match": filters.match = Match(rawValue: parts[1]) ?? .contains
                 case "words": filters.words = Words(rawValue: parts[1]) ?? .phrase
                 case "sort": filters.sort = Sort(rawValue: parts[1]) ?? .collection
                 case "hide": filters.hiddenKinds = Set(values.compactMap(Kind.init(rawValue:)))
@@ -340,6 +495,7 @@ struct HadithSearchFilterBar: View {
 
                 divider
                 if showsEveryButton {
+                    matchMenu
                     wordsMenu
                     Menu {
                         Picker("Order", selection: $filters.sort) {
@@ -357,10 +513,11 @@ struct HadithSearchFilterBar: View {
                         }
                     }
                 } else {
-                    // The one ordering choice as a switch, then a Words rule only once it is set.
+                    // The one ordering choice as a switch, then the Match and Words rules only once set.
                     chipButton(String(localized: "Best Match"), systemImage: "arrow.up.arrow.down", isOn: filters.sort == .relevance) {
                         filters.sort = filters.sort == .relevance ? .collection : .relevance
                     }
+                    if filters.match != .contains { matchMenu }
                     if filters.words != .phrase { wordsMenu }
                 }
 
@@ -380,6 +537,17 @@ struct HadithSearchFilterBar: View {
 
     private var divider: some View {
         Capsule().fill(Color.secondary.opacity(0.3)).frame(width: 1, height: 18)
+    }
+
+    private var matchMenu: some View {
+        Menu {
+            Picker("Match", selection: $filters.match) {
+                ForEach(HadithSearchFilters.Match.allCases) { Text($0.title).tag($0) }
+            }
+        } label: {
+            chipLabel(filters.match == .contains ? String(localized: "Match") : filters.match.title,
+                      systemImage: "character.cursor.ibeam", isOn: filters.match != .contains, isMenu: true)
+        }
     }
 
     private var wordsMenu: some View {
@@ -533,6 +701,14 @@ struct HadithSearchFilterSheet: View {
                              + (scope.choosesBooks
                                 ? String(localized: "A reference such as \u{201C}tirmidhi 2516\u{201D} always answers, whatever is chosen here.")
                                 : String(localized: "A hadith looked up by its number always answers, whatever is chosen here."))).localizedDigits)
+                    }
+
+                    Section {
+                        ForEach(HadithSearchFilters.Match.allCases) { match in
+                            optionRow(match.title, detail: match.detail, isOn: filters.match == match) { filters.match = match }
+                        }
+                    } header: {
+                        header(String(localized: "MATCH"))
                     }
 
                     Section {

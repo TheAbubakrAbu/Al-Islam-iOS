@@ -408,12 +408,17 @@ struct NowPlayingView: View {
         nowPlaying.customRangeRepeatPerAyah > 1 || nowPlaying.customRangeRepeatSection > 1
     }
 
-    /// "Ayahs 1–10 · 3/30": the range, and which play of the whole run this is.
+    /// "Ayahs 1–10 · 3/30": the range, and which play of the whole run this is. A range that runs into
+    /// later surahs names both ends: "18:75–19:98 · 3/300".
     private func customRangeLineOne(start: Int, end: Int) -> String {
         let current = nowPlaying.customRangeCurrentIndex ?? 1
         let section = customRangeLoops ? 1 : nowPlaying.customRangeRepeatSection
         let total = nowPlaying.customRangeTotalItems
             ?? max(1, (end - start + 1) * nowPlaying.customRangeRepeatPerAyah * section)
+        if let startSurah = nowPlaying.customRangeStartSurahNumber,
+           let endSurah = nowPlaying.customRangeEndSurahNumber, startSurah != endSurah {
+            return "\(startSurah):\(start)\u{2013}\(endSurah):\(end) \u{00B7} \(current)/\(total)"
+        }
         return String(localized: "Ayahs \(start)\u{2013}\(end) \u{00B7} \(current)/\(total)")
     }
 

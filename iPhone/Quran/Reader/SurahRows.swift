@@ -963,12 +963,41 @@ struct AyahArabicSnippet: View, Equatable {
         settings.showTajweedColors && settings.showArabicText && settings.isHafsDisplay
     }
 
+    /// The displayed riwayah's print-derived color pack, when it is not Hafs and tajweed is on: the
+    /// snippet then colors the way the reader does (`AyahRow.arabicRiwayahTajweedText`), which the
+    /// settings preview needs to show a Warsh reader their own colors (2026-11-01).
+    private var riwayahTajweedTag: String? {
+        #if os(iOS)
+        guard settings.showTajweedColors, settings.showArabicText, !settings.isHafsDisplay else { return nil }
+        return settings.riwayahTajweedPackTag
+        #else
+        return nil
+        #endif
+    }
+
     private func arabicDisplayText() -> String {
         let text = ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText)
         return settings.beginnerMode ? text.beginnerSpaced : text
     }
 
     private func arabicTajweedText() -> AttributedString? {
+        #if os(iOS)
+        if let tag = riwayahTajweedTag {
+            // With "Hide Tashkeel and Signs" on, the store colors the FULL text and projects the runs
+            // onto the stripped rendering (the reader's rule).
+            let fullText: String? = {
+                guard settings.cleanArabicText else { return nil }
+                let full = ayah.rawArabicText(surahId: surah.id)
+                return settings.beginnerMode ? full.beginnerSpaced : full
+            }()
+            return QiraahTajweedStore.shared.attributedText(
+                tag: tag, surah: surah.id, ayah: ayah.id, displayText: arabicDisplayText(),
+                beginnerSpacing: settings.beginnerMode,
+                hiddenRules: settings.riwayahTajweedHiddenRuleSet,
+                fullText: fullText
+            )
+        }
+        #endif
         guard shouldShowTajweedColors else { return nil }
         // The raw text to paint, and the text on screen (Hide Dots applies with or without Hide
         // Tashkeel; the store's default follows the same setting).
@@ -1280,7 +1309,8 @@ struct AyahSearchRow: View, Equatable {
     /// the only small pill in the tab - the exact "S:A" match listed beside them draws `SurahAyahRow`'s
     /// headline pill and the reader its 28pt one - and at 22pt tall it was also the smallest bookmark
     /// target (Abu, 2026-10-22: the "X:Y" button "is sometimes too small"). The ellipsis beside it
-    /// grew to the HadithRow's 28pt pair with it (`ayahContextMenuModifier(inlineEllipsis:)`).
+    /// grew with it for a while and went back to the compact HadithRow's 22pt on 2026-11-01 (Abu:
+    /// "too big"); it still sits in a 28pt slot (`ayahContextMenuModifier(inlineEllipsis:)`).
     @ViewBuilder
     private var ayahReferenceBadge: some View {
         ZStack(alignment: .topTrailing) {

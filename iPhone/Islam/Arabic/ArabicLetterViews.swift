@@ -3405,11 +3405,39 @@ struct ArabicNumberGridTile: View {
 }
 #endif
 
+/// One of the mushaf's printed stop and pause signs: the sign as the Hafs print draws it, its name, and
+/// what it asks of the reciter (`meaning`; 2026-11-01, the reader Legend's Signs page and a tapped tile
+/// show it). `all` is the one catalogue every signs grid and the Legend draw from.
 struct StopSignInfo: Identifiable {
     let title: String
     let symbol: String
+    var meaning: String = ""
 
     var id: String { symbol + title }
+
+    /// From "stop" to "read on", then the pauses, then the marks that are not stops at all.
+    static let all: [StopSignInfo] = [
+        StopSignInfo(title: String(localized: "Mandatory Stop"), symbol: "مـ",
+                     meaning: String(localized: "Stop here. Joining this word to the next would change or confuse the meaning.")),
+        StopSignInfo(title: String(localized: "Preferred Stop"), symbol: "قلى",
+                     meaning: String(localized: "Stopping is better than continuing, though both are allowed.")),
+        StopSignInfo(title: String(localized: "Permissible Stop"), symbol: "ج",
+                     meaning: String(localized: "Stop or continue as you like; both are equally fine.")),
+        StopSignInfo(title: String(localized: "Prefer Continue"), symbol: "صلى",
+                     meaning: String(localized: "Continuing is better than stopping, though stopping is allowed.")),
+        StopSignInfo(title: String(localized: "Must Continue"), symbol: "لا",
+                     meaning: String(localized: "Do not stop here. If you run out of breath, go back a word or two and join the words again.")),
+        StopSignInfo(title: String(localized: "Stop at One"), symbol: "∴ ∴",
+                     meaning: String(localized: "Two triplets close together: stop at one of them or the other, never at both.")),
+        StopSignInfo(title: String(localized: "Short Pause"), symbol: "س",
+                     meaning: String(localized: "Hold the sound for a moment without taking a breath, then continue. Hafs has four: 18:1, 36:52, 75:27 and 83:14.")),
+        StopSignInfo(title: String(localized: "Ayah End"), symbol: "۝",
+                     meaning: String(localized: "The number closes the ayah. Stopping here is always allowed, and the Prophet ﷺ recited ayah by ayah.")),
+        StopSignInfo(title: String(localized: "Make Sujood"), symbol: "۩",
+                     meaning: String(localized: "A prostration of recitation is recommended here, for the reciter and anyone listening: stop, prostrate once, then carry on.")),
+        StopSignInfo(title: String(localized: "Hizb Marker"), symbol: "۞",
+                     meaning: String(localized: "Marks a quarter of a hizb (half a juz). A place marker for memorizing and reviewing, not a stop sign."))
+    ]
 }
 
 struct StopInfoRow: View {
@@ -3417,30 +3445,70 @@ struct StopInfoRow: View {
     let title: String
     let symbol: String
     let color: Color
+    /// What the sign asks of the reciter. With one, a tap opens the tile to it and a second tap closes it
+    /// again (Abu, 2026-11-01: "stopping signs, when I click on it").
+    var meaning: String? = nil
+
+    @State private var showsMeaning = false
 
     var body: some View {
-        HStack(spacing: 10) {
-            // These are mushaf glyphs (۩ ۞ قلى ج صلى ...), not UI text - they belong in the Quranic face, and
-            // read wrong in SF Rounded.
-            Text(symbol)
-                .font(
-                    appearance.islamUsesCustomArabicFace
-                        ? Font.arabic(appearance.islamArabicFontName, size: 20, relativeTo: .headline)
-                        : .headline.weight(.semibold)
-                )
-                .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
-                .foregroundStyle(color)
-                .frame(width: 42, height: 42)
-                .background(color.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        if let meaning {
+            Button {
+                Settings.shared.hapticFeedback()
+                withAnimation(.easeInOut(duration: 0.2)) { showsMeaning.toggle() }
+            } label: {
+                tile(meaning: showsMeaning ? meaning : nil, expandable: true)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(showsMeaning ? "Hides what the sign means" : "Shows what the sign means")
+        } else {
+            tile(meaning: nil, expandable: false)
+        }
+    }
 
-            Text(title)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.primary)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
+    private func tile(meaning: String?, expandable: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                // These are mushaf glyphs (۩ ۞ قلى ج صلى ...), not UI text - they belong in the Quranic face, and
+                // read wrong in SF Rounded.
+                Text(symbol)
+                    .font(
+                        appearance.islamUsesCustomArabicFace
+                            ? Font.arabic(appearance.islamArabicFontName, size: 20, relativeTo: .headline)
+                            : .headline.weight(.semibold)
+                    )
+                    .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                    .foregroundStyle(color)
+                    .frame(width: 42, height: 42)
+                    .background(color.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-            Spacer(minLength: 0)
+                Text(title)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                    .multilineTextAlignment(.leading)
+
+                Spacer(minLength: 0)
+
+                if expandable {
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(meaning == nil ? 0 : 180))
+                }
+            }
+
+            if let meaning {
+                Text(meaning)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .transition(.opacity)
+            }
         }
         .padding(10)
         .frame(maxWidth: .infinity, minHeight: 62, alignment: .leading)
@@ -3453,17 +3521,7 @@ struct QuranSignsSectionContent: View {
     let accentColor: Color
     var includeLearnMoreLink: Bool = true
 
-    private let signs: [StopSignInfo] = [
-        StopSignInfo(title: String(localized: "Make Sujood"), symbol: "۩"),
-        StopSignInfo(title: String(localized: "Hizb Marker"), symbol: "۞"),
-        StopSignInfo(title: String(localized: "Mandatory Stop"), symbol: "مـ"),
-        StopSignInfo(title: String(localized: "Preferred Stop"), symbol: "قلى"),
-        StopSignInfo(title: String(localized: "Permissible Stop"), symbol: "ج"),
-        StopSignInfo(title: String(localized: "Short Pause"), symbol: "س"),
-        StopSignInfo(title: String(localized: "Stop at One"), symbol: "∴ ∴"),
-        StopSignInfo(title: String(localized: "Prefer Continue"), symbol: "صلى"),
-        StopSignInfo(title: String(localized: "Must Continue"), symbol: "لا")
-    ]
+    private var signs: [StopSignInfo] { StopSignInfo.all }
 
     private var columns: [GridItem] {
         [
@@ -3477,7 +3535,7 @@ struct QuranSignsSectionContent: View {
         // each self-sizing pass, which iOS 26 traps on. `.top`: the columns' own alignment.
         SummaryTileGrid(columns: columns.count, spacing: 8, alignment: .top) {
             ForEach(signs) { sign in
-                StopInfoRow(title: sign.title, symbol: sign.symbol, color: accentColor)
+                StopInfoRow(title: sign.title, symbol: sign.symbol, color: accentColor, meaning: sign.meaning)
             }
 
             if includeLearnMoreLink,

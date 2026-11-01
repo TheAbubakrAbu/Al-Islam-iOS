@@ -182,7 +182,9 @@ struct QiraatExplorerView: View {
             }
             .applyConditionalListStyle(disableNowPlayingInset: true)
             .compactListSectionSpacing()
-            .safeAreaInset(edge: .top, spacing: 0) { band }
+            .safeAreaInset(edge: .top, spacing: 0) { sidesBand }
+            // The place row is the bottom bar, where the readers keep their Previous | Next pair.
+            .adaptiveSafeArea(edge: .bottom, spacing: 0) { placeBar }
             .onChange(of: shownKey) { _ in
                 proxy.scrollTo(Self.topRow, anchor: .top)
             }
@@ -275,16 +277,31 @@ struct QiraatExplorerView: View {
         "\(surahID):\(hafsAyah)|\(duelA)>\(duelB)|\(everyDifference ? 1 : 0)|\(betaQiraatEnabled ? 1 : 0)"
     }
 
-    private var band: some View {
-        VStack(spacing: 8) {
-            placeRow
-            if mode == .duel { sidesRow }
+    /// Compare Two's two sides stay pinned under the navigation bar; All Riwayat pins nothing up here.
+    /// The place row went to the bottom (Abu, 2026-11-01: "the toolbar surah and arrows should be at
+    /// the bottom not the top"), so the top band is the pair alone.
+    @ViewBuilder
+    private var sidesBand: some View {
+        if mode == .duel {
+            sidesRow
+                .padding(.horizontal)
+                .padding(.top, 6)
+                .padding(.bottom, 8)
+                .background(.ultraThinMaterial)
+                .overlay(Divider(), alignment: .bottom)
         }
-        .padding(.horizontal)
-        .padding(.top, 6)
-        .padding(.bottom, 8)
-        .background(.ultraThinMaterial)
-        .overlay(Divider(), alignment: .bottom)
+    }
+
+    /// The place row as a floating glass bar in the readers' bottom-bar dress: 24 pt side margins and
+    /// the standard cushion off the tab bar (`BottomBarCushion`).
+    private var placeBar: some View {
+        placeRow
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .conditionalGlassEffect(rectangle: true)
+            .padding(.horizontal, 24)
+            .padding(.bottom, BottomBarCushion.standard)
+            .background(Color.white.opacity(0.00001))
     }
 
     private var currentBand: Band {

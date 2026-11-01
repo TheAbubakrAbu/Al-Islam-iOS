@@ -171,9 +171,12 @@ struct PermissionsIntro: View {
 struct PermissionCards: View {
     @ObservedObject var asker: PermissionAsker
     private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    @State private var showHomePicker = false
 
     private var accent: Color { settings.accentColor.color }
 
@@ -183,12 +186,30 @@ struct PermissionCards: View {
         String(localized: "You can change either later in the Settings app. Only \(AppIdentifiers.displayName) and Apple ever see your location, and it is never shared with anyone else.")
     }
 
+    /// The Location card's text. The first fix is saved as the home city (`seedHomeLocationIfNeeded`) and
+    /// Traveling Mode measures from it, which readers who installed away from home never knew (Abu,
+    /// 2026-10-31), so the card says it. Two whole sentences, so the first keeps its translations.
+    static var locationText: String {
+        String(localized: "Prayer times, the Qibla and Traveling Mode all start from where you are. Always lets the times and the widgets follow you without opening the app.")
+            + " " + String(localized: "Where you are now is saved as your home city, and Traveling Mode turns on when you are more than 48 mi from it.").localizedDigits
+    }
+
+    /// The home city the Location card names, with its Change button: only once location is allowed and a
+    /// fix has named a city, so the row never shows an empty or stale guess.
+    static func homeCity(locationAllowed: Bool, home: Location?) -> String? {
+        guard locationAllowed,
+              let city = home?.displayCity.trimmingCharacters(in: .whitespacesAndNewlines),
+              !city.isEmpty else { return nil }
+        return city
+    }
+
     var body: some View {
         VStack(spacing: 18) {
             card(systemImage: "location.fill", title: String(localized: "Location"),
-                 text: String(localized: "Prayer times, the Qibla and Traveling Mode all start from where you are. Always lets the times and the widgets follow you without opening the app."),
+                 text: Self.locationText,
                  status: asker.locationStatusText, allowed: asker.locationAllowed, denied: asker.locationDenied,
-                 identifier: "permissionsAllowLocation", allow: asker.askLocation)
+                 identifier: "permissionsAllowLocation", allow: asker.askLocation,
+                 homeCity: Self.homeCity(locationAllowed: asker.locationAllowed, home: adhanSettings.homeLocation))
 
             card(systemImage: "bell.badge.fill", title: String(localized: "Notifications"),
                  text: String(localized: "The adhan at each prayer, and reminders before them if you want them."),
@@ -198,7 +219,8 @@ struct PermissionCards: View {
     }
 
     private func card(systemImage: String, title: String, text: String, status: String, allowed: Bool,
-                      denied: Bool, identifier: String, allow: @escaping () -> Void) -> some View {
+                      denied: Bool, identifier: String, allow: @escaping () -> Void,
+                      homeCity: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 13) {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -247,6 +269,10 @@ struct PermissionCards: View {
                 .padding(.leading, dynamicTypeSize.isAccessibilitySize ? 0 : 47)
                 .accessibilityIdentifier(identifier)
             }
+
+            if let homeCity {
+                homeRow(homeCity)
+            }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -258,6 +284,41 @@ struct PermissionCards: View {
                         .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
                 )
         )
+    }
+
+    /// "Home city: X" and a Change button that opens the same map as Settings › Prayer Settings ›
+    /// Traveling Mode › Set Home City, for whoever is not at home right now.
+    private func homeRow(_ city: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "house.fill")
+                .font(.caption)
+                .foregroundColor(accent)
+                .accessibilityHidden(true)
+            Text("Home city: \(city)")
+                .font(.footnote.weight(.semibold))
+                .foregroundColor(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 8)
+            Button {
+                settings.hapticFeedback()
+                showHomePicker = true
+            } label: {
+                Text("Change")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(accent)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(accent.opacity(0.14)))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("permissionsChangeHomeCity")
+        }
+        .padding(.leading, dynamicTypeSize.isAccessibilitySize ? 0 : 47)
+        .sheet(isPresented: $showHomePicker) {
+            MapView(choosingPrayerTimes: false)
+                .environmentObject(settings)
+                .smallMediumSheetPresentation()
+        }
     }
 
     private func statusPill(_ text: String, allowed: Bool, denied: Bool) -> some View {

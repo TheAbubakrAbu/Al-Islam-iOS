@@ -130,7 +130,7 @@ final class SystemSettings: ObservableObject, SettingsSlice {
         "gridModeSettingsRaw", "hapticOn", "helpDoorsCollapsed", "helpDoorsHidden",
         "keepScreenOn", "launchTab", "launchTabChosen", "quranGridMode",
         "simpleMode", "startHereHidden", "startHereVisited", "tabSectionChoices",
-        "tabSectionsCollapsed",
+        "tabSectionsCollapsed", "tutorialNudgesSeen",
     ]
 
     private init() { ObjectPublishCounter.attach(self, label: Self.label) }
@@ -206,6 +206,11 @@ final class SystemSettings: ObservableObject, SettingsSlice {
     var helpDoorsHiddenRaw: String {
         get { Settings.shared.helpDoorsHiddenRaw }
         set { Settings.shared.helpDoorsHiddenRaw = newValue }
+    }
+
+    var tutorialNudgesSeenRaw: String {
+        get { Settings.shared.tutorialNudgesSeenRaw }
+        set { Settings.shared.tutorialNudgesSeenRaw = newValue }
     }
 
     var keepScreenOnRaw: String {

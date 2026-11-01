@@ -565,8 +565,13 @@ enum QuranMetadata {
 struct AyahInsightsCard: View {
     private let settings = Settings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var themeHighlights = ThemeHighlights.shared
     let surah: Surah
     let ayah: Ayah
+    /// Heads the card with what it is (the ayah actions sheet, where it sits under the reciter and the
+    /// sheet's switches with nothing saying what it holds; Abu, 2026-10-31: "underneath choose reciter
+    /// and other toggles explain what the theme is"). Word Study's Themes tab names it already.
+    var explains: Bool = false
 
     /// QSAC and QUL topics together, QSAC first (the app's own Browse by Theme corpus).
     private var topics: [ThemeTopic] {
@@ -586,9 +591,28 @@ struct AyahInsightsCard: View {
         let passage = passage
         let topics = topics
         let caption = QuranMetadata.caption(for: ayah, surah: surah.id)
+        let wash = themeHighlights.washSource(surah: surah.id, ayah: ayah.id)
 
-        if passage != nil || !topics.isEmpty || !caption.isEmpty {
+        if passage != nil || !topics.isEmpty || !caption.isEmpty || wash != nil {
             VStack(alignment: .leading, spacing: 10) {
+                if explains {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("THEMES")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(topics.isEmpty
+                             ? String(localized: "What this ayah is about: the passage of the surah it belongs to, and where it falls in the Quran's divisions.")
+                             : String(localized: "What this ayah is about: the passage of the surah it belongs to, and the topics it is indexed under. Tap a topic to see every ayah on it."))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                if let wash {
+                    washRow(wash.color, source: wash.source)
+                }
+
                 if let passage {
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 6) {
@@ -634,6 +658,43 @@ struct AyahInsightsCard: View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(Color.primary.opacity(0.05))
             )
+        }
+    }
+
+    /// The colour Highlight Themes washes this ayah in, said in words: what the colour stands for
+    /// (the legend's meaning and its line), and which lit theme or passage put it there.
+    private func washRow(_ color: ThemeWashColor, source: ThemeHighlights.WashSource) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Circle()
+                .fill(color.color)
+                .frame(width: 10, height: 10)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Highlighted in \(color.name): \(color.meaning)")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(color.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(color.legendDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(washSourceLine(source))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func washSourceLine(_ source: ThemeHighlights.WashSource) -> String {
+        switch source {
+        case .theme(let theme):
+            return String(localized: "Lit by the theme \u{201C}\(theme.name)\u{201D} in Highlight Themes.")
+        case .passage(let section):
+            let title = AppLanguage.isArabicScript && !section.titleArabic.isEmpty ? section.titleArabic : section.title
+            return String(localized: "Lit by its passage in Highlight Themes: \(title) (\(section.rangeLabel)).")
         }
     }
 }

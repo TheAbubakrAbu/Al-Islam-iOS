@@ -539,6 +539,28 @@ final class ThemeHighlights: ObservableObject {
         return nil
     }
 
+    /// Why an ayah wears its wash: the lit theme that names it, or the lit passage it sits in.
+    enum WashSource {
+        case theme(LitTheme)
+        case passage(SurahSection)
+    }
+
+    /// The wash an ayah wears and what lit it, for the ayah sheet's Themes card: the earliest lit
+    /// theme naming the ayah (the one whose colour `wash` returns), else the narrowest lit passage
+    /// around it (the one `rebuildSections` paints last). Nil when nothing lights the ayah.
+    func washSource(surah: Int, ayah: Int) -> (color: ThemeWashColor, source: WashSource)? {
+        guard wash(surah: surah, ayah: ayah) != nil else { return nil }
+        let key = "\(surah):\(ayah)"
+        if let theme = lit.first(where: { $0.ayahs.contains(key) }) {
+            return (theme.color, .theme(theme))
+        }
+        let store = SurahSectionsStore.shared
+        if let section = store.sections(surah: surah, ayah: ayah).first(where: { isLit(section: $0) }) {
+            return (store.color(for: section), .passage(section))
+        }
+        return nil
+    }
+
     private func rebuild() {
         var table: [Int: ThemeWashColor] = [:]
         for theme in lit {

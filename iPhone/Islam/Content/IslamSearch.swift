@@ -217,7 +217,9 @@ enum IslamArticleCatalog {
             ("RiwayatDifferencesView", "How the Riwayat Differ on the Page", "riwayat-differences",
              ["hamzah", "hamza", "hamzat al-wasl", "wasl", "madani", "maghribi", "dot", "dots", "imalah", "taqlil",
               "tas-hil", "tashil", "ibdal", "naql", "silah", "warsh", "qalun", "qaloon", "susi", "duri", "abu jafar",
-              "hamzah az-zayyat", "kisai", "orthography", "mushaf differences", "dabt"]),
+              "hamzah az-zayyat", "kisai", "orthography", "mushaf differences", "dabt",
+              "legend", "colors", "color code", "khilaf", "idgham", "sakt", "ishmam", "ghunnah", "tashdid", "bazzi",
+              "ibn kathir", "madd al-badal", "tarqiq", "taghlidh", "pronoun ha", "ha dhamir"]),
         ]),
         // Its own group beside the Quran's (Abu, 2026-09-29: "add Hadith sciences ... make that its own
         // link near the Quran stuff like tafsir and seerah").

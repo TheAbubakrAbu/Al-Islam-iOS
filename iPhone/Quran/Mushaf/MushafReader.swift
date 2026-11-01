@@ -3490,7 +3490,8 @@ struct SurahPageReader<Controls: View>: View {
     /// the FOOTER is showing, which in page mode is wherever the reader has paged to. With more than one
     /// surah on screen (`onScreen`: page 604 carries 112, 113 and 114; an open spread can hold more),
     /// Play Surah and Play Ayah by Ayah open a list of those surahs instead of guessing the meter's one.
-    /// The double-tap shortcut cannot ask, so it keeps the meter's surah.
+    /// A tap opens the menu at once: no double-tap shortcut since 2026-11-01 (it made every tap wait,
+    /// see `ShortcutMenu`); the hold is the one shortcut.
     private func pageFooterPlayButton(surah: Surah, onScreen: [Surah]) -> some View {
         let idle = !nowPlaying.isLoading && !nowPlaying.isPlaying && !nowPlaying.isPaused
         let canResumeLast = settings.lastListenedSurah?.surahNumber == surah.id
@@ -3500,10 +3501,6 @@ struct SurahPageReader<Controls: View>: View {
         return Group {
             if idle {
                 ShortcutMenu(
-                    doubleTap: MenuShortcut(String(localized: "Play Surah")) {
-                        settings.hapticFeedback()
-                        quranPlayer.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
-                    },
                     hold: settings.isHafsDisplay && onPlayCustomRange != nil
                         ? MenuShortcut(String(localized: "Play Custom Range")) {
                             settings.hapticFeedback()
@@ -6530,7 +6527,10 @@ enum MushafPageRenderCache {
     // wider and every page holding one fits differently.
     // 14: the print-matched spread cap went from 2.6x to 3.2x the size, so every print-matched page
     // short of its band takes more of the leftover into its line gaps (the folded page's dead band).
-    nonisolated private static let fitterVersion = 14
+    // 15: the baked بِـَٔا ligature (gly025) was removed from Uthmani.ttf, so the baa stays plain and
+    // only the hamza and alif carry the madd (`Scripts/patch_bi_hamza_alif_ligature.py`). The unmerged
+    // بِـَٔايَٰتِ is 4223 units against the bake's 3820, so every page holding one of its 119 words fits differently.
+    nonisolated private static let fitterVersion = 15
 
     nonisolated private static let persistedMetricsSalt: String = {
         let os = ProcessInfo.processInfo.operatingSystemVersion

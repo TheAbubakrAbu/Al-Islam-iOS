@@ -20,7 +20,7 @@ import SwiftUI
 //   they are REMOVED from the List, not hidden in place, so nothing is left behind but the header.
 // - A door lands on its answer. It used to open the settings ROOT, which pushed the page a beat
 //   later, and Beginner Mode was then the tenth control down a long page. Now a door opens either a
-//   focused screen, a settings page on its own (`SettingsSearchDestinationView.page(for:)`), or the
+//   focused screen, a settings page on its own (`SettingsSearchDestinationView.view(for:)`), or the
 //   one control that answers it with the page one row below (`Landing.answer`).
 // - Holding a card offers its quick switch ("Turn On Arabic Beginner Mode"), collapse, and Hide on
 //   This Tab.
@@ -99,7 +99,7 @@ struct HelpDoor: Identifiable {
     enum Landing {
         /// A screen of its own: Nagging Mode, Sunnah Reminders, About You, Text Size, Sky Colors.
         case screen(() -> AnyView)
-        /// A settings page by itself, never behind its settings root (`page(for:)`).
+        /// A settings page by itself, never behind its settings root (`SettingsSearchDestinationView.view(for:)`).
         case page(SettingsSearchEntry.Destination)
         /// The one control that answers the question, first, and the pages that hold the rest one row
         /// below it. For a setting that sits deep in a long page (Beginner Mode, on Arabic Text), that
@@ -126,6 +126,8 @@ struct HelpDoor: Identifiable {
     var isOn = false
     /// What the press-and-hold menu can do without opening anything.
     var actions: [HelpDoorAction] = []
+    /// The sheet opens at its full height: the tutorial's cards carry buttons under their text.
+    var opensLarge = false
 }
 
 /// A one-tap answer in a card's press-and-hold menu.
@@ -203,6 +205,23 @@ extension Settings {
 @MainActor
 enum HelpDoorCatalog {
     static func doors(for area: HelpDoorArea, settings: Settings) -> [HelpDoor] {
+        // While the tab's tutorial nudge is up, the nudge IS this question, right above the section.
+        let tutorial = settings.tutorialNudgeSeen(TutorialTab(helpDoorArea: area)) ? [tutorialDoor(for: area)] : []
+        return tutorial + tabDoors(for: area, settings: settings)
+    }
+
+    /// "New to This Tab?" leads every run (Abu, 2026-10-31): the tab's tutorial, the most basic question
+    /// a reader on that tab can have (TabTutorials.swift).
+    private static func tutorialDoor(for area: HelpDoorArea) -> HelpDoor {
+        let tab = TutorialTab(helpDoorArea: area)
+        return HelpDoor(id: "\(area.rawValue).tutorial", title: String(localized: "New to This Tab?"),
+                        caption: String(localized: "A short tutorial of the basics, one card at a time."),
+                        answerName: tab.title,
+                        systemImage: TutorialTab.doorSymbol, tint: tab.tint, secondaryTint: tab.secondaryTint,
+                        landing: .screen { AnyView(TabTutorialView(tab: tab)) }, opensLarge: true)
+    }
+
+    private static func tabDoors(for area: HelpDoorArea, settings: Settings) -> [HelpDoor] {
         switch area {
         #if HAS_ADHAN
         case .adhan: return adhan(settings)
@@ -687,7 +706,7 @@ private struct HelpDoorSheet: View {
             landing
                 .sheetDismissToolbar()
         }
-        .smallMediumSheetPresentation()
+        .smallMediumSheetPresentation(startLarge: door.opensLarge)
     }
 
     @ViewBuilder
@@ -696,7 +715,7 @@ private struct HelpDoorSheet: View {
         case .screen(let screen):
             screen()
         case .page(let destination):
-            SettingsSearchDestinationView.page(for: destination)
+            SettingsSearchDestinationView.view(for: destination)
         case .answer(let answer, let pages):
             HelpDoorAnswerPage(door: door, answer: answer, pages: pages)
         }
@@ -720,7 +739,7 @@ private struct HelpDoorAnswerPage: View {
                 Section(header: Text("MORE OPTIONS")) {
                     ForEach(pages.indices, id: \.self) { index in
                         NavigationLink(destination: LazyDestination {
-                            SettingsSearchDestinationView.page(for: pages[index])
+                            SettingsSearchDestinationView.view(for: pages[index])
                         }) {
                             HelpDoorPageLabel(destination: pages[index], tint: door.tint,
                                               secondaryTint: door.secondaryTint)
@@ -889,7 +908,7 @@ struct HelpDoorsSettingsSection: View {
         let doors = HelpDoorCatalog.doors(for: area, settings: settings)
         Section(header: Text("NEED A HAND?")) {
             VStack(alignment: .leading, spacing: 10) {
-                SettingsToggle(String(localized: "Show on the \(area.tabName) Tab"), caption: String(localized: "A few questions \(area.placement), each opening the setting that answers it. The arrow beside NEED A HAND? on the tab folds them away."), isOn: shown)
+                SettingsToggle(String(localized: "Show on the \(area.tabName) Tab"), caption: String(localized: "A few questions \(area.placement), each opening what answers it: a setting, or the tab's tutorial. The arrow beside NEED A HAND? on the tab folds them away."), isOn: shown)
 
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(doors) { door in

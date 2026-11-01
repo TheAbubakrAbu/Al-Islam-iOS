@@ -22,6 +22,8 @@ import Foundation
 enum AskAIRetriever {
     enum Lane: String, CaseIterable {
         case subject, surahName, carried, prayer, tips, settings, articles
+        /// The article the chat was opened from (its page's Ask AI button): `retrieve(focus:)`.
+        case focus
         case quranSemantic, quranKeyword, quranTopics
         case hadithSemantic, hadithRanked, hadithTopics
         case names, duas
@@ -51,6 +53,7 @@ enum AskAIRetriever {
     static func weights(for question: AskAIQuestion) -> [Lane: Double] {
         var w: [Lane: Double] = [
             .subject: 24, .surahName: 1.6, .carried: 0.6, .prayer: 12, .tips: 0.15, .settings: 0.15, .articles: 1.1,
+            .focus: 3.2,
             .quranSemantic: 1.0, .quranKeyword: 0.95, .quranTopics: 0.7,
             .hadithSemantic: 0.9, .hadithRanked: 0.9, .hadithTopics: 0.85,
             .names: 0.8, .duas: 0.8,
@@ -60,7 +63,7 @@ enum AskAIRetriever {
         case .appHelp:
             w[.tips] = 30
             w[.settings] = 34
-            scale([.articles, .quranSemantic, .quranKeyword, .quranTopics, .hadithSemantic, .hadithRanked, .hadithTopics, .names, .duas, .surahName], 0.05)
+            scale([.articles, .focus, .quranSemantic, .quranKeyword, .quranTopics, .hadithSemantic, .hadithRanked, .hadithTopics, .names, .duas, .surahName], 0.05)
         case .scripture:
             scale([.quranSemantic, .quranKeyword, .quranTopics], 1.3)
         case .hadith:
@@ -99,8 +102,12 @@ enum AskAIRetriever {
 
     /// The sources for `question`. `carried` are the previous turn's sources and `carriedCited` the
     /// ones its answer actually used: a follow-up keeps them in the pool ("why?" is about THOSE).
+    /// `focus` is the article the chat was opened from: its sections that answer the question (its
+    /// opening ones when none scores) join every turn, so "what breaks it?" asked from the wudhu
+    /// guide answers from the guide.
     static func retrieve(_ question: AskAIQuestion, budget: Budget,
-                         carried: [AskAISource] = [], carriedCited: [AskAISource] = []) async -> Outcome {
+                         carried: [AskAISource] = [], carriedCited: [AskAISource] = [],
+                         focus: IslamArticle? = nil) async -> Outcome {
         let started = CFAbsoluteTimeGetCurrent()
         var outcome = Outcome()
         outcome.searchText = question.searchText
@@ -302,6 +309,12 @@ enum AskAIRetriever {
             pool.add(AskAISourceFactory.article(hit.article, section: steps ?? headed ?? hit.section,
                                                 maxCharacters: steps != nil ? budget.subjectCharacters : budget.sourceCharacters + 200),
                      lane: .articles, rank: rank)
+        }
+        if let focus {
+            for (rank, section) in focusSections(of: focus, for: question, limit: 3).enumerated() {
+                pool.add(AskAISourceFactory.article(focus, section: section, maxCharacters: budget.sourceCharacters + 200),
+                         lane: .focus, rank: rank)
+            }
         }
         // A follow-up about an article the previous answer used ("how much is it?" after zakat):
         // the section of THAT article that answers the new words, which a fresh search across all
@@ -667,9 +680,18 @@ enum AskAIRetriever {
         return best?.0
     }
 
+    /// The focused article's sections for this question: the ones its words score in, else the
+    /// article's opening sections with text (a "summarize" or "what are the main points" names no
+    /// section, and the article's start is where it says what it is about).
+    private static func focusSections(of article: IslamArticle, for question: AskAIQuestion, limit: Int) -> [IslamArticle.Section] {
+        let scored = bestSections(of: article, for: question, excludingHeading: nil, limit: limit).map(\.section)
+        if !scored.isEmpty { return scored }
+        return Array(article.sections.filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.prefix(limit))
+    }
+
     /// The sections of `article` that best match the question's search terms, other than the one
     /// already carried, best first; empty when no section carries any of them.
-    private static func bestSections(of article: IslamArticle, for question: AskAIQuestion, excludingHeading: String,
+    private static func bestSections(of article: IslamArticle, for question: AskAIQuestion, excludingHeading: String?,
                                      limit: Int) -> [(section: IslamArticle.Section, headingAnswersShape: Bool)] {
         let terms = question.searchTerms.filter { $0.count >= 3 }
         guard !terms.isEmpty else { return [] }

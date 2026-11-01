@@ -705,6 +705,12 @@ struct IslamView: View {
     @ViewBuilder
     private func islamListEntries(split: Bool) -> some View {
         Group {
+            #if os(iOS)
+            // The tutorial's one-time nudge leads the tab (TabTutorials.swift): Need a Hand? sits at its
+            // foot, past the resources a newcomer meets first.
+            TutorialNudgeSection(tab: .islam)
+            #endif
+
             Group {
                 #if os(iOS)
                 if split, #available(iOS 16.0, *) {
@@ -1425,6 +1431,7 @@ struct IslamView: View {
             guard islamPath.isEmpty else { return }
             reminderDoor = .hub
         }
+        TutorialMenuItem(tab: .islam)
         Divider()
         TabMoreMenuItem(settings.islamGridMode ? String(localized: "Show as List") : String(localized: "Show as Grid"),
                         systemImage: settings.islamGridMode ? "list.bullet" : "square.grid.2x2") {

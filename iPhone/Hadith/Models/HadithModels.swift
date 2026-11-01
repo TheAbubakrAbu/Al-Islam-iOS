@@ -756,10 +756,15 @@ struct HadithBookData: @unchecked Sendable {
         pack.matchingRows(in: range, query: query, limit: limit)
     }
 
-    /// The filtered sweep: several needles and a row test (`HadithSearchFilters`).
+    /// The filtered sweep: several needles, the Match rule and a row test (`HadithSearchFilters`).
     func matchingRows(in range: Range<Int>, queries: [HadithFold.Query], requireAll: Bool, limit: Int,
-                      accept: ((Int) -> Bool)?) -> [Int] {
-        pack.matchingRows(in: range, queries: queries, requireAll: requireAll, limit: limit, accept: accept)
+                      rule: HadithMatchRule = .contains, accept: ((Int) -> Bool)?) -> [Int] {
+        pack.matchingRows(in: range, queries: queries, requireAll: requireAll, limit: limit, rule: rule, accept: accept)
+    }
+
+    /// The filtered sweep's test for ONE row (the ranked lane re-checks its hits under a Match rule).
+    func matches(row: Int, queries: [HadithFold.Query], requireAll: Bool, rule: HadithMatchRule) -> Bool {
+        pack.matches(row: row, queries: queries, requireAll: requireAll, rule: rule)
     }
 
     // MARK: Chapters

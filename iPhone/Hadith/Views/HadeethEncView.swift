@@ -1137,7 +1137,6 @@ struct HadeethEncHadithView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 ShortcutMenu(
-                    doubleTap: MenuShortcut(String(localized: "Copy Hadith"), action: copyHadith),
                     hold: MenuShortcut(String(localized: "Share Hadith"), action: shareHadith)
                 ) {
                     Button {

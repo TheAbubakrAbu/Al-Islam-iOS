@@ -35,8 +35,13 @@ struct TajweedImprovingRecitationView: View {
 
                     ArticleChecklist([String(localized: "Reading consistently"),
                                       String(localized: "Reciting carefully with proper tajweed"),
+                                      String(localized: "Giving every letter its due, one letter at a time"),
                                       String(localized: "Applying corrections learned from teachers or study")],
                                      title: String(localized: "For this reason, solo practice should focus on:"))
+
+                    // Abu, 2026-10-31: the one habit that separates a careful reader from a master.
+                    ArticleCallout(String(localized: "Slow down until each letter is its own sound. In يَوۡم the yaa takes a plain fathah and then the waw closes: \"yawm\", never \"yuwm\" with a dammah the waw dragged in. Where a heavy letter meets a light one, as in خَلَقَ, each keeps its own weight. A true master is not affected by the letter next door; letters pronounced one by one join cleanly on their own."),
+                                   title: String(localized: "One Letter at a Time"), systemImage: "square.stack.3d.up.fill")
 
                     ArticleParagraph(verbatim: String(localized: "Solo practice is essential, but it cannot fully replace proper guidance."))
 
@@ -459,6 +464,19 @@ struct TajweedHeavyLightView: View {
                     ])
 
                     TajweedKeyLine(String(localized: "Note: Laam (ل) and waw (و) are light by default, but laam becomes conditional in one specific case: Allah."), systemImage: "info.circle.fill")
+                }
+
+                Section(header: ArticleHeader(String(localized: "HEAVY BESIDE LIGHT"))) {
+                    // Abu, 2026-10-31: "especially true for light to heavy and heavy to light
+                    // combinations where they marble them together".
+                    ArticleCallout(String(localized: "When a heavy letter stands beside a light one, each keeps its own weight. In خَلَقَ the laam stays light between a heavy khaa and a heavy qaaf; in أَصۡحَـٰب the haa stays light after a heavy saad. A quick reader lets the heavier letter's weight spill over its neighbour, so the two marble into one sound. Read the border one letter at a time until it is clean."),
+                                   title: String(localized: "One Letter at a Time"), systemImage: "arrow.left.and.right")
+
+                    TajweedWordCard(String(localized: "Each letter its own weight"), words: [
+                        TajweedWord("خَلَقَ", "kha-la-qa", note: String(localized: "light laam between two heavy letters")),
+                        TajweedWord("أَصۡحَـٰب", "as-hab", note: String(localized: "light haa after a heavy saad")),
+                        TajweedWord("ٱلۡمُسۡتَقِيم", "al-mustaqim", note: String(localized: "light seen, then heavy taa and qaaf")),
+                    ])
                 }
 
                 Section(header: ArticleHeader(String(localized: "3. CONDITIONAL LETTERS"))) {

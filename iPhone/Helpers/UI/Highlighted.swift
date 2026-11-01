@@ -489,10 +489,12 @@ struct HighlightedSnippet: View {
     /// would paint. For a row that shows only a WINDOW of a long text (the hadith search results) and
     /// has to know where the match sits before it can choose the window; it hands the spans that
     /// fall inside back as `extraHighlightRanges`.
-    static func matchSpans(in source: String, term: String, guaranteeMatch: Bool) -> [NSRange] {
+    /// `wordRule`: the Match button's rule, so the window opens on a hit the paint will accept.
+    static func matchSpans(in source: String, term: String, guaranteeMatch: Bool,
+                           wordRule: SearchWordRule = .anywhere) -> [NSRange] {
         let normalizedTerm = normalizeForSearchText(term, trimWhitespace: true)
         guard !source.isEmpty, !normalizedTerm.isEmpty else { return [] }
-        return matchedRanges(in: source, normalizedTerm: normalizedTerm, guaranteeMatch: guaranteeMatch)
+        return matchedRanges(in: source, normalizedTerm: normalizedTerm, guaranteeMatch: guaranteeMatch, wordRule: wordRule)
             .map { NSRange($0, in: source) }
     }
 

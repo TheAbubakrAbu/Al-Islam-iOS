@@ -79,6 +79,9 @@ enum OpenScreen: String, Hashable, CaseIterable {
     /// Proving Islam's index: its chapters door into the pillar articles, and those articles door
     /// back into the index.
     case provingIslamLibrary
+    /// A tab's tutorial, by tab (TabTutorials.swift): a card's "Show me" opens that tab's settings page,
+    /// whose Tips & Tricks section starts with the door back into the same tutorial.
+    case tabTutorial
 
     /// What a disabled row says in place of its caption, when the row itself does not supply one.
     var alreadyHereCaption: String {
@@ -109,6 +112,7 @@ enum OpenScreen: String, Hashable, CaseIterable {
         case .prophetMiraclesLibrary: return String(localized: "You came here from Miracles of the Prophets")
         case .sunnahLibrary:          return String(localized: "You came here from Sunnahs of the Prophet")
         case .provingIslamLibrary:    return String(localized: "You came here from Proving Islam")
+        case .tabTutorial:            return String(localized: "You came here from this tutorial")
         }
     }
 }

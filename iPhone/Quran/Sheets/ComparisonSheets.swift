@@ -392,24 +392,14 @@ struct AyahQiraahComparisonSheet: View {
                     .foregroundStyle(.secondary)
             }
 
-            // The current riwayah's own khilaf wash paints here too - same khilaf-only rule as
+            // The current riwayah's own khilaf wash paints here too: the same khilaf-only rule as
             // the comparison rows below (all other tajweed stays off in this sheet).
-            Group {
-                if text != nil, let styled = rowStyled(for: option, resolved: resolvedText(for: option)) {
-                    Text(styled)
-                } else {
-                    Text(text ?? String(localized: "This ayah is not separate in this riwayah."))
-                }
+            if let text {
+                selectableArabic(text, styled: rowStyled(for: option, resolved: resolvedText(for: option)),
+                                 option: option, highlightsSearch: false)
+            } else {
+                notSeparateText
             }
-                .font(.custom(comparisonArabicFontName(for: option), size: shownFontSize))
-                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
-                .foregroundColor(text == nil ? .secondary : .primary)
-                .multilineTextAlignment(.trailing)
-                .lineSpacing(6)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
-                .environment(\.layoutDirection, .leftToRight)
-                .textSelection(.enabled)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -772,21 +762,14 @@ struct AyahQiraahComparisonSheet: View {
             }
 
             Group {
-                if let resolved, let styled = duelStyled(for: option, resolved: resolved, against: other) {
-                    Text(styled)
+                if let resolved {
+                    selectableArabic(resolved.text, styled: duelStyled(for: option, resolved: resolved, against: other),
+                                     option: option, highlightsSearch: false)
                 } else {
-                    Text(text ?? String(localized: "This ayah is not separate in this riwayah."))
+                    notSeparateText
                 }
             }
-                .font(.custom(comparisonArabicFontName(for: option), size: shownFontSize))
-                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
-                .foregroundColor(text == nil ? .secondary : .primary)
-                .multilineTextAlignment(.trailing)
-                .lineSpacing(6)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
-                .environment(\.layoutDirection, .leftToRight)
-                .reportingRowTextSpan(in: Self.sheetSpace)
+            .reportingRowTextSpan(in: Self.sheetSpace)
         }
         .padding(.vertical, 4)
         .opacity(text == nil ? 0.55 : 1)
@@ -809,6 +792,71 @@ struct AyahQiraahComparisonSheet: View {
 
     private func comparisonArabicFontName(for option: QiraahDisplay) -> String {
         settings.quranArabicFontName(for: option.tag)
+    }
+
+    // MARK: Selectable Arabic
+
+    /// A riwayah's Arabic in the read-only text view the Select Text sheet uses, so any run of it can
+    /// be drag-selected and copied (Abu, 2026-10-31: "select text" in Qiraah Comparison). The rows were
+    /// `Text` with `.textSelection(.enabled)`, which inside a List offers only Copy of the whole block.
+    private func selectableArabic(_ text: String, styled: AttributedString?, option: QiraahDisplay,
+                                  highlightsSearch: Bool) -> some View {
+        SelectableTextView(attributed: selectableArabicString(text, styled: styled, option: option,
+                                                              highlightsSearch: highlightsSearch))
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+            .environment(\.layoutDirection, .leftToRight)
+    }
+
+    /// The row's text with its colouring carried over: the diff accent and the khilaf wash from
+    /// `styled`, or, while a query is typed into the rows' search, the plain text with the query's
+    /// matches in the accent (`HighlightedSnippet`'s rule, which this replaced: a match outranks the
+    /// tajweed). The face and size are the rows' own; a Basic face draws in the rounded system font.
+    private func selectableArabicString(_ text: String, styled: AttributedString?, option: QiraahDisplay,
+                                        highlightsSearch: Bool) -> NSAttributedString {
+        let fontName = comparisonArabicFontName(for: option)
+        let size = CGFloat(shownFontSize)
+        let font = fontName == Settings.systemArabicFontName
+            ? UIFont.roundedSystemFont(ofSize: size)
+            : (UIFont(name: fontName, size: size) ?? .roundedSystemFont(ofSize: size))
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .right
+        paragraph.baseWritingDirection = .rightToLeft
+        paragraph.lineSpacing = 6
+        let result = NSMutableAttributedString(string: text, attributes: [
+            .font: font,
+            .foregroundColor: UIColor.label,
+            .paragraphStyle: paragraph,
+        ])
+
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if highlightsSearch, !query.isEmpty {
+            let accent = UIColor(settings.accentColor.color)
+            let whole = text as NSString
+            var remaining = NSRange(location: 0, length: whole.length)
+            while remaining.length > 0 {
+                let found = whole.range(of: query, options: .caseInsensitive, range: remaining)
+                guard found.location != NSNotFound, found.length > 0 else { break }
+                result.addAttribute(.foregroundColor, value: accent, range: found)
+                let next = found.location + found.length
+                remaining = NSRange(location: next, length: whole.length - next)
+            }
+        } else if let styled, String(styled.characters) == text {
+            for run in styled.runs {
+                guard let color = run.foregroundColor, color != .primary else { continue }
+                result.addAttribute(.foregroundColor, value: UIColor(color), range: NSRange(run.range, in: styled))
+            }
+        }
+        return result
+    }
+
+    /// The line a row shows when the riwayah does not number these words as an ayah of its own: a
+    /// note in the interface's own type, where it used to take the Arabic face at the slider's size.
+    private var notSeparateText: some View {
+        Text("This ayah is not separate in this riwayah.")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func qiraahRow(_ option: QiraahDisplay) -> some View {
@@ -876,24 +924,15 @@ struct AyahQiraahComparisonSheet: View {
                     .foregroundStyle(.secondary)
             }
 
-            HighlightedSnippet(
-                source: text ?? String(localized: "This ayah is not separate in this riwayah."),
-                term: searchText,
-                font: .custom(
-                    comparisonArabicFontName(for: option),
-                    size: shownFontSize
-                ),
-                accent: settings.accentColor.color,
-                fg: text == nil ? .secondary : .primary,
-                preStyledSource: rowStyled(for: option, resolved: resolved)
-            )
-                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
-                .multilineTextAlignment(.trailing)
-                .lineSpacing(6)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
-                .environment(\.layoutDirection, .leftToRight)
-                .reportingRowTextSpan(in: Self.sheetSpace)
+            Group {
+                if let text {
+                    selectableArabic(text, styled: rowStyled(for: option, resolved: resolved),
+                                     option: option, highlightsSearch: true)
+                } else {
+                    notSeparateText
+                }
+            }
+            .reportingRowTextSpan(in: Self.sheetSpace)
 
             // Hearing the difference: the same reciter, both readings, where a pair exists.
             if text != nil, QiraatVariantAudioStore.isBundled {

@@ -505,6 +505,34 @@ private extension View {
     }
 }
 
+// MARK: - Pinch to zoom a row
+
+/// The pinch that zooms ONE reader row in place (Abu, 2026-11-01: "allow me to zoom in for specific ayahs
+/// ... Quran list and Hadith list", then "don't want it to open a sheet"): `scale` is the row's font
+/// scale, 1 = the reader's own size, and it follows the fingers while they are down; `base` remembers
+/// where this pinch began so a second pinch continues from the current size. A FONT scale, never a
+/// `scaleEffect`, so the text re-wraps at every step instead of growing off the edge. Pinching back in
+/// stops at 1: the reader's size is the floor, as the fitted page is for the page reader's zoom. Steps
+/// of 0.05 so a pinch re-lays the row a dozen times, not a hundred. The scale is the row's own `@State`:
+/// it lasts while the reader is open and is gone the next time, like the page's zoom.
+struct RowZoomPinch: Gesture {
+    @Binding var scale: CGFloat
+    @Binding var base: CGFloat?
+    var range: ClosedRange<CGFloat> = 1...3
+
+    var body: some Gesture {
+        MagnificationGesture()
+            .onChanged { value in
+                let start = base ?? scale
+                base = start
+                let next = min(max(start * value, range.lowerBound), range.upperBound)
+                let stepped = (next * 20).rounded() / 20
+                if stepped != scale { scale = stepped }
+            }
+            .onEnded { _ in base = nil }
+    }
+}
+
 // MARK: - Zoomable image
 
 /// The image hero: pinch to zoom, drag to pan, double-tap to toggle between fit and 2.5×. Scale is clamped so

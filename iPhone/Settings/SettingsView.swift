@@ -165,6 +165,8 @@ struct SettingsSearchEntry: Identifiable {
         /// Unique Features or Beginner Features: the two settings lists every settings page opens beside
         /// its Tips & Tricks (`FeatureList`, 2026-10-26).
         case featureList(FeatureList)
+        /// A tab's tutorial (TabTutorials.swift, 2026-10-31): its cards pushed as a page.
+        case tutorial(TutorialTab)
         case credits
         /// One credited source on the Credits page (`CreditItem.id`): the page opens scrolled to it.
         case credit(String)
@@ -210,6 +212,7 @@ struct SettingsSearchEntry: Identifiable {
             #endif
             case .tips: return "lightbulb.fill"
             case .featureList(let list): return list.systemImage
+            case .tutorial: return TutorialTab.doorSymbol
             case .credits: return "scroll.fill"
             case .credit: return "link"
             #if HAS_ADHAN

@@ -175,10 +175,13 @@ final class HadithChainStore: @unchecked Sendable {
         pack?.contains(slug: slug, idInBook: idInBook) ?? false
     }
 
-    /// The chain of this narration, or nil when it has none the app can draw.
-    func chain(slug: String, idInBook: Int, arabic: String, bookTitle: String) -> IsnadChain? {
+    /// The chain of this narration, or nil when it has none the app can draw. With `english`, every
+    /// chip and every word of transmission carries its English too (`HadithIsnadEnglish`): the
+    /// narrators' names from the narrator index, so this reads that pack as well (off the main thread).
+    func chain(slug: String, idInBook: Int, arabic: String, bookTitle: String, english: Bool = false) -> IsnadChain? {
         guard let pack, let book = pack.books[slug], let code = pack.code(slug: slug, idInBook: idInBook) else { return nil }
-        return HadithChainDecoder.chain(code: code, arabic: arabic, compilerArabic: book.compilerArabic, bookTitle: bookTitle)
+        return HadithChainDecoder.chain(code: code, arabic: arabic, compilerArabic: book.compilerArabic, bookTitle: bookTitle,
+                                        english: english ? HadithIsnadEnglish(slug: slug) : nil)
     }
 
     /// The group of chains this narration's is the same as (HadithNarrators.qpk), or nil when no other
@@ -354,8 +357,10 @@ enum HadithChainDecoder {
     }
 
     /// The diagram's chain. Nil when the narration's words no longer match what the code was read
-    /// from (a rebuilt pack): a misplaced name is never drawn.
-    static func chain(code: String, arabic: String, compilerArabic: String, bookTitle: String) -> IsnadChain? {
+    /// from (a rebuilt pack): a misplaced name is never drawn. With `english`, each node's `name` is
+    /// its English and each layer's `subtitle` the English of its word of transmission.
+    static func chain(code: String, arabic: String, compilerArabic: String, bookTitle: String,
+                      english: HadithIsnadEnglish? = nil) -> IsnadChain? {
         guard let parsed = parse(code) else { return nil }
         let words = tokens(arabic)
         guard fits(parsed, count: words.count) else { return nil }
@@ -363,10 +368,16 @@ enum HadithChainDecoder {
         let meets = !parsed.branches.isEmpty
         func nodes(_ layer: Layer, role: IsnadNode.Role) -> [IsnadNode] {
             layer.map { node in
-                IsnadNode(name: "", arabic: name(node, words),
-                          detail: node.aside.map { clean(words[$0].joined(separator: " ")) },
-                          role: role, narratorID: node.narrator)
+                let arabic = name(node, words)
+                return IsnadNode(name: english?.narrator(arabic: arabic, id: node.narrator) ?? "", arabic: arabic,
+                                 detail: node.aside.map { clean(words[$0].joined(separator: " ")) },
+                                 role: role, narratorID: node.narrator)
             }
+        }
+        func layer(title: String, nodes: [IsnadNode]) -> IsnadLayer {
+            var out = IsnadLayer(title: title, nodes: nodes)
+            out.subtitle = english?.transmission(title)
+            return out
         }
         func layers(_ column: [Layer], topVerb: Int?, isShared: Bool) -> [IsnadLayer] {
             column.indices.map { index -> IsnadLayer in
@@ -374,21 +385,120 @@ enum HadithChainDecoder {
                 let isTop = isShared && index == column.count - 1
                 let role: IsnadNode.Role = isTop && parsed.prophet ? .companion
                     : (isShared && meets && index == 0 ? .imam : .link)
-                return IsnadLayer(title: verb(above, words), nodes: nodes(column[index], role: role))
+                return layer(title: verb(above, words), nodes: nodes(column[index], role: role))
             }.reversed()
         }
 
         var top: [IsnadLayer] = []
         if parsed.prophet {
-            top.append(IsnadLayer(title: "", nodes: [IsnadNode(name: "", arabic: "رَسُولُ اللَّهِ ﷺ", role: .prophet)]))
+            top.append(IsnadLayer(title: "", nodes: [IsnadNode(name: english == nil ? "" : HadithIsnadEnglish.prophet,
+                                                               arabic: "رَسُولُ اللَّهِ ﷺ", role: .prophet)]))
         }
         top += layers(parsed.shared, topVerb: parsed.prophet ? parsed.prophetVerb : nil, isShared: true)
         let branches = parsed.branches.enumerated().map { index, road in
             IsnadBranch(id: "road-\(index)", highlighted: true, layers: layers(road.layers, topVerb: road.topVerb, isShared: false))
         }
         let firstRoad = parsed.branches.first?.layers ?? parsed.shared
-        let collector = IsnadLayer(title: verb(firstRoad[0][0].verb, words),
-                                   nodes: [IsnadNode(name: "", arabic: compilerArabic, detail: bookTitle, role: .narrator)])
+        let collector = layer(title: verb(firstRoad[0][0].verb, words),
+                              nodes: [IsnadNode(name: english?.compiler ?? "", arabic: compilerArabic, detail: bookTitle, role: .narrator)])
         return IsnadChain(top: top, branches: branches, bottom: [collector])
+    }
+}
+
+// MARK: - The chain in English
+
+/// The English of a hadith chain (Abu, 2026-10-31: "would be fire if we can also translate the chain
+/// for English and the chain of narrators"): a narrator's name from the narrator index, where the
+/// script transliterated it (Scripts/arabic_translit.py), a relation ("أبيه") and a word of
+/// transmission ("حدثنا") from the two short tables here, the compiler by his book. Looked up while
+/// the chain is decoded, off the main thread; nothing is translated at render.
+struct HadithIsnadEnglish {
+    static let prophet = String(localized: "The Messenger of Allah ﷺ")
+
+    /// Who stands at the foot of each book's chains, as Scripts/build_hadith_chains.py names him.
+    private static let compilers: [String: String] = [
+        "bukhari": "al-Bukhari", "muslim": "Muslim", "abudawud": "Abu Dawud", "tirmidhi": "at-Tirmidhi",
+        "nasai": "an-Nasa'i", "ibnmajah": "Ibn Majah", "malik": "Yahya al-Laythi", "darimi": "ad-Darimi",
+        "ahmed": "Ahmad ibn Hanbal", "aladab_almufrad": "al-Bukhari", "shamail_muhammadiyah": "at-Tirmidhi",
+    ]
+
+    /// The words a narrator receives a narration by, as the script's `key` folds them (marks off,
+    /// hamza seats to alef, ى to ي, ة to ه), with the و or ف that joins them to the sentence dropped.
+    private static let transmissions: [String: String] = [
+        "حدثنا": "narrated to us", "حدثني": "narrated to me", "حدثناه": "narrated it to us", "حدثنيه": "narrated it to me",
+        "حدثه": "narrated to him", "حدثهم": "narrated to them", "حدثهما": "narrated to the two of them",
+        "حدثتني": "she narrated to me", "حدثتنا": "she narrated to us", "حدثها": "narrated to her",
+        "حدثته": "she narrated to him", "حدثتها": "she narrated to her", "حدثتهم": "she narrated to them",
+        "حدثتهما": "she narrated to the two of them", "حدثاه": "the two narrated to him", "حدثوه": "they narrated to him",
+        "حدثونا": "they narrated to us", "حدثوهم": "they narrated to them", "ثنا": "narrated to us",
+        "اخبرنا": "informed us", "اخبرني": "informed me", "اخبرناه": "informed us of it", "اخبرنيه": "informed me of it",
+        "اخبره": "informed him", "اخبرهم": "informed them", "اخبرهما": "informed the two of them",
+        "اخبرتني": "she informed me", "اخبرتنا": "she informed us", "اخبرها": "informed her",
+        "اخبرته": "she informed him", "اخبرتها": "she informed her", "اخبرتهم": "she informed them",
+        "اخبراه": "the two informed him", "اخبروه": "they informed him", "اخبرونا": "they informed us",
+        "انبانا": "told us", "انباني": "told me", "نبانا": "told us",
+        "سمعت": "I heard", "سمع": "heard", "سمعنا": "we heard", "سمعا": "the two heard",
+        "سمعته": "I heard him", "سمعاه": "the two heard him",
+        "قرات": "I read to", "قرئ": "it was read to", "قراه": "he read it to", "قرانا": "we read to",
+        "عن": "from", "ان": "that", "انه": "that he", "انها": "that she", "انهم": "that they", "انهما": "that the two",
+        "قال": "said", "قالت": "she said", "قالا": "the two said", "قالوا": "they said", "يقول": "says",
+        "تقول": "she says", "يقولان": "the two say", "يحدث": "narrates", "تحدث": "she narrates",
+        "يخبر": "informs", "يحدثه": "narrates to him", "يذكر": "mentions", "ذكر": "mentioned", "فقال": "then said",
+    ]
+
+    /// A narrator named by his relation to the one below him.
+    private static let relations: [String: String] = [
+        "ابيه": "his father", "ابيها": "her father", "امه": "his mother", "امها": "her mother",
+        "جده": "his grandfather", "جدته": "his grandmother", "جدها": "her grandfather", "جديه": "his two grandfathers",
+        "عمه": "his paternal uncle", "عمها": "her paternal uncle", "عمته": "his paternal aunt",
+        "خاله": "his maternal uncle", "خالها": "her maternal uncle", "خالته": "his maternal aunt",
+        "اخيه": "his brother", "اخيها": "her brother", "اخوه": "his brother", "اخته": "his sister",
+        "ابنه": "his son", "ابنته": "his daughter", "ابويه": "his parents",
+        "مولاه": "his mawla", "مولاته": "her mawla", "زوجها": "her husband", "زوجته": "his wife",
+        "امراته": "his wife", "امراه": "a woman",
+    ]
+
+    let compiler: String
+
+    init(slug: String) {
+        compiler = Self.compilers[slug] ?? HadithCatalogBook.bySlug[slug]?.displayAuthor ?? ""
+    }
+
+    /// The script's `key`: marks off, the hamza seats and alefs to one alef, ى to ي, ة to ه, the
+    /// punctuation the names carry out.
+    static func fold(_ text: String) -> String {
+        var out = String.UnicodeScalarView()
+        for scalar in text.removingArabicDiacriticsAndSigns.unicodeScalars {
+            switch scalar.value {
+            case 0x0623, 0x0625, 0x0622, 0x0671: out.append(UnicodeScalar(0x0627)!)
+            case 0x0649: out.append(UnicodeScalar(0x064A)!)
+            case 0x0629: out.append(UnicodeScalar(0x0647)!)
+            case 0x060C, 0x002C, 0x003A, 0x061B, 0x003B, 0x002E, 0x0022, 0x201C, 0x201D, 0x200F, 0x200E: continue
+            default: out.append(scalar)
+            }
+        }
+        return String(out)
+    }
+
+    /// The English of a word of transmission; nil when the word is not one the table knows (the
+    /// Arabic then stands alone, as it did).
+    func transmission(_ arabic: String) -> String? {
+        guard !arabic.isEmpty else { return nil }
+        let key = Self.fold(HadithChainDecoder.droppingConjunction(arabic))
+        if let found = Self.transmissions[key] { return found }
+        // "وحدثنا" and "فقال" fold with their conjunction kept when the vowel sat on it.
+        for prefix in ["و", "ف"] where key.hasPrefix(prefix) {
+            if let found = Self.transmissions[String(key.dropFirst())] { return found }
+        }
+        return nil
+    }
+
+    /// A narrator's English: his indexed name when he has a profile, his relation when he is named
+    /// by one, else nothing.
+    func narrator(arabic: String, id: Int?) -> String {
+        if let id, let profile = HadithNarratorStore.shared.profile(id: id), !profile.english.isEmpty {
+            return profile.english
+        }
+        return Self.relations[Self.fold(arabic)] ?? ""
     }
 }

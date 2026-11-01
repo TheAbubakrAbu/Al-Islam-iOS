@@ -33,8 +33,15 @@ struct AskAIChatView: View {
     /// already the conversation's latest question - reopening the sheet must not ask twice.
     var initialQuestion: String? = nil
     var presentedAsSheet = false
+    /// The article the chat was opened from (an article page's Ask AI button): the questions it
+    /// offers are about that article, and every question asked here also reads its sections
+    /// (`AskAIConversation.focusArticle`).
+    var focusArticle: IslamArticle? = nil
 
     @State private var draft = ""
+    /// Whether a question has been asked since this screen opened on an article: until one is, a
+    /// conversation that was already going shows the article's questions under its last answer.
+    @State private var askedAboutArticle = false
     @FocusState private var inputFocused: Bool
     /// The initial question is asked once per presentation: `onAppear` fires again every time a
     /// cited row's pushed reader pops, and that must not re-ask the search query.
@@ -84,11 +91,25 @@ struct AskAIChatView: View {
     ]
     #endif
 
-    /// Four starters, rotated by the day so the empty screen does not read the same every time.
+    /// Four starters, rotated by the day so the empty screen does not read the same every time; on an
+    /// article, that article's own questions.
     private var starters: [String] {
+        if let focusArticle { return Self.articleQuestions(focusArticle) }
         let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 0
         let pool = Self.starterPool
         return (0..<4).map { pool[(day * 3 + $0 * 5) % pool.count] }
+    }
+
+    /// The questions an article's Ask AI offers. English, like every question the model reads, and
+    /// naming the article in full: a bare "summarize this" reads as a rework of the previous answer
+    /// (`AskAIIntent.recap`), and a short opener as a follow-up that folds the last topic in.
+    static func articleQuestions(_ article: IslamArticle) -> [String] {
+        let title = "\u{201C}\(article.title)\u{201D}"
+        return [
+            "Give me a short summary of the article \(title).",
+            "What are the main points of the article \(title)?",
+            "What evidence from the Quran and Sunnah supports the article \(title)?",
+        ]
     }
 
     var body: some View {
@@ -162,8 +183,14 @@ struct AskAIChatView: View {
         #endif
         // The chat is the one screen that can hold three corpora (Quran, hadith, articles) at
         // once; leaving it keeps only the most recent instead of waiting for a memory warning.
-        .onDisappear { SemanticSearchEngine.shared.releaseIdleCorpora() }
+        .onDisappear {
+            SemanticSearchEngine.shared.releaseIdleCorpora()
+            if focusArticle != nil, chat.focusArticle?.id == focusArticle?.id { chat.focusArticle = nil }
+        }
         .onAppear {
+            // Set on every appearance (a cited source's pushed reader pops back to here), cleared
+            // below: the Islam tab's own Ask AI asks unfocused.
+            chat.focusArticle = focusArticle
             #if canImport(FoundationModels)
             if #available(iOS 26.0, *) { AskAIEngine.prewarm() }
             #endif
@@ -215,6 +242,9 @@ struct AskAIChatView: View {
                         messageView(message)
                             .id(message.id)
                     }
+                    if let focusArticle, !chat.messages.isEmpty, !askedAboutArticle, !chat.isAnswering {
+                        articleQuestionsBlock(focusArticle)
+                    }
                     Color.clear
                         .frame(height: 1)
                         .id("bottom")
@@ -251,38 +281,27 @@ struct AskAIChatView: View {
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 18) {
             // The card every Islam resource opens on (`ResourceHero`).
-            ResourceHero(
-                eyebrow: String(localized: "ASK AI"),
-                systemImage: "sparkles",
-                headline: String(localized: "Ask anything about Islam."),
-                message: AskAICopy.heroMessage
-            )
+            if let focusArticle {
+                ResourceHero(
+                    eyebrow: String(localized: "ASK AI"),
+                    systemImage: "sparkles",
+                    headline: String(localized: "Ask about this article."),
+                    message: String(localized: "Answers read \u{201C}\(focusArticle.title)\u{201D} first, then this app\u{2019}s Quran, hadith and other articles, with every source quoted beneath the reply.")
+                )
+            } else {
+                ResourceHero(
+                    eyebrow: String(localized: "ASK AI"),
+                    systemImage: "sparkles",
+                    headline: String(localized: "Ask anything about Islam."),
+                    message: AskAICopy.heroMessage
+                )
+            }
 
             VStack(alignment: .leading, spacing: 8) {
                 welcomeLabel(String(localized: "TRY ASKING"))
 
                 ForEach(starters, id: \.self) { question in
-                    Button {
-                        settings.hapticFeedback()
-                        chat.ask(question)
-                    } label: {
-                        HStack(spacing: 8) {
-                            Text(question.localizedDisplay)
-                                .font(.subheadline)
-                                .multilineTextAlignment(.leading)
-                            Spacer(minLength: 0)
-                            Image(systemName: "arrow.up.right")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(settings.accentColor.color)
-                        }
-                        .foregroundColor(.primary)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                        .conditionalGlassEffect(rectangle: true)
-                    }
-                    .buttonStyle(.plain)
+                    starterButton(question)
                 }
             }
 
@@ -308,6 +327,44 @@ struct AskAIChatView: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.bottom, 4)
+    }
+
+    /// One question to tap: asks it at once.
+    private func starterButton(_ question: String) -> some View {
+        Button {
+            settings.hapticFeedback()
+            askedAboutArticle = true
+            chat.ask(question)
+        } label: {
+            HStack(spacing: 8) {
+                Text(question.localizedDisplay)
+                    .font(.subheadline)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: 0)
+                Image(systemName: "arrow.up.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(settings.accentColor.color)
+            }
+            .foregroundColor(.primary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .conditionalGlassEffect(rectangle: true)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Opened on an article over a conversation that was already going: the article's questions
+    /// under the last answer, where the eye is, instead of the welcome's place at the top.
+    private func articleQuestionsBlock(_ article: IslamArticle) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            welcomeLabel(String(localized: "ABOUT THIS ARTICLE"))
+            ForEach(Self.articleQuestions(article), id: \.self) { question in
+                starterButton(question)
+            }
+        }
+        .padding(.top, 4)
     }
 
     private var cloudOffered: Bool {
@@ -358,6 +415,7 @@ struct AskAIChatView: View {
         case .assistant:
             AskAIAnswerCard(message: message, isLast: message.id == chat.messages.last?.id) { suggestion in
                 settings.hapticFeedback()
+                askedAboutArticle = true
                 chat.ask(suggestion)
             } onRetry: {
                 settings.hapticFeedback()
@@ -431,6 +489,7 @@ struct AskAIChatView: View {
         guard !question.isEmpty else { return }
         settings.hapticFeedback()
         draft = ""
+        askedAboutArticle = true
         chat.ask(question)
     }
 
@@ -479,10 +538,12 @@ private enum AskAICopy {
 @available(iOS 16.0, *)
 struct AskAIChatSheet: View {
     var initialQuestion: String? = nil
+    /// The article the sheet was opened from (`AskAIChatView.focusArticle`).
+    var focusArticle: IslamArticle? = nil
 
     var body: some View {
         SheetNavigationContainer {
-            AskAIChatView(initialQuestion: initialQuestion, presentedAsSheet: true)
+            AskAIChatView(initialQuestion: initialQuestion, presentedAsSheet: true, focusArticle: focusArticle)
         }
         // Sized here, not at the six call sites: every screen that offers Ask AI presents this one
         // type, so the half-height opening belongs with the sheet itself.

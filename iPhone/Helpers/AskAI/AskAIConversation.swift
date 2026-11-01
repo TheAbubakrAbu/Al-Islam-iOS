@@ -77,6 +77,10 @@ final class AskAIConversation: ObservableObject {
     /// The topic as the reader typed it, for the suggestion chips of a follow-up.
     private var topicDisplay: String?
     private var currentQuestion: AskAIQuestion?
+    /// The article the chat was opened from (an article page's Ask AI button): every question asked
+    /// while it is set also reads that article's sections (`AskAIRetriever.retrieve(focus:)`). Set by
+    /// the chat screen as it appears and cleared as it goes, so the Islam tab's Ask AI asks unfocused.
+    var focusArticle: IslamArticle?
     /// The earlier answers of this conversation, for the echo guard of the turn in flight.
     private var echoGuard = AskAIText.EchoGuard(previousAnswers: [])
     private var task: Task<Void, Never>?
@@ -127,6 +131,7 @@ final class AskAIConversation: ObservableObject {
         guard !trimmed.isEmpty, OnDeviceAsk.isAvailable else { return }
         cancel()
         let history = completedTurns()
+        let focus = focusArticle
         let previousReply = messages.last(where: { $0.role == .assistant && !$0.failed && !$0.text.isEmpty })
         let question = AskAIQuestion.analyze(trimmed, previousTopic: topic, hasHistory: !history.isEmpty)
         if !question.isFollowUp, question.intent.retrieves, !question.contentWords.isEmpty {
@@ -197,7 +202,8 @@ final class AskAIConversation: ObservableObject {
             } else if question.intent.retrieves {
                 let outcome = await AskAIRetriever.retrieve(question, budget: profile.retrievalBudget,
                                                             carried: previousReply?.sources ?? [],
-                                                            carriedCited: previousReply?.citedSources ?? [])
+                                                            carriedCited: previousReply?.citedSources ?? [],
+                                                            focus: focus)
                 sources = outcome.sources
                 retrievalLog = String(format: "%.0f ms; lanes ", outcome.elapsed * 1000)
                     + outcome.laneCounts.map { "\($0.key.rawValue)=\($0.value)" }.sorted().joined(separator: " ")

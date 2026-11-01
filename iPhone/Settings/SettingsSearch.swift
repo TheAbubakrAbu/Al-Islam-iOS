@@ -540,6 +540,20 @@ extension SettingsSearchEntry.Destination {
             case .hadith: return .general
             #endif
             }
+        // A tutorial belongs to its tab's settings page, like that tab's tips.
+        case .tutorial(let tab):
+            switch tab {
+            #if HAS_ADHAN
+            case .adhan: return .prayer
+            #endif
+            #if HAS_QURAN
+            case .quran: return .quran
+            #endif
+            #if HAS_HADITH
+            case .hadith: return .hadith
+            #endif
+            case .islam: return .islam
+            }
         case .credits, .credit: return .credits
         }
     }
@@ -558,7 +572,7 @@ extension SettingsSearchEntry {
         #if HAS_HADITH
         entries += hadithEntries
         #endif
-        return entries + islamEntries + appearanceEntries + aboutYouEntries + backupEntries + tipsEntries + featureListEntries + creditEntries
+        return entries + islamEntries + appearanceEntries + aboutYouEntries + backupEntries + tipsEntries + featureListEntries + tutorialEntries + creditEntries
     }()
 
     /// iCloud Backup's entries, which only Al-Islam has (`HAS_ICLOUD_BACKUP`): the companion apps never
@@ -638,8 +652,11 @@ extension SettingsSearchEntry {
 
 // MARK: - Where a result lands
 
-/// The app-wide mapping from a search destination to its screen, for the root search and for any
-/// page whose own resolver has nothing to say about a destination.
+/// The app-wide mapping from a search destination to its screen: the root search, a page whose own
+/// resolver has nothing to say about a destination, the tips, the spotlight cards, Ask AI's links and
+/// the Need a Hand? doors. A sub-screen is the ROOT of what opens, never pushed onto its settings root
+/// a beat later: that root flashed past and the page slid in over it, mid-slide in a sheet (Abu,
+/// 2026-10-31: "it opens glitchy ... fix that everywhere"). Back leads to wherever the reader came from.
 enum SettingsSearchDestinationView {
     @ViewBuilder
     static func view(for destination: SettingsSearchEntry.Destination) -> some View {
@@ -647,25 +664,29 @@ enum SettingsSearchDestinationView {
         #if HAS_ADHAN
         case .notifications: NotificationView()
         case .notificationReminders: MoreNotificationView()
-        case .notificationsPage(let page): NotificationView(openPage: page)
+        case .notificationsPage(.prayerReminders): MoreNotificationView()
+        case .notificationsPage(.naggingMode): NaggingModeView()
+        #if HAS_QURAN
+        case .notificationsPage(.sunnahReminders): SunnahRemindersView()
+        #endif
         case .prayerSettings: SettingsAdhanView(showNotifications: false)
         case .prayerTracker: PrayerTrackerView()
-        case .travelingMode: SettingsAdhanView(showNotifications: false, openPage: .travelingMode)
-        case .prayerCalculation: SettingsAdhanView(showNotifications: false, openPage: .prayerCalculation)
-        case .skyColors: SettingsAdhanView(showNotifications: false, openPage: .skyColors)
-        case .prayerPage(let page): SettingsAdhanView(showNotifications: false, openPage: page)
+        case .travelingMode: SettingsAdhanView(showNotifications: false, standalonePage: .travelingMode)
+        case .prayerCalculation: SettingsAdhanView(showNotifications: false, standalonePage: .prayerCalculation)
+        case .skyColors, .prayerPage(.skyColors): SkyColorsView()
+        case .prayerPage(let page): SettingsAdhanView(showNotifications: false, standalonePage: page)
         #endif
         #if HAS_QURAN
         case .quranSettings: SettingsQuranView()
         case .reciters: ReciterListView()
-        case .quranPage(let page): SettingsQuranView(openPage: page)
+        case .quranPage(let page): SettingsQuranView(standalonePage: page)
         #endif
         #if HAS_HADITH
         case .hadithSettings: SettingsHadithView(presentedAsSheet: false)
-        case .hadithPage(let page): SettingsHadithView(presentedAsSheet: false, openPage: page)
+        case .hadithPage(let page): SettingsHadithView(presentedAsSheet: false, standalonePage: page)
         #endif
         case .islamSettings: SettingsIslamView()
-        case .islamPage(let page): SettingsIslamView(openPage: page)
+        case .islamPage(let page): SettingsIslamView(standalonePage: page)
         case .appearance: AppearanceSettingsScreen()
         case .appearancePage(let page): AppearancePageView(page: page)
         case .aboutYou: AboutYouSettingsView()
@@ -676,33 +697,9 @@ enum SettingsSearchDestinationView {
         case .tips(let area):
             if let area { TipsView(area: area) } else { TipsHubView() }
         case .featureList(let list): FeatureListView(list: list)
+        case .tutorial(let tab): TabTutorialView(tab: tab)
         case .credits: CreditsView(presentedAsSheet: false)
         case .credit(let id): CreditsView(presentedAsSheet: false, scrollTo: id)
-        }
-    }
-
-    /// The same destinations as the ROOT of a stack of their own: a sub-screen is shown by itself,
-    /// never behind its settings root. For a sheet that is about one page (a Need a Hand? door), where
-    /// the root flashing past and the push a beat later only get in the way, and a back button would
-    /// lead to a whole settings area nobody asked for. Everything else maps as `view(for:)` does.
-    @ViewBuilder
-    static func page(for destination: SettingsSearchEntry.Destination) -> some View {
-        switch destination {
-        #if HAS_ADHAN
-        case .travelingMode: SettingsAdhanView(showNotifications: false, standalonePage: .travelingMode)
-        case .prayerCalculation: SettingsAdhanView(showNotifications: false, standalonePage: .prayerCalculation)
-        case .skyColors: SkyColorsView()
-        case .prayerPage(.skyColors): SkyColorsView()
-        case .prayerPage(let page): SettingsAdhanView(showNotifications: false, standalonePage: page)
-        #endif
-        #if HAS_QURAN
-        case .quranPage(let page): SettingsQuranView(standalonePage: page)
-        #endif
-        #if HAS_HADITH
-        case .hadithPage(let page): SettingsHadithView(presentedAsSheet: false, standalonePage: page)
-        #endif
-        case .islamPage(let page): SettingsIslamView(standalonePage: page)
-        default: view(for: destination)
         }
     }
 }
@@ -879,38 +876,13 @@ struct SettingsScopedSearch<Content: View>: View {
     }
 }
 
-// MARK: - Deep links into a page
-
-/// Pushes the sub-screen a settings search result named, a beat after the page's root has mounted
-/// (a push raised before the container exists never lands, 2026-09-05): iOS 16+ through
-/// `navigationDestination(isPresented:)`, iOS 15 through a hidden `isActive` link. Inert when
-/// nothing was requested, so a page presented in a plain `NavigationView` (the readers' settings
-/// sheets before iOS 16; see `SettingsSheetStack`) never carries a destination modifier that container
-/// would not honour.
-struct SettingsDeepLink<Destination: View>: ViewModifier {
-    @Binding var isPresented: Bool
-    var active: Bool = true
-    @ViewBuilder let destination: () -> Destination
-
-    func body(content: Content) -> some View {
-        if !active {
-            content
-        } else if #available(iOS 16.0, *) {
-            // Lazy for the reason `PushDestination` gives: the modifier would otherwise build the page
-            // on every pass of the screen that carries it, requested or not.
-            content.navigationDestination(isPresented: $isPresented) { LazyDestination(build: destination) }
-        } else {
-            content.background(
-                NavigationLink(isActive: $isPresented) { destination() } label: { EmptyView() }
-                    .hidden()
-            )
-        }
-    }
-}
+// (A `SettingsDeepLink` modifier lived here: it pushed a requested sub-screen onto its settings root a
+// beat after the root mounted. Deleted 2026-10-31: the root showed first and the page switched in
+// mid-slide. Every door now opens the sub-screen as the root itself; see `SettingsSearchDestinationView`.)
 
 /// The container a settings page sits in when it is presented as a SHEET (the readers' Quran settings,
 /// the Hadith and Islam settings): a `NavigationStack` from iOS 16, so the page's
-/// `navigationDestination` pushes (`SettingsDeepLink`, `pushDestination`, the DEBUG auto-opens) work in
+/// `navigationDestination` pushes (`pushDestination`, the DEBUG auto-opens) work in
 /// the sheet exactly as in the Settings tab, which a plain `NavigationView` silently ignores. Before
 /// iOS 16, the stack-style `NavigationView` these sheets always used (`.stack` matters on iPad: a
 /// regular-width sheet would otherwise show two columns with an empty detail pane). Al-Islam's floor is

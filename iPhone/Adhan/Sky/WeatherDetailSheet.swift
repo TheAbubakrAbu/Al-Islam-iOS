@@ -28,6 +28,10 @@ struct WeatherDetailSheet: View {
                         Section {
                             header(weather)
                                 .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+                        } footer: {
+                            // Right under the reading, in view at the medium detent the sheet opens at
+                            // (App Review asked for the mark and link to be clearly shown, 2026-10-31).
+                            attribution
                         }
 
                         Section {
@@ -91,8 +95,6 @@ struct WeatherDetailSheet: View {
                                     .foregroundColor(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
-                        } footer: {
-                            attribution
                         }
                     } else {
                         Section {

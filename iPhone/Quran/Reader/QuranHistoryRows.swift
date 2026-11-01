@@ -287,7 +287,7 @@ struct LastListenedSurahRow: View {
 
             Spacer()
 
-            ShortcutMenu(doubleTap: MenuShortcut(String(localized: "Play Last Listened")) {
+            ShortcutMenu(hold: MenuShortcut(String(localized: "Play Last Listened")) {
                 settings.hapticFeedback()
                 quranPlayer.playSurah(surahNumber: lastListenedSurah.surahNumber,
                                       surahName: lastListenedSurah.surahName, certainReciter: true)
@@ -361,7 +361,7 @@ struct LastListenedSurahRow: View {
             #if os(iOS)
             // Play controls for the history entry: from the top, or - when the stopped position is known - 
             // picking up exactly where the user left off (the same resume path Last Listened uses).
-            ShortcutMenu(doubleTap: MenuShortcut(String(localized: "Play from Beginning")) {
+            ShortcutMenu(hold: MenuShortcut(String(localized: "Play from Beginning")) {
                 settings.hapticFeedback()
                 quranPlayer.playSurah(surahNumber: item.surahNumber, surahName: item.surahName)
             }) {
@@ -735,7 +735,7 @@ struct SummarySurahTile: View {
 
                     Spacer()
 
-                    ShortcutMenu(doubleTap: MenuShortcut(String(localized: "Play Last Listened")) {
+                    ShortcutMenu(hold: MenuShortcut(String(localized: "Play Last Listened")) {
                         settings.hapticFeedback()
                         quranPlayer.playSurah(surahNumber: lastListenedSurah.surahNumber,
                                               surahName: lastListenedSurah.surahName, certainReciter: true)

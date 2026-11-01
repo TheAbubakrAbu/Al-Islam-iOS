@@ -32,26 +32,17 @@ struct SettingsAdhanView: View {
 
     @State var showNotifications: Bool
     private let presentedAsSheet: Bool
-    /// The programmatic entrances: Traveling Mode (its dialog, the prayer list's row, the Distance
-    /// From Home glance tile), Prayer Calculation (its glance tile), and any sub-screen a settings
-    /// search result names. The request is remembered and the push is raised a beat after appear
-    /// (`SettingsDeepLink`): iOS 16+ pushes through `navigationDestination(isPresented:)`, iOS 15
-    /// through a hidden `isActive` link, and either one set true before the container has mounted
-    /// never pushes (2026-09-05, seen on iOS 26).
-    private let requestedPage: SettingsAdhanPage?
-    @State private var openRequestedPage = false
-    @State private var deepLinkFired = false
-    /// One sub-screen shown ON ITS OWN, as the root of its stack: a Need a Hand? door's sheet
-    /// (HelpDoors.swift). The dialogs and the change handlers below stay attached, so Traveling
-    /// Mode's confirmation still presents from there.
+    /// One sub-screen shown ON ITS OWN, as the root of its stack: how every programmatic entrance opens
+    /// a sub-screen (Traveling Mode from its banner, the prayer list's row and its glance tile, Prayer
+    /// Calculation from its tile, a search result, a tip, a Need a Hand? door). This root with the page
+    /// pushed a beat after appear showed the root first and switched mid-slide in a sheet (Abu,
+    /// 2026-10-31). The dialogs and the change handlers below stay attached, so Traveling Mode's
+    /// confirmation still presents from there.
     private let standalonePage: SettingsAdhanPage?
 
-    init(showNotifications: Bool, presentedAsSheet: Bool = false, openTravelingMode: Bool = false,
-         openPrayerCalculation: Bool = false, openPage: SettingsAdhanPage? = nil,
-         standalonePage: SettingsAdhanPage? = nil) {
+    init(showNotifications: Bool, presentedAsSheet: Bool = false, standalonePage: SettingsAdhanPage? = nil) {
         self._showNotifications = State(initialValue: showNotifications)
         self.presentedAsSheet = presentedAsSheet
-        self.requestedPage = openTravelingMode ? .travelingMode : (openPrayerCalculation ? .prayerCalculation : openPage)
         self.standalonePage = standalonePage
     }
 
@@ -77,16 +68,6 @@ struct SettingsAdhanView: View {
                 rootList
             }
         }
-        #if os(iOS)
-        .modifier(SettingsDeepLink(isPresented: $openRequestedPage, active: requestedPage != nil) {
-            if let page = requestedPage { adhanPageDestination(page) }
-        })
-        .onAppear {
-            guard !deepLinkFired, requestedPage != nil else { return }
-            deepLinkFired = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { openRequestedPage = true }
-        }
-        #endif
         .navigationTitle(standalonePage?.title ?? String(localized: "Al-Adhan Settings"))
         #if os(iOS)
         .toolbar {
@@ -842,28 +823,12 @@ struct NotificationView: View {
         notifSettings?.soundSetting == .disabled
     }
 
-    /// A sub-screen to push a beat after the root mounts: what a settings search result lands on.
-    var openPage: SettingsNotificationsPage? = nil
-    @State private var openRequestedPage = false
-    @State private var deepLinkFired = false
-
     var body: some View {
         notificationList
-        #if os(iOS)
-        .modifier(SettingsDeepLink(isPresented: $openRequestedPage, active: openPage != nil) {
-            if let page = openPage { notificationPageDestination(page) }
-        })
-        #endif
         .task { await refresh() }
         .onAppear {
             settings.normalizeAdhanSoundSelection()
             requestAuthorizationAndFetchPrayerTimes()
-            #if os(iOS)
-            if openPage != nil, !deepLinkFired {
-                deepLinkFired = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { openRequestedPage = true }
-            }
-            #endif
         }
         .onDisappear {
             #if os(iOS)

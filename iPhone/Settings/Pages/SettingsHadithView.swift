@@ -15,13 +15,14 @@ struct SettingsHadithView: View {
     /// True when presented as a sheet (its own NavigationView + dismiss X); false when PUSHED from the
     /// Settings tab, where the surrounding navigation already provides the chrome.
     var presentedAsSheet: Bool = true
-    /// A sub-screen to push a beat after the root mounts: what a settings search result lands on.
-    var openPage: SettingsHadithPage? = nil
-    /// One sub-screen shown ON ITS OWN, as the root of its stack: a Need a Hand? door's sheet
-    /// (HelpDoors.swift), which opens on the page itself instead of this root.
+    /// One sub-screen shown ON ITS OWN, as the root of its stack: how every door into a sub-screen
+    /// opens (a search result, a tip, a Need a Hand? door), never this root with the page pushed a beat
+    /// later (`SettingsSearchDestinationView`).
     var standalonePage: SettingsHadithPage? = nil
-    @State private var openRequestedPage = false
-    @State private var deepLinkFired = false
+
+    /// The sizes while a slider's thumb is down, for the hadith preview above it; nil reads the setting.
+    @State private var liveArabicSize: Double?
+    @State private var liveEnglishSize: Double?
 
     #if DEBUG
     /// Headless visual verification (no tap access on the dev machine): `-launchHadithSettingsReading`
@@ -52,29 +53,21 @@ struct SettingsHadithView: View {
             }
         } else {
             settingsList
-                .modifier(SettingsDeepLink(isPresented: $openRequestedPage, active: openPage != nil) {
-                    if let page = openPage { hadithPageDestination(page) }
-                })
-                .onAppear {
-                    guard !deepLinkFired, openPage != nil else { return }
-                    deepLinkFired = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { openRequestedPage = true }
-                }
                 .navigationTitle("Hadith Settings")
         }
     }
 
     /// "Use Device Text Size" for the hadith Arabic - pins it to the device's Dynamic Type body size
-    /// (+4, the hadith default), the Quran settings' exact pattern.
+    /// (+2, the hadith default: `Settings.hadithArabicBodyOffset`), the Quran settings' exact pattern.
     private var useSystemArabicFontSize: Binding<Bool> {
         Binding(
             get: {
-                let systemBodySize = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
-                return settings.hadithArabicFontSize == systemBodySize + 4
+                let deviceSize = Double(UIFont.preferredFont(forTextStyle: .body).pointSize + Settings.hadithArabicBodyOffset)
+                return settings.hadithArabicFontSize == deviceSize
             },
             set: { newValue in
-                let systemBodySize = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
-                settings.hadithArabicFontSize = newValue ? systemBodySize + 4 : systemBodySize + 5
+                let deviceSize = Double(UIFont.preferredFont(forTextStyle: .body).pointSize + Settings.hadithArabicBodyOffset)
+                settings.hadithArabicFontSize = newValue ? deviceSize : deviceSize + 1
             }
         )
     }
@@ -184,14 +177,19 @@ struct SettingsHadithView: View {
                         IslamArabicFontPicker()
                     }
 
-                    // The Quran settings' size controls, one for one: the slider with its sample, then
-                    // the device-size switch, in a section of their own as on Arabic Text there.
+                    // The Quran settings' size controls, one for one: the hadith row as the preview
+                    // (`HadithReadingPreview`, moving with the thumb), the slider, then the device-size
+                    // switch, in a section of their own as on Arabic Text there.
                     Section(header: Text("SIZE")) {
                         VStack(alignment: .leading, spacing: 12) {
+                            HadithReadingPreview(arabicSize: liveArabicSize)
+                                .onChange(of: hadithSettings.hadithArabicFontSize) { _ in liveArabicSize = nil }
+
                             FontSizeSlider(String(localized: "Arabic Font Size"), value: $hadithSettings.hadithArabicFontSize, in: 15...40,
-                                           sample: Settings.hadithArabicSizeSample,
+                                           sample: nil,
                                            fontName: settings.hadithArabicWantsCustomFace ? settings.nonQuranArabicFontName : nil,
-                                           glyph: "ب")
+                                           glyph: "ب",
+                                           onLiveChange: { liveArabicSize = $0 })
 
                             SettingsToggle(String(localized: "Use Device Text Size"), isOn: useSystemArabicFontSize)
                         }
@@ -224,8 +222,12 @@ struct SettingsHadithView: View {
                 if settings.showHadithEnglish {
                     Section(header: Text("SIZE")) {
                         VStack(alignment: .leading, spacing: 12) {
+                            HadithReadingPreview(englishSize: liveEnglishSize)
+                                .onChange(of: hadithSettings.hadithEnglishFontSize) { _ in liveEnglishSize = nil }
+
                             FontSizeSlider(String(localized: "English Font Size"), value: $hadithSettings.hadithEnglishFontSize, in: 10...32,
-                                           sample: Settings.hadithEnglishSizeSample)
+                                           sample: nil,
+                                           onLiveChange: { liveEnglishSize = $0 })
 
                             SettingsToggle(String(localized: "Use Device Text Size"), isOn: useSystemEnglishFontSize)
                         }

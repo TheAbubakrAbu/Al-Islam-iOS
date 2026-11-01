@@ -227,9 +227,10 @@ struct SheetPresentationModifier: ViewModifier {
             .environment(\.nowPlayingInSheet, true)
             .interactiveDismissDisabled(settling || dismissDisabled)
             .onPreferenceChange(NowPlayingBarProvidedKey.self) { listDrawsNowPlaying = $0 }
-            // A bar, not a bare inset: the scroll edge fades the sheet's text under the player instead
-            // of letting it run on behind it in full ink (see `nowPlayingInSheet`).
-            .adaptiveSafeArea(edge: .bottom) { nowPlayingInset }
+            // A plain inset since 2026-11-01: the sheet's content ends above the player. It was the
+            // iOS 26 `safeAreaBar` for its scroll-edge fade, which never showed in a sheet, so the text
+            // ran under the player in full ink (Abu: "it gets cut off, it's not a safe area inset").
+            .safeAreaInset(edge: .bottom, spacing: 0) { nowPlayingInset }
             .onAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDuration) { settling = false }
             }

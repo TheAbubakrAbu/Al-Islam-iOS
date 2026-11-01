@@ -157,6 +157,14 @@ struct HadithView: View {
     @State private var globalRankedHighlight = ""
     @State private var globalRankedLimit = 6
     private static let rankedHadithCap = 40
+    /// How many ranked rows the engine keeps: the forty-row cap until Search All Matches lifts it to
+    /// everything (Int.max, clamped to the shelf in `runGlobalSearch`).
+    @State private var rankedHadithLimit = HadithView.rankedHadithCap
+    /// True from the Best Match Search All tap until the uncapped ranking lands.
+    @State private var isGlobalRankingAll = false
+    /// More ranked rows may exist than were kept: the engine stopped at its cap, and under a grading
+    /// or a Match rule the rows it dropped were never tested, so `globalRankedTotal` is then a floor.
+    @State private var globalRankedHasMore = false
     /// A ranked row's List identity, distinct from the same hadith's row in the book-ordered list.
     private struct RankedHadithRow: Identifiable {
         let hit: GlobalHadithHit
@@ -664,8 +672,9 @@ struct HadithView: View {
                         if showSummaryTiles && settings.showsTabSection(.hadithSummary) {
                             boxed(summaryTilesSection)
                         }
-                        // Need a Hand?: one language or both, and the name of Allah in red, right
-                        // under the summary (see HelpDoors.swift).
+                        // The tutorial's one-time nudge, then Need a Hand?: one language or both, and the
+                        // name of Allah in red, right under the summary (TabTutorials.swift, HelpDoors.swift).
+                        boxed(TutorialNudgeSection(tab: .hadith))
                         boxed(HelpDoorsSection(area: .hadith))
                     }
 
@@ -723,6 +732,11 @@ struct HadithView: View {
                                 boxed(bookSection(title: group.rawValue.localizedDisplay, books: books, icon: group.systemImage))
                             }
                         }
+                    }
+
+                    // The narrators' index, between the books and the About doors (Abu, 2026-10-31).
+                    if searchText.isEmpty && settings.showsTabSection(.hadithNarrators) {
+                        boxed(narratorsSection)
                     }
 
                     if searchText.isEmpty && settings.showsTabSection(.hadithAbout) {
@@ -840,10 +854,13 @@ struct HadithView: View {
             } message: {
                 Text("Your recent searches stay. You can bring the help back in Hadith Settings.")
             }
-            // The filter buttons ride above the results while a search (or a filter) is live; applied
-            // after the help card, so the card sits under the row.
+            // The filter buttons ride above the results while a search is live: the field focused or
+            // holding text. Not for a filter alone (Abu, 2026-10-31: the row "doesn't disappear when
+            // search bar is empty and/or dismissed"); the session filters are KEPT, and the row brings
+            // them back the next time the field is focused. Applied after the help card, so the card
+            // sits under the row.
             .adaptiveSafeArea(edge: .top, spacing: 0) {
-                if isHadithSearchFocused || !searchText.isEmpty || searchFilters.hasSessionFilters {
+                if isHadithSearchFocused || !searchText.isEmpty {
                     HadithSearchFilterBar(filters: $searchFilters) { showSearchFilterSheet = true }
                         .background {
                             if #unavailable(iOS 26.0) {
@@ -856,6 +873,8 @@ struct HadithView: View {
                 HadithSearchFilterSheet(filters: $searchFilters)
                     .smallMediumSheetPresentation()
             }
+            // The result rows paint by the Match button's rule, not only filter by it (the Quran tab's rule).
+            .environment(\.searchWordRule, searchFilters.highlightWordRule)
             .adaptiveSafeArea(edge: .bottom) {
                 // The Quran tab's exact bottom-bar grammar: just the field. (Recent searches used to
                 // stack above it as chips; they live in the search-help card over the list now.)
@@ -935,6 +954,10 @@ struct HadithView: View {
                 }
                 if ProcessInfo.processInfo.arguments.contains("-launchHadithHistory") {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { debugOpenHistory = true }
+                }
+                // `-launchHadithNarrators`: the index of every narrator, through the NARRATORS door.
+                if ProcessInfo.processInfo.arguments.contains("-launchHadithNarrators") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { openDoor = .narrators }
                 }
                 // `-launchHadithBook bukhari`: the book's chapter list itself, no chapter pushed.
                 if #available(iOS 16.0, *), bookPath.isEmpty,
@@ -1359,6 +1382,8 @@ struct HadithView: View {
         /// The "About Hadith & the Sunnah" cards, which share the same one-destination plumbing: the two
         /// pillar screens, then (2026-09-29) the Hadith & Its Sciences group of Pillars & Beliefs.
         case sunnah, hadithPillar, hadithSciences, hadithPreservation, hadithRejectors
+        /// The index of every narrator (HadithNarratorViews.swift), from the NARRATORS section.
+        case narrators
         var id: String { rawValue }
     }
 
@@ -1395,6 +1420,7 @@ struct HadithView: View {
             menuDoor(.encyclopedia, title: String(localized: "Encyclopedia"), systemImage: "books.vertical.fill")
         }
         menuDoor(.history, title: String(localized: "History"), systemImage: "clock.arrow.circlepath")
+        TutorialMenuItem(tab: .hadith)
 
         Divider()
 
@@ -1429,7 +1455,26 @@ struct HadithView: View {
         case .hadithSciences:     HadithSciencesView()
         case .hadithPreservation: HadithPreservationView()
         case .hadithRejectors:    HadithRejectorsView()
+        case .narrators:    HadithNarratorsIndexView()
         case .none:         EmptyView()
+        }
+    }
+
+    // MARK: Narrators
+
+    /// The door to the index of every narrator of the shelf's chains, its own foldable section under
+    /// the books (TabSections.swift): one row, a Button through `openDoor` like the About doors.
+    private var narratorsSection: some View {
+        let expanded = settings.tabSectionExpanded(.hadithNarrators)
+        return Section {
+            if expanded {
+                HadithNarratorsDoor {
+                    guard !bookPushInFlight else { return }
+                    openDoor = .narrators
+                }
+            }
+        } header: {
+            TabSectionHeader(.hadithNarrators)
         }
     }
 
@@ -1727,8 +1772,24 @@ struct HadithView: View {
                 // more matched than that: it used to print the whole tally over forty rows.
                 Section(header: SectionPillHeader(title: bestMatch ? String(localized: "HADITHS BY BEST MATCH") : String(localized: "TOP HADITH RESULTS"),
                                                   count: rankedRows.count, icon: "magnifyingglass",
-                                                  overflow: globalRankedTotal > rankedRows.count)) {
+                                                  overflow: globalRankedTotal > rankedRows.count || globalRankedHasMore)) {
                     rankedHadithNotice
+                    // Under Best Match this list IS the hadith list, so it carries the Search All card:
+                    // every ranked row on screen, and the engine's cap lifted when more matched than it kept.
+                    // The total is exact when the engine counted past its cap; under a grading or a Match
+                    // rule the rows it dropped were never tested, so the total waits for the uncapped run.
+                    if bestMatch, rankedRows.count > globalRankedLimit || globalRankedHasMore {
+                        let rankedTotal: Int? = globalRankedHasMore && globalRankedTotal <= rankedRows.count ? nil : globalRankedTotal
+                        HadithSearchAllRow(shown: min(globalRankedLimit, rankedRows.count), total: rankedTotal,
+                                           isLoading: isGlobalRankingAll) {
+                            globalRankedLimit = Int.max
+                            if globalRankedHasMore {
+                                rankedHadithLimit = Int.max
+                                isGlobalRankingAll = true
+                                runGlobalSearch(query: query, immediate: true)
+                            }
+                        }
+                    }
                     ForEach(rankedRows.prefix(globalRankedLimit)) { row in
                         let hit = row.hit
                         NavigationLink {
@@ -1765,9 +1826,18 @@ struct HadithView: View {
                 // The Quran search's grammar: the TOTAL pill up top, then one section per book with its
                 // own count - so results from different books never read as one undifferentiated list.
                 Section(header: SectionPillHeader(title: String(localized: "MATCHING HADITHS"), count: globalHadithResults.count, icon: "magnifyingglass", overflow: globalHasMoreHadiths)) {
-                    EmptyView()
+                    // The Search All card at the head of the list; the Load More card under it stays.
+                    // The sweep stops one past its page, so the total is unknown until it has run whole.
+                    if globalHasMoreHadiths {
+                        HadithSearchAllRow(shown: globalHadithResults.count, isLoading: isGlobalSearching && globalHadithLimit == Int.max) {
+                            globalHadithLimit = Int.max
+                            runGlobalSearch(query: query, loadMore: true)
+                        }
+                    } else {
+                        EmptyView()
+                    }
                 }
-                .padding(.bottom, -12)
+                .padding(.bottom, globalHasMoreHadiths ? 0 : -12)
 
                 ForEach(globalHadithResultsGroupedByBook, id: \.book.slug) { group in
                     Section(header: bookSearchSectionHeader(book: group.book, matchCount: group.hits.count)) {
@@ -2040,6 +2110,9 @@ struct HadithView: View {
         globalRankedCorrections = []
         globalRankedHighlight = ""
         globalRankedLimit = 6
+        rankedHadithLimit = Self.rankedHadithCap
+        isGlobalRankingAll = false
+        globalRankedHasMore = false
         globalHasMoreChapters = false
         globalHasMoreHadiths = false
         globalChapterLimit = 5
@@ -2074,7 +2147,8 @@ struct HadithView: View {
     /// scanned book by book in a TaskGroup bounded to the core count, one search-block fetch per
     /// block, until one past the page is in hand; `loadMore` resumes from the cursor the last
     /// sweep left instead of re-scanning the books already shown (Performance Guide, Phase 7 step 4).
-    private func runGlobalSearch(query: String, loadMore: Bool = false) {
+    /// `immediate` skips the typing debounce: a tap (Search All Matches under Best Match) is not a keystroke.
+    private func runGlobalSearch(query: String, loadMore: Bool = false, immediate: Bool = false) {
         globalSearchTask?.cancel()
         isGlobalSearching = true
 
@@ -2086,11 +2160,15 @@ struct HadithView: View {
         // "aishah" finds "'A'ishah" - one fold of the query, then byte compares from here on.
         let folded = HadithFold.query(query)
         // The filters in force for THIS sweep: the chosen books are the whole library it sees (so the
-        // Load More cursor stays an index into the same list), the words become needles, and the
-        // grading is a row test run on text matches only.
+        // Load More cursor stays an index into the same list), the words become needles with the
+        // Match rule's word edges, and the grading (plus Exact's letters) is a row test run on text
+        // matches only.
         let filters = searchFilters
         let books = HadithCatalogBook.all.filter(filters.includes)
         let needles = filters.needles(for: query)
+        // The ranked lane's cap: forty, or everything once Search All lifted it (clamped to the shelf
+        // below, never Int.max: the engine's heap reserves its capacity).
+        let rankedLimit = rankedHadithLimit
         let sweepChapters = filters.shows(.chapters)
         let sweepHadiths = filters.shows(.hadiths)
         let existingHits = loadMore ? globalHadithResults : []
@@ -2102,8 +2180,8 @@ struct HadithView: View {
 
         globalSearchTask = Task {
             // Debounce: typing restarts this task, so only a settled query pays for the sweep. A Load
-            // More is a tap, not a keystroke - it goes straight to the scan.
-            if !loadMore {
+            // More or a Search All is a tap, not a keystroke: it goes straight to the scan.
+            if !loadMore, !immediate {
                 try? await Task.sleep(nanoseconds: 350_000_000)
                 guard !Task.isCancelled else { return }
             }
@@ -2161,10 +2239,11 @@ struct HadithView: View {
                         guard let entry = library[index] else { continue }
                         let from = index == startBook ? startRow : 0
                         let data = entry.data
-                        let accept = filters.gradeTest(for: entry.book, data: data)
+                        let accept = filters.rowTest(for: entry.book, data: data, query: query)
                         group.addTask {
                             let rows = data.matchingRows(in: from..<data.hadiths.count, queries: needles.queries,
-                                                         requireAll: needles.requireAll, limit: needed, accept: accept)
+                                                         requireAll: needles.requireAll, limit: needed,
+                                                         rule: needles.rule, accept: accept)
                             return BookScan(index: index, rows: rows, complete: rows.count < needed)
                         }
                         return
@@ -2271,17 +2350,19 @@ struct HadithView: View {
             // Load More, which only extends the exact list.
             guard !loadMore, sweepHadiths else { return }
             let books = library.compactMap { $0 }
-            // A grading is tested AFTER the ranking (it reads text blocks, and the ranking offers
-            // thousands of rows): keep a deeper list, then cut it to the graded forty.
-            let cap = filters.grades.isEmpty ? Self.rankedHadithCap : Self.rankedHadithCap * 5
-            // Read here, on the main actor: the detached ranking below cannot reach a view's static.
-            let keptAfterGrading = Self.rankedHadithCap
+            // A grading, and a Match rule's word edges, are tested AFTER the ranking (the grading
+            // reads text blocks, and the ranking offers thousands of rows): keep a deeper list, then
+            // cut it to the forty (or to everything, after Search All) that pass.
+            let shelfRows = books.reduce(0) { $0 + $1.data.hadiths.count }
+            let keptAfterGrading = max(1, min(rankedLimit, shelfRows))
+            let narrowsRanked = !filters.grades.isEmpty || filters.match != .contains
+            let cap = narrowsRanked ? max(1, min(keptAfterGrading * 5, shelfRows)) : keptAfterGrading
             let reduced = AppPerformance.shouldAvoidBroadPrewarm
             // The reduced tier runs the lane only where the exact list cannot answer alone: two or
             // more words, or a single word the sweep found nothing for (a likely typo).
             if reduced, filters.sort != .relevance, !finalHadiths.isEmpty || !finalChapters.isEmpty,
                query.split(whereSeparator: { $0.isWhitespace }).count < 2 { return }
-            let scan = Task.detached(priority: reduced ? .utility : .userInitiated) { () -> (top: [HadithRankedSearch.ShelfHit], total: Int, relaxed: Bool, query: HadithRankedSearch.Query)? in
+            let scan = Task.detached(priority: reduced ? .utility : .userInitiated) { () -> (top: [HadithRankedSearch.ShelfHit], total: Int, relaxed: Bool, query: HadithRankedSearch.Query, hasMore: Bool)? in
                 #if DEBUG
                 let vocabStarted = DispatchTime.now().uptimeNanoseconds
                 #endif
@@ -2311,19 +2392,26 @@ struct HadithView: View {
                 #endif
                 var top = shelf.top
                 var total = shelf.total
-                if !filters.grades.isEmpty {
-                    top = top.filter { item in
-                        let entry = books[item.bookIndex]
-                        return filters.gradeTest(for: entry.book, data: entry.data)?(item.row) ?? true
-                    }
-                    top = Array(top.prefix(keptAfterGrading))
-                    total = top.count
+                // The engine kept its best `cap`: what it dropped was never tested below.
+                var hasMore = shelf.total > shelf.top.count
+                if narrowsRanked {
+                    // One row test per book, built once: the word-edge re-check, the grading, Exact's letters.
+                    let tests = books.map { filters.rankedRowTest(for: $0.book, data: $0.data, query: query) }
+                    let passed = top.filter { item in tests[item.bookIndex]?(item.row) ?? true }
+                    hasMore = hasMore || passed.count > keptAfterGrading
+                    top = Array(passed.prefix(keptAfterGrading))
+                    total = passed.count
                 }
-                return (top, total, relaxed, parsed)
+                return (top, total, relaxed, parsed, hasMore)
             }
-            guard let ranked = await withTaskCancellationHandler(operation: { await scan.value },
-                                                                 onCancel: { scan.cancel() }),
-                  !Task.isCancelled else { return }
+            let outcome = await withTaskCancellationHandler(operation: { await scan.value },
+                                                            onCancel: { scan.cancel() })
+            guard !Task.isCancelled else { return }
+            guard let ranked = outcome else {
+                // Nothing to rank: the Search All spinner must not wait for a list that never comes.
+                await MainActor.run { isGlobalRankingAll = false }
+                return
+            }
             let parsed = ranked.query
             let rankedHits: [GlobalHadithHit] = ranked.top.compactMap { item in
                 let entry = books[item.bookIndex]
@@ -2358,6 +2446,8 @@ struct HadithView: View {
                 globalRankedRelaxed = ranked.relaxed
                 globalRankedCorrections = parsed.corrections
                 globalRankedHighlight = parsed.highlightQuery
+                globalRankedHasMore = ranked.hasMore
+                isGlobalRankingAll = false
                 if !rankedHits.isEmpty { persistHadithSearchHistoryIfNeeded(query) }
                 #if DEBUG
                 if RenderCounter.enabled {

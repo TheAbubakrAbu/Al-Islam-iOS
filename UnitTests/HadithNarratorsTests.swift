@@ -38,6 +38,10 @@ final class HadithNarratorsTests: XCTestCase {
         for sample in HadithNarratorSamples.narrators {
             let profile = try XCTUnwrap(pack.profile(id: sample.id), "narrator \(sample.id)")
             XCTAssertEqual(profile.name, sample.name)
+            XCTAssertEqual(profile.english, sample.english)
+            XCTAssertEqual(profile.generation, sample.depth)
+            XCTAssertEqual(profile.forms.map { "\($0.name)=\($0.count)" }, sample.forms.map { "\($0.name)=\($0.count)" }, sample.name)
+            XCTAssertFalse(profile.english.isEmpty, sample.name)
             XCTAssertEqual(profile.narrations, sample.narrations)
             XCTAssertEqual(profile.fromProphet, sample.fromProphet)
             XCTAssertEqual(profile.teacher, sample.teacher)
@@ -90,6 +94,52 @@ final class HadithNarratorsTests: XCTestCase {
             }
             XCTAssertEqual(narrators.count, 1, "group \(sample.id): its chains name different narrators")
         }
+    }
+
+    /// The two names Abu checked by hand (2026-10-31): Ibn Mas'ud is one page with "ابن مسعود" and
+    /// the bare "عبد الله" of his students joined into it, Aishah's title form is hers, and the whole
+    /// index reads back in one walk with every generation a Companion's or below.
+    func testTheJoinedIdentitiesAndTheIndex() throws {
+        let pack = try pack()
+        let all = pack.allProfiles()
+        XCTAssertEqual(all.count, pack.narratorCount)
+        XCTAssertEqual(all.map(\.id), Array(1...pack.narratorCount), "the index is by id")
+        let ibnMasud = try XCTUnwrap(all.first { $0.key == "عبد الله بن مسعود" }, "Ibn Mas'ud has a page")
+        XCTAssertEqual(ibnMasud.english, "Abdullah ibn Mas'ud")
+        XCTAssertEqual(ibnMasud.generation, 1, "a Companion")
+        XCTAssertGreaterThan(ibnMasud.narrations, 400, "his students' bare عبد الله is his")
+        XCTAssertTrue(ibnMasud.forms.contains { HadithIsnadEnglish.fold($0.name) == "ابن مسعود" }, "\(ibnMasud.forms)")
+        XCTAssertNil(all.first { $0.key == "ابن مسعود" }, "no second page for the short form")
+        let aishah = try XCTUnwrap(all.first { $0.key == "عائشه" })
+        XCTAssertGreaterThan(aishah.narrations, 2_180)
+        XCTAssertEqual(aishah.generation, 1)
+        XCTAssertNil(all.first { $0.key.contains("المؤمنين") && $0.key.contains("عائشه") }, "the title is set aside")
+        XCTAssertTrue(all.allSatisfy { $0.generation <= 12 })
+        XCTAssertGreaterThan(all.filter { $0.generation == 1 }.count, 400, "the Companions")
+        XCTAssertGreaterThan(all.filter { $0.generation == 2 }.count, 1_000, "the Successors")
+        // Jabir stays two: ibn Abdullah and ibn Samurah both narrate from the Prophet ﷺ.
+        XCTAssertNotNil(all.first { $0.key == "جابر" }, "the bare Jabir is left apart")
+        XCTAssertNotNil(all.first { $0.key == "جابر بن عبد الله" })
+    }
+
+    /// The chain of al-Bukhari 1 in English: every narrator chip carries his English name, the Prophet
+    /// ﷺ and the collector theirs, and the words of transmission their meaning.
+    func testTheFirstHadithOfAlBukhariReadsInEnglish() throws {
+        let hadith = try XCTUnwrap(try book("bukhari").hadith(numbered: 1))
+        let chain = try XCTUnwrap(HadithChainStore.shared.chain(slug: "bukhari", idInBook: 1, arabic: hadith.arabic,
+                                                                bookTitle: "Sahih al-Bukhari", english: true))
+        let nodes = chain.top.flatMap(\.nodes)
+        XCTAssertEqual(nodes.first?.name, HadithIsnadEnglish.prophet)
+        for node in nodes.dropFirst() {
+            XCTAssertFalse(node.name.isEmpty, node.arabic)
+        }
+        XCTAssertEqual(nodes.dropFirst().first?.name, "Umar ibn al-Khattab")
+        XCTAssertEqual(chain.bottom.first?.nodes.first?.name, "al-Bukhari")
+        let subtitles = (chain.top + chain.bottom).compactMap(\.subtitle)
+        XCTAssertTrue(subtitles.contains("narrated to us"), "\(subtitles)")
+        XCTAssertTrue(subtitles.contains("I heard"), "\(subtitles)")
+        let plain = try XCTUnwrap(HadithChainStore.shared.chain(slug: "bukhari", idInBook: 1, arabic: hadith.arabic, bookTitle: "Sahih al-Bukhari"))
+        XCTAssertTrue(plain.top.flatMap(\.nodes).allSatisfy { $0.name.isEmpty }, "without the switch, Arabic alone")
     }
 
     /// The first hadith of al-Bukhari: every narrator chip opens a profile that lists it, 'Umar at

@@ -90,6 +90,94 @@ final class QiraahTajweedStore: @unchecked Sendable {
         "ibtida_wasl": String(localized: "Joined to the word before, this waṣl hamzah is silent. But if you BEGIN reciting at this word, it takes a vowel and the silent hamzah after it becomes a long vowel: ٱئۡتِنَا is begun إِيتِنَا, and ٱؤۡتُمِنَ is begun اُوتُمِنَ. The dot's position on the alif is the vowel (below for kasrah, halfway up for ḍammah), and this muṣḥaf colors it in the sixteen places where beginning changes the word this way."),
     ]
 
+    // MARK: - The one order of the rules
+
+    /// The order every list of these rules follows (Abu, 2026-11-01: "in tajweed legend taqlil should
+    /// come after imaalah", and the riwayat page explains the differences "using the tajweed legend and
+    /// the sorting of them"): what differs from Hafs, the merges, the tilts with the slight tilt right
+    /// after the full one, the joins, the pauses and blends, Abu Ja'far's two, Warsh's four, al-Bazzi's
+    /// ta. A pack's printed legend box is re-sorted to it as it loads, so one rule sits in the same slot
+    /// in every riwayah's legend and in the All Riwayat comparison; a key not listed here keeps the
+    /// print's place, after the listed ones.
+    static let ruleOrder: [String] = [
+        "khilaf_word", "khilaf_harf",
+        "idgham",
+        "imalah", "imalah_taqlil", "taqlil",
+        "silah_meem", "ha_dhamir",
+        "sakt", "ishmam_sad",
+        "ghunnah_kha_ghayn", "ibtida_wasl",
+        "madd_badal", "madd_leen", "raa_muraqqaqah", "lam_mughallazah",
+        "tashdid_ta",
+    ]
+
+    /// Where `key` sits in `ruleOrder`; a key it does not list sorts after every listed one.
+    static func ruleRank(_ key: String) -> Int {
+        ruleOrder.firstIndex(of: key) ?? ruleOrder.count
+    }
+
+    /// `items` in `ruleOrder`, stable: items of one rank keep the order they came in.
+    static func sortedByRule<T>(_ items: [T], key: (T) -> String) -> [T] {
+        items.enumerated()
+            .sorted { a, b in
+                let rankA = ruleRank(key(a.element)), rankB = ruleRank(key(b.element))
+                return rankA == rankB ? a.offset < b.offset : rankA < rankB
+            }
+            .map(\.element)
+    }
+
+    /// Rule keys that are ONE rule under two printed captions: sixteen prints call the magenta "the
+    /// letter differing from Hafs" and three (ad-Duri, Khalaf, Khallad) "the word differing from Hafs".
+    /// A list of the rules ACROSS riwayat folds the second into the first; a riwayah's own legend keeps
+    /// its print's wording.
+    static let ruleAliases: [String: String] = ["khilaf_word": "khilaf_harf"]
+
+    /// The names of a folded rule, so a cross-riwayah list is not titled after whichever print came first.
+    static let ruleTitleOverrides: [String: (english: String, arabic: String)] = [
+        "khilaf_harf": ("Differing from Ḥafṣ", "المُخَالِفُ لِحَفصٍ"),
+    ]
+
+    /// One print's use of a rule: its own legend entry (caption and color) and the words it colors.
+    struct RuleUse: Identifiable {
+        let tag: String
+        let entry: LegendEntry
+        let count: Int
+        var id: String { tag }
+    }
+
+    /// A rule across every print that marks it, for the lists that compare the prints (the Legend's
+    /// By Rule index, the riwayat page's color-code guide).
+    struct RuleAcrossRiwayat: Identifiable {
+        let key: String
+        /// The plain English caption (`ruleTitleOverrides`, else the first print's), untranslated.
+        let english: String
+        let arabic: String
+        /// The prints that mark it, in `Settings.Riwayah.allOptions` order.
+        let uses: [RuleUse]
+        var id: String { key }
+    }
+
+    /// Every rule the packs of `tags` mark, in `ruleOrder`, folded by `ruleAliases`. Loads every pack
+    /// named, so call it off the main thread.
+    func rulesAcrossRiwayat(tags: [String]) -> [RuleAcrossRiwayat] {
+        var byKey: [String: (english: String, arabic: String, uses: [RuleUse])] = [:]
+        let order = Settings.Riwayah.allOptions.map(\.tag)
+        for tag in order where tags.contains(tag) {
+            let counts = ruleWordCounts(for: tag)
+            for entry in legend(for: tag) {
+                let key = Self.ruleAliases[entry.key] ?? entry.key
+                var collected = byKey[key] ?? (entry.english, entry.arabic, [])
+                collected.uses.append(RuleUse(tag: tag, entry: entry, count: counts[entry.key] ?? 0))
+                byKey[key] = collected
+            }
+        }
+        let rules = byKey.map { key, collected in
+            let override = Self.ruleTitleOverrides[key]
+            return RuleAcrossRiwayat(key: key, english: override?.english ?? collected.english,
+                                     arabic: override?.arabic ?? collected.arabic, uses: collected.uses)
+        }
+        return Self.sortedByRule(rules.sorted { $0.english < $1.english }, key: \.key)
+    }
+
     struct WordRule {
         let letter: Character
         /// INCLUSIVE base-letter index range the rule colors within the word
@@ -198,6 +286,94 @@ final class QiraahTajweedStore: @unchecked Sendable {
     /// differs from Hafs (a merge/split point of this riwayah's own counting).
     func isKhilafNumbered(tag: String, surah: Int, ayah: Int) -> Bool {
         pack(for: tag)?.khilafMarkers[surah]?.contains(ayah) ?? false
+    }
+
+    // MARK: - Legend examples and counts
+
+    /// Where a rule is seen in this riwayah's own text, for the legend's example block.
+    struct ExampleAyah {
+        let surah: Int
+        /// The riwayah's OWN ayah number (the pack's numbering).
+        let ayah: Int
+        /// The riwayah's text of that ayah, fully vocalized.
+        let text: String
+    }
+
+    /// Examples found so far, by "tag|rule"; nil remembers that none exists.
+    private var exampleCache: [String: ExampleAyah?] = [:]
+    /// `ruleWordCounts(for:)` by tag.
+    private var countCache: [String: [String: Int]] = [:]
+
+    /// The earliest SHORT ayah (twelve words or fewer) this riwayah's print colors with `ruleKey`, else
+    /// the earliest at all (Abu, 2026-11-01: "for all qiraat including hafs give an example in more
+    /// detail"). Nil while the riwayah's text may not render (a beta text before consent: `textArabic`
+    /// would hand back Hafs) and when the pack never marks the rule. Cached per riwayah and rule;
+    /// safe from any thread (the pack is immutable and `QuranData.ayah` reads under its own lock).
+    func exampleAyah(tag: String, ruleKey: String) -> ExampleAyah? {
+        let key = Settings.Riwayah.canonicalTag(tag)
+        if Settings.Riwayah.isBeta(key), !Settings.shared.betaQiraatEnabled { return nil }
+        let cacheKey = "\(key)|\(ruleKey)"
+        lock.lock()
+        if let hit = exampleCache[cacheKey] { lock.unlock(); return hit }
+        lock.unlock()
+        let found = findExample(tag: key, ruleKey: ruleKey)
+        lock.lock()
+        exampleCache[cacheKey] = .some(found)
+        lock.unlock()
+        return found
+    }
+
+    private func findExample(tag: String, ruleKey: String) -> ExampleAyah? {
+        guard let pack = pack(for: tag),
+              let letter = pack.legend.first(where: { $0.key == ruleKey })?.letter else { return nil }
+        let quranData = QuranData.shared
+        var fallback: ExampleAyah?
+        for surah in pack.rules.keys.sorted() {
+            // A long example is better than none, but a short one a few surahs on is better still:
+            // the search goes on for five surahs past the first find, then settles.
+            if let fallback, surah > fallback.surah + 5 { return fallback }
+            guard let ayahs = pack.rules[surah] else { continue }
+            for number in ayahs.keys.sorted() {
+                guard let words = ayahs[number],
+                      words.values.contains(where: { $0.contains { $0.letter == letter } }),
+                      let ayah = quranData.ayah(surah: surah, ayah: number),
+                      ayah.existsInQiraah(tag, surahID: surah) else { continue }
+                let text = ayah.textArabic(for: tag, surahID: surah)
+                guard !text.isEmpty else { continue }
+                let example = ExampleAyah(surah: surah, ayah: number, text: text)
+                if text.split(separator: " ").count <= 12 { return example }
+                if fallback == nil { fallback = example }
+            }
+        }
+        return fallback
+    }
+
+    /// How many words of this riwayah's text the print colors with each rule (rule key -> words): the
+    /// riwayah legend's count line, the Hafs cards' counterpart (Abu, 2026-11-01: "for comparing
+    /// riwayaat mention the count of each riwayah"). A word carrying a rule twice counts once. Cached.
+    func ruleWordCounts(for tag: String) -> [String: Int] {
+        let key = Settings.Riwayah.canonicalTag(tag)
+        lock.lock()
+        if let hit = countCache[key] { lock.unlock(); return hit }
+        lock.unlock()
+        guard let pack = pack(for: key) else { return [:] }
+        var byLetter: [Character: Int] = [:]
+        for ayahs in pack.rules.values {
+            for words in ayahs.values {
+                for rules in words.values {
+                    var seen = Set<Character>()
+                    for rule in rules where seen.insert(rule.letter).inserted {
+                        byLetter[rule.letter, default: 0] += 1
+                    }
+                }
+            }
+        }
+        var counts: [String: Int] = [:]
+        for entry in pack.legend { counts[entry.key] = byLetter[entry.letter] ?? 0 }
+        lock.lock()
+        countCache[key] = counts
+        lock.unlock()
+        return counts
     }
 
     /// The magenta the prints ring khilaf-numbered ayahs with - one place, so
@@ -723,6 +899,8 @@ final class QiraahTajweedStore: @unchecked Sendable {
                 legend.append(LegendEntry(letter: c, key: entry["k"] ?? String(c), arabic: ar, english: en))
             }
         }
+        // The print's box lists its rules in its own order; the app shows every print's in ONE order.
+        legend = sortedByRule(legend, key: \.key)
 
         var khilaf: [Int: Set<Int>] = [:]
         if let khilafRaw = raw["khilafMarkers"] as? [String: [Int]] {

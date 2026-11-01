@@ -726,6 +726,12 @@ enum FontGlyphs {
 
 final class TajweedStore {
     static let shared = TajweedStore()
+    /// A second painter whose snapshot sees EVERY category, for the legend's rule examples
+    /// (`exampleText`): a rule hidden in the reader still shows what it colors. Its caches are its own,
+    /// so the reader's paints never see its all-visible signature.
+    static let legendExamples = TajweedStore(allCategoriesVisible: true)
+    /// See `legendExamples`.
+    private let allCategoriesVisible: Bool
     private static let fatha = UnicodeScalar(0x064E)!
     private static let damma = UnicodeScalar(0x064F)!
     private static let fathatayn = UnicodeScalar(0x064B)!
@@ -842,6 +848,13 @@ final class TajweedStore {
     /// colors (`TajweedColorOverrides`). The paint ops and the painted strings both bake the colors
     /// in, so a recolored rule has to miss both caches the way a hidden one does.
     private func snapshotVisibility() -> String {
+        if allCategoriesVisible {
+            let signature = Self.allVisibleSignature()
+            visibilityLock.lock()
+            visibleCategories = Set(TajweedLegendCategory.allCases)
+            visibilityLock.unlock()
+            return signature
+        }
         // The memoized signature carries the same 17 flags (Phase 10.3): read it once instead of the
         // 17 toggles per ayah per paint (and per row lookup on main).
         let signature = settings.tajweedCategoryVisibilitySignature
@@ -877,7 +890,15 @@ final class TajweedStore {
         0x06E1, 0x06E5, 0x06E6
     ]
 
-    private init() {}
+    private init(allCategoriesVisible: Bool = false) {
+        self.allCategoriesVisible = allCategoriesVisible
+    }
+
+    /// The signature of a snapshot with every category visible (`legendExamples`): the same shape as
+    /// the Settings one, so the custom colors still key the caches.
+    private static func allVisibleSignature() -> String {
+        String(repeating: "1", count: TajweedLegendCategory.allCases.count) + "#" + TajweedColorOverrides.shared.signature
+    }
 
     /// Stable fingerprint so cache invalidates when verse text changes (qiraah, data updates).
     private static func stableTextDigest(_ string: String) -> UInt64 {
@@ -1020,6 +1041,75 @@ final class TajweedStore {
             cleanDisplayText: cleanDisplayText, beginnerSpacing: beginnerSpacing,
             removeArabicDots: shouldRemoveArabicDots, waslSign: shouldWaslSign, cacheKey: cacheKey, visibilitySignature: visibilitySignature
         ).string
+    }
+
+    /// One ayah with ONE rule's letters in that rule's color and every other letter plain: the legend's
+    /// example block (Abu, 2026-11-01: "give an example in more detail using Arabic font and
+    /// everything"). Only `legendExamples` answers (its snapshot sees every category, so a rule hidden
+    /// in the reader still shows its example); the shared painter returns nil. The RAW text is painted,
+    /// without the reader's projections, so the caller shows `text` exactly as passed. The ops come
+    /// from the same pipeline as the reader's colors, so an example never shows a letter the reader
+    /// would not color. Nil when the engine paints nothing of `category` in this ayah.
+    func exampleText(surah: Int, ayah: Int, text: String, category: TajweedLegendCategory) -> AttributedString? {
+        guard allCategoriesVisible, !text.isEmpty else { return nil }
+        let signature = snapshotVisibility()
+        let cacheKey = paintCacheKey(
+            surah: surah, ayah: ayah, text: text, requestedDisplayText: nil,
+            cleanDisplayText: false, beginnerSpacing: false, removeArabicDots: false,
+            visibilitySignature: signature
+        )
+        // The finished example by (ayah, rule): the legend's cards build every example on each body
+        // pass, and the glyph pass below is not free. The signature in the key carries the custom colors.
+        let exampleKey = "\(cacheKey)|example:\(category.rawValue)" as NSString
+        if let cached = exampleCache.object(forKey: exampleKey) { return cached.value }
+        let painted = buildExampleText(surah: surah, ayah: ayah, text: text, category: category,
+                                       cacheKey: cacheKey, signature: signature)
+        if let painted { exampleCache.setObject(AttributedStringBox(painted), forKey: exampleKey) }
+        return painted
+    }
+
+    /// `exampleText` by key (the legend's eighteen Hafs examples, at most).
+    private let exampleCache: NSCache<NSString, AttributedStringBox> = {
+        let cache = NSCache<NSString, AttributedStringBox>()
+        cache.countLimit = 64
+        return cache
+    }()
+
+    private func buildExampleText(surah: Int, ayah: Int, text: String, category: TajweedLegendCategory,
+                                  cacheKey: NSString, signature: String) -> AttributedString? {
+        let ops: [PaintOp]
+        if let cached = opsCache.object(forKey: cacheKey) {
+            ops = cached.ops
+        } else {
+            ops = paint(
+                surah: surah, ayah: ayah, text: text, requestedDisplayText: nil,
+                cleanDisplayText: false, beginnerSpacing: false, removeArabicDots: false,
+                cacheKey: cacheKey, visibilitySignature: signature
+            ).ops
+        }
+        // An op's `category` is the color's category: a rule painted in another rule's color by
+        // design (`TajweedRuleAlias`) is part of that color's example, as it is in the reader.
+        let mine = ops.filter { $0.category == category }
+        guard !mine.isEmpty else { return nil }
+
+        let attributed = NSMutableAttributedString(string: text)
+        let length = attributed.length
+        attributed.addAttribute(.foregroundColor, value: platformLabelColor(), range: NSRange(location: 0, length: length))
+        let skip = Self.utf16IndicesOfWaqfOrnaments(in: text)
+        var priorities = [Int](repeating: 0, count: length)
+        let color = platformTajweedColor(category.color)
+        for op in mine {
+            let upper = min(op.range.location + op.range.length, length)
+            guard op.range.location >= 0, op.range.location < upper else { continue }
+            for index in op.range.location..<upper where !skip.contains(index) {
+                priorities[index] = 1
+                attributed.addAttribute(.foregroundColor, value: color, range: NSRange(location: index, length: 1))
+            }
+        }
+        guard priorities.contains(1) else { return nil }
+        paintWholeGlyphs(attributed, priorities: priorities)
+        FontGlyphs.plainSajdahLine(attributed, fontName: drawingFontName, plain: platformLabelColor())
+        return AttributedString(attributed)
     }
 
     /// One paint on an established cache miss: the styled string (nil when nothing was coloured) and
@@ -2802,7 +2892,8 @@ final class TajweedStore {
     /// The LIVE Settings visibility (not the snapshot): the end-of-paint check compares this against
     /// the signature the paint started from.
     private func tajweedVisibilitySignature() -> String {
-        TajweedLegendCategory.allCases
+        if allCategoriesVisible { return Self.allVisibleSignature() }
+        return TajweedLegendCategory.allCases
             .map { settings.isTajweedCategoryVisible($0) ? "1" : "0" }
             .joined(separator: "") + "#" + TajweedColorOverrides.shared.signature
     }
@@ -3048,7 +3139,9 @@ final class TajweedStore {
     /// colour, so a rule painted on a later character of it never showed. A whole-Quran audit against
     /// KFGQPC HAFS (2026-10-27) found 738 such characters: the madd of the alif inside every lam-alif
     /// (لۡأٓ of ٱلۡأٓخِرَةِ, about 270 places), the alif of بِـَٔا (بِـَٔايَٰتِنَا, 119), and a handful of word bakes
-    /// (the dagger-alif forms, the sajdah words). Where the glyph's first character is plain and every
+    /// (the dagger-alif forms, the sajdah words). The بِـَٔا bake was then taken out of the face (2026-10-31,
+    /// `Scripts/patch_bi_hamza_alif_ligature.py`): spread, its madd turned the baa gold too, and unbaked the
+    /// word keeps its shape, so only the hamza and alif carry it now. Where the glyph's first character is plain and every
     /// painted character inside it has the same colour, the whole glyph takes that colour, so the rule
     /// shows on the glyph that carries it. A glyph whose first character has a rule of its own, or that
     /// carries two different rules (رَٰءۡ 2:72, some sajdah words), can show only one and keeps the first.

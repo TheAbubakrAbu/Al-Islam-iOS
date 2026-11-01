@@ -166,10 +166,23 @@ struct TajweedLegendView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Label(visible ? "Hide" : "Show", systemImage: visible ? "eye.fill" : "eye.slash.fill")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(visible ? entry.color : .secondary)
-                .frame(maxWidth: .infinity, alignment: .trailing)
+            HStack(alignment: .firstTextBaseline) {
+                // The words the print colors with it (the Hafs cards' count line).
+                if let riwayahTag = effectiveLegendTag,
+                   let count = TajweedLegendExamples.countLabel(QiraahTajweedStore.shared.ruleWordCounts(for: riwayahTag)[entry.key]) {
+                    Text(count)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(visible ? entry.color : .secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+
+                Spacer(minLength: 4)
+
+                Label(visible ? "Hide" : "Show", systemImage: visible ? "eye.fill" : "eye.slash.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(visible ? entry.color : .secondary)
+            }
         }
         .contentShape(Rectangle())
         .onTapGesture {
@@ -393,8 +406,8 @@ struct TajweedLegendView: View {
     /// The compare mode: every riwayah's printed color code, groupable two ways. By qiraah (default):
     /// one compact card per riwayah under its qiraah's section header - Hafs an Asim's section always
     /// first with its engine rules on top, the other qiraat alphabetical. By rule: one section per
-    /// print-derived rule, listing which riwayat mark it (Hafs first where its own legend colors an
-    /// equivalent, the rest alphabetical). LazyVStack, so by-qiraah cards only parse their pack when
+    /// print-derived rule in the app's rule order (`QiraahTajweedStore.ruleOrder`), listing which riwayat
+    /// mark it (Hafs first where its own legend colors an equivalent, the rest alphabetical). LazyVStack, so by-qiraah cards only parse their pack when
     /// scrolled into view; the by-rule index is built once, off the main thread.
     private func compareAllSection(scroll: ScrollViewProxy?) -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -455,9 +468,11 @@ struct TajweedLegendView: View {
                     }
 
                     ForEach(group.options, id: \.tag) { option in
+                        let counts = QiraahTajweedStore.shared.ruleWordCounts(for: option.tag)
                         compareCardShell(title: option.displayLabel(), arabic: AppLanguage.isArabicScript ? "" : option.arabic) {
                             ForEach(QiraahTajweedStore.shared.legend(for: option.tag)) { entry in
-                                compareRuleRow(color: entry.color, english: entry.english.localizedDisplay)
+                                compareRuleRow(color: entry.color, english: entry.english.localizedDisplay,
+                                               count: counts[entry.key])
                             }
                         }
                         .contentShape(Rectangle())
@@ -496,7 +511,7 @@ struct TajweedLegendView: View {
 
                         LazyVGrid(columns: quickLegendColumns, alignment: .leading, spacing: 6) {
                             ForEach(section.rows) { row in
-                                compareRuleRow(color: row.color, english: row.title)
+                                compareRuleRow(color: row.color, english: row.title, count: row.count)
                                     .contentShape(Rectangle())
                                     .onTapGesture { previewRiwayah(tag: row.tag, scroll: scroll) }
                             }
@@ -567,6 +582,8 @@ struct TajweedLegendView: View {
         let title: String
         /// The riwayah this row stands for - tapping it previews that riwayah's own legend.
         let tag: String
+        /// The words this riwayah's print colors with the rule; nil for the Hafs engine rows.
+        var count: Int? = nil
     }
 
     private struct CompareRuleSection: Identifiable {
@@ -592,16 +609,17 @@ struct TajweedLegendView: View {
     /// the prints call the magenta "the letter differing from Hafs" and three (ad-Duri, Khalaf, Khallad)
     /// call it "the word differing from Hafs" - the same color marking the same thing. Split across two
     /// sections the index read as "only some riwayat mark what differs from Hafs" (Abu's report); every
-    /// riwayah does. The per-riwayah cards still show each print's own wording.
-    nonisolated private static let compareRuleAliases: [String: String] = ["khilaf_word": "khilaf_harf"]
+    /// riwayah does. The per-riwayah cards still show each print's own wording. The fold itself lives in
+    /// the store (`QiraahTajweedStore.ruleAliases`), shared with the riwayat page's color-code guide.
+    nonisolated private static var compareRuleAliases: [String: String] { QiraahTajweedStore.ruleAliases }
 
     /// Titles and descriptions for a folded section, so it isn't named after whichever print sorted first.
-    /// `english` is the plain English title, like the packs' captions it is sorted against
-    /// (`buildRuleSections`); the section header translates it when it draws it.
+    /// `english` is the plain English title (`QiraahTajweedStore.ruleTitleOverrides`), untranslated like
+    /// the packs' captions; the section header translates it when it draws it.
     nonisolated private static let compareRuleOverrides: [String: (english: String, arabic: String, description: String)] = [
         "khilaf_harf": (
-            "Differing from Ḥafṣ",
-            "المُخَالِفُ لِحَفصٍ",
+            QiraahTajweedStore.ruleTitleOverrides["khilaf_harf"]?.english ?? "Differing from Ḥafṣ",
+            QiraahTajweedStore.ruleTitleOverrides["khilaf_harf"]?.arabic ?? "المُخَالِفُ لِحَفصٍ",
             String(localized: "Read differently from the Ḥafṣ an ʿĀṣim reading. Every riwayah marks this.")
         )
     ]
@@ -629,6 +647,7 @@ struct TajweedLegendView: View {
         var byKey: [String: Collected] = [:]
 
         for option in packOptions.sorted(by: { $0.label < $1.label }) {
+            let counts = QiraahTajweedStore.shared.ruleWordCounts(for: option.tag)
             for entry in QiraahTajweedStore.shared.legend(for: option.tag) {
                 let key = compareRuleAliases[entry.key] ?? entry.key
                 var collected = byKey[key] ?? Collected(english: entry.english, arabic: entry.arabic)
@@ -636,7 +655,8 @@ struct TajweedLegendView: View {
                     id: "\(key)-\(option.tag)",
                     color: entry.color,
                     title: option.displayLabel(),
-                    tag: option.tag
+                    tag: option.tag,
+                    count: counts[entry.key]
                 ))
                 collected.note(caption: entry.english, label: option.displayLabel())
                 byKey[key] = collected
@@ -667,7 +687,12 @@ struct TajweedLegendView: View {
                     rows: hafsRows + collected.rows
                 )
             }
-            .sorted { $0.english < $1.english }
+            // The app's one rule order (`QiraahTajweedStore.ruleOrder`): taqlil right after imalah, the
+            // merges before the tilts, instead of wherever the alphabet left them (Abu, 2026-11-01).
+            .sorted {
+                let rankA = QiraahTajweedStore.ruleRank($0.key), rankB = QiraahTajweedStore.ruleRank($1.key)
+                return rankA == rankB ? $0.english < $1.english : rankA < rankB
+            }
     }
 
 #if DEBUG
@@ -743,7 +768,9 @@ struct TajweedLegendView: View {
         }
     }
 
-    private func compareRuleRow(color: Color, english: String) -> some View {
+    /// `count`: the words the riwayah's print colors with the rule, when known (Abu, 2026-11-01:
+    /// "for comparing riwayaat mention the count of each riwayah"); the Hafs engine rows have none.
+    private func compareRuleRow(color: Color, english: String, count: Int? = nil) -> some View {
         HStack(spacing: 6) {
             Circle()
                 .fill(color)
@@ -754,6 +781,15 @@ struct TajweedLegendView: View {
                 .foregroundStyle(.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
+
+            if let count {
+                Spacer(minLength: 2)
+
+                Text(count.formatted())
+                    .font(.caption2.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(color)
+                    .lineLimit(1)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -832,6 +868,10 @@ struct TajweedLegendView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            if let example = TajweedLegendExamples.hafs(item) {
+                example
+            }
+
             TajweedRuleColorRow(
                 colorKey: TajweedColorOverrides.key(for: item),
                 ruleName: item.transliteration,
@@ -905,6 +945,8 @@ struct TajweedLegendView: View {
         // Pushed inside the Quran settings sheet as well as presented as one: its own bar either way.
         .sheetNowPlayingBar()
         .accentWashedBackground()
+        // The examples of the legend on screen, painted ahead of the first row that opens.
+        .task(id: effectiveLegendTag) { TajweedLegendExamples.prewarm(tag: effectiveLegendTag) }
         .navigationTitle("Legend")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -971,6 +1013,8 @@ struct TajweedLegendView: View {
         let letters: String?
         let visible: Bool
         let setVisible: (Bool) -> Void
+        /// The rule's example block, built only when the row is open (the paint is not free).
+        let example: () -> TajweedRuleExample?
     }
 
     private func basicRule(_ item: TajweedLegendCategory) -> BasicRule {
@@ -980,17 +1024,20 @@ struct TajweedLegendView: View {
             count: item.countLabel?.localizedDigits, detail: item.shortDescription,
             letters: item.applicableLettersDetail,
             visible: settings.isTajweedCategoryVisible(item),
-            setVisible: { settings.setTajweedCategory(item, visible: $0) }
+            setVisible: { settings.setTajweedCategory(item, visible: $0) },
+            example: { TajweedLegendExamples.hafs(item) }
         )
     }
 
-    private func basicRule(_ entry: QiraahTajweedStore.LegendEntry) -> BasicRule {
+    private func basicRule(_ entry: QiraahTajweedStore.LegendEntry, tag: String) -> BasicRule {
         BasicRule(
             id: entry.id, color: entry.color,
             title: entry.english.localizedDisplay, subtitle: entry.arabic,
-            count: nil, detail: entry.shortDescription, letters: nil,
+            count: TajweedLegendExamples.countLabel(QiraahTajweedStore.shared.ruleWordCounts(for: tag)[entry.key]),
+            detail: entry.shortDescription, letters: nil,
             visible: settings.isRiwayahTajweedRuleVisible(entry.key),
-            setVisible: { settings.setRiwayahTajweedRule(entry.key, visible: $0) }
+            setVisible: { settings.setRiwayahTajweedRule(entry.key, visible: $0) },
+            example: { TajweedLegendExamples.riwayah(entry, tag: tag) }
         )
     }
 
@@ -1009,7 +1056,7 @@ struct TajweedLegendView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                basicRuleList(QiraahTajweedStore.shared.legend(for: riwayahTag).map(basicRule))
+                basicRuleList(QiraahTajweedStore.shared.legend(for: riwayahTag).map { basicRule($0, tag: riwayahTag) })
             }
         } else {
             ForEach(sections) { section in
@@ -1108,6 +1155,11 @@ struct TajweedLegendView: View {
                         Text(letters)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                    }
+
+                    if let example = rule.example() {
+                        example
+                            .padding(.top, 2)
                     }
 
                     Button {
@@ -1295,10 +1347,11 @@ struct TajweedLegendView: View {
 }
 // MARK: - Legend UI
 
-/// The legend for a riwayah's print-derived colors: the same rules, in the
-/// same order, as the legend box printed at the bottom of that mushaf - as
-/// cards with the rule's names, a one-liner, the longer note, and a
-/// show/hide toggle (mirrors the Hafs legend's detail cards).
+/// The legend for a riwayah's print-derived colors: the rules of the legend
+/// box printed at the bottom of that mushaf, in the app's one rule order
+/// (`QiraahTajweedStore.ruleOrder`) - as cards with the rule's names, a
+/// one-liner, the longer note, and a show/hide toggle (mirrors the Hafs
+/// legend's detail cards).
 struct QiraahTajweedLegendView: View {
     private let settings = Settings.shared
     @ObservedObject private var quranDisplay = QuranDisplay.shared
@@ -1307,6 +1360,11 @@ struct QiraahTajweedLegendView: View {
 
     private var entries: [QiraahTajweedStore.LegendEntry] {
         QiraahTajweedStore.shared.legend(for: tag)
+    }
+
+    /// Words colored per rule (`QiraahTajweedStore.ruleWordCounts`), read once per body.
+    private var counts: [String: Int] {
+        QiraahTajweedStore.shared.ruleWordCounts(for: tag)
     }
 
     var body: some View {
@@ -1345,6 +1403,18 @@ struct QiraahTajweedLegendView: View {
                     .foregroundStyle(visible ? entry.color : .secondary)
             }
 
+            // How many words the print colors with this rule, the Hafs cards' count line (Abu,
+            // 2026-11-01: "mention the count of each riwayah").
+            if let count = TajweedLegendExamples.countLabel(counts[entry.key]) {
+                Text(count)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(entry.color)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .background(Capsule(style: .continuous).fill(entry.color.opacity(0.15)))
+            }
+
             if !entry.shortDescription.isEmpty {
                 Text(entry.shortDescription)
                     .font(.caption)
@@ -1356,6 +1426,10 @@ struct QiraahTajweedLegendView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let example = TajweedLegendExamples.riwayah(entry, tag: tag) {
+                example
             }
 
             // A rule key means the same thing in every pack, so the pick follows the rule, not the
@@ -1476,6 +1550,236 @@ struct TajweedRuleColorRow: View {
         // not hide the rule the reader is busy recoloring.
         .contentShape(Rectangle())
         .onTapGesture {}
+    }
+}
+
+// MARK: - Rule examples
+
+/// A rule's example (Abu, 2026-11-01: "for all qiraat including hafs give an example in more detail
+/// using Arabic font and everything"): one ayah in the reader's Quran face, the rule's letters in its
+/// color and every other letter plain, under the ayah's reference. A Hafs rule has a fixed ayah
+/// (`TajweedLegendCategory.exampleAyah`) painted by the engine with every rule visible; a riwayah rule
+/// takes the earliest short ayah its print colors with it (`QiraahTajweedStore.exampleAyah`).
+struct TajweedRuleExample: View {
+    /// "Al-Fatihah 1:2".
+    let reference: String
+    let text: String
+    let styled: AttributedString?
+    let fontName: String
+    var size: CGFloat = 26
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Example: \(reference)")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            HighlightedSnippet(
+                source: text,
+                term: "",
+                font: Font.arabic(fontName, size: size),
+                accent: Settings.shared.accentColor.color,
+                fg: .primary,
+                preStyledSource: styled,
+                lineLimit: nil
+            )
+            .arabicFontDesign(custom: fontName != Settings.systemArabicFontName)
+            .multilineTextAlignment(.trailing)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+            .environment(\.layoutDirection, .leftToRight)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Builds the legend's example blocks; both legends (Hafs and a riwayah's) call it.
+enum TajweedLegendExamples {
+    /// The surah's name and the reference, "Al-Fatihah 1:2".
+    private static func reference(surah: Int, ayah: Int) -> String {
+        let name = QuranData.shared.surah(surah)?.displayName ?? "\(surah)"
+        return "\(name) \(surah):\(ayah)".localizedDigits
+    }
+
+    /// The Hafs rule's example, in the Hafs text whatever riwayah is being read.
+    static func hafs(_ item: TajweedLegendCategory) -> TajweedRuleExample? {
+        let place = item.exampleAyah
+        guard let ayah = QuranData.shared.ayah(surah: place.surah, ayah: place.ayah) else { return nil }
+        let text = ayah.rawArabicText(surahId: place.surah, qiraahOverride: Settings.Riwayah.hafsTag)
+        guard !text.isEmpty else { return nil }
+        let styled = TajweedStore.legendExamples.exampleText(surah: place.surah, ayah: place.ayah, text: text, category: item)
+        return TajweedRuleExample(
+            reference: reference(surah: place.surah, ayah: place.ayah),
+            text: text,
+            styled: styled,
+            fontName: Settings.shared.quranArabicFontName(for: nil)
+        )
+    }
+
+    /// The riwayah rule's example: its own text, only this rule colored (every other rule of the
+    /// print hidden for the paint).
+    static func riwayah(_ entry: QiraahTajweedStore.LegendEntry, tag: String) -> TajweedRuleExample? {
+        let store = QiraahTajweedStore.shared
+        guard let example = store.exampleAyah(tag: tag, ruleKey: entry.key) else { return nil }
+        let hidden = Set(store.legend(for: tag).map(\.key)).subtracting([entry.key])
+        let styled = store.attributedText(tag: tag, surah: example.surah, ayah: example.ayah,
+                                          displayText: example.text, hiddenRules: hidden)
+        return TajweedRuleExample(
+            reference: reference(surah: example.surah, ayah: example.ayah),
+            text: example.text,
+            styled: styled,
+            fontName: Settings.shared.quranArabicFontName(for: tag)
+        )
+    }
+
+    /// Paints every example of the legend on screen off the main thread, so a card or a row opens
+    /// with its example ready instead of running the engine in its body. Hafs when `tag` is nil.
+    static func prewarm(tag: String?) {
+        Task.detached(priority: .utility) {
+            if let tag {
+                for entry in QiraahTajweedStore.shared.legend(for: tag) { _ = riwayah(entry, tag: tag) }
+                _ = QiraahTajweedStore.shared.ruleWordCounts(for: tag)
+            } else {
+                for item in TajweedLegendCategory.allCases { _ = hafs(item) }
+            }
+        }
+    }
+
+    /// "1,544 words": how many words of the riwayah's text the print colors with the rule.
+    static func countLabel(_ count: Int?) -> String? {
+        guard let count else { return nil }
+        return String(localized: "\(count) words").localizedDigits
+    }
+}
+
+// MARK: - Stop signs
+
+/// The reader Legend's third page (Abu, 2026-11-01: "add a third tajweed legend, stopping signs"): the
+/// mushaf's stop and pause signs as one list, in the basic legend's dress, each row opening in place to
+/// what the sign asks of the reciter, and a door to the Waqf lesson under them. The signs are printed in
+/// every riwayah's text, so unlike the two color codes this page is never "off".
+struct QuranStopSignsLegendView: View {
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
+
+    /// The open rows, by sign id.
+    @State private var expanded: Set<String> = []
+
+    private static let glyphColumnWidth: CGFloat = 56
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("The small signs over the words say where a reciter may stop, must stop, or must read on. Tap a sign to see what it asks.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                signList
+
+                NavigationLink {
+                    TajweedWaqfView()
+                } label: {
+                    Label("Learn About Waqf", systemImage: "text.book.closed")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(settings.accentColor.color)
+                .conditionalGlassEffect(rectangle: true)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 28)
+        }
+        .sheetNowPlayingBar()
+        .accentWashedBackground()
+        .navigationTitle("Signs")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// The rows in one bordered block, hairlines between them (`TajweedLegendView.basicRuleList`).
+    private var signList: some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        return VStack(spacing: 0) {
+            ForEach(Array(StopSignInfo.all.enumerated()), id: \.element.id) { index, sign in
+                if index > 0 {
+                    Divider()
+                }
+                signRow(sign)
+            }
+        }
+        .background(shape.fill(Color.primary.opacity(0.04)))
+        .clipShape(shape)
+        .overlay(shape.stroke(Color.primary.opacity(0.12), lineWidth: 1))
+    }
+
+    private func signRow(_ sign: StopSignInfo) -> some View {
+        let isOpen = expanded.contains(sign.id)
+        let accent = settings.accentColor.color
+        let quranFace = settings.quranDisplayUsesCustomArabicFace
+        return VStack(alignment: .leading, spacing: 0) {
+            Button {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    if isOpen { expanded.remove(sign.id) } else { expanded.insert(sign.id) }
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    // A mushaf glyph in the Quran's own face: SF Rounded draws قلى as a word.
+                    Text(sign.symbol)
+                        .font(quranFace
+                              ? Font.arabic(settings.quranDisplayFontName, size: 22, relativeTo: .headline)
+                              : .headline.weight(.semibold))
+                        .arabicFontDesign(custom: quranFace)
+                        .foregroundStyle(accent)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .frame(width: Self.glyphColumnWidth)
+
+                    Text(sign.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, 12)
+
+                    Spacer(minLength: 6)
+
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(isOpen ? 180 : 0))
+                        .padding(.trailing, 14)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityHint(isOpen ? "Hides what the sign means" : "Shows what the sign means")
+
+            if isOpen {
+                Text(sign.meaning)
+                    .font(.caption)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, Self.glyphColumnWidth + 12)
+                    .padding(.trailing, 14)
+                    .padding(.bottom, 12)
+                    .transition(.opacity)
+            }
+        }
+        // The accent as a column behind the glyphs, the basic legend's swatch column.
+        .background(alignment: .leading) {
+            accent.opacity(0.10)
+                .frame(width: Self.glyphColumnWidth)
+        }
     }
 }
 

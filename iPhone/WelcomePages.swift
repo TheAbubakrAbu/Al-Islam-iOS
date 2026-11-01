@@ -197,6 +197,9 @@ struct WelcomeDiscoverPage: View {
     @Binding var choosesSimple: Bool
 
     @State private var showTour = false
+    /// The tutorial a LEARN EACH TAB row opened, presented here by the page that asked for it: the
+    /// welcome is the first launch's whole screen, and its rows answer the nudges themselves.
+    @State private var openTutorial: TutorialTab?
 
     private var accent: Color { settings.accentColor.color }
     private var isDarkMode: Bool { (settings.colorScheme ?? systemColorScheme) == .dark }
@@ -224,6 +227,8 @@ struct WelcomeDiscoverPage: View {
             }
 
             tipsCard
+
+            tutorialsCard
 
             // Al-Islam only: the companions skip the question at the first launch and keep Full (Abu,
             // 2026-10-14, in Al-Quran's splash); Simple Mode is still in their Settings. The flag is the
@@ -327,6 +332,82 @@ struct WelcomeDiscoverPage: View {
         .accessibilityLabel("Tips & Tricks")
         .accessibilityHint("Opens a short tour")
         .accessibilityIdentifier("welcomeTipsTour")
+    }
+
+    /// Each tab's tutorial (TabTutorials.swift), one row apiece, and where the rest is: the pointer the
+    /// home city note on the Location card held back for (2026-10-31).
+    private var tutorialsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("LEARN EACH TAB")
+                .font(.caption.weight(.semibold))
+                .foregroundColor(.secondary)
+                .padding(.leading, 4)
+                .accessibilityAddTraits(.isHeader)
+
+            VStack(spacing: 0) {
+                ForEach(Array(TutorialTab.allCases.enumerated()), id: \.element) { index, tab in
+                    if index > 0 {
+                        Divider()
+                            .padding(.leading, 61)
+                    }
+                    tutorialRow(tab)
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color(UIColor.secondarySystemBackground))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                    )
+            )
+
+            Text("Each tab also has Tips & Tricks in its settings.")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 4)
+        }
+        .sheet(item: $openTutorial) { tab in
+            TabTutorialView(tab: tab, presentedAsSheet: true)
+        }
+    }
+
+    private func tutorialRow(_ tab: TutorialTab) -> some View {
+        Button {
+            settings.hapticFeedback()
+            // Taken here, the tab's own nudge has nothing left to offer.
+            settings.markTutorialNudgeSeen(tab)
+            openTutorial = tab
+        } label: {
+            HStack(alignment: .center, spacing: 13) {
+                AccentIconChip(systemImage: tab.systemImage, tint: tab.tint, secondaryTint: tab.secondaryTint, size: 34)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tab.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.primary)
+                    Text(tab.summary)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.forward")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(Color.secondary.opacity(0.6))
+                    .accessibilityHidden(true)
+            }
+            .padding(.vertical, 10)
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("welcomeTutorial.\(tab.rawValue)")
     }
 
     /// What Simple keeps on screen, named by the domains this app ships (Al-Quran has no prayer

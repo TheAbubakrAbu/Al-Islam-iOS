@@ -65,6 +65,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "Scripts"))
 from islam_packs import Hadith, strip_marks  # noqa: E402
 import reblock_packs as packs  # noqa: E402
+from arabic_translit import transliterate  # noqa: E402
 
 OUT = ROOT / "Resources/Data/Hadith/HadithChains.qpk"
 SAMPLES = ROOT / "UnitTests/HadithChainSamples.swift"
@@ -688,68 +689,336 @@ def narrator_key(k):
 
 
 def chain_nodes(chain):
-    """Every node of the merged chain with its role: the top generation (who narrates from the Prophet
-    ﷺ when the chain reaches him), the compiler's own teachers (the foot of each road), or a link."""
+    """Every node of the merged chain with its role and its generation: the top generation (who
+    narrates from the Prophet ﷺ when the chain reaches him) is generation 1, the one below it 2, down
+    to the compiler's own teachers at the foot of each road."""
     shared, branches, tops = chain['merged']
     top = shared[-1]
     feet = [b[0] for b in branches] if branches else [shared[0]]
     out = []
     for layers in [shared] + branches:
-        for layer in layers:
+        for index, layer in enumerate(layers):
             role = ROLE_TOP if layer is top else (ROLE_TEACHER if any(layer is foot for foot in feet) else ROLE_LINK)
+            depth = len(shared) - index if layers is shared else len(shared) + len(layers) - index
             for node in layer:
-                out.append((node, role))
+                out.append((node, role, depth))
     return out
 
 
-def signature(chain, keys):
+def chain_layers_top_down(chain):
+    """The generations of the merged chain from the top down, the roads one after another below the
+    shared part: [[node, ...], ...], for the student under each narrator."""
+    shared, branches, tops = chain['merged']
+    columns = [list(reversed(shared))]
+    for branch in branches:
+        columns.append(list(reversed(branch)))
+    return columns
+
+
+# MARK: - One narrator under several written names
+
+# A title the shelf writes beside a name ("عائشة أم المؤمنين", "أم المؤمنين عائشة"): not a name.
+TITLES = (('ام', 'المؤمنين'),)
+# A word of the report that ran on after a name ("عائشة أخبرتها", "ابن عمر أراه"): not a name either.
+TRAILING = STRONG | SAY | ANN | REFERS | {'اراه', 'اظنه', 'احسبه', 'اخبرتها', 'حدثتها', 'اخبرته', 'حدثته', 'ارق'}
+# Words that make a longer name another man's ("عائشة بنت طلحة" is not Aishah): never dropped.
+NAME_WORDS = {'بن', 'ابن', 'بنت', 'ابي', 'ابو', 'ابا', 'ام', 'مولي', 'عبد', 'اخي', 'اخو', 'اخت', 'زوج', 'صاحب', 'او'}
+# One fuller name has to outnumber every other the shorter one fits by this much to take it.
+DOMINANCE = 10
+# A fuller name takes a shorter one only when the shelf names it at the top this many times, and at
+# least this share of the shorter name's own mentions (Abu Sa'id ibn al-Mu'alla, named eight times,
+# never takes the 850 mentions of "Abu Sa'id", who is al-Khudri).
+MIN_TOP = 3
+MIN_SHARE = 0.1
+
+
+def cleaned(k):
+    """`narrator_key` with its titles and the words of the report that ran on after it set aside."""
+    words = k.split()
+    for title in TITLES:
+        n = len(title)
+        for i in range(len(words) - n + 1):
+            if tuple(words[i:i + n]) == title and len(words) > n:
+                words = words[:i] + words[i + n:]
+                break
+    while len(words) > 1 and words[-1] in TRAILING:
+        words.pop()
+    return ' '.join(words)
+
+
+def is_nisba(word, given_names):
+    """"الأنصاري", "البدري", "الخدري" as `norm_name` files them (the article off): a word ending in the
+    nisba's ya that never opens a name of its own ("علي" does)."""
+    return len(word) >= 4 and (word.endswith('ي') or word.endswith('يه')) and word not in given_names and word not in NAME_WORDS
+
+
+def extends(short, full):
+    """`full` is `short` with a patronymic after it ("أنس" / "أنس بن مالك"), or `short` is "ابن X" and
+    `full` ends in "بن X" ("ابن مسعود" / "عبد الله بن مسعود")."""
+    s, f = short.split(), full.split()
+    if len(f) <= len(s):
+        return False
+    if f[:len(s)] == s and f[len(s)] in ('بن', 'بنت'):
+        return True
+    return len(s) == 2 and s[0] == 'ابن' and f[-2:] == ['بن', s[1]]
+
+
+class Identities:
+    """The narrator each written name is filed under: `canon` maps a cleaned key to its identity's
+    key, `report` says what was joined and why (printed, for the eye)."""
+
+    def __init__(self, stats):
+        self.stats = stats
+        self.canon = {}
+        self.report = defaultdict(list)
+        self.count = {k: v['count'] for k, v in stats.items()}
+        self.top = {k: v['top'] for k, v in stats.items()}
+        self.top_names = {k for k in stats if self.top[k] * 2 >= self.count[k] and self.top[k] >= 1}
+        # A given name: a word the shelf follows with a patronymic ("علي بن أبي طالب"); "أنصاري" never is.
+        self.given_names = {k.split()[0] for k in stats if len(k.split()) > 2 and k.split()[1] in ('بن', 'بنت')}
+        self.accusative()
+        self.suffixes()
+        self.prefixes()
+
+    def resolve(self, k):
+        seen = set()
+        while k in self.canon and k not in seen:
+            seen.add(k)
+            k = self.canon[k]
+        return k
+
+    def join(self, short, full, rule):
+        if short == full or self.resolve(full) == short:
+            return
+        self.canon[short] = full
+        self.report[rule].append((short, full, self.count.get(short, 0)))
+
+    def truly_short(self, s):
+        """A name the shelf writes in full often enough beside it to be short for several men ("عبد الله",
+        "جابر"): the fuller names at the top come to a tenth of its mentions at least. "ابن عباس" is not
+        short for anyone: the shelf writes him so, and his fuller name is rare beside it."""
+        fuller = sum(self.top[k] for k in self.top_names if extends(s, k))
+        return fuller >= MIN_SHARE * self.count.get(s, 0)
+
+    def ambiguous(self, s):
+        """Two men or more of this name at the top ("عبد الله بن عمر", "عبد الله بن مسعود"): a shorter
+        name or a title cannot be given to one of them."""
+        full = [k for k in self.top_names if extends(s, k) and self.top[k] >= MIN_TOP]
+        return len(full) > 1
+
+    def accusative(self):
+        """"أنسا" is "أنس", "جابرا" "جابر": the alef of the accusative, when the name without it is one
+        the shelf writes at least as often (a grammatical ending, not another man)."""
+        for k in sorted(self.stats):
+            words = k.split()
+            for i, w in enumerate(words):
+                if len(w) > 2 and w.endswith('ا') and w not in NAME_WORDS:
+                    stem = ' '.join(words[:i] + [w[:-1]] + words[i + 1:])
+                    if self.count.get(stem, 0) >= max(MIN_SEEN, self.count[k]):
+                        self.join(k, stem, 'accusative')
+                        break
+
+    def suffixes(self):
+        """At the top of the chain, a name with a nisba after it is the same name without it ("أبي
+        مسعود الأنصاري" is "أبي مسعود") when no second man of the shorter name stands at the top; and a
+        name with a word of the report left on it folds into the name the shelf writes ten times more."""
+        for f in sorted(self.top_names, key=lambda k: -len(k.split())):
+            words = f.split()
+            for k in range(1, len(words)):
+                dropped, s = words[-k:], ' '.join(words[:-k])
+                if any(w in NAME_WORDS for w in dropped) or s not in self.top_names or self.ambiguous(s):
+                    continue
+                if all(is_nisba(w, self.given_names) for w in dropped) and self.count[f] >= 2:
+                    self.join(f, s, 'nisba')
+                    break
+                if self.count[s] >= DOMINANCE * self.count[f]:
+                    self.join(f, s, 'leftover')
+                    break
+
+    def prefixes(self):
+        """At the top of the chain, a shorter name is the fuller one it begins ("أنس" is "أنس بن مالك",
+        "ابن مسعود" is "عبد الله بن مسعود") when that fuller name outnumbers every other it could be ten
+        to one; "جابر" stays apart (ibn Abdullah and ibn Samurah both narrate from the Prophet ﷺ)."""
+        for s in sorted(self.top_names, key=lambda k: (len(k.split()), k)):
+            if self.resolve(s) != s:
+                continue
+            found = Counter()
+            for f in self.top_names:
+                target = self.resolve(f)
+                if target != s and extends(s, f):
+                    found[target] += self.top[f]
+            if not found:
+                continue
+            ranked = found.most_common(2)
+            best, best_count = ranked[0]
+            second = ranked[1][1] if len(ranked) > 1 else 0
+            if best_count >= MIN_TOP and best_count >= DOMINANCE * second and best_count >= MIN_SHARE * self.count[s]:
+                self.join(s, best, 'prefix')
+
+
+def mention_stats(books):
+    """Pass one over the chains: per cleaned name, how often it is named, at the top, as the compiler's
+    teacher, and the students who narrate from it at the top of a chain."""
+    stats = defaultdict(lambda: {'count': 0, 'top': 0, 'teacher': 0})
+    students = defaultdict(Counter)
+    for slug, codes in books.items():
+        for id_text, (_, it, raw, chain) in codes.items():
+            keys = chain['keys']
+            for node, role, depth in chain_nodes(chain):
+                k = narrator_key(node_key(node, keys))
+                if not k:
+                    continue
+                c = cleaned(k)
+                stats[c]['count'] += 1
+                stats[c]['top'] += role == ROLE_TOP
+                stats[c]['teacher'] += role == ROLE_TEACHER
+            for column in chain_layers_top_down(chain):
+                for index in range(len(column) - 1):
+                    for upper in column[index]:
+                        u = narrator_key(node_key(upper, keys))
+                        if not u:
+                            continue
+                        for lower in column[index + 1]:
+                            l = narrator_key(node_key(lower, keys))
+                            if l:
+                                students[cleaned(l)][cleaned(u)] += 1
+    return stats, students
+
+
+def student_context(identities, students):
+    """For a short name at the top of a chain under a given student, the fuller name that student is
+    recorded with ten to one across the shelf ("عبد الله" under أبي وائل is "عبد الله بن مسعود"):
+    {(student identity, short identity): fuller identity}. Two chains at least must name the pair in full."""
+    teachers = defaultdict(Counter)
+    for student, uppers in students.items():
+        for upper, count in uppers.items():
+            teachers[identities.resolve(student)][identities.resolve(upper)] += count
+    out = {}
+    for student, uppers in teachers.items():
+        for short in list(uppers):
+            if len(short.split()) > 2 or not identities.truly_short(short):
+                continue
+            found = Counter()
+            for full, count in uppers.items():
+                if full != short and extends(short, full) and full in identities.top_names:
+                    found[full] += count
+            if not found:
+                continue
+            ranked = found.most_common(2)
+            best, best_count = ranked[0]
+            second = ranked[1][1] if len(ranked) > 1 else 0
+            if best_count >= 2 and best_count >= DOMINANCE * second and best_count >= MIN_SHARE * uppers[short]:
+                out[(student, short)] = best
+    return out
+
+
+def signature(chain, keys, identity):
     """The chain as its people: generations upward, "+" between the narrators of one, the roads after
     the shared part. Two chains with one signature are the same chain, written in whatever words."""
     shared, branches, tops = chain['merged']
     parts = []
     for layers in [shared] + branches:
-        parts.append('|'.join('+'.join(sorted(narrator_key(node_key(n, keys)) or node_key(n, keys) for n in layer))
-                              for layer in layers))
+        parts.append('|'.join('+'.join(sorted(identity(n) for n in layer)) for layer in layers))
     return '#'.join(parts)
 
 
 def annotate(books):
     """Number the narrators and the groups of equal chains, write every chain's code with them, and
-    return (narrators, groups): a narrator is {'key', 'name', 'refs': [(book, id, role, grade)], ...},
-    a group a list of (book, id)."""
+    return (narrators, groups): a narrator is {'key', 'name', 'english', 'depth', 'forms', 'refs':
+    [(book, id, role, grade)], ...}, a group a list of (book, id).
+
+    A narrator is a name as the shelf writes it, cleaned of titles and of the words of the report
+    that ran on after it, and joined to another written name only by the rules of `Identities` and
+    `student_context`: deterministic, each one printed, nothing guessed from outside the shelf."""
+    stats, students = mention_stats(books)
+    identities = Identities(stats)
+    context = student_context(identities, students)
+    for rule, joins in identities.report.items():
+        print(f"   {rule:11} {len(joins):4} names joined, e.g. " + '; '.join(f"{s} -> {f} ({c})" for s, f, c in sorted(joins, key=lambda j: -j[2])[:4]))
+    print(f"   context    {len(context):4} (student, name) pairs resolved, e.g. "
+          + '; '.join(f"{short} under {student} -> {full}" for (student, short), full in list(context.items())[:3]))
+
+    def node_identity(node, keys, student_key=None):
+        k = narrator_key(node_key(node, keys))
+        if not k:
+            return None
+        identity = identities.resolve(cleaned(k))
+        if student_key is not None:
+            identity = context.get((student_key, identity), identity)
+        return identity
+
+    def chain_identities(chain):
+        """{node: identity} for every narrator node, the top generation read under its students."""
+        keys = chain['keys']
+        out = {}
+        columns = chain_layers_top_down(chain)
+        for column in columns:
+            for index, layer in enumerate(column):
+                lower = column[index + 1] if index + 1 < len(column) else []
+                student_keys = [identities.resolve(cleaned(narrator_key(node_key(l, keys)) or '')) for l in lower]
+                student_keys = [s for s in student_keys if s]
+                for node in layer:
+                    if node in out:
+                        continue
+                    student = student_keys[0] if len(student_keys) == 1 and index == 0 and chain['prophet'] else None
+                    identity = node_identity(node, keys, student)
+                    if identity:
+                        out[node] = identity
+        return out
+
     mentions = Counter()
-    forms = defaultdict(Counter)
+    forms = defaultdict(lambda: defaultdict(Counter))
+    depths = defaultdict(Counter)
     by_signature = defaultdict(list)
+    resolved = {}
     for slug, codes in books.items():
         book = BOOK_SLUGS.index(slug)
         for id_text, (_, it, raw, chain) in codes.items():
             keys = chain['keys']
-            for node, _ in chain_nodes(chain):
-                k = narrator_key(node_key(node, keys))
-                if k:
-                    mentions[k] += 1
-                    forms[k][node_text(raw, node)] += 1
-            by_signature[signature(chain, keys)].append((book, int(id_text)))
+            ids_of = chain_identities(chain)
+            resolved[(slug, id_text)] = ids_of
+            for node, role, depth in chain_nodes(chain):
+                identity = ids_of.get(node)
+                if not identity:
+                    continue
+                mentions[identity] += 1
+                forms[identity][cleaned(narrator_key(node_key(node, keys)))][node_text(raw, node)] += 1
+                if chain['prophet']:
+                    depths[identity][depth] += 1
+            by_signature[signature(chain, keys, lambda n: ids_of.get(n) or node_key(n, keys))].append((book, int(id_text)))
     ordered = sorted(mentions, key=lambda k: (-mentions[k], k))
     ids = {k: n + 1 for n, k in enumerate(ordered)}
-    narrators = [{'id': ids[k], 'key': k, 'name': forms[k].most_common(1)[0][0], 'refs': [], 'from_prophet': 0,
-                  'teacher': 0, 'grades': [0] * 6, 'books': [0] * len(BOOK_SLUGS)} for k in ordered]
+    narrators = []
+    for k in ordered:
+        # The page's title: the fullest of the names joined here that the shelf writes often enough
+        # (a fifth of the mentions), so Ibn Umar's page is "عبد الله بن عمر" and Abu Sa'id's names
+        # al-Khudri; the others are listed under it, each with its count.
+        total = sum(sum(c.values()) for c in forms[k].values())
+        candidates = [(key, c) for key, c in forms[k].items() if sum(c.values()) * 5 >= total] or list(forms[k].items())
+        own_key, own = max(candidates, key=lambda kc: (len(kc[0].split()), sum(kc[1].values())))
+        name = own.most_common(1)[0][0]
+        other_forms = sorted(((c.most_common(1)[0][0], sum(c.values())) for key, c in forms[k].items() if key != own_key),
+                             key=lambda f: -f[1])
+        depth = depths[k].most_common(1)[0][0] if depths[k] else 0
+        narrators.append({'id': ids[k], 'key': k, 'name': name, 'english': transliterate(name), 'depth': min(depth, 255),
+                          'forms': other_forms, 'refs': [], 'from_prophet': 0, 'teacher': 0, 'grades': [0] * 6,
+                          'books': [0] * len(BOOK_SLUGS)})
     groups = sorted((members for members in by_signature.values() if len(members) > 1), key=lambda m: (-len(m), m))
     group_of = {member: n + 1 for n, members in enumerate(groups) for member in members}
     for slug, codes in books.items():
         book = BOOK_SLUGS.index(slug)
         for id_text, (_, it, raw, chain) in codes.items():
-            keys = chain['keys']
             grade = grade_category(slug, it.grades)
+            ids_of = resolved[(slug, id_text)]
             node_ids = {}
             roles = {}
-            for node, role in chain_nodes(chain):
-                k = narrator_key(node_key(node, keys))
-                if not k:
+            for node, role, depth in chain_nodes(chain):
+                identity = ids_of.get(node)
+                if not identity:
                     continue
-                node_ids[node] = ids[k]
+                node_ids[node] = ids[identity]
                 # A man met twice on one chain (two roads) is one narration of his, in his higher role.
-                roles[ids[k]] = max(roles.get(ids[k], ROLE_LINK), role, key=lambda r: (r == ROLE_TOP, r == ROLE_TEACHER))
+                roles[ids[identity]] = max(roles.get(ids[identity], ROLE_LINK), role, key=lambda r: (r == ROLE_TOP, r == ROLE_TEACHER))
             for narrator_id, role in roles.items():
                 entry = narrators[narrator_id - 1]
                 entry['refs'].append((book, int(id_text), role, grade))
@@ -810,12 +1079,20 @@ def read_container(path):
     return eager, blocks, fields
 
 
+def packed_string(text):
+    data = text.encode('utf-8')
+    return struct.pack('<I', len(data)) + data
+
+
 def narrator_payload(entry):
-    name = entry['name'].encode('utf-8')
-    out = struct.pack('<I', len(name)) + name
+    out = packed_string(entry['name'])
     out += struct.pack('<III', len(entry['refs']), entry['from_prophet'], entry['teacher'])
     out += struct.pack('<6I', *entry['grades'])
     out += struct.pack(f'<B{len(BOOK_SLUGS)}I', len(BOOK_SLUGS), *entry['books'])
+    out += struct.pack('<B', entry['depth']) + packed_string(entry['english']) + packed_string(entry['key'])
+    out += struct.pack('<H', len(entry['forms']))
+    for form, count in entry['forms']:
+        out += packed_string(form) + struct.pack('<I', count)
     return out
 
 
@@ -828,7 +1105,10 @@ def write_narrators_pack(narrators, groups):
       block 0 (LZMA)  the narrators: a row block by narrator id (1-based, by mentions descending):
                       string name, u32 narrations, u32 from the Prophet, u32 the compiler's teacher,
                       u32 x 6 by grade (sahih, hasan, da'if, graders differ, other, none),
-                      u8 books, u32 narrations per book
+                      u8 books, u32 narrations per book,
+                      u8 generation (1 = narrates from the Prophet ﷺ, 2 below him, ... ; 0 unknown),
+                      string English name, string folded key (the identity, for search),
+                      u16 other written forms, each: string form (as most written), u32 mentions
       block 1..S      the narrations naming each narrator: a row block by id, shard k holding the ids
                       k*SHARD+1 ... (k+1)*SHARD; a row's payload is its refs, 7 bytes each:
                       u8 book, u32 idInBook, u8 role (0 link, 1 top, 2 the compiler's teacher), u8 grade
@@ -891,12 +1171,18 @@ def write_narrator_samples(narrators, groups, books):
     """A few narrators and groups exactly as the pack holds them (HadithNarratorsTests), and the
     narrator ids of a few chains in the order their names stand on the page."""
     picks = [narrators[0], narrators[1], narrators[2], narrators[49], narrators[499], narrators[-1]]
+    # The two names Abu checked by hand (2026-10-31): Ibn Mas'ud and Aishah, as joined.
+    for key in ('عبد الله بن مسعود', 'عائشه'):
+        found = next((e for e in narrators if e['key'] == key), None)
+        if found and found not in picks:
+            picks.append(found)
     lines = ['// GENERATED by Scripts/build_hadith_chains.py: do not edit. A few narrators and groups of equal',
              '// chains exactly as HadithNarrators.qpk holds them (HadithNarratorsTests).',
              '', 'enum HadithNarratorSamples {',
              '    struct Ref { let slug: String; let idInBook: Int; let role: Int; let grade: Int }',
-             '    struct Narrator { let id: Int; let name: String; let narrations: Int; let fromProphet: Int; let teacher: Int;'
-             ' let grades: [Int]; let books: [Int]; let firstRefs: [Ref] }',
+             '    struct Form { let name: String; let count: Int }',
+             '    struct Narrator { let id: Int; let name: String; let english: String; let depth: Int; let narrations: Int;'
+             ' let fromProphet: Int; let teacher: Int; let grades: [Int]; let books: [Int]; let forms: [Form]; let firstRefs: [Ref] }',
              '    struct Group { let id: Int; let members: [(slug: String, idInBook: Int)] }',
              f'    static let narratorCount = {len(narrators)}',
              f'    static let groupCount = {len(groups)}',
@@ -904,9 +1190,11 @@ def write_narrator_samples(narrators, groups, books):
              '    static let narrators: [Narrator] = [']
     for e in picks:
         refs = ', '.join(f'Ref(slug: "{BOOK_SLUGS[b]}", idInBook: {i}, role: {r}, grade: {g})' for b, i, r, g in e['refs'][:5])
-        lines.append(f'        Narrator(id: {e["id"]}, name: {json.dumps(e["name"], ensure_ascii=False)}, narrations: {len(e["refs"])}, '
+        forms = ', '.join(f'Form(name: {json.dumps(f, ensure_ascii=False)}, count: {c})' for f, c in e['forms'])
+        lines.append(f'        Narrator(id: {e["id"]}, name: {json.dumps(e["name"], ensure_ascii=False)}, '
+                     f'english: {json.dumps(e["english"])}, depth: {e["depth"]}, narrations: {len(e["refs"])}, '
                      f'fromProphet: {e["from_prophet"]}, teacher: {e["teacher"]}, grades: {e["grades"]}, books: {e["books"]}, '
-                     f'firstRefs: [{refs}]),')
+                     f'forms: [{forms}], firstRefs: [{refs}]),')
     lines += ['    ]', '    static let groups: [Group] = [']
     for n in (0, 1, len(groups) // 2, len(groups) - 1):
         members = ', '.join(f'(slug: "{BOOK_SLUGS[b]}", idInBook: {i})' for b, i in groups[n])

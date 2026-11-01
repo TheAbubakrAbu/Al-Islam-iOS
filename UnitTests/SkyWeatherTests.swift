@@ -185,6 +185,18 @@ final class SkyWeatherTests: XCTestCase {
         XCTAssertTrue(due(location: true, notifications: true, locationNever: true), "the other permission still asks")
     }
 
+    /// The first fix becomes the home city (`seedHomeLocationIfNeeded`), and readers who installed away from
+    /// home did not know (Abu, 2026-10-31): the Location card says so and, once a city is known, names it.
+    func testLocationCardNamesTheHomeCityOnceItIsKnown() {
+        XCTAssertTrue(PermissionCards.locationText.contains("home city"), "the card says the first place is saved as home")
+        let home = Location(city: "San Francisco, CA", latitude: 37.7749, longitude: -122.4194)
+        XCTAssertEqual(PermissionCards.homeCity(locationAllowed: true, home: home), "San Francisco, CA")
+        XCTAssertNil(PermissionCards.homeCity(locationAllowed: false, home: home), "no row before location is allowed")
+        XCTAssertNil(PermissionCards.homeCity(locationAllowed: true, home: nil), "no row until the first fix names a city")
+        XCTAssertNil(PermissionCards.homeCity(locationAllowed: true, home: Location(city: "  ", latitude: 1, longitude: 2)),
+                     "a blank label is no city")
+    }
+
     // MARK: Motion (2026-10-21, Abu: "make rain and conditions move")
 
     private let box = CGSize(width: 300, height: 200)

@@ -656,19 +656,8 @@ final class SimpleModeUITests: XCTestCase {
         add(shot)
     }
 
-    // Menu shortcuts must not also trigger the native menu or the containing row's hold action.
-    func testAyahMenuDoubleTapCopiesWithoutOpeningMenu() {
-        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1",
-                          "-seedBool", "simpleMode=0,THEfirstLaunch=0",
-                          "-shareAyahLastActionMode", "text"])
-        let menu = app.buttons["ayahActionsMenu"].firstMatch
-        XCTAssertTrue(menu.waitForExistence(timeout: 15))
-        menu.doubleTap()
-        XCTAssertTrue(app.staticTexts["Copied"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["Copy Ayah"].exists, "double tap also opened the menu")
-        XCTAssertFalse(app.buttons["Select Text"].exists, "double tap opened the row actions")
-    }
-
+    // Menu shortcuts must not also trigger the native menu or the containing row's hold action. (The
+    // double-tap shortcuts, and their tests, went on 2026-11-01: a double tap made every plain tap wait.)
     func testAyahMenuHoldOpensShare() {
         let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1",
                           "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
@@ -729,7 +718,7 @@ final class SimpleModeUITests: XCTestCase {
         let closed = actionsSheetSwitch(app).waitForNonExistence(timeout: 5)
         if !closed { attachScreenshot("Actions sheet after play, default") }
         XCTAssertTrue(closed, "Play This Ayah left the sheet open with the switch off")
-        if app.buttons["Stop playing"].waitForExistence(timeout: 5) { app.buttons["Stop playing"].tap() }
+        if app.buttons["Stop playing"].waitForExistence(timeout: 5) { app.buttons["Stop playing"].firstMatch.tap() }
     }
 
     /// With Keep Sheet Open While Playing on, Play This Ayah starts the recitation and the sheet stays.
@@ -742,7 +731,7 @@ final class SimpleModeUITests: XCTestCase {
         attachScreenshot("Actions sheet after play, kept open")
         XCTAssertTrue(actionsSheetSwitch(app).exists, "Play This Ayah closed the sheet with the switch on")
         XCTAssertTrue(app.buttons["Play This Ayah"].exists, "the sheet's tiles went away")
-        if app.buttons["Stop playing"].exists { app.buttons["Stop playing"].tap() }
+        if app.buttons["Stop playing"].exists { app.buttons["Stop playing"].firstMatch.tap() }
     }
 
     /// Play From Ayah closes the sheet even with Keep Sheet Open While Playing on (Abu, 2026-10-26:
@@ -760,7 +749,60 @@ final class SimpleModeUITests: XCTestCase {
         let closed = actionsSheetSwitch(app).waitForNonExistence(timeout: 5)
         if !closed { attachScreenshot("Actions sheet after Play From Ayah, switch on") }
         XCTAssertTrue(closed, "Play From Ayah left the sheet open with Keep Sheet Open While Playing on")
-        if app.buttons["Stop playing"].waitForExistence(timeout: 5) { app.buttons["Stop playing"].tap() }
+        if app.buttons["Stop playing"].waitForExistence(timeout: 5) { app.buttons["Stop playing"].firstMatch.tap() }
+    }
+
+    /// Keep Sheet Open While Playing and Play Custom Range (Abu, 2026-10-31: "if you're only playing the
+    /// ayah on the sheet then don't dismiss it ... if many ayahs then dismiss"): the range sheet stacks
+    /// on the actions sheet, and a range WIDER than the sheet's ayah closes both once it plays. The
+    /// range sheet opens on two ayahs (the tapped one and the next), so Play as it opens is that case.
+    func testActionsSheetCustomRangeWiderThanAyahClosesSheet() {
+        let app = launchActionsSheet(keepOpenOnPlay: true)
+        let tile = app.buttons["Play Custom Range"]
+        XCTAssertTrue(tile.waitForExistence(timeout: 10), "the actions sheet has no Play Custom Range tile")
+        tile.tap()
+        let play = app.buttons["Play Range"]
+        XCTAssertTrue(play.waitForExistence(timeout: 10), "the range sheet did not open on the actions sheet")
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "2 ayahs")).firstMatch.exists,
+                      "the range sheet did not open on two ayahs")
+        play.tap()
+        let closed = actionsSheetSwitch(app).waitForNonExistence(timeout: 8)
+        if !closed {
+            attachScreenshot("Actions sheet after a wider range")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(closed, "a range wider than the ayah left the actions sheet open")
+        if app.buttons["Stop playing"].waitForExistence(timeout: 20) { app.buttons["Stop playing"].firstMatch.tap() }
+    }
+
+    /// The other half of the rule: a range of the sheet's ONE ayah hands the actions sheet back.
+    func testActionsSheetCustomRangeOfThisAyahKeepsSheet() {
+        let app = launchActionsSheet(keepOpenOnPlay: true)
+        let tile = app.buttons["Play Custom Range"]
+        XCTAssertTrue(tile.waitForExistence(timeout: 10), "the actions sheet has no Play Custom Range tile")
+        tile.tap()
+        let play = app.buttons["Play Range"]
+        XCTAssertTrue(play.waitForExistence(timeout: 10), "the range sheet did not open on the actions sheet")
+        // Pull the end back onto the start: the To field's minus, the second "Previous ayah" stepper.
+        let steppers = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Previous ayah"))
+        XCTAssertGreaterThanOrEqual(steppers.count, 2, "the range card has no To stepper")
+        steppers.element(boundBy: 1).tap()
+        let oneAyah = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "1 ayah")).firstMatch
+        if !oneAyah.waitForExistence(timeout: 5) {
+            attachScreenshot("Range sheet after To minus")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(oneAyah.exists, "the To stepper did not narrow the range to one ayah")
+        play.tap()
+        XCTAssertTrue(play.waitForNonExistence(timeout: 8), "the range sheet stayed up after Play")
+        Thread.sleep(forTimeInterval: 1.5)
+        let kept = actionsSheetSwitch(app).exists
+        if !kept {
+            attachScreenshot("Actions sheet after a one-ayah range")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(kept, "a range of the sheet's own ayah closed the actions sheet")
+        if app.buttons["Stop playing"].waitForExistence(timeout: 20) { app.buttons["Stop playing"].firstMatch.tap() }
     }
 
     /// The sheet's Choose Reciter row opens the reciter list ON the sheet: closing the list without a
@@ -780,21 +822,6 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertTrue(actionsSheetSwitch(app).waitForExistence(timeout: 5), "closing the reciter list also closed the actions sheet")
     }
 
-    func testAyahPlayButtonDoubleTapStartsPlayback() {
-        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:2",
-                          "-seedBool", "simpleMode=0,THEfirstLaunch=0,nowPlayingExpanded=1"])
-        guard let play = hittablePlayButton(app) else { return XCTFail("no hittable play button") }
-        play.doubleTap()
-        let started = app.buttons["Stop playing"].waitForExistence(timeout: 10)
-        if !started {
-            attachScreenshot("Ayah play double tap")
-            print(app.debugDescription)
-        }
-        XCTAssertTrue(started, "double tap did not start playback")
-        XCTAssertFalse(app.buttons["Play This Ayah"].exists, "double tap also opened the playback menu")
-        app.buttons["Stop playing"].tap()
-    }
-
     func testAyahPlayButtonHoldOpensCustomRange() {
         let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1",
                           "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
@@ -810,6 +837,35 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Play This Ayah"].exists, "hold also opened the playback menu")
         XCTAssertFalse(app.buttons["Stop playing"].exists, "hold also started playback")
         XCTAssertFalse(app.buttons["Select Text"].exists, "row hold stole the button's hold")
+    }
+
+    /// The range card's Surah chip is a menu (2026-10-31): "To End of Surah" widens the range from the
+    /// From ayah alone, so the play summary counts the rest of the surah. Three menus share one List
+    /// row; this also proves each takes its own tap.
+    func testCustomRangeSurahMenuOffersToEndOfSurah() {
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "18:1", "-showCustomRangeSheet",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0", "-seedString", "customRangeSelectionMode=ayahs"])
+        let surahChip = app.buttons["Surah"].firstMatch
+        XCTAssertTrue(surahChip.waitForExistence(timeout: 15), "the range card has no Surah menu")
+        surahChip.tap()
+        let toEnd = app.buttons["To End of Surah"]
+        if !toEnd.waitForExistence(timeout: 5) {
+            attachScreenshot("Custom range Surah menu")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(toEnd.exists, "the Surah menu has no To End of Surah")
+        toEnd.tap()
+        // The surah's own size, from the totals line under the mode picker ("110 ayahs · 12 pages
+        // (293–304)"): a simulator with a stale reading position may open another surah than 18.
+        let totals = app.staticTexts.matching(NSPredicate(format: "label MATCHES %@", "^\\d+ ayahs · \\d+ pages? \\(.*")).firstMatch
+        XCTAssertTrue(totals.waitForExistence(timeout: 5), "the range card has no totals line")
+        let count = totals.label.prefix(while: \.isNumber)
+        let summary = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", "\(count) ayahs", "plays")).firstMatch
+        if !summary.waitForExistence(timeout: 5) {
+            attachScreenshot("Custom range after To End of Surah")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(summary.exists, "To End of Surah did not widen the range to the surah's last ayah (\(count))")
     }
 
     /// Two taps on the ayah's text, off any word, play just that ayah; the row's single tap (the mark)
@@ -832,7 +888,7 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertTrue(started, "double tap did not start playback")
         XCTAssertFalse(app.buttons["Play This Ayah"].exists, "double tap opened the playback menu")
         XCTAssertFalse(app.buttons["Select Text"].exists, "double tap opened the row actions")
-        if started { app.buttons["Stop playing"].tap() }
+        if started { app.buttons["Stop playing"].firstMatch.tap() }
     }
 
     /// A word's own two taps (the word card) win over the ayah's: the card opens and nothing plays.
@@ -861,7 +917,7 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Stop playing"].waitForExistence(timeout: 3), "the word's two taps also played the ayah")
     }
 
-    func testHadithMenuCopyAndShareShortcuts() {
+    func testHadithMenuHoldOpensShare() {
         let app = launch(["-launchTabHadith", "-launchHadithOpen", "bukhari:20",
                           "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
         XCTAssertTrue(app.buttons["hadithActionsMenu"].firstMatch.waitForExistence(timeout: 15))
@@ -869,9 +925,6 @@ final class SimpleModeUITests: XCTestCase {
             .allElementsBoundByIndex.first(where: { $0.isHittable }) else {
             return XCTFail("no visible hadith action control")
         }
-        menu.doubleTap()
-        XCTAssertTrue(app.staticTexts["Copied"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["Copy Hadith"].exists, "double tap also opened the menu")
         menu.press(forDuration: 0.7)
         let shareOpened = app.buttons["Share"].waitForExistence(timeout: 5)
         if !shareOpened {
@@ -951,6 +1004,166 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Select Text"].exists, "the Simple ayah menu still carries the long list")
     }
 
+
+    // MARK: Pinch to zoom and the Signs legend (2026-11-01)
+
+    /// A pinch out on an ayah's text zooms that ayah IN PLACE (no sheet, no menu): its translation line
+    /// grows taller, and nothing else fires.
+    func testAyahPinchZoomsAyahInPlace() {
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:2",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
+        let menu = app.buttons["ayahActionsMenu"].firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 15))
+        let query = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "praise"))
+        let translation = query.firstMatch
+        XCTAssertTrue(translation.waitForExistence(timeout: 5), "no translation line to pinch")
+        translation.waitUntilStill()
+        let before = translation.frame.height
+        translation.pinch(withScale: 2.0, velocity: 2.0)
+        Thread.sleep(forTimeInterval: 1.0)
+        let after = query.firstMatch.frame.height
+        if after < before * 1.3 {
+            attachScreenshot("Ayah pinch")
+            print(app.debugDescription)
+        }
+        XCTAssertGreaterThan(after, before * 1.3, "the pinch did not grow the ayah (\(before) -> \(after))")
+        // Any row control still hittable: the FIRST match may have scrolled off above the grown ayah.
+        XCTAssertTrue(app.buttons.matching(identifier: "ayahActionsMenu").allElementsBoundByIndex.contains { $0.isHittable },
+                      "the pinch covered the reader with a sheet")
+        XCTAssertFalse(app.buttons["Select Text"].exists, "the pinch opened the row actions")
+        XCTAssertFalse(app.buttons["Play This Ayah"].exists, "the pinch opened the playback menu")
+    }
+
+    /// The same pinch on a hadith row grows its narration in place.
+    func testHadithPinchZoomsHadithInPlace() {
+        let app = launch(["-launchTabHadith", "-launchHadithOpen", "bukhari:20",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
+        XCTAssertTrue(app.buttons["hadithActionsMenu"].firstMatch.waitForExistence(timeout: 15))
+        // A narration's English line that is on screen and clear of the bottom bars (a pinch there
+        // reaches the system's home gesture instead).
+        let query = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Narrated"))
+        let floor = app.frame.maxY - 220
+        guard let line = query.allElementsBoundByIndex.first(where: { $0.isHittable && $0.frame.maxY < floor && $0.frame.minY > 150 }) else {
+            attachScreenshot("Hadith pinch target")
+            return XCTFail("no narration line clear of the bars to pinch")
+        }
+        let label = line.label
+        let before = line.frame.height
+        line.pinch(withScale: 2.0, velocity: 2.0)
+        Thread.sleep(forTimeInterval: 1.0)
+        let after = app.staticTexts[label].firstMatch.frame.height
+        if after < before * 1.3 {
+            attachScreenshot("Hadith pinch")
+            print(app.debugDescription)
+        }
+        XCTAssertGreaterThan(after, before * 1.3, "the pinch did not grow the hadith (\(before) -> \(after))")
+        XCTAssertTrue(app.buttons.matching(identifier: "hadithActionsMenu").allElementsBoundByIndex.contains { $0.isHittable },
+                      "the pinch covered the list with a sheet")
+    }
+
+    /// The Legend's third page, Signs: the mushaf's stop signs, each row opening to what it asks.
+    func testLegendSignsPageListsStopSigns() {
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
+        let legend = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Legend")).firstMatch
+        XCTAssertTrue(legend.waitForExistence(timeout: 15), "no Legend button")
+        legend.tap()
+        let signs = app.buttons["Signs"].firstMatch
+        XCTAssertTrue(signs.waitForExistence(timeout: 5), "the legend sheet has no Signs segment")
+        signs.tap()
+        let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Mandatory Stop")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "no Mandatory Stop row")
+        row.tap()
+        let meaning = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Stop here.")).firstMatch
+        let opened = meaning.waitForExistence(timeout: 5)
+        if !opened {
+            attachScreenshot("Legend signs")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(opened, "the row did not open to its meaning")
+        XCTAssertTrue(app.buttons["Learn About Waqf"].exists, "no door to the Waqf lesson")
+    }
+
+    /// A rule of the basic legend opens to its note AND an example ayah (2026-11-01): one ayah of the
+    /// Hafs text with only that rule's letters colored, under its reference.
+    func testLegendRuleRowShowsExample() {
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
+        let legend = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Legend")).firstMatch
+        XCTAssertTrue(legend.waitForExistence(timeout: 15), "no Legend button")
+        legend.tap()
+        // The sheet remembers the page last looked at (the Signs test leaves it on Signs).
+        let tajweed = app.buttons["Tajweed"].firstMatch
+        XCTAssertTrue(tajweed.waitForExistence(timeout: 5), "the legend sheet has no Tajweed segment")
+        tajweed.tap()
+        let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Qalqalah")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "no Qalqalah row")
+        row.tap()
+        let example = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Example:")).firstMatch
+        let shown = example.waitForExistence(timeout: 5)
+        if !shown {
+            attachScreenshot("Legend rule example")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(shown, "the open rule shows no example ayah")
+        XCTAssertTrue(example.label.contains("85:1"), "Qalqalah's example is not al-Buruj 85:1: \(example.label)")
+    }
+
+    /// Relaunches with the default riwayah seeded back: a seeded `displayQiraah` outlives the test on
+    /// this simulator, and every other test here reads Hafs.
+    private func restoreHafsAfterwards() {
+        addTeardownBlock {
+            let app = XCUIApplication()
+            // `-settingsProbe` applies through the setters a moment after launch; "Hafs" is the default.
+            app.launchArguments = ["-skipNotificationPrompt", "-travelingMode", "0", "-launchTabQuran",
+                                   "-settingsProbe", "displayQiraah=Hafs@1"]
+            app.launch()
+            _ = app.wait(for: .runningForeground, timeout: 20)
+            Thread.sleep(forTimeInterval: 4)
+            app.terminate()
+        }
+    }
+
+    /// The riwayah picker's Sort By (2026-11-01): Alphabetical lists every riwayah in one list, so
+    /// Qalun is a row of the menu itself rather than a row of the Nafi submenu. The list reader shows
+    /// its riwayah chip only in comparison mode or in a riwayah other than Hafs, so Warsh is seeded.
+    func testRiwayahPickerSortsFlat() {
+        restoreHafsAfterwards()
+        // The riwayah is a `-settingsProbe` step (applied in-process a second after launch; the
+        // launch helper's own wait covers it), not a `-seedBool` key.
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0",
+                          "-settingsProbe", "showQiraahDetails=1@1,displayQiraah=Warsh an Nafi@2"])
+        let chip = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Warsh an Nafi")).firstMatch
+        XCTAssertTrue(chip.waitForExistence(timeout: 15), "no riwayah chip in the reader's bar")
+        chip.tap()
+        let sortBy = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Sort By")).firstMatch
+        XCTAssertTrue(sortBy.waitForExistence(timeout: 5), "the picker has no Sort By")
+        // Default: the imams' submenus, Qalun inside Nafi's.
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Qalun an Nafi")).firstMatch.exists,
+                       "Qalun is a top-level row in the Default order")
+        sortBy.tap()
+        let alphabetical = app.buttons["Alphabetical"].firstMatch
+        XCTAssertTrue(alphabetical.waitForExistence(timeout: 5), "Sort By has no Alphabetical")
+        alphabetical.tap()
+        // The menu closes on the pick; reopen it.
+        _ = chip.waitForExistence(timeout: 5)
+        chip.tap()
+        let qalun = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Qalun an Nafi")).firstMatch
+        let flat = qalun.waitForExistence(timeout: 5)
+        if !flat {
+            attachScreenshot("Riwayah picker alphabetical")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(flat, "Alphabetical did not list Qalun on the menu itself")
+        // Back to Default so the simulator's other tests see the menu they expect.
+        let sortAgain = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Sort By")).firstMatch
+        if sortAgain.waitForExistence(timeout: 3) {
+            sortAgain.tap()
+            let byDefault = app.buttons["Default"].firstMatch
+            if byDefault.waitForExistence(timeout: 3) { byDefault.tap() }
+        }
+    }
 }
 
 private extension XCUIElement {

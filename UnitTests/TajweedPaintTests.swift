@@ -430,8 +430,11 @@ final class TajweedPaintTests: XCTestCase {
         let madd = rgba(UIColor(TajweedLegendCategory.maddNatural.color))
         // ٱلۡأٓخِرَةِ: the laam of the lam-alif glyph carries the madd of its alif
         XCTAssertEqual(try drawn(2, 4, at: [0x0644, 0x06E1, 0x0623, 0x0653], offset: 0), madd, "2:4: the lam-alif does not show its madd")
-        // بِـَٔايَٰتِنَآ: the baa of the بِـَٔا glyph carries the madd of its alif
-        XCTAssertEqual(try drawn(2, 39, at: [0x0628, 0x0650, 0x0640, 0x0654, 0x064E, 0x0627], offset: 0), madd, "2:39: بِـَٔا does not show its madd")
+        // بِـَٔايَٰتِنَآ: no longer one glyph (the bake left the face 2026-10-31), so the alif shows its madd
+        // and the baa stays plain instead of turning gold with it
+        let biHamzaAlif: [UInt16] = [0x0628, 0x0650, 0x0640, 0x0654, 0x064E, 0x0627]
+        XCTAssertEqual(try drawn(2, 39, at: biHamzaAlif, offset: 5), madd, "2:39: بِـَٔا does not show its madd")
+        XCTAssertEqual(try drawn(2, 39, at: biHamzaAlif, offset: 0), rgba(UIColor.label), "2:39: the baa of بِـَٔا took the madd")
         // رَٰءۡ: the glyph's raa is heavy and stays heavy
         XCTAssertEqual(try drawn(2, 72, at: [0x0631, 0x064E, 0x0670, 0x0621, 0x06E1], offset: 0),
                        rgba(UIColor(TajweedLegendCategory.tafkhim.color)), "2:72: the heavy raa lost its colour")
@@ -512,5 +515,85 @@ final class TajweedPaintTests: XCTestCase {
             }
         }
         try lines.joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)
+    }
+}
+
+// MARK: - Legend examples
+
+/// Every Hafs rule's example ayah (`TajweedLegendCategory.exampleAyah`) must carry the rule where the
+/// engine colors it, or the legend would show an example with nothing colored (2026-11-01).
+@MainActor
+final class TajweedLegendExampleTests: XCTestCase {
+    func testEveryRuleExamplePaintsItsRule() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        for item in TajweedLegendCategory.allCases {
+            let place = item.exampleAyah
+            let ayah = try XCTUnwrap(data.ayah(surah: place.surah, ayah: place.ayah), "\(item.rawValue): no ayah \(place.surah):\(place.ayah)")
+            let text = ayah.rawArabicText(surahId: place.surah, qiraahOverride: "")
+            let styled = TajweedStore.legendExamples.exampleText(surah: place.surah, ayah: place.ayah, text: text, category: item)
+            XCTAssertNotNil(styled, "\(item.rawValue): \(place.surah):\(place.ayah) paints nothing of the rule")
+        }
+    }
+
+    /// The shared painter never answers (its snapshot is the reader's), so a row can never mistake it.
+    func testSharedPainterGivesNoExamples() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let ayah = try XCTUnwrap(data.ayah(surah: 1, ayah: 1))
+        let text = ayah.rawArabicText(surahId: 1, qiraahOverride: "")
+        XCTAssertNil(TajweedStore.shared.exampleText(surah: 1, ayah: 1, text: text, category: .tafkhim))
+    }
+}
+
+/// The one order of the riwayah rules (`QiraahTajweedStore.ruleOrder`, 2026-11-01): every print's legend
+/// and the Legend's By Rule index follow it, and the riwayat page explains the rules in it.
+final class QiraahRuleOrderTests: XCTestCase {
+    private var packTags: [String] {
+        Settings.Riwayah.allOptions.map(\.tag).filter { QiraahTajweedStore.fileName(for: $0) != nil }
+    }
+
+    /// Abu, 2026-11-01: "in tajweed legend taqlil should come after imaalah" (its mixed form between them).
+    func testTaqlilFollowsImalah() throws {
+        let order = QiraahTajweedStore.ruleOrder
+        let imalah = try XCTUnwrap(order.firstIndex(of: "imalah"))
+        XCTAssertEqual(order.firstIndex(of: "imalah_taqlil"), imalah + 1)
+        XCTAssertEqual(order.firstIndex(of: "taqlil"), imalah + 2)
+        XCTAssertLessThan(QiraahTajweedStore.ruleRank("idgham"), QiraahTajweedStore.ruleRank("imalah"))
+    }
+
+    /// A rule the app can describe has a place in the order; an unknown key sorts last, in its own order.
+    func testEveryDescribedRuleHasAPlace() {
+        for key in QiraahTajweedStore.shortDescriptions.keys {
+            XCTAssertLessThan(QiraahTajweedStore.ruleRank(key), QiraahTajweedStore.ruleOrder.count, key)
+        }
+        XCTAssertEqual(QiraahTajweedStore.ruleRank("made_up"), QiraahTajweedStore.ruleOrder.count)
+        XCTAssertEqual(QiraahTajweedStore.sortedByRule(["taqlil", "zzz", "idgham", "aaa", "imalah"]) { $0 },
+                       ["idgham", "imalah", "taqlil", "zzz", "aaa"])
+    }
+
+    /// Every shipped pack's legend comes out sorted, whatever order its print's box used.
+    func testEveryPackLegendIsInTheOrder() {
+        let tags = packTags
+        XCTAssertEqual(tags.count, 19)
+        for tag in tags {
+            let keys = QiraahTajweedStore.shared.legend(for: tag).map(\.key)
+            XCTAssertFalse(keys.isEmpty, tag)
+            XCTAssertEqual(keys, QiraahTajweedStore.sortedByRule(keys) { $0 }, tag)
+            XCTAssertEqual(keys.first.map { QiraahTajweedStore.ruleAliases[$0] ?? $0 }, "khilaf_harf", "\(tag) leads with the khilaf wash")
+        }
+    }
+
+    /// The cross-riwayah index folds the two khilaf captions, keeps the order, and counts every print.
+    func testRulesAcrossRiwayatFoldTheKhilafCaptions() throws {
+        let rules = QiraahTajweedStore.shared.rulesAcrossRiwayat(tags: packTags)
+        XCTAssertEqual(rules.first?.key, "khilaf_harf")
+        XCTAssertEqual(rules.first?.english, "Differing from Ḥafṣ")
+        XCTAssertEqual(rules.first?.uses.count, 19)
+        XCTAssertNil(rules.first { $0.key == "khilaf_word" })
+        XCTAssertEqual(rules.map(\.key), QiraahTajweedStore.sortedByRule(rules.map(\.key)) { $0 })
+        let taqlil = try XCTUnwrap(rules.first { $0.key == "taqlil" })
+        XCTAssertEqual(taqlil.uses.map(\.tag), [Settings.Riwayah.warsh])
+        XCTAssertGreaterThan(taqlil.uses[0].count, 1000)
     }
 }

@@ -245,6 +245,9 @@ struct HadithBookView: View {
     @State private var inBookRanked = HadithRankedSearch.ScopedOutcome()
     @State private var rankedMatchLimit = 5
     private static let rankedHadithCap = 40
+    /// How many ranked rows the engine keeps: the forty-row cap until Search All Matches lifts it to
+    /// the whole book (`rankedRows` clamps it to the book's row count).
+    @State private var rankedHadithLimit = HadithBookView.rankedHadithCap
 
     // MARK: iPad/Mac two columns - chapters left, hadiths right
 
@@ -516,15 +519,18 @@ struct HadithBookView: View {
         let folded = HadithFold.query(query)
         // "Load all" sets Int.max; clamped so the one-past-the-page `limit + 1` below cannot overflow.
         let limit = min(hadithMatchLimit, Int.max - 1)
-        // The filters in force for THIS scan: the words become needles and the grading a row test run
-        // on text matches only. With neither (the row untouched, or only its order changed) the scan
-        // is the one-needle sweep it has always been, so the pages come out the same.
+        // The filters in force for THIS scan: the words become needles with the Match rule's word
+        // edges, and the grading (plus Exact's letters) a row test run on text matches only. With none
+        // of them (the row untouched, or only its order changed) the scan is the one-needle sweep it
+        // has always been, so the pages come out the same. The ranked lane re-tests its hits under a
+        // rule (`rankedRowTest`): it ranks stems and corrected spellings, which a rule must not pass.
         let needles = filters.needles(for: query)
-        let accept = filters.gradeTest(for: book, data: data)
-        let isPlainScan = accept == nil && needles.queries.count == 1
+        let accept = filters.rowTest(for: book, data: data, query: query)
+        let rankedAccept = filters.rankedRowTest(for: book, data: data, query: query)
+        let isPlainScan = accept == nil && needles.queries.count == 1 && needles.rule == .contains
         let wantsRanked = filters.sort == .relevance
         let book = book
-        let rankedCap = Self.rankedHadithCap
+        let rankedCap = rankedHadithLimit
 
         inBookSearchTask = Task {
             // Debounce so typing pays once per settled query; the scan itself runs detached, with
@@ -537,7 +543,8 @@ struct HadithBookView: View {
                 let rows = isPlainScan
                     ? data.matchingRows(in: 0..<data.hadiths.count, query: folded, limit: limit + 1)
                     : data.matchingRows(in: 0..<data.hadiths.count, queries: needles.queries,
-                                        requireAll: needles.requireAll, limit: limit + 1, accept: accept)
+                                        requireAll: needles.requireAll, limit: limit + 1,
+                                        rule: needles.rule, accept: accept)
                 if Task.isCancelled { return ([], false, HadithRankedSearch.ScopedOutcome()) }
                 let shown = rows.prefix(limit).map { data.hadiths[$0] }
                 for hadith in shown {
@@ -552,7 +559,7 @@ struct HadithBookView: View {
                 var ranked = HadithRankedSearch.ScopedOutcome()
                 if wantsRanked || rows.isEmpty {
                     ranked = HadithRankedSearch.rankedRows(query: query, book: book, data: data,
-                                                           cap: rankedCap, accept: accept) ?? ranked
+                                                           cap: rankedCap, accept: rankedAccept) ?? ranked
                     for row in ranked.rows.prefix(12) where data.hadiths.indices.contains(row) {
                         if Task.isCancelled { break }
                         data.prewarmText(rows: row..<(row + 1))
@@ -941,6 +948,7 @@ struct HadithBookView: View {
             chapterMatchLimit = 5
             hadithMatchLimit = 5
             rankedMatchLimit = 5
+            rankedHadithLimit = Self.rankedHadithCap
             showBookKeywordResults = HadithView.opensOnKeywordResults
             runInBookSearch(data)
             runAISearch(query: text, data: data)
@@ -950,6 +958,7 @@ struct HadithBookView: View {
             filters.persistPreferences()
             chapterMatchLimit = 5
             rankedMatchLimit = 5
+            rankedHadithLimit = Self.rankedHadithCap
             if hadithMatchLimit != 5 {
                 // The limit's own onChange below re-runs the scan.
                 hadithMatchLimit = 5
@@ -960,6 +969,10 @@ struct HadithBookView: View {
         }
         // Load-more bumps the limit; re-run the (debounced, off-main) scan for the bigger page.
         .onChange(of: hadithMatchLimit) { _ in
+            runInBookSearch(data)
+        }
+        // Search All Matches under Best Match lifts the engine's cap; the same scan ranks the whole book.
+        .onChange(of: rankedHadithLimit) { _ in
             runInBookSearch(data)
         }
         // The one-time vector build finishing mid-query: surface the results without another keystroke.
@@ -990,10 +1003,11 @@ struct HadithBookView: View {
             bookSearchHelpOverlay
                 .animation(.easeInOut, value: isBookSearchFocused)
         }
-        // The tab root's filter buttons, mounted the same way: above the results while a search (or a
-        // filter) is live, applied after the recent-searches card so the card sits under the row.
+        // The tab root's filter buttons, mounted the same way: above the results while a search is
+        // live (the field focused or holding text; a filter alone keeps its setting but not the row),
+        // applied after the recent-searches card so the card sits under the row.
         .adaptiveSafeArea(edge: .top, spacing: 0) {
-            if isBookSearchFocused || isSearchActive || searchFilters.hasSessionFilters {
+            if isBookSearchFocused || isSearchActive {
                 HadithSearchFilterBar(filters: $searchFilters, scope: .oneBook) { showSearchFilterSheet = true }
                     .background {
                         if #unavailable(iOS 26.0) {
@@ -1002,6 +1016,8 @@ struct HadithBookView: View {
                     }
             }
         }
+        // The result rows paint by the Match button's rule, not only filter by it.
+        .environment(\.searchWordRule, searchFilters.highlightWordRule)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
                 SearchBar(
@@ -1208,6 +1224,13 @@ struct HadithBookView: View {
             ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
                 Section(header: matchGroupHeader(group, isFirst: index == 0, matches: matches)) {
                     if index == 0 {
+                        // The Search All card at the head of the list; the Load More card under it
+                        // stays. The scan stops one past its page, so the total is unknown until then.
+                        if matches.hasMore {
+                            HadithSearchAllRow(shown: matches.shown.count, isLoading: hadithMatchLimit == Int.max) {
+                                hadithMatchLimit = Int.max
+                            }
+                        }
                         // The first group still names its chapter, under the overall header.
                         HStack(spacing: 8) {
                             Text(group.chapter.displayTitle)
@@ -1242,8 +1265,20 @@ struct HadithBookView: View {
         let hadiths = inBookRanked.rows.compactMap { data.hadiths.indices.contains($0) ? data.hadiths[$0] : nil }
         let bestMatch = searchFilters.sort == .relevance
         Section(header: SectionPillHeader(title: bestMatch ? String(localized: "HADITHS BY BEST MATCH") : String(localized: "CLOSEST HADITHS"),
-                                          count: hadiths.count, overflow: inBookRanked.total > hadiths.count)) {
+                                          count: hadiths.count, overflow: inBookRanked.total > hadiths.count || inBookRanked.hasMore)) {
             rankedNotice(exactFoundNothing: inBookMatches.shown.isEmpty)
+
+            // The Search All card: every ranked row on screen, and the engine's cap lifted (the
+            // whole book re-ranked) when more matched than it kept. Under a grading or a Match rule
+            // the total is a floor until then (see `ScopedOutcome.hasMore`), so the card shows none.
+            if hadiths.count > rankedMatchLimit || inBookRanked.hasMore {
+                let rankedTotal: Int? = inBookRanked.hasMore && inBookRanked.total <= hadiths.count ? nil : inBookRanked.total
+                HadithSearchAllRow(shown: min(rankedMatchLimit, hadiths.count), total: rankedTotal,
+                                   isLoading: rankedHadithLimit == Int.max && inBookRanked.hasMore) {
+                    rankedMatchLimit = Int.max
+                    if inBookRanked.hasMore { rankedHadithLimit = Int.max }
+                }
+            }
 
             ForEach(hadiths.prefix(rankedMatchLimit)) { hadith in
                 if let chapter = data.chapter(of: hadith) {
@@ -2215,12 +2250,13 @@ struct HadithChapterView: View {
         let data = bookData
         let range = Self.rowRange(of: chapter)
         let chapterID = chapter.id
-        // The filters in force for THIS scan (the book screen's rule): words as needles, the grading
-        // as a row test on text matches only, and the one-needle sweep when neither is set. A number
-        // reading is answered above, outside all of this.
+        // The filters in force for THIS scan (the book screen's rule): words as needles with the Match
+        // rule's word edges, the grading (plus Exact's letters) as a row test on text matches only, and
+        // the one-needle sweep when none is set. A number reading is answered above, outside all of this.
         let needles = filters.needles(for: trimmed)
-        let accept = filters.gradeTest(for: book, data: data)
-        let isPlainScan = accept == nil && needles.queries.count == 1
+        let accept = filters.rowTest(for: book, data: data, query: trimmed)
+        let rankedAccept = filters.rankedRowTest(for: book, data: data, query: trimmed)
+        let isPlainScan = accept == nil && needles.queries.count == 1 && needles.rule == .contains
         let wantsRanked = filters.sort == .relevance
         let isNumberReading = HadithBookData.isNumberQuery(HadithReferenceParser.localQuery(trimmed, in: book))
         let book = book
@@ -2232,7 +2268,7 @@ struct HadithChapterView: View {
                 let rows = isPlainScan
                     ? data.matchingRows(in: range, query: folded, limit: Int.max)
                     : data.matchingRows(in: range, queries: needles.queries, requireAll: needles.requireAll,
-                                        limit: Int.max, accept: accept)
+                                        limit: Int.max, rule: needles.rule, accept: accept)
                 if Task.isCancelled { return ([], HadithRankedSearch.ScopedOutcome()) }
                 var hits = rows.filter { !numbered.contains($0) }.map { data.hadiths[$0] }
                 // The ranked lane over this chapter's rows: asked for (Best Match), or the exact scan
@@ -2240,7 +2276,7 @@ struct HadithChapterView: View {
                 var ranked = HadithRankedSearch.ScopedOutcome()
                 if wantsRanked || rows.isEmpty, !isNumberReading {
                     ranked = HadithRankedSearch.rankedRows(query: trimmed, book: book, data: data, within: range,
-                                                           cap: max(1, range.count), accept: accept) ?? ranked
+                                                           cap: max(1, range.count), accept: rankedAccept) ?? ranked
                     ranked.rows.removeAll { numbered.contains($0) || !data.hadiths.indices.contains($0) }
                     if !ranked.isEmpty { hits = ranked.rows.map { data.hadiths[$0] } }
                 }
@@ -2431,9 +2467,10 @@ struct HadithChapterView: View {
 
                 floatingChapterHeader
 
-                // The book screen's filter buttons, under the chapter header while a search (or a
-                // filter) is live. No bar background: the header above floats as glass too.
-                if !isSelectingHadiths, isChapterSearchFocused || isSearchActive || searchFilters.hasSessionFilters {
+                // The book screen's filter buttons, under the chapter header while a search is live
+                // (the field focused or holding text; a filter alone keeps its setting but not the
+                // row). No bar background: the header above floats as glass too.
+                if !isSelectingHadiths, isChapterSearchFocused || isSearchActive {
                     HadithSearchFilterBar(filters: $searchFilters, scope: .oneChapter) { showSearchFilterSheet = true }
                         // Before iOS 26 the row's horizontal scroller took spare height from this
                         // stack and left an empty band under the buttons.
@@ -2493,6 +2530,8 @@ struct HadithChapterView: View {
             HadithSearchFilterSheet(filters: $searchFilters, scope: .oneChapter)
                 .smallMediumSheetPresentation()
         }
+        // The match rows paint by the Match button's rule, not only filter by it.
+        .environment(\.searchWordRule, searchFilters.highlightWordRule)
         .sheet(isPresented: $showChapterSettings) {
             SettingsHadithView()
                 .smallMediumSheetPresentation()
@@ -2570,7 +2609,7 @@ struct HadithChapterView: View {
             .padding(.vertical, 40)
     }
 
-    /// A search result or reference landed here: settle, then scroll to the hadith itself - and MARK
+    /// A search result or reference landed here: open on the hadith itself, and MARK
     /// it (the Quran's arrival rule: the selection shows you where you landed; tap to clear). Fired
     /// once the rows exist, which is `textReady` - not the List's appearance.
     private func scheduleArrivalScroll(_ scrollProxy: ScrollViewProxy) {
@@ -2586,9 +2625,18 @@ struct HadithChapterView: View {
         } else {
             anchorID = "chapter-hadith-\(target)"
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            withAnimation { scrollProxy.scrollTo(anchorID, anchor: .top) }
+        // Opened ON the hadith, the way a searched ayah opens in the surah reader (`scrollToAyah`):
+        // plain jumps from the first frame, no animation. The animated scroll a beat after the push
+        // rode down past every hadith above the target, a long ride on a long chapter (Abu,
+        // 2026-10-31: "for Quran when I search an ayah ... it opens on it but for Hadith it scrolls
+        // down"). The List lays rows out as they come on screen, so a far target can land a little
+        // off on the first jump; the later ones correct it from the rows measured around it.
+        func jump(_ remaining: Int) {
+            scrollProxy.scrollTo(anchorID, anchor: .top)
+            guard remaining > 0 else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { jump(remaining - 1) }
         }
+        DispatchQueue.main.async { jump(3) }
     }
 
     /// The SurahView title button, for a chapter: the glass label opens a menu with the chapter picker,

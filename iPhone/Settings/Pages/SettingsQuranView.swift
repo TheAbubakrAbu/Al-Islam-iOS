@@ -13,19 +13,13 @@ struct SettingsQuranView: View {
     /// Gates turning ON beta qiraat behind the warning dialog (see `betaQiraatGroup`).
     @State private var confirmEnableBetaQiraat = false
     private let presentedAsSheet: Bool
-    /// A sub-screen to push a beat after the root mounts: what a settings search result lands on
-    /// (`SettingsDeepLink`).
-    private let requestedPage: SettingsQuranPage?
-    @State private var openRequestedPage = false
-    @State private var deepLinkFired = false
-    /// One sub-screen shown ON ITS OWN, as the root of its stack: a Need a Hand? door's sheet
-    /// (HelpDoors.swift), which should open on the page the question is about rather than flash this
-    /// root and push the page a beat later.
+    /// One sub-screen shown ON ITS OWN, as the root of its stack: how every door into a sub-screen
+    /// opens (a search result, a tip, a Need a Hand? door), never this root with the page pushed a beat
+    /// later (`SettingsSearchDestinationView`).
     private let standalonePage: SettingsQuranPage?
 
-    init(presentedAsSheet: Bool = false, openPage: SettingsQuranPage? = nil, standalonePage: SettingsQuranPage? = nil) {
+    init(presentedAsSheet: Bool = false, standalonePage: SettingsQuranPage? = nil) {
         self.presentedAsSheet = presentedAsSheet
-        self.requestedPage = openPage
         self.standalonePage = standalonePage
     }
 
@@ -81,6 +75,11 @@ struct SettingsQuranView: View {
     #endif
     #if os(iOS)
     @ObservedObject private var themeHighlights = ThemeHighlights.shared
+    /// The Arabic size while its slider's thumb is down, for the reading preview above the slider;
+    /// nil reads the setting (cleared when the released value lands).
+    @State private var liveArabicSize: Double?
+    /// The same for the English size.
+    @State private var liveEnglishSize: Double?
     #endif
 
     var body: some View {
@@ -106,16 +105,6 @@ struct SettingsQuranView: View {
         .debugPushDestination(isPresented: $autoOpenReciters) { ReciterListView().environmentObject(settings) }
         .debugPushDestination(isPresented: $autoOpenSunnah) { SunnahRemindersView() }
         .debugPushDestination(isPresented: $autoOpenThemes) { ThemeHighlightsView() }
-        #endif
-        #if os(iOS)
-        .modifier(SettingsDeepLink(isPresented: $openRequestedPage, active: requestedPage != nil) {
-            if let page = requestedPage { quranPageDestination(page) }
-        })
-        .onAppear {
-            guard !deepLinkFired, requestedPage != nil else { return }
-            deepLinkFired = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { openRequestedPage = true }
-        }
         #endif
         .navigationTitle("Al-Quran Settings")
         #if os(iOS)
@@ -805,15 +794,27 @@ struct SettingsQuranView: View {
         }
     }
 
-    /// The size control (`FontSizeSlider`: sample line, small ب to big ب, one write on release), then
-    /// the system-size switch. The sample is set in the face the reader will actually draw, cleaned
-    /// the way Hide Tashkeel / Hide Dots would clean it.
+    /// The reader's own row as the preview (`QuranReadingPreview`: the face, the tajweed colors, beginner
+    /// spacing, the English lines, everything this page sets), moving with the thumb, then the size
+    /// control (`FontSizeSlider`: small ب to big ب, one write on release), then the system-size switch.
+    /// The watch keeps the slider's sample line: it has no row to preview.
     private var arabicFontSizeControls: some View {
         VStack(alignment: .leading, spacing: 12) {
+            #if os(iOS)
+            QuranReadingPreview(arabicSize: liveArabicSize)
+                .onChange(of: quranDisplay.fontArabicSize) { _ in liveArabicSize = nil }
+
+            FontSizeSlider(String(localized: "Arabic Font Size"), value: $quranDisplay.fontArabicSize, in: 15...75,
+                           sample: nil,
+                           fontName: settings.quranArabicFontName(for: settings.displayQiraahForArabic),
+                           glyph: settings.cleanedQuranArabic("ب"),
+                           onLiveChange: { liveArabicSize = $0 })
+            #else
             FontSizeSlider(String(localized: "Arabic Font Size"), value: $quranDisplay.fontArabicSize, in: 15...75,
                            sample: settings.cleanedQuranArabic(Settings.arabicSizeSample),
                            fontName: settings.quranArabicFontName(for: settings.displayQiraahForArabic),
                            glyph: settings.cleanedQuranArabic("ب"))
+            #endif
 
             SettingsToggle(String(localized: "Use Device Text Size"), isOn: useSystemArabicFontSize)
 
@@ -931,10 +932,20 @@ struct SettingsQuranView: View {
         }
     }
 
+    /// The reader's row again, its English lines at the live size (the Arabic at its own).
     private var englishFontSizeControls: some View {
         VStack(alignment: .leading, spacing: 12) {
+            #if os(iOS)
+            QuranReadingPreview(englishSize: liveEnglishSize)
+                .onChange(of: quranDisplay.englishFontSize) { _ in liveEnglishSize = nil }
+
+            FontSizeSlider(String(localized: "English Font Size"), value: $quranDisplay.englishFontSize, in: 13...20,
+                           sample: nil,
+                           onLiveChange: { liveEnglishSize = $0 })
+            #else
             FontSizeSlider(String(localized: "English Font Size"), value: $quranDisplay.englishFontSize, in: 13...20,
                            sample: Settings.englishSizeSample)
+            #endif
 
             SettingsToggle(String(localized: "Use Device Text Size"), isOn: useSystemEnglishFontSize)
         }
@@ -2229,10 +2240,15 @@ struct ReciterListView: View {
     }
 
     private func normalized(_ value: String) -> String {
-        value
+        let folded = value
             .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: .current)
             .lowercased()
             .trimmingCharacters(in: .whitespacesAndNewlines)
+        // Foundation's diacritic folding leaves Arabic's harakat in place, so a typed "ورش" never
+        // found the riwayah header "وَرش عَن نَافِع". Arabic takes the app's search fold instead (the
+        // marks dropped, the hamza carriers and alif forms made one), on the query and on every name
+        // it is held against alike.
+        return folded.containsArabicScript ? settings.cleanSearch(folded, whitespace: true) : folded
     }
 
     private func isGeneralQiraahSearch(_ query: String) -> Bool {
@@ -2253,7 +2269,22 @@ struct ReciterListView: View {
         guard !query.isEmpty else { return false }
         if normalized(reciter.name).contains(query) { return true }
         // The other names he is known and searched by (see `ReciterSpelling`).
-        return ReciterSpelling.otherNames(for: reciter).contains { normalized($0).contains(query) }
+        if ReciterSpelling.otherNames(for: reciter).contains(where: { normalized($0).contains(query) }) { return true }
+        return riwayahMatchesSearch(of: reciter, query: query)
+    }
+
+    /// The riwayah a reciter reads, by name (Abu, 2026-10-31: "allow me to search Arabic riwayaat for
+    /// reciters"). In Arabic, the riwayah and its imam: "ورش" or "نافع" find Warsh's reciters, and
+    /// "حفص" or "عاصم" the Hafs ones, which sit in sections with no Arabic header to match. In Latin
+    /// only the narrator's own name ("hafs"), from three letters: the other riwayat are found by their
+    /// section titles ("WARSH AN NAFI"), and "asi" listing every Hafs reciter would bury the names.
+    private func riwayahMatchesSearch(of reciter: Reciter, query: String) -> Bool {
+        let riwayah = Settings.Riwayah.option(for: reciter.qiraah ?? Settings.Riwayah.hafsTag)
+        if query.containsArabicScript {
+            return normalized(riwayah.arabic).contains(query) || normalized(riwayah.teacherArabic).contains(query)
+        }
+        guard query.count >= 3, let narrator = normalized(riwayah.label).split(separator: " ").first else { return false }
+        return narrator.hasPrefix(query)
     }
 
     /// Entry point for a reciter tap. A reciter with no ayah feed (ayahs fall back to Minshawi) is

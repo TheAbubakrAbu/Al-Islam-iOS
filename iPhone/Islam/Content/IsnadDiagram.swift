@@ -31,6 +31,9 @@ struct IsnadNode: Identifiable, Hashable {
 struct IsnadLayer: Identifiable {
     let title: String
     let nodes: [IsnadNode]
+    /// The English of a hadith chain's word of transmission ("narrated to us"), drawn under the Arabic
+    /// title when the chain is shown with its English (HadithIsnadEnglish). Nil everywhere else.
+    var subtitle: String? = nil
     var id: String { title + nodes.map(\.id).joined() }
 }
 
@@ -67,8 +70,14 @@ struct IsnadDiagram: View {
     /// A hadith chain's narrators open their profiles: every node with a `narratorID` becomes a
     /// button (never in the image). The page decides what a tap does.
     var onNarratorTap: ((Int) -> Void)? = nil
+    /// A hadith chain (Abu, 2026-10-31: "the text for the chain is too small", "have the line between
+    /// each one be smaller"): the Arabic a size up and the links between generations half as tall.
+    /// The article chains keep their measure.
+    var hadith = false
 
     private var accent: Color { appearance.accent }
+    /// The straight part of a link above and below its chevron.
+    private var linkHeight: CGFloat { hadith ? 6 : 14 }
 
     /// The gap between the branch columns; `IsnadBranchSplit` aims its legs at their centres.
     private static let columnSpacing: CGFloat = 10
@@ -126,17 +135,27 @@ struct IsnadDiagram: View {
     }
 
     /// A generation's title: the article chains' small capitals, or a hadith chain's Arabic word of
-    /// transmission (حدثنا, عن) in the Arabic face, never tracked (spacing letters breaks their joins).
+    /// transmission (حدثنا, عن) in the Arabic face, never tracked (spacing letters breaks their joins),
+    /// with its English under it when the chain carries one.
     @ViewBuilder
-    private func layerTitle(_ title: String, tracking: CGFloat) -> some View {
+    private func layerTitle(_ title: String, subtitle: String? = nil, tracking: CGFloat) -> some View {
         if title.isEmpty {
             EmptyView()
         } else if title.unicodeScalars.contains(where: { (0x0600...0x06FF).contains($0.value) }) {
-            Text(verbatim: title)
-                .font(appearance.islamArabicFont(base: 15, relativeTo: .caption))
-                .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
-                .foregroundStyle(forImage ? Color.black.opacity(0.55) : Color.secondary)
-                .lineLimit(1)
+            VStack(spacing: 1) {
+                Text(verbatim: title)
+                    .font(appearance.islamArabicFont(base: hadith ? 18 : 15, relativeTo: .caption))
+                    .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                    .foregroundStyle(forImage ? Color.black.opacity(0.55) : Color.secondary)
+                    .lineLimit(1)
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.caption2)
+                        .foregroundStyle(forImage ? Color.black.opacity(0.5) : Color.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+            }
         } else {
             Text(title)
                 .font(.caption2.weight(.bold))
@@ -159,7 +178,7 @@ struct IsnadDiagram: View {
 
             ForEach(Array(branch.layers.enumerated()), id: \.offset) { index, layer in
                 VStack(spacing: 6) {
-                    layerTitle(layer.title, tracking: 0.6)
+                    layerTitle(layer.title, subtitle: layer.subtitle, tracking: 0.6)
 
                     ForEach(layer.nodes) { node in
                         nodeChip(node)
@@ -178,20 +197,20 @@ struct IsnadDiagram: View {
         VStack(spacing: 0) {
             Rectangle()
                 .fill(accent.opacity(0.45))
-                .frame(width: 2, height: 14)
+                .frame(width: 2, height: linkHeight)
             Image(systemName: "chevron.down")
                 .font(.system(size: 11, weight: .bold))
                 .foregroundColor(accent.opacity(0.7))
             Rectangle()
                 .fill(accent.opacity(0.45))
-                .frame(width: 2, height: 14)
+                .frame(width: 2, height: linkHeight)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, hadith ? 1 : 2)
     }
 
     private func layerBlock(_ layer: IsnadLayer) -> some View {
-        VStack(spacing: 8) {
-            layerTitle(layer.title, tracking: 0.8)
+        VStack(spacing: hadith ? 6 : 8) {
+            layerTitle(layer.title, subtitle: layer.subtitle, tracking: 0.8)
 
             if layer.nodes.count == 1, let node = layer.nodes.first {
                 nodeChip(node)
@@ -237,9 +256,10 @@ struct IsnadDiagram: View {
         let primaryText: Color = forImage ? .black : .primary
         let secondaryText: Color = forImage ? Color.black.opacity(0.6) : .secondary
 
+        let large = node.role == .prophet || node.role == .source
         return VStack(spacing: 3) {
             Text(node.arabic)
-                .font(appearance.islamArabicFont(base: node.role == .prophet || node.role == .source ? 22 : 17, relativeTo: .body))
+                .font(appearance.islamArabicFont(base: hadith ? (large ? 25 : 21) : (large ? 22 : 17), relativeTo: .body))
                 .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
                 .foregroundColor(filled ? .white : accent)
                 .lineLimit(2)
@@ -378,6 +398,8 @@ struct IsnadShareCard: View {
     /// The line at the foot ("Al-Islam · The Ten Qiraat"); empty for the app's name alone.
     var footer: String = ""
     let chain: IsnadChain
+    /// A hadith chain's measure (`IsnadDiagram.hadith`).
+    var hadith = false
 
     var body: some View {
         VStack(spacing: 14) {
@@ -393,7 +415,7 @@ struct IsnadShareCard: View {
             }
             .multilineTextAlignment(.center)
 
-            IsnadDiagram(chain: chain, forImage: true)
+            IsnadDiagram(chain: chain, forImage: true, hadith: hadith)
 
             Text(verbatim: footer.isEmpty ? AppIdentifiers.displayName : footer)
                 .font(.caption2.weight(.semibold))
@@ -529,10 +551,11 @@ struct IsnadShareButton<Card: View>: View {
 
 @available(iOS 16.0, *)
 extension IsnadShareButton where Card == IsnadShareCard {
-    /// A chain's card: the title, the chain, the app's name at the foot, 560 points wide at 2x.
-    init(label: String, title: String, subtitle: String, footer: String = "", chain: IsnadChain) {
-        self.init(label: label, title: title, salt: subtitle, width: IsnadShareCard.width) {
-            IsnadShareCard(title: title, subtitle: subtitle, footer: footer, chain: chain)
+    /// A chain's card: the title, the chain, the app's name at the foot, 560 points wide at 2x. A
+    /// hadith chain's `salt` tells its English look from its Arabic one in the session's cache.
+    init(label: String, title: String, subtitle: String, footer: String = "", chain: IsnadChain, hadith: Bool = false, salt: String = "") {
+        self.init(label: label, title: title, salt: subtitle + salt, width: IsnadShareCard.width) {
+            IsnadShareCard(title: title, subtitle: subtitle, footer: footer, chain: chain, hadith: hadith)
         }
     }
 }

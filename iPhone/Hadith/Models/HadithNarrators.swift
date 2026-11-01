@@ -7,7 +7,10 @@ import Foundation
 // preprocessed and efficient and done so beforehand").
 //
 // Nothing here counts or compares. Scripts/build_hadith_chains.py numbered every narrator of every
-// chain it reads (one id per name as the shelf writes it; a relation like "أبيه" has none), numbered
+// chain it reads (one id per name as the shelf writes it, the written forms of one man joined by the
+// rules its `Identities` prints: a title set aside, the accusative alef, at the top of a chain a
+// shorter name folded into the one fuller name it fits ten to one and a nisba dropped, and a bare
+// name read under its student; a relation like "أبيه" has none), numbered
 // the chains that are the same chain narrator for narrator, wrote both ids into the chain codes
 // (HadithChains.swift), and shipped the profiles and the lists: Resources/Data/Hadith/HadithNarrators.qpk.
 // This file reads a profile, a narrator's list, or a group's members, each a binary search in one
@@ -48,10 +51,47 @@ struct HadithNarratorRef: Hashable {
     let grade: HadithGradeCategory
 }
 
+/// Where a narrator stands in the chains that reach the Prophet ﷺ: his usual distance from him.
+/// 1 is the generation that narrates from the Prophet ﷺ himself (the Companions), 2 the one that
+/// narrates from them (the Successors), and so on down to the compilers' teachers; 0 when none of his
+/// chains, as written, reaches the Prophet ﷺ. Counted ahead of time by Scripts/build_hadith_chains.py
+/// as the most common of his places; a Companion who also narrates from another Companion keeps his.
+enum HadithNarratorGeneration {
+    static func title(_ generation: Int) -> String {
+        switch generation {
+        case 0: return String(localized: "Not placed")
+        case 1: return String(localized: "Companions")
+        case 2: return String(localized: "Successors (Tabi'un)")
+        case 3: return String(localized: "Successors of the Successors")
+        default: return String(localized: "Generation \(generation)")
+        }
+    }
+
+    /// The short form a row shows beside a name.
+    static func label(_ generation: Int) -> String {
+        switch generation {
+        case 0: return ""
+        case 1: return String(localized: "Companion")
+        case 2: return String(localized: "Successor")
+        default: return String(localized: "Generation \(generation)")
+        }
+    }
+}
+
 /// A narrator's page: his name as the shelf most often writes it, and his counts.
-struct HadithNarratorProfile {
+struct HadithNarratorProfile: Identifiable {
     let id: Int
     let name: String
+    /// His name in English letters (Scripts/arabic_translit.py), as the shelf's titles are written.
+    let english: String
+    /// The folded name the index files him under, for search (marks and hamza seats set aside).
+    let key: String
+    /// His usual distance from the Prophet ﷺ (`HadithNarratorGeneration`); 0 unknown.
+    let generation: Int
+    /// The other ways the shelf writes his name, each with how many narrations write it so: a title
+    /// set aside ("أم المؤمنين"), a shorter form ("ابن مسعود" for "عبد الله بن مسعود"), a bare name read
+    /// under his student ("عبد الله" under Abu Wa'il). Empty when the shelf writes him one way.
+    let forms: [(name: String, count: Int)]
     /// Every narration whose chain names him.
     let narrations: Int
     /// The narrations he narrates from the Prophet ﷺ himself (the top of a chain that reaches him).
@@ -122,23 +162,56 @@ final class HadithNarratorsPack: @unchecked Sendable {
         return withBlock(0, count: narratorCount) { block, count -> HadithNarratorProfile? in
             guard let index = block.index(of: id, count: count), let payload = block.payload(at: index, count: count)
             else { return nil }
-            var reader = QuranPackReader(bytes: Array(payload))
-            let name = reader.string()
-            let narrations = reader.u32()
-            let fromProphet = reader.u32()
-            let teacher = reader.u32()
-            let grades = (0..<HadithGradeCategory.allCases.count).map { _ in reader.u32() }
-            let books = reader.u8()
-            guard !name.isEmpty, books == slugs.count else { return nil }
-            var byBook: [(slug: String, count: Int)] = []
-            for slug in slugs {
-                let count = reader.u32()
-                if count > 0 { byBook.append((slug, count)) }
-            }
-            guard reader.remaining == 0 else { return nil }
-            return HadithNarratorProfile(id: id, name: name, narrations: narrations, fromProphet: fromProphet,
-                                         teacher: teacher, grades: grades, books: byBook)
+            return decodeProfile(id: id, payload: payload)
         } ?? nil
+    }
+
+    /// Every narrator the pack holds, by id: one walk of the profiles block, for the index of
+    /// narrators (HadithNarratorViews.swift). About 7,400 short decodes, off the main thread.
+    func allProfiles() -> [HadithNarratorProfile] {
+        withBlock(0, count: narratorCount) { block, count -> [HadithNarratorProfile] in
+            var out: [HadithNarratorProfile] = []
+            out.reserveCapacity(count)
+            for index in 0..<count {
+                guard let payload = block.payload(at: index, count: count),
+                      let profile = decodeProfile(id: block.id(at: index), payload: payload) else { continue }
+                out.append(profile)
+            }
+            return out
+        } ?? []
+    }
+
+    /// One profile's payload (`narrator_payload` in the script), or nil when it is not this layout.
+    private func decodeProfile(id: Int, payload: ArraySlice<UInt8>) -> HadithNarratorProfile? {
+        var reader = QuranPackReader(bytes: Array(payload))
+        let name = reader.string()
+        let narrations = reader.u32()
+        let fromProphet = reader.u32()
+        let teacher = reader.u32()
+        let grades = (0..<HadithGradeCategory.allCases.count).map { _ in reader.u32() }
+        let books = reader.u8()
+        guard !name.isEmpty, books == slugs.count else { return nil }
+        var byBook: [(slug: String, count: Int)] = []
+        for slug in slugs {
+            let count = reader.u32()
+            if count > 0 { byBook.append((slug, count)) }
+        }
+        let generation = reader.u8()
+        let english = reader.string()
+        let key = reader.string()
+        let formCount = reader.u16()
+        var forms: [(name: String, count: Int)] = []
+        forms.reserveCapacity(formCount)
+        for _ in 0..<formCount {
+            let form = reader.string()
+            let count = reader.u32()
+            guard !form.isEmpty else { return nil }
+            forms.append((form, count))
+        }
+        guard reader.remaining == 0 else { return nil }
+        return HadithNarratorProfile(id: id, name: name, english: english, key: key, generation: generation, forms: forms,
+                                     narrations: narrations, fromProphet: fromProphet, teacher: teacher, grades: grades,
+                                     books: byBook)
     }
 
     /// Every narration naming the narrator, in the shelf's order (book, then row).
@@ -220,6 +293,12 @@ final class HadithNarratorStore: @unchecked Sendable {
     }
 
     func profile(id: Int) -> HadithNarratorProfile? { pack?.profile(id: id) }
+
+    /// Every narrator, for the index page; empty when the pack is missing.
+    func allProfiles() -> [HadithNarratorProfile] { pack?.allProfiles() ?? [] }
+
+    /// How many narrators the pack holds, for the door that opens the index (0 without the pack).
+    var narratorCount: Int { pack?.narratorCount ?? 0 }
 
     func refs(id: Int) -> [HadithNarratorRef] { pack?.refs(id: id) ?? [] }
 

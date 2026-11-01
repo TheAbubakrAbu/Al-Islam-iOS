@@ -751,10 +751,37 @@ extension View {
 /// stuff"; the tafsir sheet only looked fine because its search bar happens to sit at the foot of its own
 /// stack). So the root screen draws the bar as its OWN bottom bar (`sheetNowPlayingBar()`), the way every
 /// list already does, and claims it, so the host draws none.
+///
+/// Since 2026-11-01 the container itself draws the bar, UNDER the navigation stack as a sibling, so the
+/// stack ends above the player on every screen it shows, the root and every screen pushed from it.
+/// The per-screen bar (`sheetNowPlayingBar()`) and the lists' own (`ConditionalListStyle`) reached the
+/// root only: a screen pushed inside the sheet had neither, the host drew its copy outside the stack,
+/// and that copy floated over the pushed screen's rows with no way to scroll them out (Abu, with the
+/// Legend's Waqf lesson open under a recitation: "it gets cut off, it's not a safe area inset"). Inside
+/// this container those two stand down (`nowPlayingBarByContainer`); outside one they draw as before.
 struct SheetNavigationContainer<Content: View>: View {
     @ViewBuilder let content: () -> Content
+    @Environment(\.nowPlayingInSheet) private var inSheet
+    @ObservedObject private var playback = PlaybackVisibility.shared
 
     var body: some View {
+        VStack(spacing: 0) {
+            stack
+                // Only in a sheet: outside one the screens and lists inside keep drawing their own.
+                .environment(\.nowPlayingBarByContainer, inSheet)
+
+            if inSheet, playback.showsNowPlaying, let bar = playback.barContent {
+                NowPlayingBarStack(bar: bar, shown: playback.showsNowPlaying)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut, value: playback.showsNowPlaying)
+        // This container manages the bar: the sheet host around it draws none.
+        .preference(key: NowPlayingBarProvidedKey.self, value: inSheet)
+    }
+
+    @ViewBuilder
+    private var stack: some View {
         if #available(iOS 16.0, *) {
             NavigationStack { content().sheetNowPlayingBar() }
         } else {
@@ -775,19 +802,27 @@ extension View {
     }
 }
 
-/// See `sheetNowPlayingBar()`. Draws the bar (a `safeAreaBar` on iOS 26: the content ends above it and
-/// fades under it) unless something inside already does (a list, or a nested screen with this modifier),
-/// and reports it through `NowPlayingBarProvidedKey`, which stands the sheet host's own copy down.
+/// See `sheetNowPlayingBar()`. Draws the bar as a plain safe-area INSET, so the screen's content ends
+/// above the player, unless something inside already does (a list, or a nested screen with this
+/// modifier), and reports it through `NowPlayingBarProvidedKey`, which stands the sheet host's own copy
+/// down.
+///
+/// An inset, not a `safeAreaBar` (2026-11-01). The iOS 26 bar lets the text scroll under the player
+/// behind a scroll-edge fade, and that fade never showed inside a sheet: the rows ran under the player
+/// in full ink and the last ones peeked out below it (Abu: "it gets cut off, it's not a safe area
+/// inset"). `spacing: 0`, as the bar had: `NowPlayingBarStack` carries its own cushion.
 private struct SheetNowPlayingBar: ViewModifier {
     @Environment(\.nowPlayingInSheet) private var inSheet
+    /// Inside a `SheetNavigationContainer`, which draws the bar under its stack for every screen.
+    @Environment(\.nowPlayingBarByContainer) private var byContainer
     @ObservedObject private var playback = PlaybackVisibility.shared
     @State private var innerDrawsNowPlaying = false
 
     func body(content: Content) -> some View {
         content
             .onPreferenceChange(NowPlayingBarProvidedKey.self) { innerDrawsNowPlaying = $0 }
-            .adaptiveSafeArea(edge: .bottom) {
-                if inSheet, !innerDrawsNowPlaying, playback.showsNowPlaying, let bar = playback.barContent {
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if inSheet, !byContainer, !innerDrawsNowPlaying, playback.showsNowPlaying, let bar = playback.barContent {
                     NowPlayingBarStack(bar: bar, shown: playback.showsNowPlaying)
                 }
             }
@@ -831,8 +866,11 @@ struct AdaptiveSafeArea<InsetContent: View>: ViewModifier {
 }
 
 #if os(iOS)
-/// A list's Now Playing inset: a `safeAreaBar` in a sheet (see `nowPlayingInSheet`), the plain inset
-/// on a tab screen. `inSheet` never changes for a mounted list, so the branch never swaps under it.
+/// A list's Now Playing inset: the plain inset on a tab screen and in a sheet alike since 2026-11-01
+/// (a sheet used the iOS 26 `safeAreaBar`, whose scroll-edge fade never showed there: see
+/// `SheetNowPlayingBar`). In a sheet the inset keeps no spacing, as the bar kept none, so the sheet's
+/// screens all sit the same distance over the player. `inSheet` never changes for a mounted list, so
+/// the branch never swaps under it.
 struct NowPlayingListInset<Bar: View>: ViewModifier {
     let inSheet: Bool
     @ViewBuilder let bar: () -> Bar
@@ -840,7 +878,7 @@ struct NowPlayingListInset<Bar: View>: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if inSheet {
-            content.adaptiveSafeArea(edge: .bottom) { bar() }
+            content.safeAreaInset(edge: .bottom, spacing: 0) { bar() }
         } else {
             content.safeAreaInset(edge: .bottom) { bar() }
         }
@@ -1131,13 +1169,21 @@ struct NowPlayingBarProvidedKey: PreferenceKey {
     static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
 }
 
-/// True inside a sheet's content (`SheetPresentationModifier` sets it). A list there draws its Now
-/// Playing bar as a `safeAreaBar` on iOS 26 (`adaptiveSafeArea`), the way the sheet host draws its
-/// own: under a plain `safeAreaInset` the bar's ground is clear, so a sheet's text scrolled on behind
-/// and around the player in full ink (Abu, 2026-10-28: "when I scroll down in a sheet it doesn't
-/// seem to be a safe area inset, it seems to cut off stuff"). The bar fades the content under it
-/// instead, the scroll edge every other bar in the app has. Tab screens keep their inset as it is.
+/// True inside a sheet's content (`SheetPresentationModifier` sets it). The Now Playing bar in a
+/// sheet is a plain inset: a `SheetNavigationContainer` draws it under its whole stack, and a sheet
+/// without one gets it from the screen (`sheetNowPlayingBar()`), its list (`ConditionalListStyle`) or
+/// the host, in that order. On 2026-10-28 the sheet copies were iOS 26 `safeAreaBar`s for their
+/// scroll-edge fade (Abu: "when I scroll down in a sheet it doesn't seem to be a safe area inset, it
+/// seems to cut off stuff"); the fade never showed in a sheet, so on 2026-11-01 they went back to
+/// insets and the container took the bar over (see `SheetNavigationContainer`). Tab screens keep
+/// their inset as it is.
 private struct NowPlayingInSheetKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+/// True under a `SheetNavigationContainer` that is in a sheet: it draws the Now Playing bar for every
+/// screen of its stack, so the screens' and lists' own copies stand down.
+private struct NowPlayingBarByContainerKey: EnvironmentKey {
     static let defaultValue = false
 }
 
@@ -1145,6 +1191,11 @@ extension EnvironmentValues {
     var nowPlayingInSheet: Bool {
         get { self[NowPlayingInSheetKey.self] }
         set { self[NowPlayingInSheetKey.self] = newValue }
+    }
+
+    var nowPlayingBarByContainer: Bool {
+        get { self[NowPlayingBarByContainerKey.self] }
+        set { self[NowPlayingBarByContainerKey.self] = newValue }
     }
 }
 
@@ -1461,6 +1512,8 @@ struct ConditionalListStyle: ViewModifier {
     @Environment(\.appearance) private var appearance
     #if os(iOS)
     @Environment(\.nowPlayingInSheet) private var inSheet
+    /// Inside a `SheetNavigationContainer` in a sheet, which draws the bar under its whole stack.
+    @Environment(\.nowPlayingBarByContainer) private var byContainer
     #endif
     @ObservedObject private var playback = PlaybackVisibility.shared
 
@@ -1514,7 +1567,7 @@ struct ConditionalListStyle: ViewModifier {
     #if os(iOS)
     @ViewBuilder
     private var nowPlayingBar: some View {
-        if !disableNowPlayingInset && shouldShowNowPlaying, let bar = playback.barContent {
+        if !disableNowPlayingInset && !byContainer && shouldShowNowPlaying, let bar = playback.barContent {
             NowPlayingBarStack(bar: bar, shown: shouldShowNowPlaying)
         }
     }
@@ -1589,6 +1642,9 @@ private struct SelectableArticleList: ViewModifier {
         ScrollViewReader { proxy in
             styled(content, proxy: proxy)
                 .environment(\.articleScrollHandle, handle)
+                #if os(iOS)
+                .modifier(ArticleAskAI(articleID: article, fallback: fallback))
+                #endif
                 .onAppear {
                     // Once per page: `onAppear` runs again on the way back from a page this one pushed
                     // and on a tab switch, and the reader has moved on from the section by then.
@@ -1624,6 +1680,72 @@ private struct SelectableArticleList: ViewModifier {
             .animation(.easeOut(duration: 0.2), value: veiled)
     }
 }
+
+#if os(iOS)
+/// Every article page's Ask AI (Abu, 2026-10-31: "Ask AI for each article and how to guide and
+/// prophecy and whatnot, literally every one"): a sparkles button in the navigation bar that opens the
+/// chat on the article, its questions about the article and every answer reading its sections first
+/// (`AskAIChatView.focusArticle`). Pages with no article identity (the index pages, the tajweed and
+/// Arabic lessons) have nothing to focus it on and go without; so does a device without Apple
+/// Intelligence, the OnDeviceAsk rule.
+private struct ArticleAskAI: ViewModifier {
+    let articleID: String?
+    let fallback: IslamArticle?
+    /// The open sheet and the article it is about, as one item: a `focus` read only inside a
+    /// `sheet(isPresented:)` closure is not a dependency of the body, so the sheet was built with
+    /// the value from before the tap and opened unfocused.
+    @State private var request: Request?
+
+    private struct Request: Identifiable {
+        let id = UUID()
+        let article: IslamArticle?
+    }
+
+    func body(content: Content) -> some View {
+        if let articleID, OnDeviceAsk.isAvailable {
+            content
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            Settings.shared.hapticFeedback()
+                            open(articleID)
+                        } label: {
+                            Image(systemName: "sparkles")
+                                .font(.body.weight(.semibold))
+                        }
+                        .tint(Settings.shared.accentColor.color)
+                        .accessibilityLabel("Ask AI")
+                        .accessibilityHint("Ask about this article")
+                    }
+                }
+                .sheet(item: $request) { request in
+                    AskAIChatSheet(focusArticle: request.article)
+                }
+                #if DEBUG
+                // "-articleAskAI": open the sheet as the page appears (with `-islamOpenArticle <id>`;
+                // `-askAI "q"` then asks inside it). Once per launch: onAppear runs again on every pop.
+                .onAppear {
+                    guard ProcessInfo.processInfo.arguments.contains("-articleAskAI"), !Self.debugOpened else { return }
+                    Self.debugOpened = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { open(articleID) }
+                }
+                #endif
+        } else {
+            content
+        }
+    }
+
+    /// The corpus's article for the page, or the page's own generated one (a prophecy, a prophet's
+    /// sign); unfocused if neither has it, which the corpus verifier keeps from happening.
+    private func open(_ articleID: String) {
+        request = Request(article: IslamArticles.all.first { $0.id == articleID } ?? fallback)
+    }
+
+    #if DEBUG
+    private static var debugOpened = false
+    #endif
+}
+#endif
 
 /// Paints the per-row background for the Sepia / Gray reading themes. Must be applied to rows/sections inside
 /// a `List` so `.listRowBackground` actually reaches the cells. No-op for Light/Dark/System (system colors).
@@ -2043,10 +2165,12 @@ struct GridTileMenu<Label: View, Menu: View>: View {
 /// recognizer has failed, so every plain tap opens the menu one double-tap interval late (about a third
 /// of a second: `GridTileHoldLayer` wires `tap.require(toFail: doubleTap)`, and UIKit's interval is not
 /// tunable). A `hold` alone costs a tap nothing: the hold fails the moment the finger lifts early. So a
-/// control whose first job is to open its menu takes a hold shortcut, not a double tap (the tabs' ⋯ menus
-/// since 2026-10-26, when the wait read as lag beside the Adhan tab's shortcut-free menu); a double tap
-/// belongs on a control whose shortcut is the common action and whose menu is the rarer tap (the ayah
-/// and hadith ▶ and ⋯ buttons), where the wait is the price of that shortcut.
+/// control whose first job is to open its menu takes a hold shortcut, not a double tap: the tabs' ⋯ menus
+/// since 2026-10-26 (the wait read as lag beside the Adhan tab's shortcut-free menu), and since
+/// 2026-11-01 every other menu button too, the readers' play buttons, the ayah and hadith ▶ and ⋯, the
+/// history pills (Abu: "lag for when I touch play menu surah, check all menus"). No caller passes
+/// `doubleTap` any more; the parameter stays for a control whose shortcut IS the common action and whose
+/// menu is the rarer tap, where the wait would be the price of that shortcut.
 struct MenuShortcut {
     let title: String
     let action: () -> Void

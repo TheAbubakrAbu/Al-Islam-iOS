@@ -39,6 +39,8 @@ enum TabSection: CaseIterable, Identifiable {
     #if HAS_HADITH
     /// YOUR SUMMARY, the Hadith of the Day and Last Read tiles at the top of the Hadith tab.
     case hadithSummary
+    /// NARRATORS, the door to the index of every narrator of the shelf's chains, under the books.
+    case hadithNarrators
     /// ABOUT HADITH & THE SUNNAH, the five doors at the foot of the Hadith tab.
     case hadithAbout
     #endif
@@ -52,6 +54,7 @@ enum TabSection: CaseIterable, Identifiable {
         #endif
         #if HAS_HADITH
         case .hadithSummary: return "hadith.summary"
+        case .hadithNarrators: return "hadith.narrators"
         case .hadithAbout: return "hadith.about"
         #endif
         }
@@ -66,7 +69,7 @@ enum TabSection: CaseIterable, Identifiable {
         case .adhanTracker, .adhanGlance: return .adhan
         #endif
         #if HAS_HADITH
-        case .hadithSummary, .hadithAbout: return .hadith
+        case .hadithSummary, .hadithNarrators, .hadithAbout: return .hadith
         #endif
         }
     }
@@ -80,6 +83,7 @@ enum TabSection: CaseIterable, Identifiable {
         #endif
         #if HAS_HADITH
         case .hadithSummary: return String(localized: "YOUR SUMMARY")
+        case .hadithNarrators: return String(localized: "NARRATORS")
         case .hadithAbout: return String(localized: "ABOUT HADITH & THE SUNNAH")
         #endif
         }
@@ -94,6 +98,7 @@ enum TabSection: CaseIterable, Identifiable {
         #endif
         #if HAS_HADITH
         case .hadithSummary: return String(localized: "Your Summary")
+        case .hadithNarrators: return String(localized: "Narrators")
         case .hadithAbout: return String(localized: "About Hadith & the Sunnah")
         #endif
         }
@@ -107,6 +112,7 @@ enum TabSection: CaseIterable, Identifiable {
         #endif
         #if HAS_HADITH
         case .hadithSummary: return "sparkles"
+        case .hadithNarrators: return "person.text.rectangle.fill"
         case .hadithAbout: return "text.book.closed.fill"
         #endif
         }
@@ -123,7 +129,7 @@ enum TabSection: CaseIterable, Identifiable {
         #endif
         #if HAS_HADITH
         case .hadithSummary: return true
-        case .hadithAbout: return false
+        case .hadithNarrators, .hadithAbout: return false
         #endif
         }
     }
@@ -140,6 +146,8 @@ enum TabSection: CaseIterable, Identifiable {
         #if HAS_HADITH
         case .hadithSummary:
             return String(localized: "The Hadith of the Day and the hadith you last read, at the top of the tab. Turned off, History in the More menu still lists what you read.")
+        case .hadithNarrators:
+            return String(localized: "The door to every narrator of the shelf's chains, under the books: searched by name, grouped by generation, each with the narrations that name him.")
         case .hadithAbout:
             return String(localized: "Five pages at the foot of the tab: the Sunnah, what hadiths are, their sciences, how they were preserved and answering those who reject them. They stay on the Islam tab.")
         #endif
@@ -162,9 +170,12 @@ enum TabSection: CaseIterable, Identifiable {
         #endif
         #if HAS_HADITH
         // Simple keeps both: the summary is the two tiles a reader comes back for, and the About doors
-        // are where a newcomer starts.
+        // are where a newcomer starts. The narrators' index is a study door Simple leaves out until
+        // it is turned on.
         case .hadithSummary, .hadithAbout:
             return false
+        case .hadithNarrators:
+            return settings.simpleMode
         #endif
         }
     }

@@ -90,3 +90,21 @@ final class AskAITextTests: XCTestCase {
         }
     }
 }
+
+/// The questions an article page's Ask AI offers (`AskAIChatView.articleQuestions`) are new questions
+/// whatever came before them: read as a follow-up they would fold the last topic into the search, and
+/// read as a recap they would rework the last answer instead of reading the article.
+final class AskAIArticleQuestionTests: XCTestCase {
+    @MainActor
+    func testArticleQuestionsStandAloneAfterAnotherConversation() {
+        for title in ["Salah", "Zakah", "How to Pray", "Belief in the Angels", "Muqatta'at Letters", "Is music allowed?"] {
+            let article = IslamArticle(id: "TestView", title: title, sections: [], foldedTitle: title.lowercased())
+            for question in AskAIChatView.articleQuestions(article) {
+                let analyzed = AskAIQuestion.analyze(question, previousTopic: "zakat", hasHistory: true)
+                XCTAssertFalse(analyzed.isFollowUp, question)
+                XCTAssertNotEqual(analyzed.intent, .recap, question)
+                XCTAssertTrue(analyzed.intent.retrieves, question)
+            }
+        }
+    }
+}

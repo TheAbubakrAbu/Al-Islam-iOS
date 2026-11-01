@@ -87,7 +87,7 @@ final class TipsCatalogTests: XCTestCase {
                    "app.menushortcuts", "islam.locators"] {
             XCTAssertNotNil(tip(id), id)
         }
-        XCTAssertEqual(TipCatalog.all.count, 160)
+        XCTAssertEqual(TipCatalog.all.count, 163)
 
         if case .quranPage(let page)? = tip("quran.testmode")?.destination {
             XCTAssertEqual(page, .testMode)

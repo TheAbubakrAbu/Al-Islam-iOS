@@ -289,6 +289,114 @@ extension Settings {
             abiJafarTeacher, yaqubTeacher, khalafAshirTeacher,
         ]
 
+        /// How the riwayah picker orders the riwayat (Abu, 2026-11-01: "sort by default, alphabetical,
+        /// most common, date, and 7 + 3"). Remembered under "riwayahPickerSort" by the picker itself.
+        enum PickerSort: String, CaseIterable, Identifiable {
+            /// Hafs first, then one submenu per qiraah with the imams alphabetical: the menu as it was.
+            case classical
+            /// Every riwayah in one list, by the narrator's name.
+            case alphabetical
+            /// Every riwayah in one list, the ones recited most widely first.
+            case mostCommon
+            /// One submenu per qiraah, the imams by the year each died, the earliest first.
+            case date
+            /// By date, but the Seven before the Three: the seven qiraat of Ibn Mujahid's canon in
+            /// date order, then Abu Jafar, Yaqub and Khalaf al-Ashir, the three Ibn al-Jazari added.
+            case sevenPlusThree
+
+            var id: String { rawValue }
+
+            var title: String {
+                switch self {
+                case .classical: return String(localized: "Default")
+                case .alphabetical: return String(localized: "Alphabetical")
+                case .mostCommon: return String(localized: "Most Common")
+                case .date: return String(localized: "Date")
+                case .sevenPlusThree: return String(localized: "7 + 3").localizedDigits
+                }
+            }
+
+            /// The flat sorts list every riwayah in one list; the others keep a submenu per qiraah.
+            var isFlat: Bool { self == .alphabetical || self == .mostCommon }
+        }
+
+        /// The three qiraat beyond the Seven, Ibn al-Jazari's additions (`PickerSort.sevenPlusThree`).
+        static let threeBeyondTheSeven: Set<String> = [abiJafarTeacher, yaqubTeacher, khalafAshirTeacher]
+
+        /// How widely each riwayah is recited today, most first: Hafs nearly everywhere; Warsh across
+        /// the Maghrib and West Africa; Qalun in Libya and Tunisia; ad-Duri an Abi Amr in Sudan, Somalia
+        /// and Hadramawt; then the riwayat kept alive in study rather than in the mosques: the second
+        /// narrator of each of those qiraat, the rest of the Seven, then the Three. An editorial ranking
+        /// (no census exists), used only to order a menu.
+        static let mostCommonOrder: [String] = [
+            hafsTag, warsh, qaloon, duri, susi, shubah, buzzi, qunbul,
+            hisham, ibnDhakwan, khalaf, khallad, abuHarith, duriKisai,
+            ibnWardan, ibnJammaz, ruways, rawh, ishaq, idris,
+        ]
+
+        private static func mostCommonRank(_ option: Option) -> Int {
+            mostCommonOrder.firstIndex(of: option.tag) ?? mostCommonOrder.count
+        }
+
+        /// The narrator's name alone ("Warsh" of "Warsh an Nafi", in the interface's script), the key
+        /// `alphabetical` sorts by; the article ("al-", "ad-", "as-", "ال") is ignored the way the
+        /// teacher list ignores it.
+        static func narratorSortKey(_ option: Option) -> String {
+            let label = option.displayLabel(omitsDefaultSuffix: true)
+            var narrator = label
+            for separator in [" an ", " \u{0639}\u{064E}\u{0646}"] {
+                if let range = label.range(of: separator) {
+                    narrator = String(label[..<range.lowerBound])
+                    break
+                }
+            }
+            let lower = narrator.lowercased()
+            for prefix in ["al-", "ad-", "as-", "\u{0627}\u{0644}"] where lower.hasPrefix(prefix) {
+                return String(lower.dropFirst(prefix.count))
+            }
+            return lower
+        }
+
+        /// `live` in `sort`'s order: the flat sorts' one list, and the order within a qiraah's submenu
+        /// for the grouped ones (its narrators by the year each died).
+        static func sortedOptions(_ live: [Option], by sort: PickerSort) -> [Option] {
+            switch sort {
+            case .classical:
+                return live.sorted { $0.order < $1.order }
+            case .alphabetical:
+                return live.sorted { narratorSortKey($0) < narratorSortKey($1) }
+            case .mostCommon:
+                return live.sorted { mostCommonRank($0) < mostCommonRank($1) }
+            case .date, .sevenPlusThree:
+                return live.sorted {
+                    ($0.narratorDiedAH ?? .max, $0.order) < ($1.narratorDiedAH ?? .max, $1.order)
+                }
+            }
+        }
+
+        /// The qiraah groups of `live` in `sort`'s order: the imams alphabetical (`classical`, and the
+        /// flat sorts for a caller that still groups, the watch's picker), by the year each died
+        /// (`date`), or by date with the Three after the Seven (`sevenPlusThree`).
+        static func groups(_ live: [Option], sortedBy sort: PickerSort) -> [Group] {
+            let base = grouped(live)
+            switch sort {
+            case .classical, .alphabetical, .mostCommon:
+                return base
+            case .date, .sevenPlusThree:
+                return base
+                    .map { Group(teacher: $0.teacher, teacherArabic: $0.teacherArabic,
+                                 options: sortedOptions($0.options, by: sort)) }
+                    .sorted { a, b in
+                        if sort == .sevenPlusThree {
+                            let aThree = threeBeyondTheSeven.contains(a.teacher)
+                            let bThree = threeBeyondTheSeven.contains(b.teacher)
+                            if aThree != bThree { return !aThree }
+                        }
+                        return (teacherDiedAH[a.teacher] ?? .max) < (teacherDiedAH[b.teacher] ?? .max)
+                    }
+            }
+        }
+
         static var groups: [Group] {
             grouped(options)
         }

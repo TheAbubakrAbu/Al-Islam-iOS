@@ -226,6 +226,10 @@ enum HadithDigits {
 }
 
 struct HadithRow: View, Equatable {
+    /// The Match button's rule, so a compact row's WINDOW opens on a hit the rule accepts (the
+    /// snippets under it read the same value for the paint). A dynamic property: `==` below need
+    /// not fold it, SwiftUI re-renders the row when the environment changes.
+    @Environment(\.searchWordRule) private var wordRule
     /// Read wherever this view bakes a text style's size into a fixed font (`textStyleSize`): nothing
     /// else re-renders it when the user's text size changes (Quality Guide G9).
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -303,6 +307,11 @@ struct HadithRow: View, Equatable {
     }
 
     @State private var showShareSheet = false
+    /// A pinch on the row zooms THIS hadith in place (Abu, 2026-11-01: "zoom in ... Hadith list", not a
+    /// sheet): the Arabic and English scale by `fontScale` times this, and pinching back in returns to
+    /// the reader's size (`RowZoomPinch`). Row state, so it lasts while the screen is open.
+    @State private var zoomScale: CGFloat = 1
+    @State private var zoomBase: CGFloat?
     @State private var showNoteSheet = false
     @State private var noteDraft = ""
     @State private var showRespectAlert = false
@@ -396,11 +405,11 @@ struct HadithRow: View, Equatable {
     private var arabicFontSize: CGFloat {
         // Compact rows show the full text, so the type drops to caption scale (+2 keeps the Arabic
         // script legible at that size).
-        (compact ? textStyleSize(.caption1) + 2 : settings.hadithArabicFontSize) * fontScale
+        (compact ? textStyleSize(.caption1) + 2 : settings.hadithArabicFontSize) * fontScale * zoomScale
     }
 
     private var englishFontSize: CGFloat {
-        (compact ? textStyleSize(.caption2) : settings.hadithEnglishFontSize) * fontScale
+        (compact ? textStyleSize(.caption2) : settings.hadithEnglishFontSize) * fontScale * zoomScale
     }
 
     /// Which fields confidently contain the query, and - when none does - which single field gets
@@ -526,13 +535,15 @@ struct HadithRow: View, Equatable {
         let arabicWindow = isSearchResult && arabicCarriesMatch
             ? HadithSearchSnippet.window(
                 of: text.arabic,
-                spans: HighlightedSnippet.matchSpans(in: text.arabic, term: anchorTerm, guaranteeMatch: visibility.guaranteeArabic) + cross.arabic,
+                spans: HighlightedSnippet.matchSpans(in: text.arabic, term: anchorTerm, guaranteeMatch: visibility.guaranteeArabic,
+                                                     wordRule: wordRule) + cross.arabic,
                 length: HadithSearchSnippet.arabicLength)
             : nil
         let englishWindow = isSearchResult
             ? HadithSearchSnippet.window(
                 of: text.text,
-                spans: HighlightedSnippet.matchSpans(in: text.text, term: anchorTerm, guaranteeMatch: visibility.guaranteeText) + cross.text,
+                spans: HighlightedSnippet.matchSpans(in: text.text, term: anchorTerm, guaranteeMatch: visibility.guaranteeText,
+                                                     wordRule: wordRule) + cross.text,
                 length: HadithSearchSnippet.englishLength)
             : nil
         return VStack(alignment: .leading, spacing: compact ? 5 : 10) {
@@ -598,12 +609,9 @@ struct HadithRow: View, Equatable {
                 // The context menu, reachable without a long-press - the AyahRow actions button's exact
                 // sizing (icon in a glass square matching the pill's height). Always the ellipsis:
                 // bookmark state lives on the pill (tint + corner badge), the Quran rows' grammar.
+                // Tap = menu, hold = share. No double tap since 2026-11-01: it made every plain tap wait
+                // before the menu opened (`ShortcutMenu`); Copy Hadith is a row of the menu.
                 ShortcutMenu(
-                    doubleTap: MenuShortcut(String(localized: "Copy Hadith")) {
-                        settings.hapticFeedback()
-                        UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
-                        CopyConfirmation.shared.show()
-                    },
                     hold: MenuShortcut(String(localized: "Share Hadith")) {
                         settings.hapticFeedback()
                         showShareSheet = true
@@ -622,6 +630,32 @@ struct HadithRow: View, Equatable {
                 }
                 .accessibilityLabel("Hadith Actions")
                 .accessibilityIdentifier("hadithActionsMenu")
+            }
+
+            // The scholar verdicts, sunnah.com's way, right under the reference and above the text
+            // (Abu, 2026-10-31: "have the strength of the hadith at the top everywhere", as the similar
+            // sheet's rows draw it). Deliberately OUTSIDE the Arabic/English blocks below: the grading
+            // is part of the hadith, not a display preference, so it renders whenever the hadith has
+            // grades, including with both display toggles off.
+            // A tap on the grade opens the chain it rests on (Abu, 2026-10-27: "if I click on the ruling
+            // ... see chain"), marked by the chain glyph at the line's end.
+            if !compact, !grades.isEmpty, hasChain {
+                Button {
+                    settings.hapticFeedback()
+                    showChainSheet = true
+                } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        HadithGradeLine(grades: grades, font: .footnote)
+                        Image(systemName: "point.3.connected.trianglepath.dotted")
+                            .font(.caption)
+                            .foregroundColor(settings.accentColor.color)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(Text("Shows the chain of narrators"))
+            } else {
+                HadithGradeLine(grades: grades, font: compact ? .caption2 : .footnote)
             }
 
             // A field that matched (or carries the guaranteed span) is forced visible even when its
@@ -715,31 +749,6 @@ struct HadithRow: View, Equatable {
                 }
             }
 
-            // The scholar verdicts, sunnah.com's way - under the text, above the note. Deliberately
-            // OUTSIDE the Arabic/English blocks above: the grading is part of the hadith, not a
-            // display preference, so it renders whenever the hadith has grades - including with both
-            // display toggles off.
-            // A tap on the grade opens the chain it rests on (Abu, 2026-10-27: "if I click on the ruling
-            // ... see chain"), marked by the chain glyph at the line's end.
-            if !compact, !grades.isEmpty, hasChain {
-                Button {
-                    settings.hapticFeedback()
-                    showChainSheet = true
-                } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        HadithGradeLine(grades: grades, font: .footnote)
-                        Image(systemName: "point.3.connected.trianglepath.dotted")
-                            .font(.caption)
-                            .foregroundColor(settings.accentColor.color)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityHint(Text("Shows the chain of narrators"))
-            } else {
-                HadithGradeLine(grades: grades, font: compact ? .caption2 : .footnote)
-            }
-
             // The bookmark's note, shown in the reading row exactly like a noted ayah - quiet, under the text.
             if !compact, let note = noteText {
                 HStack(alignment: .top, spacing: 6) {
@@ -756,6 +765,8 @@ struct HadithRow: View, Equatable {
             }
         }
         .padding(.vertical, compact ? 2 : 4)
+        // A pinch zooms this hadith in place (`zoomScale`).
+        .simultaneousGesture(RowZoomPinch(scale: $zoomScale, base: $zoomBase))
         .contextMenu { menuContent }
         // The ayah rows' swipes (2026-09-21): bookmark on the leading edge, copy and share on the
         // trailing one. Inert outside a List (the standalone cards), harmless there.
@@ -1381,6 +1392,66 @@ struct HadithLoadMoreControls: View {
                 onLoadAll: { limit = Int.max }
             )
         }
+    }
+}
+
+/// The one-tap "Search All Matches" card at the HEAD of a truncated hadith result list (Abu,
+/// 2026-10-31: "why there no a search all button to find all matches"). The Load More card under the
+/// list stays; a reader who wants everything should not have to find it. Reads what is on screen
+/// against the total where that is known ("Showing 5 of 212"), or the shown count alone when the
+/// sweep stopped at its page. The Load More card's shape, so the two read as one family. Shared by
+/// the tab root and the book view (a chapter's search already shows every match).
+struct HadithSearchAllRow: View {
+    @Environment(\.appearance) private var appearance
+
+    let shown: Int
+    /// Nil while the total is unknown: a sweep that stops one past its page.
+    var total: Int? = nil
+    /// True while the all-matches sweep runs: the count gives way to a spinner.
+    var isLoading = false
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            Settings.shared.hapticFeedback()
+            action()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "text.magnifyingglass")
+                Text("Search All Matches")
+                    .font(.subheadline.weight(.semibold))
+
+                Spacer(minLength: 8)
+
+                if isLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Text(countText)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .padding(.vertical, 11)
+            .padding(.horizontal, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isLoading)
+        .foregroundStyle(appearance.accent)
+        .conditionalGlassEffect(rectangle: true)
+        .listRowSeparator(.hidden)
+        .accessibilityLabel(Text("Search All Matches"))
+        .accessibilityValue(Text(countText))
+    }
+
+    private var countText: String {
+        if let total {
+            return String(localized: "Showing \(shown) of \(total)").localizedDigits
+        }
+        return String(localized: "Showing the first \(shown)").localizedDigits
     }
 }
 

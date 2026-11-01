@@ -2,12 +2,17 @@ import SwiftUI
 
 /// One narration's chain of narrators (HadithChains.swift), opened from the row's menu or a tap on its
 /// grade: the isnad as the narration writes it, in Arabic, from the Prophet ﷺ down to the collector,
-/// with the word each narrator received it by, and the way to share it as an image. A tap on a
-/// narrator opens his page (HadithNarratorViews.swift), and below the chain the doors to the other
-/// narrations carried by exactly this chain and to the tree of every chain of this narration
-/// (HadithIsnadTreeView.swift).
+/// with the word each narrator received it by, each name and word in English under it when the
+/// toolbar's switch is on (Abu, 2026-10-31), and the way to share it as an image. A tap on a
+/// narrator opens his page (HadithNarratorViews.swift), and above the chain (Abu: "put tree at the
+/// top rather than the bottom") the doors to the other narrations carried by exactly this chain and
+/// to the tree of every chain of this narration (HadithIsnadTreeView.swift).
 struct HadithChainSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appearance) private var appearance
+    /// The English under each name and word, remembered; the tree page reads the same switch.
+    @AppStorage(HadithChainSheet.englishKey) private var showsEnglish = true
+    static let englishKey = "hadithChainShowsEnglish"
 
     let book: HadithCatalogBook
     let hadith: HadithBookData.Hadith
@@ -30,8 +35,21 @@ struct HadithChainSheet: View {
             List {
                 Group {
                     if let chain {
+                        // The doors first: a chain can run ten generations, and the tree is what a
+                        // reader comes back for.
+                        if sameChain != nil || tree != nil {
+                            Section {
+                                if let tree {
+                                    HadithIsnadTreeDoor(summary: tree) { pushTree = true }
+                                }
+                                if let sameChain {
+                                    HadithSameChainDoor(others: sameChain.others) { pushSameChain = true }
+                                }
+                            }
+                        }
+
                         Section {
-                            IsnadDiagram(chain: chain, onNarratorTap: { pushedNarrator = $0 })
+                            IsnadDiagram(chain: chain, onNarratorTap: { pushedNarrator = $0 }, hadith: true)
                                 .padding(.vertical, 4)
                                 // The chain reads right to left in every interface: the first road is
                                 // the first one the narration gives.
@@ -39,25 +57,17 @@ struct HadithChainSheet: View {
 
                             if #available(iOS 16.0, *) {
                                 IsnadShareButton(label: String(localized: "Share the Chain as an Image"),
-                                                 title: reference, subtitle: "سَنَدُ الحَدِيثِ", chain: chain)
+                                                 title: reference, subtitle: "سَنَدُ الحَدِيثِ", chain: chain, hadith: true,
+                                                 salt: showsEnglish ? "en" : "")
                                     // The image takes the direction its button sits in: the diagram's.
                                     .environment(\.layoutDirection, .rightToLeft)
                             }
                         } header: {
                             Text("Chain of Narrators")
                         } footer: {
-                            Text("Read from this narration's own Arabic: each narrator as it names him, and above him the word by which he received it from the one above (حدثنا، أخبرنا، عن، سمعت). Where the collector gives it by more than one road, the roads are drawn side by side below the narrator where they meet. Tap a narrator to see every narration that names him.")
-                        }
-
-                        if sameChain != nil || tree != nil {
-                            Section {
-                                if let sameChain {
-                                    HadithSameChainDoor(others: sameChain.others) { pushSameChain = true }
-                                }
-                                if let tree {
-                                    HadithIsnadTreeDoor(summary: tree) { pushTree = true }
-                                }
-                            }
+                            Text(showsEnglish
+                                 ? "Read from this narration's own Arabic: each narrator as it names him, and above him the word by which he received it from the one above (حدثنا، أخبرنا، عن، سمعت). The English under each name is a transliteration made ahead of time, and under each word its meaning. Where the collector gives it by more than one road, the roads are drawn side by side below the narrator where they meet. Tap a narrator to see every narration that names him."
+                                 : "Read from this narration's own Arabic: each narrator as it names him, and above him the word by which he received it from the one above (حدثنا، أخبرنا، عن، سمعت). Where the collector gives it by more than one road, the roads are drawn side by side below the narrator where they meet. Tap a narrator to see every narration that names him.")
                         }
                     } else if resolved {
                         Section {
@@ -100,16 +110,30 @@ struct HadithChainSheet: View {
             #endif
             .navigationTitle(reference)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        Settings.shared.hapticFeedback()
+                        showsEnglish.toggle()
+                    } label: {
+                        Image(systemName: showsEnglish ? "character.book.closed.fill" : "character.book.closed")
+                    }
+                    .tint(appearance.accent)
+                    .accessibilityLabel(showsEnglish ? "Hide the English" : "Show the English")
+                }
+            }
             .sheetDismissToolbar()
         }
         .hadithOpenInBook(dismiss: dismiss)
-        .task {
+        // Decoded again when the English is switched: the names come from the narrator index then.
+        .task(id: showsEnglish) {
             let arabic = hadith.arabic
             let slug = book.slug
             let idInBook = hadith.idInBook
             let title = book.displayTitle
+            let english = showsEnglish
             let found = await Task.detached(priority: .userInitiated) { () -> (IsnadChain?, (Int, Int)?, HadithIsnadTreesPack.Summary?) in
-                let chain = HadithChainStore.shared.chain(slug: slug, idInBook: idInBook, arabic: arabic, bookTitle: title)
+                let chain = HadithChainStore.shared.chain(slug: slug, idInBook: idInBook, arabic: arabic, bookTitle: title, english: english)
                 let tree = chain == nil ? nil : HadithIsnadTreeStore.shared.summary(slug: slug, idInBook: idInBook)
                 guard chain != nil, let group = HadithChainStore.shared.chainGroup(slug: slug, idInBook: idInBook) else { return (chain, nil, tree) }
                 let others = HadithNarratorStore.shared.members(group: group).filter { $0.slug != slug || $0.idInBook != idInBook }

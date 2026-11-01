@@ -127,3 +127,140 @@ final class SearchFoldTests: XCTestCase {
         XCTAssertEqual(HadithFold.english("Sunan Abī Dāwūd, ʿĀʾishah, Muħammad"), "sunan abi dawud aishah muhammad")
     }
 }
+
+/// The hadith search's Match button (Abu, 2026-10-31: "Hadith search should support some things that
+/// Quran search supports like exact match"): the word-edge rule the byte sweep applies to the prebuilt
+/// folds (`HadithMatchRule`) and Exact's letter-for-letter check on the row's own text
+/// (`HadithSearchFilters.LetterMatch`). Pure functions, no pack opened.
+final class HadithMatchRuleTests: XCTestCase {
+
+    // MARK: Word edges on the fold
+
+    func testContainsFindsAnywhere() {
+        // Inside a longer word, at a word's start or buried in it: anywhere.
+        XCTAssertTrue(HadithMatchRule.contains.occurs("merc", in: "the mercies of allah"))
+        XCTAssertTrue(HadithMatchRule.contains.occurs("mercy", in: "showmercy to them"))
+        XCTAssertTrue(HadithMatchRule.contains.occurs("رب", in: "اربعة"))
+        XCTAssertFalse(HadithMatchRule.contains.occurs("patience", in: "the mercies of allah"))
+    }
+
+    func testWholeWordNeedsBothEdges() {
+        let rule = HadithMatchRule.wholeWord
+        XCTAssertTrue(rule.occurs("mercy", in: "the mercy of allah"))
+        XCTAssertFalse(rule.occurs("merc", in: "the mercies of allah"), "a leading edge alone is not a whole word")
+        XCTAssertFalse(rule.occurs("mercy", in: "showmercy to them"), "a trailing edge alone is not a whole word")
+        // The span's own edges count as word edges.
+        XCTAssertTrue(rule.occurs("mercy", in: "mercy of allah"))
+        XCTAssertTrue(rule.occurs("mercy", in: "of allah mercy"))
+        XCTAssertTrue(rule.occurs("mercy", in: "mercy"))
+        // A phrase needle: edges at the phrase's ends only.
+        XCTAssertTrue(rule.occurs("mercy of", in: "the mercy of allah"))
+        XCTAssertFalse(rule.occurs("mercy of", in: "the mercy offered"))
+    }
+
+    /// A hit the rule turns down is stepped over by one byte, so a real hit later in the row is found.
+    func testRefusedHitStepsForwardOneByte() {
+        XCTAssertTrue(HadithMatchRule.wholeWord.occurs("رب", in: "اربعة رب"))
+        XCTAssertTrue(HadithMatchRule.wholeWord.occurs("ab", in: "xab ab"))
+        XCTAssertTrue(HadithMatchRule.wholeWord.occurs("aa", in: "aaa aa"))
+        XCTAssertFalse(HadithMatchRule.wholeWord.occurs("aa", in: "aaa aaa"))
+        XCTAssertTrue(HadithMatchRule.startsWith.occurs("an", in: "banana and"))
+    }
+
+    func testStartsWithAndEndsWith() {
+        XCTAssertTrue(HadithMatchRule.startsWith.occurs("merc", in: "the mercies of allah"))
+        XCTAssertFalse(HadithMatchRule.startsWith.occurs("ercies", in: "the mercies of allah"))
+        XCTAssertTrue(HadithMatchRule.endsWith.occurs("ies", in: "the mercies of allah"))
+        XCTAssertFalse(HadithMatchRule.endsWith.occurs("merci", in: "the mercies of allah"))
+        XCTAssertTrue(HadithMatchRule.endsWith.occurs("allah", in: "the mercies of allah"))
+    }
+
+    /// The English fold keeps its newlines and tabs, and a no-break space survives as C2 A0.
+    func testEveryWhitespaceIsAWordEdge() {
+        XCTAssertTrue(HadithMatchRule.wholeWord.occurs("mercy", in: "narrated abu hurairah\nmercy\tis wide"))
+        XCTAssertTrue(HadithMatchRule.wholeWord.occurs("mercy", in: "his\u{00A0}mercy\u{00A0}is wide"))
+        XCTAssertFalse(HadithMatchRule.wholeWord.occurs("mercy", in: "his\u{00A0}mercyis wide"))
+    }
+
+    func testEmptyNeedleAndShortFoldNeverMatch() {
+        XCTAssertFalse(HadithMatchRule.wholeWord.occurs("", in: "mercy"))
+        XCTAssertFalse(HadithMatchRule.contains.occurs("mercy of allah", in: "mercy"))
+        XCTAssertFalse(HadithMatchRule.wholeWord.occurs("mercy", in: ""))
+    }
+
+    // MARK: The filters
+
+    func testMatchFoldsIntoTheSession() {
+        var filters = HadithSearchFilters()
+        XCTAssertFalse(filters.hasSessionFilters)
+        filters.match = .wholeWord
+        XCTAssertTrue(filters.hasSessionFilters)
+        XCTAssertEqual(filters.activeCount, 1)
+        XCTAssertEqual(filters.activeCount(in: .oneChapter), 1)
+        XCTAssertEqual(filters.needles(for: "mercy").rule, .wholeWord)
+        XCTAssertEqual(filters.highlightWordRule, .wholeWord)
+        filters.match = .exact
+        XCTAssertEqual(filters.needles(for: "mercy").rule, .wholeWord, "Exact is whole words on the fold, letters on the row")
+        XCTAssertEqual(filters.highlightWordRule, .wholeWord)
+        filters.match = .startsWith
+        XCTAssertEqual(filters.needles(for: "mer").rule, .startsWith)
+        XCTAssertEqual(filters.highlightWordRule, .startsWith)
+        filters.resetSession()
+        XCTAssertEqual(filters.match, .contains)
+        XCTAssertFalse(filters.hasSessionFilters)
+        XCTAssertEqual(filters.needles(for: "mercy").rule, .contains)
+        XCTAssertEqual(filters.highlightWordRule, .anywhere)
+    }
+
+    // MARK: Exact: letter for letter on the row
+
+    func testExactEnglishKeepsCapitals() {
+        let capital = HadithSearchFilters.LetterMatch("Mercy", words: .phrase)
+        XCTAssertTrue(capital.matches(arabic: "", english: ["Narrated Abu Hurairah:", "The Mercy of Allah is wide."]))
+        XCTAssertFalse(capital.matches(arabic: "", english: ["Narrated Abu Hurairah:", "The mercy of Allah is wide."]))
+        let small = HadithSearchFilters.LetterMatch("mercy", words: .phrase)
+        XCTAssertTrue(small.matches(arabic: "", english: ["", "The mercy of Allah is wide."]))
+        XCTAssertFalse(small.matches(arabic: "", english: ["", "The mercies of Allah are wide."]))
+        // Punctuation around a word is not a letter; the words of a phrase stay consecutive.
+        let phrase = HadithSearchFilters.LetterMatch("mercy of Allah", words: .phrase)
+        XCTAssertTrue(phrase.matches(arabic: "", english: ["", "\"The mercy of Allah,\" he said."]))
+        XCTAssertFalse(phrase.matches(arabic: "", english: ["", "The mercy of the Lord, Allah."]))
+    }
+
+    /// A Latin query reads the narrator line and the narration together, as the fold stores them.
+    func testExactEnglishSpansNarratorAndText() {
+        let all = HadithSearchFilters.LetterMatch("Hurairah mercy", words: .allWords)
+        XCTAssertTrue(all.matches(arabic: "", english: ["Narrated Abu Hurairah:", "The mercy of Allah is wide."]))
+        XCTAssertFalse(all.matches(arabic: "", english: ["Narrated Abu Hurairah:", "The Mercy of Allah is wide."]))
+        let any = HadithSearchFilters.LetterMatch("Hurairah patience", words: .anyWord)
+        XCTAssertTrue(any.matches(arabic: "", english: ["Narrated Abu Hurairah:", "The mercy of Allah is wide."]))
+        XCTAssertFalse(any.matches(arabic: "", english: ["Narrated Anas:", "The mercy of Allah is wide."]))
+    }
+
+    /// Marks go, letter forms stay: أ and ا, ة and ه, ى and ي are different letters here.
+    func testExactArabicKeepsLetterFormsAndDropsMarks() {
+        let taMarbuta = HadithSearchFilters.LetterMatch("رحمة", words: .phrase)
+        XCTAssertTrue(taMarbuta.matches(arabic: "إِنَّ رَحْمَةَ اللَّهِ وَاسِعَةٌ", english: []))
+        XCTAssertFalse(taMarbuta.matches(arabic: "إِنَّ رَحْمَهُ اللَّهُ", english: []))
+        XCTAssertFalse(taMarbuta.matches(arabic: "بِرَحْمَةِ اللَّهِ", english: []), "a prefixed word is not the whole word")
+
+        let hamza = HadithSearchFilters.LetterMatch("أربعة", words: .phrase)
+        XCTAssertTrue(hamza.matches(arabic: "عَلَى أَرْبَعَةٍ", english: []))
+        XCTAssertFalse(hamza.matches(arabic: "عَلَى اربعة", english: []))
+
+        let maqsurah = HadithSearchFilters.LetterMatch("على", words: .phrase)
+        XCTAssertTrue(maqsurah.matches(arabic: "عَلَى أَرْبَعَةٍ", english: []))
+        XCTAssertFalse(maqsurah.matches(arabic: "علي بن أبي طالب", english: []))
+
+        // A query typed with tashkeel matches the same letters written bare.
+        let vocalized = HadithSearchFilters.LetterMatch("رَحْمَة", words: .phrase)
+        XCTAssertTrue(vocalized.matches(arabic: "رحمة الله", english: []))
+    }
+
+    func testExactArabicReadsTheArabicOnly() {
+        let arabic = HadithSearchFilters.LetterMatch("رحمة", words: .phrase)
+        XCTAssertFalse(arabic.matches(arabic: "", english: ["", "رحمة"]))
+        let english = HadithSearchFilters.LetterMatch("mercy", words: .phrase)
+        XCTAssertFalse(english.matches(arabic: "mercy", english: ["", ""]))
+    }
+}

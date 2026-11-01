@@ -2357,15 +2357,8 @@ struct SurahView: View {
                     surah: rangeSurah,
                     displayQiraah: settings.displayQiraahForArabic
                 ),
-                onPlay: { start, end, repAyah, repSec in
-                    quranPlayer.playCustomRange(
-                        surahNumber: rangeSurah.id,
-                        surahName: rangeSurah.nameTransliteration,
-                        startAyah: start,
-                        endAyah: end,
-                        repeatPerAyah: repAyah,
-                        repeatSection: repSec
-                    )
+                onPlay: { selection in
+                    quranPlayer.playCustomRange(selection)
                 },
                 onCancel: { showCustomRangeSheet = false }
             )
@@ -4021,11 +4014,11 @@ struct SurahView: View {
         let repeatCounts  = [20, 15, 10, 5, 3, 2]
 
         if playerIdle {
+            // A tap opens the menu AT ONCE and a hold is the one shortcut. No double tap since 2026-11-01
+            // (Abu: "lag for when I touch play menu surah"): a double-tap shortcut made every plain tap
+            // wait out UIKit's double-tap interval before the menu opened (`ShortcutMenu`). Play Surah is
+            // the menu's bottom row, nearest the thumb.
             ShortcutMenu(
-                doubleTap: MenuShortcut(String(localized: "Play Surah")) {
-                    settings.hapticFeedback()
-                    quranPlayer.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
-                },
                 hold: MenuShortcut(settings.isHafsDisplay ? String(localized: "Play Custom Range") : String(localized: "Choose Reciter")) {
                     settings.hapticFeedback()
                     if settings.isHafsDisplay { showCustomRangeSheet = true }
@@ -5132,15 +5125,36 @@ struct ArabicTextRiwayahPicker: View {
         #endif
     }
 
-    /// Hafs standalone, then one submenu per qiraah. iOS-only: watchOS has no `Menu`,
-    /// and its picker (above) is a flat grouped list already.
+    /// Hafs standalone, then the riwayat in the remembered sort (`Settings.Riwayah.PickerSort`): one
+    /// submenu per qiraah, or one flat list, with Sort By at the foot of the menu. iOS-only: watchOS
+    /// has no `Menu`, and its picker (above) is a flat grouped list already.
     #if os(iOS)
+    /// The sort every copy of this picker shares (Abu, 2026-11-01: "sort by default, alphabetical,
+    /// most common, date, and 7 + 3").
+    @AppStorage("riwayahPickerSort") private var sortRaw = Settings.Riwayah.PickerSort.classical.rawValue
+
+    private var sort: Settings.Riwayah.PickerSort {
+        Settings.Riwayah.PickerSort(rawValue: sortRaw) ?? .classical
+    }
+
+    private var sortBinding: Binding<Settings.Riwayah.PickerSort> {
+        Binding(
+            get: { sort },
+            set: { newValue in
+                guard newValue != sort else { return }
+                settings.hapticFeedback()
+                sortRaw = newValue.rawValue
+            }
+        )
+    }
+
     @ViewBuilder
     private var qiraahMenuContent: some View {
         let current = Settings.Riwayah.canonicalTag(selection)
         // The standalone Hafs entry keeps its full "(default)" label but drops the death-year
         // subtitle - that detail belongs on the copy INSIDE the Asim submenu, where Hafs sits next
-        // to Shubah and the dates mean something (user rule).
+        // to Shubah and the dates mean something (user rule). It leads in every sort: it is the
+        // default, and the one riwayah nearly everyone wants in one tap.
         if includeHafs {
             qiraahButton(
                 Settings.Riwayah.option(for: Settings.Riwayah.hafsTag),
@@ -5149,22 +5163,59 @@ struct ArabicTextRiwayahPicker: View {
             )
         }
 
-        // The four verified qiraat on the menu itself; the six beta ones behind one Beta Riwayat door
-        // once beta text is unlocked (2026-10-21): eleven rows were the picker's longest menu.
-        let groups = Settings.Riwayah.textGroups
-        ForEach(groups.filter { !$0.isBeta }) { group in
-            teacherMenu(group, current: current)
+        let options = Settings.Riwayah.textOptions
+        if sort.isFlat {
+            // Alphabetical and Most Common: every verified riwayah in one list (Hafs is the standalone
+            // row above, not repeated), the beta ones behind their door in the same order.
+            let flat = Settings.Riwayah.sortedOptions(options, by: sort)
+                .filter { $0.tag != Settings.Riwayah.hafsTag }
+            ForEach(flat.filter { !$0.beta }, id: \.tag) { option in
+                qiraahButton(option, current: current)
+            }
+
+            let beta = flat.filter(\.beta)
+            if !beta.isEmpty {
+                Menu {
+                    ForEach(beta, id: \.tag) { option in
+                        qiraahButton(option, current: current)
+                    }
+                } label: {
+                    Label("Beta Riwayat", systemImage: "testtube.2")
+                }
+            }
+        } else {
+            // The four verified qiraat on the menu itself; the six beta ones behind one Beta Riwayat
+            // door once beta text is unlocked (2026-10-21): eleven rows were the picker's longest menu.
+            let groups = Settings.Riwayah.groups(options, sortedBy: sort)
+            ForEach(groups.filter { !$0.isBeta }) { group in
+                teacherMenu(group, current: current)
+            }
+
+            let beta = groups.filter(\.isBeta)
+            if !beta.isEmpty {
+                Menu {
+                    ForEach(beta) { group in
+                        teacherMenu(group, current: current)
+                    }
+                } label: {
+                    Label("Beta Riwayat", systemImage: "testtube.2")
+                }
+            }
         }
 
-        let beta = groups.filter(\.isBeta)
-        if !beta.isEmpty {
-            Menu {
-                ForEach(beta) { group in
-                    teacherMenu(group, current: current)
+        Divider()
+
+        // The order of the riwayat above. A submenu rather than inline rows: the picker's job is
+        // choosing a riwayah, and five sort rows under the riwayat would double the menu.
+        Menu {
+            Picker("Sort By", selection: sortBinding) {
+                ForEach(Settings.Riwayah.PickerSort.allCases) { option in
+                    Text(option.title).tag(option)
                 }
-            } label: {
-                Label("Beta Riwayat", systemImage: "testtube.2")
             }
+        } label: {
+            Label("Sort By", systemImage: "arrow.up.arrow.down")
+            Text(sort.title)
         }
     }
 
@@ -5220,11 +5271,14 @@ struct ArabicTextRiwayahPicker: View {
 /// Which of the reader's two color codes the legend sheet is showing.
 enum ReaderLegendPage: String {
     case tajweed, themes
+    /// The mushaf's stop and pause signs (Abu, 2026-11-01: "a third tajweed legend, stopping signs").
+    case signs
 }
 
 /// The reader's Legend button. It explains BOTH color codes a page can wear, the tajweed rules on the
-/// letters and the theme washes behind the ayahs (Abu, 2026-09-20). The sheet's picker switches
-/// between the two, and each side leads with its own switch.
+/// letters and the theme washes behind the ayahs (Abu, 2026-09-20), and since 2026-11-01 the stop signs
+/// printed over the words (`QuranStopSignsLegendView`). The sheet's picker switches between the three,
+/// and each color side leads with its own switch.
 ///
 /// Always up since 2026-10-10 (Abu agreed). It used to show only while a color code was on, so turning
 /// tajweed off from its own switch made the button vanish, and the sheet had to send people to
@@ -5267,7 +5321,11 @@ private struct ReaderLegendMenu: View {
     /// the side last looked at when both are on, and with neither, the side whose switch can color
     /// this page (tajweed wherever the page has Arabic it can paint, the themes otherwise).
     private var openingPage: ReaderLegendPage {
-        if tajweedApplies && themesApply { return ReaderLegendPage(rawValue: lastPage) ?? .tajweed }
+        let remembered = ReaderLegendPage(rawValue: lastPage)
+        // The Signs page is never on or off (the signs are printed in every text), so it comes back
+        // only as the side last looked at.
+        if remembered == .signs { return .signs }
+        if tajweedApplies && themesApply { return remembered ?? .tajweed }
         if themesApply { return .themes }
         if tajweedApplies { return .tajweed }
         return tajweedPossible ? .tajweed : .themes
@@ -5293,7 +5351,9 @@ private struct ReaderLegendMenu: View {
 
     @ViewBuilder
     private var quickPeekCard: some View {
-        if colorsOff {
+        if openingPage == .signs {
+            signsPeekCard
+        } else if colorsOff {
             // Nothing on the page to peek at: say so, and where the switches are.
             VStack(alignment: .leading, spacing: 6) {
                 Text("Colors are off")
@@ -5309,6 +5369,32 @@ private struct ReaderLegendMenu: View {
         } else {
             quickPeekEntriesCard
         }
+    }
+
+    /// The first few stop signs, glyph and name, when the Signs page is the one that would open.
+    private var signsPeekCard: some View {
+        let quranFace = settings.quranDisplayUsesCustomArabicFace
+        return VStack(alignment: .leading, spacing: 10) {
+            ForEach(StopSignInfo.all.prefix(6)) { sign in
+                HStack(spacing: 10) {
+                    Text(sign.symbol)
+                        .font(quranFace ? Font.arabic(settings.quranDisplayFontName, size: 15) : .caption.weight(.semibold))
+                        .arabicFontDesign(custom: quranFace)
+                        .foregroundStyle(settings.accentColor.color)
+                        .lineLimit(1)
+                        .frame(width: 34)
+
+                    Text(sign.title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.primary)
+                }
+            }
+
+            Text("Tap Legend for the full guide")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(14)
     }
 
     private var quickPeekEntriesCard: some View {
@@ -5422,6 +5508,8 @@ private struct ReaderLegendSheet: View {
                         presentationMode.wrappedValue.dismiss()
                         AppNavigation.shared.open(.ayah(surahID, ayahID))
                     }
+                case .signs:
+                    QuranStopSignsLegendView()
                 }
             }
             .toolbar {
@@ -5430,9 +5518,10 @@ private struct ReaderLegendSheet: View {
                     Picker("Legend", selection: $page) {
                         Text("Tajweed").tag(ReaderLegendPage.tajweed)
                         Text("Themes").tag(ReaderLegendPage.themes)
+                        Text("Signs").tag(ReaderLegendPage.signs)
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 210)
+                    .frame(width: 280)
                 }
             }
             .sheetDismissToolbar()
