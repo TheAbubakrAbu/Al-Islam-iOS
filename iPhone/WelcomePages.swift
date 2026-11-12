@@ -1,13 +1,12 @@
-// The welcome's shared pieces and its middle pages (Abu, 2026-10-19: "for splash screen force them to
-// go through it ... instead of asking location and notification at the same time have them be buttons
-// in a splash screen page ... tips and tricks ... you can also turn on simple mode"). SplashScreen.swift
-// runs the pages in order: what the app is, About You (AboutYouView.swift), Location and Notifications
-// (`WelcomePermissionsPage`, Al-Adhan and Al-Islam), what there is to discover and how much of it to
-// show (`WelcomeDiscoverPage`), and on Al-Islam the iCloud offer (CloudBackupViews.swift) as the stage
-// after it. Every page ends in the same `WelcomeActionBar` with a Skip that skips that page alone, and
-// nothing leaves the whole walk at once (Abu, 2026-10-19: "have each page option have a skip button but
-// don't have way to leave the tutorial completely"). Shared with the companion apps like the splash, so
-// per-app content sits behind flags.
+// The welcome's shared pieces and its middle pages. SplashScreen.swift runs the pages in order: what the
+// app is, About You (AboutYouView.swift), Location and Notifications (`WelcomePermissionsPage`, Al-Adhan
+// and Al-Islam), Simple or Full (`WelcomeModePage`, Al-Islam), and on Al-Islam the iCloud offer
+// (CloudBackupViews.swift) as the stage after it. Every page is one idea that fits the screen without
+// scrolling (Abu, 2026-11-05: "make them look beautiful make them simple make them clear"): the same
+// `WelcomeHeader`, at most two lines under it, and the same `WelcomeActionBar` with a Skip that skips
+// that page alone. Nothing leaves the whole walk at once (Abu, 2026-10-19: "have each page option have a
+// skip button but don't have way to leave the tutorial completely"). Shared with the companion apps like
+// the splash, so per-app content sits behind flags.
 #if os(iOS)
 import SwiftUI
 
@@ -132,23 +131,92 @@ struct WelcomeProgressDots: View {
     }
 }
 
+// MARK: - The head of a page
+
+/// What every page after the first opens with: one symbol on an accent tile, the title, and at most two
+/// lines under it.
+struct WelcomeHeader: View {
+    @Environment(\.appearance) private var appearance
+
+    let systemImage: String
+    let title: String
+    var text: String? = nil
+
+    var body: some View {
+        VStack(spacing: 8) {
+            AccentIconChip(systemImage: systemImage, size: 64)
+                .shadow(color: appearance.accent.opacity(0.35), radius: 14, y: 6)
+                .padding(.bottom, 10)
+                .accessibilityHidden(true)
+
+            Text(title)
+                .font(.title2.bold())
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+
+            if let text {
+                Text(text)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+/// The filled card every welcome page puts its rows on: a surface with a hairline edge, not glass (on
+/// this plain ground clear glass draws no surface in the light themes). Selected, it wears the accent.
+struct WelcomeCardSurface: View {
+    @Environment(\.appearance) private var appearance
+
+    var selected = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .fill(selected ? appearance.accent.opacity(0.16) : Color(UIColor.secondarySystemBackground))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .strokeBorder(selected ? appearance.accent : Color.primary.opacity(0.08), lineWidth: selected ? 2 : 1)
+            )
+    }
+}
+
 // MARK: - Location and Notifications
 
 #if HAS_ADHAN
-/// The two permissions as two buttons of their own, each raising its system prompt when tapped, over the
-/// same cards the Adhan tab's sheet shows (PermissionsSheet.swift). Continue once both are answered;
-/// Skip, there whatever was answered, quiets whatever is not for a day, the sheet's own snooze, so the
-/// tab does not ask again the moment the welcome ends.
+/// The two permissions as two rows with their status (PermissionsSheet.swift, `PermissionCards`) over ONE
+/// button that walks them in turn: Allow Location, then Allow Notifications, then Continue. Each tap
+/// raises one system prompt, never both at once (Abu, 2026-10-19). Skip moves on and leaves whatever is
+/// unanswered that way: the Adhan tab's own cards (`AdhanPermissionSection`) offer it from there.
 struct WelcomePermissionsPage: View {
     @StateObject private var asker = PermissionAsker()
+    /// Asked on this page already. A question the system would not put (Allow Notifications off in the
+    /// app, a headless run) is not offered twice: the button moves on.
+    @State private var askedLocation = false
+    @State private var askedNotifications = false
 
     let onFinished: () -> Void
+
+    private enum Step {
+        case location, notifications, done
+    }
+
+    private var step: Step {
+        if asker.locationUndetermined, !askedLocation { return .location }
+        if asker.notificationsUndetermined, !askedNotifications { return .notifications }
+        return .done
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 18) {
-                    PermissionsIntro()
+                VStack(spacing: 22) {
+                    WelcomeHeader(systemImage: "mappin.and.ellipse",
+                                  title: String(localized: "Prayer times for where you are"),
+                                  text: String(localized: "Location finds today's times. Notifications call you to them."))
                     PermissionCards(asker: asker)
                     Text(PermissionCards.footnote)
                         .font(.footnote)
@@ -164,15 +232,13 @@ struct WelcomePermissionsPage: View {
             }
 
             WelcomeActionBar(
-                primaryTitle: String(localized: "Continue"),
-                primaryEnabled: !asker.anythingUndetermined,
-                primaryAction: onFinished,
+                primaryTitle: primaryTitle,
+                primaryBusy: asker.asking,
+                primaryIdentifier: primaryIdentifier,
+                primaryAction: primaryAction,
                 secondaryTitle: String(localized: "Skip"),
                 secondaryIdentifier: "welcomeSkip",
-                secondaryAction: {
-                    asker.snoozeUnanswered()
-                    onFinished()
-                }
+                secondaryAction: onFinished
             )
             .frame(maxWidth: 560)
             .padding(.horizontal, 20)
@@ -180,246 +246,61 @@ struct WelcomePermissionsPage: View {
         }
         .task { await asker.refresh() }
     }
+
+    private var primaryTitle: String {
+        switch step {
+        case .location: return String(localized: "Allow Location")
+        case .notifications: return String(localized: "Allow Notifications")
+        case .done: return String(localized: "Continue")
+        }
+    }
+
+    /// The two asks keep the identifiers their own buttons had; Continue is found by its label.
+    private var primaryIdentifier: String? {
+        switch step {
+        case .location: return "permissionsAllowLocation"
+        case .notifications: return "permissionsAllowNotifications"
+        case .done: return nil
+        }
+    }
+
+    private func primaryAction() {
+        switch step {
+        case .location: asker.askLocation { askedLocation = true }
+        case .notifications: asker.askNotifications { askedNotifications = true }
+        case .done: onFinished()
+        }
+    }
 }
 #endif
 
-// MARK: - A lot to discover
+// MARK: - Simple or Full
 
-/// What there is in the app and how much of it to show: a short pitch, the Tips & Tricks door (the
-/// tour of what only this app does), then the Simple or Full choice (Docs/Product/Simple Mode Guide.md,
-/// Splash). The choice is written by the splash when its page ends, not here.
-struct WelcomeDiscoverPage: View {
+/// How much of the app to show (Docs/Product/Simple Mode Guide.md, Splash): two cards, Full preselected.
+/// The choice is written by the splash when its page ends, not here. Al-Islam only: the companions skip
+/// the question at the first launch and keep Full (Abu, 2026-10-14); Simple Mode is still in their
+/// Settings.
+struct WelcomeModePage: View {
     private let settings = Settings.shared
-    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
-    @ObservedObject private var systemSettings = SystemSettings.shared
-    @Environment(\.colorScheme) private var systemColorScheme
+    @Environment(\.appearance) private var appearance
 
     @Binding var choosesSimple: Bool
 
-    @State private var showTour = false
-    /// The tutorial a LEARN EACH TAB row opened, presented here by the page that asked for it: the
-    /// welcome is the first launch's whole screen, and its rows answer the nudges themselves.
-    @State private var openTutorial: TutorialTab?
-
-    private var accent: Color { settings.accentColor.color }
-    private var isDarkMode: Bool { (settings.colorScheme ?? systemColorScheme) == .dark }
-
     var body: some View {
-        VStack(spacing: 18) {
-            VStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 44, weight: .semibold))
-                    .foregroundColor(accent)
-                    .padding(.bottom, 2)
-                    .accessibilityHidden(true)
+        VStack(spacing: 22) {
+            WelcomeHeader(systemImage: "slider.horizontal.3",
+                          title: String(localized: "Simple or Full?"),
+                          text: String(localized: "You can change it any time in Settings."))
 
-                Text("A lot to discover")
-                    .font(.title2.bold())
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityAddTraits(.isHeader)
-
-                Text(pitch)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            tipsCard
-
-            tutorialsCard
-
-            // Al-Islam only: the companions skip the question at the first launch and keep Full (Abu,
-            // 2026-10-14, in Al-Quran's splash); Simple Mode is still in their Settings. The flag is the
-            // one his gate used, since no flag names Al-Islam itself.
-            #if HAS_ICLOUD_BACKUP
-            VStack(alignment: .leading, spacing: 10) {
-                Text("HOW MUCH WOULD YOU LIKE TO SEE?")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.secondary)
-                    .padding(.leading, 4)
-                    .accessibilityAddTraits(.isHeader)
-
-                modeCard(simple: true, title: String(localized: "Simple"), text: simpleModeSummary,
+            VStack(spacing: 10) {
+                modeCard(simple: true, title: String(localized: "Simple"),
+                         text: String(localized: "The essentials. Extras stay tucked away."),
                          systemImage: "rectangle.compress.vertical")
-                modeCard(simple: false, title: String(localized: "Full"), text: String(localized: "Every tool, shortcut and detail, right on screen."),
+                modeCard(simple: false, title: String(localized: "Full"),
+                         text: String(localized: "Every tool and detail, right on screen."),
                          systemImage: "rectangle.expand.vertical")
             }
-
-            Text("You can change this any time in Settings \u{203A} Simple Mode.")
-                .font(.footnote)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-            #endif
         }
-        .sheet(isPresented: $showTour) {
-            TipsTourView(area: .app, tips: TipCatalog.spotlight, title: String(localized: "Only in \(AppIdentifiers.displayName)"))
-                .smallMediumSheetPresentation()
-        }
-    }
-
-    /// Named after the Settings tab's own spotlight cards, so each app names what it really has.
-    private var pitch: String {
-        let highlights = TipCatalog.spotlight.prefix(3).compactMap { $0.card?.title }
-        let lead = highlights.isEmpty
-            ? String(localized: "\(AppIdentifiers.displayName) does things no other app does.")
-            : String(localized: "\(AppIdentifiers.displayName) does things no other app does, like \(Self.listed(highlights)).")
-        return String(localized: "\(lead) It can feel like a lot at first. Browse the Tips & Tricks whenever you like, or start with Simple Mode and bring the extras in when you want them.")
-    }
-
-    /// "A, B and C".
-    static func listed(_ items: [String]) -> String {
-        guard items.count > 1, let last = items.last else { return items.first ?? "" }
-        return String(localized: "\(items.dropLast().joined(separator: ", ")) and \(last)")
-    }
-
-    private var tipCount: Int {
-        TipArea.offered.reduce(0) { $0 + TipCatalog.tips(in: $1).count }
-    }
-
-    /// The door to the tour of what only this app does; every settings page keeps its own list too.
-    private var tipsCard: some View {
-        Button {
-            settings.hapticFeedback()
-            showTour = true
-        } label: {
-            HStack(alignment: .center, spacing: 13) {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(LinearGradient(colors: [accent, accent.opacity(0.74)],
-                                         startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 34, height: 34)
-                    .overlay(
-                        Image(systemName: "lightbulb.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                    )
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Tips & Tricks")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    Text("\(tipCount) things that are easy to miss, each with where to find it. Every settings page opens with its own list, and this short tour shows what only \(AppIdentifiers.displayName) does.")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 8)
-
-                Image(systemName: "chevron.forward")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundColor(Color.secondary.opacity(0.6))
-                    .accessibilityHidden(true)
-            }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color(UIColor.secondarySystemBackground))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Tips & Tricks")
-        .accessibilityHint("Opens a short tour")
-        .accessibilityIdentifier("welcomeTipsTour")
-    }
-
-    /// Each tab's tutorial (TabTutorials.swift), one row apiece, and where the rest is: the pointer the
-    /// home city note on the Location card held back for (2026-10-31).
-    private var tutorialsCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("LEARN EACH TAB")
-                .font(.caption.weight(.semibold))
-                .foregroundColor(.secondary)
-                .padding(.leading, 4)
-                .accessibilityAddTraits(.isHeader)
-
-            VStack(spacing: 0) {
-                ForEach(Array(TutorialTab.allCases.enumerated()), id: \.element) { index, tab in
-                    if index > 0 {
-                        Divider()
-                            .padding(.leading, 61)
-                    }
-                    tutorialRow(tab)
-                }
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color(UIColor.secondarySystemBackground))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-                    )
-            )
-
-            Text("Each tab also has Tips & Tricks in its settings.")
-                .font(.footnote)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.leading, 4)
-        }
-        .sheet(item: $openTutorial) { tab in
-            TabTutorialView(tab: tab, presentedAsSheet: true)
-        }
-    }
-
-    private func tutorialRow(_ tab: TutorialTab) -> some View {
-        Button {
-            settings.hapticFeedback()
-            // Taken here, the tab's own nudge has nothing left to offer.
-            settings.markTutorialNudgeSeen(tab)
-            openTutorial = tab
-        } label: {
-            HStack(alignment: .center, spacing: 13) {
-                AccentIconChip(systemImage: tab.systemImage, tint: tab.tint, secondaryTint: tab.secondaryTint, size: 34)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(tab.title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.primary)
-                    Text(tab.summary)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 8)
-
-                Image(systemName: "chevron.forward")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundColor(Color.secondary.opacity(0.6))
-                    .accessibilityHidden(true)
-            }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("welcomeTutorial.\(tab.rawValue)")
-    }
-
-    /// What Simple keeps on screen, named by the domains this app ships (Al-Quran has no prayer
-    /// times, Al-Adhan no Quran reader).
-    private var simpleModeSummary: String {
-        #if HAS_ADHAN && HAS_QURAN
-        return String(localized: "Prayer times, the Quran and the essentials, with the extras tucked away until you want them.")
-        #elseif HAS_ADHAN
-        return String(localized: "Prayer times and the essentials, with the extras tucked away until you want them.")
-        #else
-        return String(localized: "The Quran and the essentials, with the extras tucked away until you want them.")
-        #endif
     }
 
     private func modeCard(simple: Bool, title: String, text: String, systemImage: String) -> some View {
@@ -428,16 +309,8 @@ struct WelcomeDiscoverPage: View {
             settings.hapticFeedback()
             withAnimation(.easeInOut(duration: 0.2)) { choosesSimple = simple }
         } label: {
-            HStack(spacing: 13) {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(LinearGradient(colors: [accent, accent.opacity(0.74)],
-                                         startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 34, height: 34)
-                    .overlay(
-                        Image(systemName: systemImage)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                    )
+            HStack(spacing: 14) {
+                AccentIconChip(systemImage: systemImage, size: 40)
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 3) {
@@ -451,26 +324,19 @@ struct WelcomeDiscoverPage: View {
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-
-                Spacer(minLength: 8)
+                // The column takes the row's width itself: beside a Spacer it gave up a line's worth.
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundColor(selected ? accent : Color.secondary.opacity(0.5))
+                    .foregroundColor(selected ? appearance.accent : Color.secondary.opacity(0.5))
                     .accessibilityHidden(true)
             }
-            .padding(.vertical, 12)
+            .padding(.vertical, 14)
             .padding(.horizontal, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(selected ? accent.opacity(0.16) : Color(UIColor.secondarySystemBackground))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .strokeBorder(selected ? accent : Color.primary.opacity(0.08), lineWidth: selected ? 2 : 1)
-                    )
-            )
+            .background(WelcomeCardSurface(selected: selected))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(title). \(text)")

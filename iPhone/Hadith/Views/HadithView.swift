@@ -672,8 +672,9 @@ struct HadithView: View {
                         if showSummaryTiles && settings.showsTabSection(.hadithSummary) {
                             boxed(summaryTilesSection)
                         }
-                        // The tutorial's one-time nudge, then Need a Hand?: one language or both, and the
-                        // name of Allah in red, right under the summary (TabTutorials.swift, HelpDoors.swift).
+                        // Need a Hand?: the tab's tutorial, one language or both, and the name of Allah in
+                        // red, right under the summary. Simple Mode has no Need a Hand?, so there the
+                        // tutorial's one-time nudge is a card of its own (TabTutorials.swift, HelpDoors.swift).
                         boxed(TutorialNudgeSection(tab: .hadith))
                         boxed(HelpDoorsSection(area: .hadith))
                     }
@@ -2933,9 +2934,12 @@ enum HadithSemanticCorpus {
     nonisolated static let id = "hadith-all"
 
     /// Version keyed to the shelf itself - deterministic (never hashValue, which is seeded per
-    /// launch), so yesterday's build loads from disk today.
+    /// launch), so yesterday's build loads from disk today. The number moves when a book's ROWS
+    /// change (all4, 2026-11-10: the Musnad grew from 1,374 rows to the whole book): the slugs alone
+    /// stayed the same, a persisted build of the old shelf loaded as this one, and
+    /// "-exportSemanticPacks" wrote that 50,884-item build under the new shelf's fingerprint.
     static var version: String {
-        "all3-" + HadithCatalogBook.all.map(\.slug).sorted().joined(separator: ".")
+        "all4-" + HadithCatalogBook.all.map(\.slug).sorted().joined(separator: ".")
     }
 
     /// True while the slow path (reading every book to gather texts) runs, pre-embedding.

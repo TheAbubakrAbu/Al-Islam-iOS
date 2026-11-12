@@ -614,19 +614,36 @@ enum AskAIText {
 
     // MARK: - Follow-up suggestions
 
-    /// Two or three next questions, built locally from the question's intent and what the answer
-    /// cited: no model call, so they appear the moment the answer settles.
-    static func suggestions(for question: AskAIQuestion, cited: [AskAISource], conversationTopic: String? = nil) -> [String] {
-        // A follow-up's own words ("who has to pay it?") name no subject: the chips use the
-        // conversation's topic instead.
-        let display = question.isFollowUp ? (conversationTopic ?? question.topicDisplay) : question.topicDisplay
-        var topicWords = display.split(separator: " ").map(String.init)
-        if question.intent == .dua {
-            topicWords.removeAll { ["dua", "duas", "du'a", "dhikr", "adhkar", "supplication"].contains($0.lowercased()) }
+    /// Two or three next questions, built locally from the question's intent, its canonical topic
+    /// and what the answer cited: no model call, so they appear the moment the answer settles.
+    /// The topic is the synonym HEAD of the question's first content word that has one ("zakat"
+    /// asks about charity, "mother" about parents); a word outside the table names nothing, so the
+    /// chips say "this" rather than "pay mahr" or "stop lazy". A follow-up never borrows the
+    /// conversation's earlier topic (a misread follow-up carried "go back sleep after fajr" into a
+    /// question about hair dye). A dua chip appears only when a dua on the topic exists.
+    static func suggestions(for question: AskAIQuestion, cited: [AskAISource], duaTopics: Set<String>, starters: [String]) -> [String] {
+        // A question about suicide or self-harm never gets templated chips ("Give an example of
+        // suicide from the Prophet's life"): the crisis chips, which lead to a dua and to hope.
+        if question.intent == .crisis || AskAICrisis.mentionsSelfHarm(question.raw) { return AskAICrisis.suggestions }
+        let head = AskAILexicon.canonicalTopic(in: question.contentWords)
+        if head == "suicide" { return AskAICrisis.suggestions }
+        let topic = head.map(AskAILexicon.displayTopic)
+        let subject = topic ?? "this"
+        // A dua for the TOPIC itself (its head or a synonym is a dua title's word); with no topic,
+        // for any search term. "Prophet" alone is in dozens of Hisn titles and offered a dua for
+        // whatever the question was about.
+        let hasDua: Bool
+        if let head {
+            hasDua = AskAILexicon.expand([head]).contains { duaTopics.contains($0) }
+        } else {
+            hasDua = question.searchTerms.contains { duaTopics.contains($0) }
         }
-        let topic = topicWords.isEmpty ? nil : topicWords.joined(separator: " ")
         var out: [String] = []
         func add(_ text: String) { if !out.contains(text), out.count < 3 { out.append(text) } }
+        func addDuaChip() {
+            guard hasDua else { return }
+            add(topic.map { "Is there a dua for \($0)?" } ?? "Is there a dua for this?")
+        }
 
         let firstAyah = cited.first { if case .ayah = $0.kind { return true } else { return false } }
         let firstHadith = cited.first { if case .hadith = $0.kind { return true } else { return false } }
@@ -634,9 +651,7 @@ enum AskAIText {
 
         switch question.intent {
         case .greeting, .thanks, .farewell, .capabilities, .smallTalk:
-            add("What does the Quran say about patience?")
-            add("How do I make up a missed prayer?")
-            add("Explain Ayat al-Kursi")
+            return Array(starters.prefix(3))
         case .reference:
             if let firstAyah, case .ayah(let s, let a) = firstAyah.kind {
                 add("What comes before and after \(s):\(a)?")
@@ -655,42 +670,37 @@ enum AskAIText {
                 add("Is there a Quran verse on the same point?")
             }
         case .scripture, .hadith, .general:
-            if let topic {
-                #if HAS_HADITH
-                if question.intent != .hadith { add("What do the hadith say about \(topic)?") }
-                #endif
-                add("Is there a dua about \(topic)?")
-                if let firstAyah { add("Explain \(firstAyah.title) in more detail") }
-                add("Which surah speaks most about \(topic)?")
-            }
+            addDuaChip()
+            #if HAS_HADITH
+            if question.intent != .hadith { add("What do the hadith say about \(subject)?") }
+            #endif
+            if let firstAyah { add("Explain \(firstAyah.title) in more detail") }
+            #if HAS_QURAN
+            if let topic { add("Which surah speaks most about \(topic)?") } else { add("Which verses of the Quran speak about this?") }
+            #endif
         case .define:
-            if let topic {
-                add("Give an example of \(topic) from the Prophet\u{2019}s life")
-                add("What does the Quran say about \(topic)?")
-                add("What is the opposite of \(topic)?")
-            }
-        case .howTo:
-            if let topic {
-                add("What invalidates \(topic)?")
-                add("Common mistakes when doing \(topic)?")
-                add("What did the Prophet say about \(topic)?")
-            }
+            addDuaChip()
+            add("What does the Quran say about \(subject)?")
+            add("What did the Prophet say about \(subject)?")
         case .ruling:
-            if let topic {
-                add("What is the evidence about \(topic)?")
-                add("Do the schools of thought differ on \(topic)?")
-            }
+            add("What is the evidence on this?")
+            add("Do the schools of thought differ on this?")
         case .story:
-            if let topic {
-                add("What lessons does the story of \(topic) teach?")
-                add("Which surah tells the story of \(topic)?")
-                add("Is there a hadith about \(topic)?")
-            }
+            add(topic.map { "What lessons does the story of \($0) teach?" } ?? "What lessons does this story teach?")
+            #if HAS_QURAN
+            if firstAyah != nil || firstSurah != nil { add("Which surah tells this story?") }
+            #endif
+            #if HAS_HADITH
+            add("Is there a hadith about \(subject)?")
+            #endif
+        case .howTo:
+            addDuaChip()
+            add("What are the conditions for \(subject)?")
+            add("Common mistakes when doing \(subject)?")
+            add(topic.map { "What did the Prophet say about \($0)?" } ?? "What did the Prophet say about it?")
         case .dua:
-            if let topic {
-                add("When exactly is the dua for \(topic) said?")
-                add("Is there a hadith on the virtue of this dua?")
-            }
+            add("When exactly is this dua said?")
+            add("Is there a hadith on the virtue of this dua?")
             add("What are the morning and evening adhkar?")
         case .appHelp:
             add("What else can I customize in this app?")
@@ -704,12 +714,61 @@ enum AskAIText {
             if let firstHadith { add("Explain \(firstHadith.reference) in more detail") }
             if let firstAyah { add("What is the context of \(firstAyah.title)?") }
             add("Are there other narrations on the same point?")
+        case .crisis:
+            return AskAICrisis.suggestions
         }
         if out.isEmpty {
             add("Can you explain that more simply?")
-            add("Is there a dua related to this?")
+            add("Which sources did you use for that?")
         }
         return out
+    }
+}
+
+/// The empty screen's starter questions, rotated by the day of the year.
+enum AskAIStarters {
+    #if HAS_QURAN
+    static let pool = [
+        "What does the Quran say about patience in hardship?",
+        "How do I make up a missed prayer?",
+        "Why is Surah Al-Kahf read on Fridays?",
+        "What did the Prophet say about kindness to parents?",
+        "Explain Ayat al-Kursi",
+        "What is the difference between zakat and sadaqah?",
+        "Tell me the story of Prophet Yusuf",
+        "Is there a dua for anxiety?",
+        "What does Al-Wadud mean?",
+        "How do I perform wudu?",
+        "What are the signs of the Day of Judgment?",
+        "How do I change the reciter in this app?",
+    ]
+    #else
+    // Without the Quran reader (Al-Adhan): the same pool, with the four starters that lean on the
+    // Quran's text or its reciters swapped for ones this app's own sources answer (its prayer times,
+    // articles, duas, Names and tips).
+    static let pool = [
+        "When does the time for Isha end tonight?",
+        "How do I make up a missed prayer?",
+        "What are the sunnahs of Friday?",
+        "What did the Prophet say about kindness to parents?",
+        "What should I say after the adhan?",
+        "What is the difference between zakat and sadaqah?",
+        "Tell me the story of Prophet Yusuf",
+        "Is there a dua for anxiety?",
+        "What does Al-Wadud mean?",
+        "How do I perform wudu?",
+        "What are the signs of the Day of Judgment?",
+        "How do I change the adhan sound in this app?",
+    ]
+    #endif
+
+    /// Four starters for a day of the year, so the empty screen does not read the same every time.
+    static func forDay(_ dayOfYear: Int) -> [String] {
+        (0..<4).map { pool[(dayOfYear * 3 + $0 * 5) % pool.count] }
+    }
+
+    static func today() -> [String] {
+        forDay(Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 0)
     }
 }
 

@@ -8,6 +8,21 @@ import SwiftUI
 /// Image path reads for the same answer: one key, so the two can never drift apart.
 private let qiraahSmartComparisonKey = "qiraahSmartComparison"
 
+/// One ayah of a share, resolved on the main actor for the render queue (`ShareAyahSheet.shareEntries`):
+/// the sheet shares one from the ayah menus and the actions sheet, several from the reader's Select
+/// Ayahs bar (Abu, 2026-11-08: "support sharing multiple ayahs in one screen").
+struct ShareAyahEntry {
+    let surah: Surah
+    /// The ayah whose ARABIC is shared, numbered as `arabicQiraah` numbers it.
+    let ayah: Ayah
+    /// The Hafs ayah whose transliteration and translations are shared (the sheet's smart matching).
+    let hafsAyah: Ayah
+    /// The rest of a split ayah, joined after `ayah` (`ShareAyahSheet.arabicSplitTail`).
+    let tail: [Ayah]
+    /// The riwayah the Arabic is read in: the sheet's, or Hafs where that riwayah does not number these words.
+    let arabicQiraah: String
+}
+
 struct ShareAyahSheet: View {
     private let settings = Settings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
@@ -18,8 +33,30 @@ struct ShareAyahSheet: View {
 
     @Environment(\.presentationMode) private var presentationMode
 
-    let surahNumber: Int
-    let ayahNumber: Int
+    /// The ayahs this sheet shares, in reading order: one from the ayah menus and the actions sheet,
+    /// several from the reader's Select Ayahs bar. Never empty.
+    let refs: [HighlightedAyahRef]
+    /// The first ayah: the single-ayah paths (the note, the smart-matching anchor) and the title's start.
+    var surahNumber: Int { refs[0].surahID }
+    var ayahNumber: Int { refs[0].ayahID }
+    /// Called as the sheet closes itself after a copy or a completed share, never on a cancel or the X.
+    /// The ayah actions sheet this one may be stacked on closes too (`AyahSecondarySheetContent`).
+    var onShared: (() -> Void)? = nil
+
+    /// The most ayahs one image card draws. A longer selection shares as text: a card of thirty ayahs
+    /// of al-Baqarah with one translation is already some 5,000 pt tall.
+    static let imageAyahLimit = 30
+
+    init(surahNumber: Int, ayahNumber: Int, onShared: (() -> Void)? = nil) {
+        self.init(refs: [HighlightedAyahRef(surahID: surahNumber, ayahID: ayahNumber)], onShared: onShared)
+    }
+
+    /// Several ayahs on one card. Sorted into reading order whatever order they were picked in.
+    init(refs: [HighlightedAyahRef], onShared: (() -> Void)? = nil) {
+        precondition(!refs.isEmpty, "ShareAyahSheet needs at least one ayah")
+        self.refs = refs.sorted { ($0.surahID, $0.ayahID) < ($1.surahID, $1.ayahID) }
+        self.onShared = onShared
+    }
 
     @State private var shareSettings = ShareSettings()
 
@@ -60,6 +97,8 @@ struct ShareAyahSheet: View {
     private static let shareImageQueue = DispatchQueue(label: "app.shareAyah.imageGeneration", qos: .userInitiated)
 
     private func fetchNote() -> String? {
+        // A note belongs to one ayah; a card of several draws none.
+        guard !isMultiple else { return nil }
         if let idx = settings.bookmarkedAyahs.firstIndex(where: {
             $0.surah == surahNumber && $0.ayah == ayahNumber
         }) {
@@ -78,23 +117,34 @@ struct ShareAyahSheet: View {
 
     private var surah: Surah? { quranData.surah(surahNumber) }
 
-    /// The tapped ayah's Hafs anchor (identity when the reader was on Hafs or a Kufi-counted riwayah).
-    private var anchorHafsAyah: Int {
-        QiraahComparison.hafsAnchor(surahID: surahNumber, ayahNumber: ayahNumber, tag: originQiraah, quranData: quranData)
+    /// Whether this sheet shares more than one ayah (the reader's Select Ayahs bar).
+    private var isMultiple: Bool { refs.count > 1 }
+    private var imageAllowed: Bool { refs.count <= Self.imageAyahLimit }
+
+    // MARK: Resolving one ayah
+    //
+    // Smart matching, the split tail and the translation's Hafs anchor, each for the ref it is asked
+    // about: the single-ayah paths read `refs[0]` through the wrappers below, the card of several
+    // resolves every ref in `shareEntries`.
+
+    /// The ayah's Hafs anchor (identity when the reader was on Hafs or a Kufi-counted riwayah).
+    private func anchorHafsAyah(for ref: HighlightedAyahRef) -> Int {
+        QiraahComparison.hafsAnchor(surahID: ref.surahID, ayahNumber: ref.ayahID, tag: originQiraah, quranData: quranData)
     }
 
     /// The ayah number whose ARABIC the sheet serves. Smart matching resolves the share riwayah's own
     /// number for the tapped words via the Hafs anchor; off, it is the tapped number as-is (the old
     /// direct read, which for merged/shifted numbering shows whatever verse sits at that number).
-    private var resolvedAyahNumber: Int {
-        guard smartAyahMatching else { return ayahNumber }
+    private func resolvedAyahNumber(for ref: HighlightedAyahRef) -> Int {
+        guard smartAyahMatching else { return ref.ayahID }
+        let anchor = anchorHafsAyah(for: ref)
         let tag = Settings.Riwayah.canonicalTag(shareQiraah)
-        if tag.isEmpty { return anchorHafsAyah }
-        guard let alignment = QiraahComparison.alignment(surahID: surahNumber, tag: tag, quranData: quranData) else {
-            return ayahNumber
+        if tag.isEmpty { return anchor }
+        guard let alignment = QiraahComparison.alignment(surahID: ref.surahID, tag: tag, quranData: quranData) else {
+            return ref.ayahID
         }
         // Unnumbered there (`anchorUnnumberedInShareQiraah`): the Hafs ayah, read as Hafs.
-        return alignment.riwayahNumberForHafs[anchorHafsAyah] ?? anchorHafsAyah
+        return alignment.riwayahNumberForHafs[anchor] ?? anchor
     }
 
     /// Smart matching finds the tapped words unnumbered in the share riwayah: its alignment maps their
@@ -102,49 +152,78 @@ struct ShareAyahSheet: View {
     /// calls unavailable. The sheet then shares the Hafs words, its fallback for any ayah a riwayah
     /// does not have, rather than that riwayah's unrelated ayah under the same number (Warsh 1:1's
     /// al-hamd under the basmalah's translation).
-    private var anchorUnnumberedInShareQiraah: Bool {
+    private func anchorUnnumberedInShareQiraah(for ref: HighlightedAyahRef) -> Bool {
         guard smartAyahMatching else { return false }
         let tag = Settings.Riwayah.canonicalTag(shareQiraah)
         guard !tag.isEmpty,
-              let alignment = QiraahComparison.alignment(surahID: surahNumber, tag: tag, quranData: quranData) else { return false }
-        return alignment.riwayahNumberForHafs[anchorHafsAyah] == nil
+              let alignment = QiraahComparison.alignment(surahID: ref.surahID, tag: tag, quranData: quranData) else { return false }
+        return alignment.riwayahNumberForHafs[anchorHafsAyah(for: ref)] == nil
     }
 
     /// The riwayah the shared Arabic (and its riwayah line) is read in: the sheet's, or Hafs for the
     /// case above.
-    private var arabicQiraah: String {
-        anchorUnnumberedInShareQiraah ? Settings.Riwayah.hafsTag : shareQiraah
+    private func arabicQiraah(for ref: HighlightedAyahRef) -> String {
+        anchorUnnumberedInShareQiraah(for: ref) ? Settings.Riwayah.hafsTag : shareQiraah
     }
 
     /// The rest of a split ayah: the share riwayah's ayahs after `ayah` that carry the same ONE Hafs
     /// ayah (al-Fatiha's last ayah is two in the Madani count), shared after it as
     /// `QiraahAyahResolver` joins them, so the Arabic covers the whole translation. Empty elsewhere.
-    private var arabicSplitTail: [Ayah] {
-        guard smartAyahMatching, let surah, let first = ayah else { return [] }
-        let tag = Settings.Riwayah.canonicalTag(arabicQiraah)
+    private func arabicSplitTail(for ref: HighlightedAyahRef) -> [Ayah] {
+        guard smartAyahMatching, let surah = quranData.surah(ref.surahID), let first = ayah(for: ref) else { return [] }
+        let tag = Settings.Riwayah.canonicalTag(arabicQiraah(for: ref))
         guard !tag.isEmpty,
-              let alignment = QiraahComparison.alignment(surahID: surahNumber, tag: tag, quranData: quranData) else { return [] }
-        let anchor = anchorHafsAyah
+              let alignment = QiraahComparison.alignment(surahID: ref.surahID, tag: tag, quranData: quranData) else { return [] }
+        let anchor = anchorHafsAyah(for: ref)
         var tail: [Ayah] = []
         var last = first.id
         while alignment.hafsRangeForRiwayah[last + 1] == anchor...anchor,
               let piece = surah.ayahs.first(where: { $0.id == last + 1 }),
-              piece.existsInQiraah(tag, surahID: surahNumber) {
+              piece.existsInQiraah(tag, surahID: ref.surahID) {
             tail.append(piece)
             last += 1
         }
         return tail
     }
 
-    private var ayah: Ayah? { surah?.ayahs.first(where: { $0.id == resolvedAyahNumber }) }
+    private func ayah(for ref: HighlightedAyahRef) -> Ayah? {
+        let number = resolvedAyahNumber(for: ref)
+        return quranData.surah(ref.surahID)?.ayahs.first(where: { $0.id == number })
+    }
 
     /// Hafs-keyed companions (transliteration, both translations) read from the Hafs anchor when smart
     /// matching is on, so the English always matches the words being shared even when the Arabic sits
     /// under a different riwayah number.
-    private var translationAyah: Ayah? {
-        guard smartAyahMatching else { return ayah }
-        return surah?.ayahs.first(where: { $0.id == anchorHafsAyah }) ?? ayah
+    private func translationAyah(for ref: HighlightedAyahRef) -> Ayah? {
+        guard smartAyahMatching else { return ayah(for: ref) }
+        let anchor = anchorHafsAyah(for: ref)
+        return quranData.surah(ref.surahID)?.ayahs.first(where: { $0.id == anchor }) ?? ayah(for: ref)
     }
+
+    private func ayahExistsInShareQiraah(for ref: HighlightedAyahRef) -> Bool {
+        ayah(for: ref)?.existsInQiraah(shareQiraah, surahID: ref.surahID) ?? true
+    }
+
+    /// Every ayah of the share, resolved here on the main actor (the alignment cache is main-actor
+    /// state the render queue must never touch), in reading order; a ref the data cannot serve is
+    /// left out.
+    private var shareEntries: [ShareAyahEntry] {
+        refs.compactMap { ref in
+            guard let surah = quranData.surah(ref.surahID), let ayah = ayah(for: ref) else { return nil }
+            return ShareAyahEntry(surah: surah, ayah: ayah, hafsAyah: translationAyah(for: ref) ?? ayah,
+                                  tail: arabicSplitTail(for: ref), arabicQiraah: arabicQiraah(for: ref))
+        }
+    }
+
+    // The single-ayah forms, over the first ref: what the sheet's single-ayah paths read.
+    private var firstRef: HighlightedAyahRef { refs[0] }
+    private var anchorHafsAyah: Int { anchorHafsAyah(for: firstRef) }
+    private var resolvedAyahNumber: Int { resolvedAyahNumber(for: firstRef) }
+    private var anchorUnnumberedInShareQiraah: Bool { anchorUnnumberedInShareQiraah(for: firstRef) }
+    private var arabicQiraah: String { arabicQiraah(for: firstRef) }
+    private var arabicSplitTail: [Ayah] { arabicSplitTail(for: firstRef) }
+    private var ayah: Ayah? { ayah(for: firstRef) }
+    private var translationAyah: Ayah? { translationAyah(for: firstRef) }
 
     // Tajweed data is Hafs-only, so it keys off the sheet's riwayah, not the reader's.
     private var isHafsShare: Bool { shareQiraah.isEmpty }
@@ -337,6 +416,11 @@ struct ShareAyahSheet: View {
     }
 
     private var shareText: String {
+        if isMultiple {
+            return Self.multiShareText(entries: shareEntries, shareSettings: shareSettings, settings: settings,
+                                       includeRiwayah: settings.showQiraahDetails && shareSettings.includeQiraah,
+                                       riwayahTag: arabicQiraah)
+        }
         guard let surah = surah, let ayah = ayah else { return "" }
         let hafsAyah = translationAyah ?? ayah
 
@@ -448,6 +532,17 @@ struct ShareAyahSheet: View {
         if translit.isEmpty { return english }
         if english.isEmpty { return translit }
         return "\(translit) | \(english)"
+    }
+
+    /// One ayah by name and number; a run of them as a range ("Al-Baqarah 2:1-5"); anything else by count.
+    private var sheetTitle: String {
+        guard isMultiple else { return ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber) }
+        let oneSurah = refs.allSatisfy { $0.surahID == surahNumber }
+        let contiguous = zip(refs, refs.dropFirst()).allSatisfy { $1.ayahID == $0.ayahID + 1 }
+        if oneSurah, contiguous, let last = refs.last {
+            return ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber, endAyah: last.ayahID)
+        }
+        return String(localized: "\(refs.count) Ayahs")
     }
 
     /// Returns (English, Arabic) display names for the given displayQiraah tag.
@@ -602,11 +697,11 @@ struct ShareAyahSheet: View {
     /// to Hafs (Smart Ayah Matching off on a number that riwayah lacks). Nil while no Arabic is shared.
     private var hafsFallbackNotice: String? {
         guard shareSettings.arabic, Settings.isNonHafsQiraah(shareQiraah) else { return nil }
-        if anchorUnnumberedInShareQiraah {
+        if refs.contains(where: anchorUnnumberedInShareQiraah(for:)) {
             let riwayah = Settings.Riwayah.option(for: shareQiraah).displayLabel(omitsDefaultSuffix: true)
             return String(localized: "\(riwayah) does not count these words as an ayah, so the Hafs text is shown.")
         }
-        if !ayahExistsInShareQiraah {
+        if refs.contains(where: { !ayahExistsInShareQiraah(for: $0) }) {
             return String(localized: "This ayah is not separate in this riwayah; its words are part of a neighboring ayah, so the Hafs text is shown.")
         }
         return nil
@@ -623,15 +718,18 @@ struct ShareAyahSheet: View {
                             // The PREVIOUS image stays on screen while a regeneration runs (it is never
                             // nilled mid-flight), dimmed slightly so the swap reads as an update, not a
                             // teardown - this is what stopped the sheet's jump-and-reflow on every toggle.
-                            Image(uiImage: img)
-                                .resizable()
-                                .scaledToFit()
-                                .cornerRadius(24)
-                                .padding(.horizontal, 16)
-                                .contextMenu { copyMenu(image: img) }
-                                .opacity(isGeneratingImage ? 0.6 : 1)
-                                .animation(.easeInOut(duration: 0.15), value: isGeneratingImage)
-                                .transition(.opacity)
+                            //
+                            // Several ayahs can make a tall card: one taller than about 1.4 of its
+                            // width scrolls at full width rather than shrinking into the slot, where
+                            // a dozen ayahs were unreadable. A short one stays centred like a single.
+                            if isMultiple, img.size.height > img.size.width * 1.4 {
+                                ScrollView {
+                                    previewImage(img)
+                                        .padding(.vertical, 8)
+                                }
+                            } else {
+                                previewImage(img)
+                            }
                         } else {
                             // First render only: hold the preview slot at a stable size so the controls
                             // below don't shift when the image lands.
@@ -639,22 +737,14 @@ struct ShareAyahSheet: View {
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 180)
                         }
+                    } else if refs.count > 3 {
+                        // Long text scrolls rather than shrinking to fit (see the image above).
+                        ScrollView {
+                            textPreview
+                                .padding(.vertical, 8)
+                        }
                     } else {
-                        Text(shareAttributedText)
-                            .font(.body)
-                            .textSelection(.enabled)
-                            // With a transliteration or a translation in it the preview reads left to
-                            // right in the Arabic interface too, as the shared text does; Arabic alone
-                            // follows the interface.
-                            .leftToRightContent(shareSettings.transliteration || shareSettings.englishSaheeh || shareSettings.englishMustafa)
-                            .padding()
-                            .background(Color.black)
-                            .cornerRadius(24)
-                            .padding(.horizontal, 16)
-                            .contextMenu { copyMenu(image: generatedImage) }
-                            .lineLimit(nil)
-                            .minimumScaleFactor(0.1)
-                            .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                        textPreview
                     }
                 }
                 .scaleEffect(isSharing ? 0.98 : 1)
@@ -720,13 +810,24 @@ struct ShareAyahSheet: View {
                 }
                 .frame(maxHeight: 200)
 
-                Picker("Action Mode", selection: $actionMode) {
-                    Text("Image").tag(ActionMode.image)
-                    Text("Text").tag(ActionMode.text)
+                if imageAllowed {
+                    Picker("Action Mode", selection: $actionMode) {
+                        Text("Image").tag(ActionMode.image)
+                        Text("Text").tag(ActionMode.text)
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 4)
+                } else {
+                    // Past `imageAyahLimit` the sheet is text only, and says why instead of greying a segment.
+                    Text("Image cards are for up to \(Self.imageAyahLimit) ayahs; a longer selection shares as text.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 4)
                 }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding(.horizontal, 16)
-                .padding(.vertical, 4)
 
                 HStack(spacing: 12) {
                     actionButton(String(localized: "Copy")) {
@@ -750,7 +851,7 @@ struct ShareAyahSheet: View {
                     }
                 }
             }
-            .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))
+            .navigationTitle(sheetTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) { optionsMenu }
@@ -783,8 +884,8 @@ struct ShareAyahSheet: View {
                     showTajweed: settings.showTajweedColors
                 )
 
-                actionMode = ActionMode(rawValue: storedActionModeRaw) ?? .image
-                generatePreviewImage()
+                actionMode = imageAllowed ? (ActionMode(rawValue: storedActionModeRaw) ?? .image) : .text
+                if imageAllowed { generatePreviewImage() }
             }
 
             DispatchQueue.main.async {
@@ -794,7 +895,8 @@ struct ShareAyahSheet: View {
 
         .onChange(of: actionMode) { newValue in
             if didFinishInitialSetup { settings.hapticFeedback() }
-            storedActionModeRaw = newValue.rawValue
+            // The forced text mode of a long selection is not a preference the user expressed.
+            if imageAllowed { storedActionModeRaw = newValue.rawValue }
             if newValue == .image && generatedImage == nil {
                 generatePreviewImage()
             }
@@ -858,7 +960,7 @@ struct ShareAyahSheet: View {
             // Close the whole sheet only after a COMPLETED share. On cancel, stay put with the configured
             // preview intact.
             if !open && didCompleteShare {
-                presentationMode.wrappedValue.dismiss()
+                closeAfterSharing()
             }
         }
     }
@@ -892,6 +994,36 @@ struct ShareAyahSheet: View {
             .padding(.horizontal, 20)
         }
         .padding(.vertical, 4)
+    }
+
+    private func previewImage(_ img: UIImage) -> some View {
+        Image(uiImage: img)
+            .resizable()
+            .scaledToFit()
+            .cornerRadius(24)
+            .padding(.horizontal, 16)
+            .contextMenu { copyMenu(image: img) }
+            .opacity(isGeneratingImage ? 0.6 : 1)
+            .animation(.easeInOut(duration: 0.15), value: isGeneratingImage)
+            .transition(.opacity)
+    }
+
+    private var textPreview: some View {
+        Text(shareAttributedText)
+            .font(.body)
+            .textSelection(.enabled)
+            // With a transliteration or a translation in it the preview reads left to
+            // right in the Arabic interface too, as the shared text does; Arabic alone
+            // follows the interface.
+            .leftToRightContent(shareSettings.transliteration || shareSettings.englishSaheeh || shareSettings.englishMustafa)
+            .padding()
+            .background(Color.black)
+            .cornerRadius(24)
+            .padding(.horizontal, 16)
+            .contextMenu { copyMenu(image: generatedImage) }
+            .lineLimit(nil)
+            .minimumScaleFactor(0.1)
+            .transition(.opacity.combined(with: .scale(scale: 0.98)))
     }
 
     private func toggle(_ title: LocalizedStringKey, _ binding: Binding<Bool>, disabled: Bool) -> some View {
@@ -960,23 +1092,29 @@ struct ShareAyahSheet: View {
 
 
 
+    /// The copy is made or the share went through: the sheet is done, and says so before it closes.
+    private func closeAfterSharing() {
+        onShared?()
+        presentationMode.wrappedValue.dismiss()
+    }
+
     private func performCopyOrGenerate() {
         settings.hapticFeedback()
 
         switch actionMode {
         case .text:
             UIPasteboard.general.string = shareText
-            presentationMode.wrappedValue.dismiss()
+            closeAfterSharing()
         case .image:
             // Not while a render is in flight: the image on screen then predates the last toggle, and
             // the fresh render below supersedes the one running.
             if !isGeneratingImage, let img = generatedImage {
                 UIPasteboard.general.image = img
-                presentationMode.wrappedValue.dismiss()
+                closeAfterSharing()
             } else {
                 generatePreviewImage { img in
                     UIPasteboard.general.image = img
-                    presentationMode.wrappedValue.dismiss()
+                    closeAfterSharing()
                 }
             }
         }
@@ -999,6 +1137,8 @@ struct ShareAyahSheet: View {
     }
 
     private func generatePreviewImage(completion: @escaping (UIImage) -> Void = { _ in }) {
+        // A selection past the image limit is text only (see `imageAllowed`); nothing to draw.
+        guard imageAllowed else { return }
         // Snapshot EVERY main-actor input on main, before hopping to the render queue: the queue must never
         // read view state (shareSettings, shareQiraah, the note) that a later toggle could be rewriting.
         let snapshot = shareSettings
@@ -1010,10 +1150,7 @@ struct ShareAyahSheet: View {
         // The RESOLVED ayahs too: resolving them (smart ayah matching) walks QiraahComparison's
         // main-actor alignment cache - an unsynchronized static dictionary the render queue must
         // never touch while the main thread (this sheet's own footer) is reading/populating it.
-        let surahSnapshot = surah
-        let ayahSnapshot = ayah
-        let hafsAyahSnapshot = translationAyah
-        let tailSnapshot = arabicSplitTail
+        let entriesSnapshot = shareEntries
         let generationID = imageGenerationID + 1
         imageGenerationID = generationID
         // The previous image deliberately STAYS visible (dimmed via isGeneratingImage) while this render
@@ -1035,10 +1172,7 @@ struct ShareAyahSheet: View {
 
             let img: UIImage = autoreleasepool {
                 self.drawImage(
-                    surah: surahSnapshot,
-                    ayah: ayahSnapshot,
-                    hafsAyah: hafsAyahSnapshot,
-                    arabicTail: tailSnapshot,
+                    entries: entriesSnapshot,
                     shareSettings: snapshot,
                     qiraah: qiraahSnapshot,
                     includeNote: includeNoteSnapshot,
@@ -1063,11 +1197,11 @@ struct ShareAyahSheet: View {
         }
     }
 
-    /// Runs on the render queue - `surah`/`ayah`/`hafsAyah` are passed in as main-thread snapshots,
-    /// never resolved here (resolution touches the main-actor alignment cache).
-    private func drawImage(surah: Surah?, ayah: Ayah?, hafsAyah hafsAyahSnapshot: Ayah?, arabicTail: [Ayah], shareSettings: ShareSettings, qiraah shareQiraah: String, includeNote: Bool, noteText: String?, screenWidth: CGFloat, backdrop: ShareBackdrop) -> UIImage {
-        guard let surah, let ayah else { return UIImage() }
-        return Self.composeCard(surah: surah, ayah: ayah, hafsAyah: hafsAyahSnapshot ?? ayah, arabicTail: arabicTail, shareSettings: shareSettings,
+    /// Runs on the render queue - the entries are passed in as main-thread snapshots, never resolved
+    /// here (resolution touches the main-actor alignment cache).
+    private func drawImage(entries: [ShareAyahEntry], shareSettings: ShareSettings, qiraah shareQiraah: String, includeNote: Bool, noteText: String?, screenWidth: CGFloat, backdrop: ShareBackdrop) -> UIImage {
+        guard !entries.isEmpty else { return UIImage() }
+        return Self.composeCard(entries: entries, shareSettings: shareSettings,
                                 settings: settings, qiraah: shareQiraah, includeNote: includeNote, noteText: noteText,
                                 screenWidth: screenWidth, backdrop: backdrop)
     }
@@ -1256,6 +1390,21 @@ extension ShareAyahSheet {
     static func composeCard(surah: Surah, ayah: Ayah, hafsAyah: Ayah, arabicTail: [Ayah] = [], shareSettings: ShareSettings, settings: Settings,
                             qiraah: String, includeNote: Bool, noteText: String?, screenWidth: CGFloat,
                             backdrop: ShareBackdrop) -> UIImage {
+        composeCard(entries: [ShareAyahEntry(surah: surah, ayah: ayah, hafsAyah: hafsAyah, tail: arabicTail, arabicQiraah: qiraah)],
+                    shareSettings: shareSettings, settings: settings, qiraah: qiraah, includeNote: includeNote,
+                    noteText: noteText, screenWidth: screenWidth, backdrop: backdrop)
+    }
+
+    /// The card of one ayah or of several (the reader's Select Ayahs bar). One ayah keeps the layout
+    /// it always had; several are drawn per surah as one Arabic passage with the ayah numbers inline,
+    /// the way a mushaf line reads, then the transliteration and the translations as numbered lines
+    /// under the same reference. `qiraah` is the riwayah the face and the riwayah line follow; each
+    /// entry carries the riwayah its own Arabic is read in.
+    static func composeCard(entries: [ShareAyahEntry], shareSettings: ShareSettings, settings: Settings,
+                            qiraah: String, includeNote: Bool, noteText: String?, screenWidth: CGFloat,
+                            backdrop: ShareBackdrop) -> UIImage {
+        let first = entries[0]
+        let surah = first.surah, ayah = first.ayah, hafsAyah = first.hafsAyah, arabicTail = first.tail
         // Rounded, to match the app's system-font design (the `fontDesign` environment does not reach this
         // UIKit-drawn image, so the design is asked for explicitly).
         let bodyFont   = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
@@ -1325,106 +1474,225 @@ extension ShareAyahSheet {
         }
         func sepIfNeeded() { if text.length > 0 { append("\n\n", bodyAttr, highlightAllah: false) } }
 
-        // Arabic
-        if shareSettings.arabic {
-            let arabicText = Self.shareArabicText(
-                surah: surah,
-                ayah: ayah,
-                cleanArabic: effectiveCleanArabic(shareSettings),
-                hideArabicDots: effectiveHideArabicDots(shareSettings),
-                qiraahOverride: qiraah,
-                tail: arabicTail
-            )
-
-            if settings.showAyahInformation {
-                append("[\(Settings.shared.cleanedQuranArabic(surah.nameArabic)) ", arAccent, highlightAllah: false)
-                append("\(surah.idArabic):\(ayah.idArabic)]", accentAttr, highlightAllah: false)
-                append("\n", bodyAttr, highlightAllah: false)
-            }
-
-            if let tajweedText = Self.shareArabicImageAttributedText(
-                surah: surah,
-                ayah: ayah,
-                shareSettings: shareSettings,
-                settings: settings,
-                qiraah: qiraah,
-                font: arabicFont,
-                paragraphStyle: right,
-                textColor: arabicColor,
-                allahColor: palette.allah
-            ) {
-                text.append(tajweedText)
-            } else {
-                append(arabicText, arAttr)
-            }
-            if !settings.showAyahInformation {
-                append(" \(ayah.idArabic)", arNumberAttr, highlightAllah: false)
-            }
-        }
-
-        // Transliteration (always offered; the text itself follows Hafs numbering)
-        if shareSettings.transliteration {
-            let trLabelName = (!shareSettings.englishSaheeh && !shareSettings.englishMustafa)
-                ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish)
-                : surah.nameTransliteration
-
-            sepIfNeeded()
-
-            if settings.showAyahInformation {
-                append("[\(trLabelName) \(surah.id):\(hafsAyah.id)]", accentAttr, highlightAllah: false)
-                append("\n", bodyAttr, highlightAllah: false)
-            }
-
-            append(settings.showAyahInformation ? hafsAyah.textTransliteration : "\(hafsAyah.textTransliteration) (\(hafsAyah.id))", englishBodyAttr)
-        }
-
-        let wantsAnyEnglish = shareSettings.englishSaheeh || shareSettings.englishMustafa
-        if wantsAnyEnglish {
-            let enHeaderName = (!shareSettings.transliteration)
-                ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish)
-                : surah.nameEnglish
-
-            sepIfNeeded()
-
-            if settings.showAyahInformation {
-                append("[\(enHeaderName) \(surah.id):\(hafsAyah.id)]", accentAttr, highlightAllah: false)
-                append("\n", bodyAttr, highlightAllah: false)
-            }
-
-            if shareSettings.englishSaheeh {
-                if settings.showAyahInformation {
-                    append("- Saheeh International", captionAttr, highlightAllah: false)
-                    append("\n", bodyAttr, highlightAllah: false)
-                }
-                append(settings.showAyahInformation ? hafsAyah.textEnglishSaheeh : "\(hafsAyah.textEnglishSaheeh) (\(hafsAyah.id))", englishBodyAttr)
-            }
-
-            if shareSettings.englishMustafa {
-                if shareSettings.englishSaheeh { append("\n\n", bodyAttr, highlightAllah: false) }
+        if entries.count == 1 {
+            // Arabic
+            if shareSettings.arabic {
+                let arabicText = Self.shareArabicText(
+                    surah: surah,
+                    ayah: ayah,
+                    cleanArabic: effectiveCleanArabic(shareSettings),
+                    hideArabicDots: effectiveHideArabicDots(shareSettings),
+                    qiraahOverride: qiraah,
+                    tail: arabicTail
+                )
 
                 if settings.showAyahInformation {
-                    append("- Clear Quran (Mustafa Khattab)", captionAttr, highlightAllah: false)
+                    append("[\(Settings.shared.cleanedQuranArabic(surah.nameArabic)) ", arAccent, highlightAllah: false)
+                    append("\(surah.idArabic):\(ayah.idArabic)]", accentAttr, highlightAllah: false)
                     append("\n", bodyAttr, highlightAllah: false)
                 }
-                append(settings.showAyahInformation ? hafsAyah.textEnglishMustafa : "\(hafsAyah.textEnglishMustafa) (\(hafsAyah.id))", englishBodyAttr)
+
+                if let tajweedText = Self.shareArabicImageAttributedText(
+                    surah: surah,
+                    ayah: ayah,
+                    shareSettings: shareSettings,
+                    settings: settings,
+                    qiraah: qiraah,
+                    font: arabicFont,
+                    paragraphStyle: right,
+                    textColor: arabicColor,
+                    allahColor: palette.allah
+                ) {
+                    text.append(tajweedText)
+                } else {
+                    append(arabicText, arAttr)
+                }
+                if !settings.showAyahInformation {
+                    append(" \(ayah.idArabic)", arNumberAttr, highlightAllah: false)
+                }
             }
-        }
 
-        if includeNote, let note = noteText {
-            sepIfNeeded()
-            append("- \(String(localized: "Note"))", captionAttr, highlightAllah: false)
-            append("\n", bodyAttr, highlightAllah: false)
-            append(note, bodyAttr)
-        }
+            // Transliteration (always offered; the text itself follows Hafs numbering)
+            if shareSettings.transliteration {
+                let trLabelName = (!shareSettings.englishSaheeh && !shareSettings.englishMustafa)
+                    ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish)
+                    : surah.nameTransliteration
 
-        if shareSettings.includeQiraah {
-            sepIfNeeded()
-            let labels = Self.qiraahLabels(displayQiraah: qiraah)
-            append(String(localized: "Riwayah: \(labels.english) – \(labels.arabic)"), captionCentAttr, highlightAllah: false)
-        }
-        if settings.showSurahInformation {
-            if shareSettings.includeQiraah { append("\n", bodyAttr, highlightAllah: false) } else { sepIfNeeded() }
-            append("\(surah.ayahCountLabel()) – \(surah.pageCountLabel) – \(surah.type.capitalized.localizedDisplay) \(surah.type == "makkan" ? "🕋" : "🕌")", captionCentAttr, highlightAllah: false)
+                sepIfNeeded()
+
+                if settings.showAyahInformation {
+                    append("[\(trLabelName) \(surah.id):\(hafsAyah.id)]", accentAttr, highlightAllah: false)
+                    append("\n", bodyAttr, highlightAllah: false)
+                }
+
+                append(settings.showAyahInformation ? hafsAyah.textTransliteration : "\(hafsAyah.textTransliteration) (\(hafsAyah.id))", englishBodyAttr)
+            }
+
+            let wantsAnyEnglish = shareSettings.englishSaheeh || shareSettings.englishMustafa
+            if wantsAnyEnglish {
+                let enHeaderName = (!shareSettings.transliteration)
+                    ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish)
+                    : surah.nameEnglish
+
+                sepIfNeeded()
+
+                if settings.showAyahInformation {
+                    append("[\(enHeaderName) \(surah.id):\(hafsAyah.id)]", accentAttr, highlightAllah: false)
+                    append("\n", bodyAttr, highlightAllah: false)
+                }
+
+                if shareSettings.englishSaheeh {
+                    if settings.showAyahInformation {
+                        append("- Saheeh International", captionAttr, highlightAllah: false)
+                        append("\n", bodyAttr, highlightAllah: false)
+                    }
+                    append(settings.showAyahInformation ? hafsAyah.textEnglishSaheeh : "\(hafsAyah.textEnglishSaheeh) (\(hafsAyah.id))", englishBodyAttr)
+                }
+
+                if shareSettings.englishMustafa {
+                    if shareSettings.englishSaheeh { append("\n\n", bodyAttr, highlightAllah: false) }
+
+                    if settings.showAyahInformation {
+                        append("- Clear Quran (Mustafa Khattab)", captionAttr, highlightAllah: false)
+                        append("\n", bodyAttr, highlightAllah: false)
+                    }
+                    append(settings.showAyahInformation ? hafsAyah.textEnglishMustafa : "\(hafsAyah.textEnglishMustafa) (\(hafsAyah.id))", englishBodyAttr)
+                }
+            }
+
+            if includeNote, let note = noteText {
+                sepIfNeeded()
+                append("- \(String(localized: "Note"))", captionAttr, highlightAllah: false)
+                append("\n", bodyAttr, highlightAllah: false)
+                append(note, bodyAttr)
+            }
+
+            if shareSettings.includeQiraah {
+                sepIfNeeded()
+                let labels = Self.qiraahLabels(displayQiraah: qiraah)
+                append(String(localized: "Riwayah: \(labels.english) – \(labels.arabic)"), captionCentAttr, highlightAllah: false)
+            }
+            if settings.showSurahInformation {
+                if shareSettings.includeQiraah { append("\n", bodyAttr, highlightAllah: false) } else { sepIfNeeded() }
+                append("\(surah.ayahCountLabel()) – \(surah.pageCountLabel) – \(surah.type.capitalized.localizedDisplay) \(surah.type == "makkan" ? "🕋" : "🕌")", captionCentAttr, highlightAllah: false)
+            }
+        } else {
+            // Several ayahs: per surah, one passage with the ayah numbers inline, then the
+            // transliteration and the translations numbered line by line under the same reference.
+            // A note belongs to one ayah, so none is drawn here.
+            let groups = Self.surahGroups(entries)
+
+            if shareSettings.arabic {
+                for group in groups {
+                    sepIfNeeded()
+                    if settings.showAyahInformation {
+                        append("[\(Settings.shared.cleanedQuranArabic(group.surah.nameArabic)) ", arAccent, highlightAllah: false)
+                        append("\(group.surah.idArabic):\(Self.referenceLabel(ayahIDs: group.entries.map { $0.ayah.id }, arabicDigits: true))]",
+                               accentAttr, highlightAllah: false)
+                        append("\n", bodyAttr, highlightAllah: false)
+                    }
+                    for (index, entry) in group.entries.enumerated() {
+                        if index > 0 { append(" ", arAttr, highlightAllah: false) }
+                        if let tajweedText = Self.shareArabicImageAttributedText(
+                            surah: group.surah,
+                            ayah: entry.ayah,
+                            shareSettings: shareSettings,
+                            settings: settings,
+                            qiraah: entry.arabicQiraah,
+                            font: arabicFont,
+                            paragraphStyle: right,
+                            textColor: arabicColor,
+                            allahColor: palette.allah
+                        ) {
+                            text.append(tajweedText)
+                        } else {
+                            append(Self.shareArabicText(
+                                surah: group.surah,
+                                ayah: entry.ayah,
+                                cleanArabic: effectiveCleanArabic(shareSettings),
+                                hideArabicDots: effectiveHideArabicDots(shareSettings),
+                                qiraahOverride: entry.arabicQiraah,
+                                tail: entry.tail
+                            ), arAttr)
+                        }
+                        // The ayah's number after its words, as the single card draws it without a header.
+                        append(" \(entry.ayah.idArabic)", arNumberAttr, highlightAllah: false)
+                    }
+                }
+            }
+
+            if shareSettings.transliteration {
+                for group in groups {
+                    let trLabelName = (!shareSettings.englishSaheeh && !shareSettings.englishMustafa)
+                        ? combinedName(translit: group.surah.nameTransliteration, english: group.surah.nameEnglish)
+                        : group.surah.nameTransliteration
+
+                    sepIfNeeded()
+
+                    if settings.showAyahInformation {
+                        append("[\(trLabelName) \(group.surah.id):\(Self.referenceLabel(ayahIDs: group.entries.map { $0.hafsAyah.id }))]",
+                               accentAttr, highlightAllah: false)
+                        append("\n", bodyAttr, highlightAllah: false)
+                    }
+                    for (index, entry) in group.entries.enumerated() {
+                        if index > 0 { append("\n", bodyAttr, highlightAllah: false) }
+                        append("\(entry.hafsAyah.id). \(entry.hafsAyah.textTransliteration)", englishBodyAttr)
+                    }
+                }
+            }
+
+            let wantsAnyEnglish = shareSettings.englishSaheeh || shareSettings.englishMustafa
+            if wantsAnyEnglish {
+                for group in groups {
+                    let enHeaderName = (!shareSettings.transliteration)
+                        ? combinedName(translit: group.surah.nameTransliteration, english: group.surah.nameEnglish)
+                        : group.surah.nameEnglish
+
+                    sepIfNeeded()
+
+                    if settings.showAyahInformation {
+                        append("[\(enHeaderName) \(group.surah.id):\(Self.referenceLabel(ayahIDs: group.entries.map { $0.hafsAyah.id }))]",
+                               accentAttr, highlightAllah: false)
+                        append("\n", bodyAttr, highlightAllah: false)
+                    }
+
+                    if shareSettings.englishSaheeh {
+                        if settings.showAyahInformation {
+                            append("- Saheeh International", captionAttr, highlightAllah: false)
+                            append("\n", bodyAttr, highlightAllah: false)
+                        }
+                        for (index, entry) in group.entries.enumerated() {
+                            if index > 0 { append("\n", bodyAttr, highlightAllah: false) }
+                            append("\(entry.hafsAyah.id). \(entry.hafsAyah.textEnglishSaheeh)", englishBodyAttr)
+                        }
+                    }
+
+                    if shareSettings.englishMustafa {
+                        if shareSettings.englishSaheeh { append("\n\n", bodyAttr, highlightAllah: false) }
+
+                        if settings.showAyahInformation {
+                            append("- Clear Quran (Mustafa Khattab)", captionAttr, highlightAllah: false)
+                            append("\n", bodyAttr, highlightAllah: false)
+                        }
+                        for (index, entry) in group.entries.enumerated() {
+                            if index > 0 { append("\n", bodyAttr, highlightAllah: false) }
+                            append("\(entry.hafsAyah.id). \(entry.hafsAyah.textEnglishMustafa)", englishBodyAttr)
+                        }
+                    }
+                }
+            }
+
+            if shareSettings.includeQiraah {
+                sepIfNeeded()
+                let labels = Self.qiraahLabels(displayQiraah: qiraah)
+                append(String(localized: "Riwayah: \(labels.english) – \(labels.arabic)"), captionCentAttr, highlightAllah: false)
+            }
+            // The surah line names ONE surah; a selection that crossed into the next says nothing here.
+            if settings.showSurahInformation, groups.count == 1 {
+                let only = groups[0].surah
+                if shareSettings.includeQiraah { append("\n", bodyAttr, highlightAllah: false) } else { sepIfNeeded() }
+                append("\(only.ayahCountLabel()) – \(only.pageCountLabel) – \(only.type.capitalized.localizedDisplay) \(only.type == "makkan" ? "🕋" : "🕌")", captionCentAttr, highlightAllah: false)
+            }
         }
         // Every run on the card's ground at 3:1 or better: the tajweed colors (made for the reader's
         // white or black page) and any custom ones, which the designs' own inks already clear.
@@ -1461,7 +1729,11 @@ extension ShareAyahSheet {
         let watermark = Self.backdropWatermark(backdrop: backdrop, surah: surah, ayah: ayah, tail: arabicTail, shareSettings: shareSettings,
                                                qiraah: qiraah, fontName: arabicFontName, width: maxWidth, color: arabicColor)
 
-        let r1 = UIGraphicsImageRenderer(size: canvas.size)
+        // A long passage (the Select Ayahs bar) makes a tall card: past ~1,800 pt it is drawn at 2x
+        // rather than the screen's 3x, which keeps a thirty-ayah card's bitmap under ~50 MB.
+        let format = UIGraphicsImageRendererFormat.default()
+        if canvas.height > 1800 { format.scale = 2 }
+        let r1 = UIGraphicsImageRenderer(size: canvas.size, format: format)
         let card = r1.image { ctx in
             let textFrame = CGRect(x: padding, y: headroom.top + padding, width: canvas.width - 2*padding,
                                    height: textRect.height - 2*padding)
@@ -1477,10 +1749,113 @@ extension ShareAyahSheet {
             }
             wmText.draw(in: CGRect(x: wmX + logoSize.width + spacing, y: wmY, width: wmTextSize.width, height: wmTextSize.height))
         }
-        return UIGraphicsImageRenderer(size: canvas.size).image { _ in
+        return UIGraphicsImageRenderer(size: canvas.size, format: format).image { _ in
             UIBezierPath(roundedRect: canvas, cornerRadius: backdrop.cornerRadius).addClip()
             card.draw(at: .zero)
         }
+    }
+
+    // MARK: Several ayahs
+
+    /// The entries grouped by surah, in order: a selection that crossed a surah boundary (page mode)
+    /// gets one passage and one set of headers per surah.
+    static func surahGroups(_ entries: [ShareAyahEntry]) -> [(surah: Surah, entries: [ShareAyahEntry])] {
+        var groups: [(surah: Surah, entries: [ShareAyahEntry])] = []
+        for entry in entries {
+            if let last = groups.indices.last, groups[last].surah.id == entry.surah.id {
+                groups[last].entries.append(entry)
+            } else {
+                groups.append((surah: entry.surah, entries: [entry]))
+            }
+        }
+        return groups
+    }
+
+    /// "1-5" for a run of ayahs, "1, 3, 7-9" otherwise; Arabic-Indic digits (and the Arabic comma)
+    /// for the Arabic header. Duplicates fold, order is numeric.
+    static func referenceLabel(ayahIDs: [Int], arabicDigits: Bool = false) -> String {
+        let ids = Array(Set(ayahIDs)).sorted()
+        var runs: [String] = []
+        var index = 0
+        while index < ids.count {
+            var end = index
+            while end + 1 < ids.count, ids[end + 1] == ids[end] + 1 { end += 1 }
+            let from = arabicDigits ? arabicNumberString(from: ids[index]) : String(ids[index])
+            let to = arabicDigits ? arabicNumberString(from: ids[end]) : String(ids[end])
+            runs.append(end > index ? "\(from)-\(to)" : from)
+            index = end + 1
+        }
+        return runs.joined(separator: arabicDigits ? "، " : ", ")
+    }
+
+    /// The text of several ayahs (the Select Ayahs bar's share in text mode): the card's sections in
+    /// plain text. `includeRiwayah` is already gated on `showQiraahDetails`, as the single text is.
+    static func multiShareText(entries: [ShareAyahEntry], shareSettings: ShareSettings, settings: Settings,
+                               includeRiwayah: Bool, riwayahTag: String) -> String {
+        var s = ""
+        func sepIfNeeded() { if !s.isEmpty { s += "\n\n" } }
+        let groups = surahGroups(entries)
+
+        if shareSettings.arabic {
+            for group in groups {
+                sepIfNeeded()
+                if settings.showAyahInformation {
+                    s += "[\(Settings.shared.cleanedQuranArabic(group.surah.nameArabic)) \(group.surah.idArabic):\(referenceLabel(ayahIDs: group.entries.map { $0.ayah.id }, arabicDigits: true))]\n"
+                }
+                s += group.entries.map { entry in
+                    shareArabicText(surah: group.surah, ayah: entry.ayah,
+                                    cleanArabic: effectiveCleanArabic(shareSettings),
+                                    hideArabicDots: effectiveHideArabicDots(shareSettings),
+                                    qiraahOverride: entry.arabicQiraah, tail: entry.tail) + " \(entry.ayah.idArabic)"
+                }.joined(separator: " ")
+            }
+        }
+
+        if shareSettings.transliteration {
+            for group in groups {
+                sepIfNeeded()
+                let name = (!shareSettings.englishSaheeh && !shareSettings.englishMustafa)
+                    ? combinedName(translit: group.surah.nameTransliteration, english: group.surah.nameEnglish)
+                    : group.surah.nameTransliteration
+                if settings.showAyahInformation {
+                    s += "[\(name) \(group.surah.id):\(referenceLabel(ayahIDs: group.entries.map { $0.hafsAyah.id }))]\n"
+                }
+                s += group.entries.map { "\($0.hafsAyah.id). \($0.hafsAyah.textTransliteration)" }.joined(separator: "\n")
+            }
+        }
+
+        if shareSettings.englishSaheeh || shareSettings.englishMustafa {
+            for group in groups {
+                sepIfNeeded()
+                let name = (!shareSettings.transliteration)
+                    ? combinedName(translit: group.surah.nameTransliteration, english: group.surah.nameEnglish)
+                    : group.surah.nameEnglish
+                if settings.showAyahInformation {
+                    s += "[\(name) \(group.surah.id):\(referenceLabel(ayahIDs: group.entries.map { $0.hafsAyah.id }))]\n"
+                }
+                if shareSettings.englishSaheeh {
+                    if settings.showAyahInformation { s += "- Saheeh International\n" }
+                    s += group.entries.map { "\($0.hafsAyah.id). \($0.hafsAyah.textEnglishSaheeh)" }.joined(separator: "\n")
+                }
+                if shareSettings.englishMustafa {
+                    if shareSettings.englishSaheeh { s += "\n\n" }
+                    if settings.showAyahInformation { s += "- Mustafa Khattab\n" }
+                    s += group.entries.map { "\($0.hafsAyah.id). \($0.hafsAyah.textEnglishMustafa)" }.joined(separator: "\n")
+                }
+            }
+        }
+
+        if includeRiwayah {
+            sepIfNeeded()
+            let labels = qiraahLabels(displayQiraah: riwayahTag)
+            s += String(localized: "Riwayah: \(labels.english) – \(labels.arabic)")
+        }
+        if settings.showSurahInformation, groups.count == 1 {
+            let only = groups[0].surah
+            if includeRiwayah, !s.isEmpty { s += "\n" } else { sepIfNeeded() }
+            s += "\(only.ayahCountLabel()) – \(only.pageCountLabel) – \(only.type.capitalized.localizedDisplay) \(only.type == "makkan" ? "🕋" : "🕌")"
+        }
+        return s
     }
 
 }
@@ -1512,6 +1887,18 @@ extension ShareAyahSheet {
                 let image = composeCard(surah: surah, ayah: ayah, hafsAyah: ayah, shareSettings: sample.share, settings: settings,
                                         qiraah: "", includeNote: false, noteText: nil, screenWidth: 402, backdrop: backdrop)
                 try? image.pngData()?.write(to: folder.appendingPathComponent("\(sample.name)-\(backdrop.rawValue).png"))
+            }
+        }
+        // Several ayahs on one card (the Select Ayahs bar): al-Baqarah 2:1-5 with tajweed and the
+        // Saheeh line, on every backdrop.
+        if let baqarah = quranData.surah(2) {
+            let entries = baqarah.ayahs.filter { (1...5).contains($0.id) }.map {
+                ShareAyahEntry(surah: baqarah, ayah: $0, hafsAyah: $0, tail: [], arabicQiraah: "")
+            }
+            for backdrop in ShareBackdrop.allCases {
+                let image = composeCard(entries: entries, shareSettings: ShareSettings(arabic: true, englishSaheeh: true, showTajweed: true),
+                                        settings: settings, qiraah: "", includeNote: false, noteText: nil, screenWidth: 402, backdrop: backdrop)
+                try? image.pngData()?.write(to: folder.appendingPathComponent("multi-\(backdrop.rawValue).png"))
             }
         }
         // The classic card takes the reader's accent: every preset's contrast on its black ground,

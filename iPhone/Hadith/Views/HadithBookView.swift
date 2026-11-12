@@ -703,6 +703,10 @@ struct HadithBookView: View {
             ? inBookMatches
             : (shown: [HadithBookData.Hadith](), hasMore: false)
         let shownChapters = filteredChapters
+        #if os(iOS)
+        // The chapter numbers down the edge, in the list and the grid alike; not while searching.
+        let railItems = isSearchActive ? [] : Self.chapterRailItems(shownChapters, data: data, book: book)
+        #endif
 
         return ScrollViewReader { scrollProxy in
         List {
@@ -869,14 +873,15 @@ struct HadithBookView: View {
             }
             .themedListRowBackground()
         }
+        #if os(iOS)
+        .jumpIndexRailRoom(railItems)
+        #endif
         // Column mode: this is the CONTENT column and the reading column beside it shows the Now
         // Playing bar - suppress the duplicate here (same rule as the catalog and the Quran sidebar).
         .applyConditionalListStyle(disableNowPlayingInset: usesColumnNavigation)
         .compactListSectionSpacing()
         #if os(iOS)
-        // The chapter numbers down the edge, in the list and the grid alike; not while searching.
-        .jumpIndexRail(isSearchActive ? [] : Self.chapterRailItems(shownChapters, data: data, book: book),
-                       accessibilityName: String(localized: "Chapter index"), proxy: scrollProxy) { item -> String? in
+        .jumpIndexRail(railItems, accessibilityName: String(localized: "Chapter index"), proxy: scrollProxy) { item -> String? in
             guard shownChapters.indices.contains(item.id) else { return nil }
             let chunk = tileGridChunk(columns: Self.chapterGridColumns)
             return showsGrid
@@ -905,8 +910,10 @@ struct HadithBookView: View {
             // This book's chains of narrators (HadithChains.swift), inflated off the main thread while
             // the reader picks a chapter, so its rows' first question is a lookup.
             HadithChainStore.shared.prewarm(slug: book.slug)
-            // Likewise this book's similar-narration lists (SimilarHadiths.swift).
+            // Likewise this book's similar-narration lists (SimilarHadiths.swift) and its links to the
+            // Hadith Encyclopedia's explanations (HadithExplanations.swift).
             SimilarHadithsStore.shared.prewarm(slug: book.slug)
+            HadithExplanationStore.shared.prewarm(slug: book.slug)
 
             #if DEBUG
             // `-hadithBookSearch <term>` (with `-launchHadithBook <slug>`): the in-book search, headless.
@@ -2479,23 +2486,41 @@ struct HadithChapterView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        // Select mode takes the bar over the way the surah reader's does (`SurahView.applySurahToolbar`,
+        // 2026-11-09): the count where the title was, Select All in the back button's place, Done
+        // trailing. The bottom bar then holds only the actions (`selectionActionBar`).
+        .navigationBarBackButtonHidden(isSelectingHadiths)
         .toolbar {
-            // The SurahView toolbar shape, exactly: the title IS the menu (a glass button carrying the
-            // chapter identity), the gear top right. The old leading pages/list button lives in the
-            // menu now - the chapters screen keeps its own toggle for the default.
-            ToolbarItem(placement: .principal) {
-                chapterTitleMenuButton
-            }
-
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    settings.hapticFeedback()
-                    showChapterSettings = true
-                } label: {
-                    Image(systemName: "gear")
+            if isSelectingHadiths {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    selectAllButton
                 }
-                .accessibilityLabel("Hadith settings")
-                .tint(settings.accentColor.accent2)
+
+                ToolbarItem(placement: .principal) {
+                    selectionTitle
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    selectionDoneButton
+                }
+            } else {
+                // The SurahView toolbar shape, exactly: the title IS the menu (a glass button carrying the
+                // chapter identity), the gear top right. The old leading pages/list button lives in the
+                // menu now - the chapters screen keeps its own toggle for the default.
+                ToolbarItem(placement: .principal) {
+                    chapterTitleMenuButton
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        settings.hapticFeedback()
+                        showChapterSettings = true
+                    } label: {
+                        Image(systemName: "gear")
+                    }
+                    .accessibilityLabel("Hadith settings")
+                    .tint(settings.accentColor.accent2)
+                }
             }
         }
         .onChange(of: searchText) { text in
@@ -2724,6 +2749,11 @@ struct HadithChapterView: View {
 
     private var chapterList: some View {
         ScrollViewReader { scrollProxy in
+        #if os(iOS)
+        // The hadiths' places in the chapter down the edge, the surah reader's ayah rail: the
+        // numbers the rows lead with, the book's own citation in the bubble.
+        let railItems = !isSearchActive && textReady ? hadithRailItems : []
+        #endif
         List {
             Group {
                 if isSearchActive {
@@ -2864,15 +2894,15 @@ struct HadithChapterView: View {
             }
             .themedListRowBackground()
         }
+        #if os(iOS)
+        .jumpIndexRailRoom(railItems)
+        #endif
         // The ayah list's fix for a pinned header sitting flush on the first row: breathing room
         // via the list's top content margin, not a phantom spacer row.
         .applyConditionalListStyle(topContentMargin: 11, readingWidth: true)
         .compactListSectionSpacing()
         #if os(iOS)
-        // The hadiths' places in the chapter down the edge, the surah reader's ayah rail: the
-        // numbers the rows lead with, the book's own citation in the bubble.
-        .jumpIndexRail(!isSearchActive && textReady ? hadithRailItems : [],
-                       accessibilityName: String(localized: "Hadith index"), proxy: scrollProxy) { item in
+        .jumpIndexRail(railItems, accessibilityName: String(localized: "Hadith index"), proxy: scrollProxy) { item in
             allChapterHadiths.indices.contains(item.id) ? "chapter-hadith-\(allChapterHadiths[item.id].idInBook)" : nil
         }
         #endif
@@ -2970,77 +3000,93 @@ struct HadithChapterView: View {
         }
     }
 
-    /// The bulk-action bar shown while selecting: count, Copy, Share, Bookmark, Select All, Done -
-    /// one glass bar where the search normally sits.
+    /// The bulk actions while selecting, the surah reader's bar exactly (`SurahView.selectionActionBar`,
+    /// 2026-11-09): one glass row of bare symbols, Copy, Share, Bookmark, where the search normally
+    /// sits. The count, Select All and Done moved up to the navigation bar for the duration (see the
+    /// toolbar), so the two readers' select modes read the same. The old bar put all six in one slab.
     private var selectionActionBar: some View {
-        HStack(spacing: 16) {
-            Text("\(selectedHadithIDs.count)")
-                .font(.subheadline.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(selectedHadithIDs.isEmpty ? .secondary : .primary)
-
-            Button {
-                settings.hapticFeedback()
-                UIPasteboard.general.string = selectedHadiths
-                    .map { HadithShareSheet.composedText(book: book, hadith: $0) }
-                    .joined(separator: "\n\n")
-            } label: {
-                Image(systemName: "doc.on.doc")
-                    .font(.body.weight(.semibold))
+        HStack(spacing: 0) {
+            bulkActionButton(String(localized: "Copy"), systemImage: "doc.on.doc") {
+                UIPasteboard.general.string = selectedHadithsText
+                CopyConfirmation.shared.show()
             }
-            .disabled(selectedHadithIDs.isEmpty)
-
-            Button {
-                settings.hapticFeedback()
-                let text = selectedHadiths
-                    .map { HadithShareSheet.composedText(book: book, hadith: $0) }
-                    .joined(separator: "\n\n")
-                presentSystemShareSheet(items: [text])
-            } label: {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.body.weight(.semibold))
+            bulkActionButton(String(localized: "Share"), systemImage: "square.and.arrow.up") {
+                presentSystemShareSheet(items: [selectedHadithsText])
             }
-            .disabled(selectedHadithIDs.isEmpty)
-
-            Button {
-                settings.hapticFeedback()
+            bulkActionButton(allSelectedBookmarked ? String(localized: "Remove Bookmarks") : String(localized: "Bookmark"),
+                             systemImage: allSelectedBookmarked ? "bookmark.fill" : "bookmark") {
                 bulkToggleHadithBookmarks()
-            } label: {
-                Image(systemName: allSelectedBookmarked ? "bookmark.fill" : "bookmark")
-                    .font(.body.weight(.semibold))
-            }
-            .accessibilityLabel(allSelectedBookmarked ? "Remove Bookmarks" : "Bookmark")
-            .disabled(selectedHadithIDs.isEmpty)
-
-            Spacer()
-
-            // The surah reader's Select All: the whole chapter on screen, or none of it.
-            let allSelected = !allChapterHadiths.isEmpty && selectedHadithIDs.count >= allChapterHadiths.count
-            Button {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    selectedHadithIDs = allSelected ? [] : Set(allChapterHadiths.map(\.idInBook))
-                }
-            } label: {
-                Text(allSelected ? "Deselect All" : "Select All")
-                    .font(.caption.weight(.semibold))
-            }
-
-            Button {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    isSelectingHadiths = false
-                    selectedHadithIDs = []
-                }
-            } label: {
-                Text("Done")
-                    .font(.subheadline.weight(.semibold))
             }
         }
-        .foregroundStyle(settings.accentColor.color)
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
-        .conditionalGlassEffect(rectangle: true)
+        .disabled(selectedHadithIDs.isEmpty)
+        .opacity(selectedHadithIDs.isEmpty ? 0.45 : 1)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .conditionalGlassEffect()
+    }
+
+    /// Every selected hadith's share text, in reading order.
+    private var selectedHadithsText: String {
+        selectedHadiths
+            .map { HadithShareSheet.composedText(book: book, hadith: $0) }
+            .joined(separator: "\n\n")
+    }
+
+    /// Select mode's navigation bar, in place of the chapter title, the gear and the back button: the
+    /// count as the title, Select All leading, Done trailing (the system's edit-mode arrangement).
+    private var selectionTitle: some View {
+        Text("\(selectedHadithIDs.count) Selected")
+            .font(.headline)
+            .monospacedDigit()
+            .lineLimit(1)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// The whole chapter on screen, or none of it.
+    private var selectAllButton: some View {
+        let allSelected = !allChapterHadiths.isEmpty && selectedHadithIDs.count >= allChapterHadiths.count
+
+        return Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut) {
+                selectedHadithIDs = allSelected ? [] : Set(allChapterHadiths.map(\.idInBook))
+            }
+        } label: {
+            Text(allSelected ? "Deselect All" : "Select All")
+                .lineLimit(1)
+        }
+        .tint(settings.accentColor.color)
+    }
+
+    private var selectionDoneButton: some View {
+        Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut) {
+                isSelectingHadiths = false
+                selectedHadithIDs = []
+            }
+        } label: {
+            Text("Done")
+                .fontWeight(.semibold)
+        }
+        .tint(settings.accentColor.color)
+    }
+
+    /// A bare symbol in an equal-width slot, the title for VoiceOver: the surah reader's
+    /// `bulkActionLabel`, so the two bars draw alike.
+    private func bulkActionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button {
+            settings.hapticFeedback()
+            action()
+        } label: {
+            Image(systemName: systemImage)
+                .font(.body.weight(.semibold))
+                .foregroundColor(settings.accentColor.color)
+                .frame(maxWidth: .infinity, minHeight: 36)
+                .contentShape(Rectangle())
+                .accessibilityLabel(title)
+        }
+        .buttonStyle(.plain)
     }
 
     /// The chapter's identity, pinned above the list - reorganized around the ordinal chip: number in

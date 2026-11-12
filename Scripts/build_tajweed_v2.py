@@ -745,7 +745,7 @@ def hafs_diff_extent(key, s, a, wi, cl):
 # (context hints), and the madd wave (length hint, not a letter difference).
 NONREADING = {RING, HIGHDOT, "ۖ", "ۗ", "ۘ", "ۚ", "ۛ", "۟", "۠", "ۢ", "ۭ", MADDAH}
 
-def norm_clusters(cl, word_initial_hamza=True):
+def norm_clusters(cl, word_initial_hamza=True, pair=None, keep=frozenset()):
     """(base, markset) pairs normalized so orthography-only conventions do not
     read as differences between these editions and Hafs:
       - ٱ=ا, and word-initial أ/إ=ا (qat' hamza written as plain voweled alef)
@@ -753,8 +753,15 @@ def norm_clusters(cl, word_initial_hamza=True):
       - the definite-article/لل lam drops ALL its marks (their الذين family
         and لله are written without shadda; naql puts a vowel there)
       - hamza seats fold: ئ=(ى+ٔ), ؤ=(و+ٔ); hamza-below counts as hamza-above
-      - NONREADING marks are stripped."""
-    skl = "".join(c[0] for c in cl).replace("ٱ", "ا")
+      - NONREADING marks are stripped.
+    `pair`, when given, is the aligned Hafs word's clusters (same length) and settles
+    the two spellings that are ambiguous on this side alone: a bare voweled alef is a
+    wasl alef where Hafs writes ٱ (وَاَتَّقُونِ against وَٱتَّقُونِ: the vowel is the ibtida
+    hint, not a reading), and an opening ا+ل is the article only where Hafs's is
+    (an eased hamzah is written as a bare alef, so اَ۬لَآ for أَلَآ would otherwise
+    read as the article and lose its lam's marks on this side only). `keep` names
+    NONREADING signs that count as reading here after all (see `PAIRED_READING`)."""
+    skl = "".join(c[0] for c in (pair if pair is not None else cl)).replace("ٱ", "ا")
     art_lam = None
     for pref in ("ال", "وال", "فال", "بال", "كال", "تال", "لل", "ولل", "فلل"):
         if skl.startswith(pref):
@@ -763,7 +770,7 @@ def norm_clusters(cl, word_initial_hamza=True):
     out = []
     for ci, c in enumerate(cl):
         b = c[0].replace("ٱ", "ا")
-        ms = set(c[1]) - NONREADING
+        ms = set(c[1]) - (NONREADING - keep)
         if b == "ئ":
             b = "ى"; ms.add(HAMZA_ABOVE)
         elif b == "ؤ":
@@ -775,7 +782,8 @@ def norm_clusters(cl, word_initial_hamza=True):
         if ci == 0 and word_initial_hamza and b in "أإ":
             b = "ا"; ms.discard(HAMZA_ABOVE)
         wasl = b == "ا" and (c[0] == "ٱ" or RING in c[1] or HIGHDOT in c[1] or "۟" in c[1]
-                             or (art_lam is not None and ci == art_lam - 1))
+                             or (art_lam is not None and ci == art_lam - 1)
+                             or (pair is not None and pair[ci][0] == "ٱ" and HAMZA_ABOVE not in ms))
         if wasl:
             ms -= {FATHA, KASRA, DAMMA}   # wasl alef: ibtida hint, not reading
         if ci == art_lam and b == "ل":
@@ -864,7 +872,28 @@ def _runs(indexes):
     return [tuple(x) for x in out]
 
 
-def reading_diff(key, s, a, wi, cl):
+# The sign for a letter silent in wasl (U+06E0). NONREADING everywhere else, but on these
+# editions' dropped hāʾ as-sakt (يَتَسَنَّه۠ for Hafs's يَتَسَنَّهۡ) it IS the reading, so the paired
+# compare keeps it and the mark lands on that hāʾ instead of the whole word.
+PAIRED_READING = frozenset("۠")
+
+
+def _marks_equal(a, b):
+    """Sukoon-vs-nothing is a writing convention, not a reading."""
+    return a == b or a ^ b == {SUKOON}
+
+
+def _through_predecessor(cl, lo, hi):
+    """A run of bare madd letters (the ibdal of a hamzah: يَاجُوجَ for يَأۡجُوجَ) sounds through
+    its predecessor's vowel, so the run starts one letter earlier. The paired narrowing
+    leaves this out: there the mark is carried onto Hafs's letters, where the hamzah seat
+    itself is the counterpart, and an added letter lands on the letter it follows anyway."""
+    if lo > 0 and all(cl[j][0] in "ويا" and not (set(cl[j][1]) & VOCAL) for j in range(lo, hi + 1)):
+        lo -= 1
+    return (lo, hi)
+
+
+def reading_diff(key, s, a, wi, cl, paired=False):
     """None when no aligned Hafs token; else (identical, lo, hi, runs).
 
     lo/hi is the differing cluster extent in ORIGINAL cluster indexes (None, None when
@@ -872,13 +901,39 @@ def reading_diff(key, s, a, wi, cl):
     split into CONTIGUOUS stretches: a word differing at letters 1 and 5 has runs
     [(1,1),(5,5)] where lo/hi alone says 1..5, and the span washed the three letters
     between them that the print leaves black. Callers that can emit several extents per
-    word use `runs`; `lo`/`hi` stay for the ones that cannot."""
+    word use `runs`; `lo`/`hi` stay for the ones that cannot. With `paired`, the compare is
+    tuned for narrowing a whole-word print's mark: a word of the same letter count is
+    normalized against Hafs's spelling (see `norm_clusters`), the wasl sign ۠ counts as a
+    reading, a shaddah on the word's first letter is the PREVIOUS word's idgham (noon
+    sakinah or tanwin into it, or Hafs's own ب into م) and carries the mark only when it is
+    the whole difference, a first consonant written with no vowel at all takes Hafs's (no
+    word begins with a vowelless consonant, so the extraction dropped it: ونُكَفِّرۡ for وَيُكَفِّرُ
+    marks the nūn, not the wāw), two skeletons of the same length are compared letter by letter
+    (سَنَكۡتُبُ against سَيُكۡتَبُ marks the nūn and the tāʾ, not the kāf between), and a bare
+    madd letter does not reach back to its predecessor (see `_through_predecessor`)."""
     ht = hafs_tok(key, s, a, wi)
     if ht is None:
         return None
     hcl = clusterize(ht)
-    r = norm_clusters(cl)
-    h = norm_clusters(hcl)
+    keep = PAIRED_READING if paired else frozenset()
+    r = norm_clusters(cl, pair=hcl if paired and len(cl) == len(hcl) else None, keep=keep)
+    h = norm_clusters(hcl, keep=keep)
+    if paired and r and h and r[0][0] == h[0][0] and r[0][0] != "ا" and not (r[0][1] & VOCAL) \
+            and h[0][1] & {FATHA, KASRA, DAMMA}:
+        # a bare alef is a reading (wasl, or an eased hamzah); a bare consonant is a dropped vowel
+        r[0] = (r[0][0], r[0][1] | (h[0][1] & {FATHA, KASRA, DAMMA}))
+    initial_shaddah = False
+    if paired and r and h and r[0][0] == h[0][0] and r[0][1] ^ h[0][1] == {SHADDA}:
+        initial_shaddah = True
+        r[0] = (r[0][0], r[0][1] - {SHADDA})
+        h[0] = (h[0][0], h[0][1] - {SHADDA})
+    d = _reading_diff_core(key, s, a, wi, cl, r, h, paired)
+    if d[0] and initial_shaddah:
+        return (False, 0, 0, [(0, 0)])
+    return d
+
+
+def _reading_diff_core(key, s, a, wi, cl, r, h, paired):
     if article_naql_equal(r, h):
         return (True, None, None, [])
     if [x[0] for x in r] == [x[0] for x in h]:
@@ -898,6 +953,10 @@ def reading_diff(key, s, a, wi, cl):
         if not diff:
             return (True, None, None, [])
         return (False, rmap[min(diff)], rmap[max(diff)], _runs([rmap[i] for i in diff]))
+    if paired and len(rb) == len(hb):
+        diff = [i for i in range(len(rb)) if rb[i] != hb[i] or not _marks_equal(re_[i][1], he[i][1])]
+        runs = _runs({rmap[i] for i in diff})
+        return (False, runs[0][0], runs[-1][1], runs)
     lo = 0
     while lo < len(rb) and lo < len(hb) and rb[lo] == hb[lo] \
             and (re_[lo][1] == he[lo][1] or re_[lo][1] ^ he[lo][1] == {SUKOON}):
@@ -912,8 +971,8 @@ def reading_diff(key, s, a, wi, cl):
     if hi_r >= len(rb):
         return (False, None, None, [])  # pure deletion vs hafs: no local letter to paint
     olo, ohi = rmap[lo], rmap[min(hi_r, len(rb) - 1)]
-    if olo > 0 and all(cl[j][0] in "ويا" and not (set(cl[j][1]) & VOCAL) for j in range(olo, ohi + 1)):
-        olo -= 1  # converted bare madd sounds through its predecessor's vowel
+    if not paired:
+        olo, ohi = _through_predecessor(cl, olo, ohi)
     return (False, olo, ohi, [(olo, ohi)])
 
 def identical_to_hafs(key, s, a, wi, cl):
@@ -1337,6 +1396,33 @@ def _pairs(rw, sw):
     return out
 
 
+# The whole-word prints whose khilaf the pack narrows to letters (Abu, 2026-11-02: the "differs
+# from Hafs" tint should mark the letter that changes, in every riwayah). Three volumes key the
+# magenta as الكلمة المخالفة لحفص and ink the whole word, so their pages name no letter; for these
+# the letter comes from the text instead: the clusters where the word differs from the aligned
+# Hafs word (`reading_diff`, the same compare that measured the letter prints against their
+# pages at 90% agreement). A word the text cannot narrow keeps the print's whole word.
+NARROWED_WORD_PRINTS = {"duri", "khalaf", "khallad"}
+
+
+def narrowed_khilaf_runs(key, s, a, wi):
+    """The letter runs of a whole-word khilaf mark, or None to keep the whole word.
+
+    None when the word has no aligned Hafs word, or reads the same as it once the spelling
+    conventions are folded (the print still marks it, so the whole word stays). A word that
+    ends short of Hafs's (جَآ for جَآءَ: the dropped hamzah) names its last letter, the one the
+    drop follows, since there is no cluster of its own to point at."""
+    cl = CLS[key][s][a][wi]
+    if not cl:
+        return None
+    d = reading_diff(key, s, a, wi, cl, paired=True)
+    if d is None or d[0]:
+        return None
+    if d[1] is None:
+        return [(len(cl) - 1, len(cl) - 1)]
+    return d[3] or [(d[1], d[2])]
+
+
 def print_rules(key, rules):
     """Paint every rule this volume's print inks, at the letter the print inks it.
 
@@ -1407,8 +1493,15 @@ def print_rules(key, rules):
                     hits[(PACK_LETTER[kc], keys[kc])].add(sci[j + k])
             for (letter, rule), cis in sorted(hits.items()):
                 if word_unit and rule == "khilaf-word":
-                    add(rules, s, a, wi, letter, -1, -1)
-                    st["whole-word"] += 1
+                    runs = narrowed_khilaf_runs(key, s, a, wi) if key in NARROWED_WORD_PRINTS else None
+                    if runs is None:
+                        add(rules, s, a, wi, letter, -1, -1)
+                        st["whole-word"] += 1
+                    else:
+                        for lo, hi in runs:
+                            add(rules, s, a, wi, letter, lo, hi)
+                        st["narrowed-letter" if len(runs) == 1 and runs[0][0] == runs[0][1]
+                           else "narrowed-run"] += 1
                     continue
                 # one entry per CONTIGUOUS run of letters, never one span from the first
                 # inked letter to the last: that is what bled into the letters between.
@@ -1427,7 +1520,9 @@ def print_rules(key, rules):
 def print_legend(key):
     spec = _LEGEND_JSON[PIPE_SLUG.get(key, key)]
     seen = {v["rule"]: int(c[1:], 16) for c, v in spec["keys"].items()}
-    return [legend_entry(PACK_LETTER[seen[r]], PACK_RULE[r])
+    # a narrowed print's magenta names a letter now, so its legend says so
+    narrowed = {"khilaf-word": "khilaf_harf"} if key in NARROWED_WORD_PRINTS else {}
+    return [legend_entry(PACK_LETTER[seen[r]], narrowed.get(r, PACK_RULE[r]))
             for r in RULE_ORDER if r in seen]
 
 

@@ -218,6 +218,16 @@ func ayahPlayFromMenuItems(
 func ayahDisplayMenuItems(refs: Set<HighlightedAyahRef>, settings: Settings,
                           offersWordByWord: Bool) -> some View {
     let overrides = AyahDisplayOverrides.shared
+    // The rows' checkmarks are read when the rows are BUILT, not on every opening of the menu: a pin
+    // made from this menu left its own row unchecked the next time the menu opened, and the next tap
+    // on that row then turned the pin OFF again (Abu, 2026-11-08: "select ayahs apply settings
+    // doesn't work"; reproduced on the simulator from the Select Ayahs bar: Hide Tashkeel applied,
+    // re-opened unchecked, tapped again and the tashkeel came back). The rows take a new identity
+    // whenever the effective state of any option changes, so every opening builds them from the
+    // store. The hosts all observe `AyahDisplayOverrides`, so a pin re-runs this builder.
+    let stateCode = String(AyahDisplayOption.allCases.map { option -> Character in
+        overrides.allOn(option, for: refs, settings: settings) ? "1" : "0"
+    })
 
     ForEach(AyahDisplayOption.allCases, id: \.self) { option in
         if option != .wordByWord || (offersWordByWord && settings.isHafsDisplay) {
@@ -240,6 +250,7 @@ func ayahDisplayMenuItems(refs: Set<HighlightedAyahRef>, settings: Settings,
             .toggleStyle(.automatic)
         }
     }
+    .id(stateCode)
 
     if overrides.hasOverride(refs) {
         Divider()
@@ -866,6 +877,16 @@ struct AyahContextMenuModifier: ViewModifier {
             } label: {
                 Label("Play This Ayah", systemImage: "play.circle")
             }
+
+            #if os(iOS)
+            // Each word's own clip in turn, lit as it sounds (WordClipPlayer); the same row stops it.
+            Button {
+                settings.hapticFeedback()
+                WordClipPlayer.shared.toggle(surah: surah, ayah: ayah)
+            } label: {
+                Label("Play Word by Word", systemImage: "text.word.spacing")
+            }
+            #endif
 
             Menu {
                 chooseReciterButton

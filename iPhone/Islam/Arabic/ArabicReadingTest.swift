@@ -524,6 +524,7 @@ struct ReadingTier: Identifiable, Hashable {
             summary: String(localized: "The doubled mark that adds an n: an, in, un"),
             teaches: [
                 String(localized: "Two fathas, two kasras or two dammas on the last letter add an n that is heard and never written: an, in, un."),
+                String(localized: "So \u{0643}\u{0650}\u{062A}\u{064E}\u{0627}\u{0628}\u{064C} is really said \u{0643}\u{0650}\u{062A}\u{064E}\u{0627}\u{0628}\u{064F}\u{0646}\u{0652} (kitaabun), \u{0643}\u{0650}\u{062A}\u{064E}\u{0627}\u{0628}\u{064B}\u{0627} is \u{0643}\u{0650}\u{062A}\u{064E}\u{0627}\u{0628}\u{064E}\u{0646}\u{0652} (kitaaban), and \u{0643}\u{0650}\u{062A}\u{064E}\u{0627}\u{0628}\u{064D} is \u{0643}\u{0650}\u{062A}\u{064E}\u{0627}\u{0628}\u{0650}\u{0646}\u{0652} (kitaabin): the vowel, then a noon with a sukoon."),
                 String(localized: "A double fatha usually sits before an alif. That alif is a seat for the mark, and is not read."),
             ],
             specimen: "بٌ", display: .joined, skills: [.read, .spell, .listen, .build, .gap, .match, .odd], hint: .letterByLetter,

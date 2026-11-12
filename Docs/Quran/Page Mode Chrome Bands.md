@@ -45,7 +45,9 @@ What changed:
   `NowPlayingView` takes an `expanded:` override for this and does not animate its height under it.
 - **Select mode's bar the same way** (`selectRoom` / `selectVisible`, `applySelecting`; the host's
   `isSelectingAyahs` is the intent, `PageReaderControlsPart.bar(selecting:)` carries the room): the
-  bulk-action bar is two rows to the controls' one, and the host's `withAnimation` swept the band.
+  bulk-action bar was two rows to the controls' one, and the host's `withAnimation` swept the band
+  (since 2026-11-08 the bar is one glass row of symbols, its count, Select All and Done in the
+  navigation bar; the room mechanism is unchanged).
 - **Twins for all of them.** `MushafChromeJump` is now `fold, find, player, playerSize, select`, each with
   its own learned store (`mushaf.<kind>Twins`, device-only in the manifest), learned by `updatePagerSize`
   from the band noted before the change (`noteJump`). `prewarm` fits the visible page at every twin it has after the two nearest

@@ -21,35 +21,91 @@ context) is wired but off: see "Private Cloud Compute" below.
 | File | Owns |
 | --- | --- |
 | `AskAISources.swift` | `AskAISource` (kind, reference, title, verbatim text, Arabic, transliteration, provenance facts, aliases, subject flag) and `AskAISourceFactory`, which builds one from an ayah, hadith, tafsir entry, surah background, article section, Name of Allah, dua (app collections and Hisn al-Muslim), tip, settings entry, or today's prayer times. `promptLine` is what the model reads. `clip` cuts at a sentence end. |
-| `AskAIIntent.swift` | `AskAIIntent` (greeting, thanks, farewell, capabilities, smallTalk, sourceQuestion, recap, appHelp, prayerTimes, reference, scripture, hadith, define, howTo, ruling, story, dua, general), each with `retrieves`, token cap, temperature and a task line. `AskAIQuestion.analyze` classifies, detects follow-ups, extracts content words (ruling words such as "haram" steer the intent but never the search), expands synonyms (`AskAILexicon`, English and Arabic terms both ways) and adds phrase hints ("how much" searches as amount, rate, nisab). |
-| `AskAIRetrieval.swift` | `AskAIRetriever.retrieve`: the lanes (subject, surahName, carried, prayer, tips, settings, articles, quranSemantic, quranKeyword, quranTopics, hadithSemantic, hadithRanked, hadithTopics, names, duas), reciprocal-rank fusion with per-intent weights, a 60% per-family diversity cap, subjects first. A how-to swaps in the article's step section; a follow-up also searches the sections of the article the previous answer cited; a Name is a subject only when typed with its article ("as-salam") or beside a Names cue ("the name wali"), and a Name-only question skips the hadith lanes. Hadith text blocks are inflated off the main actor before their sources are built; the dua catalogues are folded once. Non-subject sources carry `focusTerms`, so a long one is clipped around the sentence that matched. `prewarm()` readies the indexes on appear. |
+| `AskAIIntent.swift` | `AskAIIntent` (greeting, thanks, farewell, capabilities, smallTalk, sourceQuestion, recap, crisis, appHelp, prayerTimes, reference, scripture, hadith, define, howTo, ruling, story, dua, general), each with `retrieves`, token cap, temperature and a task line. `AskAIQuestion.analyze` classifies, detects follow-ups, extracts content words (ruling words such as "haram" steer the intent but never the search), expands synonyms (`AskAILexicon`, English and Arabic terms both ways; `canonicalTopic` gives the head a chip names a topic by) and adds phrase hints ("how much" searches as amount, rate, nisab). |
+| `AskAICrisis.swift` | `AskAICrisis`: `isCrisis` (a first-person expression of suicidal intent or self-harm: one English regex over the folded text, and one Arabic and Urdu regex over the same text with the hamza forms folded to the bare letters, since `fold` keeps them), `mentionsSelfHarm` (a question ABOUT it, in the three languages), the reply the app writes itself (translated to Arabic and Urdu in the catalog), `helpLine(regionCode:)` (988 in the US and Canada, Samaritans in the UK and Ireland, Lifeline in Australia, 1737 in New Zealand, Tele-MANAS in India, findahelpline.com elsewhere; digits follow the locale), `helpLineAction(regionCode:)` (the same as a `tel:` or web link with a button label), its two chips (English, like every chip; the Quran one only with `HAS_QURAN`) and its sources (94:5, the Hisn dua for anxiety and sorrow). |
+| `AskAIRetrieval.swift` | `AskAIRetriever.retrieve`: the lanes (subject, surahName, carried, prayer, tips, settings, articles, quranSemantic, quranKeyword, quranTopics, hadithSemantic, hadithRanked, hadithTopics, names, duas), reciprocal-rank fusion with per-intent weights, a 60% per-family diversity cap, subjects first. A how-to swaps in the article's step section; a follow-up also searches the sections of the article the previous answer cited; a Name is retrieved (`exactNames`) or made the subject (`typedNames`) only when typed with its article ("as-salam", "al wadood", "assalam") or beside a Names cue (name, names, husna, asmaul, attribute: "the name wali", "is aziz a good name"), never as a bare English word (spelling-folded, "mother" was Al-Musawwir and "money" Al-Mani), and a Name-only question skips the hadith lanes. `duaTopicWords()` is the set of topics the app has a dua for, for the chips. Hadith text blocks are inflated off the main actor before their sources are built; the dua catalogues are folded once. Non-subject sources carry `focusTerms`, so a long one is clipped around the sentence that matched. `prewarm()` readies the indexes on appear. |
 | `AskAIEngine.swift` | `AskAIProfile` (per-engine budgets), `AskAIEngine` (session creation, streaming with the repetition cut, error classification for both error families, the cloud offer gate), `AskAIPrompt` (the instructions, the prompt builder, the clipped history, the reference task by subject kind). |
 | `AskAIText.swift` | Hygiene (echo labels, markdown, loops, trailing reference lists, copied source lines, em dashes, sentence capitalization with the proper nouns and surah names restored), citation markers (`normalizeMarkers`, `citedSources` by number then by reference or alias), `policeCitations` (recalled parenthetical references), `policeQuotations` (quotes of five or more words not in any source; an elided quote is verified piece by piece in one source), `EchoGuard` (paragraphs that repeat an earlier answer), `attributedAnswer` (markers as raised accent numerals), `shareText`, `suggestions`. |
-| `AskAIConversation.swift` | `AskAIConversation.shared`: the messages, ask/cancel/reset/retryLast, the retry policy (leaner on overflow; on a guardrail trip first reframed with four sources, then reframed with no sources and no history and a note saying so; on-device fallback when the cloud fails before its first word), stream coalescing at 0.1 s, persistence in Documents/askai-conversation.json (see "Persistence" below), the `-askAILog` writer. |
+| `AskAIConversation.swift` | `AskAIConversation.shared`: the messages, ask/cancel/reset/retryLast, the crisis short circuit, the retry policy (leaner on overflow; a guardrail decline is shown as one, with the sources, and never re-asked from general knowledge; on-device fallback when the cloud fails before its first word), stream coalescing at 0.1 s, persistence in Documents/askai-conversation.json (see "Persistence" below), the `-askAILog` writer. |
 | `AskAIChat.swift` | `AskAIChatView`, `AskAIChatSheet(initialQuestion:)` (the entry-point signature every search screen uses), the welcome, the answer card, the source card, the composer, `AskAISourceDestination` (what a card opens). |
 | `OnDeviceAsk.swift` | The summarize sheets' model access, `isAvailable`, `supportsArabic`, `repetitionCutoff`. No chat code any more. |
 
 ## A turn, step by step
 
+0. Before any analysis, `AskAICrisis.isCrisis` reads the message. A first-person expression of
+   suicidal intent or self-harm ("I feel like ending my life", "I want to kill myself") gets the
+   app's own reply: no model, no retrieval, a help line for the device's region, two chips, the
+   verse 94:5 and the Hisn dua for anxiety as sources. The turn is logged with INTENT `crisis` and
+   RETRIEVAL "crisis reply, no model". The crisis ends the thread: `completedTurns(in:)` and
+   `previousReply(in:)` start after the last crisis reply and the topic is cleared, so a "why?"
+   after it cannot continue the earlier subject (hell, in the review's own order) or carry the
+   crisis text to the model. The card has no AI label, engine badge or AI caution: it is the app's
+   words, under the app's localized name, with the help line as a button beneath the text
+   (`Message.offersHelpLine`: "Call 988" dials, "Find a helpline" opens findahelpline.com). The
+   model on its own retrieved 10:7 and Al-Fil and spoke of a "wretched resting place".
+   A question ABOUT suicide ("Is suicide haram?", "Is it haram to commit suicide?") is a question:
+   answered normally, with the help line as its note and button whether or not the answer came,
+   and with the crisis chips instead of templated ones. The shapes that also fit a question (commit
+   suicide, self harm, going to die) need a first-person subject; "cut myself shaving" and "cant go
+   on Hajj" are excluded. Arabic and Urdu first-person shapes ("أريد أن أموت", "أفكر في الانتحار",
+   "میں مرنا چاہتا ہوں", "خودکشی کرنا چاہتا ہوں", "خود کو نقصان پہنچاتا ہوں") are matched the same
+   way; "هل الانتحار حرام؟" and "کیا خودکشی حرام ہے؟" are questions. The wording lists are a
+   machine pass and need a native reader. Note that with an Arabic or Urdu per-app language the
+   whole feature is absent (`SystemLanguageModel.availability` reports `modelNotReady` and
+   `supportsLocale(ar)` is false on the iOS 27 simulator; the Ask AI row and screen need
+   `OnDeviceAsk.isAvailable`), so the Arabic and Urdu detection serves readers who type those
+   languages into an English interface, and the Arabic and Urdu reply strings wait for Apple's
+   model to support the languages (`-forceAskAIRow` shows the screen regardless, for a look).
+   `AskAICrisisTests` holds the positive and negative tables in all three languages: add every
+   new phrasing there first.
 1. `AskAIQuestion.analyze` decides the intent and whether it is a follow-up (a short message with
    fewer than two substantive words, unless shaped like a whole question such as "what is tawhid";
-   or a short one that opens like a continuation or leans on a pronoun). A follow-up searches with
-   the conversation's topic prepended and keeps the previous turn's sources in the pool, stripped of
-   their subject mark.
+   or a short one that opens like a continuation or leans on a pronoun). Four things are NOT
+   follow-ups: a possessive after a subject ("can a man hit HIS wife"), a demonstrative before a
+   word that is not a source noun ("is THIS game allowed", against "is THAT hadith authentic" or
+   "the ruling on THIS issue": `sourceNouns` holds verse, hadith, issue, matter, practice, sin...),
+   the expletive "is it ... to" ("is it haram to dye my hair"; "is it THE SAME for women" points
+   back), and a continuation starter on a message with two or more substantive words ("what did the
+   Prophet say about his neighbours"). A follow-up searches with the conversation's topic prepended
+   and keeps the previous turn's sources in the pool, stripped of their subject mark. A prayer
+   question is today's schedule only when it asks about the clock (when, what time, how long, is
+   it ... yet, today, tonight, next) and carries no fiqh word (combine, shorten, missed, travel,
+   valid, should, makruh...): "Can I combine prayers when traveling?" is a ruling. A clock opening
+   with a day word overrides the fiqh word: "What time should I pray Fajr tomorrow?" wants the time;
+   "I missed Isha tonight, can I still pray it?" does not.
 2. Conversation intents skip retrieval. `sourceQuestion` ("who narrated that?") and `recap`
    ("summarize that") reuse the previous answer's cited sources. Everything else runs
    `AskAIRetriever.retrieve` under the engine's budget (on device: 8 sources of 500 characters,
-   subjects 1,400).
-3. `AskAIPrompt.build` writes SOURCES, the clipped earlier turns ("context only; never repeat"),
-   the task line and the question. Greetings get no history; thanks get the last question only; a
-   recap gets the last answer in full. The instructions carry no example narrator or surah: the
-   on-device model copied "Abu Hurairah narrated, in Sahih al-Bukhari" from an example into
-   answers about verses and about other narrators' hadiths.
+   subjects 1,400; 12 of 600 once `SystemLanguageModel.contextSize` reports 8,192 or more).
+   `AskAIPrompt.fit` estimates the window at 3.4 characters a token with the instructions' real
+   length, then (iOS 26.4+) measures the built prompt with the model's own `tokenCount` and drops
+   the lowest-ranked source until it fits; the RETRIEVAL log line ends `window=4096 instructions=895`.
+3. `AskAIPrompt.build` writes SOURCES, the task line and the question. The earlier turns
+   ("context only; never repeat") go in ONLY for a follow-up, a thanks, a goodbye or a recap
+   (`sendsHistory`): sent on every turn, the hell answer leaked into the suicide turn and the socks
+   answer into a question about a gift. The instructions carry no example narrator, surah or
+   phrase: the on-device model copied "Abu Hurairah narrated, in Sahih al-Bukhari" from an example
+   into answers about verses, wrote "scholars generally explain" (from rule 3's old sample) in 25 of
+   38 review answers with invented content behind it, and ended 5 of 6 answers with "the app's
+   library has nothing on this" when that sentence was offered as the way to decline. Rule 3 now
+   describes the decline (one sentence of its own, no filling from memory, no view attributed to
+   scholars unless a source states it) and says to add no such remark when the sources do answer.
 4. The answer streams; each flush strips markdown, normalizes markers, drops echoed paragraphs and
    em dashes, and re-parses the citations so the cards track the text.
 5. On settle: repetition collapsed, out-of-range markers and recalled references removed and
    counted, unverified quotations marked, trailing reference lists dropped, suggestions built, the
-   conversation saved.
+   conversation saved. The chips (`AskAIText.suggestions`) name the topic by its synonym HEAD
+   (`AskAILexicon.canonicalTopic(in:)`: "zakat" is charity, "mother" is parents; a word that IS a
+   head beats one that only belongs to a row, so "celebrating Eid" is about Eid and not birthdays;
+   `displayTopic` capitalizes proper nouns and names the prophets by their Quranic names, Musa and
+   Ayyub) or say "this" when the question's words are outside the table; they never reuse the
+   previous turn's topic, offer a dua only when `AskAIRetriever.duaTopicWords()` holds the TOPIC
+   (its head or one of its two synonyms, not any word of the question: "prophet" is in dozens of
+   Hisn titles), never ask for an "opposite", and for a greeting show the day's starters
+   (`AskAIStarters.forDay`, the same pool as the empty screen).
+   Before this the chips were templates over leftover words ("Is there a dua about punishment zina?",
+   "What is the opposite of mahr?") and a misread follow-up carried "go back sleep after fajr" into
+   a question about hair dye.
 
 ## Headless testing
 
@@ -69,6 +125,25 @@ the container's Documents/askai-log.txt with intent, follow-up flag, engine, ret
 lane counts, the fused ranking, the sources, the citations, the removed and flagged counts, the
 suggestions and the answer; `-askAILogPrompt` also writes the last prompt to Documents/askai-prompt.txt.
 Read the log, not the screen: it is where the fabricated references and echoed answers show.
+
+`Scripts/qa/askai/run.sh <questions.txt> <out.txt>` does the launch above for a file of questions
+(one per line) on the iOS 27 iPhone 17 Pro, waits for every turn and copies the log out;
+`Scripts/qa/askai/score.py <log> [<log>...]` prints one row per log: turns, failed, scholars
+("cholars generally"), declines, names_stray (the Names lane fired with no cue word and no article),
+history_leak (three or more substantive six-word shingles shared with an earlier answer), junk_chips,
+plus the follow-up flags and intents per question (`--verbose` lists the offenders). The review's
+38 questions are `questions-hard.txt`, `questions-everyday.txt` and `questions-collide.txt`, with
+their 2026-11-05 logs in `baseline-2026-11-05/` and the post-fix logs in `after-2026-11-07/` (the
+evening's minors pass, chips and routing, in `after-2026-11-07b/`). The timing medians count only
+the turns a model answered (a crisis reply and a failed turn log 0.0). Run the harness on a
+simulator of its own: a unit-test run reinstalls the app and kills a replay. The model varies run
+to run, so compare counts over a whole set, never one answer.
+
+`-askAIForceDecline` (DEBUG) makes every generation fail the way a guardrail decline does, so the
+decline card (the decline sentence, then SOURCES THE APP FOUND in the open, retry in the header)
+can be looked at: the permissive model declined none of the questions tried, so nothing else
+shows it. `-forceAskAIRow` lists the screen where Apple Intelligence is missing (an Arabic or
+Urdu per-app language, say), and a crisis turn renders there since it needs no model.
 
 `-askAITextProbe` runs the pure text functions (markers, citation policing, the clock-time mask,
 intent routing, the focus clip, lenient decoding) on the inputs that broke them, with no model and
@@ -185,6 +260,15 @@ means the model is not ready (still downloading after Apple Intelligence was tur
 `AskAIEngine.classify` maps it, and `.assetsUnavailable`, to `.modelUnavailable`, and the reply
 says so instead of the generic line. With `-askAILog` every failed turn also logs ERROR: with the
 framework's own words.
+
+The on-device session uses `SystemLanguageModel(guardrails: .permissiveContentTransformations)`:
+the default guardrails declined 5 of 11 ordinary religious questions (fighting, zina, hitting a
+wife, homosexuality, hell), on the retrieved passage as often as on the question; the permissive
+setting declined 0 of 16, and again 0 of 6 twice after the change. A decline that does come
+through is shown as one (`Message.declined`): "Apple Intelligence declined to write about this.
+The sources the app found are shown below so you can read them yourself.", the source cards listed
+in the open, the Retry button. The old ladder (re-ask "as an educational question" with four
+sources, then with none and a note) is gone: it wrote unsourced answers to the hardest questions.
 
 ## Private Cloud Compute
 

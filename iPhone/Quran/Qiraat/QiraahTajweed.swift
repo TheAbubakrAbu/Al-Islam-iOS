@@ -93,21 +93,23 @@ final class QiraahTajweedStore: @unchecked Sendable {
     // MARK: - The one order of the rules
 
     /// The order every list of these rules follows (Abu, 2026-11-01: "in tajweed legend taqlil should
-    /// come after imaalah", and the riwayat page explains the differences "using the tajweed legend and
-    /// the sorting of them"): what differs from Hafs, the merges, the tilts with the slight tilt right
-    /// after the full one, the joins, the pauses and blends, Abu Ja'far's two, Warsh's four, al-Bazzi's
-    /// ta. A pack's printed legend box is re-sorted to it as it loads, so one rule sits in the same slot
-    /// in every riwayah's legend and in the All Riwayat comparison; a key not listed here keeps the
-    /// print's place, after the listed ones.
+    /// come after imaalah", then "fix them to be best order that makes sense"; the riwayat page explains
+    /// the differences "using the tajweed legend and the sorting of them"). Grouped by what the reader
+    /// hears, the most common group first: what differs from Hafs (every print's first color); the
+    /// tilted vowel, with the slight tilt right after the full one; the lengthenings (Warsh's two
+    /// madds); the joins, where a pronoun takes a long vowel (the plural mim, the pronoun ha); the
+    /// letters sounded differently (merged, doubled, hummed, blended); the thin ra and the thick lam;
+    /// and last the pauses and the beginnings. A pack's printed legend box is re-sorted to it as it
+    /// loads, so one rule sits in the same slot in every riwayah's legend and in the All Riwayat
+    /// comparison; a key not listed here keeps the print's place, after the listed ones.
     static let ruleOrder: [String] = [
         "khilaf_word", "khilaf_harf",
-        "idgham",
         "imalah", "imalah_taqlil", "taqlil",
+        "madd_badal", "madd_leen",
         "silah_meem", "ha_dhamir",
-        "sakt", "ishmam_sad",
-        "ghunnah_kha_ghayn", "ibtida_wasl",
-        "madd_badal", "madd_leen", "raa_muraqqaqah", "lam_mughallazah",
-        "tashdid_ta",
+        "idgham", "tashdid_ta", "ghunnah_kha_ghayn", "ishmam_sad",
+        "raa_muraqqaqah", "lam_mughallazah",
+        "sakt", "ibtida_wasl",
     ]
 
     /// Where `key` sits in `ruleOrder`; a key it does not list sorts after every listed one.
@@ -286,6 +288,42 @@ final class QiraahTajweedStore: @unchecked Sendable {
     /// differs from Hafs (a merge/split point of this riwayah's own counting).
     func isKhilafNumbered(tag: String, surah: Int, ayah: Int) -> Bool {
         pack(for: tag)?.khilafMarkers[surah]?.contains(ayah) ?? false
+    }
+
+    /// The print's "differs from Hafs" letters of one ayah: word index -> the khilaf rule's INCLUSIVE
+    /// base-letter cluster extents (lo -1 = the print colors the whole word). Words the print leaves
+    /// black are absent. The letter-level diff tint (`QiraatLetterDiff`) carries these onto Hafs.
+    func khilafExtents(tag: String, surah: Int, ayah: Int) -> [Int: [(lo: Int, hi: Int)]] {
+        guard let pack = pack(for: tag), let rules = pack.rules[surah]?[ayah] else { return [:] }
+        let khilafLetters = Set(pack.legend.filter { $0.key == "khilaf_word" || $0.key == "khilaf_harf" }.map(\.letter))
+        var out: [Int: [(lo: Int, hi: Int)]] = [:]
+        for (word, list) in rules {
+            let extents = list.filter { khilafLetters.contains($0.letter) }.map { (lo: $0.baseLo, hi: $0.baseHi) }
+            if !extents.isEmpty { out[word] = extents }
+        }
+        return out
+    }
+
+    /// Only the print's khilaf letters, in one `tint` instead of the print's magenta: what the reader
+    /// draws for a letter-level riwayah with Tajweed Colors off, where the whole-word diff tint used to
+    /// paint (`QiraatLetterDiff`). Same inputs as `attributedText`; nil when the print marks nothing.
+    func khilafText(tag: String, surah: Int, ayah: Int, displayText: String,
+                    beginnerSpacing: Bool = false, fullText: String? = nil, tint: UIColor) -> AttributedString? {
+        let hidden = Set(legend(for: tag).map(\.key)).subtracting(["khilaf_word", "khilaf_harf"])
+        guard let painted = attributedText(tag: tag, surah: surah, ayah: ayah, displayText: displayText,
+                                           beginnerSpacing: beginnerSpacing, hiddenRules: hidden,
+                                           fullText: fullText) else { return nil }
+        return Self.recolored(painted, to: tint)
+    }
+
+    /// `painted` with every colored run (anything but the label color) in `tint`.
+    static func recolored(_ painted: AttributedString, to tint: UIColor) -> AttributedString {
+        let ns = NSMutableAttributedString(attributedString: NSAttributedString(painted))
+        ns.enumerateAttribute(.foregroundColor, in: NSRange(location: 0, length: ns.length)) { value, range, _ in
+            guard let color = value as? UIColor, color != .label else { return }
+            ns.addAttribute(.foregroundColor, value: tint, range: range)
+        }
+        return AttributedString(ns)
     }
 
     // MARK: - Legend examples and counts
@@ -605,8 +643,8 @@ final class QiraahTajweedStore: @unchecked Sendable {
     /// two texts walk in lockstep and every colored UTF-16 unit lands on its surviving letter.
     /// Nil when `displayText` is not a recognized stripped rendering of `fullText` (then the
     /// offsets would lie) or when nothing colored survives the strip.
-    private static func projectColors(from coloredFull: AttributedString, fullText: String,
-                                      onto displayText: String) -> AttributedString? {
+    static func projectColors(from coloredFull: AttributedString, fullText: String,
+                              onto displayText: String) -> AttributedString? {
         // Which pipeline produced the display string: tashkeel stripped, or tashkeel + dots.
         let stripped = fullText.removingArabicDiacriticsAndSigns
         guard stripped == displayText || stripped.removingArabicDots == displayText else { return nil }

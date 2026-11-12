@@ -184,11 +184,17 @@ struct ArabicTopicLinkLabel: View {
     let caption: String
     /// A line of Arabic shown under the caption, e.g. the marks the Tashkeel page covers.
     var preview: String? = nil
+    /// A small line ABOVE the title: where the topic lives, on a search result row ("Hamzatul WaSl",
+    /// "Reading Test"), so a result found off its section still says which section it is in.
+    var eyebrow: String? = nil
     /// Which face draws the Arabic. `.uthmani` is only for a page whose whole subject is a shape that
     /// face draws (the stacked ٮحـ); `.plain` is for unmarked text, where the mushaf faces would drop
     /// the dots of a final yaa and turn بي into the spelling of alif maqSoorah.
     enum Face { case reader, uthmani, plain }
     var face: Face = .reader
+    /// A symbol at the trailing edge in place of a link's chevron, for a row that is a Button (the
+    /// search's scroll-to rows draw the "to the section" arrow).
+    var trailingSymbol: String? = nil
 
     #if os(watchOS)
     private static let tileSide: CGFloat = 34
@@ -236,6 +242,13 @@ struct ArabicTopicLinkLabel: View {
                 )
 
             VStack(alignment: .leading, spacing: 2) {
+                if let eyebrow {
+                    Text(eyebrow.uppercased())
+                        .font(.caption2.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+                        .lineLimit(1)
+                }
+
                 Text(title)
                     .font(.body.weight(.semibold))
                     .foregroundColor(.primary)
@@ -255,10 +268,18 @@ struct ArabicTopicLinkLabel: View {
                         .padding(.top, usesArabicFace ? 0 : 2)
                 }
             }
+
+            if let trailingSymbol {
+                Spacer(minLength: 8)
+
+                Image(systemName: trailingSymbol)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(Color.secondary.opacity(0.6))
+            }
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title). \(caption)")
+        .accessibilityLabel(eyebrow.map { "\($0). \(title). \(caption)" } ?? "\(title). \(caption)")
     }
 }
 

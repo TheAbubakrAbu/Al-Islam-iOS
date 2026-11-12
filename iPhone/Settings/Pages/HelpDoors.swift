@@ -128,6 +128,8 @@ struct HelpDoor: Identifiable {
     var actions: [HelpDoorAction] = []
     /// The sheet opens at its full height: the tutorial's cards carry buttons under their text.
     var opensLarge = false
+    /// Run as the card is tapped, before its sheet opens (the tutorial's door answers the tab's nudge).
+    var onOpen: (() -> Void)? = nil
 }
 
 /// A one-tap answer in a card's press-and-hold menu.
@@ -205,20 +207,26 @@ extension Settings {
 @MainActor
 enum HelpDoorCatalog {
     static func doors(for area: HelpDoorArea, settings: Settings) -> [HelpDoor] {
-        // While the tab's tutorial nudge is up, the nudge IS this question, right above the section.
-        let tutorial = settings.tutorialNudgeSeen(TutorialTab(helpDoorArea: area)) ? [tutorialDoor(for: area)] : []
-        return tutorial + tabDoors(for: area, settings: settings)
+        [tutorialDoor(for: area, settings: settings)] + tabDoors(for: area, settings: settings)
     }
 
     /// "New to This Tab?" leads every run (Abu, 2026-10-31): the tab's tutorial, the most basic question
     /// a reader on that tab can have (TabTutorials.swift).
-    private static func tutorialDoor(for area: HelpDoorArea) -> HelpDoor {
+    ///
+    /// It is also the tab's first-visit nudge (Abu, 2026-11-04: "merge need a hand with tutorial"). The
+    /// nudge was a card of its own above this section, asking the same question twice on one screen;
+    /// now the door's pill wears the accent until the tutorial has been opened from anywhere, and goes
+    /// quiet after. Simple Mode, which has no Need a Hand?, keeps the card (`TutorialNudgeSection`).
+    private static func tutorialDoor(for area: HelpDoorArea, settings: Settings) -> HelpDoor {
         let tab = TutorialTab(helpDoorArea: area)
         return HelpDoor(id: "\(area.rawValue).tutorial", title: String(localized: "New to This Tab?"),
                         caption: String(localized: "A short tutorial of the basics, one card at a time."),
                         answerName: tab.title,
                         systemImage: TutorialTab.doorSymbol, tint: tab.tint, secondaryTint: tab.secondaryTint,
-                        landing: .screen { AnyView(TabTutorialView(tab: tab)) }, opensLarge: true)
+                        landing: .screen { AnyView(TabTutorialView(tab: tab)) },
+                        value: String(localized: "\(TutorialCatalog.steps(for: tab).count) cards"),
+                        isOn: !settings.tutorialNudgeSeen(tab), opensLarge: true,
+                        onOpen: { settings.markTutorialNudgeSeen(tab) })
     }
 
     private static func tabDoors(for area: HelpDoorArea, settings: Settings) -> [HelpDoor] {
@@ -540,7 +548,10 @@ struct HelpDoorsSection: View {
                         // (the Islam grid's measured rule).
                         VStack(spacing: 8) {
                             ForEach(doors) { door in
-                                HelpDoorCard(door: door, area: area) { openDoor = door }
+                                HelpDoorCard(door: door, area: area) {
+                                    openDoor = door
+                                    door.onOpen?()
+                                }
                             }
                         }
                         .padding(.vertical, 1)

@@ -142,6 +142,50 @@ struct SettingsQuranView: View {
     }
     #endif
 
+    /// The reader layout a setting belongs to, for the four that only one layout reads (Abu, 2026-11-10:
+    /// "hide/disable certain settings if on page compared to list"): Word by Word and the page and juz
+    /// dividers are the List's, Fit Page to Screen and Two-Page Spread the Pages'. Under the other
+    /// layout the row goes dead and its caption says why, the way the word features do off Hafs.
+    /// Nothing is hidden, so the page search and the tips still land on the row.
+    ///
+    /// Every other switch stays live under both: the page draws one text of its own (Page Text), but
+    /// the ayah sheets, the search results and the history rows read the same settings under either
+    /// layout, so those pages carry a footer note instead (`arabicTextPagesNote`, `englishTextPagesNote`).
+    private enum ReaderLayout {
+        case list, pages
+
+        /// The watch has no page reader and never receives the key, so the List is always on screen there.
+        func isOnScreen(_ settings: Settings) -> Bool {
+            (self == .pages) == settings.quranPageMode
+        }
+
+        /// The caption of a row whose layout is not the one on screen.
+        var elsewhereCaption: String {
+            switch self {
+            case .list: return String(localized: "List layout only. You are reading in Pages.")
+            case .pages: return String(localized: "Pages layout only. You are reading in List.")
+            }
+        }
+    }
+
+    /// The English Text page's note to a Pages reader: none of its switches reach the page itself.
+    private var englishTextPagesNote: String? {
+        guard ReaderLayout.pages.isOnScreen(settings) else { return nil }
+        return String(localized: "You are reading in Pages. A page shows one text, chosen under Page Text in the reader's title menu. The settings here do not change the page; they still apply to ayah sheets, search results and the List layout.")
+    }
+
+    /// The Arabic Text page's note to a Pages reader. An Arabic page reads everything here but the
+    /// Show Arabic switch it sits under; a printed or an English page reads none of the Arabic
+    /// options (the size is left out of the sentence: an English page is set at it).
+    private var arabicTextPagesNote: String? {
+        guard ReaderLayout.pages.isOnScreen(settings) else { return nil }
+        let pageText = settings.resolvedMushafPageLanguage
+        if pageText == .arabic {
+            return String(localized: "You are reading in Pages, and a page always shows its Page Text (in the reader's title menu). This switch is for ayah sheets, search results and the List layout.")
+        }
+        return String(localized: "Page Text is set to \(pageText.displayName) in the reader's title menu, so the Arabic font, tajweed colors and marks set here do not change your pages. They still apply to ayah sheets, search results and the List layout.")
+    }
+
     /// The root's sections, on the page-search scaffold (iOS) or a plain list (the watch).
     @ViewBuilder
     private var rootList: some View {
@@ -340,6 +384,9 @@ struct SettingsQuranView: View {
         Section {
             reciterSelection
             recitationEndingPicker
+            SettingsToggle(String(localized: "Highlight Words While Playing"),
+                           caption: String(localized: "The word being recited lights up as the reciter reaches it, in the list, on the page and on an ayah's card. Uses the reciter's word timings from quran.com, fetched once per surah; a reciter without them keeps the ayah highlight alone."),
+                           isOn: $quranDisplay.highlightPlayingWords)
         } header: {
             Text("RECITATION")
         } footer: {
@@ -443,8 +490,15 @@ struct SettingsQuranView: View {
         }
     }
 
+    /// The List's alone (`ReaderLayout`): a page is its own divider, and its chrome names the page and juz.
     private var pageAndJuzDividersGroup: some View {
-        SettingsToggle(String(localized: "Show Page and Juz Dividers"), caption: String(localized: "Shows a divider inside a surah wherever a new mushaf page or juz begins, plus a small floating label with the current page and juz while you read."), isOn: pageJuzDividers)
+        let inList = ReaderLayout.list.isOnScreen(settings)
+        return SettingsToggle(String(localized: "Show Page and Juz Dividers"),
+                              caption: inList
+                                  ? String(localized: "Shows a divider inside a surah wherever a new mushaf page or juz begins, plus a small floating label with the current page and juz while you read.")
+                                  : ReaderLayout.list.elsewhereCaption,
+                              isOn: pageJuzDividers)
+            .disabled(!inList)
     }
 
     /// "Use Device Text Size" for the Arabic text only - pins the Arabic size to the device's Dynamic Type
@@ -483,8 +537,14 @@ struct SettingsQuranView: View {
     /// while the Arabic is shown; hidden, they would be empty headers.
     @ViewBuilder
     private var arabicTextSections: some View {
-        Section(header: Text("ARABIC TEXT")) {
+        Section {
             arabicVisibilityToggle
+        } header: {
+            Text("ARABIC TEXT")
+        } footer: {
+            if let note = arabicTextPagesNote {
+                Text(note)
+            }
         }
 
         #if os(iOS)
@@ -556,9 +616,11 @@ struct SettingsQuranView: View {
         }
     }
 
-    /// The study layout, and the two lines it can write under each word.
+    /// The study layout, and the two lines it can write under each word. The List's alone
+    /// (`ReaderLayout`): the page keeps the mushaf's lines, so in Pages the whole group goes dead.
     private var wordByWordGroup: some View {
-        VStack(alignment: .leading) {
+        let inList = ReaderLayout.list.isOnScreen(settings)
+        return VStack(alignment: .leading) {
             let canRenderNow = wordFeaturesAvailable
             let inlineBinding = Binding<Bool>(
                 get: { settings.wordByWordInline && canRenderNow },
@@ -566,9 +628,11 @@ struct SettingsQuranView: View {
             )
 
             SettingsToggle(String(localized: "Word by Word"),
-                           caption: canRenderNow || !settings.showArabicText
-                               ? String(localized: "Lays the ayah out word by word, each word's meaning and pronunciation beneath it. List mode only: page mode keeps the mushaf layout.")
-                               : String(localized: "Available in Hafs an Asim, with beginner mode off: the meanings are counted word by word against that text."),
+                           caption: !inList
+                               ? ReaderLayout.list.elsewhereCaption
+                               : canRenderNow || !settings.showArabicText
+                                   ? String(localized: "Lays the ayah out word by word, each word's meaning and pronunciation beneath it. List mode only: page mode keeps the mushaf layout.")
+                                   : String(localized: "Available in Hafs an Asim, with beginner mode off: the meanings are counted word by word against that text."),
                            isOn: inlineBinding)
                 .disabled(!canRenderNow)
                 .onChange(of: settings.wordByWordInline) { enabled in
@@ -580,6 +644,7 @@ struct SettingsQuranView: View {
                 wordByWordLineToggles
             }
         }
+        .disabled(!inList)
     }
 
     /// The two lines the study layout can write under each word. Each is disabled while it is the
@@ -825,9 +890,15 @@ struct SettingsQuranView: View {
     }
 
     #if os(iOS)
+    /// The Pages' alone (`ReaderLayout`): in the List both go dead, keeping the value they hold.
     private var fitPageControls: some View {
-        VStack(alignment: .leading) {
-            SettingsToggle(String(localized: "Fit Page to Screen"), caption: String(localized: "Each page laid out as this riwayah's printed mushaf is, at the largest size that fits the screen. Off, the size above applies and the page scrolls."), isOn: $quranDisplay.mushafFitPage)
+        let inPages = ReaderLayout.pages.isOnScreen(settings)
+        return VStack(alignment: .leading) {
+            SettingsToggle(String(localized: "Fit Page to Screen"),
+                           caption: inPages
+                               ? String(localized: "Each page laid out as this riwayah's printed mushaf is, at the largest size that fits the screen. Off, the size above applies and the page scrolls.")
+                               : ReaderLayout.pages.elsewhereCaption,
+                           isOn: $quranDisplay.mushafFitPage)
 
             // An @AppStorage flip that changes the READER's page layout behind this sheet. It used to
             // be the one switch here with NO `.animation` on its binding, because an animated write
@@ -835,8 +906,13 @@ struct SettingsQuranView: View {
             // `page-mode-chrome-bands`). Every switch is a `SettingsToggle` now: its write is flagged
             // and the pager strips the animation from it (`ignoresSettingsPageAnimation`), so this
             // row animates the sheet like its neighbours while the reader animates its own spread change.
-            SettingsToggle(String(localized: "Two-Page Spread"), caption: String(localized: "Two facing pages, like an open mushaf, whenever the page area is wider than it is tall: landscape, an iPad, a wide Mac window. Portrait shows one."), isOn: $quranDisplay.mushafTwoPageSpread)
+            SettingsToggle(String(localized: "Two-Page Spread"),
+                           caption: inPages
+                               ? String(localized: "Two facing pages, like an open mushaf, whenever the page area is wider than it is tall: landscape, an iPad, a wide Mac window. Portrait shows one.")
+                               : ReaderLayout.pages.elsewhereCaption,
+                           isOn: $quranDisplay.mushafTwoPageSpread)
         }
+        .disabled(!inPages)
     }
     #endif
 
@@ -872,11 +948,25 @@ struct SettingsQuranView: View {
         .disabled(!settings.showArabicText)
     }
 
-    /// One word of the preview: the Quran face the reader has chosen, over a small label.
+    /// The Arabic size the previews outside the SIZE section draw at: the slider's while its thumb is
+    /// down, the setting otherwise (the watch's slider previews in its own sample line).
+    private var previewArabicSize: CGFloat {
+        #if os(iOS)
+        CGFloat(liveArabicSize ?? settings.fontArabicSize)
+        #else
+        CGFloat(settings.fontArabicSize)
+        #endif
+    }
+
+    /// One word of the preview: the Quran face the reader has chosen, at the reader's own Arabic size
+    /// (Abu, 2026-11-10: it was a fixed 30 pt), over a small label. One line, shrinking before it
+    /// wraps: two words at 75 pt are wider than a small phone's row.
     private func waslSignPreview(_ word: String, label: String) -> some View {
         VStack(spacing: 2) {
             Text(word)
-                .font(.custom(settings.quranArabicFontName(for: settings.displayQiraahForArabic), size: 30))
+                .font(Font.arabic(settings.quranArabicFontName(for: settings.displayQiraahForArabic), size: previewArabicSize))
+                .lineLimit(1)
+                .minimumScaleFactor(0.4)
                 .environment(\.layoutDirection, .rightToLeft)
             Text(label)
                 .font(.caption2)
@@ -893,14 +983,35 @@ struct SettingsQuranView: View {
     /// while some English line is on; there is nothing for it to size otherwise.
     @ViewBuilder
     private var englishTextSections: some View {
-        Section(header: Text("ENGLISH TEXT"), footer: settings.showQiraahDetails ? Text("Transliteration, translations, and all English text apply only to default Hafs an Asim. For other riwayat, only the Arabic text is shown.") : nil) {
+        Section {
             includeEnglishToggle
             englishDisplayToggles
+        } header: {
+            Text("ENGLISH TEXT")
+        } footer: {
+            englishTextFooter
         }
 
         if englishSizeApplies {
             Section(header: Text("SIZE")) {
                 englishFontSizeControls
+            }
+        }
+    }
+
+    /// The ENGLISH TEXT section's footer: the riwayah scope for readers who have the riwayat on
+    /// screen, then the note a Pages reader needs (`englishTextPagesNote`).
+    @ViewBuilder
+    private var englishTextFooter: some View {
+        let pagesNote = englishTextPagesNote
+        if settings.showQiraahDetails || pagesNote != nil {
+            VStack(alignment: .leading, spacing: 6) {
+                if settings.showQiraahDetails {
+                    Text("Transliteration, translations, and all English text apply only to default Hafs an Asim. For other riwayat, only the Arabic text is shown.")
+                }
+                if let pagesNote {
+                    Text(pagesNote)
+                }
             }
         }
     }
@@ -1078,7 +1189,7 @@ struct SettingsQuranView: View {
         Text("""
         The Quran was revealed by Allah in seven Ahruf (modes) to make recitation easy for the Muslims. From these, the 10 Qiraat (recitations) were preserved, where they are all mass-transmitted and authentically traced back to the Prophet ﷺ through unbroken chains of narration.
 
-        The Qiraat are not different Qurans; they are different prophetic ways of reciting the same Quran, letter for letter, word for word, all preserving the same meaning and message.
+        The Qiraat are not different Qurans; they are different prophetic ways of reciting the same Quran, letter for letter, word for word, agreeing in meaning and message, never contradicting one another.
 
         To learn more about the 7 Ahruf and the 10 Qiraat, see below and in Al-Islam View > Islamic Pillars and Basics.
         """)
@@ -2530,7 +2641,7 @@ struct ReciterListView: View {
                                 Text("""
                                 The Quran was revealed by Allah in seven Ahruf (modes) to make recitation easy for the Muslims. From these, the 10 Qiraat (recitations) were preserved, where they are all mass-transmitted and authentically traced back to the Prophet ﷺ through unbroken chains of narration.
 
-                                The Qiraat are not different Qurans; they are different prophetic ways of reciting the same Quran, letter for letter, word for word, all preserving the same meaning and message.
+                                The Qiraat are not different Qurans; they are different prophetic ways of reciting the same Quran, letter for letter, word for word, agreeing in meaning and message, never contradicting one another.
 
                                 To learn more about the 7 Ahruf and the 10 Qiraat, see below and in Al-Islam View > Islamic Pillars and Basics.
                                 """)
@@ -2601,7 +2712,7 @@ struct ReciterListView: View {
                             Text("""
                             The Quran was revealed by Allah in seven Ahruf (modes) to make recitation easy for the Muslims. From these, the 10 Qiraat (recitations) were preserved, where they are all mass-transmitted and authentically traced back to the Prophet ﷺ through unbroken chains of narration.
 
-                            The Qiraat are not different Qurans; they are different prophetic ways of reciting the same Quran, letter for letter, word for word, all preserving the same meaning and message.
+                            The Qiraat are not different Qurans; they are different prophetic ways of reciting the same Quran, letter for letter, word for word, agreeing in meaning and message, never contradicting one another.
 
                             To learn more about the 7 Ahruf and the 10 Qiraat, see below and in Al-Islam View > Islamic Pillars and Basics.
                             """)

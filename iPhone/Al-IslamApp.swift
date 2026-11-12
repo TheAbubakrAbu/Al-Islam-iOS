@@ -182,7 +182,7 @@ struct AlIslamApp: App {
             // the splash fades onto About You, and it fades only on its own way out.
             #if HAS_ICLOUD_BACKUP
             if cloudOfferPresented {
-                CloudOfferView()
+                CloudOfferView(followsWelcome: sawSplashThisLaunch)
                     .opacity(rootStage == .main ? 0 : 1)
                     .allowsHitTesting(rootStage == .cloudOffer)
                     .zIndex(1.7)

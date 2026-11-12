@@ -1575,6 +1575,10 @@ struct HisnDuaLibraryView: View {
 
     var body: some View {
         let _ = RenderCounter.hit("HisnDuaLibraryView")
+        #if os(iOS)
+        // The situations' numbers down the edge (1, 5, 10 ... 130, 132); not while searching.
+        let railItems = query.isEmpty ? Self.situationRailItems(shownCategories) : []
+        #endif
         ScrollViewReader { proxy in
         List {
             Group {
@@ -1673,12 +1677,13 @@ struct HisnDuaLibraryView: View {
             }
             .themedListRowBackground()
         }
+        #if os(iOS)
+        .jumpIndexRailRoom(railItems)
+        #endif
         .applyConditionalListStyle(disableNowPlayingInset: true)
         .compactListSectionSpacing()
         #if os(iOS)
-        // The situations' numbers down the edge (1, 5, 10 ... 130, 132); not while searching.
-        .jumpIndexRail(query.isEmpty ? Self.situationRailItems(shownCategories) : [],
-                       accessibilityName: String(localized: "Situation index"), proxy: proxy) { item in
+        .jumpIndexRail(railItems, accessibilityName: String(localized: "Situation index"), proxy: proxy) { item in
             shownCategories.indices.contains(item.id) ? shownCategories[item.id].railRowID : nil
         }
         #endif

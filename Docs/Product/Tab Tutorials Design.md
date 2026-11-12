@@ -20,7 +20,7 @@ Design written 2026-10-31; built the same day (Abu: "work on the tutorials"), fo
 | Depth | The basics first. The last card points at that tab's Tips & Tricks for everything else. |
 | Format | A paged walkthrough like the Tips & Tricks tour, with one idea per card. A card can carry up to two "Show me" buttons that open the real setting. Not coach marks drawn over the live tab: Simple Mode, hidden sections and the iPad layout all move the things they would point at. |
 | Home city | The Adhan tutorial has a card about it with two buttons, "Change Home City" (the Set Home City picker) and "Traveling Mode Settings" (Abu, 2026-10-31: "make sure they allow to change in settings for traveling city"). |
-| Where it opens | The tab's ⋯ menu, the first row of the tab's Tips & Tricks, the welcome's "A lot to discover" page, and settings search. |
+| Where it opens | The tab's ⋯ menu, the first row of the tab's Tips & Tricks, and settings search. (The welcome's "A lot to discover" page listed them until 2026-11-05, when the welcome was cut to one idea a page.) |
 
 ## 3. Rules
 
@@ -73,7 +73,7 @@ Design written 2026-10-31; built the same day (Abu: "work on the tutorials"), fo
    - HadithView.swift ~1389-1408
    - IslamView.swift ~1420-1439
 2. **The first row of the tab's Tips & Tricks section** (`TipsSection(area:)`): "Take the Adhan Tutorial", and so on for each tab.
-3. **The welcome's "A lot to discover" page** (`WelcomeDiscoverPage`): a LEARN EACH TAB card under the Tips & Tricks card, with one row per offered tab, and the line "Each tab also has Tips & Tricks in its settings." This is the pointer held back on 2026-10-31.
+3. **(Removed 2026-11-05 with the page itself.)** The welcome's "A lot to discover" page (`WelcomeDiscoverPage`): a LEARN EACH TAB card under the Tips & Tricks card, with one row per offered tab, and the line "Each tab also has Tips & Tricks in its settings." This is the pointer held back on 2026-10-31.
 4. **Settings search:** a new `SettingsSearchEntry.Destination.tutorial(TutorialTab)`, with entries "Adhan Tutorial" and the rest. `view(for:)` maps it to `TabTutorialView(tab:presentedAsSheet: false)`.
 
 ### 4.4 Nothing new to store
@@ -169,6 +169,8 @@ These are draft cards. Each claim comes from the 2026-10-31 survey of the code; 
 1. First-visit nudge: **yes**, one time per tab (`TutorialNudgeSection`, key `tutorialNudgesSeen`, device-only). It stays until "Take the Tutorial", its close button, the tutorial's Finish, or a welcome row is pressed.
 2. "Show me" opens **settings and pickers only**, not the tab's own screens.
 3. Need a Hand?: **yes**, "New to This Tab?" leads each tab's run.
+
+**2026-11-04, the nudge and the door are one** (Abu: "merge need a hand with tutorial"). The nudge card sat right above Need a Hand? and asked the door's question, so outside Simple Mode it is gone: "New to This Tab?" always leads the run, its pill counts the tutorial's cards and wears the accent until the nudge is answered (tapping the card answers it, as every other way of opening the tutorial does). Simple Mode has no Need a Hand?, so `TutorialNudgeSection` still draws the card there, and only there. A reader who took Need a Hand? off a tab took the door with it.
 
 What the surveys corrected in the draft cards:
 

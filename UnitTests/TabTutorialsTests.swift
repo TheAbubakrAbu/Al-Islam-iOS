@@ -122,15 +122,22 @@ final class TabTutorialsTests: XCTestCase {
         XCTAssertTrue(Settings.deviceOnlyStorageKeys.contains("tutorialNudgesSeen"), "a device's onboarding, never backed up")
     }
 
-    /// "New to This Tab?" leads each Need a Hand? run once the tab's nudge is answered; while the nudge
-    /// is up it asks the same question right above the section, so the door waits.
-    func testEveryDoorLeadsToTheTutorialOnceTheNudgeIsAnswered() {
+    /// "New to This Tab?" leads each Need a Hand? run, and it is the tab's nudge (2026-11-04): its pill
+    /// wears the accent until the nudge is answered, and tapping the card answers it.
+    func testEveryRunLeadsWithTheTutorialAndItsDoorIsTheNudge() {
         let settings = Settings.shared
         settings.tutorialNudgesSeenRaw = ""
         for area in HelpDoorArea.allCases {
-            XCTAssertNotEqual(HelpDoorCatalog.doors(for: area, settings: settings).first?.id, "\(area.rawValue).tutorial")
-            settings.markTutorialNudgeSeen(TutorialTab(helpDoorArea: area))
-            XCTAssertEqual(HelpDoorCatalog.doors(for: area, settings: settings).first?.id, "\(area.rawValue).tutorial")
+            let tab = TutorialTab(helpDoorArea: area)
+            let fresh = HelpDoorCatalog.doors(for: area, settings: settings).first
+            XCTAssertEqual(fresh?.id, "\(area.rawValue).tutorial")
+            XCTAssertEqual(fresh?.isOn, true, "the door wears the accent while the nudge is unanswered")
+            XCTAssertEqual(fresh?.value?.isEmpty, false, "the pill counts the tutorial's cards")
+            fresh?.onOpen?()
+            XCTAssertTrue(settings.tutorialNudgeSeen(tab), "tapping the card answers the nudge")
+            let answered = HelpDoorCatalog.doors(for: area, settings: settings).first
+            XCTAssertEqual(answered?.id, "\(area.rawValue).tutorial")
+            XCTAssertEqual(answered?.isOn, false)
         }
         XCTAssertEqual(SettingsSearchEntry.tutorialEntries.count, TutorialTab.allCases.count)
         XCTAssertEqual(SettingsSearchEntry.Destination.tutorial(.adhan).scope, .prayer)

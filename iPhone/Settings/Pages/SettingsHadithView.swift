@@ -172,6 +172,14 @@ struct SettingsHadithView: View {
                 }
 
                 if settings.showHadithArabic {
+                    // Where the isnad sits (Abu, 2026-11-02: "Put Hadith chain back at the bottom so it
+                    // matches with English"): off, the Arabic opens at the final narrator like the
+                    // English line and the chain follows beneath it; on, the book's own order.
+                    Section(header: Text("CHAIN OF NARRATORS"),
+                            footer: Text("Off, a hadith opens at its final narrator, as the English does, and its chain of narrators follows beneath it in smaller text. On, the Arabic reads as the book writes it, the chain first. Only a narration whose chain the app can read is rearranged.")) {
+                        SettingsToggle(String(localized: "Chain Before the Hadith"), isOn: $hadithSettings.hadithChainFirst)
+                    }
+
                     // The footer is the chosen face's own story (same captions as the Quran font picker).
                     Section(header: Text("FONT"), footer: Text(settings.islamArabicFace.historyCaption.localizedDigits)) {
                         IslamArabicFontPicker()

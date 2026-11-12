@@ -673,6 +673,10 @@ struct NamesView: View {
         #else
         let keywordVisible = true
         #endif
+        #if os(iOS)
+        // The names' numbers down the edge, in the list and the grid alike; not while searching.
+        let railItems = !hasActiveSearch && keywordVisible ? Self.nameRailItems(names) : []
+        #endif
 
         ScrollViewReader { proxy in
             List {
@@ -732,9 +736,8 @@ struct NamesView: View {
                 .themedListRowBackground()
             }
             #if os(iOS)
-            // The names' numbers down the edge, in the list and the grid alike; not while searching.
-            .jumpIndexRail(!hasActiveSearch && keywordVisible ? Self.nameRailItems(names) : [],
-                           accessibilityName: String(localized: "Name index"), proxy: proxy) { item -> String? in
+            .jumpIndexRailRoom(railItems)
+            .jumpIndexRail(railItems, accessibilityName: String(localized: "Name index"), proxy: proxy) { item -> String? in
                 guard names.indices.contains(item.id) else { return nil }
                 let chunk = tileGridChunk(columns: nameGridColumns.count)
                 return settings.namesGridMode

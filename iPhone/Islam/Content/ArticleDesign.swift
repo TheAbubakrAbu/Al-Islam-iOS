@@ -1355,3 +1355,73 @@ struct ResourceHeroSection<Footer: View>: View {
         #endif
     }
 }
+
+// MARK: - Video links
+
+/// A video on YouTube as a row: a red play chip, the video's title, who made it, and the outward
+/// arrow. Tapping opens it; holding offers to copy its link (Abu, 2026-11-09: "allow me to copy them
+/// with context menu"). The row sits at the TOP of its page, right under the summary or the intro,
+/// never at the foot (Abu, the same day: "put YouTube video links at the top of each thing").
+///
+/// The English articles keep an English caption; a translated page passes `translated: true` and the
+/// caption follows the app's language (the "%@, on YouTube" and "YouTube" catalog keys).
+struct ArticleVideoLink: View {
+    let title: String
+    let url: String
+    /// Who made it, for the caption. Empty reads "YouTube" alone.
+    var channel: String = "Arabic 101"
+    var translated: Bool = false
+
+    var body: some View {
+        if let destination = URL(string: url) {
+            Link(destination: destination) {
+                HStack(spacing: 12) {
+                    AccentIconChip(systemImage: "play.fill", tint: .red, size: 30)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        // Explicit greys: inside a Link the hierarchical styles take the link's tint.
+                        caption
+                            .font(.caption)
+                            .foregroundColor(Self.secondaryInk)
+                    }
+                    Spacer(minLength: 8)
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(Self.secondaryInk)
+                }
+                .padding(.vertical, 2)
+            }
+            #if os(iOS)
+            .contextMenu {
+                Text("Copy")
+                    .foregroundStyle(.secondary)
+
+                Button {
+                    Settings.shared.hapticFeedback()
+                    UIPasteboard.general.string = url
+                } label: {
+                    Label("Copy Link", systemImage: "doc.on.doc")
+                }
+            }
+            #endif
+        }
+    }
+
+    private var caption: Text {
+        if channel.isEmpty {
+            return translated ? Text("YouTube") : Text(verbatim: "YouTube")
+        }
+        return translated ? Text("\(channel), on YouTube") : Text(verbatim: "\(channel), on YouTube")
+    }
+
+    private static var secondaryInk: Color {
+        #if os(iOS)
+        Color(UIColor.secondaryLabel)
+        #else
+        Color.gray
+        #endif
+    }
+}

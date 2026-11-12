@@ -101,6 +101,55 @@ final class ArabicSpeech: NSObject, ObservableObject {
         }
     }
 
+    /// The best English voice, for the hadith read aloud in English (2026-11-02): the same quality
+    /// ladder as the Arabic one, the device's own English locale preferred, then en-US. Resolved in
+    /// the same background pass as the Arabic voice (one catalog enumeration, never on main).
+    @Published private var englishVoice: AVSpeechSynthesisVoice?
+
+    nonisolated private static func bestEnglishVoice() -> AVSpeechSynthesisVoice? {
+        let english = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.hasPrefix("en") }
+        guard !english.isEmpty else { return nil }
+        let preferred = Locale.preferredLanguages.first { $0.hasPrefix("en") }.map { $0.replacingOccurrences(of: "_", with: "-") }
+        func qualityRank(_ voice: AVSpeechSynthesisVoice) -> Int {
+            if #available(iOS 16.0, watchOS 9.0, *), voice.quality == .premium { return 2 }
+            return voice.quality == .enhanced ? 1 : 0
+        }
+        func localeRank(_ voice: AVSpeechSynthesisVoice) -> Int {
+            if let preferred, voice.language == preferred { return 2 }
+            return voice.language == "en-US" ? 1 : 0
+        }
+        return english.max { a, b in
+            (qualityRank(a), localeRank(a)) < (qualityRank(b), localeRank(b))
+        }
+    }
+
+    var isEnglishAvailable: Bool { englishVoice != nil }
+
+    /// Speaks English text (a hadith's narrator line and translation) with the English voice, cutting
+    /// off whatever was being spoken. One utterance: the English voices pace themselves, and the row
+    /// highlight compares against the whole text. Silent on a device with no English voice.
+    func speakEnglish(_ text: String, rate: Float = AVSpeechUtteranceDefaultSpeechRate) {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        if !voiceResolved {
+            // Resolving: speak when the voices land (`then` fires only on that path, see `resolveVoice`).
+            resolveVoice(then: { _ in ArabicSpeech.shared.speakEnglish(text, rate: rate) })
+            return
+        }
+        guard let voice = englishVoice, !reentering else { return }
+        reentering = true
+        defer { reentering = false }
+
+        stop()
+        currentText = text
+        activateSession { [self] in
+            let item = AVSpeechUtterance(string: text)
+            item.voice = voice
+            item.rate = rate
+            utteranceOwners[item] = text
+            synthesizer.speak(item)
+        }
+    }
+
     /// Resolved once and kept, and resolved OFF the main thread.
     ///
     /// `speechVoices()` is documented above as 5-30 ms, which is what it costs on a phone. On a Mac it
@@ -134,9 +183,11 @@ final class ArabicSpeech: NSObject, ObservableObject {
         if let then { pendingVoiceContinuations.append(then) }
         Self.voiceQueue.async {
             let resolved = Self.bestArabicVoice()
+            let english = Self.bestEnglishVoice()
             Task { @MainActor in
                 let speech = ArabicSpeech.shared
                 speech.arabicVoice = resolved
+                speech.englishVoice = english
                 speech.voiceResolved = true
                 speech.voiceResolving = false
                 ArabicVoiceAvailability.shared.update(resolved != nil)

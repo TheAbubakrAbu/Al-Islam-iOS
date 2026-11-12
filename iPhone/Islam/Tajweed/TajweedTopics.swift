@@ -22,6 +22,13 @@ struct TajweedImprovingRecitationView: View {
                     ArticleParagraph(verbatim: String(localized: "You must also set aside arrogance and ego. Even if you believe your tajweed, voice, or makharij are good, there is always room to improve. The greatest reciters spent years refining their recitation. Below are three consistent practices that will help maximize both this guide and your learning of tajweed."))
                 }
 
+                Section(header: ArticleHeader(String(localized: "WATCH"))) {
+                    ArticleVideoLink(title: String(localized: "Why are you still struggling with Quran recitation?"),
+                                     url: "https://www.youtube.com/watch?v=_acpVGn0ys0", translated: true)
+                    ArticleVideoLink(title: String(localized: "The best and fastest route to learn Arabic and the Quran"),
+                                     url: "https://www.youtube.com/watch?v=86qiFqqZSG0", translated: true)
+                }
+
                 Section(header: ArticleHeader(String(localized: "1. PRACTICE RECITING ON YOUR OWN"))) {
                     ArticleParagraph(verbatim: String(localized: "Reading the Quran regularly on your own is essential. This type of practice helps with:"))
 
@@ -84,13 +91,6 @@ struct TajweedImprovingRecitationView: View {
                     ArticleParagraph(verbatim: String(localized: "Learning with a teacher is similar to training with a coach in sports. A coach observes your technique and gives personalized corrections that accelerate your improvement."))
 
                     ArticleClosing(String(localized: "If a formal teacher is not available, try to practice with someone knowledgeable who has strong tajweed and is willing to listen to your recitation and offer corrections."))
-                }
-
-                Section(header: ArticleHeader(String(localized: "WATCH"))) {
-                    TajweedVideoLink(title: String(localized: "Why are you still struggling with Quran recitation?"),
-                                     url: "https://www.youtube.com/watch?v=_acpVGn0ys0")
-                    TajweedVideoLink(title: String(localized: "The best and fastest route to learn Arabic and the Quran"),
-                                     url: "https://www.youtube.com/watch?v=86qiFqqZSG0")
                 }
 
                 TajweedCourseLessons([
@@ -295,8 +295,8 @@ struct TajweedMakharijView: View {
 
                     TajweedKeyLine(String(localized: "Listen → imitate → repeat aloud. Silent learning does not work for makharij."), systemImage: "speaker.wave.2.fill")
 
-                    TajweedVideoLink(title: String(localized: "Makharij and sifaat, the full playlist"),
-                                     url: "https://www.youtube.com/watch?v=-YrfRpwFMe8&list=PL6TlMIZ5ylgpmlnN3EpkOec0tJ8OJZ5re")
+                    ArticleVideoLink(title: String(localized: "Makharij and sifaat, the full playlist"),
+                                     url: "https://www.youtube.com/watch?v=-YrfRpwFMe8&list=PL6TlMIZ5ylgpmlnN3EpkOec0tJ8OJZ5re", translated: true)
                 }
 
                 Section(header: ArticleHeader(String(localized: "PRIMARY AREAS OF ARTICULATION"))) {
@@ -1108,6 +1108,11 @@ struct TajweedMeemSakinahView: View {
                     ArticleParagraph(verbatim: String(localized: "These rules depend on the letter that comes after the Meem Sakinah."))
                 }
 
+                Section(header: ArticleHeader(String(localized: "WATCH"))) {
+                    ArticleVideoLink(title: String(localized: "How to pronounce meem sakinah properly"),
+                                     url: "https://www.youtube.com/watch?v=MAvDrZgWRTs", translated: true)
+                }
+
                 Section(header: ArticleHeader(String(localized: "1. IKHFAA SHAFAWI"))) {
                     ArticleParagraph(verbatim: String(localized: "Ikhfaa Shafawi occurs when Meem Sakinah (مْ) is followed by the letter Ba (ب)."))
 
@@ -1189,11 +1194,6 @@ struct TajweedMeemSakinahView: View {
                     Text("Every letter page shows which of these it triggers, with an example from the Quran.")
                 }
 
-                Section(header: ArticleHeader(String(localized: "WATCH"))) {
-                    TajweedVideoLink(title: String(localized: "How to pronounce meem sakinah properly"),
-                                     url: "https://www.youtube.com/watch?v=MAvDrZgWRTs")
-                }
-
                 TajweedCourseLessons([
                     TajweedCourseLesson(id: "mim-sakin-rules", title: String(localized: "The Three Rules of Mim Sakin")),
                     TajweedCourseLesson(id: "noon-mim-mushaddad", title: String(localized: "Nun and Mim with a Shaddah")),
@@ -1214,6 +1214,11 @@ struct TajweedSukoonView: View {
             Group {
                 Section(header: ArticleHeader(String(localized: "The 4 Types of Sukoon Marks in the Qur’an"))) {
                     ArticleLead(String(localized: "In the Uthmani script of the Qur’an, letters may carry different kinds of sukoon-style markings. These marks tell the reciter whether a letter is pronounced, skipped, pronounced only when stopping, or affected by a special tajweed rule."), eyebrow: String(localized: "IN SHORT"))
+                }
+
+                Section(header: ArticleHeader(String(localized: "WATCH"))) {
+                    ArticleVideoLink(title: String(localized: "The four types of sukoon in the Quran"),
+                                     url: "https://www.youtube.com/shorts/ZlMsseUu7hU", translated: true)
                 }
 
                 Section(header: ArticleHeader(String(localized: "1. Normal Sukoon: Pronounce the Letter Without a Vowel"))) {
@@ -1266,11 +1271,6 @@ struct TajweedSukoonView: View {
                     ArticleStep(verbatim: String(localized: "4. No mark: Either a madd letter or a special tajweed rule. Example: يُقِيمُونَ / يُنفِقُونَ"))
                 }
 
-                Section(header: ArticleHeader(String(localized: "WATCH"))) {
-                    TajweedVideoLink(title: String(localized: "The four types of sukoon in the Quran"),
-                                     url: "https://www.youtube.com/shorts/ZlMsseUu7hU")
-                }
-
                 TajweedCourseLessons([
                     TajweedCourseLesson(id: "sukoon", title: String(localized: "Sukoon: The Letter at Rest")),
                 ])
@@ -1302,6 +1302,15 @@ struct TajweedHamzatulWaslView: View {
                     ])
 
                     TajweedKeyLine(String(localized: "Key rule: If you start from the word, pronounce Hamzatul-Wasl. If you connect from the previous word, drop it."), systemImage: "key.fill")
+                }
+
+                Section(header: ArticleHeader(String(localized: "WATCH"))) {
+                    ArticleVideoLink(title: String(localized: "How to pronounce words with no tashkeel"),
+                                     url: "https://www.youtube.com/shorts/SpA7EtX3jMA", translated: true)
+                    ArticleVideoLink(title: String(localized: "Hamzat al-wasl and hamzat al-qat'"),
+                                     url: "https://www.youtube.com/shorts/xNn-pR4eoHM", translated: true)
+                    ArticleVideoLink(title: String(localized: "Alif and hamzah"),
+                                     url: "https://www.youtube.com/shorts/79Ku0wSKf9Q", translated: true)
                 }
 
                 Section(header: ArticleHeader(String(localized: "1. Hamzatul-Wasl Is Dropped When Connecting"))) {
@@ -1376,15 +1385,6 @@ struct TajweedHamzatulWaslView: View {
 
                 Section(header: ArticleHeader(String(localized: "SHORT SUMMARY"))) {
                     ArticleClosing(String(localized: "Hamzatul-Wasl is the connecting hamzah, pronounced only when starting from the word. Nouns usually take 'i', words with ٱل start with 'a', verbs depend on the third letter, and tanwīn before Hamzatul-Wasl connects with an 'nِ' sound."))
-                }
-
-                Section(header: ArticleHeader(String(localized: "WATCH"))) {
-                    TajweedVideoLink(title: String(localized: "How to pronounce words with no tashkeel"),
-                                     url: "https://www.youtube.com/shorts/SpA7EtX3jMA")
-                    TajweedVideoLink(title: String(localized: "Hamzat al-wasl and hamzat al-qat'"),
-                                     url: "https://www.youtube.com/shorts/xNn-pR4eoHM")
-                    TajweedVideoLink(title: String(localized: "Alif and hamzah"),
-                                     url: "https://www.youtube.com/shorts/79Ku0wSKf9Q")
                 }
 
                 TajweedCourseLessons([

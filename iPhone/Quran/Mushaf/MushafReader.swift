@@ -3761,6 +3761,9 @@ private struct MushafPageContent: View {
     /// The coalesced playback snapshot (see `SurahPageReader`), not the raw player (Phase 10.4).
     @ObservedObject private var nowPlaying = QuranPlayer.shared.nowPlaying
     private var quranPlayer: QuranPlayer { .shared }
+    /// Play Word by Word's run (WordClipPlayer; publishes on start and stop only): its ayah takes the
+    /// recitation tint while the clips sound.
+    @ObservedObject private var wordClips = WordClipPlayer.shared
     /// Observed so pinning an ayah's display choices (beginner spacing, tajweed, tashkeel, dots, ...)
     /// re-evaluates this page: the composed text changes, and the render cache key (which folds in this
     /// page's pins) has to be recomputed to pick it up.
@@ -3851,6 +3854,10 @@ private struct MushafPageContent: View {
 
     /// The ayah being recited right now, if it's on this page - it gets an accent-tinted background.
     private var playingAyah: (surahID: Int, ayahID: Int)? {
+        // Play Word by Word lights its ayah the same way while its clips sound.
+        if let words = wordClips.current, ayahRef(surahID: words.surah, ayahID: words.ayah) != nil {
+            return (words.surah, words.ayah)
+        }
         guard let surahID = nowPlaying.currentSurahNumber,
               let ayahID = nowPlaying.currentAyahNumber,
               ayahRef(surahID: surahID, ayahID: ayahID) != nil else { return nil }
@@ -4259,6 +4266,11 @@ private struct MushafPageContent: View {
 
     private func pageTextBody(rendered: MushafRenderedPage, width: CGFloat, visibleHeight: CGFloat,
                               zoomable: Bool, scale: CGFloat = 1, clipsToBand: Bool = false) -> some View {
+                // The recited word reaches the page through this host, which re-renders the text view
+                // alone on each word (an attribute edit in place, see `updateUIView`), never this reader.
+                PlayingWordHost(keys: Set(rendered.ranges.filter { $0.ayahID > 0 }.map {
+                    PlayingWordLink.AyahKey(surah: $0.surahID, ayah: $0.ayahID)
+                })) { playingWord in
                 MushafPageTextView(
                     pageNumber: page.page,
                     attributed: rendered.text,
@@ -4267,6 +4279,7 @@ private struct MushafPageContent: View {
                     height: rendered.height,
                     highlight: recitingAyah,
                     highlightColor: settings.accentColor.color,
+                    playingWord: playingWord.map { (surahID: $0.surah, ayahID: $0.ayah, index: $0.index, count: $0.count) },
                     playingSurahID: nowPlaying.currentSurahNumber,
                     mark: markedAyah ?? sheetAyahTint,
                     termHighlight: arrivalHighlight.map { (surahID: $0.ref.surahID, ayahID: $0.ref.ayahID, term: $0.term) },
@@ -4326,6 +4339,7 @@ private struct MushafPageContent: View {
                     showSurahInfo(surahID: surahID)
                 } onDoubleTapWord: { surahID, ayahID, wordIndex in
                     presentWordMeaning(surahID: surahID, ayahID: ayahID, wordIndex: wordIndex)
+                }
                 }
                 .frame(width: width, height: rendered.height)
                 // `scale` < 1 only for a render fitted to a taller band (see `renderedPageBody`): the
@@ -7949,6 +7963,9 @@ struct MushafPageTextView: UIViewRepresentable {
     /// The ayah being recited, if it is on this page - tinted in the accent.
     var highlight: (surahID: Int, ayahID: Int)?
     var highlightColor: Color = .accentColor
+    /// The word being recited inside `highlight`'s ayah (WordHighlight.swift): washed stronger than
+    /// the ayah, found as word `index` of the ayah's run when that run holds exactly `count` words.
+    var playingWord: (surahID: Int, ayahID: Int, index: Int, count: Int)? = nil
     /// The surah currently loaded in the player, if any: its heading NAME (not the bismillah) carries the
     /// accent tint while it plays, so the page shows which surah the recitation belongs to.
     var playingSurahID: Int? = nil
@@ -8106,8 +8123,15 @@ struct MushafPageTextView: UIViewRepresentable {
             return (ayahRange, marker)
         }
 
+        // The recited word's run inside its ayah's run, when the page's tokens agree with the source.
+        let wordTint: NSRange? = playingWord.flatMap { word in
+            range(of: (word.surahID, word.ayahID)).flatMap { ayahRange in
+                QuranWords.range(ofWord: word.index, in: ayahRange, of: text.string as NSString, expecting: word.count)
+            }
+        }
+
         guard !tints.isEmpty || !highlightWashes.isEmpty || termTarget != nil || searchIsActive
-                || !hidden.isEmpty else { return (text, []) }
+                || !hidden.isEmpty || wordTint != nil else { return (text, []) }
 
         var touched: [NSRange] = []
         let mutable = NSMutableAttributedString(attributedString: text)
@@ -8128,6 +8152,11 @@ struct MushafPageTextView: UIViewRepresentable {
         for (range, color) in tints {
             mutable.addAttribute(.backgroundColor, value: UIColor(color).withAlphaComponent(0.22), range: range)
             touched.append(range)
+        }
+        // The recited word, over its ayah's tint.
+        if let wordTint {
+            mutable.addAttribute(.backgroundColor, value: UIColor(highlightColor).withAlphaComponent(0.42), range: wordTint)
+            touched.append(wordTint)
         }
         // Only when at least one match is actually located ON this page: flatten the page's tajweed to the
         // label color (headings keep their own styling; `> 0` skips the name-only subranges so the heading
@@ -8391,7 +8420,9 @@ struct MushafPageTextView: UIViewRepresentable {
         let groundKey = washGround.map { WashRGB($0).key } ?? ""
         // Test Mode's hidden ayahs, for the same reason: revealing one changes nothing else on the page.
         let testKey = testHidden.map { "\($0.surahID):\($0.ayahID)" }.joined(separator: ",")
-        let highlightKey = "\(key(highlight))|\(playingSurahID.map(String.init) ?? "")|\(key(mark))|\(termKey)|\(selectedKey)|\(searchKey)|\(bookmarkKey)|\(themeKey)|\(groundKey)|\(testKey)"
+        // The recited word moves a few times a second; its key change takes the in-place edit path below.
+        let wordKey = playingWord.map { "\($0.surahID):\($0.ayahID):\($0.index)/\($0.count)" } ?? ""
+        let highlightKey = "\(key(highlight))|\(playingSurahID.map(String.init) ?? "")|\(key(mark))|\(termKey)|\(selectedKey)|\(searchKey)|\(bookmarkKey)|\(themeKey)|\(groundKey)|\(testKey)|\(wordKey)"
         let sameText = context.coordinator.lastAssignedText === attributed
             && context.coordinator.lastWidth == width
             && context.coordinator.lastHeight == height

@@ -1172,6 +1172,15 @@ struct LastListenedAyahRow: View {
                     Label("Play This Ayah", systemImage: "play.circle")
                 }
 
+                #if os(iOS)
+                Button {
+                    settings.hapticFeedback()
+                    WordClipPlayer.shared.toggle(surah: surah.id, ayah: ayah.id)
+                } label: {
+                    Label("Play Word by Word", systemImage: "text.word.spacing")
+                }
+                #endif
+
                 Menu {
                     ayahPlayFromMenuItems(surah: surah.id, ayah: ayah.id, settings: settings,
                                           quranPlayer: quranPlayer)

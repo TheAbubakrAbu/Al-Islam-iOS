@@ -816,16 +816,6 @@ struct QuranView: View {
         }
     }
 
-    /// `UIApplication.didEnterBackgroundNotification` on iOS. The watch build compiles this file too
-    /// and has neither that symbol nor page mode, so there it is a name nothing ever posts.
-    private static let didEnterBackgroundNotification: Notification.Name = {
-        #if os(iOS)
-        return UIApplication.didEnterBackgroundNotification
-        #else
-        return Notification.Name("AlIslamQuranNoopDidEnterBackground")
-        #endif
-    }()
-
     @State private var path: [QuranRoute] = []
     /// Guards the once-per-appearance auto-open of the mushaf when page mode is already on.
     @State private var didAutoOpenMushaf = false
@@ -1508,34 +1498,13 @@ struct QuranView: View {
             }
             #endif
         }
-        // LEAVING THE APP is the same event as leaving the tab, and page mode has to treat it that
-        // way: "if you have page mode on, when you disappear it should just be mushaf" (Abu,
-        // 2026-09-14). Without this, backgrounding the app while the tab sat on the surah list
-        // (a Back tap out of the reader, or a launch that has not opened it yet) meant the next
-        // foreground came back to the LIST - `isActiveTab` never changed, so nothing re-opened it,
-        // and the mushaf only appeared after a trip through another tab.
-        //
-        // `didEnterBackground`, not `willResignActive`: the latter also fires for a pulled-down
-        // notification banner or Control Center, and re-arranging the navigation stack underneath
-        // someone who never actually left is its own bug. Setting `path` here is cheap (it is the
-        // realization that costs, and that happens on the way back in, where it would have anyway);
-        // what it buys is that the return renders the reader directly instead of the list plus a push.
-        .onReceive(NotificationCenter.default.publisher(for: Self.didEnterBackgroundNotification)) { _ in
-            #if os(iOS)
-            // NOT while something modal is up. A share sheet handing an ayah to Messages, a sheet
-            // left open while a call comes in: the app backgrounds, but the user has not LEFT - they
-            // are mid-action and coming straight back to what they had open. Re-arranging the stack
-            // underneath put the mushaf where the surah list (and the share sheet's context) had
-            // been (Abu, 2026-09-28: "I was sharing an ayah, then I come back and page mode comes
-            // back"). See `ModalPresence`.
-            let modal = ModalPresence.isPresenting
-            #if DEBUG
-            NSLog("QURAN BACKGROUND modal=%d pathEmpty=%d pageMode=%d", modal ? 1 : 0, path.isEmpty ? 1 : 0, settings.quranPageMode ? 1 : 0)
-            #endif
-            guard !modal else { return }
-            #endif
-            openMushafUnanimated()
-        }
+        // Leaving the APP is deliberately NOT the same as leaving the tab (Abu, 2026-11-08: "I don't
+        // want it to do that by me just doing on change of scene phase ... we should still do it if I
+        // go to adhan then back to Quran"). From 2026-09-14 to 2026-11-08 a `didEnterBackground`
+        // observer here re-opened the mushaf under a surah list the user had deliberately backed out
+        // to, so a notification, a quick trip to another app or the app switcher came back to a
+        // different screen than the one left. Backing out to the list now survives until the TAB is
+        // left (the `isActiveTab` handler above) or the app is relaunched (the auto-open in `.task`).
         .onChange(of: searchHandoff.pendingQuery) { query in
             guard let query, !isPicker else { return }
             runHandedOffSearch(query)
@@ -1895,6 +1864,9 @@ struct QuranView: View {
     var content: some View {
         ScrollViewReader { scrollProxy in
             let context = searchDisplayContext
+            #if os(iOS)
+            let railItems = showsJuzRail ? juzRailItems : []
+            #endif
 
             List {
                 Group {
@@ -1902,9 +1874,10 @@ struct QuranView: View {
                     if !isPicker {
                         boxed(primaryHistorySections(context: context))
                         #if os(iOS)
-                        // The tutorial's one-time nudge, then Need a Hand?: reading the script,
-                        // transliteration, al-Kahf on Friday, right under the summary and gone while a
-                        // search is typed (TabTutorials.swift, HelpDoors.swift).
+                        // Need a Hand?: the tab's tutorial, reading the script, transliteration, al-Kahf
+                        // on Friday, right under the summary and gone while a search is typed. Simple Mode
+                        // has no Need a Hand?, so there the tutorial's one-time nudge is a card of its own
+                        // (TabTutorials.swift, HelpDoors.swift).
                         if !context.isSearching {
                             boxed(TutorialNudgeSection(tab: .quran))
                         }
@@ -1933,6 +1906,9 @@ struct QuranView: View {
                 }
                 .themedListRowBackground()
             }
+            #if os(iOS)
+            .jumpIndexRailRoom(railItems)
+            #endif
             .applyConditionalListStyle(disableNowPlayingInset: true)
             // Landscape on a phone: the sensor housing insets this list 62pt on BOTH sides, so the
             // browse tiles were being laid out into 750pt of an 874pt band. Reclaim the container
@@ -1967,8 +1943,8 @@ struct QuranView: View {
             // The phone, iPad and Mac draw their own juz rail below instead of the system index.
             .listSectionIndexVisibilityWhenAvailable(visible: false)
             .overlay(alignment: .trailing) {
-                if showsJuzRail {
-                    juzRail(proxy: scrollProxy)
+                if !railItems.isEmpty {
+                    juzRail(railItems, proxy: scrollProxy)
                 }
             }
             #else
@@ -4451,13 +4427,17 @@ struct QuranView: View {
         }
     }
 
-    private func juzRail(proxy: ScrollViewProxy) -> some View {
+    private var juzRailItems: [JumpIndexItem] {
         let items = QuranData.juzList.map { juz in
             JumpIndexItem(id: juz.id, label: "\(juz.id)".localizedDigits,
                           title: String(localized: "Juz \(juz.id)"), subtitle: juz.displayName)
         }
-        return JumpIndexRail(
-            items: juzListDescending ? items.reversed() : items,
+        return juzListDescending ? items.reversed() : items
+    }
+
+    private func juzRail(_ items: [JumpIndexItem], proxy: ScrollViewProxy) -> some View {
+        JumpIndexRail(
+            items: items,
             accent: settings.accentColor.color,
             accessibilityName: String(localized: "Juz index"),
             onSelect: { item in

@@ -117,6 +117,17 @@ struct QiraatChange {
     let hafsWordsByAyah: [Int: [Int]]
     /// Hafs ayah -> the index of its first token in `hafsText` (a joined span's earlier ayahs first).
     var hafsStartByAyah: [Int: Int] = [:]
+    /// The print's "differs from Hafs" letters, for a riwayah whose tint is drawn letter by letter
+    /// (`QiraatLetterDiff.hasLetterPack`): riwayah token index -> the pack's INCLUSIVE base-letter
+    /// cluster extents of that word (lo -1 = the whole word). Words the print leaves black are absent.
+    var riwayahLetters: [Int: [(lo: Int, hi: Int)]] = [:]
+    /// Whether `riwayahLetters` speaks for this riwayah (its pack is bundled and listed). Without it
+    /// every changed word is tinted whole, as before 2026-11-02.
+    var hasPrintLetters = false
+    /// Hafs token -> riwayah token for the letter tints: the folded-word pairs plus the leftovers
+    /// paired off positionally where a gap holds as many words on each side (a replaced word with
+    /// its replacement), as `QiraatLetterDiff.pairWords` does for the reader and the sheet.
+    var letterPairs: [Int: Int] = [:]
 
     var differs: Bool { !hafsWords.isEmpty || !riwayahWords.isEmpty }
     var differsAtWordLevel: Bool { !hafsWordLevel.isEmpty || !riwayahWordLevel.isEmpty }
@@ -177,6 +188,8 @@ struct QiraatChange {
         // word-level change; letter khilaf (dots, hamzah, a vowel) is the finer tier.
         var khilafWord = Set<Int>()
         var khilafLetter = Set<Int>()
+        let hasPrintLetters = QiraatLetterDiff.hasLetterPack(tag: tag)
+        var riwayahLetters: [Int: [(lo: Int, hi: Int)]] = [:]
         let store = QiraahTajweedStore.shared
         let legend = store.legend(for: tag)
         let wordLetters = Set(legend.filter { $0.key == "khilaf_word" }.map(\.letter))
@@ -204,6 +217,10 @@ struct QiraatChange {
                         khilafWord.insert(offset + index)
                     } else if list.contains(where: { harfLetters.contains($0.letter) }) {
                         khilafLetter.insert(offset + index)
+                    }
+                    let khilaf = list.filter { wordLetters.contains($0.letter) || harfLetters.contains($0.letter) }
+                    if hasPrintLetters, !khilaf.isEmpty {
+                        riwayahLetters[offset + index] = khilaf.map { (lo: $0.baseLo, hi: $0.baseHi) }
                     }
                 }
             }
@@ -260,22 +277,44 @@ struct QiraatChange {
             starts[piece.ayah] = start
             start += count
         }
-        return QiraatChange(hafsText: hafsText, riwayahText: riwayahText, diff: diff,
-                            hafsWords: hafsAll.sorted(), riwayahWords: riwayahAll.sorted(),
-                            hafsWordLevel: hafsWordLevel, riwayahWordLevel: riwayahWordLevel,
-                            hafsWordsByAyah: byAyah, hafsStartByAyah: starts)
+        var change = QiraatChange(hafsText: hafsText, riwayahText: riwayahText, diff: diff,
+                                  hafsWords: hafsAll.sorted(), riwayahWords: riwayahAll.sorted(),
+                                  hafsWordLevel: hafsWordLevel, riwayahWordLevel: riwayahWordLevel,
+                                  hafsWordsByAyah: byAyah, hafsStartByAyah: starts)
+        change.hasPrintLetters = hasPrintLetters
+        change.riwayahLetters = riwayahLetters
+        if hasPrintLetters {
+            change.letterPairs = QiraatLetterDiff.pairWords(hafs: diff.hafs.map(\.text), riwayah: diff.riwayah.map(\.text)).pairs
+        }
+        return change
     }
 }
 
-/// Tints chosen words of an ayah text, leaving the waqf stop signs riding their last letters in the
-/// base color (user rule: stop signs are never highlighted).
+/// Tints chosen words of an ayah text, or chosen letters inside them, leaving the waqf stop signs
+/// riding their last letters in the base color (user rule: stop signs are never highlighted).
 enum QiraatTint {
-    static func attributed(_ text: String, tokens: [QiraatWordDiff.Token], words: Set<Int>,
+    /// What to tint in one text: whole words by token index, and letters by UTF-16 range over the
+    /// text (a letter-level riwayah's marked letters, from `QiraatPlaceBuilder.tints`).
+    struct Spec: Equatable {
+        var words: Set<Int> = []
+        var letters: [NSRange] = []
+
+        static let none = Spec()
+
+        var isEmpty: Bool { words.isEmpty && letters.isEmpty }
+    }
+
+    static func attributed(_ text: String, tokens: [QiraatWordDiff.Token], spec: Spec,
                            base: Color, tint: Color) -> AttributedString {
         var attributed = AttributedString(text)
         attributed.foregroundColor = base
-        for index in words where tokens.indices.contains(index) {
-            for run in stopSignFreeRuns(of: tokens[index].range, in: text) {
+        var ranges: [Range<String.Index>] = []
+        for index in spec.words where tokens.indices.contains(index) { ranges.append(tokens[index].range) }
+        for range in spec.letters {
+            if let swiftRange = Range(range, in: text) { ranges.append(swiftRange) }
+        }
+        for range in ranges {
+            for run in stopSignFreeRuns(of: range, in: text) {
                 if let lo = AttributedString.Index(run.lowerBound, within: attributed),
                    let hi = AttributedString.Index(run.upperBound, within: attributed), lo < hi {
                     attributed[lo..<hi].foregroundColor = tint

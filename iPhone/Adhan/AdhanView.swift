@@ -50,11 +50,6 @@ struct AdhanView: View {
     /// in `autoChangeFlagsDidChange` only fires while it is.
     @State private var isOnScreen = false
     #if os(iOS)
-    /// The permissions sheet (PermissionsSheet.swift): location and notifications, explained and asked
-    /// for from one place, before either system prompt. Presented once this tab is in front after the
-    /// welcome; its dismissal runs the refresh the bare prompts used to lead into.
-    @State private var showPermissionsSheet = false
-    @State private var permissionsSheetChecked = false
     /// The scheme the list's content keeps while the sky does not fill the tab (`skyPageContent`).
     @Environment(\.colorScheme) private var colorScheme
     #endif
@@ -343,7 +338,7 @@ struct AdhanView: View {
                 #if os(iOS)
                 openPendingQiblaIfAny()
                 #endif
-                askLocationThenRefresh()
+                arrivalRefresh()
                 settings.refreshLocationIfStale()
             } else {
                 // Behind the launch cover (this is the initial tab): compute today's list from the
@@ -356,18 +351,15 @@ struct AdhanView: View {
         .onChange(of: appRevealed) { revealed in
             guard revealed else { return }
             LaunchClock.mark("adhan root: reveal refresh")
-            // The location question waits for this tab to be in front (a learner's welcome lands on
-            // the Islam tab); the refresh runs either way, as it always has.
+            // The watch's location question waits for this tab to be in front; the refresh runs either
+            // way, as it always has (off screen: a learner's welcome lands on the Islam tab).
             if isOnScreen {
                 #if os(iOS)
                 openPendingQiblaIfAny()
                 #endif
-                askLocationThenRefresh()
+                arrivalRefresh()
             } else {
-                // Off screen (a learner's welcome lands on the Islam tab): the times refresh, but no
-                // system prompt. The permissions sheet is the one door to both prompts since
-                // 2026-10-11, and it is offered the first time this tab comes in front.
-                prayerTimeRefresh(force: false, askNotifications: false)
+                prayerTimeRefresh(force: false)
             }
             settings.refreshLocationIfStale()
         }
@@ -412,7 +404,7 @@ struct AdhanView: View {
                     // Control Center tap, then the gear within a second) left SwiftUI holding a second
                     // sheet it could never show ("only presenting a single sheet is supported", logged
                     // on every update for the rest of the session; the stress walk, 2026-10-12).
-                    guard glanceSheet == nil, !showPermissionsSheet else { return }
+                    guard glanceSheet == nil else { return }
                     settingsSheet = .root
                 } label: {
                     Image(systemName: "gear")
@@ -469,9 +461,6 @@ struct AdhanView: View {
                 EmptyView()
                 #endif
             }
-        }
-        .sheet(isPresented: $showPermissionsSheet, onDismiss: permissionsSheetDismissed) {
-            PermissionsSheet()
         }
         #if DEBUG
         // "-glanceAction <name>": fire a glance tile's action after the reveal, since tiles are not
@@ -538,7 +527,7 @@ struct AdhanView: View {
     private func handleGlance(_ action: GlanceAction) {
         // One sheet at a time (see the gear button): a second request while one is up is dropped,
         // the way a second tap on a door is dropped everywhere else in the app.
-        let sheetIsUp = glanceSheet != nil || settingsSheet != nil || showPermissionsSheet
+        let sheetIsUp = glanceSheet != nil || settingsSheet != nil
         switch action {
         case .cityPrayerTimes:
             if !sheetIsUp { glanceSheet = .cityPrayerTimes }
@@ -583,11 +572,16 @@ struct AdhanView: View {
             // a loud card leading the whole tab). With the sky on, the countdown rides in the sky
             // card, so this is the first row beneath it either way.
             travelingSection
-            // The tutorial's one-time nudge, in the notices' slot above the list it explains (and, before
-            // there are times to show, where the list would be): TabTutorials.swift.
+            // Simple Mode's tutorial nudge (elsewhere the nudge is the door leading Need a Hand?), in the
+            // notices' slot above the list it explains (and, before there are times to show, where the
+            // list would be): TabTutorials.swift.
             TutorialNudgeSection(tab: .adhan)
+            // Whatever permission is still missing, asked for right here (PermissionsSheet.swift).
+            AdhanPermissionSection(hasTimes: true) { prayerTimeRefresh(force: false) }
             PrayerList()
         } else {
+            // No times yet: "Turn On Location" stands where they would be.
+            AdhanPermissionSection(hasTimes: false) { prayerTimeRefresh(force: false) }
             travelingSection
             TutorialNudgeSection(tab: .adhan)
         }
@@ -750,56 +744,14 @@ struct AdhanView: View {
     }
     #endif
 
-    /// Location first, then the refresh, which is where the notification question is asked: one system
-    /// prompt at a time, and neither over the welcome (launch no longer asks for location).
-    ///
-    /// Since 2026-10-11 the permissions sheet stands in front of both prompts (PermissionsSheet.swift):
-    /// while a permission is unanswered and the sheet is due, it is presented instead and the refresh
-    /// runs when it closes; while its Not Now stands (a day), the tab refreshes WITHOUT raising either
-    /// system prompt, so the sheet is the one door to them. Snoozed is also what "-skipNotificationPrompt"
-    /// runs look like for notifications, which the existing DEBUG gate inside already handles.
-    private func askLocationThenRefresh() {
+    /// The refresh as the tab comes in front. The phone asks for nothing here: its two permissions are
+    /// asked for by the welcome's page and, after it, by this tab's own cards (`AdhanPermissionSection`,
+    /// PermissionsSheet.swift), which replaced the permissions sheet and the daily dialogs on 2026-11-05.
+    /// The watch has no cards, so it still asks: location first, then the refresh, which is where its
+    /// notification question is asked, one system prompt at a time.
+    private func arrivalRefresh() {
         #if os(iOS)
-        if !permissionsSheetChecked {
-            permissionsSheetChecked = true
-            Task { @MainActor in
-                let due = await PermissionsSheet.shouldPresent(settings)
-                #if DEBUG
-                NSLog("PERMISSIONS SHEET due=%d onScreen=%d revealed=%d", due ? 1 : 0, isOnScreen ? 1 : 0, AppReveal.revealed ? 1 : 0)
-                #endif
-                if due {
-                    // A beat after the reveal, so the sheet rises over a settled tab rather than
-                    // mid-dissolve; the refresh follows its dismissal. `AppReveal.revealed` is the
-                    // live mirror of `appRevealed`: a captured environment value would be stale here.
-                    try? await Task.sleep(nanoseconds: 450_000_000)
-                    guard isOnScreen, AppReveal.revealed, !showPermissionsSheet,
-                          glanceSheet == nil, settingsSheet == nil else {
-                        // The tab left the screen in that beat (or the cover is still up, or another
-                        // sheet of this tab is up: a glance tile or a deep link in that beat raised one,
-                        // and two sheets on one List is the fault the gear button describes): the sheet
-                        // is offered again the next time the tab asks, and nothing prompts meanwhile.
-                        // Falling through to the refresh here raised the two bare system prompts over
-                        // whatever tab the user had gone to, and the sheet never came (checked once).
-                        permissionsSheetChecked = false
-                        return
-                    }
-                    showPermissionsSheet = true
-                } else {
-                    askLocationThenRefresh()
-                }
-            }
-            return
-        }
-        let now = Date()
-        let locationSnoozed = SimpleMode.isSnoozed(until: settings.locationAlertSnoozedUntil, now: now)
-        let notificationsSnoozed = SimpleMode.isSnoozed(until: settings.notificationAlertSnoozedUntil, now: now)
-        if locationSnoozed {
-            prayerTimeRefresh(force: false, askNotifications: !notificationsSnoozed)
-        } else {
-            settings.requestLocationIfUndetermined {
-                prayerTimeRefresh(force: false, askNotifications: !notificationsSnoozed)
-            }
-        }
+        prayerTimeRefresh(force: false)
         #else
         settings.requestLocationIfUndetermined {
             prayerTimeRefresh(force: false)
@@ -807,26 +759,16 @@ struct AdhanView: View {
         #endif
     }
 
-    #if os(iOS)
-    /// The permissions sheet closed, by its Done, its Not Now, or a swipe. Whatever is still unanswered
-    /// waits a day (the dialogs' snooze), then the usual refresh, which asks nothing while it waits.
-    private func permissionsSheetDismissed() {
-        let center = UNUserNotificationCenter.current()
-        Task { @MainActor in
-            let notifications = await center.notificationSettings().authorizationStatus
-            if Settings.locationManager.authorizationStatus == .notDetermined {
-                settings.snoozePermissionAlert(location: true)
-            }
-            if notifications == .notDetermined {
-                settings.snoozePermissionAlert(location: false)
-            }
-            askLocationThenRefresh()
-        }
-    }
-    #endif
-
-    private func prayerTimeRefresh(force: Bool, askNotifications: Bool = true) {
-        settings.requestNotificationAuthorization(askIfUndetermined: askNotifications) {
+    private func prayerTimeRefresh(force: Bool) {
+        #if os(iOS)
+        // An unanswered permission is left alone (the Turn On Notifications card is the one door to
+        // the system prompt), and the cards hear what the Settings app changed while we were away.
+        let asksNotifications = false
+        Task { await PermissionAsker.shared.refresh() }
+        #else
+        let asksNotifications = true
+        #endif
+        settings.requestNotificationAuthorization(askIfUndetermined: asksNotifications) {
             settings.fetchPrayerTimes(force: force) {
                 // The one place the confirmation is raised: after the refresh has actually settled, a beat
                 // later so the list isn't still animating. `nextAlertToPresent` reads the standing flags, and
@@ -885,7 +827,10 @@ struct AdhanView: View {
         if settings.ownsAutomaticCalculationCheck, settings.calculationAutoChanged {
             return .calculationAutomaticChanged
         }
-        // A dismissed permission dialog waits a day before it asks again (`snoozePermissionAlert`).
+        // The permission dialogs are the watch's alone since 2026-11-05: the phone shows a card in the
+        // tab instead (`AdhanPermissionSection`). A dismissed one waits a day before it asks again
+        // (`snoozePermissionAlert`).
+        #if !os(iOS)
         let now = Date()
         if !settings.locationNeverAskAgain && settings.showLocationAlert
             && !SimpleMode.isSnoozed(until: settings.locationAlertSnoozedUntil, now: now) {
@@ -895,6 +840,7 @@ struct AdhanView: View {
             && !SimpleMode.isSnoozed(until: settings.notificationAlertSnoozedUntil, now: now) {
             return .notificationAlert
         }
+        #endif
         return nil
     }
 

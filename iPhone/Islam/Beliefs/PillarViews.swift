@@ -590,6 +590,10 @@ struct MuqattaatPillarView: View {
                     ArticleLead("In short: the Muqatta'at are the disconnected letters (like Alif-Lam-Mim) that open twenty-nine surahs, recited letter by letter.")
                 }
 
+                Section(header: ArticleHeader("WATCH")) {
+                    ArticleVideoLink(title: "The separated letters, and how to recite them", url: "https://www.youtube.com/watch?v=6_gKg6PByOI")
+                }
+
                 Section(header: ArticleHeader("MUQATTA'AT")) {
                     ArticleParagraph(articleMarkdown: "**Muqatta'at (مُقَطَّعَات)**, from the root **q-t-a (ق ط ع)** meaning to cut or sever, are the disconnected opening letters that appear at the beginning of 29 surahs, after the Basmalah where the Basmalah is recited.")
 
@@ -618,11 +622,6 @@ struct MuqattaatPillarView: View {
                     ForEach(rows) { row in
                         muqattaatRow(row)
                     }
-                }
-
-                Section(header: ArticleHeader("LEARN MORE")) {
-                    Text(articleMarkdown: "How the muqatta'at are recited: https://www.youtube.com/watch?v=6_gKg6PByOI")
-                        .font(.caption)
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -840,6 +839,9 @@ struct HadithPillarView: View {
                     ArticleLead("In short: a Hadith is a recorded saying, action, or approval of Prophet Muhammad (peace and blessings be upon him). Hadiths preserve the Sunnah and clarify how to act on the Quran.")
                 }
 
+                Section(header: ArticleHeader("WATCH")) {
+                    ArticleVideoLink(title: "Hadith Nabawi, Hadith Qudsi and the Quran: the difference", url: "https://www.youtube.com/watch?v=F7vfmGC-o-A")
+                }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(articleMarkdown: "A **Hadith (حَدِيث)**, an Arabic word meaning “speech,” “narration,” or “report,” is a recorded saying, action, or approval of Prophet Muhammad (peace and blessings be upon him). Hadiths preserve the Sunnah and are an essential source of Islamic knowledge, and scholars verified them meticulously to ensure their authenticity.")
@@ -867,9 +869,6 @@ struct HadithPillarView: View {
 
                     ArticleStep("2. **Hadith Nabawi (حَدِيث نَبَوِي), the Prophetic Hadith:** These include the Prophet’s own words, actions, and approvals, reflecting his teachings and practices. For instance, he said:")
                     ScriptureQuote(hadith: "bukhari:5027", cite: "Sahih al-Bukhari 5027", arabic: 36...40, english: 4...17)
-
-                    Text(verbatim: "Learn the difference here: https://www.youtube.com/watch?v=F7vfmGC-o-A")
-                        .font(.caption)
                 }
 
                 Section(header: ArticleHeader("AUTHENTICITY AND CLASSIFICATION")) {

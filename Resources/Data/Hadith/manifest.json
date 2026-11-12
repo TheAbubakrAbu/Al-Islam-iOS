@@ -24,33 +24,33 @@
     },
     {
       "blocks" : 22,
-      "bytes" : 1908740,
+      "bytes" : 1908802,
       "chapters" : 38,
       "dailyCandidates" : 1399,
       "hadiths" : 4345,
-      "sha256" : "ec090fbd01f91f6dd849597e2944ebaa9b0a4705a7cfc46b288725a52efe6c4b",
+      "sha256" : "3824bc166dd928e1c3f2ffa1a6f2bd38b0c499b6aaba2ce3fb0b11ee41195e3d",
       "slug" : "ibnmajah",
-      "sourceBytes" : 6885735
+      "sourceBytes" : 6885841
     },
     {
       "blocks" : 30,
-      "bytes" : 2833982,
+      "bytes" : 2834005,
       "chapters" : 43,
       "dailyCandidates" : 1441,
       "hadiths" : 5276,
-      "sha256" : "e0ed1b18ced8b07f1c952bc46bdc2661320c552110018c1c09fe717a44584fbe",
+      "sha256" : "967de7a0af894cb2654de0570af8170c6a7b0a5de906050f03ffbb95b5b98316",
       "slug" : "abudawud",
-      "sourceBytes" : 8975691
+      "sourceBytes" : 8975717
     },
     {
       "blocks" : 30,
-      "bytes" : 2506446,
+      "bytes" : 2506454,
       "chapters" : 49,
       "dailyCandidates" : 311,
       "hadiths" : 4053,
-      "sha256" : "083b3c2ecc959134d4aa149b64125af976ec3b54826aab312e2ccc6aff6cb152",
+      "sha256" : "3c7806d617615f05ab4c29541cf8e909c63163cfc8d2915a3edaee1351cb5d59",
       "slug" : "tirmidhi",
-      "sourceBytes" : 8710320
+      "sourceBytes" : 8710384
     },
     {
       "blocks" : 30,
@@ -73,14 +73,14 @@
       "sourceBytes" : 3404961
     },
     {
-      "blocks" : 9,
-      "bytes" : 814084,
-      "chapters" : 8,
+      "blocks" : 99,
+      "bytes" : 6705623,
+      "chapters" : 1287,
       "dailyCandidates" : 321,
-      "hadiths" : 1374,
-      "sha256" : "8432ecb22a9a41688c5bed6da0be2739425c6dcc87dd29530f138e9e4af997c0",
+      "hadiths" : 27529,
+      "sha256" : "4b951a92193cdb11bb340c690379699faa6d4570b65a6a6217dca36aa5cbddd2",
       "slug" : "ahmed",
-      "sourceBytes" : 2558269
+      "sourceBytes" : 29579275
     },
     {
       "blocks" : 11,
@@ -177,7 +177,7 @@
   "formatVersion" : 4,
   "searchCodec" : "lzfse",
   "textCodec" : "lzma",
-  "totalChapters" : 607,
-  "totalHadiths" : 50884,
-  "totalPackBytes" : 25488825
+  "totalChapters" : 1886,
+  "totalHadiths" : 77039,
+  "totalPackBytes" : 31380457
 }

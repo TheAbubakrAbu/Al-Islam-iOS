@@ -13,10 +13,13 @@ import SwiftUI
 // marks drawn over the live tab: Simple Mode, hidden sections and the iPad layout all move what they
 // would point at.
 //
-// It opens from the tab's ⋯ menu, a one-time nudge on the tab (`TutorialNudgeSection`), the first row of
-// the tab's Tips & Tricks on its settings page, a "New to This Tab?" door in Need a Hand?, the welcome's
-// LEARN EACH TAB card, and settings search. The tab's own requests go through ONE sheet on the tab bar
-// root (`tabTutorialPresenter()`), so no tab grows another sheet bridge.
+// It opens from the tab's ⋯ menu, the "New to This Tab?" door that leads Need a Hand? (the tab's
+// one-time nudge too: its pill wears the accent until the tutorial is opened; Simple Mode, with no
+// Need a Hand?, shows the nudge as a card, `TutorialNudgeSection`), the first row of the tab's Tips &
+// Tricks on its settings page, and settings search (the welcome listed them too until 2026-11-05, when
+// it was cut down to one idea a page). The tab's own
+// requests go through ONE sheet on the tab bar root (`tabTutorialPresenter()`), so no tab grows another
+// sheet bridge.
 //
 // EVERY CARD WAS CHECKED AGAINST THE CODE (four surveys with file and line, 2026-10-31), the same rule as
 // the tips: a card that describes something the app does not do is worse than no card, so a card changes
@@ -59,7 +62,7 @@ enum TutorialTab: String, CaseIterable, Identifiable {
         }
     }
 
-    /// What it covers, under the nudge's question and the welcome's rows.
+    /// What it covers, under the nudge's question.
     var summary: String {
         switch self {
         #if HAS_ADHAN
@@ -679,20 +682,25 @@ struct TutorialMenuItem: View {
 
 // MARK: - The nudge
 
-/// The tab's first-visit nudge: "New to the Adhan tab?", what the tutorial covers, Take the Tutorial and
-/// a close button. Shown until one of them is pressed, or the tutorial is taken from anywhere that marks
-/// it; never written from an appear. In Simple Mode too: it is a door for exactly the reader Simple Mode
-/// is for.
+/// The tab's first-visit nudge as a card of its own: "New to the Adhan tab?", what the tutorial covers,
+/// Take the Tutorial and a close button. Shown until one of them is pressed, or the tutorial is taken
+/// from anywhere that marks it; never written from an appear.
+///
+/// In Simple Mode only since 2026-11-04 (Abu: "merge need a hand with tutorial"): everywhere else the
+/// nudge is the "New to This Tab?" door leading Need a Hand? (`HelpDoorCatalog.tutorialDoor`), and a
+/// card here would ask the same question twice. Simple Mode has no Need a Hand?, and the tutorial is a
+/// door for exactly the reader Simple Mode is for. A reader who took Need a Hand? off a tab took its
+/// door with it: no card comes back in its place.
 struct TutorialNudgeSection: View {
     private let settings = Settings.shared
-    /// The slice that publishes `tutorialNudgesSeen`.
+    /// The slice that publishes `tutorialNudgesSeen` and `simpleMode`.
     @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.appearance) private var appearance
 
     let tab: TutorialTab
 
     var body: some View {
-        if !settings.tutorialNudgeSeen(tab) {
+        if settings.hides(.needAHand), !settings.tutorialNudgeSeen(tab) {
             Section {
                 card
             }

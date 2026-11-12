@@ -3202,6 +3202,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// only repeat and play this ayah"), nor is Play Custom Range; both close the sheet as they always have.
     @Setting("keepAyahSheetOpenOnPlay") var keepAyahSheetOpenOnPlay: Bool = false
 
+    /// The word being recited lights up as the reciter reaches it (Abu, 2026-11-02: "play ayah
+    /// highlighting each word"), from quran.com's word timings for the reciter (see
+    /// WordHighlight.swift). On by default; off leaves the ayah wash alone. Play Word by Word always
+    /// lights its words: that is what it is for.
+    @Setting("highlightPlayingWords") var highlightPlayingWords: Bool = true
+
     /// Holds the display awake while the ayah's actions sheet is on screen (Abu, 2026-10-25: "if that
     /// ayah screen is there dont turn off screen"). Off by default. Counted with the reader's own
     /// recitation hold, see `ScreenWakeLock`.
@@ -3342,6 +3348,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// pure-English reading experience).
     @Setting("showHadithArabic") var showHadithArabic = true
     @Setting("showHadithEnglish") var showHadithEnglish = true
+    /// Where a hadith's chain of narrators sits in its Arabic. OFF (the default since 2026-11-02, Abu:
+    /// "Put Hadith chain back at the bottom so it matches with English"): the Arabic opens at the
+    /// final narrator, as the English does ("Narrated Abu Hurairah:"), and the chain follows beneath
+    /// it, smaller. ON: the book's own order, the chain first. Only a narration whose chain the app
+    /// could read (HadithChains.qpk) is rearranged; the rest read as written either way.
+    @Setting("hadithChainFirst") var hadithChainFirst: Bool = false
     /// Hadith's own "Highlight Allah" toggle, split from the Quran's `highlightAllahNames` so the two
     /// readers can differ. Seeded from the Quran toggle once in `init` so the split changes nothing
     /// until the user actually flips it.

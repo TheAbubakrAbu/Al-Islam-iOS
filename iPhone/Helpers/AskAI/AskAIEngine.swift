@@ -57,6 +57,15 @@ struct AskAIProfile {
     static let onDevice = AskAIProfile(kind: .onDevice, contextTokens: 4096, sourceLimit: 8, sourceCharacters: 500,
                                        subjectCharacters: 1_400, historyCharacters: 1_200, responseTokenCap: 900)
 
+    /// The on-device profile for the window the model reports (`SystemLanguageModel.contextSize`,
+    /// 4,096 on today's devices; newer ones report more): a doubled window takes half again as many
+    /// sources, each a little longer, and a longer answer.
+    static func onDevice(contextTokens: Int) -> AskAIProfile {
+        guard contextTokens >= 8192 else { return onDevice }
+        return AskAIProfile(kind: .onDevice, contextTokens: contextTokens, sourceLimit: 12, sourceCharacters: 600,
+                            subjectCharacters: 2_000, historyCharacters: 1_600, responseTokenCap: 1_000)
+    }
+
     static func privateCloud(contextTokens: Int) -> AskAIProfile {
         let scale = max(1.0, min(4.0, Double(contextTokens) / 8192))
         return AskAIProfile(kind: .privateCloud, contextTokens: contextTokens,
@@ -133,9 +142,22 @@ enum AskAIEngine {
     /// The cloud model's context size, fetched once (an async query); 32k until known.
     nonisolated(unsafe) private static var cloudContextTokens = 32_768
 
+    /// The on-device model's window, read in `prewarm` (4,096 until then and on every device that
+    /// reports nothing more), and what its tokenizer charges for the instructions (888 measured on
+    /// the iOS 27 simulator, 2026-11-07; re-measured in `prewarm` where `tokenCount` exists).
+    nonisolated(unsafe) private(set) static var onDeviceContextTokens = 4096
+    nonisolated(unsafe) private(set) static var instructionTokens = 888
+
+    /// Counts a prompt's tokens with the model's own tokenizer; nil where the API does not exist
+    /// (iOS 26.0 to 26.3), so `AskAIPrompt.fit` keeps its estimate.
+    static var tokenCounter: ((String) async -> Int?)? {
+        guard #available(iOS 26.4, *) else { return nil }
+        return { text in try? await onDeviceModel.tokenCount(for: text) }
+    }
+
     static func profile(for kind: AskAIEngineKind) -> AskAIProfile {
         switch kind {
-        case .onDevice: return .onDevice
+        case .onDevice: return .onDevice(contextTokens: onDeviceContextTokens)
         case .privateCloud: return .privateCloud(contextTokens: cloudContextTokens)
         }
     }
@@ -148,6 +170,14 @@ enum AskAIEngine {
                        options: GenerationOptions) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
+                #if DEBUG
+                // `-askAIForceDecline`: every turn fails the way a guardrail decline does, so the
+                // decline card can be seen (the permissive model declined none of the questions tried).
+                if ProcessInfo.processInfo.arguments.contains("-askAIForceDecline") {
+                    continuation.finish(throwing: ForcedDecline())
+                    return
+                }
+                #endif
                 do {
                     let session = try makeSession(kind: kind, instructions: instructions)
                     let stream = session.streamResponse(to: prompt, options: options)
@@ -169,6 +199,17 @@ enum AskAIEngine {
     }
 
     private struct CloudUnavailable: Error {}
+    #if DEBUG
+    /// The error `-askAIForceDecline` throws; `classify` reads it as a guardrail decline.
+    struct ForcedDecline: Error {}
+    #endif
+
+    /// The on-device model with the permissive guardrail setting: the default one declined 5 of 11
+    /// ordinary religious questions (fighting, zina, hitting a wife, homosexuality, hell) on the
+    /// retrieved passages as often as on the question; the permissive setting declined none of 16,
+    /// and the app's instructions still govern what is written. A decline that does come through
+    /// is shown as a decline, with the sources (no "educational" re-ask from general knowledge).
+    static let onDeviceModel = SystemLanguageModel(guardrails: .permissiveContentTransformations)
 
     private static func makeSession(kind: AskAIEngineKind, instructions: String) throws -> LanguageModelSession {
         if kind == .privateCloud {
@@ -184,7 +225,7 @@ enum AskAIEngine {
             #endif
             throw CloudUnavailable()
         }
-        return LanguageModelSession(instructions: instructions)
+        return LanguageModelSession(model: onDeviceModel, instructions: instructions)
     }
 
     /// Loads the on-device model ahead of the first question (the chat screen calls this on
@@ -193,13 +234,24 @@ enum AskAIEngine {
     static func prewarm() {
         guard !didPrewarm, OnDeviceAsk.isAvailable else { return }
         didPrewarm = true
-        LanguageModelSession(instructions: AskAIPrompt.instructions).prewarm()
+        LanguageModelSession(model: onDeviceModel, instructions: AskAIPrompt.instructions).prewarm()
+        // On the main actor: the statics it writes are read there (`profile(for:)`, `fit`).
+        Task { @MainActor in
+            let window = onDeviceModel.contextSize
+            if window >= 1024 { onDeviceContextTokens = window }
+            if #available(iOS 26.4, *), let count = try? await onDeviceModel.tokenCount(for: Instructions(AskAIPrompt.instructions)), count > 0 {
+                instructionTokens = count
+            }
+        }
     }
 
     // MARK: Failures
 
     static func classify(_ error: Error) -> Failure {
         if error is CloudUnavailable { return .cloudUnavailable(String(localized: "Private Cloud Compute is not available right now")) }
+        #if DEBUG
+        if error is ForcedDecline { return .guardrail }
+        #endif
         if let generation = error as? LanguageModelSession.GenerationError {
             switch generation {
             case .exceededContextWindowSize: return .contextOverflow
@@ -245,7 +297,7 @@ enum AskAIEngine {
     static func message(for failure: Failure) -> String? {
         switch failure {
         case .guardrail:
-            return String(localized: "Apple Intelligence declined to answer this one. Try rephrasing the question, or asking about it in a different way.")
+            return String(localized: "Apple Intelligence declined to write about this. The sources the app found are shown below so you can read them yourself.")
         case .refusal:
             return String(localized: "Apple Intelligence declined to answer this one. Try asking in a different way.")
         case .unsupportedLanguage:
@@ -298,19 +350,20 @@ enum AskAIPrompt {
     3. Write in your own words. You may quote at most one short phrase or sentence per source, word for \
     word, in quotation marks; never copy a source's text wholesale and never reproduce a source's cut-off \
     ending. Never quote or cite anything that is not in the sources: no verse numbers, hadith numbers or \
-    wording from memory. Where the sources fall short, answer from general knowledge and say so in words \
-    ("scholars generally explain") without a number.
+    wording from memory. If none of the sources answers the question, say so plainly in one sentence of \
+    your own and stop there: do not fill the gap from memory, and do not attribute a view to scholars \
+    unless a source states it. When the sources do answer it, answer from them and add no remark about \
+    what the library lacks.
     4. A source marked SUBJECT OF THE QUESTION is the verse, surah or hadith the question is about: \
     explain that one, not something else. A source marked as already quoted in your previous answer \
     is there for context: draw a NEW point from it or from another source, never the same quotation.
     5. Read a hadith as a whole before drawing a point from it: a phrase inside it may be someone \
     else's words (a Companion's objection, a questioner) that the Prophet then answered or corrected, \
     and the chapter title beside it says what the collector understood it to establish.
-    6. Use the "Prayer times today" source only for questions about today's schedule, and give its \
-    times exactly as written.
+    6. Never state a prayer time or a time of day that is not written in a source.
 
     HONESTY. Say plainly when something is disputed among scholars or when you are not sure; do not \
-    manufacture doubt where there is none. Never give a fatwa or a personal ruling: for "is this \
+    manufacture doubt where there is none. Never present your own words as what scholars say. Never give a fatwa or a personal ruling: for "is this \
     allowed" questions, explain what the evidence and the scholars say, note where they differ, and \
     point to a qualified scholar for a personal ruling. Answer in English even when asked in another \
     language, keeping key Arabic terms in transliteration.
@@ -327,7 +380,7 @@ enum AskAIPrompt {
     }
 
     /// The characters the instructions take, and a turn's overhead (headings, task line, question).
-    private static let instructionCharacters = 2_600
+    private static let instructionCharacters = instructions.count
     private static let overheadCharacters = 700
 
     /// The sources that fit the engine's window beside the history and the answer, best first:
@@ -338,10 +391,24 @@ enum AskAIPrompt {
     /// 3.4 keeps a subject's long text in without overflowing, where 3 trimmed a turn to four sources.
     private static let charactersPerToken = 3.4
 
-    static func fit(sources: [AskAISource], history: [Turn], profile: AskAIProfile, intent: AskAIIntent) -> [AskAISource] {
+    /// Whether the turn's prompt carries the earlier conversation. A standalone question gets none:
+    /// the earlier answers leaked into unrelated turns (hell into a crisis, mahr into apostasy) and
+    /// a small model continues what it is shown. A follow-up needs it; thanks, goodbyes and recaps
+    /// refer to the last turn by nature.
+    static func sendsHistory(for question: AskAIQuestion) -> Bool {
+        switch question.intent {
+        case .thanks, .farewell, .recap: return true
+        case .greeting, .capabilities, .smallTalk, .crisis: return false
+        default: return question.isFollowUp
+        }
+    }
+
+    static func fit(question: AskAIQuestion, sources: [AskAISource], history: [Turn], profile: AskAIProfile) -> [AskAISource] {
+        let intent = question.intent
         let responseCharacters = Int(Double(min(intent.maxResponseTokens, profile.responseTokenCap)) * charactersPerToken)
         let window = Int(Double(profile.contextTokens) * charactersPerToken)
-        let historyCharacters = min(profile.historyCharacters, clippedHistory(history, budget: profile.historyCharacters).count)
+        let historyCharacters = sendsHistory(for: question)
+            ? min(profile.historyCharacters, clippedHistory(history, budget: profile.historyCharacters).count) : 0
         var budget = window - responseCharacters - instructionCharacters - overheadCharacters - historyCharacters
         budget = max(1_500, budget)
         func cost(_ source: AskAISource) -> Int {
@@ -356,10 +423,30 @@ enum AskAIPrompt {
         return kept
     }
 
+    /// The estimate above, then the model's own count: the prompt is built and measured, and the
+    /// lowest-ranked source dropped while the instructions, the prompt, the answer's ceiling and
+    /// a margin exceed the window (never below two sources). `measure` nil, or returning nil, keeps
+    /// the estimate (the API is iOS 26.4; the estimate stays conservative for the devices before it).
+    static func fit(question: AskAIQuestion, sources: [AskAISource], history: [Turn], profile: AskAIProfile,
+                    measure: ((String) async -> Int?)?) async -> [AskAISource] {
+        var kept = fit(question: question, sources: sources, history: history, profile: profile)
+        guard let measure else { return kept }
+        let instructionTokens: Int
+        if #available(iOS 26.0, *) { instructionTokens = AskAIEngine.instructionTokens } else { instructionTokens = 846 }
+        let reserved = instructionTokens + min(question.intent.maxResponseTokens, profile.responseTokenCap) + 64
+        while kept.count > 2 {
+            let prompt = build(question: question, sources: kept, history: history, profile: profile)
+            guard let promptTokens = await measure(prompt) else { return kept }
+            guard reserved + promptTokens > profile.contextTokens else { break }
+            kept.removeLast()
+        }
+        return kept
+    }
+
     /// The prompt for a turn: the numbered sources with their origins, the recent conversation
     /// clipped to the profile's budget (the most recent turn fullest), the task line, the question.
     static func build(question: AskAIQuestion, sources: [AskAISource], history: [Turn],
-                      profile: AskAIProfile, framing: String? = nil) -> String {
+                      profile: AskAIProfile) -> String {
         var prompt = ""
         if !sources.isEmpty {
             let lines = sources.enumerated().map { index, source in
@@ -385,9 +472,11 @@ enum AskAIPrompt {
                     + AskAISource.clip(last.answer, to: 1_600) + "\n\n"
             }
         default:
-            let recent = clippedHistory(history, budget: profile.historyCharacters)
-            if !recent.isEmpty {
-                prompt += "EARLIER IN THIS CONVERSATION (context only; never repeat or continue it):\n" + recent + "\n\n"
+            if sendsHistory(for: question) {
+                let recent = clippedHistory(history, budget: profile.historyCharacters)
+                if !recent.isEmpty {
+                    prompt += "EARLIER IN THIS CONVERSATION (context only; never repeat or continue it):\n" + recent + "\n\n"
+                }
             }
         }
         var task = question.intent.taskLine
@@ -397,7 +486,6 @@ enum AskAIPrompt {
         if question.isFollowUp, !history.isEmpty {
             task += " This is a follow-up to the conversation above: \u{201C}that\u{201D}, \u{201C}it\u{201D} and \u{201C}he\u{201D} refer to what was just discussed. Add new material (the reasoning, a source not yet used, the context); do not repeat the earlier answer or its quotations."
         }
-        if let framing { task += " " + framing }
         prompt += "TASK: \(task)\n\n"
         prompt += "User: \(question.raw)"
         return prompt

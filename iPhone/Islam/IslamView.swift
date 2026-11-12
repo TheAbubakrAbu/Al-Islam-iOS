@@ -352,7 +352,12 @@ struct IslamView: View {
                                           "sifaat", "sifat", "makharij", "whistling", "safeer", "hams", "families",
                                           "sound-alike", "quiz", "sun letters", "moon letters",
                                           "reading test", "qaida", "qaidah", "noorani", "spelling", "pronunciation",
-                                          "hamzatul wasl", "hamzat al-wasl", "wasl", "tanween", "connecting hamza"]
+                                          "hamzatul wasl", "hamzat al-wasl", "wasl", "tanween", "connecting hamza",
+                                          // The screen's other sections, so a search here lands on the
+                                          // screen whose own search then finds the row (2026-11-08).
+                                          "vowel letters", "grammar", "pronouns", "noun", "verb", "harf",
+                                          "laam alif", "baa on haa", "maqsurah", "shapes", "arabic numbers", "digits",
+                                          "quran signs", "waqf", "stop signs", "default tashkeel"]
             case .tajweedFoundations: return ["recitation", "rules", "makharij", "sifaat", "ghunnah", "qalqalah", "madd",
                                               "noon sakinah", "meem sakinah", "waqf", "hamzatul wasl", "sukoon", "reference", "tajwid",
                                               // The course's own words too, so "tajweed course" still lands here where
@@ -706,8 +711,8 @@ struct IslamView: View {
     private func islamListEntries(split: Bool) -> some View {
         Group {
             #if os(iOS)
-            // The tutorial's one-time nudge leads the tab (TabTutorials.swift): Need a Hand? sits at its
-            // foot, past the resources a newcomer meets first.
+            // Simple Mode's tutorial nudge leads the tab (TabTutorials.swift). Elsewhere the nudge is the
+            // door leading Need a Hand?, at the tab's foot.
             TutorialNudgeSection(tab: .islam)
             #endif
 
@@ -1978,7 +1983,11 @@ struct ProphetQuote: View {
     @State private var sweepOffset: CGFloat = -600
     @State private var rotateRing = false
 
-    private let quoteText = "“O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red man over a black man, nor of a black man over a red man, except by taqwa (piety, righteousness, and God-consciousness).”"
+    // "White", not the literal "red": the Arabic's ahmar is the classical word for the fair-skinned, and
+    // every standard English rendering of this sermon says white (Abu, 2026-11-09).
+    private let quoteText = "“O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a white man over a black man, nor of a black man over a white man, except by taqwa (piety, righteousness, and God-consciousness).”"
+    // 23489 is the ar-Risalah edition's number, the numbering the app's Musnad Ahmad follows since it
+    // carries the whole book (2026-11-10), so "ahmad 23489" in the Hadith tab opens this narration.
     private let attributionText1 = String(localized: "Farewell Pilgrimage\nMusnad Ahmad 23489 (sahih, al-Albani)")
     private let attributionText2 = String(localized: "Mina, the middle day of Tashriq\n12 Dhul-Hijjah 10 AH, March 632 CE")
 
@@ -2016,7 +2025,7 @@ struct ProphetQuote: View {
                     .foregroundStyle(.secondary)
 
                 Button {
-                    UIPasteboard.general.string = "O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red man over a black man, nor of a black man over a red man, except by taqwa (piety, righteousness, and God-consciousness).\n\n– Farewell Pilgrimage\nMusnad Ahmad 23489 (sahih, al-Albani)\n\nMina, the middle day of Tashriq\n12 Dhul-Hijjah 10 AH, March 632 CE"
+                    UIPasteboard.general.string = "O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a white man over a black man, nor of a black man over a white man, except by taqwa (piety, righteousness, and God-consciousness).\n\n– Farewell Pilgrimage\nMusnad Ahmad 23489 (sahih, al-Albani)\n\nMina, the middle day of Tashriq\n12 Dhul-Hijjah 10 AH, March 632 CE"
                 } label: {
                     Label("Copy Text", systemImage: "doc.on.doc")
                 }

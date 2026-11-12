@@ -56,48 +56,11 @@ struct AskAIChatView: View {
     @State private var debugQueue: [String] = []
     #endif
 
-    #if HAS_QURAN
-    private static let starterPool = [
-        "What does the Quran say about patience in hardship?",
-        "How do I make up a missed prayer?",
-        "Why is Surah Al-Kahf read on Fridays?",
-        "What did the Prophet say about kindness to parents?",
-        "Explain Ayat al-Kursi",
-        "What is the difference between zakat and sadaqah?",
-        "Tell me the story of Prophet Yusuf",
-        "Is there a dua for anxiety?",
-        "What does Al-Wadud mean?",
-        "How do I perform wudu?",
-        "What are the signs of the Day of Judgment?",
-        "How do I change the reciter in this app?",
-    ]
-    #else
-    // Without the Quran reader (Al-Adhan): the same pool, with the four starters that lean on the
-    // Quran's text or its reciters swapped for ones this app's own sources answer (its prayer times,
-    // articles, duas, Names and tips).
-    private static let starterPool = [
-        "When does the time for Isha end tonight?",
-        "How do I make up a missed prayer?",
-        "What are the sunnahs of Friday?",
-        "What did the Prophet say about kindness to parents?",
-        "What should I say after the adhan?",
-        "What is the difference between zakat and sadaqah?",
-        "Tell me the story of Prophet Yusuf",
-        "Is there a dua for anxiety?",
-        "What does Al-Wadud mean?",
-        "How do I perform wudu?",
-        "What are the signs of the Day of Judgment?",
-        "How do I change the adhan sound in this app?",
-    ]
-    #endif
-
     /// Four starters, rotated by the day so the empty screen does not read the same every time; on an
     /// article, that article's own questions.
     private var starters: [String] {
         if let focusArticle { return Self.articleQuestions(focusArticle) }
-        let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 0
-        let pool = Self.starterPool
-        return (0..<4).map { pool[(day * 3 + $0 * 5) % pool.count] }
+        return AskAIStarters.today()
     }
 
     /// The questions an article's Ask AI offers. English, like every question the model reads, and
@@ -578,7 +541,7 @@ private struct AskAIAnswerCard: View {
                 Text(statusLine)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-            } else if message.failed, message.sources.isEmpty || !message.text.contains("\n\n(") {
+            } else if !message.hasAnswerProse {
                 Text(message.text)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -590,6 +553,17 @@ private struct AskAIAnswerCard: View {
                 Label(note, systemImage: "info.circle")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+            }
+
+            // The help line as a thing to tap: the number for the reader's region, or the finder.
+            if message.offersHelpLine, !message.isStreaming,
+               let action = AskAICrisis.helpLineAction(regionCode: Locale.current.region?.identifier) {
+                Link(destination: action.url) {
+                    Label(action.label, systemImage: action.url.scheme == "tel" ? "phone.fill" : "safari")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .tint(settings.accentColor.color)
             }
 
             if !cited.isEmpty {
@@ -604,7 +578,18 @@ private struct AskAIAnswerCard: View {
                 }
             }
 
-            if !message.isStreaming, !uncited.isEmpty {
+            // A decline lists what the app found in the open: its text says the sources are below.
+            if !message.isStreaming, !uncited.isEmpty, message.declined {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("SOURCES THE APP FOUND")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 2)
+                    ForEach(uncited) { source in
+                        AskAISourceCard(number: number(of: source), source: source)
+                    }
+                }
+            } else if !message.isStreaming, !uncited.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Button {
                         settings.hapticFeedback()
@@ -651,7 +636,9 @@ private struct AskAIAnswerCard: View {
             // On EVERY finished answer, not only the ruling-shaped ones. A caution that appears
             // selectively teaches the reader that its absence means "this one is reliable",
             // which is the opposite of true.
-            if !message.isStreaming, !message.failed, !(message.intent?.isConversational ?? false) {
+            // A failure that streamed prose before it ("...\n\n(Apple Intelligence declined...)")
+            // is AI prose too, and keeps the caution.
+            if !message.isStreaming, message.hasAnswerProse, !(message.intent?.isConversational ?? false), message.intent != .crisis {
                 Label(message.asksForRuling
                       ? "Not a ruling, and scholars differ on questions like this. This is AI: useful for quick, simple, general questions, never the final word. For your own situation ask a knowledgeable scholar of Ahl as-Sunnah."
                       : "This is AI: useful for quick, simple, general questions, never the final word. For anything that matters, ask a knowledgeable scholar of Ahl as-Sunnah.",
@@ -695,10 +682,18 @@ private struct AskAIAnswerCard: View {
 
     private var header: some View {
         HStack(spacing: 6) {
-            Image(systemName: "sparkles")
-                .font(.caption)
-            Text("AI")
-                .font(.caption.weight(.semibold))
+            // The crisis reply is the app's own words, not the model's: no AI label, no engine badge.
+            if message.intent == .crisis {
+                Image(systemName: "heart.fill")
+                    .font(.caption)
+                Text(AppIdentifiers.displayName)
+                    .font(.caption.weight(.semibold))
+            } else {
+                Image(systemName: "sparkles")
+                    .font(.caption)
+                Text("AI")
+                    .font(.caption.weight(.semibold))
+            }
             if let engine = message.engine {
                 Text(engine.badge)
                     .font(.caption2.weight(.medium))

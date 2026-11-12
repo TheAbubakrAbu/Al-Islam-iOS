@@ -1,0 +1,186 @@
+===== Q: hello
+INTENT: greeting followUp=false engine=onDevice first token 14.4s, total 14.5s
+RETRIEVAL: 
+SOURCES: 
+CITED: 
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What does the Quran say about patience? | How do I make up a missed prayer? | Explain Ayat al-Kursi
+A: Hello. I'm here to help with the Quran, the hadith, prayer, or the app.
+===== Q: what can you do?
+INTENT: capabilities followUp=true engine=onDevice first token 2.9s, total 5.3s
+RETRIEVAL: 
+SOURCES: 
+CITED: 
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What does the Quran say about patience? | How do I make up a missed prayer? | Explain Ayat al-Kursi
+A: I'm here to help you unpack the words of Allah in the Quran, understand what the Prophet said and did, explore the Names of Allah, find words of comfort in duas, guide you through prayer, fasting, and other acts of worship, trace Islamic history and the prophets, and show you how to use this app, from reciters and fonts to notifications and widgets.
+
+How about we look at a verse from the Quran that speaks to patience during hardship?
+===== Q: Who was Imam Malik?
+INTENT: story followUp=false engine=onDevice first token 2.9s, total 6.5s
+RETRIEVAL: 245 ms; lanes articles=4 hadithRanked=6 names=1 quranKeyword=6 quranTopics=1; ranking Madhahib of Fiqh › When The Madhahib Took Shape 0.94 | 43:77 0.87 | Bid'ah › Why It Is So Serious 0.62 | The Mawlid › The History 0.47 | The Forty Hadith of Imam Nawawi 13 0.45 | Al-Malik 0.40 | Riwayat on the Page › Other Things You Will Notice 0.37 | 114:2 0.35 | The Forty Hadith of Imam Nawawi 32 0.30 | 1:4 0.26 | The Forty Hadith of Imam Nawawi 23 0.23 | 54:55 0.21
+SOURCES: [1] Madhahib of Fiqh › When The Madhahib Took Shape | [2] 43:77 | [3] Bid'ah › Why It Is So Serious | [4] The Mawlid › The History | [5] The Forty Hadith of Imam Nawawi 13 | [6] Al-Malik | [7] Riwayat on the Page › Other Things You Will Notice | [8] 114:2
+CITED: Madhahib of Fiqh › When The Madhahib Took Shape
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What lessons does the story of Malik teach? | Which surah tells the story of Malik? | Is there a hadith about Malik?
+A: Imam Malik was a scholar who helped shape the Islamic legal tradition, and his work is tied to the development of the Hanbali school. After his father, Imam Ahmad, passed away, his sons and students like al-Khallal collected and organized his teachings into a structured system [1]. Scholars generally explain that his teachings were passed down through a continuous chain of teachers and students, including Imam Malik himself teaching al-Shafi‘i, who later taught Imam Ahmad ibn Hanbal [1].
+===== Q: What is the mahr?
+INTENT: define followUp=false engine=onDevice first token 2.9s, total 9.7s
+RETRIEVAL: 204 ms; lanes articles=1 hadithRanked=6 names=1 quranKeyword=6 quranTopics=1; ranking How to Do Ruqyah › Step By Step 0.88 | Al-Muakhkhir 0.52 | 56:67 0.47 | Sahih al-Bukhari 4201 0.45 | 4:23 0.35 | 68:27 0.32 | Sahih al-Bukhari 6386 0.30 | 38:21 0.24 | Sahih al-Bukhari 5155 0.23 | 19:11 0.19 | Sahih al-Bukhari 6960 0.18 | 70:25 0.16
+SOURCES: [1] How to Do Ruqyah › Step By Step | [2] Al-Muakhkhir | [3] 56:67 | [4] Sahih al-Bukhari 4201 | [5] 4:23 | [6] 68:27 | [7] Sahih al-Bukhari 6386 | [8] 38:21
+CITED: 4:23 | Sahih al-Bukhari 4201 | Sahih al-Bukhari 6386 | Al-Muakhkhir
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: Give an example of mahr from the Prophet’s life | What does the Quran say about mahr? | What is the opposite of mahr?
+A: The mahr is the marriage gift given when a man takes a woman as his wife, according to the Prophet’s teachings. The Quran also sets boundaries for who may receive this gift, and the hadith records the Prophet’s practice of celebrating such unions.
+
+The Quran mentions that if a man has not married someone within guardianship, there is no sin, but it does not define the mahr itself [5]. The Prophet’s companions and the Prophet himself clarified that the mahr could be the woman herself when she was freed from slavery [4]. The Prophet encouraged giving a wedding feast, even with one sheep, when a mahr of gold equal to a date-stone was given [7].
+
+Scholars generally explain that the mahr is a personal choice tied to the marriage contract, though the Quran and the Prophet’s example show it is a meaningful offering that can be symbolic or material [2] [7]. The app’s own guidance notes that the mahr is part of the marriage process, and the hadith highlights the Prophet’s practice of celebrating it [4] [7].
+===== Q: Is Aziz a good name for a boy?
+INTENT: general followUp=false engine=onDevice first token 2.8s, total 4.2s
+RETRIEVAL: 289 ms; lanes articles=4 names=1 quranKeyword=1 quranSemantic=7 subject=1; ranking Al-Aziz 12.40 | 12:30 0.72 | How the Hadith Were Preserved › The First Official Collection 0.55 | 3:40 0.50 | Ibrahim › The Sacrifice 0.37 | 12:19 0.33 | Ismail › His Story 0.28 | Yahya › Overview 0.22 | 15:53 0.20 | 18:62 0.17 | 18:74 0.14 | 18:80 0.12
+SOURCES: [1] Al-Aziz (SUBJECT) | [2] 12:30 | [3] How the Hadith Were Preserved › The First Official Collection | [4] 3:40 | [5] Ibrahim › The Sacrifice | [6] 12:19 | [7] Ismail › His Story | [8] Yahya › Overview
+CITED: Al-Aziz
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about Aziz boy? | Is there a dua about Aziz boy? | Which surah speaks most about Aziz boy?
+A: Yes, Aziz is a good name. Aziz is one of the 99 Names of Allah, and the Quran mentions it in the verses of Surah Al-Aziz [1]. Scholars generally explain that these names reflect divine qualities and are meaningful for children [1].
+===== Q: How do I name my baby?
+INTENT: general followUp=false engine=onDevice first token 2.7s, total 19.5s
+RETRIEVAL: 313 ms; lanes articles=4 hadithRanked=1 hadithSemantic=6 quranKeyword=6 quranSemantic=5 quranTopics=5; ranking 16:58 1.09 | 19:29 0.88 | 81:8 0.64 | Sulayman › Magic Is Not His 0.55 | Sahih al-Bukhari 1358 0.45 | Riyad as-Salihin 44 0.45 | 28:9 0.41 | 51:29 0.39 | The Quran and Earlier Scripture › Key Terms 0.37 | Sahih al-Bukhari 1359 0.30 | How to Do Ruqyah › Magic (Sihr) 0.28 | Sahih al-Bukhari 1385 0.23
+SOURCES: [1] 16:58 | [2] 19:29 | [3] 81:8 | [4] Sulayman › Magic Is Not His | [5] Sahih al-Bukhari 1358 | [6] Riyad as-Salihin 44 | [7] 28:9 | [8] 51:29
+CITED: Riyad as-Salihin 44 | Sahih al-Bukhari 1358 | Sulayman › Magic Is Not His
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about baby? | Is there a dua about baby? | Which surah speaks most about baby?
+A: Choosing a name for a baby is a deeply personal act, and the Quran and the Prophet’s teachings guide us toward clarity and meaning. Scholars generally explain that names carry spiritual significance, and the verses and traditions we share below reflect that care.
+
+1. The Prophet once named a child 'Abdullah by chewing a date and rubbing it on the baby’s gums [6].
+2. The Prophet also spoke of a pure faith rooted in worshiping none but Allah Alone, a principle echoed in the Quran’s verses on creation [5].
+3. The Quran itself mentions Aziz as one of the 99 Names of Allah, suggesting that a name rooted in divine qualities can hold meaning [4].
+
+There is no single rule about naming, but the Prophet’s actions and the Quran’s teachings encourage names that reflect trust in God and simplicity. For guidance, you might explore the names listed in the Quran or consult a trusted scholar.
+===== Q: Who was Asma bint Abi Bakr?
+INTENT: story followUp=false engine=onDevice first token 3.3s, total 8.6s
+RETRIEVAL: 516 ms; lanes articles=4 hadithRanked=6 hadithSemantic=6 hadithTopics=2 quranKeyword=1 quranSemantic=7 surahName=1; ranking The 99 Names of Allah › Overview 0.94 | Surah 87 Al-A'la 0.80 | 17:110 0.66 | Who is Allah? › Overview 0.62 | 2:31 0.55 | The Wives › The Eleven Wives 0.47 | Sahih al-Bukhari 30 0.45 | Sunan an-Nasa'i 3050 0.45 | Sahih Muslim 2473c 0.42 | Compilation of the Quran › First Compilation Under Abu Bakr 0.37 | 2:33 0.37 | Sahih al-Bukhari 53 0.30
+SOURCES: [1] The 99 Names of Allah › Overview | [2] Surah 87 Al-A'la | [3] 17:110 | [4] Who is Allah? › Overview
+CITED: The 99 Names of Allah › Overview | Surah 87 Al-A'la
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What lessons does the story of Asma bint Abi Bakr teach? | Which surah tells the story of Asma bint Abi Bakr? | Is there a hadith about Asma bint Abi Bakr?
+A: The Quran and the hadith do not mention a woman named Asma bint Abi Bakr. The sources focus instead on the Prophet’s own family and the names of the Prophet’s children.
+
+1. The Prophet’s eldest son was Muhammad [1] [2].
+2. The Prophet’s daughter was Aisha [1] [2].
+===== Q: What is a mumin?
+INTENT: define followUp=false engine=onDevice first token 2.9s, total 9.0s
+RETRIEVAL: 180 ms; lanes hadithRanked=6 names=1 quranKeyword=6; ranking Al-Mumin 0.52 | 64:2 0.47 | Sunan Abi Dawud 2055 0.45 | 56:42 0.32 | Sunan Abi Dawud 3528 0.30 | 23:1 0.24 | Sunan Abi Dawud 4788 0.23 | 26:114 0.19 | Sunan Abi Dawud 298 0.18 | 37:81 0.16 | Sunan Abi Dawud 2134 0.15 | 37:111 0.14
+SOURCES: [1] Al-Mumin | [2] 64:2 | [3] Sunan Abi Dawud 2055 | [4] 56:42 | [5] Sunan Abi Dawud 3528 | [6] 23:1 | [7] Sunan Abi Dawud 4788 | [8] 26:114
+CITED: 64:2 | Al-Mumin | Sunan Abi Dawud 2055 | 23:1
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: Give an example of mumin from the Prophet’s life | What does the Quran say about mumin? | What is the opposite of mumin?
+A: The term mumin means someone who holds firm belief in the oneness of God and follows the teachings of the Prophet.
+
+The Quran clarifies this meaning by describing those who believe in this truth, saying, “Among you is the believer. And Allah, of what you do, is Seeing” [2]. It also notes that believers are truthful in their conviction, adding, “The Infuser of Faith. The One who witnessed for Himself that no one is God but Him” [1]. These verses show that mumin carries a spiritual weight tied to genuine faith.
+
+The Prophet’s own words reinforce this, as Aisha, the Prophet’s wife, explained that what is forbidden because of close blood ties is also forbidden because of foster ties [3]. This reflects the idea that strong belief shapes how one relates to others, including family. Similarly, the Prophet spoke about the nature of a believer’s success, stating, “Certainly will the believers have succeeded” [6], underscoring that true faith leads to a purposeful life.
+===== Q: What is the name of the Prophet's mother?
+INTENT: define followUp=false engine=onDevice first token 3.7s, total 8.4s
+RETRIEVAL: 385 ms; lanes articles=4 hadithRanked=6 hadithSemantic=6 names=1 quranKeyword=6 quranSemantic=7 quranTopics=5; ranking 2:233 0.99 | Answering Christianity › 1. Jesus Is Not God 0.88 | Ismail › His Story 0.59 | Sahih al-Bukhari 4757 0.58 | 4:11 0.57 | 31:14 0.55 | Al-Musawwir 0.52 | 80:35 0.47 | Sahih al-Bukhari 1358 0.45 | The Seerah › Before Prophethood 0.44 | 4:12 0.42 | 46:15 0.36
+SOURCES: [1] 2:233 | [2] Answering Christianity › 1. Jesus Is Not God | [3] Ismail › His Story | [4] Sahih al-Bukhari 4757 | [5] 4:11 | [6] 31:14 | [7] Al-Musawwir | [8] 80:35
+CITED: 4:11 | Ismail › His Story | Sahih al-Bukhari 4757 | 31:14
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: Give an example of mother from the Prophet’s life | What does the Quran say about mother? | What is the opposite of mother?
+A: The Prophet’s mother was Khadijah [5].
+
+The Quran and the Prophet’s own family are the primary sources for understanding her role. The verses and the Prophet’s stories show that she was a steadfast believer who supported him from the start. The articles and hadiths also speak to her deep faith and the love she showed for him, even when the path was unclear.
+
+Scholars explain that her name and her quiet strength are part of the Prophet’s legacy. The stories in the Quran and the sayings in the hadith highlight how she stood by him, and the app’s materials echo this by tying her name to the early foundations of belief [3] [4] [6].
+===== Q: Can I pray in my socks?
+INTENT: ruling followUp=false engine=onDevice first token 3.4s, total 9.6s
+RETRIEVAL: 518 ms; lanes articles=4 hadithRanked=1 hadithSemantic=6 hadithTopics=3 quranKeyword=5 quranSemantic=7 quranTopics=5; ranking Salah › How To Pray 0.77 | Sahih Muslim 274d 0.54 | Sunan Ibn Majah 557 0.54 | How to Pray the Sunnah Prayers › How To Pray Them 0.51 | 4:102 0.50 | 4:103 0.47 | Sahih al-Bukhari 793 0.42 | How to Make Up Missed Prayers › Prayers Left On Purpose 0.39 | Muwatta Malik 72 0.36 | 9:103 0.35 | 40:50 0.33 | 10:87 0.32
+SOURCES: [1] Salah › How To Pray | [2] Sahih Muslim 274d | [3] Sunan Ibn Majah 557 | [4] How to Pray the Sunnah Prayers › How To Pray Them | [5] 4:102 | [6] 4:103 | [7] Sahih al-Bukhari 793 | [8] How to Make Up Missed Prayers › Prayers Left On Purpose
+CITED: Sunan Ibn Majah 557 | How to Make Up Missed Prayers › Prayers Left On Purpose | Sahih Muslim 274d | How to Pray the Sunnah Prayers › How To Pray Them | 4:102 | 4:103
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What is the evidence about pray socks? | Do the schools of thought differ on pray socks?
+A: The Prophet said, “For as long as you see fit,” when asked if he’d allow wiping over leather socks [3]. Scholars generally explain that prayer is meant to be performed with cleanliness and care, and the evidence suggests that certain safeguards are needed [8].
+
+1. A hadith shows the Prophet agreeing to wiping over socks for a period, but the practice is not universally prescribed [2] [3].
+2. Articles clarify that prayer is best when performed with intention and proper preparation, though the Prophet often prayed at home for the Maghrib and Isha rawatib [4].
+3. The Quran mentions carrying arms during prayer, implying that carrying any item that obstructs focus may require caution [5] [6].
+
+The evidence is mixed: some view the practice as permissible if done with intention and care, while others see it as requiring strict adherence to cleanliness [8]. For guidance tailored to your situation, consult a qualified scholar.
+===== Q: What does Islam say about cats?
+INTENT: scripture followUp=false engine=onDevice first token 3.7s, total 8.4s
+RETRIEVAL: 334 ms; lanes articles=1 hadithRanked=6 hadithSemantic=6 quranKeyword=6 quranSemantic=7; ranking 7:176 0.65 | 25:7 0.62 | Answering Paganism › Common Questions 0.55 | Sunan Ibn Majah 367 0.45 | Sahih al-Bukhari 2940 0.45 | 18:18 0.43 | 25:8 0.41 | 18:22 0.33 | 23:33 0.31 | Sunan Ibn Majah 369 0.30 | Sahih al-Bukhari 4610 0.30 | 2:173 0.26
+SOURCES: [1] 7:176 | [2] 25:7 | [3] Answering Paganism › Common Questions | [4] Sunan Ibn Majah 367 | [5] Sahih al-Bukhari 2940 | [6] 18:18 | [7] 25:8 | [8] 18:22
+CITED: Sunan Ibn Majah 367 | 7:176 | Answering Paganism › Common Questions | Sahih al-Bukhari 2940 | 18:18 | 25:7
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about cats? | Is there a dua about cats? | Explain Al-A'raf 7:176 in more detail
+A: Islam clarifies that cats are not impure and are part of everyday life. A hadith shows the Prophet acknowledging their presence among people [4]. The Quran also points out that dogs are linked to those who deny signs, but it does not set a rule about cats [1]. Scholars generally explain that superstitions tied to animals should be replaced with understanding and good words [3].
+
+1. A hadith by `Abdullah bin `Abbas, recorded in Sahih al-Bukhari (2940) [5], says the Messenger of Allah mentioned that cats are not impure. 
+2. The Quran, in Surah Al-Kahf (18:18) [6] and Surah Al-Furqan (25:7) [2], does not mention impurity for cats.
+===== Q: How do I stop being lazy?
+INTENT: general followUp=false engine=onDevice first token 2.7s, total 8.6s
+RETRIEVAL: 354 ms; lanes articles=4 hadithRanked=6 hadithSemantic=6 quranKeyword=6 quranSemantic=7 quranTopics=3; ranking 9:54 0.69 | Bid'ah › “But Umar Called Tarawih A Good Bid'ah” 0.55 | 37:24 0.47 | Al-Adab Al-Mufrad 800 0.45 | Sahih al-Bukhari 2661 0.45 | 7:202 0.44 | 2:217 0.39 | 2:193 0.38 | Riwayat on the Page › Sakt: The Breathless Pause 0.37 | 5:73 0.36 | 63:10 0.35 | 69:7 0.33
+SOURCES: [1] 9:54 | [2] Bid'ah › “But Umar Called Tarawih A Good Bid'ah” | [3] 37:24 | [4] Al-Adab Al-Mufrad 800 | [5] Sahih al-Bukhari 2661 | [6] 7:202 | [7] 2:217 | [8] 2:193
+CITED: Al-Adab Al-Mufrad 800 | 9:54 | 37:24
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about stop lazy? | Is there a dua about stop lazy? | Explain At-Tawbah 9:54 in more detail
+A: Prayer is a powerful way to steady your spirit and focus your effort, and the Prophet’s life shows that even when tiredness or distraction creeps in, routine and intention help keep the practice alive.
+
+1. The Prophet himself led people in Tarawih for three nights before pausing, partly because he knew the weight of repetition and the fear that it might become routine without meaning [4].
+2. Aisha reported that when she was tired or unwell, she still prayed sitting down, meaning that physical ease does not mean giving up on the act [4].
+3. The Prophet did not neglect to pray at night, and scholars generally explain that consistency in worship builds resilience against laziness [4].
+
+The Quran warns that laziness in worship can be linked to deeper neglect of faith, but it does not single out laziness as a sin in itself, rather, it stresses that true submission requires effort and attention [1] [3].
+===== Q: What is a good gift for my mother?
+INTENT: define followUp=false engine=onDevice first token 3.0s, total 9.3s
+RETRIEVAL: 479 ms; lanes articles=4 hadithRanked=1 hadithSemantic=6 hadithTopics=1 names=1 quranKeyword=6 quranSemantic=7 quranTopics=5; ranking Answering Christianity › 1. Jesus Is Not God 0.88 | Sahih al-Bukhari 2587 0.65 | 2:233 0.64 | At-Tabari › His Life 0.59 | Al-Musawwir 0.52 | 24:61 0.50 | 80:35 0.47 | Sahih Muslim 2448a 0.45 | Riyad as-Salihin 21 0.45 | Ismail › His Story 0.44 | 46:15 0.44 | 31:14 0.36
+SOURCES: [1] Answering Christianity › 1. Jesus Is Not God | [2] Sahih al-Bukhari 2587 | [3] 2:233 | [4] At-Tabari › His Life | [5] Al-Musawwir | [6] 24:61 | [7] 80:35 | [8] Sahih Muslim 2448a
+CITED: Answering Christianity › 1. Jesus Is Not God | 2:233 | Sahih al-Bukhari 2587 | At-Tabari › His Life
+REMOVED: 0 FLAGGED: 1 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: Give an example of gift mother from the Prophet’s life | What does the Quran say about gift mother? | What is the opposite of gift mother?
+A: The Prophet once said, For as long as you see fit, (wording not verified) when asked about wiping over leather socks [1]. Scholars generally explain that prayer is meant to be performed with cleanliness and care, and the evidence suggests that thoughtful gestures, like something she enjoys, carry meaning [1].
+
+The Quran speaks of care for parents in Surah Al-Baqarah, where it says, “No person is charged with more than his capacity. No mother should be harmed through her child, and no father through his child” [3]. A hadith from 'Amir shows how gifts are often tied to respect and witness, with the Prophet's acceptance depending on the sincerity behind the offering [2]. The app’s articles note that figures like At-Tabari lived modestly, valuing simple, respectful giving over ostentation [4].
+
+So, a gift that reflects care and effort, whether it’s a cherished item or something she values, carries more weight than a grand gesture. The Prophet's example and the Quran’s guidance suggest that intention and humility shape what truly matters.
+===== Q: Is coffee allowed in Ramadan?
+INTENT: ruling followUp=false engine=onDevice first token 3.4s, total 25.1s
+RETRIEVAL: 367 ms; lanes articles=4 hadithRanked=6 hadithSemantic=6 hadithTopics=3 quranKeyword=2 quranSemantic=4 quranTopics=5; ranking Sawm › Rewards Of Fasting 0.77 | 2:187 0.73 | 2:184 0.72 | Sahih al-Bukhari 1915 0.70 | 2:185 0.67 | Sahih al-Bukhari 1894 0.54 | Sahih Muslim 1165e 0.54 | What is Islam? › The Five Pillars 0.51 | Sighting the New Month › The Rule 0.39 | Sahih al-Bukhari 1903 0.36 | Sahih al-Bukhari 2041 0.36 | 5:95 0.33
+SOURCES: [1] Sawm › Rewards Of Fasting | [2] 2:187 | [3] 2:184 | [4] Sahih al-Bukhari 1915 | [5] 2:185 | [6] Sahih al-Bukhari 1894 | [7] Sahih Muslim 1165e | [8] What is Islam? › The Five Pillars
+CITED: 2:187 | 2:184 | What is Islam? › The Five Pillars | 2:185 | Sahih al-Bukhari 1894
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What is the evidence about coffee Ramadan? | Do the schools of thought differ on coffee Ramadan?
+A: Fasting during Ramadan involves abstaining from food, drink, and marital relations from dawn to sunset, as the Quran and the Prophet’s teachings make clear [2] [3] [8]. The wording of the fast is not flexible in the same way as, for example, permissible activities like eating before fasting begins [3].
+
+Some scholars say that drinking coffee or similar beverages is permissible as long as it does not disrupt the fast or lead to excessive tiredness, while others caution that caffeine may interfere with the body’s natural rhythm during fasting [5] [6]. The Prophet emphasized that fasting is a shield and that the mind and body must remain steady, so anything that distracts or makes the practice harder could be questioned [6].
+
+The Quran and the Prophet’s words leave no clear rule about coffee specifically, so opinions differ. For a personal decision, it helps to consider whether the habit fits the spirit of self-discipline and care for the fast, and to consult a qualified scholar who understands the broader context of your routine.

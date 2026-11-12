@@ -90,3 +90,27 @@ final class AyahReferenceParsingTests: XCTestCase {
         XCTAssertNil(parse("   "))
     }
 }
+
+/// The share card's reference for several ayahs (`ShareAyahSheet.referenceLabel`): runs fold to a
+/// range, gaps stay listed, and the Arabic header takes Arabic-Indic digits with the Arabic comma.
+final class ShareAyahReferenceLabelTests: XCTestCase {
+    func testOneAyahIsItsNumber() {
+        XCTAssertEqual(ShareAyahSheet.referenceLabel(ayahIDs: [7]), "7")
+    }
+
+    func testARunFoldsToARange() {
+        XCTAssertEqual(ShareAyahSheet.referenceLabel(ayahIDs: [1, 2, 3, 4, 5]), "1-5")
+    }
+
+    func testGapsStayListedAndOrderIsNumeric() {
+        XCTAssertEqual(ShareAyahSheet.referenceLabel(ayahIDs: [9, 1, 3, 7, 8, 10]), "1, 3, 7-10")
+    }
+
+    func testDuplicatesFold() {
+        XCTAssertEqual(ShareAyahSheet.referenceLabel(ayahIDs: [2, 2, 3]), "2-3")
+    }
+
+    func testArabicDigitsAndComma() {
+        XCTAssertEqual(ShareAyahSheet.referenceLabel(ayahIDs: [1, 2, 5], arabicDigits: true), "١-٢، ٥")
+    }
+}

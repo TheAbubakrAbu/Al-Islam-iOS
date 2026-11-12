@@ -34,9 +34,9 @@ extension QuranPlayer {
 ///
 /// One list, top to bottom (Abu, 2026-10-19: the old layered layout, with seven range buttons, a
 /// chip row per repeat and a split preview pane, was "too spread out, too hard to read, too
-/// confusing"): the range card, the two repeat rows and the forever switch, the reciter, then every
-/// ayah the range will play. The count and the play total sit over the Play button, so they stay on
-/// screen while the list scrolls.
+/// confusing"): the ayahs the range will play, the reciter, the range card, the two repeat rows and
+/// the forever switch, then the ranges played before. The count and the play total sit over the Play
+/// button, so they stay on screen while the list scrolls.
 struct PlayCustomRangeSheet: View {
     private let settings = Settings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
@@ -683,6 +683,14 @@ struct PlayCustomRangeSheet: View {
                     // will play is the first thing on screen, and it follows the fields as they move.
                     previewSection
 
+                    // The reciter sits above the range (Abu, 2026-11-04: "choose a reciter should be
+                    // above range").
+                    Section {
+                        reciterRow
+                    } header: {
+                        SectionIconHeader(String(localized: "Reciter"), icon: "person.wave.2")
+                    }
+
                     Section {
                         rangeCard
                     } header: {
@@ -697,12 +705,6 @@ struct PlayCustomRangeSheet: View {
                         foreverRow
                     } header: {
                         SectionIconHeader(String(localized: "Repeat"), icon: "repeat")
-                    }
-
-                    Section {
-                        reciterRow
-                    } header: {
-                        SectionIconHeader(String(localized: "Reciter"), icon: "person.wave.2")
                     }
 
                     // The ranges played from here before, newest first: one tap plays one again.

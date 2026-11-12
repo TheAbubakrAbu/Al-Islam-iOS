@@ -719,7 +719,7 @@ struct ShirkView: View {
             .ayah("46:5"),
             .ayah("9:31"),
             .markdown("**Minor shirk (الشِّرك الأَصغَر)** does not take one out of Islam but is greater than every other sin: showing off in worship (**riya’ (رِيَاء)**, from ر-أ-ي, to see: doing an act so that people will see it), swearing by other than Allah, and saying “what Allah wills and you will.” The Prophet (peace be upon him) said:"),
-            .quote(text: "“The thing I fear most for you is minor shirk.” They said: And what is minor shirk, O Messenger of Allah? He said: “Showing off” (Musnad Ahmad 23630; graded sahih by al-Albani, Sahih al-Jami' 1555).", arabic: "إِنَّ أَخوَفَ مَا أَخَافُ عَلَيكُمُ الشِّركُ الأَصغَرُ. قَالُوا: وَمَا الشِّركُ الأَصغَرُ يَا رَسُولَ اللَّهِ؟ قَالَ: الرِّيَاءُ", dimmed: true),
+            .hadith("ahmed:23630", cite: "Musnad Ahmad 23630; graded sahih by al-Albani, Sahih al-Jami' 1555", arabic: 23...38, text: "“The thing I fear most for you is minor shirk.” They said: And what is minor shirk, O Messenger of Allah? He said: “Showing off”"),
             .text("Amulets, charms, omens, and going to fortune-tellers also fall under shirk, because they attach the heart to other than Allah for benefit and protection."),
         ]),
         ArticleSection("THE CURE", [

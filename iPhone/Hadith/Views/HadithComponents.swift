@@ -136,6 +136,7 @@ extension Settings {
         [
             showHadithArabic ? "1" : "0",
             showHadithEnglish ? "1" : "0",
+            hadithChainFirst ? "1" : "0",
             highlightAllahNamesHadith ? "1" : "0",
             useFontArabic ? "1" : "0",
             nonQuranArabicFontName,
@@ -319,9 +320,11 @@ struct HadithRow: View, Equatable {
     @State private var showSelectTextSheet = false
     @State private var showChainSheet = false
     @State private var showSimilarSheet = false
+    @State private var showExplanationSheet = false
     #if DEBUG
     private static var debugChainOpened = false
     private static var debugSimilarOpened = false
+    private static var debugExplanationOpened = false
     #endif
 
     /// This narration has a chain the app can draw (HadithChains.swift): a binary search in its book's
@@ -334,6 +337,56 @@ struct HadithRow: View, Equatable {
     /// the same binary search as `hasChain`, in a book block the book screen inflates as it appears.
     private var hasSimilar: Bool {
         SimilarHadithsStore.shared.hasMatches(slug: book.slug, idInBook: hadith.idInBook)
+    }
+
+    /// The Hadith Encyclopedia explains this narration (HadithExplanations.swift): the same binary
+    /// search as `hasChain`, in a book block inflated as the book appears.
+    private var hasExplanation: Bool {
+        HadithExplanationStore.shared.hasExplanation(slug: book.slug, idInBook: hadith.idInBook)
+    }
+
+    /// The Arabic the row reads aloud: the hadith as it shows it, the chain left out when it sits
+    /// beneath the text (`hadithChainFirst` off and the chain read), the whole narration otherwise.
+    private func spokenArabic(_ arabic: String) -> String {
+        guard !settings.hadithChainFirst,
+              let cut = HadithChainStore.shared.matnStart(slug: book.slug, idInBook: hadith.idInBook, arabic: arabic),
+              let parts = HadithChainCut.split(arabic, at: cut, spans: []) else { return arabic }
+        return parts.matn
+    }
+
+    private var chainFont: Font {
+        settings.hadithArabicWantsCustomFace
+            ? Font.arabic(settings.nonQuranArabicFontName, size: arabicFontSize * 0.82)
+            : .system(size: arabicFontSize * 0.82)
+    }
+
+    /// The Arabic as the row draws it: the chunked renderer for the longest narrations (the KFGQPC
+    /// faces shape only so much at once), the one-Text snippet otherwise.
+    @ViewBuilder
+    private func arabicText(_ source: String, spans: [NSRange], term: String, guarantee: Bool,
+                            font: Font, usesCustomFace: Bool, color: Color) -> some View {
+        if HadithArabicChunks.needed(source) {
+            HadithArabicText(text: source, term: term, font: font, lineSpacing: 6,
+                             guaranteeMatch: guarantee, extraHighlightRanges: spans)
+        } else {
+            HighlightedSnippet(
+                source: source,
+                term: term,
+                font: font,
+                accent: settings.accentColor.color,
+                fg: color,
+                highlightAllahNames: settings.highlightAllahNamesHadith,
+                guaranteeMatch: guarantee,
+                extraHighlightRanges: spans
+            )
+            .arabicFontDesign(custom: usesCustomFace)
+            .multilineTextAlignment(.trailing)
+            .lineSpacing(6)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            // `.trailing` is the RIGHT edge only left to right: the Arabic hugs the right edge in
+            // the Arabic interface too.
+            .environment(\.layoutDirection, .leftToRight)
+        }
     }
 
     /// "Sahih al-Bukhari 1234" - the standard way a hadith is cited (the sunnah.com citation when
@@ -663,6 +716,42 @@ struct HadithRow: View, Equatable {
             // rows' `showArabicLine` rule.
             if compact || settings.showHadithArabic || visibility.mArabic || visibility.guaranteeArabic
                 || !cross.arabic.isEmpty, !text.arabic.isEmpty {
+                // The chain beneath the hadith (Abu, 2026-11-02: "Put Hadith chain back at the bottom so
+                // it matches with English"; `hadithChainFirst` off): a reading row whose chain the app
+                // read opens at its final narrator, as the English line does, and draws the chain under
+                // it, smaller and secondary, a tap on it opening the chain sheet. A compact or windowed
+                // (searched) row keeps the text whole, as does a span that would straddle the cut.
+                let cut = (!compact && !settings.hadithChainFirst && arabicWindow == nil)
+                    ? HadithChainStore.shared.matnStart(slug: book.slug, idInBook: hadith.idInBook, arabic: text.arabic)
+                    : nil
+                if let cut, let parts = HadithChainCut.split(text.arabic, at: cut, spans: cross.arabic) {
+                    VStack(alignment: .trailing, spacing: 8) {
+                        arabicText(parts.matn, spans: parts.matnSpans, term: searchText,
+                                   guarantee: visibility.guaranteeArabic, font: arabicFont,
+                                   usesCustomFace: arabicUsesCustomFace, color: .primary)
+                        Button {
+                            settings.hapticFeedback()
+                            showChainSheet = true
+                        } label: {
+                            HStack(alignment: .top, spacing: 6) {
+                                arabicText(parts.chain, spans: parts.chainSpans, term: searchText,
+                                           guarantee: false, font: chainFont,
+                                           usesCustomFace: arabicUsesCustomFace, color: .secondary)
+                                Image(systemName: "point.3.connected.trianglepath.dotted")
+                                    .font(.caption)
+                                    .foregroundColor(settings.accentColor.color)
+                                    .padding(.top, 5)
+                            }
+                            .contentShape(Rectangle())
+                            // The glyph at the chain's head, the right edge, in every interface.
+                            .environment(\.layoutDirection, .leftToRight)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Text("Chain of Narrators"))
+                        .accessibilityHint(Text("Shows the chain of narrators"))
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                } else {
                 Group {
                 if !compact, HadithArabicChunks.needed(text.arabic) {
                     // The longest narrations, in the chosen face: sentence-bounded chunks, each short
@@ -703,6 +792,7 @@ struct HadithRow: View, Equatable {
                 }
                 }
                 .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             // Cross-language spans FORCE the English block visible too: an Arabic hit whose aligned
@@ -811,13 +901,22 @@ struct HadithRow: View, Equatable {
         .sheet(isPresented: $showSimilarSheet) {
             SimilarHadithsSheet(book: book, hadith: hadith)
         }
+        .sheet(isPresented: $showExplanationSheet) {
+            HadithExplanationSheet(book: book, hadith: hadith)
+        }
         #if DEBUG
         .onAppear {
-            // "-openHadithChain bukhari:1" / "-openSimilarHadiths bukhari:1" (slug:idInBook, with
-            // -launchHadithOpen): that row opens its chain, or its similar narrations.
+            // "-openHadithChain bukhari:1" / "-openSimilarHadiths bukhari:1" / "-openHadithExplanation
+            // bukhari:1" (slug:idInBook, with -launchHadithOpen): that row opens its chain, its similar
+            // narrations, or its explanation.
             let arguments = ProcessInfo.processInfo.arguments
             guard !compact else { return }
             let target = "\(book.slug):\(hadith.idInBook)"
+            if let index = arguments.firstIndex(of: "-openHadithExplanation"), arguments.indices.contains(index + 1),
+               arguments[index + 1] == target, !Self.debugExplanationOpened {
+                Self.debugExplanationOpened = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showExplanationSheet = true }
+            }
             if let index = arguments.firstIndex(of: "-openHadithChain"), arguments.indices.contains(index + 1),
                arguments[index + 1] == target, !Self.debugChainOpened {
                 Self.debugChainOpened = true
@@ -928,6 +1027,47 @@ struct HadithRow: View, Equatable {
             Label("Select Text", systemImage: "highlighter")
         }
 
+        // Read aloud by the system voices (Abu, 2026-11-02; Tilawa's Listen button): the Arabic as the
+        // row shows it (the chain left out when it sits beneath the hadith), or the English with its
+        // narrator line. A hadith being read offers Stop instead; the voices gate each language.
+        let text = hadith.allText
+        let arabicToSpeak = spokenArabic(text.arabic)
+        let englishToSpeak = [text.narrator, text.text].filter { !$0.isEmpty }.joined(separator: "\n")
+        let speaking = ArabicSpeech.shared.currentText ?? ""
+        if !speaking.isEmpty, speaking == arabicToSpeak || speaking == englishToSpeak {
+            Button {
+                settings.hapticFeedback()
+                ArabicSpeech.shared.stop()
+            } label: {
+                Label("Stop Reading", systemImage: "stop.fill")
+            }
+        } else {
+            let canArabic = ArabicSpeech.shared.isAvailable && !arabicToSpeak.isEmpty
+            let canEnglish = ArabicSpeech.shared.isEnglishAvailable && !englishToSpeak.isEmpty
+            if canArabic || canEnglish {
+                Menu {
+                    if canArabic {
+                        Button {
+                            settings.hapticFeedback()
+                            ArabicSpeech.shared.speak(arabicToSpeak, rate: 0.42)
+                        } label: {
+                            Label("Arabic", systemImage: "speaker.wave.2")
+                        }
+                    }
+                    if canEnglish {
+                        Button {
+                            settings.hapticFeedback()
+                            ArabicSpeech.shared.speakEnglish(englishToSpeak)
+                        } label: {
+                            Label("English", systemImage: "speaker.wave.2")
+                        }
+                    }
+                } label: {
+                    Label("Play Hadith", systemImage: "speaker.wave.2")
+                }
+            }
+        }
+
         // The narration's isnad, drawn in Arabic and shareable (HadithChainSheet).
         if hasChain {
             Button {
@@ -945,6 +1085,17 @@ struct HadithRow: View, Equatable {
                 showSimilarSheet = true
             } label: {
                 Label("Similar Hadiths", systemImage: "doc.text.magnifyingglass")
+            }
+        }
+
+        // The Hadith Encyclopedia's explanation of this narration, when it has one (Abu, 2026-11-02:
+        // "bring hadith explanation"; HadithExplanations.swift).
+        if hasExplanation {
+            Button {
+                settings.hapticFeedback()
+                showExplanationSheet = true
+            } label: {
+                Label("Explanation", systemImage: "text.book.closed")
             }
         }
 

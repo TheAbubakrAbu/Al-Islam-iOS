@@ -575,7 +575,7 @@ extension Settings {
             DispatchQueue.main.async { waiters.forEach { $0() } }
         }
         #if os(iOS)
-        // The permissions sheet shows the status beside its Allow button (PermissionsSheet.swift).
+        // The welcome's page and the Adhan tab's cards show the status (`PermissionAsker`, PermissionsSheet.swift).
         DispatchQueue.main.async {
             NotificationCenter.default.post(name: Self.locationAuthorizationDidChange, object: nil)
         }
@@ -2387,9 +2387,9 @@ extension Settings {
     static var notificationsDeliverable: Bool?
 
     /// `askIfUndetermined`: false leaves an unanswered permission alone (reports false) instead of
-    /// raising the system prompt. The Adhan tab passes false while the permissions sheet's Not Now
-    /// stands (`PermissionsSheet`), so the sheet is the one door to that prompt; Settings' Request
-    /// Access and the sheet's own buttons always ask.
+    /// raising the system prompt. The phone's Adhan tab always passes false: its Turn On Notifications
+    /// card is the one door to that prompt (`AdhanPermissionSection`, PermissionsSheet.swift); the
+    /// welcome's page, that card and Settings' Request Access ask.
     @MainActor
     func requestNotificationAuthorization(askIfUndetermined: Bool = true) async -> Bool {
         let deliverable = await notificationAuthorizationResult(askIfUndetermined: askIfUndetermined)

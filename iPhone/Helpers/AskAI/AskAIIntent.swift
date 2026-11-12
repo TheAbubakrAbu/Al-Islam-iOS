@@ -19,13 +19,16 @@ enum AskAIIntent: String, Codable, CaseIterable {
     /// A rework of the previous answer ("summarize that", "simpler", "shorter"): the last turn
     /// alone, its sources kept, nothing new fetched.
     case recap
+    /// A first-person expression of suicidal intent or self-harm: the app replies itself
+    /// (`AskAICrisis`), no model, no retrieval, and the turn is never sent as history.
+    case crisis
     // Retrieval, each with its own lane weights and task line.
     case appHelp, prayerTimes, reference, scripture, hadith, define, howTo, ruling, story, dua, general
 
     /// Whether the app searches its library for this question.
     var retrieves: Bool {
         switch self {
-        case .greeting, .thanks, .farewell, .capabilities, .smallTalk, .sourceQuestion, .recap: return false
+        case .greeting, .thanks, .farewell, .capabilities, .smallTalk, .sourceQuestion, .recap, .crisis: return false
         default: return true
         }
     }
@@ -41,6 +44,7 @@ enum AskAIIntent: String, Codable, CaseIterable {
     /// run long; everything else stops before a small model starts padding.
     var maxResponseTokens: Int {
         switch self {
+        case .crisis: return 0
         case .greeting, .thanks, .farewell, .smallTalk: return 160
         case .capabilities: return 260
         case .sourceQuestion: return 400
@@ -81,6 +85,8 @@ enum AskAIIntent: String, Codable, CaseIterable {
             #endif
         case .sourceQuestion:
             return "The reader is asking about the sources of the previous answer (who narrated it, which collection or surah it comes from, how it is graded, where to find it). Answer in a sentence or two per source asked about, from the details written beside that source above: the collection and its compiler, the chapter, the narrator, the grade; for a verse, its surah and translation. Cite by number. If the reader calls a source a hadith but it is a verse of the Quran (or the other way round), say so. If the details do not say, say so plainly rather than guessing."
+        case .crisis:
+            return ""
         case .recap:
             return "The reader wants your previous answer reworked as asked (a summary, a shorter or simpler version, a restatement). Rework ONLY that answer, keeping its citations by number; add no new subjects."
         case .appHelp:
@@ -104,7 +110,7 @@ enum AskAIIntent: String, Codable, CaseIterable {
         case .dua:
             return "Give the dua or dhikr from the sources: when it is said, then its meaning in English, citing by number and naming its collection and reference. The app shows the Arabic and the transliteration beneath your answer, so do not attempt to write Arabic letters."
         case .general:
-            return "Answer the question directly and completely, using the sources that fit (say where each comes from and cite by number) and general knowledge for the rest, saying which is which."
+            return "Answer the question directly and completely from the sources that fit (say where each comes from and cite by number). If none of them answers it, say so in one sentence instead of guessing."
         }
     }
 }
@@ -211,8 +217,30 @@ struct AskAIQuestion {
         let standaloneShape = standaloneShapeRegex.firstMatch(in: lowered, range: whole) != nil
         if substantiveCount < 2, words.count <= 5, !(standaloneShape && substantiveCount >= 1) { return true }
         guard substantiveCount <= 3 else { return false }
-        if AskAILexicon.followUpStarters.contains(where: { lowered.hasPrefix($0) }) { return true }
-        if words.contains(where: { AskAILexicon.backReferences.contains($0) }) { return true }
+        // "Is it haram to dye my hair?": the expletive "it" names nothing earlier.
+        if AskAILexicon.expletiveRegex.firstMatch(in: lowered, range: whole) != nil { return false }
+        // "What did the Prophet say about his neighbours?" carries its own subject; "what about
+        // fasting" (one substantive word) continues the conversation.
+        if substantiveCount <= 1, AskAILexicon.followUpStarters.contains(where: { lowered.hasPrefix($0) }) { return true }
+        var sawSubstantive = false
+        for (index, word) in words.enumerated() {
+            let substantive = !AskAILexicon.stopWords.contains(word)
+            // A possessive after a subject belongs to it ("can a man hit his wife?").
+            if AskAILexicon.possessiveBackReferences.contains(word) {
+                if !sawSubstantive { return true }
+            } else if ["this", "that", "these", "those"].contains(word) {
+                // A determiner ("this game") points at nothing earlier; "this verse", "that" alone do.
+                let next = index + 1 < words.count ? words[index + 1] : nil
+                if let next, !AskAILexicon.stopWords.contains(next), !AskAILexicon.sourceNouns.contains(next) {
+                    // determiner
+                } else {
+                    return true
+                }
+            } else if AskAILexicon.backReferences.contains(word) {
+                return true
+            }
+            if substantive { sawSubstantive = true }
+        }
         return false
     }
 
@@ -242,14 +270,21 @@ struct AskAIQuestion {
         // to drag the whole timetable into answers about charity).
         let wordSet = Set(words)
         let namedPrayer = !wordSet.isDisjoint(with: AskAILexicon.prayerNames)
-        let clock = !wordSet.isDisjoint(with: AskAILexicon.clockWords)
+        let schedule = !wordSet.isDisjoint(with: AskAILexicon.scheduleWords)
+        let clockQuestion = AskAILexicon.clockQuestionRegex.firstMatch(in: lowered, range: whole) != nil
         let prayerGeneral = !wordSet.isDisjoint(with: AskAILexicon.prayerGeneral)
+        let prayerFiqh = !wordSet.isDisjoint(with: AskAILexicon.prayerFiqhWords)
+        // A fiqh word keeps the question out of the timetable ("When should I pray Witr?") unless
+        // the question opens as a clock question AND names the day ("What time should I pray Fajr
+        // tomorrow?" wants the time).
+        let asksTheClock = !prayerFiqh || (clockQuestion && schedule)
         #if HAS_ADHAN
-        if (namedPrayer && clock) || (prayerGeneral && clock && wordCount <= 10) || (namedPrayer && wordCount <= 4) {
+        if asksTheClock, (namedPrayer && (clockQuestion || schedule)) || (prayerGeneral && schedule)
+            || (namedPrayer && wordCount <= 2) || lowered.contains("prayer times") {
             return .prayerTimes
         }
         #else
-        _ = (namedPrayer, clock, prayerGeneral)
+        _ = (asksTheClock, namedPrayer, schedule, clockQuestion, prayerGeneral)
         #endif
         if mentionsApp, AskAILexicon.appHelpRegex.firstMatch(in: lowered, range: whole) != nil {
             return .appHelp
@@ -412,7 +447,9 @@ enum AskAILexicon {
 
     static func phraseHints(in lowered: String) -> [String] {
         var out: [String] = []
-        for (phrase, hints) in phraseHintTable where lowered.contains(phrase) {
+        // Whole phrases: "leaving islamic school" is not "leaving islam".
+        let padded = " " + lowered + " "
+        for (phrase, hints) in phraseHintTable where padded.contains(" " + phrase + " ") {
             for hint in hints where !out.contains(hint) { out.append(hint) }
         }
         return out
@@ -477,6 +514,21 @@ enum AskAILexicon {
         "until", "till", "start", "starts", "started", "begin", "begins", "end", "ends", "late", "early", "minutes",
         "hours", "remaining", "countdown", "clock", "oclock", "long", "soon", "yet", "still", "missed", "miss",
     ]
+    /// A question about prayer that is fiqh, not today's clock: combining, shortening, missing,
+    /// travelling, validity ("Can I combine prayers when traveling?" was answered with a timetable).
+    static let prayerFiqhWords: Set<String> = [
+        "combine", "combining", "combined", "shorten", "shortening", "join", "joining", "qasr", "jam", "missed", "miss",
+        "forgot", "forget", "travel", "traveling", "travelling", "traveler", "traveller", "journey", "sick", "delay",
+        "delayed", "valid", "invalid", "should", "supposed", "allowed", "makeup", "forbidden", "haram", "makruh",
+        "makrooh", "permissible", "sunnah", "wajib", "fard", "obligatory",
+    ]
+    /// Words that ask about the schedule itself.
+    static let scheduleWords: Set<String> = [
+        "today", "todays", "tonight", "tonights", "tomorrow", "now", "next", "left", "until", "till", "remaining",
+        "countdown", "schedule", "timetable", "yet", "soon", "times",
+    ]
+    static let clockQuestionRegex = try! NSRegularExpression(
+        pattern: #"^(when|what time|how long|how many minutes|how much time|is it time|is it .* yet)\b"#)
 
     static let duaWords = [
         "dua", "duas", "du'a", "supplication", "supplications", "what to say when", "what do i say", "what should i say",
@@ -547,9 +599,24 @@ enum AskAILexicon {
         "meaning", "translate", "translation", "show me", "in more detail", "in detail", "briefly", "in short",
     ]
     static let backReferences: Set<String> = [
-        "it", "that", "this", "those", "these", "he", "she", "they", "him", "her", "them", "its", "his", "their",
+        "it", "that", "this", "those", "these", "he", "she", "they", "him", "her", "them",
         "one", "same", "above", "previous", "earlier", "last",
     ]
+    /// Possessives point back only when nothing substantive comes before them ("who was his
+    /// father?"); after a subject they belong to it ("can a man hit his wife?").
+    static let possessiveBackReferences: Set<String> = ["his", "her", "their", "its"]
+    /// Nouns a demonstrative points back WITH ("this verse", "that hadith"); before any other word
+    /// it is a determiner ("this game", "these days").
+    static let sourceNouns: Set<String> = [
+        "verse", "ayah", "ayat", "surah", "hadith", "narration", "dua", "story", "answer", "point", "one", "part",
+        "name", "word", "phrase", "line", "ruling", "opinion", "saying", "quote", "quotation", "passage", "chapter",
+        "source", "reference", "explanation", "term", "case", "topic", "subject", "question", "issue", "matter",
+        "practice", "act", "action", "situation", "sin", "problem", "behaviour", "behavior", "habit", "belief",
+        "view", "rule", "law", "condition", "teaching", "principle", "concept", "idea", "event", "incident",
+    ]
+    /// "Is it haram to dye my hair": the expletive "it" names nothing earlier. "Is it the same for
+    /// women?" is not that shape: "the same" points back.
+    static let expletiveRegex = try! NSRegularExpression(pattern: #"^(is|was|isnt|wasnt) it (?!(the )?same\b)(\w+ ){1,4}(to|that|if|for|when)\b"#)
 
     // MARK: Synonyms across English and Arabic terms
 
@@ -596,14 +663,14 @@ enum AskAILexicon {
         ("friday", ["jumuah", "jummah", "jumu'ah"]),
         ("night prayer", ["tahajjud", "qiyam"]),
         ("travel", ["traveller", "traveler", "journey", "safar", "travelling"]),
-        ("sick", ["illness", "ill", "disease", "sickness"]),
+        ("sickness", ["sick", "illness", "ill", "disease"]),
         ("knowledge", ["ilm", "learning", "learn", "seeking knowledge"]),
         ("honesty", ["truthfulness", "truthful", "honest", "sidq"]),
         ("lying", ["lies", "liar", "falsehood", "lie"]),
         ("backbiting", ["gheebah", "ghibah", "gossip", "slander"]),
         ("neighbor", ["neighbour", "neighbors", "neighbours"]),
         ("orphan", ["orphans", "yateem"]),
-        ("poor", ["poverty", "needy", "miskeen", "destitute"]),
+        ("poverty", ["poor", "needy", "miskeen", "destitute"]),
         ("wealth", ["money", "rizq", "provision", "rich"]),
         ("alcohol", ["khamr", "intoxicants", "wine", "drinking"]),
         ("gambling", ["maysir", "betting", "lottery"]),
@@ -657,7 +724,7 @@ enum AskAILexicon {
         ("brotherhood", ["brother", "brothers", "ummah", "unity"]),
         ("wisdom", ["hikmah", "wise"]),
         ("shahada", ["shahadah", "testimony", "declaration of faith"]),
-        ("names of allah", ["asma", "asma ul husna", "beautiful names"]),
+        ("names of allah", ["asma ul husna", "asmaul husna", "beautiful names"]),
         ("recitation", ["recite", "tilawah", "tajweed", "reading quran"]),
         ("memorization", ["memorize", "memorise", "hifz", "hafiz"]),
         ("eid", ["festival", "celebration"]),
@@ -676,6 +743,26 @@ enum AskAILexicon {
         ("menstruation", ["period", "menses", "haid"]),
         ("prayer times", ["salah times", "timetable"]),
         ("ablution", ["wudu", "wudhu", "wudoo"]),
+        // The gaps the 2026-11-05 review found (zero entries for zina, mahr, apostasy, suicide).
+        // The first two of each row are the ones that search (`expand` takes two), so they are the
+        // words the shipped texts use: 24:2, 17:32, 4:24 and 25:68 say "sexual intercourse" in
+        // Saheeh and 17:32 "adultery" in Mustafa; 4:4 "dowries", 4:25 "dowry"; 4:29 "kill
+        // yourselves". "Sexual intercourse" searches for zina one way only (`directedPairs`): lawful
+        // intercourse is not zina. Rows for istikhara and "leaving islam" (as phrase hints) changed
+        // nothing in two replays (the hints fall past the keyword query's 8-term cut) and went.
+        ("zina", ["adultery", "fornication", "fornicators"]),
+        ("mahr", ["dowry", "dowries", "dower", "bridal gift", "marriage gift"]),
+        ("apostasy", ["apostate", "riddah", "murtad", "leaving islam", "renounce"]),
+        ("suicide", ["kill yourselves", "self harm", "take your life"]),
+        ("combining prayers", ["combine", "shorten", "qasr", "join prayers", "jam"]),
+        ("nisab", ["threshold", "minimum amount", "85 grams", "zakatable"]),
+    ]
+
+    /// One-way: the head searches with these FIRST, but they never lead back to the head ("sexual
+    /// intercourse" finds 24:2 and 17:32 for zina; "Do I need ghusl after sexual intercourse?" must
+    /// not search zina).
+    private static let directedPairs: [(String, [String])] = [
+        ("zina", ["sexual intercourse"]),
     ]
 
     private static let synonyms: [String: [String]] = {
@@ -689,8 +776,49 @@ enum AskAILexicon {
                 }
             }
         }
+        for (head, related) in directedPairs {
+            table[fold(head), default: []].insert(contentsOf: related.map(fold), at: 0)
+        }
         return table
     }()
+
+    /// Every folded member of a synonym row, mapped to its folded head: the word a chip names a
+    /// topic by ("zakat" is "charity", "mother" is "parents"). The first row that holds a word wins.
+    private static let canonicalHeads: [String: String] = {
+        var table: [String: String] = [:]
+        for (head, related) in synonymPairs {
+            let canonical = fold(head)
+            for word in [head] + related where table[fold(word)] == nil {
+                table[fold(word)] = canonical
+            }
+        }
+        return table
+    }()
+
+    /// The synonym head a word belongs to, or nil for a word outside the table.
+    static func canonicalTopic(for word: String) -> String? {
+        canonicalHeads[fold(word)]
+    }
+
+    /// The topic of a question's content words: a word that IS a head wins over a word that only
+    /// belongs to one ("celebrating Eid" is about Eid, though "celebrating" sits in the birthday
+    /// row); among heads, or with none, the first word with a head.
+    static func canonicalTopic(in words: [String]) -> String? {
+        let pairs = words.compactMap { word in canonicalTopic(for: word).map { (word: word, head: $0) } }
+        if let own = pairs.first(where: { fold($0.word) == $0.head }) { return own.head }
+        return pairs.first?.head
+    }
+
+    /// A head as a chip writes it: proper nouns capitalized, the prophets by their Quranic names.
+    static func displayTopic(_ head: String) -> String {
+        displayNames[head] ?? head
+    }
+    private static let displayNames: [String: String] = [
+        "eid": "Eid", "friday": "Friday", "satan": "Satan", "kaaba": "the Kaaba", "madinah": "Madinah",
+        "jerusalem": "Jerusalem", "names of allah": "the Names of Allah", "muhammad": "the Prophet",
+        "jesus": "Isa", "moses": "Musa", "abraham": "Ibrahim", "noah": "Nuh", "joseph": "Yusuf", "mary": "Maryam",
+        "jonah": "Yunus", "david": "Dawud", "solomon": "Sulayman", "jacob": "Yaqub", "job": "Ayyub", "adam": "Adam",
+    ]
 
     /// The terms with up to two synonyms apiece appended (unique, order kept).
     static func expand(_ terms: [String]) -> [String] {
@@ -702,11 +830,15 @@ enum AskAILexicon {
                 out.append(related)
             }
         }
-        // A two-word phrase in the table ("night prayer", "names of allah") is looked up whole too.
-        let joined = terms.joined(separator: " ")
-        for (head, _) in synonymPairs where head.contains(" ") && joined.contains(head) {
-            for related in (synonyms[fold(head)] ?? []).prefix(2) where seen.insert(related).inserted {
-                out.append(related)
+        // A phrase in the table ("night prayer", "names of allah", "asma ul husna") is looked up
+        // whole too, whichever member of its row it is: typed as separate words, each word alone
+        // finds nothing ("asma" is also a woman's name).
+        let joined = " " + terms.joined(separator: " ") + " "
+        for (head, related) in synonymPairs {
+            for member in [head] + related where member.contains(" ") && joined.contains(" " + fold(member) + " ") {
+                for other in (synonyms[fold(member)] ?? []).prefix(2) where seen.insert(other).inserted {
+                    out.append(other)
+                }
             }
         }
         return out

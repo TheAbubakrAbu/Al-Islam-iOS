@@ -500,6 +500,11 @@ struct SurahView: View {
     /// (Phase 10.4: the raw player published 5-6 times per ayah advance, each a full reader pass).
     @ObservedObject private var nowPlaying = QuranPlayer.shared.nowPlaying
     private var quranPlayer: QuranPlayer { .shared }
+    #if os(iOS)
+    /// Play Word by Word's run (WordClipPlayer; publishes on start and stop only): its ayah is the
+    /// playing row while the clips sound, washed like a recited one.
+    @ObservedObject private var wordClips = WordClipPlayer.shared
+    #endif
     /// The failure dialog publishes on `alerts`, not the player (see `PlaybackAlerts`).
     @ObservedObject private var playbackAlerts = QuranPlayer.shared.alerts
 
@@ -554,6 +559,8 @@ struct SurahView: View {
     @StateObject private var testModeLease = QuranTestReaderLease()
     #endif
     @State private var showBulkNoteSheet = false
+    /// The share editor for the whole selection (`ShareAyahSheet(refs:)`), from the bar's Share.
+    @State private var showBulkShareSheet = false
     @State private var bulkNoteDraft = ""
     @State private var showBulkRespectAlert = false
     @State private var confirmBulkUnbookmark = false
@@ -1622,7 +1629,12 @@ struct SurahView: View {
     // Three of the row's inputs as plain calls: inline, the twenty-argument `AyahRow` init tipped
     // the type-checker over its budget ("unable to type-check this expression in reasonable time").
     private func isPlayingAyah(_ ayahID: Int) -> Bool {
-        nowPlaying.currentSurahNumber == surah.id && nowPlaying.currentAyahNumber == ayahID
+        if nowPlaying.currentSurahNumber == surah.id && nowPlaying.currentAyahNumber == ayahID { return true }
+        #if os(iOS)
+        return wordClips.isPlaying(surah: surah.id, ayah: ayahID)
+        #else
+        return false
+        #endif
     }
 
     private func arrivalTerm(for ayahID: Int) -> String {
@@ -2280,6 +2292,15 @@ struct SurahView: View {
                 .environmentObject(settings)
                 .environmentObject(quranData)
         }
+        .sheet(isPresented: $showBulkShareSheet) {
+            // The share editor with the whole selection on one card, in reading order (Abu,
+            // 2026-11-08). The selection stays as it was, like after the bar's other actions. A
+            // card of more than a few ayahs is tall and its preview scrolls, so that one opens tall.
+            if !selectedAyahs.isEmpty {
+                ShareAyahSheet(refs: selectedAyahs.sorted { ($0.surahID, $0.ayahID) < ($1.surahID, $1.ayahID) })
+                    .smallMediumSheetPresentation(startLarge: selectedAyahs.count > 3)
+            }
+        }
         .sheet(isPresented: $showBulkNoteSheet) {
             // One note, applied to every selected ayah (each becomes a bookmarked ayah carrying it).
             NoteEditorSheet(
@@ -2530,6 +2551,12 @@ struct SurahView: View {
         let listRows = listAyahs
         let ayahsForQiraah = listRows.ayahs
         let ayahByID = listRows.ayahByID
+        #if os(iOS)
+        // The ayah numbers down the edge (the Quran tab's juz rail, for one surah). Not while a
+        // search filters the list, and not on a phone in landscape: there the rows take the
+        // safe-area gutter back for the text, so the rail would sit on the Arabic.
+        let railItems = searchText.isEmpty && !isCompactHeight ? Self.ayahRailItems(ayahsForQiraah) : []
+        #endif
         let shouldUseTextSearchBlobs = !cleanQuery.isEmpty
             && !isDividerKeywordSearch
             && !isPageOrJuzSearch
@@ -2911,6 +2938,9 @@ struct SurahView: View {
                 }
                 .themedListRowBackground()
             }
+            #if os(iOS)
+            .jumpIndexRailRoom(railItems)
+            #endif
             .applyConditionalListStyle(disableNowPlayingInset: true, topContentMargin: 11, readingWidth: true)
             // A phone in landscape: the sensor housing's safe area insets the list 62 pt on EACH side
             // (measured, 874 pt band -> 750 pt of list), which is 14% of the screen spent on nothing
@@ -2920,11 +2950,7 @@ struct SurahView: View {
             // the other side reads edge to edge.
             .readerLandscapeWidth(isCompactHeight)
             #if os(iOS)
-            // The ayah numbers down the edge (the Quran tab's juz rail, for one surah). Not while a
-            // search filters the list, and not on a phone in landscape: there the rows take the
-            // safe-area gutter back for the text (above), so the rail would sit on the Arabic.
-            .jumpIndexRail(searchText.isEmpty && !isCompactHeight ? Self.ayahRailItems(ayahsForQiraah) : [],
-                           accessibilityName: String(localized: "Ayah index"), proxy: proxy) { item in
+            .jumpIndexRail(railItems, accessibilityName: String(localized: "Ayah index"), proxy: proxy) { item in
                 ayahsForQiraah.indices.contains(item.id) ? ayahsForQiraah[item.id].id : nil
             }
             #endif
@@ -3508,96 +3534,106 @@ struct SurahView: View {
         !selectedAyahs.isEmpty && selectedAyahs.allSatisfy { settings.isBookmarked(surah: $0.surahID, ayah: $0.ayahID) }
     }
 
+    /// The bulk actions, one glass row of symbols like the Hadith reader's selection bar and the
+    /// system's edit-mode toolbars: Copy, Share, Bookmark, Highlight, Note, Settings. The count, Select
+    /// All and Done moved up to the navigation bar (`applySurahToolbar`), where Mail and Photos keep
+    /// theirs - the old bar stacked all three over labelled actions in one slab and read as clutter
+    /// (Abu, 2026-11-08: "the tool bar at the bottom looks hideous").
     private var selectionActionBar: some View {
-        VStack(spacing: 10) {
-            HStack {
-                Text("\(selectedAyahs.count) selected")
-                    .font(.subheadline.weight(.semibold))
-                    .monospacedDigit()
-
-                Spacer()
-
-                // "Select All" covers the surah on screen; anything picked in ANOTHER surah (a page-mode
-                // selection that crossed a boundary) is kept, so the toggle never silently discards it.
-                //
-                // Only the COUNT is computed while rendering: building the target list here allocated an
-                // array of every ayah in the surah (286 in al-Baqarah, each filtered through
-                // `existsInQiraah`) and then walked it again with `allSatisfy` - on every single tap,
-                // because this bar re-renders whenever the selection changes. That was the "selecting and
-                // unselecting is slow" report (Abu, 2026-09-16), and it scaled with the surah's length,
-                // which is why it showed on the big screens where the whole bar sits beside the reader.
-                // The list itself is built only when the button is actually pressed.
-                let selectableCount = selectAllTargetCount
-                let allSelected = selectableCount > 0 && selectedInDisplayedSurah >= selectableCount
-
-                Button {
-                    settings.hapticFeedback()
-                    let allTargets = selectAllTargets
-                    withAnimation(.easeInOut) {
-                        if allSelected {
-                            selectedAyahs.subtract(allTargets)
-                        } else {
-                            selectedAyahs.formUnion(allTargets)
-                        }
-                    }
-                } label: {
-                    Text(allSelected ? "Deselect All" : "Select All")
-                        .font(.caption.weight(.semibold))
-                        .contentShape(Rectangle())
-                }
-
-                Button {
-                    settings.hapticFeedback()
-                    withAnimation(.easeInOut) {
-                        isSelectingAyahs = false
-                        selectedAyahs = []
-                    }
-                } label: {
-                    Text("Done")
-                        .font(.subheadline.weight(.semibold))
-                        .contentShape(Rectangle())
-                }
+        HStack(spacing: 0) {
+            bulkActionButton(String(localized: "Copy"), systemImage: "doc.on.doc") {
+                UIPasteboard.general.string = bulkSelectionText()
+                CopyConfirmation.shared.show()
             }
-            .foregroundColor(settings.accentColor.color)
-
-            HStack(spacing: 0) {
-                bulkActionButton(String(localized: "Copy"), systemImage: "doc.on.doc") {
-                    UIPasteboard.general.string = bulkSelectionText()
-                }
-                bulkActionButton(String(localized: "Share"), systemImage: "square.and.arrow.up") {
-                    presentSystemShareSheet(items: [bulkSelectionText()])
-                }
-                bulkActionButton(allSelectedBookmarked ? String(localized: "Unbookmark") : String(localized: "Bookmark"),
-                                 systemImage: allSelectedBookmarked ? "bookmark.fill" : "bookmark") {
-                    bulkToggleBookmarks()
-                }
-                bulkHighlightMenu
-                bulkActionButton(String(localized: "Note"), systemImage: "square.and.pencil") {
-                    bulkNoteDraft = ""
-                    showBulkNoteSheet = true
-                }
-                // Was a "Beginner" toggle: now the whole "Apply Settings" menu (beginner spacing, tajweed,
-                // tashkeel, dots, Highlight Allah, word by word) applied to every selected ayah at once,
-                // with a reset when any of them differs from the app settings.
-                Menu {
-                    // The inline study layout only draws in the list reader; the composed page has no
-                    // room for glosses, so page mode's bulk menu leaves "Word by Word" out.
-                    ayahDisplayMenuItems(refs: selectedAyahs, settings: settings,
-                                         offersWordByWord: !settings.quranPageMode)
-                } label: {
-                    bulkActionLabel(String(localized: "Settings"), systemImage: "slider.horizontal.3",
-                                    tint: displayOverrides.hasOverride(selectedAyahs) ? settings.accentColor.accent1 : nil)
-                }
-                .buttonStyle(.plain)
+            // The share editor with every selected ayah on one card (was the system sheet with the
+            // plain text; Abu, 2026-11-08: "support sharing multiple ayahs in one screen").
+            bulkActionButton(String(localized: "Share"), systemImage: "square.and.arrow.up") {
+                showBulkShareSheet = true
             }
-            .disabled(selectedAyahs.isEmpty)
-            .opacity(selectedAyahs.isEmpty ? 0.45 : 1)
+            bulkActionButton(allSelectedBookmarked ? String(localized: "Unbookmark") : String(localized: "Bookmark"),
+                             systemImage: allSelectedBookmarked ? "bookmark.fill" : "bookmark") {
+                bulkToggleBookmarks()
+            }
+            bulkHighlightMenu
+            bulkActionButton(String(localized: "Note"), systemImage: "note.text") {
+                bulkNoteDraft = ""
+                showBulkNoteSheet = true
+            }
+            // Was a "Beginner" toggle: now the whole "Apply Settings" menu (beginner spacing, tajweed,
+            // tashkeel, dots, Highlight Allah, word by word) applied to every selected ayah at once,
+            // with a reset when any of them differs from the app settings.
+            Menu {
+                // The inline study layout only draws in the list reader; the composed page has no
+                // room for glosses, so page mode's bulk menu leaves "Word by Word" out.
+                ayahDisplayMenuItems(refs: selectedAyahs, settings: settings,
+                                     offersWordByWord: !settings.quranPageMode)
+            } label: {
+                bulkActionLabel(String(localized: "Settings"), systemImage: "slider.horizontal.3",
+                                tint: displayOverrides.hasOverride(selectedAyahs) ? settings.accentColor.accent1 : nil)
+            }
+            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .conditionalGlassEffect(rectangle: true)
-        .padding(.horizontal, 16)
+        .disabled(selectedAyahs.isEmpty)
+        .opacity(selectedAyahs.isEmpty ? 0.45 : 1)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .conditionalGlassEffect()
+        .padding(.horizontal, 24)
         .padding(.bottom, 8)
+    }
+
+    /// Select mode's navigation bar, in place of the title pill, the gear and the back button: the
+    /// count as the title, Select All leading, Done trailing (the system's edit-mode arrangement).
+    private var selectionTitle: some View {
+        Text("\(selectedAyahs.count) Selected")
+            .font(.headline)
+            .monospacedDigit()
+            .lineLimit(1)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// "Select All" covers the surah on screen; anything picked in ANOTHER surah (a page-mode
+    /// selection that crossed a boundary) is kept, so the toggle never silently discards it.
+    ///
+    /// Only the COUNT is computed while rendering: building the target list here allocated an array
+    /// of every ayah in the surah (286 in al-Baqarah, each filtered through `existsInQiraah`) and
+    /// then walked it again with `allSatisfy` - on every single tap, because this re-renders
+    /// whenever the selection changes. That was the "selecting and unselecting is slow" report (Abu,
+    /// 2026-09-16), and it scaled with the surah's length. The list itself is built only when the
+    /// button is actually pressed.
+    private var selectAllButton: some View {
+        let selectableCount = selectAllTargetCount
+        let allSelected = selectableCount > 0 && selectedInDisplayedSurah >= selectableCount
+
+        return Button {
+            settings.hapticFeedback()
+            let allTargets = selectAllTargets
+            withAnimation(.easeInOut) {
+                if allSelected {
+                    selectedAyahs.subtract(allTargets)
+                } else {
+                    selectedAyahs.formUnion(allTargets)
+                }
+            }
+        } label: {
+            Text(allSelected ? "Deselect All" : "Select All")
+                .lineLimit(1)
+        }
+        .tint(settings.accentColor.color)
+    }
+
+    private var selectionDoneButton: some View {
+        Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut) {
+                isSelectingAyahs = false
+                selectedAyahs = []
+            }
+        } label: {
+            Text("Done")
+                .fontWeight(.semibold)
+        }
+        .tint(settings.accentColor.color)
     }
 
     /// The one selected color when every selected ayah wears the same one - the bar can then show which
@@ -3662,22 +3698,18 @@ struct SurahView: View {
         .buttonStyle(.plain)
     }
 
-    /// Shared by the bar's buttons and its one menu, so a menu slot is the same size and weight as a
-    /// button slot instead of quietly rendering as a differently-metricked label.
+    /// Shared by the bar's buttons and its two menus, so a menu slot is the same size and weight as a
+    /// button slot instead of quietly rendering as a differently-metricked label. A bare symbol, as
+    /// the Hadith reader's bar and the system's toolbars draw theirs; the title is what VoiceOver
+    /// reads.
     private func bulkActionLabel(_ title: String, systemImage: String, tint: Color? = nil) -> some View {
-        VStack(spacing: 3) {
-            Image(systemName: systemImage)
-                .font(.body.weight(.semibold))
-
-            Text(title)
-                .font(.system(size: 10, weight: .semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-        .foregroundColor(tint ?? settings.accentColor.color)
-        .frame(maxWidth: .infinity)
-        // The whole equal-width slot is tappable, not just the glyph's own ink.
-        .contentShape(Rectangle())
+        Image(systemName: systemImage)
+            .font(.body.weight(.semibold))
+            .foregroundColor(tint ?? settings.accentColor.color)
+            .frame(maxWidth: .infinity, minHeight: 36)
+            // The whole equal-width slot is tappable, not just the glyph's own ink.
+            .contentShape(Rectangle())
+            .accessibilityLabel(title)
     }
 
     /// The combined text of every selected ayah: reference, Arabic, and whichever translations the reader
@@ -4525,15 +4557,35 @@ struct SurahView: View {
     /// into the reading mode the user is already in.
     @ViewBuilder
     private func applySurahToolbar(to base: some View) -> some View {
-        base.toolbar {
-            ToolbarItem(placement: .principal) {
-                surahTitlePickerButton
-            }
+        base
+            // Select mode takes the bar over the way the system's edit modes do: the count where the
+            // title was, Select All in the back button's place, Done trailing. The bottom bar then
+            // holds only the actions (`selectionActionBar`). The page reader's navigation bar never
+            // folds (see `SurahPageReader.chromeCollapsed`), so Done is always within reach.
+            .navigationBarBackButtonHidden(isSelectingAyahs)
+            .toolbar {
+                if isSelectingAyahs {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        selectAllButton
+                    }
 
-            ToolbarItem(placement: .navigationBarTrailing) {
-                navBarTitle
+                    ToolbarItem(placement: .principal) {
+                        selectionTitle
+                    }
+
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        selectionDoneButton
+                    }
+                } else {
+                    ToolbarItem(placement: .principal) {
+                        surahTitlePickerButton
+                    }
+
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        navBarTitle
+                    }
+                }
             }
-        }
     }
 
     private var settingsSheet: some View {

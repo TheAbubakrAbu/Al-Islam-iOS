@@ -944,6 +944,9 @@ struct HadeethEncHadithView: View {
     /// The light row: the title, grade and attribution show at once; the narration itself is
     /// inflated from its block on the screen's task.
     let entry: HadeethEncEntry
+    /// The title a host gives the screen instead of the encyclopedia's own number: the hadith
+    /// row's Explanation sheet (HadithExplanationSheet) opens this page under that name.
+    var titleOverride: String? = nil
 
     @State private var hadith: HadeethEncHadith?
     @State private var showArabicExplanation = false
@@ -1131,7 +1134,7 @@ struct HadeethEncHadithView: View {
             .themedListRowBackground()
         }
         .applyConditionalListStyle()
-        .navigationTitle("Hadith \(entry.id.localizedDigits)")
+        .navigationTitle(titleOverride ?? "Hadith \(entry.id.localizedDigits)")
         .openScreen(.hadeethEncHadith, id: entry.id)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

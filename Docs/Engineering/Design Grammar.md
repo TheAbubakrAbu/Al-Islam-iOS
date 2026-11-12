@@ -40,6 +40,15 @@ Rules:
   padded `.vertical, 2` as its own row.
 - A caption inside a control's label (under a switch's title) is `SettingsToggle(_, caption:)`; never a
   free-standing caption `Text` under a `Toggle`.
+- A switch that cannot act in the state on screen (another reader layout, another riwayah) stays where it is,
+  disabled, keeping its value, and its caption becomes the one-line reason: the word features off Hafs, and the
+  four Quran switches only one layout reads (`ReaderLayout` in SettingsQuranView.swift: "List layout only. You
+  are reading in Pages."). The page search and the tips link to the row, so it is not hidden. A control that
+  only refines another choice (the Hijazi mark styles) is the other case: it is not drawn until that choice is
+  made.
+- A page whose switches the mushaf page does not read, while the sheets and search results still do (English
+  Text, and Arabic Text under a printed or an English page), stays live and says so in its first section's
+  footer while the reader is in Pages.
 
 ## 3. Rows
 

@@ -70,7 +70,9 @@ LATIN_OK = {"al-islam", "al-adhan", "al-quran", "apple", "icloud", "carplay", "s
             "airplay", "wi-fi", "wifi", "bluetooth", "imessage", "facetime", "safari", "url", "qr",
             "utc", "gmt", "am", "pm", "hafs", "warsh", "qalun", "app", "store", "tilawa", "quran.com",
             "github", "dynamic", "island", "pro", "max", "ipad", "iphone", "mac", "kfgqpc", "uthmani",
-            "indopak", "sf", "rounded", "mp3", "ok", "csv"}
+            "indopak", "sf", "rounded", "mp3", "ok", "csv",
+            # The crisis help lines (Ask AI): names and a domain, the same in every language.
+            "findahelpline.com", "tele-manas", "samaritans", "lifeline"}
 
 
 def load_catalog():

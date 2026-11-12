@@ -601,8 +601,9 @@ enum AskAIRetriever {
     }
 
     private static let nameArticles: Set<String> = ["al", "ar", "as", "an", "ad", "at", "ash", "az", "adh", "ath"]
-    /// Words that say the question is about a Name: "the name salam", "asma ul husna".
-    private static let nameCues: Set<String> = ["name", "names", "asma", "husna", "attribute", "attributes"]
+    /// Words that say the question is about a Name: "the name salam", "asma ul husna". Not "asma"
+    /// alone: it is a woman's name too (Asma bint Abi Bakr was sent to the 99 Names overview).
+    private static let nameCues: Set<String> = ["name", "names", "husna", "asmaul", "attribute", "attributes"]
 
     /// Names whose transliteration (article dropped) is a word of the question, exactly as folded,
     /// AND written the way a Name is meant: with its article ("as-salam", "al wali", "assalam") or
@@ -817,39 +818,67 @@ enum AskAIRetriever {
 
     // MARK: - Lane: the Names of Allah
 
-    /// Names the question spells out ("al-wadud", "ar rahman", "Al-Karim") as exact folded matches.
-    private static func exactNames(in question: AskAIQuestion) -> [NameOfAllah] {
+    /// Names the question spells out as Names. A word is a Name when (a) the word before it is an
+    /// article and the pair folds onto exactly one Name ("ar rahman", "al wadood"); (b) the article
+    /// is glued on and the rest is three letters or more ("assalam", "alwadud"); or (c) the question
+    /// holds a Names cue and the word IS a Name's transliteration, article dropped ("the name
+    /// wadud", "is aziz a good name"). A bare word never counts: spelling-folded, "mother" was
+    /// Al-Musawwir, "mahr" Al-Muakhkhir, "money" Al-Mani, "game" Al-Jami and "Imam Malik" Al-Malik,
+    /// so the Names lane fired on 9 of 20 everyday questions, 7 of them about something else.
+    static func exactNames(in question: AskAIQuestion) -> [NameOfAllah] {
         let names = NamesViewModel.shared.namesOfAllah
         guard !names.isEmpty, !question.isArabic else { return [] }
         let lowered = AskAILexicon.fold(question.raw)
         let words = lowered.split(separator: " ").map(String.init)
+        let cued = !Set(words).isDisjoint(with: nameCues)
         var out: [NameOfAllah] = []
-        for (index, word) in words.enumerated() {
-            // The article is optional and spelled many ways: "al", "ar", "as", "an"... A bare name
-            // counts only when it is not an ordinary English word ("the light" vs "an-Nur").
-            let isArticle = AskAILexicon.stopWords.contains(word) || ["al", "ar", "as", "an", "ad", "at", "ash", "az", "adh", "ath"].contains(word)
-            guard !isArticle, word.count >= 4 else { continue }
-            let candidates = index > 0 ? [words[index - 1] + " " + word, word] : [word]
-            for candidate in candidates {
-                let hits = SpellingFold.matches(candidate, in: names) { $0.spelling }
-                    .filter { name in
-                        // Exact whole-key matches only: "rahman" finds Ar-Rahman, "rah" finds nothing.
-                        guard let query = SpellingFold.Query(candidate) else { return false }
-                        let strength = SpellingFold.strength(of: query, in: name.spelling)
-                        return strength == .keyExact || strength == .skeletonExact
-                    }
-                if hits.count == 1, let name = hits.first, !out.contains(name) {
-                    out.append(name)
-                    break
+        func exactMatch(_ candidate: String) -> NameOfAllah? {
+            guard let query = SpellingFold.Query(candidate) else { return nil }
+            let hits = SpellingFold.matches(candidate, in: names) { $0.spelling }
+                .filter { name in
+                    // Exact whole-key matches only: "rahman" finds Ar-Rahman, "rah" finds nothing.
+                    let strength = SpellingFold.strength(of: query, in: name.spelling)
+                    return strength == .keyExact || strength == .skeletonExact
                 }
+            return hits.count == 1 ? hits.first : nil
+        }
+        for (index, word) in words.enumerated() {
+            guard !nameArticles.contains(word), !AskAILexicon.stopWords.contains(word), word.count >= 3 else { continue }
+            var found: NameOfAllah?
+            if index > 0, nameArticles.contains(words[index - 1]) {
+                found = exactMatch(words[index - 1] + " " + word)
             }
+            if found == nil, word.count >= 5,
+               nameArticles.contains(where: { word.hasPrefix($0) && word.count - $0.count >= 3 }) {
+                found = exactMatch(word)
+            }
+            if found == nil, cued, word.count >= 4 {
+                found = cuedNameKeys(for: names)[word]
+            }
+            if let found, !out.contains(found) { out.append(found) }
         }
         return out
     }
 
+    /// Rule (c)'s keys: each Name's folded transliteration with its article dropped ("wadud" for
+    /// Al-Wadud), folded once per Names list rather than 99 times per cued word.
+    private static var cuedNameKeyCache: (count: Int, keys: [String: NameOfAllah])?
+    private static func cuedNameKeys(for names: [NameOfAllah]) -> [String: NameOfAllah] {
+        if let cached = cuedNameKeyCache, cached.count == names.count { return cached.keys }
+        var keys: [String: NameOfAllah] = [:]
+        for name in names {
+            var parts = AskAILexicon.fold(name.transliteration).split(separator: " ").map(String.init)
+            if let first = parts.first, nameArticles.contains(first) { parts.removeFirst() }
+            let key = parts.joined(separator: " ")
+            if keys[key] == nil { keys[key] = name }
+        }
+        cuedNameKeyCache = (names.count, keys)
+        return keys
+    }
+
     private static func nameSources(for question: AskAIQuestion, limit: Int) -> [AskAISource] {
         let lowered = AskAILexicon.fold(question.raw)
-        let asksNames = lowered.contains("name") || lowered.contains("asma")
+        let asksNames = !Set(lowered.split(separator: " ").map(String.init)).isDisjoint(with: nameCues)
         var out: [AskAISource] = []
         for name in exactNames(in: question).prefix(limit) { out.append(AskAISourceFactory.name(name)) }
         guard asksNames, out.count < limit else { return out }
@@ -876,6 +905,35 @@ enum AskAIRetriever {
         var hisn: [(entry: Int, category: String, head: String, body: String)] = []
     }
     private static var foldedDuas = FoldedDuaIndex()
+
+    /// The topics the app has a dua for: the folded words (four letters or more, no stop words) of
+    /// every Hisn al-Muslim entry title and category, and every dua collection's title and subtitle,
+    /// expanded once through the lexicon. The chips offer "Is there a dua for X?" only when X is
+    /// here. Cached; rebuilt when Hisn finishes loading (it parses off the main actor on first use).
+    private static var cachedDuaTopics: (hisnCount: Int, words: Set<String>)?
+    static func duaTopicWords() -> Set<String> {
+        let hisn = HisnDuasStore.shared.libraryIfLoaded
+        let hisnCount = hisn?.entries.count ?? 0
+        if let cached = cachedDuaTopics, cached.hisnCount == hisnCount { return cached.words }
+        var texts: [String] = []
+        if let hisn {
+            texts += hisn.entries.map(\.title)
+            texts += hisn.categories.map(\.label)
+        }
+        let library = DuaLibrary.shared
+        library.load()
+        texts += library.collections.map { $0.title + " " + $0.subtitle }
+        var words = Set<String>()
+        for text in texts {
+            for word in AskAILexicon.fold(text).split(separator: " ").map(String.init)
+            where word.count >= 4 && !AskAILexicon.stopWords.contains(word) {
+                words.insert(word)
+            }
+        }
+        words.formUnion(AskAILexicon.expand(Array(words)))
+        cachedDuaTopics = (hisnCount, words)
+        return words
+    }
 
     private static func duaSources(for question: AskAIQuestion, limit: Int, hisn: HisnDuasStore.Library?) -> [AskAISource] {
         let terms = question.searchTerms.filter { $0.count >= 3 && !["dua", "duas", "dhikr", "adhkar", "supplication", "say", "recite"].contains($0) }

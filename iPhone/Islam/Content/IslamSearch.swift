@@ -2234,6 +2234,8 @@ enum ArticleSources {
             ArticleSource(title: "Al-Itqan fi Ulum al-Quran", subtitle: "As-Suyuti"),
             ArticleSource(title: "Fada'il al-Quran in Sahih al-Bukhari", subtitle: "The chapters on the collection of the Quran"),
             ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, commentary on Sahih al-Bukhari"),
+            ArticleSource(title: "An-Nashr fi al-Qira'at al-'Ashr", subtitle: "Ibn al-Jazari, on the Uthmanic copies and why they were left without dots"),
+            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, his answer on the seven ahruf (vol. 13)"),
             ArticleSource(title: "'Uthmaan's compilation of the Mushaf in one style (harf)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/125091"),
             ArticleSource(title: "Who Wrote the Quran?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10012"),
         ],
@@ -2272,6 +2274,7 @@ enum ArticleSources {
         "AhrufView": [
             ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
             ArticleSource(title: "An-Nashr fil-Qira'at al-Ashr", subtitle: "Ibn al-Jazari"),
+            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, his answer on the seven ahruf (vol. 13)"),
             ArticleSource(title: "Al-Ibanah an Ma'ani al-Qira'at", subtitle: "Makki ibn Abi Talib"),
             ArticleSource(title: "Al-Itqan fi Ulum al-Quran", subtitle: "As-Suyuti"),
             ArticleSource(title: "The revelation of the Quran in seven styles (ahruf, sing. harf)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/5142"),
@@ -2445,6 +2448,10 @@ enum ArticleSources {
             ArticleSource(title: "Al-Itqan fi Ulum al-Quran", subtitle: "As-Suyuti"),
             ArticleSource(title: "The revelation of the Quran in seven styles (ahruf, sing. harf)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/5142"),
             ArticleSource(title: "Ruling on one who, whilst praying, switches between the seven modes of recitation that were narrated via mutawaatir reports", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/192182"),
+            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, his answer on the seven ahruf and the readings (vol. 13)"),
+            ArticleSource(title: "Al-Majmu' Sharh al-Muhadhdhab", subtitle: "An-Nawawi, on reciting the shadh readings (3/392)"),
+            ArticleSource(title: "Ghayat an-Nihayah fi Tabaqat al-Qurra'", subtitle: "Ibn al-Jazari, the lives and teachers of the readers"),
+            ArticleSource(title: "Mizan al-I'tidal", subtitle: "Adh-Dhahabi, on Humran ibn A'yan"),
         ],
         "HijriCalendarView": [
             ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),

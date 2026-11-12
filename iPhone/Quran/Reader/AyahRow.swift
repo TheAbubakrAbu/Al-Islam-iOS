@@ -519,7 +519,7 @@ struct AyahRow: View, Equatable {
     private func arabicSnippet(source: String, font: Font, preStyled: AttributedString?,
                                beginner: Bool, suffixFont: Font,
                                highlightQuery: String, matchedArabic: Bool,
-                               extraRanges: [NSRange] = []) -> some View {
+                               extraRanges: [NSRange] = [], washRanges: [NSRange] = []) -> some View {
         HighlightedSnippet(
             source: source,
             term: highlightQuery,
@@ -533,7 +533,9 @@ struct AyahRow: View, Equatable {
             trailingSuffixColor: ayahNumberColor,
             highlightAllahNames: displayChoices.highlightAllah,
             guaranteeMatch: matchedArabic,
-            extraHighlightRanges: extraRanges
+            extraHighlightRanges: extraRanges,
+            washRanges: washRanges,
+            washColor: settings.accentColor.color
         )
         .arabicFontDesign(custom: true)
         .id(tajweedAnimationKey)
@@ -710,6 +712,21 @@ struct AyahRow: View, Equatable {
         let raw = comparisonQiraahOverride ?? (settings.displayQiraahForArabic ?? "")
         let tag = Settings.Riwayah.canonicalTag(raw == "Hafs" ? "" : raw)
         guard !tag.isEmpty else { return nil }
+
+        #if os(iOS)
+        // A letter-level riwayah (Warsh, 2026-11-01): the tint is the print's own "differs from Hafs"
+        // letters, in the accent, where the whole-word diff used to wash the word (the same letters
+        // the magenta paints with Tajweed Colors on). Nothing when the print marks nothing.
+        if QiraatLetterDiff.isLetterLevel(tag: tag) {
+            let fullText: String? = displayChoices.hideTashkeel
+                ? ayah.rawArabicText(surahId: surah.id, qiraahOverride: comparisonQiraahOverride)
+                : nil
+            return QiraahTajweedStore.shared.khilafText(
+                tag: tag, surah: surah.id, ayah: ayah.id, displayText: displayText,
+                fullText: fullText, tint: UIColor(settings.accentColor.color)
+            )
+        }
+        #endif
 
         let quranData = QuranData.shared
         let span = QiraahComparison.alignment(surahID: surah.id, tag: tag, quranData: quranData)?
@@ -1492,6 +1509,15 @@ struct AyahRow: View, Equatable {
                     ?? arabicDiffText(displayText: arabicSource, beginner: beginner)
 
                 #if os(iOS)
+                // The recited word (WordHighlight.swift) reaches the renderers through this host, which
+                // subscribes only while this is the playing row: a word tick re-renders this block of
+                // this row and nothing else.
+                PlayingWordHost(surah: surah.id, ayahs: [ayah.id], active: isPlayingThis) { playingWord in
+                // As this row's renderers number the tokens; nil when the row's tokens do not match the
+                // source's count (beginner spacing, a text numbered otherwise), so no wrong word lights.
+                let playingToken: Int? = playingWord.flatMap {
+                    QuranWords.tokenIndex(ofWord: $0.index, in: arabicSource, expecting: $0.count)
+                }
                 // The search look the word renderers share with the one-Text snippet: the term's
                 // words (from the snippet's own match ladder) plus the cross-language spans, in the
                 // accent over plain text. Computed here so the renderers keep drawing through a
@@ -1549,7 +1575,8 @@ struct AyahRow: View, Equatable {
                                     arabicRanges: searchRanges,
                                     normalizedQuery: HighlightedSnippet.normalizeForSearchText(highlightQuery, trimWhitespace: true)
                                 )
-                                : nil
+                                : nil,
+                            playingWord: playingToken
                         )
                         .id(tajweedAnimationKey)
                         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -1570,6 +1597,7 @@ struct AyahRow: View, Equatable {
                             highlightAllahNames: choices.highlightAllah,
                             highlightRanges: searchRanges,
                             selectedWord: openWordIndex,
+                            playingWord: playingToken,
                             onSelectWord: selectWord ?? { _ in }
                         )
                         .id(tajweedAnimationKey)
@@ -1611,6 +1639,7 @@ struct AyahRow: View, Equatable {
                         highlightAllahNames: choices.highlightAllah,
                         highlightRanges: searchRanges,
                         selectedWord: openRiwayahWordIndex,
+                        playingWord: playingToken,
                         onSelectWord: { index in
                             guard wordTapsAllowed else { return }
                             let tokens = WordTokens.tokens(in: arabicSource)
@@ -1661,7 +1690,9 @@ struct AyahRow: View, Equatable {
                     arabicSnippet(source: arabicSource, font: arabicFont, preStyled: preStyled,
                                   beginner: beginner, suffixFont: suffixFont,
                                   highlightQuery: highlightQuery, matchedArabic: matchedArabic,
-                                  extraRanges: crossArabic)
+                                  extraRanges: crossArabic,
+                                  washRanges: playingToken.map { [WordTokens.ranges(in: arabicSource)[$0]] } ?? [])
+                }
                 }
                 #else
                 arabicSnippet(source: arabicSource, font: arabicFont, preStyled: preStyled,
@@ -1711,8 +1742,10 @@ struct AyahRow: View, Equatable {
                     // Mode drops it.
                     // Verbatim: the caption names the English text it sits under, inside its
                     // left-to-right block; translated, it read as Arabic hugging the left edge.
+                    // The leading dash is the attribution mark Abu asked back for the list view
+                    // (2026-11-09); both captions had read bare since 4.6.0.
                     if !settings.hides(.translationCaption, unless: showEnglishMustafa) {
-                        Text(verbatim: "Saheeh International")
+                        Text(verbatim: "— Saheeh International")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
@@ -1740,7 +1773,7 @@ struct AyahRow: View, Equatable {
                     )
                     // Always named, Simple Mode or not: it is the translation someone chose over the
                     // default, so the screen says which one it is (Docs/Product/Simple Mode Guide.md, rule 2).
-                    Text(verbatim: "Clear Quran (Mustafa Khattab)")
+                    Text(verbatim: "— Clear Quran (Mustafa Khattab)")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -1829,6 +1862,16 @@ struct AyahRow: View, Equatable {
         } label: {
             Label("Play This Ayah", systemImage: "play.circle")
         }
+
+        #if os(iOS)
+        // Each word's own clip in turn, lit as it sounds (WordClipPlayer); the same row stops it.
+        Button {
+            settings.hapticFeedback()
+            WordClipPlayer.shared.toggle(surah: surah.id, ayah: ayah.id)
+        } label: {
+            Label("Play Word by Word", systemImage: "text.word.spacing")
+        }
+        #endif
     }
 
     /// Add Note on its own; once a note is saved, one Note submenu holds Edit and Remove instead of
@@ -1976,6 +2019,15 @@ struct AyahRow: View, Equatable {
             } label: {
                 Label("Play This Ayah", systemImage: "play.circle")
             }
+
+            #if os(iOS)
+            Button {
+                settings.hapticFeedback()
+                WordClipPlayer.shared.toggle(surah: surah.id, ayah: ayah.id)
+            } label: {
+                Label("Play Word by Word", systemImage: "text.word.spacing")
+            }
+            #endif
         }
 
         Button(role: isBookmarked ? .destructive : nil) {

@@ -1188,6 +1188,9 @@ struct WordByWordTextView: UIViewRepresentable {
     let width: CGFloat
     /// The word whose meaning is showing, lit in the accent.
     var selectedWord: Int?
+    /// The word being recited (WordHighlight.swift), lit a shade stronger. Moves a few times a second
+    /// while an ayah plays: re-lit in place on the text storage, never through a relayout.
+    var playingWord: Int? = nil
     var highlightColor: Color
     /// Taps that open a word - two in the reader rows, one on the ayah preview cards (see `WordByWordText`).
     var tapsRequired: Int = 2
@@ -1244,15 +1247,23 @@ struct WordByWordTextView: UIViewRepresentable {
         // swallowed those - every VISIBLE ayah stayed on its old font until it scrolled off screen and was
         // rebuilt through `makeUIView` ("only the rows I can't see change" - user report). `isEqual(to:)`
         // still skips the relayout when a playback tick re-renders the parent with identical content.
-        let selectionAndWidthUnchanged = context.coordinator.lastSelectedWord == (selectedWord ?? -1)
-            && context.coordinator.lastWidth == width
-        if selectionAndWidthUnchanged,
-           let last = context.coordinator.lastAttributed,
-           last === attributed || last.isEqual(to: attributed) {
+        let litUnchanged = context.coordinator.lastSelectedWord == (selectedWord ?? -1)
+            && context.coordinator.lastPlayingWord == (playingWord ?? -1)
+        let textUnchanged: Bool = {
+            guard context.coordinator.lastWidth == width, let last = context.coordinator.lastAttributed else { return false }
+            return last === attributed || last.isEqual(to: attributed)
+        }()
+        if textUnchanged, litUnchanged { return }
+        context.coordinator.lastSelectedWord = selectedWord ?? -1
+        context.coordinator.lastPlayingWord = playingWord ?? -1
+        if textUnchanged {
+            // Only the lit words moved (a recitation tick, a word card opening): repaint the washes on
+            // the storage in place. A background attribute invalidates display, not layout, so the
+            // run keeps its lines and the tick costs no typesetting.
+            relight(view.textStorage)
             return
         }
         context.coordinator.lastAttributed = attributed
-        context.coordinator.lastSelectedWord = selectedWord ?? -1
         context.coordinator.lastWidth = width
 
         view.textContainer.widthTracksTextView = false
@@ -1290,17 +1301,40 @@ struct WordByWordTextView: UIViewRepresentable {
     /// The selected word's accent wash, painted on top rather than composed in: a background attribute
     /// changes no layout, so lighting a word re-measures nothing.
     private func lit(_ text: NSAttributedString) -> NSAttributedString {
-        guard let selectedWord, wordRanges.indices.contains(selectedWord) else { return text }
-        let range = wordRanges[selectedWord]
-        guard range.location + range.length <= text.length else { return text }
-
+        let washes = washes(length: text.length)
+        guard !washes.isEmpty else { return text }
         let mutable = NSMutableAttributedString(attributedString: text)
-        mutable.addAttribute(
-            .backgroundColor,
-            value: UIColor(highlightColor).withAlphaComponent(0.22),
-            range: range
-        )
+        for (range, color) in washes {
+            mutable.addAttribute(.backgroundColor, value: color, range: range)
+        }
         return mutable
+    }
+
+    /// The selected word's wash and the recited word's (stronger, and on top when they coincide).
+    private func washes(length: Int) -> [(NSRange, UIColor)] {
+        var out: [(NSRange, UIColor)] = []
+        if let selectedWord, wordRanges.indices.contains(selectedWord),
+           NSMaxRange(wordRanges[selectedWord]) <= length {
+            out.append((wordRanges[selectedWord], UIColor(highlightColor).withAlphaComponent(0.22)))
+        }
+        if let playingWord, wordRanges.indices.contains(playingWord),
+           NSMaxRange(wordRanges[playingWord]) <= length {
+            out.append((wordRanges[playingWord], UIColor(highlightColor).withAlphaComponent(0.34)))
+        }
+        return out
+    }
+
+    /// Repaints the washes on the live storage: every background cleared, then the current ones set.
+    /// The run's own attributes carry no background (search and the name of Allah are foreground
+    /// colors), so clearing them all is exactly undoing the last `lit`.
+    private func relight(_ storage: NSTextStorage) {
+        let whole = NSRange(location: 0, length: storage.length)
+        storage.beginEditing()
+        storage.removeAttribute(.backgroundColor, range: whole)
+        for (range, color) in washes(length: storage.length) {
+            storage.addAttribute(.backgroundColor, value: color, range: range)
+        }
+        storage.endEditing()
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -1313,6 +1347,7 @@ struct WordByWordTextView: UIViewRepresentable {
         /// original (not the `lit(_:)` copy), so selection changes compare against the right base.
         var lastAttributed: NSAttributedString?
         var lastSelectedWord = -1
+        var lastPlayingWord = -1
         var lastWidth: CGFloat = 0
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
@@ -1425,13 +1460,15 @@ struct WordByWordText: View {
     var selectable: Bool = false
     /// The word currently showing its card, lit in the accent.
     let selectedWord: WordByWordRef?
+    /// The word being recited (WordHighlight.swift), lit a shade stronger.
+    var playingWord: WordByWordRef? = nil
     let onSelectWord: (WordByWordRef) -> Void
 
     /// The single-ayah form the reader rows use.
     init(displayText: String, preStyled: AttributedString?, fontName: String?, fontSize: CGFloat,
          ayahNumberArabic: String, glosses: [String], alwaysTappable: Bool = false,
          highlightAllahNames: Bool, highlightRanges: [NSRange] = [], tapsRequired: Int = 2,
-         selectedWord: Int?, onSelectWord: @escaping (Int) -> Void) {
+         selectedWord: Int?, playingWord: Int? = nil, onSelectWord: @escaping (Int) -> Void) {
         self.segments = [WordByWordSegment(
             displayText: displayText, preStyled: preStyled, ayahNumberArabic: ayahNumberArabic,
             glosses: glosses, alwaysTappable: alwaysTappable, highlightAllahNames: highlightAllahNames,
@@ -1441,19 +1478,22 @@ struct WordByWordText: View {
         self.fontSize = fontSize
         self.tapsRequired = tapsRequired
         self.selectedWord = selectedWord.map { WordByWordRef(segment: 0, index: $0) }
+        self.playingWord = playingWord.map { WordByWordRef(segment: 0, index: $0) }
         self.onSelectWord = { onSelectWord($0.index) }
     }
 
     /// The multi-ayah form the preview cards use.
     init(segments: [WordByWordSegment], fontName: String?, fontSize: CGFloat, tapsRequired: Int = 2,
          selectable: Bool = false,
-         selectedWord: WordByWordRef?, onSelectWord: @escaping (WordByWordRef) -> Void) {
+         selectedWord: WordByWordRef?, playingWord: WordByWordRef? = nil,
+         onSelectWord: @escaping (WordByWordRef) -> Void) {
         self.segments = segments
         self.fontName = fontName
         self.fontSize = fontSize
         self.tapsRequired = tapsRequired
         self.selectable = selectable
         self.selectedWord = selectedWord
+        self.playingWord = playingWord
         self.onSelectWord = onSelectWord
     }
 
@@ -1540,6 +1580,7 @@ struct WordByWordText: View {
                     wordRanges: layout.wordRanges,
                     width: width,
                     selectedWord: selectedWord.flatMap { globalIndex(of: $0, in: layout) },
+                    playingWord: playingWord.flatMap { globalIndex(of: $0, in: layout) },
                     highlightColor: settings.accentColor.color,
                     tapsRequired: tapsRequired,
                     selectable: selectable,
@@ -1646,6 +1687,36 @@ struct WordByWordText: View {
         Self.attributedMemo.setObject(built, forKey: key)
         return built
     }
+
+    /// The run's laid-out height at `width`, answered the way `WordByWordTextView.sizeThatFits` answers
+    /// it (the same TextKit configuration, the same bleed insets), with no view in any hierarchy: the
+    /// ayah actions sheet decides its opening detent from this before it is presented
+    /// (`AyahPreviewCard.estimatedHeight`). Main thread: the fonts and the attributed memo.
+    func measuredHeight(width: CGFloat) -> CGFloat {
+        guard width > 0 else { return 0 }
+        let view = Self.measuringTextView
+        view.textContainer.size = CGSize(width: width, height: .greatestFiniteMagnitude)
+        view.attributedText = attributedText()
+        let fitting = view.sizeThatFits(
+            CGSize(width: width + 2 * ArabicInkBleedHost.bleed, height: .greatestFiniteMagnitude)
+        )
+        return ceil(fitting.height)
+    }
+
+    /// One text view, configured as `WordByWordTextView.makeUIView` configures the live ones, kept for
+    /// measuring.
+    private static let measuringTextView: UITextView = {
+        let view = UITextView()
+        view.isEditable = false
+        view.isScrollEnabled = false
+        view.textContainer.lineFragmentPadding = 0
+        view.adjustsFontForContentSizeCategory = false
+        view.textContainer.widthTracksTextView = false
+        view.textContainerInset = UIEdgeInsets(top: 0, left: ArabicInkBleedHost.bleed,
+                                               bottom: 0, right: ArabicInkBleedHost.bleed)
+        _ = view.layoutManager
+        return view
+    }()
 
     /// Assembles the run exactly as `runLayout` measures it: every segment's text, its " marker", and one
     /// joining space before the next segment.
@@ -1788,6 +1859,8 @@ struct WordByWordInlineText: View {
     let onSelectWord: ((Int) -> Void)?
     /// The active search term's paint, nil when nothing is being searched (see the type).
     var searchPaint: WordByWordSearchPaint? = nil
+    /// The word being recited (WordHighlight.swift), washed a shade stronger than the selected one.
+    var playingWord: Int? = nil
 
     @State private var width: CGFloat = 0
 
@@ -1950,6 +2023,7 @@ struct WordByWordInlineText: View {
 
     private func cellView(_ cell: WordCell) -> some View {
         let selected = !cell.isOrnament && selectedWord == cell.id
+        let playing = !cell.isOrnament && playingWord == cell.id
         let accent = settings.accentColor.color
         // The search look: everything primary, the matched words alone in the accent - the
         // transliteration's accent and the glosses' grey are the READING look, not a highlight, and
@@ -1988,7 +2062,7 @@ struct WordByWordInlineText: View {
         .padding(.horizontal, cellHorizontalPadding)
         .background(
             RoundedRectangle(cornerRadius: 6)
-                .fill(selected ? accent.opacity(0.18) : Color.clear)
+                .fill(playing ? accent.opacity(0.3) : (selected ? accent.opacity(0.18) : Color.clear))
                 // The wash reaches 3pt past the glyphs on each side, the room the cell padding used
                 // to give it, without spreading the words themselves.
                 .padding(.horizontal, -3)
@@ -2793,6 +2867,7 @@ struct WordMeaningSheet: View {
     @ObservedObject private var quranDisplay = QuranDisplay.shared
     @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var speech = ArabicSpeech.shared
+    @ObservedObject private var wordClips = WordClipPlayer.shared
     @Environment(\.presentationMode) private var presentationMode
 
     let surah: Surah
@@ -2982,7 +3057,11 @@ struct WordMeaningSheet: View {
             }
             #endif
         }
-        .onDisappear { ArabicSpeech.shared.stop() }
+        .onDisappear {
+            ArabicSpeech.shared.stop()
+            // The card's own single word stops with it; an ayah's Play Word by Word run is not the card's.
+            if WordClipPlayer.shared.current?.position != nil { WordClipPlayer.shared.stop() }
+        }
         .onChange(of: current) { _ in selectedSegment = nil }
     }
 
@@ -3118,14 +3197,38 @@ struct WordMeaningSheet: View {
         .accessibilityHint("Opens the \(target.title) page")
     }
 
+    /// The word's quran.com position (1-based) in the Hafs text: the per-word clip's number. Nil for
+    /// a token the source never counts (an ornament), which has no clip.
+    private static func clipPosition(of focus: Focus) -> Int? {
+        let index = QuranWords.ranges(in: focus.rawText).firstIndex { NSEqualRanges($0, focus.range) }
+        return index.map { $0 + 1 }
+    }
+
+    /// Listen plays quran.com's recording of this one word (the same voice as Play Word by Word), lit
+    /// in the reader behind the card; the system voice reads it only when the clip cannot play (no
+    /// network, nothing cached) or the word has no clip.
     private func actionRow(_ focus: Focus) -> some View {
+        let clipPosition = Self.clipPosition(of: focus)
         let speechAvailable = ArabicSpeech.shared.isAvailable
         let speaking = speech.currentText == focus.rawToken || speech.currentText == focus.shown
+        let clipPlaying = clipPosition.map { wordClips.isPlaying(surah: focus.surah.id, ayah: focus.ayah.id, position: $0) } ?? false
+        let listening = speaking || clipPlaying
         return HStack(spacing: 10) {
-            if speechAvailable {
-                actionButton(speaking ? String(localized: "Stop") : String(localized: "Listen"), system: speaking ? "stop.fill" : "speaker.wave.2.fill") {
+            if clipPosition != nil || speechAvailable {
+                actionButton(listening ? String(localized: "Stop") : String(localized: "Listen"), system: listening ? "stop.fill" : "speaker.wave.2.fill") {
                     settings.hapticFeedback()
-                    if speaking { ArabicSpeech.shared.stop() } else { ArabicSpeech.shared.speak(focus.shown) }
+                    if listening {
+                        if speaking { ArabicSpeech.shared.stop() }
+                        if clipPlaying { WordClipPlayer.shared.stop() }
+                    } else if let clipPosition {
+                        ArabicSpeech.shared.stop()
+                        let spoken = focus.shown
+                        WordClipPlayer.shared.playWord(surah: focus.surah.id, ayah: focus.ayah.id, position: clipPosition) {
+                            if ArabicSpeech.shared.isAvailable { ArabicSpeech.shared.speak(spoken) }
+                        }
+                    } else {
+                        ArabicSpeech.shared.speak(focus.shown)
+                    }
                 }
             }
             actionButton(String(localized: "Copy"), system: "doc.on.doc") {

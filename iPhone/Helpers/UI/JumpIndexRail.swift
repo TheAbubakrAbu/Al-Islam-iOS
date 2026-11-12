@@ -45,10 +45,12 @@ struct JumpIndexItem: Identifiable, Equatable {
 /// only, while the Quran grid is one Section of chunk rows. This one hands its caller the stop and
 /// lets it scroll to whatever row id it likes, on every iOS the app supports.
 ///
-/// Lay it over the List with `.overlay(alignment: .trailing)`: it takes the whole height to measure
+/// Lay it over the List with `.overlay(alignment: .trailing)`, the List itself first given
+/// `jumpIndexRailRoom(items)` so its rows clear the labels: it takes the whole height to measure
 /// itself but only its own column takes touches, so the list underneath scrolls as before. When the
 /// height cannot fit every label (a phone in landscape), it prints every other one with a dot
-/// between, as UIKit does; the finger still reaches every stop.
+/// between, as UIKit does; the finger still reaches every stop. While it shows, the list's own scroll
+/// indicator is off, as under UIKit's index: it runs down the same strip of the edge.
 struct JumpIndexRail: View {
     let items: [JumpIndexItem]
     let accent: Color
@@ -69,9 +71,8 @@ struct JumpIndexRail: View {
 
     private static let rowHeight: CGFloat = 15
     private static let minimumRowHeight: CGFloat = 11
-    private static let columnWidth: CGFloat = 18
-    /// The touch target: wider than the labels, reaching in toward the list.
-    private static let touchWidth: CGFloat = 30
+    /// The touch target's least width: wider than the labels, reaching in toward the list.
+    private static let minimumTouchWidth: CGFloat = 30
     private static let verticalMargin: CGFloat = 12
 
     var body: some View {
@@ -79,9 +80,57 @@ struct JumpIndexRail: View {
             let height = max(0, proxy.size.height - Self.verticalMargin * 2)
             let slots = Self.slots(count: items.count, height: height)
             let row = slots.isEmpty ? Self.rowHeight : min(Self.rowHeight, height / CGFloat(slots.count))
-            column(slots: slots, row: row)
+            column(slots: slots, row: row, laneWidth: Self.laneWidth(for: items))
+                // The face the lane is measured in, whatever design the list's subtree carries (a
+                // reader's Arabic opts its rows out of the rounded design).
+                .appFontDesign()
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                .background {
+                    ScrollIndicatorHider(listMinimumHeight: proxy.size.height / 2)
+                        .frame(width: 1, height: 1)
+                }
         }
+    }
+
+    // MARK: - Lane
+
+    /// The labels' column. It was a fixed 18 pt and the labels shrank to fit it, so "100" to "286"
+    /// ran out of the 16 pt gutter onto the cards and the Musnad's four-figure chapters printed "10…"
+    /// (Abu, 2026-11-10: "Fix the right numbers theres overlap in the scrolling and whatnot"). Now it
+    /// is as wide as the widest label at full size, and the rows make room for it (`listRoom`).
+    /// No condensed face for the long numbers: the app draws in SF Rounded, which has none, and
+    /// `.width(.condensed)` under it is silently dropped (measured).
+    private static let labelFont: Font = .system(size: 11, weight: .bold).monospacedDigit()
+
+    /// `labelFont` as UIKit measures it, in the app's rounded design (`appFontDesign`).
+    private static let measuringFont: UIFont = {
+        let font = UIFont.monospacedDigitSystemFont(ofSize: 11, weight: .bold)
+        return font.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: 11) } ?? font
+    }()
+
+    /// Space each side of a label inside the column.
+    private static let labelInset: CGFloat = 1
+    /// The list's own trailing margin beside its cards on a phone, which the column sits in.
+    private static let listGutter: CGFloat = 16
+    /// What the column keeps clear of the cards.
+    private static let cardGap: CGFloat = 2
+    /// The column before iOS 17, where the rows cannot make room (`jumpIndexRailRoom`): the width it
+    /// always had, the longer labels shrinking into it as they did.
+    private static let fixedLaneWidth: CGFloat = 18
+
+    static func laneWidth(for items: [JumpIndexItem]) -> CGFloat {
+        let widest = items.map { ($0.label as NSString).size(withAttributes: [.font: measuringFont]).width }.max() ?? 0
+        let fitted = ceil(widest) + labelInset * 2
+        if #available(iOS 17.0, *) { return fitted }
+        return min(fitted, fixedLaneWidth)
+    }
+
+    /// How far the list's rows move in so the column clears them: 4 pt for two figures (the juz
+    /// rail), 12 for three (an ayah rail on a long surah), 19 for four (the Musnad's chapters).
+    /// Nothing without stops.
+    static func listRoom(for items: [JumpIndexItem]) -> CGFloat {
+        guard !items.isEmpty else { return 0 }
+        return max(0, laneWidth(for: items) + cardGap - listGutter)
     }
 
     // MARK: - Layout
@@ -114,24 +163,26 @@ struct JumpIndexRail: View {
         return Int((fraction * CGFloat(count - 1)).rounded())
     }
 
-    private func column(slots: [Slot], row: CGFloat) -> some View {
+    private func column(slots: [Slot], row: CGFloat, laneWidth: CGFloat) -> some View {
         let railHeight = row * CGFloat(slots.count)
+        let touchWidth = max(Self.minimumTouchWidth, laneWidth + 12)
         return VStack(spacing: 0) {
             ForEach(Array(slots.enumerated()), id: \.offset) { _, slot in
                 switch slot {
                 case .label(let index):
                     Text(verbatim: items[index].label)
-                        .font(.system(size: 11, weight: .bold))
-                        .monospacedDigit()
+                        .font(Self.labelFont)
                         .lineLimit(1)
+                        // Full size wherever the column is fitted to the labels; only the fixed
+                        // column before iOS 17 shrinks them.
                         .minimumScaleFactor(0.6)
                         .foregroundStyle(accent)
-                        .frame(width: Self.columnWidth, height: row)
+                        .frame(width: laneWidth, height: row)
                 case .dot:
                     Circle()
                         .fill(accent.opacity(0.6))
                         .frame(width: 3.5, height: 3.5)
-                        .frame(width: Self.columnWidth, height: row)
+                        .frame(width: laneWidth, height: row)
                 }
             }
         }
@@ -140,7 +191,7 @@ struct JumpIndexRail: View {
             Capsule()
                 .fill(accent.opacity(activeIndex == nil ? 0 : 0.14))
         }
-        .frame(width: Self.touchWidth, alignment: .trailing)
+        .frame(width: touchWidth, alignment: .trailing)
         .contentShape(Rectangle())
         .gesture(
             DragGesture(minimumDistance: 0, coordinateSpace: .local)
@@ -168,7 +219,7 @@ struct JumpIndexRail: View {
                     .fixedSize()
                     // Beside the rail (padding, so it flips with the layout direction), centred on
                     // the finger: the overlay centres it on the column, 6 pt padding included.
-                    .padding(.trailing, Self.touchWidth + 6)
+                    .padding(.trailing, touchWidth + 6)
                     .offset(y: activeY - (railHeight + 12) / 2)
                     .allowsHitTesting(false)
                     .transition(.opacity)
@@ -220,13 +271,112 @@ struct JumpIndexRail: View {
     }
 }
 
+/// Turns off the vertical scroll indicator of the list a rail lies over, and back on when the rail
+/// goes. Mid-scroll the indicator was drawn straight through the labels (measured 396 to 399 pt on
+/// the 17 Pro, the labels 387 to 400). UIKit, not `.scrollIndicators(.hidden)`: that one is an
+/// environment value, so it would reach every scroll view under the list as well, the sheets its
+/// rows present among them. A 1 pt probe at the middle of the rail's area looks for the list among
+/// the views beside it: the scroll view under that point at least half the rail's height (a row's
+/// horizontal strip never is).
+private struct ScrollIndicatorHider: UIViewRepresentable {
+    let listMinimumHeight: CGFloat
+
+    func makeUIView(context: Context) -> ProbeView {
+        let view = ProbeView()
+        view.isUserInteractionEnabled = false
+        view.listMinimumHeight = listMinimumHeight
+        return view
+    }
+
+    func updateUIView(_ uiView: ProbeView, context: Context) {
+        uiView.listMinimumHeight = listMinimumHeight
+        uiView.attach()
+    }
+
+    static func dismantleUIView(_ uiView: ProbeView, coordinator: ()) {
+        uiView.release()
+    }
+
+    final class ProbeView: UIView {
+        var listMinimumHeight: CGFloat = 0
+        private weak var list: UIScrollView?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            guard window != nil else { return release() }
+            attach()
+            // The list can join the window a pass after the overlay does.
+            DispatchQueue.main.async { [weak self] in self?.attach() }
+        }
+
+        func attach() {
+            guard let window else { return }
+            if list == nil { list = findList(in: window) }
+            if list?.showsVerticalScrollIndicator == true { list?.showsVerticalScrollIndicator = false }
+        }
+
+        func release() {
+            list?.showsVerticalScrollIndicator = true
+            list = nil
+        }
+
+        /// The nearest ancestors first, so the rail's own list wins over any further away.
+        private func findList(in window: UIWindow) -> UIScrollView? {
+            let point = convert(CGPoint(x: bounds.midX, y: bounds.midY), to: window)
+            var branch: UIView = self
+            var ancestor = superview
+            var levels = 0
+            while let container = ancestor, container !== window, levels < 8 {
+                for view in container.subviews.reversed() where view !== branch {
+                    if let found = scrollView(in: view, under: point, window: window) { return found }
+                }
+                branch = container
+                ancestor = container.superview
+                levels += 1
+            }
+            return nil
+        }
+
+        private func scrollView(in view: UIView, under point: CGPoint, window: UIWindow) -> UIScrollView? {
+            guard !view.isHidden, view.alpha > 0 else { return nil }
+            if let scroll = view as? UIScrollView, !(scroll is UITextView) {
+                let frame = scroll.convert(scroll.bounds, to: window)
+                return frame.contains(point) && frame.height >= listMinimumHeight ? scroll : nil
+            }
+            for sub in view.subviews.reversed() {
+                if let found = scrollView(in: sub, under: point, window: window) { return found }
+            }
+            return nil
+        }
+    }
+}
+
 extension View {
+    /// Moves a List's rows in from the trailing edge by what a rail with these stops needs beyond the
+    /// list's own margin (`JumpIndexRail.listRoom`), so no label sits on a card. Safe-area padding,
+    /// as the reading column's margins are (`ReadingColumnMargins`): the rows already honour it.
+    /// iOS 17+; before it the rail keeps its fixed column.
+    ///
+    /// Apply it to the List ITSELF, before `applyConditionalListStyle`: the style's Now Playing bar
+    /// is a bottom inset on the styled list, and padding laid around that squeezed the bar in from
+    /// the same edge (measured 2026-11-10 on the Musnad's chapters, 19 pt). No stops is no room, so
+    /// it stays on the List while a search hides the rail.
+    @ViewBuilder
+    func jumpIndexRailRoom(_ items: [JumpIndexItem]) -> some View {
+        if #available(iOS 17.0, *) {
+            safeAreaPadding(.trailing, JumpIndexRail.listRoom(for: items))
+        } else {
+            self
+        }
+    }
+
     /// A `JumpIndexRail` down the trailing edge of a List that jumps by row id (the reader's ayahs, a
     /// chapter's hadiths, the 99 Names, Hisn al-Muslim's situations, a book's chapters; Abu,
     /// 2026-10-27, on the rail going to other screens: "could be fire"). A stop scrolls its row to the
     /// top at once, unanimated so a drag along the rail keeps up; when the finger lifts, the same row
     /// once more, after the rows a far jump passed over have measured themselves (a lazy List lands
-    /// the first time on estimated heights). No `items` draws nothing.
+    /// the first time on estimated heights). No `items` draws nothing. The List takes the same
+    /// `items` in `jumpIndexRailRoom`, so its rows clear the labels.
     func jumpIndexRail<ID: Hashable>(_ items: [JumpIndexItem], accessibilityName: String,
                                      proxy: ScrollViewProxy, rowID: @escaping (JumpIndexItem) -> ID?) -> some View {
         overlay(alignment: .trailing) {

@@ -87,8 +87,16 @@ struct QiraatSiteReading: Identifiable, Equatable {
     var tags: [String]
     var english = ""
     var transliteration = ""
+    /// The UTF-16 ranges of `text` to set in the accent when the reading is emphasized: the letters
+    /// the print marks as read differently from Hafs in the words it changes, and whole words where
+    /// it marks nothing. Nil for Hafs's own reading and for a riwayah without print letters, whose
+    /// whole reading takes the accent.
+    var letters: [NSRange]? = nil
 
     var isHafs: Bool { tags.contains(Settings.Riwayah.hafsTag) }
+    /// The site's first reading: Hafs's words, read so by Hafs and by every riwayah grouped with him
+    /// (Compare Two renames the groups by side and keeps the ids).
+    var readsAsHafs: Bool { id == 0 }
 }
 
 /// A word, or a short run of words, of the Hafs ayah that some riwayah reads differently.
@@ -137,10 +145,15 @@ struct QiraatPlace {
     let audioTags: [String]
     /// The reference has readings for this ayah, so its full page has something to show.
     let hasReference: Bool
+    /// What the Hafs card tints: every word some riwayah changes, as the letters that differ where
+    /// the riwayah's print marks them and whole otherwise (`QiraatPlaceBuilder.tints`).
+    var hafsTint: QiraatTint.Spec = .none
+    /// Per riwayah, what its whole-ayah card tints: its changed words, as its print's letters or whole.
+    var riwayahTints: [String: QiraatTint.Spec] = [:]
 
     var key: String { "\(surah):\(hafsAyah)" }
 
-    /// Every Hafs word some riwayah changes.
+    /// Every Hafs word some riwayah changes (the words; `hafsTint` is what the card draws).
     var hafsTinted: Set<Int> {
         Set(sites.flatMap { $0.changedHafs.values.joined() })
     }
@@ -148,6 +161,11 @@ struct QiraatPlace {
     /// The words of `tag`'s own text that differ from Hafs here.
     func tinted(_ tag: String) -> Set<Int> {
         Set(sites.flatMap { $0.changedRiwayah[tag] ?? [] })
+    }
+
+    /// What `tag`'s whole-ayah card tints.
+    func tint(_ tag: String) -> QiraatTint.Spec {
+        riwayahTints[tag] ?? .none
     }
 
     func side(_ tag: String) -> QiraatPlaceSide? {
@@ -178,8 +196,9 @@ struct QiraatDuelPlace {
     let place: QiraatPlace
     /// The sites where the two read differently, each with exactly their two readings.
     let sites: [QiraatSite]
-    let aTinted: Set<Int>
-    let bTinted: Set<Int>
+    /// What each side's text tints where the two part ways (`QiraatPlaceBuilder.duel`).
+    let aTint: QiraatTint.Spec
+    let bTint: QiraatTint.Spec
 
     /// A side's whole text: Hafs's own ayah, or the riwayah's text aligned to it.
     func text(_ tag: String) -> (text: String, tokens: [QiraatWordDiff.Token])? {
@@ -217,9 +236,11 @@ enum QiraatPlaceBuilder {
                 audioTags = tags.filter { QiraatVariantAudioStore.shared.pair(tag: $0, surah: surah, ayah: hafsAyah) != nil }
             }
         }
+        let tints = Self.tints(hafsText: hafsText, hafsTokens: hafsTokens, sides: sides, sites: sites)
         return QiraatPlace(surah: surah, hafsAyah: hafsAyah, everyDifference: everyDifference,
                            hafsText: hafsText, hafsTokens: hafsTokens, english: ayah?.textEnglishSaheeh ?? "",
-                           sides: sides, sites: sites, audioTags: audioTags, hasReference: hasReference)
+                           sides: sides, sites: sites, audioTags: audioTags, hasReference: hasReference,
+                           hafsTint: tints.hafs, riwayahTints: tints.riwayah)
     }
 
     /// Each riwayah resolved and diffed against Hafs, side by side on every core: the first place in
@@ -378,9 +399,27 @@ enum QiraatPlaceBuilder {
                     continue
                 }
                 let ownTokens = Array(Set(inside.flatMap { Array($0.riwayah) })).sorted()
-                let text = ownTokens.compactMap { change.diff.riwayah.indices.contains($0) ? shown(change.diff.riwayah[$0].text) : nil }
-                    .filter { !$0.isEmpty }
-                    .joined(separator: " ")
+                let changedTokens = Set(changes.flatMap { Array($0.riwayah) })
+                // The reading's words, and, for a print with letters, what to accent in them: the
+                // marked letters of each changed word (whole where it marks none); a neighbour the
+                // site took along stays plain. `shown` drops only stop signs, which are no cluster,
+                // so the pack's cluster extents hold on the shown word.
+                var text = ""
+                var letters: [NSRange] = []
+                for token in ownTokens where change.diff.riwayah.indices.contains(token) {
+                    let word = shown(change.diff.riwayah[token].text)
+                    guard !word.isEmpty else { continue }
+                    if !text.isEmpty { text += " " }
+                    let at = text.utf16.count
+                    if change.hasPrintLetters, changedTokens.contains(token) {
+                        if let own = ownWordLetters(change, token: token, word: word) {
+                            letters += own.map { NSRange(location: at + $0.location, length: $0.length) }
+                        } else {
+                            letters.append(NSRange(location: at, length: word.utf16.count))
+                        }
+                    }
+                    text += word
+                }
                 let key = QiraahSpelling.key(text)
                 if key == hafsKey {
                     // The print flags it, but the words come out as Hafs's: nothing to show apart.
@@ -393,7 +432,8 @@ enum QiraatPlaceBuilder {
                     readings[at].tags.append(side.tag)
                 } else {
                     groupOfKey[key] = readings.count
-                    readings.append(QiraatSiteReading(id: readings.count, text: text, fontTag: side.tag, tags: [side.tag]))
+                    readings.append(QiraatSiteReading(id: readings.count, text: text, fontTag: side.tag, tags: [side.tag],
+                                                      letters: change.hasPrintLetters && !letters.isEmpty ? letters : nil))
                 }
             }
 
@@ -445,30 +485,200 @@ enum QiraatPlaceBuilder {
     /// The two sides at a place built for them, kept to the sites where they part ways.
     static func duel(a: String, b: String, place: QiraatPlace) -> QiraatDuelPlace {
         var kept: [QiraatSite] = []
-        var aTinted = Set<Int>()
-        var bTinted = Set<Int>()
+        var aTint = QiraatTint.Spec()
+        var bTint = QiraatTint.Spec()
         for site in place.sites {
             // A side that does not number this ayah is in no reading group, so it never parts ways.
             guard var readingA = site.reading(of: a), var readingB = site.reading(of: b),
                   readingA.id != readingB.id else { continue }
             readingA.tags = [a]
             readingB.tags = [b]
+            // The riwayah first and Hafs's reading second: the emphasized reading is Hafs's words, so
+            // the first side's letters are carried onto them (the way the Hafs card gets them).
+            if readingB.readsAsHafs, !a.isEmpty, let sideA = place.side(a) {
+                readingB.letters = hafsReadingLetters(site, from: sideA, hafsTokens: place.hafsTokens)
+            }
             var pair = site
             pair.readings = [readingA, readingB]
             kept.append(pair)
-            aTinted.formUnion(tint(a, against: b, in: site))
-            bTinted.formUnion(tint(b, against: a, in: site))
+            add(tint(a, against: b, in: site, place: place), to: &aTint)
+            add(tint(b, against: a, in: site, place: place), to: &bTint)
         }
-        return QiraatDuelPlace(a: a, b: b, place: place, sites: kept, aTinted: aTinted, bTinted: bTinted)
+        return QiraatDuelPlace(a: a, b: b, place: place, sites: kept, aTint: normalized(aTint), bTint: normalized(bTint))
     }
 
-    /// The words of `tag`'s text to tint where it and `other` part ways: its own changed words, or,
-    /// where it reads as Hafs, its words standing where `other` changes.
-    private static func tint(_ tag: String, against other: String, in site: QiraatSite) -> [Int] {
-        if !tag.isEmpty, let own = site.changedRiwayah[tag], !own.isEmpty { return own }
+    /// What `tag`'s text tints where it and `other` part ways at `site`: its own changed words, or,
+    /// where it reads as Hafs, its words standing where `other` changes. The letters where they are
+    /// exact: a side's print letters are measured from Hafs, so they are the letters that part from
+    /// `other` only when `other` reads as Hafs there (and are then carried onto `other`'s words too);
+    /// where both sides change the word, each keeps it whole.
+    private static func tint(_ tag: String, against other: String, in site: QiraatSite, place: QiraatPlace) -> QiraatTint.Spec {
+        var spec = QiraatTint.Spec()
+        if !tag.isEmpty, let own = site.changedRiwayah[tag], !own.isEmpty {
+            let otherReadsAsHafs = other.isEmpty || (site.reading(of: other)?.readsAsHafs ?? false)
+            let change = place.side(tag)?.change
+            for token in own {
+                if otherReadsAsHafs, let change, let letters = ownLetters(change, token: token) {
+                    spec.letters += letters
+                } else {
+                    spec.words.insert(token)
+                }
+            }
+            return spec
+        }
         let hafsWords = site.changedHafs[other] ?? []
-        if tag.isEmpty { return hafsWords }
-        return hafsWords.compactMap { site.aligned[tag]?[$0] }
+        let otherSide = place.side(other)
+        if tag.isEmpty {
+            for h in hafsWords where place.hafsTokens.indices.contains(h) {
+                if let letters = carriedLetters(from: otherSide, hafsToken: h, onto: place.hafsTokens[h], in: place.hafsText) {
+                    spec.letters += letters
+                } else {
+                    spec.words.insert(h)
+                }
+            }
+        } else if let change = place.side(tag)?.change {
+            for h in hafsWords {
+                guard let own = site.aligned[tag]?[h], change.diff.riwayah.indices.contains(own) else { continue }
+                if let letters = carriedLetters(from: otherSide, hafsToken: h, onto: change.diff.riwayah[own], in: change.riwayahText) {
+                    spec.letters += letters
+                } else {
+                    spec.words.insert(own)
+                }
+            }
+        }
+        return spec
+    }
+
+    // MARK: Letters
+
+    /// The Hafs card's tint and each riwayah's: every changed word whole, or, for a riwayah whose
+    /// print marks letters (`QiraatChange.hasPrintLetters`), the letters themselves: its own on its
+    /// card, and on the Hafs card their counterparts in the Hafs word (`QiraatLetterDiff`, the same
+    /// carrying the reader and the comparison sheet do). A Hafs word the riwayah has no word for, and
+    /// a changed word its print leaves black, stay whole.
+    static func tints(hafsText: String, hafsTokens: [QiraatWordDiff.Token], sides: [QiraatPlaceSide],
+                      sites: [QiraatSite]) -> (hafs: QiraatTint.Spec, riwayah: [String: QiraatTint.Spec]) {
+        var hafs = QiraatTint.Spec()
+        var riwayah: [String: QiraatTint.Spec] = [:]
+        for side in sides {
+            guard let change = side.change else { continue }
+            var own = QiraatTint.Spec()
+            for site in sites {
+                for h in site.changedHafs[side.tag] ?? [] where hafsTokens.indices.contains(h) {
+                    if let letters = carriedLetters(from: side, hafsToken: h, onto: hafsTokens[h], in: hafsText) {
+                        hafs.letters += letters
+                    } else {
+                        hafs.words.insert(h)
+                    }
+                }
+                for token in site.changedRiwayah[side.tag] ?? [] {
+                    if let letters = ownLetters(change, token: token) {
+                        own.letters += letters
+                    } else {
+                        own.words.insert(token)
+                    }
+                }
+            }
+            if !own.isEmpty { riwayah[side.tag] = normalized(own) }
+        }
+        return (normalized(hafs), riwayah)
+    }
+
+    /// `change`'s letters inside its own word `token`, given as `word` (the token's text, or the
+    /// reading's stop-sign-free copy of it; clusters are the same): the print's, or, where the print
+    /// marks none, the letters the word and its Hafs counterpart disagree on. Nil when neither says
+    /// anything (no print letters, or the two words agree letter for letter), which tints the word whole.
+    private static func ownWordLetters(_ change: QiraatChange, token: Int, word: String) -> [NSRange]? {
+        guard change.hasPrintLetters else { return nil }
+        if let extents = change.riwayahLetters[token], !extents.isEmpty {
+            let ranges = QiraatLetterDiff.ownLetterRanges(word: word, extents: extents)
+            return ranges.isEmpty ? nil : ranges
+        }
+        guard let hafsToken = change.letterPairs.first(where: { $0.value == token })?.key,
+              change.diff.hafs.indices.contains(hafsToken) else { return nil }
+        let ranges = QiraatLetterDiff.wordDiffRanges(hafsWord: change.diff.hafs[hafsToken].text, riwayahWord: word).riwayah
+        return ranges.isEmpty ? nil : ranges
+    }
+
+    /// `side`'s letters at the Hafs word `hafsToken` (local to the ayah) carried onto `hafsWord`,
+    /// Hafs's own word (or a riwayah's that reads it as Hafs does, or the reading's stop-sign-free
+    /// copy): the print's letters projected, or, where the print marks none, the letters the two
+    /// words disagree on. Nil when the riwayah pairs no word with it or neither says anything.
+    private static func carriedWordLetters(from side: QiraatPlaceSide?, hafsToken: Int, hafsWord: String) -> [NSRange]? {
+        guard let side, let change = side.change, change.hasPrintLetters,
+              let paired = change.letterPairs[hafsToken + side.hafsBase], change.diff.riwayah.indices.contains(paired)
+        else { return nil }
+        let riwayahWord = change.diff.riwayah[paired].text
+        let ranges: [NSRange]
+        if let extents = change.riwayahLetters[paired], !extents.isEmpty {
+            ranges = QiraatLetterDiff.projectedRanges(hafsWord: hafsWord, riwayahWord: riwayahWord, extents: extents)
+        } else {
+            ranges = QiraatLetterDiff.wordDiffRanges(hafsWord: hafsWord, riwayahWord: riwayahWord).hafs
+        }
+        return ranges.isEmpty ? nil : ranges
+    }
+
+    /// `ownWordLetters` over the change's whole text.
+    private static func ownLetters(_ change: QiraatChange, token: Int) -> [NSRange]? {
+        guard change.diff.riwayah.indices.contains(token) else { return nil }
+        let word = change.diff.riwayah[token]
+        return ownWordLetters(change, token: token, word: word.text)
+            .map { offset($0, by: word.range.lowerBound.utf16Offset(in: change.riwayahText)) }
+    }
+
+    /// `carriedWordLetters` onto `word` over `text`.
+    private static func carriedLetters(from side: QiraatPlaceSide?, hafsToken: Int, onto word: QiraatWordDiff.Token,
+                                       in text: String) -> [NSRange]? {
+        carriedWordLetters(from: side, hafsToken: hafsToken, hafsWord: word.text)
+            .map { offset($0, by: word.range.lowerBound.utf16Offset(in: text)) }
+    }
+
+    /// Hafs's reading of `site` with `side`'s letters carried onto it: the words as the reading
+    /// shows them (`shown`, joined by spaces, the way `sites` built its text), each word the side
+    /// changes with the carried letters, or whole where neither the print nor the words say which.
+    private static func hafsReadingLetters(_ site: QiraatSite, from side: QiraatPlaceSide,
+                                           hafsTokens: [QiraatWordDiff.Token]) -> [NSRange]? {
+        guard side.change?.hasPrintLetters == true else { return nil }
+        let changed = Set(site.changedHafs[side.tag] ?? [])
+        var at = 0
+        var letters: [NSRange] = []
+        for h in site.range where hafsTokens.indices.contains(h) {
+            let word = shown(hafsTokens[h].text)
+            guard !word.isEmpty else { continue }
+            if at > 0 { at += 1 }
+            if changed.contains(h) {
+                if let carried = carriedWordLetters(from: side, hafsToken: h, hafsWord: word) {
+                    letters += offset(carried, by: at)
+                } else {
+                    letters.append(NSRange(location: at, length: word.utf16.count))
+                }
+            }
+            at += word.utf16.count
+        }
+        return letters.isEmpty ? nil : letters
+    }
+
+    private static func offset(_ ranges: [NSRange], by base: Int) -> [NSRange] {
+        ranges.map { NSRange(location: base + $0.location, length: $0.length) }
+    }
+
+    private static func add(_ spec: QiraatTint.Spec, to total: inout QiraatTint.Spec) {
+        total.words.formUnion(spec.words)
+        total.letters += spec.letters
+    }
+
+    /// The letter ranges sorted and merged (two riwayat marking one Hafs letter give it once), so
+    /// equal tints compare equal and the card's layout is left alone.
+    private static func normalized(_ spec: QiraatTint.Spec) -> QiraatTint.Spec {
+        var merged: [NSRange] = []
+        for range in spec.letters.sorted(by: { $0.location < $1.location }) {
+            if let last = merged.last, range.location <= NSMaxRange(last) {
+                merged[merged.count - 1] = NSRange(location: last.location, length: max(NSMaxRange(last), NSMaxRange(range)) - last.location)
+            } else {
+                merged.append(range)
+            }
+        }
+        return QiraatTint.Spec(words: spec.words, letters: merged)
     }
 
     /// The Hafs ayahs of a surah where either side differs from Hafs under the tier: every place the

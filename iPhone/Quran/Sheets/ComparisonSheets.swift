@@ -54,6 +54,16 @@ struct AyahQiraahComparisonSheet: View {
     /// independent of Hide Tashkeel / Hide Dots: the colors are painted over the full text and
     /// projected onto the stripped skeleton, so hiding the marks no longer hides the coloring.
     @AppStorage("qiraahCompareShowTajweed") private var compareShowTajweed = true
+    /// The Explorer's tier, shared with it as the text size is: off, the words that change form; on,
+    /// every difference down to one letter's dots, hamzah or vowel. It decides which words of the ayah
+    /// get a card in WHAT CHANGES HERE.
+    @AppStorage("qiraatExplorerEveryDifference") private var everyDifference = false
+    /// WHAT CHANGES HERE open or folded, remembered.
+    @AppStorage("qiraahCompareShowSites") private var showSites = true
+    /// This ayah worked out word by word, the Explorer's place: built off the main thread per
+    /// ayah, tier and riwayah set (`placeKey`); nil while it builds.
+    @State private var place: QiraatPlace?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     #if DEBUG
     /// "-openQiraatExplorer": push the explorer as the sheet appears (its row cannot be tapped headlessly).
@@ -164,6 +174,7 @@ struct AyahQiraahComparisonSheet: View {
         }
         .applyConditionalListStyle()
         .compactListSectionSpacing()
+        .task(id: placeKey) { await buildPlace() }
         #if DEBUG
         .debugPushDestination(isPresented: $debugOpenExplorer) {
             QiraatExplorerView(surah: surahNumber, ayah: ayahNumber, originTag: originTag)
@@ -225,6 +236,7 @@ struct AyahQiraahComparisonSheet: View {
         .onChange(of: duelMode) { _ in settings.hapticFeedback() }
         .onChange(of: smartComparison) { _ in settings.hapticFeedback() }
         .onChange(of: compareShowTajweed) { _ in settings.hapticFeedback() }
+        .onChange(of: everyDifference) { _ in settings.hapticFeedback() }
         .onChange(of: compareHideTashkeel) { newValue in
             settings.hapticFeedback()
             // Dots without the tashkeel stripped is not a state the reading view offers either.
@@ -279,6 +291,11 @@ struct AyahQiraahComparisonSheet: View {
             Toggle(isOn: $compareShowTajweed) {
                 Label("Show Tajweed", systemImage: "paintpalette")
                 Text("Each print's khilaf coloring")
+            }
+            .toggleStyle(.automatic)
+            Toggle(isOn: $everyDifference) {
+                Label("Every Difference", systemImage: "textformat.abc.dottedunderline")
+                Text("Count one letter's dots, hamzah or vowel too")
             }
             .toggleStyle(.automatic)
             Divider()
@@ -446,6 +463,11 @@ struct AyahQiraahComparisonSheet: View {
         let favorites = favoriteOptions(from: filtered)
         let grouped = groupedOptions(from: filtered)
 
+        // The words first, then the whole texts. A search is for a riwayah's row, so it steps aside.
+        if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            sitesSection(place?.sites, label: nil)
+        }
+
         if !favorites.isEmpty {
             Section(header: Text("FAVORITES")) {
                 ForEach(favorites) { option in
@@ -484,6 +506,10 @@ struct AyahQiraahComparisonSheet: View {
         } footer: {
             Text(duelFooterText)
         }
+
+        sitesSection(duelSites) { reading in
+            sideName(reading.tags.first ?? "")
+        }
     }
 
     /// The door to the whole-Quran view, under the rows as the Explorer keeps its own doors: this
@@ -491,11 +517,19 @@ struct AyahQiraahComparisonSheet: View {
     /// one note about what the rows show.
     private var moreSection: some View {
         Section {
+            // Compare Two hands its two sides over, so the walk goes on from this pair rather than
+            // from the Explorer's last one (2026-11-01).
+            let pair = duelMode ? duelPair : nil
             NavigationLink(destination: LazyDestination {
-                QiraatExplorerView(surah: surahNumber, ayah: ayahNumber, originTag: originTag)
+                if let pair {
+                    QiraatExplorerView(surah: surahNumber, ayah: ayahNumber, originTag: originTag, duelA: pair.a, duelB: pair.b)
+                } else {
+                    QiraatExplorerView(surah: surahNumber, ayah: ayahNumber, originTag: originTag)
+                }
             }) {
                 SettingsRowLabel(title: String(localized: "Qiraat Explorer"), systemImage: "arrow.left.and.right.text.vertical",
-                                 subtitle: String(localized: "Every place the riwayat differ, side by side"))
+                                 subtitle: pair.map { String(localized: "Step through every place \(sideName($0.a)) and \(sideName($0.b)) part ways") }
+                                    ?? String(localized: "Every place the riwayat differ, side by side"))
             }
         } header: {
             Text("MORE")
@@ -518,6 +552,134 @@ struct AyahQiraahComparisonSheet: View {
             parts.append(rasmFooterText)
         }
         return parts.joined(separator: " ")
+    }
+
+    // MARK: What changes here
+
+    /// The riwayat the place is built for: every one whose text may render, Hafs excluded (it is the
+    /// reference), exactly the Explorer's set.
+    private var placeTags: [String] { QiraatPlacesStore.shared.enabledTags }
+
+    private var placeKey: String {
+        "\(surahNumber):\(anchorHafsAyah)|\(everyDifference ? 1 : 0)|\(placeTags.joined(separator: ","))"
+    }
+
+    /// Every riwayah on the sheet, Hafs included, for the who-reads-it lines (an imam stands for both
+    /// his narrators when both agree).
+    private var comparedTags: Set<String> { Set(options.map(\.tag)) }
+
+    /// The place built off the main thread (the Explorer's builder: the riwayat in parallel, a few
+    /// milliseconds a place) and swapped in whole, so the rows under it never animate.
+    @MainActor
+    private func buildPlace() async {
+        let built = await QiraatPlaceBuilder.build(surah: surahNumber, hafsAyah: anchorHafsAyah, tags: placeTags,
+                                                   everyDifference: everyDifference, quranData: quranData)
+        guard !Task.isCancelled else { return }
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { place = built }
+    }
+
+    /// Compare Two's two sides as tags, Hafs being "".
+    private var duelPair: (a: String, b: String)? {
+        guard let a = duelOptionA?.tag, let b = duelOptionB?.tag else { return nil }
+        return (a, b)
+    }
+
+    /// Compare Two's sites: the words where its two sides part ways, each with their two readings.
+    /// Nil until the place is built; empty when the two read the ayah alike.
+    private var duelSites: [QiraatSite]? {
+        guard let place else { return nil }
+        guard let pair = duelPair else { return [] }
+        return QiraatPlaceBuilder.duel(a: pair.a, b: pair.b, place: place).sites
+    }
+
+    /// The narrator's short name as the reader sees it, with his imam when another compared narrator
+    /// shares it (the two ad-Duris).
+    private func sideName(_ tag: String) -> String {
+        QiraatReaderNames.narratorName(tag, compared: comparedTags, display: true)
+    }
+
+    /// The Explorer's heart, brought in (Abu, 2026-11-01: "incorporate qiraat explorer parts in qiraah
+    /// comparison"): one card per word of this ayah that some riwayah reads differently, with every way
+    /// it is read, who reads it so, and the reference's transliteration and meaning. Above the rows,
+    /// since it answers the sheet's question first; it folds with the arrow in its header, and the fold
+    /// is remembered. `label` names each reading by its side (Compare Two).
+    @ViewBuilder
+    private func sitesSection(_ sites: [QiraatSite]?, label: ((QiraatSiteReading) -> String)?) -> some View {
+        Section {
+            if showSites {
+                if let sites {
+                    if sites.isEmpty {
+                        readAlikeRow
+                    } else {
+                        ForEach(Array(sites.enumerated()), id: \.element.id) { index, site in
+                            siteCard(site, index: index, of: sites.count, label: label)
+                        }
+                    }
+                } else {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("Lining up the riwayat…")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                }
+            }
+        } header: {
+            SectionPillHeader(title: String(localized: "WHAT CHANGES HERE"), count: sites?.count ?? 0,
+                              icon: "text.word.spacing", isExpanded: $showSites,
+                              countText: sites == nil ? "…" : nil)
+        }
+    }
+
+    /// Nothing changes here: say so, and where the next change is.
+    private var readAlikeRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(duelMode
+                  ? String(localized: "The two read this ayah alike")
+                  : String(localized: "No riwayah reads a word of this ayah differently"),
+                  systemImage: "checkmark.circle")
+                .font(.subheadline.weight(.semibold))
+            Text(everyDifference
+                 ? String(localized: "The Qiraat Explorer, under the rows, steps to the nearest ayah where one does.")
+                 : String(localized: "The Qiraat Explorer, under the rows, steps to the nearest ayah where one does. Every Difference (in the options) counts single dots and vowels too."))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 4)
+    }
+
+    /// One site as one card: its place among the ayah's sites with the reference's caption, every
+    /// reading (the Explorer's own row), then the reference's note.
+    private func siteCard(_ site: QiraatSite, index: Int, of count: Int, label: ((QiraatSiteReading) -> String)?) -> some View {
+        let stacked = QiraatSiteCopy.isStacked(site, at: dynamicTypeSize)
+        return VStack(alignment: .leading, spacing: 6) {
+            if count > 1 || site.caption != nil {
+                Text(QiraatSiteCopy.header(site, index: index, of: count))
+                    .font(.caption.weight(.bold))
+                    .tracking(0.6)
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(Array(site.readings.enumerated()), id: \.element.id) { position, reading in
+                if position > 0 { Divider() }
+                QiraatSiteReadingRow(reading: reading, site: site, label: label?(reading),
+                                     emphasized: QiraatSiteCopy.isEmphasized(reading, in: site, labeled: label != nil),
+                                     stacked: stacked, compared: comparedTags, accent: settings.accentColor.color,
+                                     fontName: settings.quranArabicFontName(for: reading.fontTag), fontSize: shownFontSize,
+                                     customFace: settings.quranDisplayUsesCustomArabicFace)
+            }
+            if let note = QiraatSiteCopy.footer(site) {
+                Text(note)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+            }
+        }
+        .padding(.vertical, 4)
     }
 
     #if canImport(FoundationModels)
@@ -627,14 +789,43 @@ struct AyahQiraahComparisonSheet: View {
     /// Always on, deliberately: comparing riwayat is the whole point of this sheet, so the diff tint
     /// is never gated on a setting. Do not reintroduce a `highlightQiraahDifferences`-style check here.
     private func diffStyled(for option: QiraahDisplay, resolved: ResolvedQiraahText?) -> AttributedString? {
-        guard let resolved, option.id != currentOption?.id,
+        guard let resolved, let current = currentOption, option.id != current.id,
               let reference = referenceText, reference != resolved.text else { return nil }
+        if let letters = letterDiffStyled(for: option, resolved: resolved, against: current) { return letters }
         return QiraahComparison.diffAttributed(
             text: resolved.text,
             reference: reference,
             baseColor: .primary,
             diffColor: settings.accentColor.color
         )
+    }
+
+    /// The letter-level tint for Hafs beside a letter-level riwayah (`QiraatLetterDiff`, Warsh first),
+    /// in either direction; nil for every other pair, which keeps the whole-word tint.
+    /// Hafs's side: the print's khilaf letters carried over to their Hafs counterparts, in the accent.
+    /// The riwayah's side: its own print letters, which `khilafOverlaid` draws in the print's magenta
+    /// while the sheet's tajweed is on, and the accent takes over when it is off.
+    private func letterDiffStyled(for option: QiraahDisplay, resolved: ResolvedQiraahText,
+                                  against other: QiraahDisplay) -> AttributedString? {
+        let optionTag = Settings.Riwayah.canonicalTag(option.tag)
+        let otherTag = Settings.Riwayah.canonicalTag(other.tag)
+        let accent = settings.accentColor.color
+        if optionTag.isEmpty, QiraatLetterDiff.isLetterLevel(tag: otherTag) {
+            guard let fullHafs = resolvedBase(for: option)?.text,
+                  let otherBase = resolvedBase(for: other) else { return nil }
+            let ranges = QiraatLetterDiff.hafsLetterRanges(
+                hafsText: fullHafs, tag: otherTag, surah: surahNumber,
+                ownAyah: otherBase.ownNumber ?? ayahNumber, splitSpan: otherBase.splitSpan
+            ) ?? []
+            return QiraatLetterDiff.attributed(fullText: fullHafs, ranges: ranges, displayText: resolved.text,
+                                               base: .primary, tint: accent)
+        }
+        if otherTag.isEmpty, QiraatLetterDiff.isLetterLevel(tag: optionTag) {
+            var plain = AttributedString(resolved.text)
+            plain.foregroundColor = .primary
+            return compareShowTajweed ? plain : (khilafLayer(plain, option: option, resolved: resolved, tint: accent) ?? plain)
+        }
+        return nil
     }
 
     private func numberNote(_ resolved: ResolvedQiraahText) -> String? {
@@ -655,18 +846,17 @@ struct AyahQiraahComparisonSheet: View {
     /// Stands down entirely while the sheet's Show Tajweed toggle is off.
     private func khilafOverlaid(_ diff: AttributedString?, option: QiraahDisplay, resolved: ResolvedQiraahText) -> AttributedString? {
         guard compareShowTajweed else { return diff }
+        return khilafLayer(diff, option: option, resolved: resolved, tint: nil)
+    }
+
+    /// The print's khilaf runs over `diff` (or a plain base), in the print's own color or all in `tint`.
+    private func khilafLayer(_ diff: AttributedString?, option: QiraahDisplay, resolved: ResolvedQiraahText,
+                             tint: Color?) -> AttributedString? {
         let tag = Settings.Riwayah.canonicalTag(option.tag)
         guard !tag.isEmpty else { return diff }
-        let ownAyah = resolved.ownNumber ?? ayahNumber
         let allRules = Set(QiraahTajweedStore.shared.legend(for: tag).map(\.key))
         let hidden = allRules.subtracting(["khilaf_word", "khilaf_harf"])
-        // With the sheet's Hide Tashkeel / Hide Dots on, `resolved.text` is the stripped skeleton;
-        // the full resolved text lets the store paint the real print and project the runs onto it.
-        guard let khilaf = QiraahTajweedStore.shared.attributedText(
-            tag: tag, surah: surahNumber, ayah: ownAyah, displayText: resolved.text,
-            hiddenRules: hidden,
-            fullText: (compareHideTashkeel || compareHideDots) ? resolvedBase(for: option)?.text : nil
-        ) else { return diff }
+        guard let khilaf = khilafPainted(tag: tag, option: option, resolved: resolved, hidden: hidden) else { return diff }
 
         // Overlay the khilaf runs onto the diff-tinted base (or a plain-primary base). Both strings
         // are built over `resolved.text`, so UTF-16 offsets transfer exactly.
@@ -682,9 +872,42 @@ struct AyahQiraahComparisonSheet: View {
                   let range = Range(nsRange, in: resolved.text),
                   let start = AttributedString.Index(range.lowerBound, within: merged),
                   let end = AttributedString.Index(range.upperBound, within: merged) else { return }
-            merged[start..<end].foregroundColor = Color(color)
+            merged[start..<end].foregroundColor = tint ?? Color(color)
         }
         return merged
+    }
+
+    /// The store's paint of the riwayah's resolved text with only the khilaf rules showing. With the
+    /// sheet's Hide Tashkeel / Hide Dots on, `resolved.text` is the stripped skeleton; the full text
+    /// lets the store paint the real print and project the runs onto it. A Hafs ayah this riwayah
+    /// divides (`resolved.splitSpan`) is painted piece by piece and joined the way the resolver joined
+    /// its text: laying the first piece's rules over both left the second piece plain (Hisham's
+    /// يُكَذِّبُونَ, the rest of Hafs 2:10 in the Shami count, 2026-11-02).
+    private func khilafPainted(tag: String, option: QiraahDisplay, resolved: ResolvedQiraahText,
+                               hidden: Set<String>) -> AttributedString? {
+        let store = QiraahTajweedStore.shared
+        let stripped = compareHideTashkeel || compareHideDots
+        guard let span = resolved.splitSpan else {
+            return store.attributedText(tag: tag, surah: surahNumber, ayah: resolved.ownNumber ?? ayahNumber,
+                                        displayText: resolved.text, hiddenRules: hidden,
+                                        fullText: stripped ? resolvedBase(for: option)?.text : nil)
+        }
+        let joined = NSMutableAttributedString()
+        var painted = false
+        for piece in span {
+            guard let ayah = quranData.ayah(surah: surahNumber, ayah: piece) else { return nil }
+            let full = ayah.rawArabicText(surahId: surahNumber, qiraahOverride: tag)
+            let display = stripped ? compareTransformed(full) : full
+            if joined.length > 0 { joined.append(NSAttributedString(string: " ")) }
+            if let part = store.attributedText(tag: tag, surah: surahNumber, ayah: piece, displayText: display,
+                                               hiddenRules: hidden, fullText: stripped ? full : nil) {
+                joined.append(NSAttributedString(part))
+                painted = true
+            } else {
+                joined.append(NSAttributedString(string: display))
+            }
+        }
+        return painted ? AttributedString(joined) : nil
     }
 
     // MARK: - Head-to-Head (compare exactly two riwayat)
@@ -780,7 +1003,8 @@ struct AyahQiraahComparisonSheet: View {
         var diff: AttributedString?
         if let other, other.id != option.id,
            let reference = qiraahText(for: other), reference != resolved.text {
-            diff = QiraahComparison.diffAttributed(
+            diff = letterDiffStyled(for: option, resolved: resolved, against: other)
+                ?? QiraahComparison.diffAttributed(
                 text: resolved.text,
                 reference: reference,
                 baseColor: .primary,

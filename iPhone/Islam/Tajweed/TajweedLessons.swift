@@ -47,6 +47,9 @@ struct TajweedLessonDetailView: View {
             List {
                 Group {
                     if shows("hero") { heroSection }
+                    // The videos come first (Abu, 2026-11-09: "YouTube video links at the top of each
+                    // thing"); they used to sit after the examples.
+                    if shows("videos") { videosSection }
                     if shows("rule") { ruleSection }
                     if shows("definition") { definitionSection }
                     if shows("images") { imagesSection }
@@ -59,7 +62,6 @@ struct TajweedLessonDetailView: View {
                     if shows("mistakes") { mistakesSection }
                     if shows("drills") { drillsSection }
                     if shows("examples") { examplesSection }
-                    if shows("videos") { videosSection }
                     if shows("quiz") { quizSection }
                     if shows("families") { familiesSection }
                     if shows("next") { readNextSection }
@@ -115,8 +117,8 @@ struct TajweedLessonDetailView: View {
     }
 
     #if DEBUG
-    /// `-tajweedLessonOnly <cards>`: only those cards (comma-separated: hero, rule, definition, images,
-    /// letters, explanation, words, keypoints, table, extras, mistakes, drills, examples, videos, quiz,
+    /// `-tajweedLessonOnly <cards>`: only those cards (comma-separated: hero, videos, rule, definition,
+    /// images, letters, explanation, words, keypoints, table, extras, mistakes, drills, examples, quiz,
     /// families, next, step), so a screenshot reaches the lower ones: nothing here can scroll the
     /// simulator.
     private static let debugOnly: Set<String>? = {
@@ -591,26 +593,9 @@ struct TajweedLessonDetailView: View {
         if !lesson.videos.isEmpty {
             Section(header: TajweedLessonHeader(systemImage: "play.rectangle", title: String(localized: "Watch"), accent: accent)) {
                 ForEach(lesson.videos) { video in
-                    Link(destination: video.url) {
-                        HStack(spacing: 12) {
-                            AccentIconChip(systemImage: "play.fill", tint: .red, size: 30)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(video.title)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundColor(.primary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                // Explicit greys: inside a Link the hierarchical styles take the link's tint.
-                                Text(video.channel.isEmpty ? "YouTube" : String(localized: "\(video.channel), on YouTube"))
-                                    .font(.caption)
-                                    .foregroundColor(Color(.secondaryLabel))
-                            }
-                            Spacer(minLength: 8)
-                            Image(systemName: "arrow.up.right")
-                                .font(.caption.weight(.semibold))
-                                .foregroundColor(Color(.tertiaryLabel))
-                        }
-                        .padding(.vertical, 2)
-                    }
+                    // The kit's row (ArticleDesign.swift): the same look as the Foundations pages, and
+                    // a hold copies the link.
+                    ArticleVideoLink(title: video.title, url: video.url.absoluteString, channel: video.channel, translated: true)
                 }
             }
         }

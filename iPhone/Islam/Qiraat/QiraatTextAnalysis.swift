@@ -121,9 +121,12 @@ enum QiraatTextAnalysis {
         ("Kufi", 6236, String(localized: "Asim, Hamzah, al-Kisai and Khalaf al-Ashir")),
         ("Shami", 6226, String(localized: "Ibn Amir")),
         ("Makki", 6220, String(localized: "Ibn Kathir")),
-        ("Basri", 6217, String(localized: "Abu Amr al-Basri")),
-        ("Madani al-Awwal", 6214, String(localized: "Nafi and Abu Ja'far")),
-        ("Basri (Ya'qub)", 6204, String(localized: "Ruways; Rawh counts 6206")),
+        // The counts as al-Dani gives them: the earlier Madinan 6,217, the later 6,214 (the Maghribi
+        // prints' own "al-Madani al-Akhir"), the Basran 6,204. Abu Amr's prints count al-Baqarah 285,
+        // the Madinan figure (Basran 287), so their 6,217 is the earlier Madinan count.
+        ("Madani al-Awwal", 6217, String(localized: "Abu Amr al-Basri")),
+        ("Madani al-Akhir", 6214, String(localized: "Nafi and Abu Ja'far")),
+        ("Basri", 6204, String(localized: "Ruways; Rawh counts 6206")),
     ]
 
     /// A counting tradition's name as shown, on keys of its own: the catalog's "Makki" and "Kufi" are the
@@ -135,6 +138,7 @@ enum QiraatTextAnalysis {
         case "Makki": return String(localized: "count.makki", defaultValue: "Makki")
         case "Basri": return String(localized: "count.basri", defaultValue: "Basri")
         case "Madani al-Awwal": return String(localized: "count.madaniAwwal", defaultValue: "Madani al-Awwal")
+        case "Madani al-Akhir": return String(localized: "count.madaniAkhir", defaultValue: "Madani al-Akhir")
         case "Basri (Ya'qub)": return String(localized: "count.basriYaqub", defaultValue: "Basri (Ya'qub)")
         default: return name.localizedDisplay
         }
@@ -214,6 +218,10 @@ struct QiraatTextAnalysisView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+
+            Text("The two Madinan counts are named as al-Dani names them, the earlier 6,217 and the later 6,214; some books give the names the other way round. Abu Amr's printed mushafs follow the earlier Madinan count, not the Basran one.")
+                .font(.footnote)
+                .foregroundColor(.secondary)
 
             Text("The proof that this is boundary-drawing and not more or less Quran is the word count. Across all twenty the whole text runs between 77,424 and 77,468 words: a spread of 44 words, well under a tenth of one percent, against an ayah-count spread of 32.")
                 .font(.body)

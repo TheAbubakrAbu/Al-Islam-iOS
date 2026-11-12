@@ -1,8 +1,11 @@
 // The welcome (Abu, 2026-10-19: "for splash screen force them to go through it"): a first launch walks
 // the pages in `SplashScreen.pages`, each ending in the same bar (WelcomePages.swift), Skip skipping its
 // own page; the Islam tab's "Learn More" shows the first page alone as a sheet. The pages after the first
-// are other files' views, embedded: AboutYouView.swift, WelcomePages.swift (permissions, discover), and
-// on Al-Islam the iCloud offer follows as the next root stage (CloudBackupViews.swift).
+// are other files' views, embedded: AboutYouView.swift, WelcomePages.swift (permissions, Simple or Full),
+// and on Al-Islam the iCloud offer follows as the next root stage (CloudBackupViews.swift). Each page is
+// one idea that fits the screen without scrolling (Abu, 2026-11-05: "make them look beautiful make them
+// simple make them clear"); what was cut from the walk that day (the four tab cards, the Tips & Tricks
+// card, the tutorials list) still lives in the app, behind Need a Hand? and the tabs' menus.
 #if os(iOS)
 import SwiftUI
 
@@ -24,12 +27,14 @@ struct SplashScreen: View {
     var presentedAsSheet = false
 
     /// The welcome's pages, in order (Abu, 2026-10-19: "for splash screen force them to go through it"):
-    /// what the app is, About You, Location and Notifications (the apps with prayer times), then what
-    /// there is to discover with the Simple or Full choice. On Al-Islam the iCloud offer is the stage
-    /// after the last page (CloudBackupViews.swift), so it reads as one more page. Nothing dismisses
-    /// the welcome; every page but the first can be skipped, and a skip skips that page alone.
+    /// what the app is, About You, Location and Notifications (the apps with prayer times), then the
+    /// Simple or Full choice (Al-Islam: the companions keep Full and skip the question, Abu,
+    /// 2026-10-14; the flag is the one his gate used, since no flag names Al-Islam itself). On Al-Islam
+    /// the iCloud offer is the stage after the last page (CloudBackupViews.swift), so it reads as one
+    /// more page. Nothing dismisses the welcome; every page after the first can be skipped, and a skip
+    /// skips that page alone.
     enum Page: Equatable {
-        case welcome, aboutYou, permissions, discover
+        case welcome, aboutYou, permissions, simpleOrFull
     }
 
     static let pages: [Page] = {
@@ -37,13 +42,15 @@ struct SplashScreen: View {
         #if HAS_ADHAN
         pages.append(.permissions)
         #endif
-        pages.append(.discover)
+        #if HAS_ICLOUD_BACKUP
+        pages.append(.simpleOrFull)
+        #endif
         return pages
     }()
 
     @State private var pageIndex = 0
-    /// The discover page's choice, Full preselected: the 10-07 "off by default for everyone" stands, so
-    /// the question offers Simple Mode rather than deciding it (Docs/Product/Simple Mode Guide.md).
+    /// The Simple or Full page's choice, Full preselected: the 10-07 "off by default for everyone" stands,
+    /// so the question offers Simple Mode rather than deciding it (Docs/Product/Simple Mode Guide.md).
     @State private var choosesSimple = false
     @State private var popCenter = false
     @State private var popLeft = false
@@ -68,15 +75,39 @@ struct SplashScreen: View {
         settings.accentColor.color
     }
 
-    /// The app family below the card, at this fraction of the launch screen's size. The feature card
-    /// needs the room: four rows in Al-Islam, where iCloud Backup joins them. 0.74 since 2026-10-10:
-    /// at 0.8 the family row's longer text ran its last line under the hero on the iPhone 17 Pro.
-    private static let heroFraction: CGFloat = 0.74
+    /// The app family below the card, as a fraction of the launch screen's size: whatever the page's
+    /// height leaves once the greeting, the three promises and the button have theirs (`textHeight`, at
+    /// the default text size, with air above the family's aura), up to 0.92. It was a fixed 0.74, which
+    /// the feature card ran under on the iPhone 17 Pro.
+    private static func heroFraction(height: CGFloat, scale s: CGFloat) -> CGFloat {
+        // An iPad's greeting and gaps are drawn at its scale; the card and the button are not
+        // (measured on the iPad Pro 11: about 100 pt more per step of scale).
+        let textHeight = 495 + 100 * (s - 1)
+        // The family's height at full size (`appHeroStack`'s `stackHeight`).
+        let fullHero = (275 + (s > 1 ? 24 : 0)) * s
+        return min(0.92, (height - textHeight) / fullHero)
+    }
+
+    /// Under this the family is too small to stand on its own (a short phone).
+    private static let smallestStandingHero: CGFloat = 0.55
+    /// The family's size when it scrolls with the text.
+    private static let scrollingHero: CGFloat = 0.74
 
     /// At the accessibility text sizes the family row and its labels would take half the screen and
-    /// leave the promises a sliver, so they scroll with the text instead of standing below it.
-    private var heroScrolls: Bool {
-        dynamicTypeSize.isAccessibilitySize
+    /// leave the promises a sliver, and on a short phone there is no room left under them, so the
+    /// family scrolls with the text instead of standing below it.
+    private func heroScrolls(fraction: CGFloat) -> Bool {
+        dynamicTypeSize.isAccessibilitySize || fraction < Self.smallestStandingHero
+    }
+
+    /// One dot per page, and on Al-Islam one more for the iCloud offer that follows (CloudBackupViews.swift
+    /// carries the same row with its last dot lit).
+    static var dotCount: Int {
+        #if HAS_ICLOUD_BACKUP
+        return pages.count + 1
+        #else
+        return pages.count
+        #endif
     }
 
     private var heroSpring: Animation {
@@ -101,7 +132,7 @@ struct SplashScreen: View {
                     Group {
                         switch page {
                         case .welcome:
-                            welcomePage(scale: s, column: column)
+                            welcomePage(scale: s, column: column, height: geo.size.height)
                         case .aboutYou:
                             AboutYouView(isNewInstall: true, embedded: true) { advance() }
                         case .permissions:
@@ -110,8 +141,8 @@ struct SplashScreen: View {
                             #else
                             EmptyView()
                             #endif
-                        case .discover:
-                            discoverPage(scale: s, column: column)
+                        case .simpleOrFull:
+                            modePage(scale: s, column: column)
                         }
                     }
                     .id(pageIndex)
@@ -127,7 +158,7 @@ struct SplashScreen: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     if !presentedAsSheet {
-                        WelcomeProgressDots(count: Self.pages.count, index: pageIndex)
+                        WelcomeProgressDots(count: Self.dotCount, index: pageIndex)
                     }
                 }
             }
@@ -156,14 +187,16 @@ struct SplashScreen: View {
 
     /// The greeting and the promises scroll only when they must (a small phone, a large text size, the
     /// sheet); the family row and the button stay put.
-    private func welcomePage(scale s: CGFloat, column: CGFloat) -> some View {
-        VStack(spacing: 0) {
+    private func welcomePage(scale s: CGFloat, column: CGFloat, height: CGFloat) -> some View {
+        let hero = Self.heroFraction(height: height, scale: s)
+        let scrollsHero = heroScrolls(fraction: hero)
+        return VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 18 * s) {
+                VStack(spacing: 22 * s) {
                     greeting(scale: s)
                     featureCard
-                    if heroScrolls {
-                        appHeroStack(layoutScale: s)
+                    if scrollsHero {
+                        appHeroStack(layoutScale: s, fraction: Self.scrollingHero)
                     }
                 }
                 .frame(width: column)
@@ -174,18 +207,16 @@ struct SplashScreen: View {
 
             // Under the card, not over it: the aura spreads past its own frame, and on
             // top it washed the last row's text.
-            if !heroScrolls {
-                appHeroStack(layoutScale: s)
+            if !scrollsHero {
+                appHeroStack(layoutScale: s, fraction: hero)
                     .zIndex(-1)
             }
 
-            // Skip too, like every page of the welcome; the "Learn More" sheet is one page, and Done.
+            // No Skip here: there is nothing on this page to skip, and it did what Get Started does.
+            // The "Learn More" sheet is one page, and Done.
             WelcomeActionBar(
                 primaryTitle: presentedAsSheet ? String(localized: "Done") : String(localized: "Get Started"),
-                primaryAction: primaryAction,
-                secondaryTitle: presentedAsSheet ? nil : String(localized: "Skip"),
-                secondaryIdentifier: "welcomeSkip",
-                secondaryAction: advance
+                primaryAction: primaryAction
             )
             .frame(width: column)
             .padding(.top, 4)
@@ -193,18 +224,18 @@ struct SplashScreen: View {
         }
     }
 
-    // MARK: The discover page
+    // MARK: Simple or Full
 
-    /// "A lot to discover" (WelcomePages.swift), then the first launch ends: Continue writes the Simple
-    /// or Full choice, Skip leaves Full.
-    private func discoverPage(scale s: CGFloat, column: CGFloat) -> some View {
+    /// The last page (WelcomePages.swift), then the first launch ends: Continue writes the Simple or
+    /// Full choice, Skip leaves Full.
+    private func modePage(scale s: CGFloat, column: CGFloat) -> some View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
-                WelcomeDiscoverPage(choosesSimple: $choosesSimple)
+                WelcomeModePage(choosesSimple: $choosesSimple)
                     .frame(width: column)
                     .frame(maxWidth: .infinity)
-                    .padding(.top, 20 * s)
-                    .padding(.bottom, 12)
+                    .padding(.top, 8)
+                    .padding(.bottom, 16)
             }
 
             WelcomeActionBar(
@@ -277,8 +308,8 @@ struct SplashScreen: View {
         }
     }
 
-    private func appHeroStack(layoutScale screenScale: CGFloat) -> some View {
-        let s = screenScale * Self.heroFraction
+    private func appHeroStack(layoutScale screenScale: CGFloat, fraction: CGFloat) -> some View {
+        let s = screenScale * fraction
         let card = 120 * s
         let cr = 32 * s
         let inset = 10 * s
@@ -422,7 +453,7 @@ struct SplashScreen: View {
                     .foregroundColor(.primary)
             }
 
-            Text("Peace be upon you, and welcome to \(AppIdentifiers.displayName): \(Self.whatTheAppIs)")
+            Text("Welcome to \(AppIdentifiers.displayName): \(Self.whatTheAppIs)")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -452,34 +483,27 @@ struct SplashScreen: View {
         var id: String { title }
     }
 
-    /// What every app in the family promises, and what only Al-Islam has. iCloud Backup is Al-Islam's
-    /// alone (`HAS_ICLOUD_BACKUP`, which the companion apps do not define), so they show three rows
-    /// and name it in the family row instead, with the rest of what only Al-Islam has (Abu,
-    /// 2026-10-11: "mention in splash screen al Islam has iCloud support amongst other things"):
-    /// the weather on the sky (`HAS_WEATHER`) and the iMessage stickers. Tips & Tricks is not on the
-    /// list: the companions compile it too, with their own areas (`TipArea.offered`). Al-Islam's own
-    /// row keeps its two lines: a third pushed the family row under the hero on the iPhone 17 Pro.
+    /// What every app in the family promises, and what only Al-Islam has: three rows, one line each.
+    /// iCloud Backup is Al-Islam's alone (`HAS_ICLOUD_BACKUP`, which the companion apps do not define),
+    /// so their third row names the family instead (Abu, 2026-10-11: "mention in splash screen al Islam
+    /// has iCloud support amongst other things"). In Al-Islam the family is the three apps drawn below.
     private var features: [Feature] {
-        #if HAS_ICLOUD_BACKUP
-        return [
+        let shared = [
             Feature(icon: "lock.shield.fill", title: String(localized: "Private by design"),
-                    text: String(localized: "No accounts and no tracking, and it works offline. What you save is yours alone.")),
+                    text: String(localized: "No accounts, no tracking, works offline.")),
             Feature(icon: "heart.fill", title: String(localized: "Free forever"),
-                    text: String(localized: "No ads, fees or subscriptions. Offered as sadaqah jariyah.")),
+                    text: String(localized: "No ads or fees. A sadaqah jariyah.")),
+        ]
+        #if HAS_ICLOUD_BACKUP
+        return shared + [
             Feature(icon: "icloud.fill", title: String(localized: "iCloud Backup"),
-                    text: String(localized: "Optional: your bookmarks, prayer tracker, khatm and journal, in your own private iCloud."),
+                    text: String(localized: "Optional, in your own private iCloud."),
                     tag: String(localized: "Only in Al-Islam")),
-            Feature(icon: "square.grid.2x2.fill", title: String(localized: "One family of apps"),
-                    text: String(localized: "Everything Al-Quran and Al-Adhan do, in one app. Tap an app below to see it on the App Store.")),
         ]
         #else
-        return [
-            Feature(icon: "lock.shield.fill", title: String(localized: "Private by design"),
-                    text: String(localized: "Everything stays on your device: no accounts, no tracking, and it works offline.")),
-            Feature(icon: "heart.fill", title: String(localized: "Free forever"),
-                    text: String(localized: "No ads, fees or subscriptions. Offered as sadaqah jariyah.")),
+        return shared + [
             Feature(icon: "square.grid.2x2.fill", title: String(localized: "One family of apps"),
-                    text: String(localized: "Al-Islam does everything Al-Quran and Al-Adhan do, plus iCloud Backup, weather on the sky and iMessage stickers. Tap an app below to see it on the App Store.")),
+                    text: String(localized: "Al-Islam has all of this and more, in one app.")),
         ]
         #endif
     }
@@ -499,27 +523,12 @@ struct SplashScreen: View {
             }
         }
         .padding(.vertical, 4)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(UIColor.secondarySystemBackground))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-                )
-        )
+        .background(WelcomeCardSurface())
     }
 
     private func featureRow(_ feature: Feature) -> some View {
-        HStack(alignment: .top, spacing: 13) {
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(LinearGradient(colors: [accent, accent.opacity(0.74)],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 34, height: 34)
-                .overlay(
-                    Image(systemName: feature.icon)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                )
+        HStack(alignment: .center, spacing: 13) {
+            AccentIconChip(systemImage: feature.icon, size: 34)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -545,7 +554,7 @@ struct SplashScreen: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 9)
+        .padding(.vertical, 11)
         .accessibilityElement(children: .combine)
     }
 

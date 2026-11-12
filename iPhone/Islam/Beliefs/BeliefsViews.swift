@@ -1241,6 +1241,10 @@ struct CompileView: View {
                     ArticleLead("In short: the Quran was preserved from the start by mass memorization and careful writing, gathered into one volume under Abu Bakr, and standardized under Uthman.")
                 }
 
+                Section(header: ArticleHeader("WATCH")) {
+                    ArticleVideoLink(title: "How to prove the Quran has been preserved accurately", url: "https://www.youtube.com/watch?v=n281Zyywyn4&t=343s", channel: "OnePath Network")
+                }
+
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(verbatim: "From the first revelation, the Quran was preserved by the Companions through precise memorization (hifdh) and careful writing on parchments, leather, bones, and leaves. Prophet Muhammad (peace and blessings be upon him) had official scribes (including Zayd ibn Thabit) who wrote verses as they were revealed.")
 
@@ -1272,13 +1276,13 @@ struct CompileView: View {
                 }
 
                 Section(header: ArticleHeader("STANDARDIZATION UNDER UTHMAN")) {
-                    ArticleParagraph(verbatim: "As Islam spread, differences in regional reading threatened dispute. Caliph Uthman ibn Affan formed a committee led by Zayd ibn Thabit with senior Qurayshi scholars to produce standardized copies based on the Abu Bakr compilation and the established Uthmanic rasm (consonantal skeleton). Written without dots or tashkeel (vowel marks), this skeletal script could accommodate the seven revealed Ahruf.")
+                    ArticleParagraph(verbatim: "As Islam spread, differences in regional reading threatened dispute. Caliph Uthman ibn Affan formed a committee led by Zayd ibn Thabit with senior Qurayshi scholars to copy the Abu Bakr compilation into standardized copies, writing in the dialect of Quraysh wherever the scribes differed (Sahih al-Bukhari 4987). This is the Uthmanic rasm (consonantal skeleton): written without dots or tashkeel (vowel marks), it carries every reading of the final review (al-Ardah al-Akhirah) that fits it.")
 
-                    ArticleParagraph(verbatim: "This was not a limitation of the copies; it was how Arabic was written. Dots (i'jam) and tashkeel simply did not exist in the script at that time, and the Arabs, masters of their own language, did not need them to read. Precisely BECAUSE the rasm was bare, one written skeleton could be read in every revealed way that matched it: the same letters carried all the Ahruf, and the verified oral transmission determined how each was recited.")
+                    ArticleParagraph(verbatim: "This was not a limitation of the copies. Dots (i'jam) were rare in the writing of the time and vowel signs had not yet been devised, and the Arabs, masters of their own language, read without them. Ibn al-Jazari explains that the Companions left the copies bare of dots and vowels on purpose, so that one written skeleton could carry every reading authentically received from the Prophet (peace and blessings be upon him) that fit it, since the reliance was on memorization rather than on the writing alone (an-Nashr fi al-Qira'at al-'Ashr, in its introduction). Other scholars hold that the letters were not dotted at all in the Companions' time and that the dots came later: the vowel dots with Abu al-Aswad ad-Du'ali, the letter dots with Nasr ibn Asim and Yahya ibn Ya'mar. On either view the copies were written bare, and the verified oral transmission determined how each word was recited.")
 
                     ArticleParagraph(verbatim: "Uthman sent official copies to all the major cities (Makkah, Kufa, Basra, Sham, and others, with one kept in Madinah) and asked that non-verified personal materials be retired to prevent confusion between private notes/duas and the Quranic text. The Companions agreed with this measure, preserving unity upon the authenticated text.")
 
-                    ArticleParagraph(verbatim: "This standardization did not remove revelation; rather, it unified the community upon the verified mushaf, whose skeletal rasm supported the seven Ahruf, and ensured consistent public recitation.")
+                    ArticleParagraph(verbatim: "This standardization lost nothing of the Quran; it unified the community upon the verified mushaf, which holds the whole of the final review, and ensured consistent public recitation.")
                 }
 
                 Section(header: ArticleHeader("FROM THE PROPHET ﷺ TO THE CITIES")) {
@@ -1300,9 +1304,9 @@ struct CompileView: View {
                 }
 
                 Section(header: ArticleHeader("AHRUF, QIRAAT, AND THE UTHMANIC RASM")) {
-                    ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) taught that the Quran was revealed in seven Ahruf (modes) for ease. The Quran was first compiled into one manuscript under Abu Bakr (may Allah be pleased with him), around one year after the Prophet’s death. Under Uthman (may Allah be pleased with him), official copies were sent to all the major cities; because the rasm was a skeletal script without dots or tashkeel, it supported the seven Ahruf, which continued to be read and transmitted through canonical Qiraat verified by chains. The 10 Qiraat (with their 20 Riwayaat) are mutawatir and reflect how the prophetic recitation was preserved in writing and oral teaching.")
+                    ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) taught that the Quran was revealed in seven Ahruf (modes) for ease. The Quran was first compiled into one manuscript under Abu Bakr (may Allah be pleased with him), around one year after the Prophet’s death. Under Uthman (may Allah be pleased with him), official copies were sent to all the major cities, written as a skeletal script without dots or tashkeel. The majority of the Salaf and the imams hold that these copies are upon one of the seven Ahruf and contain the final review the Prophet (peace and blessings be upon him) went over with Jibril (Ibn Taymiyyah, Majmu' al-Fatawa 13/389–404); Ibn al-Jazari words it as the copies holding what their skeleton can carry of the seven Ahruf, leaving out nothing of the final review (an-Nashr). The canonical Qiraat, verified by chains, are all read within that skeleton. The 10 Qiraat (with their 20 Riwayaat) are mutawatir and reflect how the prophetic recitation was preserved in writing and oral teaching.")
 
-                    ArticleParagraph(verbatim: "Thus, standardization did not limit revelation; it safeguarded it, preventing private notes and unverified materials from being mistaken for the Quran, while preserving the legitimate readings taught by Prophet Muhammad (peace and blessings be upon him).")
+                    ArticleParagraph(verbatim: "Thus, standardization lost nothing of the Quran; it safeguarded it, preventing private notes and unverified materials from being mistaken for the Quran, while preserving the legitimate readings taught by Prophet Muhammad (peace and blessings be upon him).")
                 }
 
                 Section(header: ArticleHeader("KEY REPORTS (BRIEF)")) {
@@ -1340,11 +1344,6 @@ struct CompileView: View {
                     ScriptureQuote(quran: "41:42")
                 }
 
-                Section(header: ArticleHeader("USEFUL LINKS")) {
-                    Text(articleMarkdown: "Learn More about the Compilation of the Quran: https://www.youtube.com/watch?v=n281Zyywyn4&t=343s")
-                        .font(.caption)
-                }
-
                 Section(header: ArticleHeader("IN SUMMARY")) {
                     ArticleClosing("Through unbroken memorization and a verified written text, the Quran remains today exactly as it was revealed, fulfilling Allah's promise to preserve it.")
                 }
@@ -1367,6 +1366,10 @@ struct TajweedView: View {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Tajweed is the science of reciting the Quran correctly: giving each letter its proper articulation and every rule its due.")
+                }
+
+                Section(header: ArticleHeader("WATCH")) {
+                    ArticleVideoLink(title: "Tajweed lessons, letter by letter: the Learn Arabic 101 channel", url: "https://www.youtube.com/@Arabic101")
                 }
 
                 // The legend is the Quran reader's (TajweedLegendView.swift), so the door ships with it.
@@ -1456,11 +1459,6 @@ struct TajweedView: View {
                     }
                     #endif
                     #endif
-                }
-
-                Section(header: ArticleHeader("RESOURCES")) {
-                    Text(verbatim: "Watch Learn Arabic 101: https://www.youtube.com/@Arabic101")
-                        .font(.caption)
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -1601,6 +1599,10 @@ struct AhrufView: View {
                     ArticleLead("In short: the Quran was revealed in seven ahruf (modes of recitation) as a mercy easing its recitation for the different Arab tribes.")
                 }
 
+                Section(header: ArticleHeader("WATCH")) {
+                    ArticleVideoLink(title: "The seven ahruf and the ten qiraat, explained", url: "https://www.youtube.com/watch?v=8hj7u0F3yEg&t=34s")
+                }
+
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(verbatim: "The Quran was revealed by Allah (Glorified and Exalted be He) in seven Ahruf (أَحرُف), the plural of Harf (حَرف). The word Harf comes from the Arabic root H–r–f (ح ر ف), meaning “edge, border, side, or angle,” referring to a particular “way” or “mode.” Islamically and Quranically, Ahruf refers to the divinely revealed modes of recitation.")
 
@@ -1618,7 +1620,7 @@ struct AhrufView: View {
                 Section(header: ArticleHeader("THE WISDOM BEHIND THE VARIETY")) {
                     ArticleParagraph(verbatim: "Classical scholars draw out several wisdoms behind the revealed variety, beyond ease of recitation:")
 
-                    ArticleParagraph(verbatim: "• Mercy and ease: a largely unlettered nation of many dialects could all recite the Quran as it was revealed, without hardship.\n• A sign of inimitability (i'jaz): the wordings vary, yet the meanings align and complete one another; no mode contradicts another in a single ruling or belief.\n• Proof of its divine origin: had the Quran been from other than Allah (Glorified and Exalted be He), such parallel wordings would inevitably clash. They never do.\n• Extra preservation: each mode was memorized and passed on through its own verified channels, multiplying the independent lines guarding the text.")
+                    ArticleParagraph(verbatim: "• Mercy and ease: a largely unlettered nation of many dialects could all recite the Quran as it was revealed, without hardship.\n• A sign of inimitability (i'jaz): the wordings vary, yet the meanings align and complete one another; no mode contradicts another in a single ruling or belief.\n• Proof of its divine origin: had the Quran been from other than Allah (Glorified and Exalted be He), such parallel wordings would inevitably clash. They never do.\n• Extra preservation: every reading was memorized and passed on through its own verified channels, multiplying the independent lines guarding the text.")
 
                     ArticleParagraph(verbatim: "Ibn Shihab az-Zuhri, a narrator of these hadiths, added after one of them in Sahih Muslim (819): “It has reached me that these seven styles are essentially one, not differing about what is permitted and what is forbidden.” The variation lies in how the words are recited, not in what the Quran commands: no harf permits what another forbids.")
                 }
@@ -1637,8 +1639,26 @@ struct AhrufView: View {
                         .foregroundColor(appearance.accent.opacity(0.85))
                 }
 
+                // The two questions every reader of this page asks next, answered as the Salaf answered
+                // them (Abu, 2026-11-02: "100% right ... according to Sunni salafi"). Ibn Taymiyyah's
+                // answer on the seven ahruf (Majmu' al-Fatawa 13/389-404) reports the majority of the
+                // Salaf: the Uthmanic mushaf is upon one harf and holds the final review; the "all seven"
+                // view is that of some jurists, reciters and theologians (al-Baqillani). Ibn al-Jazari's
+                // wording of the majority view (an-Nashr): what the rasm can carry of the seven.
+                Section(header: ArticleHeader("ARE THE SEVEN AHRUF THE SEVEN QIRAAT?")) {
+                    ArticleParagraph(verbatim: "No. Ibn Taymiyyah writes that there is no dispute among the scholars whose word counts that the seven Ahruf in which the Prophet (peace and blessings be upon him) said the Quran was revealed are not the readings of the seven famous reciters (Majmu' al-Fatawa 13/389–404). The seven readings were gathered by Ibn Mujahid more than three centuries after the Prophet (peace and blessings be upon him); the shared number led some people to confuse the two, and the scholars warned against it.")
+
+                    ArticleParagraph(verbatim: "What the Ahruf are, exactly, the scholars discussed at length, and the best-known views are three: seven dialects of the Arabs spread through the Quran (Abu Ubayd al-Qasim ibn Sallam); different words for one meaning, as halumma, aqbil and ta'al all mean “come” (at-Tabari, and Ibn Abd al-Barr gives it as the view of most scholars); and seven kinds of difference in wording, such as number, verb form, vowel endings, word order and a letter added or dropped (Ibn Qutaybah, and after him Ibn al-Jazari). What they agree on is enough: each harf is revealed, the wordings may differ while the meaning agrees, and no harf contradicts another.")
+                }
+
+                Section(header: ArticleHeader("THE AHRUF IN THE UTHMANIC MUSHAF")) {
+                    ArticleParagraph(verbatim: "The majority of the Salaf and the imams hold that the mushaf of Uthman (may Allah be pleased with him) is upon one of the seven Ahruf and contains the final review, the recitation the Prophet (peace and blessings be upon him) went over with Jibril in his last Ramadan. Ibn Taymiyyah reports this, and reports that some jurists, reciters and theologians, among them al-Baqillani, held instead that the mushaf contains all seven (Majmu' al-Fatawa 13/389–404). Ibn al-Jazari words the majority view as: the Uthmanic copies hold what their written skeleton can carry of the seven Ahruf, and the whole of the final review, leaving out none of it (an-Nashr, in its introduction).")
+
+                    ArticleParagraph(verbatim: "Either way, nothing of the Quran was lost. Reciting by the seven Ahruf was a permission (rukhsah) and an ease, not an obligation: the Ummah was given the choice of which harf to recite, as Ibn Jarir at-Tabari explained and Ibn Taymiyyah relates in the same answer. So when the Companions agreed together on the Uthmanic copies, they kept everything of the final review, and every reading that fits their skeleton and reached us by mass transmission is still recited today.")
+                }
+
                 Section(header: ArticleHeader("DO THE AHRUF AFFECT PRESERVATION?")) {
-                    ArticleParagraph(verbatim: "No. The Quran remains perfectly preserved: letter for letter, word for word, in every revealed mode. The Ahruf are part of that preservation, not a contradiction to it.")
+                    ArticleParagraph(verbatim: "No. The Quran remains perfectly preserved: letter for letter, word for word, as it stood in the final review. The Ahruf are part of that preservation, not a contradiction to it.")
 
                     ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) promised:")
 
@@ -1652,15 +1672,15 @@ struct AhrufView: View {
                 Section(header: ArticleHeader("HOW AHRUF WERE PRESERVED")) {
                     ArticleParagraph(verbatim: "• Prophet Muhammad (peace and blessings be upon him) taught the Companions each harf personally.\n• Jibril reviewed the Quran with Prophet Muhammad (peace and blessings be upon him) every year in Ramadan.\n• In the year Prophet Muhammad (peace and blessings be upon him) passed away, Jibril reviewed it twice (al-Ardah al-Akhirah).")
 
-                    ArticleParagraph(verbatim: "About one year after the Prophet’s passing, Abu Bakr (may Allah be pleased with him) commissioned the first complete compilation of the Quran into one manuscript. During the caliphate of Uthman (may Allah be pleased with him), the Ummah was then unified upon official copies from that preserved compilation, written in the Uthmanic rasm and sent to all the major cities. Because the rasm was a bare skeletal script, without dots or tashkeel (vowel marks), it could carry the seven Ahruf, preserving what the Ummah recited. Dots and tashkeel did not even exist in Arabic writing yet; the Arabs did not need them, and it is precisely that bareness that let one written skeleton be read in every revealed way that matched it.")
+                    ArticleParagraph(verbatim: "About one year after the Prophet’s passing, Abu Bakr (may Allah be pleased with him) commissioned the first complete compilation of the Quran into one manuscript. During the caliphate of Uthman (may Allah be pleased with him), the Ummah was then unified upon official copies from that preserved compilation, written in the Uthmanic rasm and sent to all the major cities. The rasm was a bare skeletal script, without dots or tashkeel (vowel marks), which the Arabs read without difficulty, and the Companions left it bare on purpose, so that one written skeleton could be read in every authentically received way that matched it (Ibn al-Jazari, an-Nashr). Other scholars hold that the letters were simply not dotted yet in their time; on either view, the bare skeleton carried the readings.")
 
-                    ArticleParagraph(verbatim: "The Ahruf are preserved through oral transmission, ijazahs, and chains of narration (isnad).")
+                    ArticleParagraph(verbatim: "What the copies carry is preserved through oral transmission, ijazahs, and chains of narration (isnad).")
                 }
 
                 Section(header: ArticleHeader("AN ANALOGY: SEVEN NUMBERS, MANY PASSWORDS")) {
                     ArticleParagraph(verbatim: "Think of the seven Ahruf as seven numbers you are handed, and each Qiraah as a password formed from them. The numbers (Ahruf) are the revealed building blocks; a password (Qiraah) is one specific, fixed combination drawn from them, whether it uses one digit, a few, or all seven.")
 
-                    ArticleParagraph(verbatim: "Seven numbers could form far more than ten passwords, and likewise more readings than ten were transmitted historically. The 10 Qiraat are the combinations preserved with mass transmission (mutawatir): rigorously verified, widely taught, and famous across the Ummah.")
+                    ArticleParagraph(verbatim: "Seven numbers could form far more than ten passwords, and likewise more readings than ten were transmitted historically. The 10 Qiraat are the combinations preserved with mass transmission (mutawatir): rigorously verified, widely taught, and famous across the Ummah. The picture follows Ibn al-Jazari's wording; the scholars who say the mushaf is upon one harf place every Qiraah within that harf, and both agree that each canonical Qiraah lies within the Uthmanic rasm and is fully Quran.")
 
                     Text(verbatim: "Since every harf is revealed by Allah (Glorified and Exalted be He), every canonical combination of them is fully Quran, and no combination was ever invented: each Qiraah was received from Prophet Muhammad (peace and blessings be upon him) through an unbroken chain and applies its rules with complete consistency, exactly as taught.")
                         .font(.body)
@@ -1668,7 +1688,7 @@ struct AhrufView: View {
                 }
 
                 Section(header: ArticleHeader("WHAT ABOUT THE 10 QIRAAT?")) {
-                    ArticleParagraph(verbatim: "The 10 Qiraat are the mass-transmitted (mutawatir) methods that show how the Ahruf were preserved through the Uthmanic mushaf and teaching traditions.")
+                    ArticleParagraph(verbatim: "The 10 Qiraat are the mass-transmitted (mutawatir) readings of the Uthmanic mushaf, each within its written skeleton, preserved through the teaching tradition.")
 
                     ArticleParagraph(verbatim: "Each Qiraah has an unbroken chain (isnad) from the reciter to his teacher, and his teacher's teacher, back to Prophet Muhammad (peace and blessings be upon him). Here is the chain of the reading of ‘Asim, which divides into his two narrators, Hafs and Shu‘bah:")
 
@@ -1679,14 +1699,8 @@ struct AhrufView: View {
                         .foregroundColor(appearance.accent)
                 }
 
-                Section(header: ArticleHeader("USEFUL LINKS")) {
-                    Text(articleMarkdown: "Learn More about Ahruf and Qiraat: https://www.youtube.com/watch?v=8hj7u0F3yEg&t=34s")
-                        .font(.caption)
-                }
-
-
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    ArticleClosing("The seven ahruf are all from Allah; the Uthmanic mushaf, written in a skeletal rasm without dots or tashkeel and sent to all the major cities, supported them, and the canonical recitations preserve them to this day.")
+                    ArticleClosing("The seven ahruf are all from Allah and are not the seven qiraat; the Uthmanic mushaf, written in a skeletal rasm without dots or tashkeel and sent to all the major cities, holds the whole of the final review, and the canonical recitations preserve it to this day.")
                 }
 
                 ArticleSourcesSection(article: "AhrufView")
@@ -1766,6 +1780,11 @@ struct QiraatView: View {
                     ArticleLead("In short: the ten Qiraat are the authentic, mass-transmitted ways of reciting the Quran, each traced through a continuous chain to the Prophet.")
                 }
 
+                Section(header: ArticleHeader("WATCH")) {
+                    ArticleVideoLink(title: "The seven ahruf and the ten qiraat, explained", url: "https://www.youtube.com/watch?v=8hj7u0F3yEg&t=34s")
+                    ArticleVideoLink(title: "The anomalous (shadhdh) qiraat", url: "https://www.youtube.com/watch?v=CeV6w0rCilQ&t=80s")
+                }
+
                 // The reading is one thing, seeing it another: the explorer walks the places where
                 // the riwayat actually differ, ayah by ayah, with every reading side by side.
                 #if os(iOS)
@@ -1797,7 +1816,7 @@ struct QiraatView: View {
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(verbatim: "The 10 Qiraat (قِرَاءَات), from the root q–r–a (قَرَأَ) meaning “to read/recite,” literally means “readings/recitations.” Islamically and Quranically, a Qiraah (قِرَاءَة) is a specific, verified method of reciting the Quran. The 10 Qiraat are the preserved, mass-transmitted (mutawatir, مُتَوَاتِر) recitations of the Quran, each a precise method taught by Prophet Muhammad (peace and blessings be upon him) and transmitted through authentic chains of narrators (isnad إِسنَاد). They do not represent different Qurans, but different prophetic ways of reciting the same revelation.")
 
-                    ArticleParagraph(verbatim: "As covered in the previous section, the Quran was revealed by Allah (Glorified and Exalted be He) in seven Ahruf (أَحرُف), modes of recitation for ease. Jibril (Gabriel) brought these modes to Prophet Muhammad (peace and blessings be upon him), who taught them to the Ummah. Around one year after the Prophet’s passing, Abu Bakr (may Allah be pleased with him) commissioned the first complete compilation of the Quran into one manuscript, and later Uthman (may Allah be pleased with him) unified public recitation upon official copies from that preserved text, sent to all the major cities. The Qiraat show how those Ahruf were preserved in practice through the Uthmanic rasm (الرَّسم العُثمَانِي), the consonantal skeleton of the mushaf (مُصحَف): dots and tashkeel did not yet exist in Arabic writing (nor did the Arabs need them), so the bare skeleton naturally supported the seven Ahruf, readable in every revealed way that matched the rasm.")
+                    ArticleParagraph(verbatim: "As covered in the previous section, the Quran was revealed by Allah (Glorified and Exalted be He) in seven Ahruf (أَحرُف), modes of recitation for ease. Jibril (Gabriel) brought these modes to Prophet Muhammad (peace and blessings be upon him), who taught them to the Ummah. Around one year after the Prophet’s passing, Abu Bakr (may Allah be pleased with him) commissioned the first complete compilation of the Quran into one manuscript, and later Uthman (may Allah be pleased with him) unified public recitation upon official copies from that preserved text, sent to all the major cities. The Qiraat show how those Ahruf were preserved in practice through the Uthmanic rasm (الرَّسم العُثمَانِي), the consonantal skeleton of the mushaf (مُصحَف): written without dots or tashkeel, which the Arabs did not need, the one skeleton carries every authentically received reading that matches it. The seven Ahruf are not the seven or the ten Qiraat; every canonical Qiraah is read within the one Uthmanic rasm.")
 
                     // Every reading carries a city, and the article named them only in passing on the
                     // rows below (Abu, 2026-09-14: "qiraat view should also mention the city they were
@@ -1811,7 +1830,7 @@ struct QiraatView: View {
 
                     ArticleParagraph(verbatim: "A password does not have to use all seven digits; it may draw on one, a few, or all of them. In the same way, a Qiraah may reflect one harf, several, or elements of many, and it is fully Quran either way, because every harf on its own is revealed Quran, and any single Qiraah on its own is sufficient, complete Quran.")
 
-                    ArticleParagraph(verbatim: "Just as seven numbers can form far more than ten passwords, the revealed modes could combine into more readings than ten, and other readings were indeed transmitted historically. The 10 Qiraat are the combinations that reached us mutawatir (mass-transmitted): rigorously verified, taught continuously from teacher to student, and famous across the Ummah. Together they keep the seven Ahruf alive, carried by the Uthmanic rasm, whose skeletal script (no dots or tashkeel) supported them all.")
+                    ArticleParagraph(verbatim: "Just as seven numbers can form far more than ten passwords, the revealed modes could combine into more readings than ten, and other readings were indeed transmitted historically. The 10 Qiraat are the combinations that reached us mutawatir (mass-transmitted): rigorously verified, taught continuously from teacher to student, and famous across the Ummah. Together they carry what the Uthmanic rasm, a skeletal script with no dots or tashkeel, holds of the seven Ahruf. The picture follows Ibn al-Jazari's wording; the scholars who say the mushaf is upon one harf place every Qiraah within that harf, and both agree that each canonical Qiraah lies within the Uthmanic rasm and is fully Quran.")
 
                     Text(verbatim: "But no one sat down and invented these combinations. Each Qiraah was received, not designed: it descends through an unbroken chain (isnad) from its reciters → their teachers → a Companion → Prophet Muhammad (peace and blessings be upon him), who taught it exactly this way.")
                         .font(.body)
@@ -1831,7 +1850,7 @@ struct QiraatView: View {
 
                     ArticleParagraph(verbatim: "Most differences are within established rules of tajwid (تَجوِيد), allowable word-forms and vowels, elongation (madd مَدّ), assimilation (idgham إِدغَام), imalah (إِمَالَة), and stopping/continuation, while preserving the same meanings and guidance.")
 
-                    ArticleParagraph(verbatim: "Important: The Qiraat are not arbitrary. They reflect how the seven Ahruf were preserved through both writing and oral transmission, essentially a “mix and preserve” of the revealed modes into rigorously taught, verifiable recitational methods.")
+                    ArticleParagraph(verbatim: "Important: The Qiraat are not arbitrary. Each was received, not composed: it reads the Uthmanic rasm exactly as it was taught from Prophet Muhammad (peace and blessings be upon him), preserved through both writing and oral transmission in a rigorously taught, verifiable method of recitation.")
 
                     ArticleParagraph(verbatim: "This precision goes back to how the Quran was taught from the very beginning: the Companions would take a portion of ayat from Prophet Muhammad (peace and blessings be upon him) and not move past it until they had mastered both its recitation and what it contained (Musnad Ahmad 23482, from Abu Abd ar-Rahman as-Sulami; its chain graded hasan by Shu'ayb al-Arna'ut). The Qiraat continue that discipline, teacher to student, to this day.")
                 }
@@ -1869,7 +1888,7 @@ struct QiraatView: View {
 
                     ArticleParagraph(verbatim: "The original seven were famously codified by Imam Abu Bakr Ibn Mujahid. Their Imams are: Nafi (Madinah), Ibn Kathir (Makkah), Abu Amr (Basra), Ibn Amir (Damascus), Asim (Kufa), Hamzah (Kufa), and al-Kisai (Kufa).")
 
-                    ArticleParagraph(verbatim: "The three that complete the ten, established by Imam Ibn al-Jazari, are: Abu Ja'far (Madinah), Ya'qub al-Hadrami (Basra), and Khalaf al-Bazzar (Baghdad, transmitting the Kufan tradition he received through Hamzah).")
+                    ArticleParagraph(verbatim: "The three that complete the ten, counted with the seven by scholars before him and confirmed by Imam Ibn al-Jazari, are: Abu Ja'far (Madinah), Ya'qub al-Hadrami (Basra), and Khalaf al-Bazzar (Baghdad, transmitting the Kufan tradition he received through Hamzah).")
 
                     ArticleParagraph(verbatim: "Hafs is a riwayah from Asim, and Warsh is a riwayah from Nafi. So when people say Hafs or Warsh, they are naming a narration path within the canonical recitation tradition.")
 
@@ -1918,7 +1937,7 @@ struct QiraatView: View {
                 }
 
                 Section(header: ArticleHeader("THE THREE COMPLETING QIRAAT (القِرَاءَاتُ الثَّلَاثُ المُتَمِّمَةُ)")) {
-                    ArticleParagraph(verbatim: "The three readings Imam Ibn al-Jazari (d. 833 AH) established as equally mutawatir in al-Durrah al-Mutammimah, completing the ten: Abu Ja'far of Madinah, Ya'qub of Basra and Khalaf of Kufa (the tenth reader, a different reading from his own narration of Hamzah). Together with the seven they are the ten Qiraat.")
+                    ArticleParagraph(verbatim: "The three readings Imam Ibn al-Jazari (d. 833 AH) set out in ad-Durrah al-Mudiyyah, completing the ten, and whose mass transmission he defended in an-Nashr: Abu Ja'far of Madinah, Ya'qub of Basra and Khalaf of Baghdad (the tenth reader, a different reading from his own narration of Hamzah). Scholars had counted them with the seven long before him. Together with the seven they are the ten Qiraat.")
 
                     ForEach(QiraatProfiles.masters(in: QiraatProfiles.threeIDs)) { master in
                         NavigationLink(destination: LazyDestination { QiraahMasterDetailView(profile: master) }) {
@@ -2002,7 +2021,7 @@ struct QiraatView: View {
 
                     ArticleParagraph(verbatim: "Every one of these narrators of the noble Quran received it, through the chains above, from the Messenger of Allah (peace and blessings be upon him) by way of his Companions (may Allah be pleased with them), the first to learn, gather, preserve, and transmit it.")
 
-                    Text(verbatim: "Not a single Ithna Ashari (Twelver) Shia is found among these transmitters. This is part of the Quran’s preservation: Allah (Glorified and Exalted be He) did not place in the transmission of His Book anyone who slanders the Companions of His Prophet (peace and blessings be upon him).")
+                    Text(verbatim: "The ten imams and their twenty narrators are all of Ahl as-Sunnah, and no reading rests on anyone who reviled the Companions. Each imam read on several teachers, so a reading never hangs on one man: Hamzah also read on Humran ibn A'yan, whom Abu Dawud called a Rafidi (adh-Dhahabi, Mizan al-I'tidal), but he read as well on al-A'mash and Ibn Abi Layla, and his reading reaches the Companions through them. The article linked below words it as: not a single Twelver (Ithna Ashari) Shia is among these transmitters. Humran died before that sect took its final form, so the claim holds in that narrow sense; it is worded more carefully here because the Sunni critics already counted him among the Rafidah. This is part of the Quran’s preservation: Allah (Glorified and Exalted be He) kept the transmission of His Book in the hands of those who honoured the Companions of His Prophet (peace and blessings be upon him).")
                         .font(.body)
                         .foregroundColor(appearance.accent)
 
@@ -2017,11 +2036,11 @@ struct QiraatView: View {
 
                     ArticleParagraph(verbatim: "Ad-Durrah al-Mudiyyah, by Ibn al-Jazari (d. 833 AH), adds the three completing readings in about 240 lines. Together the two poems are the ‘Ashara Sughra, the ten by the shorter route, where students of the ten begin. His Tayyibat an-Nashr (about 1,015 lines, drawn from his prose an-Nashr fi al-Qira’at al-‘Ashr) is the ‘Ashara Kubra: the same ten readings with many more turuq (routes of transmission) under each narrator, studied after the Sughra.")
 
-                    ArticleParagraph(verbatim: "Ibn al-Jazari set three conditions for an accepted reading: a sound chain of transmission, agreement with one of the Uthmani mushafs, and agreement with Arabic. The ten meet all three, and the twenty riwayaat in this app follow the Sughra: ash-Shatibiyyah for the seven, ad-Durrah for the three.")
+                    ArticleParagraph(verbatim: "Ibn al-Jazari set three conditions for an accepted reading: a sound chain of transmission, well known among the masters of the craft; agreement with one of the Uthmani mushafs, even if only by what its skeleton can carry; and agreement with Arabic, even in one of its ways. Most of the scholars of usul and fiqh word the first condition as mass transmission (tawatur), as in the criteria near the top of this page; Abu Shamah and Ibn al-Jazari held that a sound, well-known chain is enough when the other two are met. The ten meet the conditions on both views, and the twenty riwayaat in this app follow the Sughra: ash-Shatibiyyah for the seven, ad-Durrah for the three.")
                 }
 
                 Section(header: ArticleHeader("OTHER REPORTED QIRAAT")) {
-                    ArticleParagraph(verbatim: "There are other reported qiraat besides these Ten. Unlike the 10 Qiraat, which are mutawatir and mass attested, those others do not reach mutawatir status. That does not automatically make them inauthentic; some have isnad to Prophet Muhammad (peace and blessings be upon him), but because they are not mass attested, we avoid them in public recitation and worship.")
+                    ArticleParagraph(verbatim: "There are other reported qiraat besides these Ten. Unlike the 10 Qiraat, which are mutawatir and mass attested, those others do not reach mutawatir status, and a reading that fails the conditions above is called shadh (irregular). Some of them have a chain to Prophet Muhammad (peace and blessings be upon him), and the scholars use them to explain meanings and Arabic, but they are not recited as Quran, in prayer or outside it: an-Nawawi gives this as the position of his school and of others (al-Majmu' 3/392), and it is the position of the great majority of the scholars. Ibn Taymiyyah records the other view as well. Of a reading outside the Uthmanic copies that is authentic from a Companion, such as Ibn Mas'ud's, one narration each from Malik and Ahmad permits reciting it in prayer, since the Companions and the Successors did; the other narration, the view of most scholars, forbids it, since it did not come by mass transmission. And a reading beyond the ten that fits the Uthmanic copies with a sound chain, such as al-A'mash's, he says may be recited in prayer and outside it by whoever has it established, and is not shadh in that case (Majmu' al-Fatawa 13/389–404).")
 
                     ArticleParagraph(verbatim: "The best known are the four readings beyond the ten, called shadh: those of al-Hasan al-Basri, Ibn Muhaysin, Yahya al-Yazidi and al-A’mash. Students of the Kubra sometimes take them up after the ten; with the ten they are called the fourteen.")
 
@@ -2082,14 +2101,6 @@ struct QiraatView: View {
                         qiraatCreditLink(handle: "truth_seeker_of_god")
                     }
                     .font(.caption)
-                }
-
-                Section(header: ArticleHeader("USEFUL LINKS")) {
-                    Text(articleMarkdown: "Learn More about Ahruf and Qiraat: https://www.youtube.com/watch?v=8hj7u0F3yEg&t=34s")
-                        .font(.caption)
-
-                    Text(articleMarkdown: "Learn about the other Qiraat: https://www.youtube.com/watch?v=CeV6w0rCilQ&t=80s")
-                        .font(.caption)
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {

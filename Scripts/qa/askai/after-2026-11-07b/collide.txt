@@ -1,0 +1,116 @@
+===== Q: How do I save money?
+INTENT: general followUp=false engine=onDevice first token 2.4s, total 7.5s
+RETRIEVAL: 3363 ms; lanes articles=4 hadithRanked=2 hadithSemantic=6 quranKeyword=2 quranSemantic=7 quranTopics=5 surahName=1; ranking Surah 54 Al-Qamar 0.80 | Shu'ayb › Lessons 0.55 | 2:177 0.50 | Sunan an-Nasa'i 4727 0.48 | 16:71 0.47 | Sahih al-Bukhari 1427 0.45 | Sahih al-Bukhari 4141 0.45 | How to Repent › The Conditions 0.37 | 21:51 0.35 | 16:92 0.33 | 65:7 0.32 | Bulugh al-Maram 4:36 0.30; window=4096 instructions=888
+SOURCES: [1] Surah 54 Al-Qamar | [2] Shu'ayb › Lessons | [3] 2:177 | [4] Sunan an-Nasa'i 4727 | [5] 16:71 | [6] Sahih al-Bukhari 1427 | [7] Sahih al-Bukhari 4141 | [8] How to Repent › The Conditions
+CITED: Sahih al-Bukhari 1427 | Shu'ayb › Lessons | 2:177
+REMOVED: 0 FLAGGED: 1 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: Is there a dua for wealth? | What do the hadith say about wealth? | Explain Al-Baqarah 2:177 in more detail
+A: 1. Practise before you preach: the Prophet said, "One should start giving first to his dependents. And the best object of charity is that which is given by a wealthy person (from the money which is left after his expenses)" [6]. 
+2. The upper hand is better than the lower hand (i.e. giving is better than taking): "Whoever abstains from asking others for some financial help, Allah will give him and save him from asking others, Allah will make him self-sufficient" [6]. 
+3. Wealth is not a shield from charity: "Islam does not separate the prayer mat from the marketplace" [2]. 
+4. "Our wealth is our own business" is an old objection: "They mocked him for thinking prayer had anything to do with their money. It had everything to do with it" [2]. 
+5. The Prophet's example shows responsibility: "The upper hand is better than the lower hand (i.e. he who gives in charity is better than him who takes it)" [6]. 
+6. Practical charity is tied to faith: Those who establish prayer and gives zakah... [Are] those who fulfill their promise when they promise (wording not verified) [3].
+===== Q: What is the best time to pray?
+INTENT: define followUp=false engine=onDevice first token 2.3s, total 7.8s
+RETRIEVAL: 463 ms; lanes articles=4 hadithRanked=6 hadithSemantic=6 hadithTopics=3 quranKeyword=1 quranSemantic=7 quranTopics=5; ranking Salah › How To Pray 0.88 | How to Make Up Missed Prayers › Prayers Left On Purpose 0.59 | 2:239 0.50 | 4:103 0.47 | Sahih al-Bukhari 335 0.45 | Sunan an-Nasa'i 531 0.45 | How to Pray the Sunnah Prayers › How To Pray Them 0.44 | Sahih al-Bukhari 793 0.42 | How to Pray the Funeral Prayer › Before The Prayer 0.35 | 103:1 0.35 | 3:37 0.33 | Sahih al-Bukhari 428 0.30; window=4096 instructions=888
+SOURCES: [1] Salah › How To Pray | [2] How to Make Up Missed Prayers › Prayers Left On Purpose | [3] 2:239 | [4] 4:103 | [5] Sahih al-Bukhari 335 | [6] Sunan an-Nasa'i 531 | [7] How to Pray the Sunnah Prayers › How To Pray Them | [8] Sahih al-Bukhari 793
+CITED: How to Pray the Sunnah Prayers › How To Pray Them | 2:239 | 4:103 | Sunan an-Nasa'i 531 | How to Make Up Missed Prayers › Prayers Left On Purpose | Salah › How To Pray | Sahih al-Bukhari 335
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: Is there a dua for prayer? | What does the Quran say about prayer? | What did the Prophet say about prayer?
+A: The app’s articles and the Prophet’s example show that the best time to pray is when you are at home, as the Prophet often prayed there for the Maghrib and Isha prayers [7].
+
+The Quran says prayer is tied to specific times, yet it also urges remembering Allah even when you are secure [3] [4]. The Prophet himself delayed the 'Atamah prayer one night so people could rest, then called for it when the time arrived [6]. The app notes that sincere repentance and abundant voluntary prayer are ways to make up for missed prayers, and scholars say a deliberately missed prayer has no valid make-up [2].
+
+The Prophet instructed people to pray as he did, which included performing Tayammum wherever needed, and he emphasized the importance of intention and routine [1] [5]. The articles stress that the best prayer is the one you perform with focus and regularity, especially when you can do it quietly at home [7].
+===== Q: Is this game allowed?
+INTENT: ruling followUp=false engine=onDevice first token 2.1s, total 8.1s
+RETRIEVAL: 230 ms; lanes articles=2 hadithRanked=2 hadithSemantic=6 quranKeyword=4 quranSemantic=4 quranTopics=3; ranking 5:96 1.02 | Madhahib of Aqeedah › The Rejected Sects 0.77 | 5:4 0.74 | 5:94 0.65 | Sahih al-Bukhari 175 0.54 | Sahih al-Bukhari 1834 0.54 | Salafiyyah › Common Questions 0.51 | 5:95 0.44 | Sahih al-Bukhari 1349 0.36 | Sahih al-Bukhari 6933 0.36 | Sahih al-Bukhari 1587 0.27 | 76:2 0.23; window=4096 instructions=888
+SOURCES: [1] 5:96 | [2] Madhahib of Aqeedah › The Rejected Sects | [3] 5:4 | [4] 5:94 | [5] Sahih al-Bukhari 175 | [6] Sahih al-Bukhari 1834 | [7] Salafiyyah › Common Questions | [8] 5:95
+CITED: 5:96 | 5:94 | 5:95 | Sahih al-Bukhari 175 | Sahih al-Bukhari 1834 | Madhahib of Aqeedah › The Rejected Sects | Salafiyyah › Common Questions
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What is the evidence on this? | Do the schools of thought differ on this?
+A: The rulings on hunting depend on the state of ihram and how the animal is hunted, and there is scholarly debate about the wording of certain passages.
+
+1. The Quran states that game from the sea is lawful and provision for travelers, but land game is forbidden while in ihram [1] [4] [8].
+2. The Prophet said that if you let a trained dog loose with Allah’s name and it hunts game, you may eat it, but if the dog eats it, you must refrain [5].
+3. Another teaching says that game should not be chased or its fallen parts picked up without public declaration, except for Al-Idhkhir [6].
+4. Some narrations warn that applying verses about disbelievers to believers can lead to disbelief [2] [7].
+
+The Quran and hadith leave room for interpretation: while there are clear warnings against harming game or hunting while in ihram, the wording of certain verses is debated. Some scholars view the wording as pointing to a strict prohibition, while others see it as context-dependent.
+
+For guidance tailored to your situation, consult a qualified scholar.
+===== Q: What is a good book on Islam?
+INTENT: define followUp=false engine=onDevice first token 2.0s, total 11.0s
+RETRIEVAL: 297 ms; lanes articles=4 hadithRanked=6 hadithSemantic=6 quranKeyword=6 quranSemantic=7; ranking What is Islam? › Islamic Values 0.88 | 2:105 0.66 | Sahih al-Bukhari 344 0.63 | Belief in the Books › Importance Of Believing In The Books 0.59 | 2:112 0.47 | Sahih Muslim 1773a 0.45 | God: The Prior Question › From A Creator To A Message 0.44 | Answering the Shia › 5. Aisha, The Mother Of The Believers 0.35 | 3:110 0.33 | 39:41 0.32 | 5:5 0.30 | Sahih al-Bukhari 1870 0.30; window=4096 instructions=888
+SOURCES: [1] What is Islam? › Islamic Values | [2] 2:105 | [3] Sahih al-Bukhari 344 | [4] Belief in the Books › Importance Of Believing In The Books | [5] 2:112 | [6] Sahih Muslim 1773a | [7] God: The Prior Question › From A Creator To A Message | [8] Answering the Shia › 5. Aisha, The Mother Of The Believers
+CITED: What is Islam? › Islamic Values | 2:105 | Sahih al-Bukhari 344 | Belief in the Books › Importance Of Believing In The Books | 2:112 | Sahih Muslim 1773a | God: The Prior Question › From A Creator To A Message | Answering the Shia › 5. Aisha, The Mother Of The Believers
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What does the Quran say about this? | What did the Prophet say about this?
+A: The app doesn’t hold a single list of books, but it does share what scholars and readers have valued in the past. One piece of conversation from the past suggests that a solid read might start with clarity about faith and practice, and another points to a work that explores how belief and action shape life.
+
+[1] The app’s own article on Islamic values notes that strong character and kindness toward others are central to faith, and it suggests that exploring these themes can deepen understanding. [2] The Quran’s verse 2:105 shows that good is not guaranteed, and mercy is chosen by Allah, hinting at a path where meaning is built through trust in divine will. [3] A hadith from Sahih al-Bukhari speaks of travelers finding rest and purpose in routine, which can mirror the steady work of learning. [4] The app’s article on belief in the books highlights that faith includes accepting divine guidance, and it links this to teachings recorded in the Prophet’s words. [5] The Quran’s verse 2:112 connects submission to good deeds with peace, reinforcing that wisdom often lies in living rightly. [6] A hadith from Sahih Muslim shows how personal experience and learning from others can guide understanding, and [7] the app’s exploration of meaning asks whether questions about existence lead to clarity, underscoring that reflection is part of the journey. [8] The app’s account of Aisha’s testimony in the Quran and commentary shows that truth and justice are upheld through testimony, which can inform how one approaches learning.
+===== Q: Can I go back to sleep after Fajr?
+INTENT: ruling followUp=false engine=onDevice first token 2.3s, total 7.2s
+RETRIEVAL: 787 ms; lanes articles=4 hadithRanked=1 hadithSemantic=6 hadithTopics=3 quranKeyword=1 quranSemantic=7 quranTopics=5 surahName=1; ranking 2:255 0.81 | Surah 89 Al-Fajr 0.80 | How to Make Up Missed Prayers › Sleep And Forgetting 0.77 | Sahih al-Bukhari 2661 0.54 | Sahih al-Bukhari 2468 0.54 | Adhan › Only For Fajr 0.51 | 39:42 0.50 | Sahih al-Bukhari 2458 0.42 | How to Pray Witr › Its Time 0.39 | Sahih al-Bukhari 4141 0.36 | 6:31 0.35 | Dawud › Lessons 0.31; window=4096 instructions=888
+SOURCES: [1] 2:255 | [2] Surah 89 Al-Fajr | [3] How to Make Up Missed Prayers › Sleep And Forgetting | [4] Sahih al-Bukhari 2661 | [5] Sahih al-Bukhari 2468 | [6] Adhan › Only For Fajr | [7] 39:42 | [8] Sahih al-Bukhari 2458
+CITED: 39:42 | Adhan › Only For Fajr | How to Make Up Missed Prayers › Sleep And Forgetting
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What is the evidence on this? | Do the schools of thought differ on this?
+A: The evidence from the Quran and the Prophet’s practice points toward a firm prohibition.
+
+1. The verse of Allah in Surah Az-Zumar [7] states: “Prayer is better than sleep,” and it is said only in the Adhan for Fajr [6].
+2. The Prophet (peace and blessings be upon him) himself once slept through Fajr on a journey and prayed it when the Companions woke, after the sun had risen [3].
+3. The Prophet’s practice was to pray the missed prayer as soon as he remembered it, with no other expiation required [3].
+
+Scholars agree that sleeping through Fajr and failing to pray it is a serious omission, and the preference is to make up the prayer immediately. However, there is no explicit permission in the Quran or Hadith to deliberately postpone the prayer. The stance on this varies among scholars, and a qualified scholar can advise based on personal circumstances and local rulings.
+===== Q: Is it haram to dye my hair?
+INTENT: ruling followUp=false engine=onDevice first token 2.1s, total 12.8s
+RETRIEVAL: 295 ms; lanes articles=4 hadithRanked=2 hadithSemantic=6 hadithTopics=3 quranKeyword=6 quranSemantic=7 quranTopics=2; ranking 73:17 0.95 | How to Make Ghusl › How To Make Ghusl 0.77 | 16:80 0.64 | 19:4 0.57 | Sahih al-Bukhari 166 0.54 | Sunan Ibn Majah 3074 0.54 | 48:27 0.53 | Adhan › Only For Fajr 0.51 | Sahih al-Bukhari 4294 0.42 | 30:54 0.40 | 20:94 0.39 | How to Pray When Sick › Common Questions 0.39; window=4096 instructions=888
+SOURCES: [1] 73:17 | [2] How to Make Ghusl › How To Make Ghusl | [3] 16:80 | [4] 19:4 | [5] Sahih al-Bukhari 166 | [6] Sunan Ibn Majah 3074 | [7] 48:27 | [8] Adhan › Only For Fajr
+CITED: Sahih al-Bukhari 166 | Sunan Ibn Majah 3074
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What is the evidence on this? | Do the schools of thought differ on this?
+A: The Quran and the Prophet’s actions do not mention hair dyeing by name, so there is no direct prohibition stated. However, a hadith shows the Prophet observing certain practices tied to hair:
+
+[5] `Ubaid Ibn Juraij asked `Abdullah bin `Umar about things he never saw companions do, including dyeing hair with Hinna.
+
+[6] In another account, the Prophet’s companions cut their hair and changed their hair length when not performing Hajj with sacrificial animals, though the Prophet and those with animals did not.
+
+The sources do not explicitly forbid hair dyeing, but they record the Prophet’s attention to hair appearance and certain practices. There is no indication of a general prohibition in these texts.
+
+Scholars differ on whether such practices are prohibited or permitted. Some view them as permissible if not contrary to established norms, while others caution against unnecessary adornment.
+
+For guidance tailored to your situation, consult a qualified scholar familiar with local customs and religious rulings.
+===== Q: What should I do when my head hurts?
+INTENT: general followUp=false engine=onDevice first token 2.1s, total 2.1s
+RETRIEVAL: 419 ms; lanes articles=4 hadithRanked=6 hadithSemantic=6 quranKeyword=6 quranSemantic=7 quranTopics=2 surahName=1; ranking Sahih al-Bukhari 2661 0.90 | Surah 11 Hud 0.80 | 7:150 0.64 | Sahih al-Bukhari 3905 0.60 | The Bible Points Ahead › The Stone The Builders Rejected 0.55 | 20:94 0.49 | 44:48 0.47 | 19:4 0.46 | Sahih al-Bukhari 4037 0.45 | How to Make Ghusl › How To Make Ghusl 0.37 | Sahih al-Bukhari 4141 0.36 | 12:36 0.36; window=4096 instructions=888
+SOURCES: [1] Sahih al-Bukhari 2661 | [2] Surah 11 Hud | [3] 7:150 | [4] Sahih al-Bukhari 3905 | [5] The Bible Points Ahead › The Stone The Builders Rejected | [6] 20:94 | [7] 44:48 | [8] 19:4
+CITED: 
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about this? | Which verses of the Quran speak about this?
+A: The sources do not mention anything about headaches.
+===== Q: How many days is Ramadan?
+INTENT: general followUp=false engine=onDevice first token 2.1s, total 2.2s
+RETRIEVAL: 594 ms; lanes articles=4 hadithRanked=3 hadithSemantic=6 hadithTopics=3 quranKeyword=2 quranSemantic=2 quranTopics=5; ranking 2:184 0.97 | 2:185 0.65 | Sawm › Rewards Of Fasting 0.55 | Sunan Abi Dawud 507 0.45 | Sunan Abi Dawud 1395 0.45 | Sahih al-Bukhari 1915 0.42 | Sighting the New Month › The Rule 0.37 | 7:54 0.35 | Sunan Abi Dawud 2327 0.30 | Sunan Abi Dawud 1390 0.30 | Sahih al-Bukhari 1920 0.28 | What is Islam? › The Five Pillars 0.28; window=4096 instructions=888
+SOURCES: [1] 2:184 | [2] 2:185 | [3] Sawm › Rewards Of Fasting | [4] Sunan Abi Dawud 507 | [5] Sunan Abi Dawud 1395 | [6] Sahih al-Bukhari 1915 | [7] Sighting the New Month › The Rule | [8] 7:54
+CITED: 2:185
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: Is there a dua for fasting? | What do the hadith say about fasting? | Explain Al-Baqarah 2:185 in more detail
+A: The month of Ramadan lasts for one month [2].

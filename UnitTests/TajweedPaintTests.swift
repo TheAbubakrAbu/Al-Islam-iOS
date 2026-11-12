@@ -553,13 +553,24 @@ final class QiraahRuleOrderTests: XCTestCase {
         Settings.Riwayah.allOptions.map(\.tag).filter { QiraahTajweedStore.fileName(for: $0) != nil }
     }
 
-    /// Abu, 2026-11-01: "in tajweed legend taqlil should come after imaalah" (its mixed form between them).
+    /// Abu, 2026-11-01: "in tajweed legend taqlil should come after imaalah" (its mixed form between them),
+    /// then "fix them to be best order that makes sense": the khilaf wash first, the groups in the order
+    /// the store's comment gives, each rule once.
     func testTaqlilFollowsImalah() throws {
         let order = QiraahTajweedStore.ruleOrder
         let imalah = try XCTUnwrap(order.firstIndex(of: "imalah"))
         XCTAssertEqual(order.firstIndex(of: "imalah_taqlil"), imalah + 1)
         XCTAssertEqual(order.firstIndex(of: "taqlil"), imalah + 2)
-        XCTAssertLessThan(QiraahTajweedStore.ruleRank("idgham"), QiraahTajweedStore.ruleRank("imalah"))
+        XCTAssertEqual(Set(order).count, order.count)
+        XCTAssertEqual(order.prefix(2), ["khilaf_word", "khilaf_harf"])
+        let rank = QiraahTajweedStore.ruleRank
+        // The groups: differs from Hafs, tilts, lengthenings, joins, letters, thin and thick, pauses.
+        XCTAssertLessThan(rank("taqlil"), rank("madd_badal"))
+        XCTAssertLessThan(rank("madd_leen"), rank("silah_meem"))
+        XCTAssertLessThan(rank("ha_dhamir"), rank("idgham"))
+        XCTAssertLessThan(rank("ishmam_sad"), rank("raa_muraqqaqah"))
+        XCTAssertLessThan(rank("lam_mughallazah"), rank("sakt"))
+        XCTAssertEqual(order.last, "ibtida_wasl")
     }
 
     /// A rule the app can describe has a place in the order; an unknown key sorts last, in its own order.
@@ -569,7 +580,7 @@ final class QiraahRuleOrderTests: XCTestCase {
         }
         XCTAssertEqual(QiraahTajweedStore.ruleRank("made_up"), QiraahTajweedStore.ruleOrder.count)
         XCTAssertEqual(QiraahTajweedStore.sortedByRule(["taqlil", "zzz", "idgham", "aaa", "imalah"]) { $0 },
-                       ["idgham", "imalah", "taqlil", "zzz", "aaa"])
+                       ["imalah", "taqlil", "idgham", "zzz", "aaa"])
     }
 
     /// Every shipped pack's legend comes out sorted, whatever order its print's box used.
@@ -595,5 +606,826 @@ final class QiraahRuleOrderTests: XCTestCase {
         let taqlil = try XCTUnwrap(rules.first { $0.key == "taqlil" })
         XCTAssertEqual(taqlil.uses.map(\.tag), [Settings.Riwayah.warsh])
         XCTAssertGreaterThan(taqlil.uses[0].count, 1000)
+    }
+}
+
+/// "Differs from Hafs" one letter at a time (2026-11-01, Warsh first): the print's khilaf letters carried
+/// over to their Hafs counterparts, and the word pairing underneath.
+@MainActor
+final class QiraatLetterDiffTests: XCTestCase {
+    private func text(_ word: String, _ range: NSRange) -> String { (word as NSString).substring(with: range) }
+
+    /// Warsh's يُومِنُونَ marks its wāw (cluster 1): the letter it answers to in Hafs is the ؤ.
+    func testKhilafLetterLandsOnItsHafsCounterpart() {
+        let hafs = "يُؤۡمِنُونَ"
+        let ranges = QiraatLetterDiff.projectedRanges(hafsWord: hafs, riwayahWord: "يُومِنُونَ", extents: [(lo: 1, hi: 1)])
+        XCTAssertEqual(ranges.map { text(hafs, $0) }, ["ؤۡ"])
+    }
+
+    /// Warsh's اٰمَنُوا has no hamzah: Hafs's ء has no pair, so it is changed along with the alif it marks.
+    func testDroppedHafsLettersAreChanged() {
+        let hafs = "ءَامَنُواْ"
+        let ranges = QiraatLetterDiff.projectedRanges(hafsWord: hafs, riwayahWord: "اٰمَنُوا", extents: [(lo: 0, hi: 0)])
+        XCTAssertEqual(ranges.map { text(hafs, $0) }, ["ءَا"])
+    }
+
+    /// A whole-word mark (lo -1) covers the whole counterpart, the letter the riwayah drops included.
+    func testWholeWordCoversTheWholeCounterpart() {
+        let hafs = "وَسَارِعُوٓاْ"
+        let ranges = QiraatLetterDiff.projectedRanges(hafsWord: hafs, riwayahWord: "سَارِعُوٓاْ", extents: [(lo: -1, hi: -1)])
+        XCTAssertEqual(ranges.map { text(hafs, $0) }, [hafs])
+    }
+
+    /// A word the print leaves black tints nothing, however its spelling differs.
+    func testUnmarkedWordsStayPlain() {
+        XCTAssertEqual(QiraatLetterDiff.projectedRanges(hafsWord: "غَمَٰم", riwayahWord: "غَمَام", extents: []), [])
+    }
+
+    /// Two letters marked apart stay two ranges; the letter between them stays plain.
+    func testSeparateLettersStaySeparate() {
+        let hafs = "يُؤۡتِيَنِ"
+        let ranges = QiraatLetterDiff.projectedRanges(hafsWord: hafs, riwayahWord: "يُّوتِيَنِۦ", extents: [(lo: 1, hi: 1), (lo: 4, hi: 4)])
+        XCTAssertEqual(ranges.map { text(hafs, $0) }, ["ؤۡ", "نِ"])
+    }
+
+    /// The folded LCS pairs the words both read alike; a replaced word pairs positionally inside its gap.
+    func testWordPairingFillsEqualGaps() {
+        let pairing = QiraatLetterDiff.pairWords(hafs: ["قُلۡ", "هُوَ", "ٱللَّهُ", "أَحَدٌ"], riwayah: ["قَالَ", "هُوَ", "اَ۬للَّهُ", "اَحَدٌ"])
+        XCTAssertEqual(pairing.pairs, [0: 0, 1: 1, 2: 2, 3: 3])
+        XCTAssertTrue(pairing.hafsOnly.isEmpty)
+        XCTAssertTrue(pairing.riwayahOnly.isEmpty)
+    }
+
+    /// A Hafs word the riwayah has no word for is left over; an uneven gap is not guessed at.
+    func testWordPairingLeavesUnevenGaps() {
+        let pairing = QiraatLetterDiff.pairWords(hafs: ["وَإِذۡ", "قَالَ", "مُوسَىٰ"], riwayah: ["وَإِذۡ", "مُوسَىٰ"])
+        XCTAssertEqual(pairing.pairs, [0: 0, 2: 1])
+        XCTAssertEqual(pairing.hafsOnly, [1])
+    }
+
+    /// A letter the riwayah adds has no Hafs pair: it lands on the Hafs letter it follows, so the word
+    /// still shows where to look. Warsh's إِبۡرَٰهِـيمَ marks its yā; Hafs's small yā rides on the
+    /// tatweel before it, and that tatweel is the only tint.
+    func testAddedLetterLandsOnTheLetterItFollows() {
+        let hafs = "قَالَ"
+        let ranges = QiraatLetterDiff.projectedRanges(hafsWord: hafs, riwayahWord: "قَالُوا", extents: [(lo: 3, hi: 3)])
+        XCTAssertEqual(ranges.map { text(hafs, $0) }, ["لَ"])
+        let ibrahim = "إِبۡرَٰهِـۧمَ"
+        let ibrahimRanges = QiraatLetterDiff.projectedRanges(hafsWord: ibrahim, riwayahWord: "إِبۡرَٰهِـيمَ", extents: [(lo: 5, hi: 5)])
+        XCTAssertEqual(ibrahimRanges.map { text(ibrahim, $0) }, ["ـۧ"])
+    }
+
+    /// A swapped letter needs no anchor: Hafs's تَ sits in Qalun's يَ's gap and is marked as unpaired,
+    /// so the ع after it stays plain.
+    func testSwappedLetterDoesNotSpreadToItsNeighbour() {
+        let hafs = "تَعۡمَلُونَ"
+        let ranges = QiraatLetterDiff.projectedRanges(hafsWord: hafs, riwayahWord: "يَعۡمَلُونَ", extents: [(lo: 0, hi: 0)])
+        XCTAssertEqual(ranges.map { text(hafs, $0) }, ["تَ"])
+    }
+
+    /// Every letter print is letter-level: Warsh, Qalun, al-Bazzi, Qunbul, as-Susi, Shubah, Hisham, Ibn
+    /// Dhakwan, Abu al-Harith, ad-Duri an al-Kisai, Ibn Wardan, Ibn Jammaz, Ruways, Rawh, Ishaq and Idris,
+    /// and so are ad-Duri an Abi Amr, Khalaf and Khallad, whose whole-word prints the builder narrows
+    /// to the differing letters. A beta print is letter-level only while its text may render: before
+    /// the beta consent its text surfaces hand back Hafs, which its extents do not describe.
+    func testOnlyListedRiwayatAreLetterLevel() {
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.warsh))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.qaloon))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.buzzi))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.qunbul))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.susi))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.shubah))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.duri))
+        XCTAssertFalse(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.hafsTag))
+
+        let betaWasEnabled = Settings.shared.betaQiraatEnabled
+        defer { Settings.shared.betaQiraatEnabled = betaWasEnabled }
+        Settings.shared.betaQiraatEnabled = false
+        XCTAssertFalse(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.hisham))
+        XCTAssertFalse(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.ibnDhakwan))
+        XCTAssertFalse(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.abuHarith))
+        XCTAssertFalse(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.duriKisai))
+        XCTAssertFalse(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.ibnWardan))
+        XCTAssertFalse(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.ibnJammaz))
+        XCTAssertFalse(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.ruways))
+        XCTAssertFalse(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.rawh))
+        XCTAssertFalse(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.ishaq))
+        XCTAssertFalse(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.idris))
+        XCTAssertFalse(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.khalaf))
+        XCTAssertFalse(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.khallad))
+        Settings.shared.betaQiraatEnabled = true
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.hisham))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.ibnDhakwan))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.abuHarith))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.duriKisai))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.ibnWardan))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.ibnJammaz))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.ruways))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.rawh))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.ishaq))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.idris))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.khalaf))
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: Settings.Riwayah.khallad))
+    }
+
+    /// Hafs 2:3 against Warsh: the pack marks only the wāw of يُومِنُونَ, so Hafs's ayah tints only its ؤ.
+    /// Warsh counts Madani, where الٓمٓ is not an ayah, so Hafs 2:3 is Warsh's own ayah 2 (the alignment
+    /// says which; the sheet asks it the same way).
+    func testHafsAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let hafs = try XCTUnwrap(data.ayah(surah: 2, ayah: 3)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let own = try XCTUnwrap(QiraahComparison.alignment(surahID: 2, tag: Settings.Riwayah.warsh, quranData: data)?
+            .riwayahNumberForHafs[3])
+        let warsh = try XCTUnwrap(data.ayah(surah: 2, ayah: own)).rawArabicText(surahId: 2, qiraahOverride: Settings.Riwayah.warsh)
+        guard warsh != hafs, warsh.contains("يُومِنُونَ") else {
+            throw XCTSkip("Warsh's text is not loaded in this simulator (showOtherQiraatReciters is off)")
+        }
+        XCTAssertEqual(own, 2)
+        let ranges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: hafs, tag: Settings.Riwayah.warsh,
+                                                                     surah: 2, ownAyah: own, splitSpan: nil))
+        XCTAssertEqual(ranges.map { text(hafs, $0) }, ["ؤۡ"])
+    }
+
+    /// Hafs 1:4 against Qalun: the print marks the mīm and lām of مَلِكِ (no dagger alif), so Hafs's
+    /// مَٰلِكِ tints those two letters and nothing else. Qalun counts Madani too: the basmalah is not
+    /// ayah 1 of al-Fatihah, so Hafs 1:4 is Qalun's own ayah 3.
+    func testQalunAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let hafs = try XCTUnwrap(data.ayah(surah: 1, ayah: 4)).rawArabicText(surahId: 1, qiraahOverride: "")
+        let own = try XCTUnwrap(QiraahComparison.alignment(surahID: 1, tag: Settings.Riwayah.qaloon, quranData: data)?
+            .riwayahNumberForHafs[4])
+        let qalun = try XCTUnwrap(data.ayah(surah: 1, ayah: own)).rawArabicText(surahId: 1, qiraahOverride: Settings.Riwayah.qaloon)
+        guard qalun != hafs, qalun.contains("مَلِكِ") else {
+            throw XCTSkip("Qalun's text is not loaded in this simulator (showOtherQiraatReciters is off)")
+        }
+        XCTAssertEqual(own, 3)
+        let ranges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: hafs, tag: Settings.Riwayah.qaloon,
+                                                                     surah: 1, ownAyah: own, splitSpan: nil))
+        XCTAssertEqual(ranges.map { text(hafs, $0) }, ["مَٰلِ"])
+    }
+
+    /// Hafs 11:40 against al-Bazzi: the print marks the alif of جَا (the hamzah of جَآءَ drops before
+    /// أَمۡرُنَا, so Hafs's alif and its dropped hamzah are the counterpart) and the lām of كُلِّ.
+    func testBazziAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let hafs = try XCTUnwrap(data.ayah(surah: 11, ayah: 40)).rawArabicText(surahId: 11, qiraahOverride: "")
+        let own = try XCTUnwrap(QiraahComparison.alignment(surahID: 11, tag: Settings.Riwayah.buzzi, quranData: data)?
+            .riwayahNumberForHafs[40])
+        let bazzi = try XCTUnwrap(data.ayah(surah: 11, ayah: own)).rawArabicText(surahId: 11, qiraahOverride: Settings.Riwayah.buzzi)
+        guard bazzi != hafs, bazzi.contains("جَا أَمۡرُنَا") else {
+            throw XCTSkip("al-Bazzi's text is not loaded in this simulator (showOtherQiraatReciters is off)")
+        }
+        XCTAssertEqual(own, 40)
+        let ranges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: hafs, tag: Settings.Riwayah.buzzi,
+                                                                     surah: 11, ownAyah: own, splitSpan: nil))
+        XCTAssertEqual(ranges.map { text(hafs, $0) }, ["آءَ", "لّٖ"])
+    }
+
+    /// Hafs 1:6 and 2:10 against Qunbul: the print marks the ṣād of ٱلصِّۜرَٰطَ (Qunbul reads it with a sīn)
+    /// and the three changed letters of يُكَذِّبُونَ; the silah ۥ on the plural mīm is left black, so those
+    /// words stay plain. Qunbul counts Makki, where الٓمٓ is not an ayah, so Hafs 2:10 is its own ayah 9.
+    func testQunbulAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.qunbul
+        let sirat = try XCTUnwrap(data.ayah(surah: 1, ayah: 6)).rawArabicText(surahId: 1, qiraahOverride: "")
+        let ownSirat = try XCTUnwrap(QiraahComparison.alignment(surahID: 1, tag: tag, quranData: data)?
+            .riwayahNumberForHafs[6])
+        let qunbul = try XCTUnwrap(data.ayah(surah: 1, ayah: ownSirat)).rawArabicText(surahId: 1, qiraahOverride: tag)
+        guard qunbul != sirat, qunbul.contains("ٱلصِّۜرَٰطَ") else {
+            throw XCTSkip("Qunbul's text is not loaded in this simulator (showOtherQiraatReciters is off)")
+        }
+        XCTAssertEqual(ownSirat, 6)
+        let siratRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: sirat, tag: tag, surah: 1,
+                                                                          ownAyah: ownSirat, splitSpan: nil))
+        XCTAssertEqual(siratRanges.map { text(sirat, $0) }, ["صِّ"])
+
+        let hafs = try XCTUnwrap(data.ayah(surah: 2, ayah: 10)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let own = try XCTUnwrap(QiraahComparison.alignment(surahID: 2, tag: tag, quranData: data)?
+            .riwayahNumberForHafs[10])
+        XCTAssertEqual(own, 9)
+        let ranges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: hafs, tag: tag, surah: 2,
+                                                                     ownAyah: own, splitSpan: nil))
+        XCTAssertEqual(ranges.map { text(hafs, $0) }, ["يَكۡذِ"])
+    }
+
+    /// Hafs 2:3 and 2:67 against as-Susi: the print marks the madd letter that replaces a sākin hamzah
+    /// (يُومِنُونَ, يَامُرۡكُمۡ), the rā of يَامُرۡكُمۡ it reads sākin, and the wāw seat of هُزُؤٗا, so Hafs's ayahs
+    /// tint only ؤ, then أ and ر apart in one word, then و. As-Susi counts Basri, where الٓمٓ is not an
+    /// ayah, so Hafs 2:3 and 2:67 are its own ayahs 2 and 66.
+    func testSusiAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.susi
+        let believe = try XCTUnwrap(data.ayah(surah: 2, ayah: 3)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let ownBelieve = try XCTUnwrap(QiraahComparison.alignment(surahID: 2, tag: tag, quranData: data)?
+            .riwayahNumberForHafs[3])
+        let susi = try XCTUnwrap(data.ayah(surah: 2, ayah: ownBelieve)).rawArabicText(surahId: 2, qiraahOverride: tag)
+        guard susi != believe, susi.contains("يُومِنُونَ") else {
+            throw XCTSkip("as-Susi's text is not loaded in this simulator (showOtherQiraatReciters is off)")
+        }
+        XCTAssertEqual(ownBelieve, 2)
+        let believeRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: believe, tag: tag, surah: 2,
+                                                                            ownAyah: ownBelieve, splitSpan: nil))
+        XCTAssertEqual(believeRanges.map { text(believe, $0) }, ["ؤۡ"])
+
+        let hafs = try XCTUnwrap(data.ayah(surah: 2, ayah: 67)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let own = try XCTUnwrap(QiraahComparison.alignment(surahID: 2, tag: tag, quranData: data)?
+            .riwayahNumberForHafs[67])
+        XCTAssertEqual(own, 66)
+        let ranges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: hafs, tag: tag, surah: 2,
+                                                                     ownAyah: own, splitSpan: nil))
+        XCTAssertEqual(ranges.map { text(hafs, $0) }, ["أۡ", "رُ", "وٗ"])
+    }
+
+    /// Hafs 2:271 and 21:4 against Shubah: the print marks the ʿayn it reads sākin in فَنِعۡمَّا and the nūn
+    /// it reads for Hafs's yā in وَنُكَفِّرُ, so Hafs's ayah tints ع in one word and ي in the other. Where
+    /// Shubah reads قُل for قَالَ the print marks the whole word, so Hafs's قَالَ tints whole and the
+    /// rā of رَبِّي (Shubah رَّبِّي) alone. Shubah counts Kufi like Hafs, so the ayah numbers match.
+    func testShubahAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.shubah
+        let hafs = try XCTUnwrap(data.ayah(surah: 2, ayah: 271)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let own = try XCTUnwrap(QiraahComparison.alignment(surahID: 2, tag: tag, quranData: data)?
+            .riwayahNumberForHafs[271])
+        let shubah = try XCTUnwrap(data.ayah(surah: 2, ayah: own)).rawArabicText(surahId: 2, qiraahOverride: tag)
+        guard shubah != hafs, shubah.contains("فَنِعۡمَّا") else {
+            throw XCTSkip("Shubah's text is not loaded in this simulator (showOtherQiraatReciters is off)")
+        }
+        XCTAssertEqual(own, 271)
+        let ranges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: hafs, tag: tag, surah: 2,
+                                                                     ownAyah: own, splitSpan: nil))
+        XCTAssertEqual(ranges.map { text(hafs, $0) }, ["عِ", "يُ"])
+
+        let said = try XCTUnwrap(data.ayah(surah: 21, ayah: 4)).rawArabicText(surahId: 21, qiraahOverride: "")
+        let ownSaid = try XCTUnwrap(QiraahComparison.alignment(surahID: 21, tag: tag, quranData: data)?
+            .riwayahNumberForHafs[4])
+        XCTAssertEqual(ownSaid, 4)
+        let saidRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: said, tag: tag, surah: 21,
+                                                                         ownAyah: ownSaid, splitSpan: nil))
+        XCTAssertEqual(saidRanges.map { text(said, $0) }, ["قَالَ", "رَ"])
+    }
+
+    /// Hafs 2:10 and 2:85 against Hisham, the first beta print. Hisham counts Shami, where الٓمٓ is not an
+    /// ayah and Hafs 2:10 is two ayahs (own 9 ends at أَلِيمُۢ, own 10 is بِمَا كَانُواْ يُكَذِّبُونَ), so the
+    /// Hafs ayah is gathered from both pieces and tints only يَكۡذِ of يَكۡذِبُونَ, the print's يُكَذِّ. Hafs
+    /// 2:85 is own 84: the ẓāʾ of تَظَٰهَرُونَ (Hisham تَظَّٰهَرُونَ) and تُفَٰ of تُفَٰدُوهُمۡ (Hisham
+    /// تَفۡدُوهُمۡ). Beta text renders only after consent, so the test turns it on and back.
+    func testHishamAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.hisham
+        let betaWasEnabled = Settings.shared.betaQiraatEnabled
+        defer { Settings.shared.betaQiraatEnabled = betaWasEnabled }
+        Settings.shared.betaQiraatEnabled = true
+        guard BetaQiraatStore.shared.isAvailable(tag: tag) else {
+            throw XCTSkip("Hisham's beta text is not bundled in this build")
+        }
+        let alignment = try XCTUnwrap(QiraahComparison.alignment(surahID: 2, tag: tag, quranData: data))
+
+        let hafs = try XCTUnwrap(data.ayah(surah: 2, ayah: 10)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let own = try XCTUnwrap(alignment.riwayahNumberForHafs[10])
+        XCTAssertEqual(own, 9)
+        XCTAssertEqual(alignment.hafsRangeForRiwayah[own + 1], 10...10, "own 10 is the rest of Hafs 2:10")
+        let ranges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: hafs, tag: tag, surah: 2,
+                                                                     ownAyah: own, splitSpan: own...(own + 1)))
+        XCTAssertEqual(ranges.map { text(hafs, $0) }, ["يَكۡذِ"])
+
+        let ransom = try XCTUnwrap(data.ayah(surah: 2, ayah: 85)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let ownRansom = try XCTUnwrap(alignment.riwayahNumberForHafs[85])
+        XCTAssertEqual(ownRansom, 84)
+        let ransomRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: ransom, tag: tag, surah: 2,
+                                                                           ownAyah: ownRansom, splitSpan: nil))
+        XCTAssertEqual(ransomRanges.map { text(ransom, $0) }, ["ظَٰ", "تُفَٰ"])
+    }
+
+    /// Ibn Dhakwan, Ibn Amir's other rawi, counts Shami like Hisham: Hafs 2:10 is own 9 and 10 and tints
+    /// only يَكۡذِ. Hafs 2:106 is own 105, where نَنسَخۡ (Ibn Dhakwan نُنسِخۡ) has two marked letters with an
+    /// untouched nūn between them, so the Hafs word carries two separate runs, نَ and سَ. Hafs 18:34 is own
+    /// 33 (al-Kahf has 106 ayahs in the Shami count): ثَمَ of ثَمَرٞ, the print's ثُمُ.
+    func testIbnDhakwanAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.ibnDhakwan
+        let betaWasEnabled = Settings.shared.betaQiraatEnabled
+        defer { Settings.shared.betaQiraatEnabled = betaWasEnabled }
+        Settings.shared.betaQiraatEnabled = true
+        guard BetaQiraatStore.shared.isAvailable(tag: tag) else {
+            throw XCTSkip("Ibn Dhakwan's beta text is not bundled in this build")
+        }
+        let baqarah = try XCTUnwrap(QiraahComparison.alignment(surahID: 2, tag: tag, quranData: data))
+
+        let hafs = try XCTUnwrap(data.ayah(surah: 2, ayah: 10)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let own = try XCTUnwrap(baqarah.riwayahNumberForHafs[10])
+        XCTAssertEqual(own, 9)
+        XCTAssertEqual(baqarah.hafsRangeForRiwayah[own + 1], 10...10, "own 10 is the rest of Hafs 2:10")
+        let ranges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: hafs, tag: tag, surah: 2,
+                                                                     ownAyah: own, splitSpan: own...(own + 1)))
+        XCTAssertEqual(ranges.map { text(hafs, $0) }, ["يَكۡذِ"])
+
+        let abrogate = try XCTUnwrap(data.ayah(surah: 2, ayah: 106)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let ownAbrogate = try XCTUnwrap(baqarah.riwayahNumberForHafs[106])
+        XCTAssertEqual(ownAbrogate, 105)
+        let abrogateRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: abrogate, tag: tag, surah: 2,
+                                                                             ownAyah: ownAbrogate, splitSpan: nil))
+        XCTAssertEqual(abrogateRanges.map { text(abrogate, $0) }, ["نَ", "سَ"])
+
+        let kahf = try XCTUnwrap(QiraahComparison.alignment(surahID: 18, tag: tag, quranData: data))
+        let fruit = try XCTUnwrap(data.ayah(surah: 18, ayah: 34)).rawArabicText(surahId: 18, qiraahOverride: "")
+        let ownFruit = try XCTUnwrap(kahf.riwayahNumberForHafs[34])
+        XCTAssertEqual(ownFruit, 33)
+        let fruitRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: fruit, tag: tag, surah: 18,
+                                                                          ownAyah: ownFruit, splitSpan: nil))
+        XCTAssertEqual(fruitRanges.map { text(fruit, $0) }, ["ثَمَ"])
+    }
+
+    /// Abu al-Harith an al-Kisai, the third beta print, counts Kufi like Hafs, so the ayah numbers match.
+    /// Hafs 3:109: تُرۡجَعُ (Abu al-Harith تَرۡجِعُ) has two marked letters with an untouched rā between
+    /// them, so the Hafs word carries two separate runs, تُ and جَ. Hafs 3:39: the تۡ of فَنَادَتۡهُ (the
+    /// print's فَنَادَىٰهُ marks the yā that stands in for it), the هُ of وَهُوَ (the print's وَهۡوَ) and
+    /// يُبَشِّ of يُبَشِّرُكَ (the print's يَبۡشُرُ, three letters). Hafs 72:20: قُلۡ is marked whole for قَالَ.
+    func testAbuHarithAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.abuHarith
+        let betaWasEnabled = Settings.shared.betaQiraatEnabled
+        defer { Settings.shared.betaQiraatEnabled = betaWasEnabled }
+        Settings.shared.betaQiraatEnabled = true
+        guard BetaQiraatStore.shared.isAvailable(tag: tag) else {
+            throw XCTSkip("Abu al-Harith's beta text is not bundled in this build")
+        }
+        let imran = try XCTUnwrap(QiraahComparison.alignment(surahID: 3, tag: tag, quranData: data))
+
+        let returned = try XCTUnwrap(data.ayah(surah: 3, ayah: 109)).rawArabicText(surahId: 3, qiraahOverride: "")
+        let own = try XCTUnwrap(imran.riwayahNumberForHafs[109])
+        XCTAssertEqual(own, 109)
+        let ranges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: returned, tag: tag, surah: 3,
+                                                                     ownAyah: own, splitSpan: nil))
+        XCTAssertEqual(ranges.map { text(returned, $0) }, ["تُ", "جَ"])
+
+        let glad = try XCTUnwrap(data.ayah(surah: 3, ayah: 39)).rawArabicText(surahId: 3, qiraahOverride: "")
+        let ownGlad = try XCTUnwrap(imran.riwayahNumberForHafs[39])
+        XCTAssertEqual(ownGlad, 39)
+        let gladRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: glad, tag: tag, surah: 3,
+                                                                         ownAyah: ownGlad, splitSpan: nil))
+        XCTAssertEqual(gladRanges.map { text(glad, $0) }, ["تۡ", "هُ", "يُبَشِّ"])
+
+        let jinn = try XCTUnwrap(QiraahComparison.alignment(surahID: 72, tag: tag, quranData: data))
+        let say = try XCTUnwrap(data.ayah(surah: 72, ayah: 20)).rawArabicText(surahId: 72, qiraahOverride: "")
+        let ownSay = try XCTUnwrap(jinn.riwayahNumberForHafs[20])
+        XCTAssertEqual(ownSay, 20)
+        let sayRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: say, tag: tag, surah: 72,
+                                                                        ownAyah: ownSay, splitSpan: nil))
+        XCTAssertEqual(sayRanges.map { text(say, $0) }, ["قُلۡ"])
+    }
+
+    /// ad-Duri an al-Kisai, the fourth beta print, shares al-Kisai's Kufi count with Hafs. Hafs 21:112:
+    /// قَٰلَ is marked whole for the print's قُل, and the print's doubled رَّبِّ (the lām merges into it)
+    /// carries only its rāʾ onto Hafs's رَبِّ. Hafs 2:284: the print's jazm on فَيَغۡفِرۡ and وَيُعَذِّب
+    /// lands on the Hafs رُ and بُ, and the doubled مَّن on the Hafs مَ. Hafs 3:109: تُرۡجَعُ (the print's
+    /// تَرۡجِعُ) has two marked letters with an untouched rāʾ between them, so two separate runs.
+    func testDuriKisaiAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.duriKisai
+        let betaWasEnabled = Settings.shared.betaQiraatEnabled
+        defer { Settings.shared.betaQiraatEnabled = betaWasEnabled }
+        Settings.shared.betaQiraatEnabled = true
+        guard BetaQiraatStore.shared.isAvailable(tag: tag) else {
+            throw XCTSkip("ad-Duri an al-Kisai's beta text is not bundled in this build")
+        }
+        let prophets = try XCTUnwrap(QiraahComparison.alignment(surahID: 21, tag: tag, quranData: data))
+        let judge = try XCTUnwrap(data.ayah(surah: 21, ayah: 112)).rawArabicText(surahId: 21, qiraahOverride: "")
+        let ownJudge = try XCTUnwrap(prophets.riwayahNumberForHafs[112])
+        XCTAssertEqual(ownJudge, 112)
+        let judgeRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: judge, tag: tag, surah: 21,
+                                                                           ownAyah: ownJudge, splitSpan: nil))
+        XCTAssertEqual(judgeRanges.map { text(judge, $0) }, ["قَٰلَ", "رَ"])
+
+        let cow = try XCTUnwrap(QiraahComparison.alignment(surahID: 2, tag: tag, quranData: data))
+        let forgive = try XCTUnwrap(data.ayah(surah: 2, ayah: 284)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let ownForgive = try XCTUnwrap(cow.riwayahNumberForHafs[284])
+        XCTAssertEqual(ownForgive, 284)
+        let forgiveRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: forgive, tag: tag, surah: 2,
+                                                                             ownAyah: ownForgive, splitSpan: nil))
+        XCTAssertEqual(forgiveRanges.map { text(forgive, $0) }, ["رُ", "بُ", "مَ"])
+
+        let imran = try XCTUnwrap(QiraahComparison.alignment(surahID: 3, tag: tag, quranData: data))
+        let returned = try XCTUnwrap(data.ayah(surah: 3, ayah: 109)).rawArabicText(surahId: 3, qiraahOverride: "")
+        let own = try XCTUnwrap(imran.riwayahNumberForHafs[109])
+        XCTAssertEqual(own, 109)
+        let ranges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: returned, tag: tag, surah: 3,
+                                                                     ownAyah: own, splitSpan: nil))
+        XCTAssertEqual(ranges.map { text(returned, $0) }, ["تُ", "جَ"])
+    }
+
+    /// Ibn Wardan an Abi Jafar, the fifth beta print, counts Madani: الٓمٓ is not an ayah, so Hafs 2:6 is
+    /// his own ayah 5. There the print's tashil pair ءَٰا۬ lands on Hafs's ءَأَ, and Abu Jafar's ibdal of the
+    /// sākin hamzah (يُومِنُونَ) on Hafs's ؤ alone. Hafs 3:23: لِيُحۡكَمَ marks two letters with the ḥāʾ between
+    /// them untouched, so two runs on Hafs's لِيَحۡكُمَ. Hafs 43:24 (own 23): قُلۡ is marked whole for Hafs's
+    /// قَٰلَ, and جِينَٰكُمُۥ carries its yāʾ onto Hafs's ئ while the tāʾ Hafs alone reads is changed by definition.
+    func testIbnWardanAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.ibnWardan
+        let betaWasEnabled = Settings.shared.betaQiraatEnabled
+        defer { Settings.shared.betaQiraatEnabled = betaWasEnabled }
+        Settings.shared.betaQiraatEnabled = true
+        guard BetaQiraatStore.shared.isAvailable(tag: tag) else {
+            throw XCTSkip("Ibn Wardan's beta text is not bundled in this build")
+        }
+        let cow = try XCTUnwrap(QiraahComparison.alignment(surahID: 2, tag: tag, quranData: data))
+        let warned = try XCTUnwrap(data.ayah(surah: 2, ayah: 6)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let ownWarned = try XCTUnwrap(cow.riwayahNumberForHafs[6])
+        XCTAssertEqual(ownWarned, 5)
+        let warnedRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: warned, tag: tag, surah: 2,
+                                                                            ownAyah: ownWarned, splitSpan: nil))
+        XCTAssertEqual(warnedRanges.map { text(warned, $0) }, ["ءَأَ", "ؤۡ"])
+
+        let imran = try XCTUnwrap(QiraahComparison.alignment(surahID: 3, tag: tag, quranData: data))
+        let judge = try XCTUnwrap(data.ayah(surah: 3, ayah: 23)).rawArabicText(surahId: 3, qiraahOverride: "")
+        let ownJudge = try XCTUnwrap(imran.riwayahNumberForHafs[23])
+        XCTAssertEqual(ownJudge, 23)
+        let judgeRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: judge, tag: tag, surah: 3,
+                                                                           ownAyah: ownJudge, splitSpan: nil))
+        XCTAssertEqual(judgeRanges.map { text(judge, $0) }, ["يَ", "كُ"])
+
+        let ornaments = try XCTUnwrap(QiraahComparison.alignment(surahID: 43, tag: tag, quranData: data))
+        let said = try XCTUnwrap(data.ayah(surah: 43, ayah: 24)).rawArabicText(surahId: 43, qiraahOverride: "")
+        let ownSaid = try XCTUnwrap(ornaments.riwayahNumberForHafs[24])
+        XCTAssertEqual(ownSaid, 23)
+        let saidRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: said, tag: tag, surah: 43,
+                                                                          ownAyah: ownSaid, splitSpan: nil))
+        XCTAssertEqual(saidRanges.map { text(said, $0) }, ["قَٰلَ", "ئۡتُ"])
+    }
+    /// Ibn Jammaz an Abi Jafar, the sixth beta print, shares Abu Jafar's Madani count and nearly every mark
+    /// with Ibn Wardan: Hafs 2:6 is again his own ayah 5, with ءَٰا۬ landing on Hafs's ءَأَ and the ibdal wāw
+    /// on its ؤ alone. Hafs 3:13 carries one of the two marks only he has, يُوَيِّدُ for Hafs's يُؤَيِّدُ, beside
+    /// Abu Jafar's فِيَتَيۡنِ, فِيَةٞ, رَايَ and the wasl dot of اِ۪نَّ, while تَرَوۡنَهُمُۥ for يَرَوۡنَهُم tints the
+    /// yāʾ his tāʾ replaces. Hafs 11:116 carries the other: بِقۡيَةٖ marks three letters, one run on بَقِيَّةٖ.
+    func testIbnJammazAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.ibnJammaz
+        let betaWasEnabled = Settings.shared.betaQiraatEnabled
+        defer { Settings.shared.betaQiraatEnabled = betaWasEnabled }
+        Settings.shared.betaQiraatEnabled = true
+        guard BetaQiraatStore.shared.isAvailable(tag: tag) else {
+            throw XCTSkip("Ibn Jammaz's beta text is not bundled in this build")
+        }
+        let cow = try XCTUnwrap(QiraahComparison.alignment(surahID: 2, tag: tag, quranData: data))
+        let warned = try XCTUnwrap(data.ayah(surah: 2, ayah: 6)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let ownWarned = try XCTUnwrap(cow.riwayahNumberForHafs[6])
+        XCTAssertEqual(ownWarned, 5)
+        let warnedRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: warned, tag: tag, surah: 2,
+                                                                            ownAyah: ownWarned, splitSpan: nil))
+        XCTAssertEqual(warnedRanges.map { text(warned, $0) }, ["ءَأَ", "ؤۡ"])
+
+        let imran = try XCTUnwrap(QiraahComparison.alignment(surahID: 3, tag: tag, quranData: data))
+        let sign = try XCTUnwrap(data.ayah(surah: 3, ayah: 13)).rawArabicText(surahId: 3, qiraahOverride: "")
+        let ownSign = try XCTUnwrap(imran.riwayahNumberForHafs[13])
+        XCTAssertEqual(ownSign, 13)
+        let signRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: sign, tag: tag, surah: 3,
+                                                                          ownAyah: ownSign, splitSpan: nil))
+        XCTAssertEqual(signRanges.map { text(sign, $0) }, ["ئَ", "ئَ", "يَ", "أۡ", "ؤَ", "إِ"])
+
+        let hud = try XCTUnwrap(QiraahComparison.alignment(surahID: 11, tag: tag, quranData: data))
+        let remnant = try XCTUnwrap(data.ayah(surah: 11, ayah: 116)).rawArabicText(surahId: 11, qiraahOverride: "")
+        let ownRemnant = try XCTUnwrap(hud.riwayahNumberForHafs[116])
+        XCTAssertEqual(ownRemnant, 116)
+        let remnantRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: remnant, tag: tag, surah: 11,
+                                                                             ownAyah: ownRemnant, splitSpan: nil))
+        XCTAssertEqual(remnantRanges.map { text(remnant, $0) }, ["بَقِيَّ"])
+    }
+
+    /// Ruways an Yaqub, the seventh beta print, counts Basri: Hafs 2:6 is his own ayah 5, where Yaqub's
+    /// عَلَيۡهُمۡ tints the hāʾ of عَلَيۡهِمۡ and the tashil of ءَا۬نذَرۡتَهُمۡ lands on the second hamzah alone, with
+    /// nothing on the first. Hafs 2:10 is his own 9, where يُكَذِّبُونَ marks three letters, one run on يَكۡذِبُونَ.
+    /// Hafs 2:260 is his own 261: أَرۡنِي tints only the rāʾ of أَرِنِي and فَصِرۡهُنَّ only the ṣād of فَصُرۡهُنَّ.
+    /// Hafs 11:44 keeps its number and carries his ishmam on identical text: the qāf of each وَقِيلَ and the
+    /// ghayn of وَغِيضَ, with the trailing alif of his وَقِيلَا never spilling onto Hafs, beside أَقۡلِعِي's hamzah.
+    func testRuwaysAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.ruways
+        let betaWasEnabled = Settings.shared.betaQiraatEnabled
+        defer { Settings.shared.betaQiraatEnabled = betaWasEnabled }
+        Settings.shared.betaQiraatEnabled = true
+        guard BetaQiraatStore.shared.isAvailable(tag: tag) else {
+            throw XCTSkip("Ruways's beta text is not bundled in this build")
+        }
+        let cow = try XCTUnwrap(QiraahComparison.alignment(surahID: 2, tag: tag, quranData: data))
+        let warned = try XCTUnwrap(data.ayah(surah: 2, ayah: 6)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let ownWarned = try XCTUnwrap(cow.riwayahNumberForHafs[6])
+        XCTAssertEqual(ownWarned, 5)
+        let warnedRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: warned, tag: tag, surah: 2,
+                                                                            ownAyah: ownWarned, splitSpan: nil))
+        XCTAssertEqual(warnedRanges.map { text(warned, $0) }, ["هِ", "أَ"])
+
+        let liars = try XCTUnwrap(data.ayah(surah: 2, ayah: 10)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let ownLiars = try XCTUnwrap(cow.riwayahNumberForHafs[10])
+        XCTAssertEqual(ownLiars, 9)
+        let liarsRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: liars, tag: tag, surah: 2,
+                                                                           ownAyah: ownLiars, splitSpan: nil))
+        XCTAssertEqual(liarsRanges.map { text(liars, $0) }, ["يَكۡذِ"])
+
+        let birds = try XCTUnwrap(data.ayah(surah: 2, ayah: 260)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let ownBirds = try XCTUnwrap(cow.riwayahNumberForHafs[260])
+        XCTAssertEqual(ownBirds, 261)
+        let birdsRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: birds, tag: tag, surah: 2,
+                                                                           ownAyah: ownBirds, splitSpan: nil))
+        XCTAssertEqual(birdsRanges.map { text(birds, $0) }, ["رِ", "صُ"])
+
+        let hud = try XCTUnwrap(QiraahComparison.alignment(surahID: 11, tag: tag, quranData: data))
+        let flood = try XCTUnwrap(data.ayah(surah: 11, ayah: 44)).rawArabicText(surahId: 11, qiraahOverride: "")
+        let ownFlood = try XCTUnwrap(hud.riwayahNumberForHafs[44])
+        XCTAssertEqual(ownFlood, 44)
+        let floodRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: flood, tag: tag, surah: 11,
+                                                                           ownAyah: ownFlood, splitSpan: nil))
+        XCTAssertEqual(floodRanges.map { text(flood, $0) }, ["قِ", "أَ", "غِ", "قِ"])
+    }
+
+    /// Rawh an Yaqub, the eighth beta print, counts Basri like Ruways but reads his own pack: Hafs 2:6 is
+    /// his own ayah 5, where عَلَيۡهُمۡ tints only the hāʾ of عَلَيۡهِمۡ (the tashil of ءَأَنذَرۡتَهُمۡ was Ruways's).
+    /// Hafs 3:57 keeps its number: فَنُوَفِّيهُمۡ marks its nūn and its hāʾ, so the unpaired yāʾ and the hāʾ of
+    /// فَيُوَفِّيهِمۡ tint as two runs. Hafs 16:2 marks three words at once: تَنَزَّلُ tints the yāʾ and the zāy
+    /// of يُنَزِّلُ with the nūn between them plain, then the tāʾ marbūṭah of ٱلۡمَلَٰٓئِكَةَ and the nūn of
+    /// فَٱتَّقُونِ. Hafs 7:123 is his own 122, where ءَأَٰمَنتُم marks its first hamzah: the tint lands on the
+    /// first hamzah of ءَامَنتُم, where the print put it, not on the alif the computed change would pick.
+    func testRawhAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.rawh
+        let betaWasEnabled = Settings.shared.betaQiraatEnabled
+        defer { Settings.shared.betaQiraatEnabled = betaWasEnabled }
+        Settings.shared.betaQiraatEnabled = true
+        guard BetaQiraatStore.shared.isAvailable(tag: tag) else {
+            throw XCTSkip("Rawh's beta text is not bundled in this build")
+        }
+        let cow = try XCTUnwrap(QiraahComparison.alignment(surahID: 2, tag: tag, quranData: data))
+        let warned = try XCTUnwrap(data.ayah(surah: 2, ayah: 6)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let ownWarned = try XCTUnwrap(cow.riwayahNumberForHafs[6])
+        XCTAssertEqual(ownWarned, 5)
+        let warnedRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: warned, tag: tag, surah: 2,
+                                                                            ownAyah: ownWarned, splitSpan: nil))
+        XCTAssertEqual(warnedRanges.map { text(warned, $0) }, ["هِ"])
+
+        let imran = try XCTUnwrap(QiraahComparison.alignment(surahID: 3, tag: tag, quranData: data))
+        let wages = try XCTUnwrap(data.ayah(surah: 3, ayah: 57)).rawArabicText(surahId: 3, qiraahOverride: "")
+        let ownWages = try XCTUnwrap(imran.riwayahNumberForHafs[57])
+        XCTAssertEqual(ownWages, 57)
+        let wagesRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: wages, tag: tag, surah: 3,
+                                                                           ownAyah: ownWages, splitSpan: nil))
+        XCTAssertEqual(wagesRanges.map { text(wages, $0) }, ["يُ", "هِ"])
+
+        let bee = try XCTUnwrap(QiraahComparison.alignment(surahID: 16, tag: tag, quranData: data))
+        let angels = try XCTUnwrap(data.ayah(surah: 16, ayah: 2)).rawArabicText(surahId: 16, qiraahOverride: "")
+        let ownAngels = try XCTUnwrap(bee.riwayahNumberForHafs[2])
+        XCTAssertEqual(ownAngels, 2)
+        let angelsRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: angels, tag: tag, surah: 16,
+                                                                            ownAyah: ownAngels, splitSpan: nil))
+        XCTAssertEqual(angelsRanges.map { text(angels, $0) }, ["يُ", "زِّ", "ةَ", "نِ"])
+
+        let heights = try XCTUnwrap(QiraahComparison.alignment(surahID: 7, tag: tag, quranData: data))
+        let pharaoh = try XCTUnwrap(data.ayah(surah: 7, ayah: 123)).rawArabicText(surahId: 7, qiraahOverride: "")
+        let ownPharaoh = try XCTUnwrap(heights.riwayahNumberForHafs[123])
+        XCTAssertEqual(ownPharaoh, 122)
+        let pharaohRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: pharaoh, tag: tag, surah: 7,
+                                                                            ownAyah: ownPharaoh, splitSpan: nil))
+        XCTAssertEqual(pharaohRanges.map { text(pharaoh, $0) }, ["ءَ"])
+    }
+
+    /// Ishaq an Khalaf al-Ashir, the ninth beta print, counts Kufi like Hafs, so his own numbers are the
+    /// Hafs numbers. Hafs 2:85 marks two words: تَفۡدُوهُمۡ tints the tāʾ and the fāʾ of تُفَٰدُوهُمۡ as one run,
+    /// and يَعۡمَلُونَ only the tāʾ of تَعۡمَلُونَ. Hafs 2:98 holds the two names: وَجَبۡرَءِيلَ marks its jīm, its
+    /// rāʾ and the hamzah Hafs lacks, which tints the jīm and the rāʾ of وَجِبۡرِيلَ (the hamzah anchors to
+    /// the rāʾ it follows), and وَمِيكَٰٓـِٔيلَ marks its kāf, the hamzah on the tatweel (a cluster of its
+    /// own, as the tatweel sits in the base-letter range) and its yāʾ, so كَىٰ tints as one run and the lām
+    /// stays plain. Hafs 22:2 marks only the sīn and the kāf of سَكۡرٜىٰ twice, narrower than the computed
+    /// change, which would reach the rāʾ. Hafs 36:35 drops a letter: عَمِلَتۡ marks its tāʾ, and the hāʾ
+    /// Hafs adds in عَمِلَتۡهُ is changed by definition, so تۡهُ tints as one run.
+    func testIshaqAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.ishaq
+        let betaWasEnabled = Settings.shared.betaQiraatEnabled
+        defer { Settings.shared.betaQiraatEnabled = betaWasEnabled }
+        Settings.shared.betaQiraatEnabled = true
+        guard BetaQiraatStore.shared.isAvailable(tag: tag) else {
+            throw XCTSkip("Ishaq's beta text is not bundled in this build")
+        }
+        let cow = try XCTUnwrap(QiraahComparison.alignment(surahID: 2, tag: tag, quranData: data))
+        let ransom = try XCTUnwrap(data.ayah(surah: 2, ayah: 85)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let ownRansom = try XCTUnwrap(cow.riwayahNumberForHafs[85])
+        XCTAssertEqual(ownRansom, 85)
+        let ransomRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: ransom, tag: tag, surah: 2,
+                                                                            ownAyah: ownRansom, splitSpan: nil))
+        XCTAssertEqual(ransomRanges.map { text(ransom, $0) }, ["تُفَٰ", "تَ"])
+
+        let angels = try XCTUnwrap(data.ayah(surah: 2, ayah: 98)).rawArabicText(surahId: 2, qiraahOverride: "")
+        let ownAngels = try XCTUnwrap(cow.riwayahNumberForHafs[98])
+        XCTAssertEqual(ownAngels, 98)
+        let angelsRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: angels, tag: tag, surah: 2,
+                                                                            ownAyah: ownAngels, splitSpan: nil))
+        XCTAssertEqual(angelsRanges.map { text(angels, $0) }, ["جِ", "رِ", "كَىٰ"])
+
+        let hajj = try XCTUnwrap(QiraahComparison.alignment(surahID: 22, tag: tag, quranData: data))
+        let drunk = try XCTUnwrap(data.ayah(surah: 22, ayah: 2)).rawArabicText(surahId: 22, qiraahOverride: "")
+        let ownDrunk = try XCTUnwrap(hajj.riwayahNumberForHafs[2])
+        XCTAssertEqual(ownDrunk, 2)
+        let drunkRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: drunk, tag: tag, surah: 22,
+                                                                           ownAyah: ownDrunk, splitSpan: nil))
+        XCTAssertEqual(drunkRanges.map { text(drunk, $0) }, ["سُكَٰ", "سُكَٰ"])
+
+        let yaSin = try XCTUnwrap(QiraahComparison.alignment(surahID: 36, tag: tag, quranData: data))
+        let fruit = try XCTUnwrap(data.ayah(surah: 36, ayah: 35)).rawArabicText(surahId: 36, qiraahOverride: "")
+        let ownFruit = try XCTUnwrap(yaSin.riwayahNumberForHafs[35])
+        XCTAssertEqual(ownFruit, 35)
+        let fruitRanges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: fruit, tag: tag, surah: 36,
+                                                                           ownAyah: ownFruit, splitSpan: nil))
+        XCTAssertEqual(fruitRanges.map { text(fruit, $0) }, ["ثَمَ", "تۡهُ"])
+    }
+
+    /// Idris an Khalaf al-Ashir, the tenth beta print and the last letter print, reads Ishaq's text: his
+    /// pack and his text are Ishaq's byte for byte, and he counts Kufi too. The four Ishaq sites tint the
+    /// same letters under his tag, and the two tags agree range for range, so the tint follows the pack
+    /// his tag opens rather than the name on the picker.
+    func testIdrisAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.idris
+        let betaWasEnabled = Settings.shared.betaQiraatEnabled
+        defer { Settings.shared.betaQiraatEnabled = betaWasEnabled }
+        Settings.shared.betaQiraatEnabled = true
+        guard BetaQiraatStore.shared.isAvailable(tag: tag) else {
+            throw XCTSkip("Idris's beta text is not bundled in this build")
+        }
+        let sites: [(surah: Int, ayah: Int, tinted: [String])] = [
+            (2, 85, ["تُفَٰ", "تَ"]),
+            (2, 98, ["جِ", "رِ", "كَىٰ"]),
+            (22, 2, ["سُكَٰ", "سُكَٰ"]),
+            (36, 35, ["ثَمَ", "تۡهُ"]),
+        ]
+        for site in sites {
+            let where_ = "\(site.surah):\(site.ayah)"
+            let alignment = try XCTUnwrap(QiraahComparison.alignment(surahID: site.surah, tag: tag, quranData: data))
+            let hafs = try XCTUnwrap(data.ayah(surah: site.surah, ayah: site.ayah))
+                .rawArabicText(surahId: site.surah, qiraahOverride: "")
+            let own = try XCTUnwrap(alignment.riwayahNumberForHafs[site.ayah], where_)
+            XCTAssertEqual(own, site.ayah, where_)
+            let ranges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: hafs, tag: tag, surah: site.surah,
+                                                                          ownAyah: own, splitSpan: nil), where_)
+            XCTAssertEqual(ranges.map { text(hafs, $0) }, site.tinted, where_)
+            let ishaq = QiraatLetterDiff.hafsLetterRanges(hafsText: hafs, tag: Settings.Riwayah.ishaq,
+                                                          surah: site.surah, ownAyah: own, splitSpan: nil)
+            XCTAssertEqual(ranges, ishaq ?? [], "\(where_): Idris and Ishaq disagree")
+        }
+    }
+
+    /// ad-Duri an Abi Amr, the first whole-word print to join: his page inks the whole word, so the
+    /// builder narrows each mark to the clusters that differ from the aligned Hafs word. He counts
+    /// Basri, so Hafs 2:9 through 2:31 are his own 8 through 30. يُخَٰدِعُونَ and يُكَذِّبُونَ each mark one run of
+    /// three letters on يَخۡدَعُونَ and يَكۡذِبُونَ; the eased hamzah of اَ۬لَآ tints only the hamzah of أَلَآ (not
+    /// the lām, which his bare-alif spelling once made the normaliser read as an article); وَهۡوَ tints
+    /// the hāʾ of وَهُوَ; the opened yāʾ of إِنِّيَ tints the yāʾ of إِنِّيٓ; and هَٰٓؤُلَآ, which drops the
+    /// final hamzah, names its last letter, so Hafs's هَٰٓؤُلَآءِ tints the alif and the hamzah it keeps.
+    func testDuriAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.duri
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: tag))
+        let sites: [(surah: Int, ayah: Int, tinted: [String])] = [
+            (2, 9, ["يَخۡدَ"]),
+            (2, 10, ["يَكۡذِ"]),
+            (2, 13, ["أَ"]),
+            (2, 29, ["هُ"]),
+            (2, 30, ["يٓ"]),
+            (2, 31, ["آءِ"]),
+        ]
+        for site in sites {
+            let where_ = "\(site.surah):\(site.ayah)"
+            let alignment = try XCTUnwrap(QiraahComparison.alignment(surahID: site.surah, tag: tag, quranData: data))
+            let hafs = try XCTUnwrap(data.ayah(surah: site.surah, ayah: site.ayah))
+                .rawArabicText(surahId: site.surah, qiraahOverride: "")
+            let own = try XCTUnwrap(alignment.riwayahNumberForHafs[site.ayah], where_)
+            XCTAssertEqual(own, site.ayah - 1, where_)
+            let ranges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: hafs, tag: tag, surah: site.surah,
+                                                                          ownAyah: own, splitSpan: nil), where_)
+            XCTAssertEqual(ranges.map { text(hafs, $0) }, site.tinted, where_)
+        }
+    }
+
+    /// Khalaf an Hamzah, the second whole-word print to join and the eleventh beta print: his page inks
+    /// the whole word, so the builder narrows each mark to the clusters that differ from the aligned
+    /// Hafs word. He counts Kufi, so his own numbers are Hafs's. مَلِكِ tints the mīm of مَٰلِكِ; both
+    /// عَلَيۡهُمۡ of 1:7 tint the hāʾ of عَلَيۡهِمۡ; the hāʾ as-sakt he drops in wasl (هِيَه۠) tints the hāʾ of
+    /// هِيَهۡ, a difference only the wasl sign carries; in 13:4 the shaddah his text writes on وَّزَرۡعٖ,
+    /// وَّنَخِيلٖ, وَّغَيۡرِ and وَّيُفَضِّلُ (the previous word's idgham) tints nothing, so each tints its own
+    /// difference, and تُسۡقٜىٰ tints the yāʾ and the qāf of يُسۡقَىٰ, not the sīn between; سَيُكۡتَبُ tints
+    /// the nūn and the tāʾ of سَنَكۡتُبُ, not the kāf; ثُمُرِهِۦ and عَمِلَتۡ tint what they tint under Ishaq;
+    /// and in 7:44 Hafs's own idgham shaddah on لَّعۡنَةُ tints nothing either, so أَنَّ tints the nūn of
+    /// أَن and لَعۡنَةَ the tāʾ marbūṭah of لَّعۡنَةُ.
+    func testKhalafAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.khalaf
+        let betaWasEnabled = Settings.shared.betaQiraatEnabled
+        defer { Settings.shared.betaQiraatEnabled = betaWasEnabled }
+        Settings.shared.betaQiraatEnabled = true
+        guard BetaQiraatStore.shared.isAvailable(tag: tag) else {
+            throw XCTSkip("Khalaf's beta text is not bundled in this build")
+        }
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: tag))
+        let sites: [(surah: Int, ayah: Int, tinted: [String])] = [
+            (1, 4, ["مَٰ"]),
+            (1, 7, ["هِ", "هِ"]),
+            (101, 10, ["هۡ"]),
+            (13, 4, ["عٞ", "لٞ", "نٞ", "رُ", "يُ", "قَ", "نُ"]),
+            (3, 181, ["نَ", "تُ", "لَ", "نَ"]),
+            (36, 35, ["ثَمَ", "تۡهُ"]),
+            (7, 44, ["ن", "ةُ"]),
+        ]
+        for site in sites {
+            let where_ = "\(site.surah):\(site.ayah)"
+            let alignment = try XCTUnwrap(QiraahComparison.alignment(surahID: site.surah, tag: tag, quranData: data))
+            let hafs = try XCTUnwrap(data.ayah(surah: site.surah, ayah: site.ayah))
+                .rawArabicText(surahId: site.surah, qiraahOverride: "")
+            let own = try XCTUnwrap(alignment.riwayahNumberForHafs[site.ayah], where_)
+            XCTAssertEqual(own, site.ayah, where_)
+            let ranges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: hafs, tag: tag, surah: site.surah,
+                                                                          ownAyah: own, splitSpan: nil), where_)
+            XCTAssertEqual(ranges.map { text(hafs, $0) }, site.tinted, where_)
+        }
+    }
+
+    /// Khallad an Hamzah, the third whole-word print and the last riwayah to join: the builder narrows
+    /// his marks like Khalaf's, and he counts Kufi, so his own numbers are Hafs's. Both عَلَيۡهُمۡ of 1:7
+    /// tint the hāʾ of عَلَيۡهِمۡ, as under Khalaf. His text drops the vowel of a word's first letter
+    /// here and there (ونُكَفِّرۡ, ويُفَضِّلُ, لتُقُولُنَّ); no word begins with a vowelless consonant, so
+    /// that letter takes Hafs's vowel and tints nothing: ونُكَفِّرۡ tints the yāʾ and the rāʾ of
+    /// وَيُكَفِّرُ, not the wāw, and 13:4 tints one letter per word as under Khalaf. His يَاجُوجَ and
+    /// وَمَاجُوجَ tint only the hamzah seat of يَأۡجُوجَ and وَمَأۡجُوجَ (a bare madd letter no longer reaches
+    /// back to the letter before it), and خَرَٰجًا tints the rāʾ of خَرۡجًا. Readings that are his alone
+    /// against Khalaf: وَيُعَذِّب with jazm tints the bāʾ of وَيُعَذِّبُ (and فَيَغۡفِرۡ the rāʾ), مَعۡذِرَةٌ
+    /// tints the tāʾ marbūṭah of مَعۡذِرَةً, مَن without the sakt tints the nūn of مَنۡۜ with its sakt
+    /// sign, and فَٱلۡمُلۡقِيَٰت, read into the next word, tints the final tāʾ. In 27:49 لَتُبَيِّتُنَّهُۥ,
+    /// لتُقُولُنَّ and مُهۡلَكَ each tint two letters with the letters between left plain.
+    func testKhalladAyahTintsOnlyTheCounterpartLetters() async throws {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let tag = Settings.Riwayah.khallad
+        let betaWasEnabled = Settings.shared.betaQiraatEnabled
+        defer { Settings.shared.betaQiraatEnabled = betaWasEnabled }
+        Settings.shared.betaQiraatEnabled = true
+        guard BetaQiraatStore.shared.isAvailable(tag: tag) else {
+            throw XCTSkip("Khallad's beta text is not bundled in this build")
+        }
+        XCTAssertTrue(QiraatLetterDiff.isLetterLevel(tag: tag))
+        let sites: [(surah: Int, ayah: Int, tinted: [String])] = [
+            (1, 7, ["هِ", "هِ"]),
+            (2, 271, ["نِ", "يُ", "رُ"]),
+            (13, 4, ["عٞ", "لٞ", "نٞ", "رُ", "يُ", "قَ", "نُ"]),
+            (18, 94, ["أۡ", "أۡ", "رۡ"]),
+            (2, 284, ["رُ", "بُ"]),
+            (7, 164, ["ةً"]),
+            (75, 27, ["نۡۜ"]),
+            (77, 5, ["تِ"]),
+            (27, 49, ["نُ", "تَ", "نَ", "لَ", "مَ", "لِ"]),
+        ]
+        for site in sites {
+            let where_ = "\(site.surah):\(site.ayah)"
+            let alignment = try XCTUnwrap(QiraahComparison.alignment(surahID: site.surah, tag: tag, quranData: data))
+            let hafs = try XCTUnwrap(data.ayah(surah: site.surah, ayah: site.ayah))
+                .rawArabicText(surahId: site.surah, qiraahOverride: "")
+            let own = try XCTUnwrap(alignment.riwayahNumberForHafs[site.ayah], where_)
+            XCTAssertEqual(own, site.ayah, where_)
+            let ranges = try XCTUnwrap(QiraatLetterDiff.hafsLetterRanges(hafsText: hafs, tag: tag, surah: site.surah,
+                                                                          ownAyah: own, splitSpan: nil), where_)
+            XCTAssertEqual(ranges.map { text(hafs, $0) }, site.tinted, where_)
+        }
+    }
+
+    /// A changed word the print leaves black (the Explorer's fallback, `QiraatPlaceBuilder`): the
+    /// letters the two words themselves disagree on. A base that differs (Hafs's hamzah seat against
+    /// Warsh's wāw), a mark that differs (the dagger alif of مَٰلِكِ), a letter one side adds (a silah
+    /// written as a wāw of its own, which lands on the mīm it follows; the mīm's own vowel changes
+    /// too), and nothing where the words agree.
+    func testUnmarkedWordNarrowsToTheLettersThatDiffer() {
+        func both(_ hafs: String, _ riwayah: String) -> ([String], [String]) {
+            let ranges = QiraatLetterDiff.wordDiffRanges(hafsWord: hafs, riwayahWord: riwayah)
+            return (ranges.hafs.map { text(hafs, $0) }, ranges.riwayah.map { text(riwayah, $0) })
+        }
+        XCTAssertEqual(both("يُؤۡمِنُونَ", "يُومِنُونَ").0, ["ؤۡ"])
+        XCTAssertEqual(both("يُؤۡمِنُونَ", "يُومِنُونَ").1, ["و"])
+        XCTAssertEqual(both("مَٰلِكِ", "مَلِكِ").0, ["مَٰ"])
+        XCTAssertEqual(both("مَٰلِكِ", "مَلِكِ").1, ["مَ"])
+        XCTAssertEqual(both("رَزَقۡنَٰهُمۡ", "رَزَقۡنَٰهُمُو").0, ["مۡ"])
+        XCTAssertEqual(both("رَزَقۡنَٰهُمۡ", "رَزَقۡنَٰهُمُو").1, ["مُو"])
+        XCTAssertEqual(both("رَزَقۡنَٰهُمۡ", "رَزَقۡنَٰهُمۡ").0, [])
+        XCTAssertEqual(both("رَزَقۡنَٰهُمۡ", "رَزَقۡنَٰهُمۡ").1, [])
     }
 }

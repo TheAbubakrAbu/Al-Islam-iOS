@@ -142,9 +142,11 @@ enum QiraatIsnad {
         ),
         Settings.Riwayah.khalafAshirTeacher: ImamChain(
             teachers: [
+                // Khalaf read on Sulaym, al-A'sha and Abu Zayd al-Ansari; Shu'bah's reading reached him
+                // through al-A'sha and Yahya ibn Adam, not by reading on Shu'bah (Ghayat an-Nihayah, his entry).
                 successor("Sulaym ibn Isa", "سُلَيمُ بنُ عِيسَى", String(localized: "d. 188 AH")),
-                successor("Abu Bakr ibn Ayyash (Shu'bah)", "أَبُو بَكرِ بنُ عَيَّاشٍ", String(localized: "d. 193 AH")),
                 successor("Ya'qub ibn Khalifah al-A'sha", "يَعقُوبُ بنُ خَلِيفَةَ الأَعشَى", String(localized: "d. c. 200 AH")),
+                successor("Abu Zayd Sa'id ibn Aws al-Ansari", "أَبُو زَيدٍ سَعِيدُ بنُ أَوسٍ الأَنصَارِيُّ", String(localized: "d. 215 AH")),
             ],
             companions: [.uthman, .ali, .ibnMasud, .zayd, .ubayy, .husayn]
         ),
@@ -163,7 +165,8 @@ enum QiraatIsnad {
         // Nafi
         Settings.Riwayah.warsh: NarratorChain(links: [], students: [
             student("Abu Ya'qub al-Azraq", "أَبُو يَعقُوبَ الأَزرَقُ", String(localized: "d. 240 AH")),
-            student("Abu Bakr al-Asbahani", "أَبُو بَكرٍ الأَصبَهَانِيُّ", String(localized: "d. 296 AH")),
+            // A student who read on Warsh himself; al-Asbahani (d. 296) took the riwayah from Warsh's students.
+            student("Yunus ibn Abd al-A'la", "يُونُسُ بنُ عَبدِ الأَعلَى", String(localized: "d. 264 AH")),
         ]),
         Settings.Riwayah.qaloon: NarratorChain(links: [], students: [
             student("Abu Nashit Muhammad ibn Harun", "أَبُو نَشِيطٍ مُحَمَّدُ بنُ هَارُونَ", String(localized: "d. 258 AH")),
@@ -204,7 +207,6 @@ enum QiraatIsnad {
             link("Yahya adh-Dhimari", "يَحيَى الذِّمَارِيُّ", String(localized: "d. 145 AH")),
         ], students: [
             student("Ahmad al-Hulwani", "أَحمَدُ الحُلوَانِيُّ", String(localized: "d. 250 AH")),
-            student("ad-Dajuni", "الدَّاجُونِيُّ", String(localized: "d. 324 AH")),
         ]),
         Settings.Riwayah.ibnDhakwan: NarratorChain(links: [
             link("Ayyub ibn Tamim", "أَيُّوبُ بنُ تَمِيمٍ", String(localized: "d. 198 AH")),
@@ -235,13 +237,14 @@ enum QiraatIsnad {
             student("Abu Uthman ad-Darir", "أَبُو عُثمَانَ الضَّرِيرُ", String(localized: "d. c. 290 AH")),
         ]),
         // Abu Ja'far
+        // The Durrah's routes (al-Fadl ibn Shadhan and Hibat Allah for Ibn Wardan, al-Hashimi and
+        // ad-Duri for Ibn Jammaz) reach the narrator through these students, a generation or two
+        // down, so the students drawn are the ones who read on the narrator himself.
         Settings.Riwayah.ibnWardan: NarratorChain(links: [], students: [
-            student("al-Fadl ibn Shadhan", "الفَضلُ بنُ شَاذَانَ", String(localized: "d. c. 290 AH")),
-            student("Hibat Allah ibn Ja'far", "هِبَةُ اللَّهِ بنُ جَعفَرٍ", String(localized: "d. 350 AH")),
+            student("Qalun", "قَالُون", String(localized: "d. 220 AH")),
         ]),
         Settings.Riwayah.ibnJammaz: NarratorChain(links: [], students: [
-            student("al-Hashimi", "الهَاشِمِيُّ", String(localized: "d. c. 250 AH")),
-            student("Hafs ad-Duri", "حَفصٌ الدُّورِيُّ", String(localized: "d. 246 AH")),
+            student("Isma'il ibn Ja'far", "إِسمَاعِيلُ بنُ جَعفَرٍ", String(localized: "d. 180 AH")),
         ]),
         // Ya'qub
         Settings.Riwayah.ruways: NarratorChain(links: [], students: [

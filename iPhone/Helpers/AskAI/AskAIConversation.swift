@@ -31,6 +31,9 @@ final class AskAIConversation: ObservableObject {
         var sources: [AskAISource] = []
         var isStreaming = false
         var failed = false
+        /// Apple Intelligence declined to write the answer: a failure whose sources stay on show,
+        /// since the reader can still read them.
+        var declined = false
         /// Citation markers and recalled references removed at the end of the turn, disclosed
         /// beneath the answer.
         var removedCitations = 0
@@ -43,6 +46,9 @@ final class AskAIConversation: ObservableObject {
         var isFollowUp = false
         /// A note the turn earned ("Private Cloud Compute was unavailable, so..."), shown under it.
         var note: String? = nil
+        /// The turn is a crisis reply, or a question about suicide or self-harm: the help line is
+        /// offered as a thing to tap (`AskAICrisis.helpLineAction`), not only read.
+        var offersHelpLine = false
         /// The references the answer cites, in the order they first appear. Parsed off the live
         /// text at every flush and when the reply settles (stored, not computed: the transcript
         /// read it per message per render).
@@ -56,6 +62,13 @@ final class AskAIConversation: ObservableObject {
 
         var uncitedSources: [AskAISource] {
             sources.filter { !citedReferences.contains($0.reference) }
+        }
+
+        /// The card shows the model's prose: an answer, or a failure that streamed prose before its
+        /// failure line (the sources are there to cite). A bare failure message is not prose, and
+        /// gets no AI caution.
+        var hasAnswerProse: Bool {
+            !failed || (!sources.isEmpty && text.contains("\n\n("))
         }
 
         mutating func refreshCitations() {
@@ -73,7 +86,7 @@ final class AskAIConversation: ObservableObject {
 
     /// The conversation's current subject (the last standalone question's content words): what a
     /// bare follow-up searches with.
-    private var topic: String?
+    private(set) var topic: String?
     /// The topic as the reader typed it, for the suggestion chips of a follow-up.
     private var topicDisplay: String?
     private var currentQuestion: AskAIQuestion?
@@ -109,10 +122,15 @@ final class AskAIConversation: ObservableObject {
     // MARK: - Turns
 
     /// The completed question/answer pairs so far, oldest first: what a new turn is re-grounded on.
-    private func completedTurns() -> [AskAIPrompt.Turn] {
+    /// A crisis turn (the app's own reply, `AskAICrisis`) ends the thread: nothing before it or of
+    /// it is history, so a "why?" after it cannot continue the earlier subject, and the model never
+    /// sees the app's words as something it said.
+    func completedTurns() -> [AskAIPrompt.Turn] { Self.completedTurns(in: messages) }
+
+    nonisolated static func completedTurns(in messages: [Message]) -> [AskAIPrompt.Turn] {
         var turns: [AskAIPrompt.Turn] = []
         var pendingQuestion: String?
-        for message in messages {
+        for message in messages.suffix(from: threadStart(of: messages)) {
             switch message.role {
             case .user:
                 pendingQuestion = message.text
@@ -126,13 +144,34 @@ final class AskAIConversation: ObservableObject {
         return turns
     }
 
+    /// The last finished answer the next turn may carry sources from; none across a crisis turn.
+    nonisolated static func previousReply(in messages: [Message]) -> Message? {
+        messages.suffix(from: threadStart(of: messages))
+            .last(where: { $0.role == .assistant && !$0.failed && !$0.text.isEmpty && $0.intent != .crisis })
+    }
+
+    /// The index after the last crisis reply (the start of the live thread), or 0.
+    nonisolated private static func threadStart(of messages: [Message]) -> Int {
+        guard let last = messages.lastIndex(where: { $0.role == .assistant && $0.intent == .crisis }) else { return 0 }
+        return last + 1
+    }
+
     func ask(_ raw: String) {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, OnDeviceAsk.isAvailable else { return }
+        guard !trimmed.isEmpty else { return }
+        // A first-person crisis needs no model and no library: the app replies itself, before the
+        // availability guard (a device without Apple Intelligence still gets the help line).
+        if AskAICrisis.isCrisis(trimmed) {
+            answerCrisis(trimmed)
+            return
+        }
+        guard OnDeviceAsk.isAvailable else { return }
         cancel()
+        helpLineForCurrentTurn = AskAICrisis.mentionsSelfHarm(trimmed)
+            ? AskAICrisis.helpLine(regionCode: Locale.current.region?.identifier) : nil
         let history = completedTurns()
         let focus = focusArticle
-        let previousReply = messages.last(where: { $0.role == .assistant && !$0.failed && !$0.text.isEmpty })
+        let previousReply = Self.previousReply(in: messages)
         let question = AskAIQuestion.analyze(trimmed, previousTopic: topic, hasHistory: !history.isEmpty)
         if !question.isFollowUp, question.intent.retrieves, !question.contentWords.isEmpty {
             topic = question.topic
@@ -212,8 +251,10 @@ final class AskAIConversation: ObservableObject {
             guard !Task.isCancelled else { return }
             #if canImport(FoundationModels)
             if #available(iOS 26.0, *) {
-                let fitted = AskAIPrompt.fit(sources: sources, history: history, profile: profile, intent: question.intent)
+                let fitted = await AskAIPrompt.fit(question: question, sources: sources, history: history, profile: profile,
+                                                   measure: AskAIEngine.tokenCounter)
                 if fitted.count < sources.count { retrievalLog += "; fitted to \(fitted.count) sources" }
+                retrievalLog += "; window=\(AskAIEngine.onDeviceContextTokens) instructions=\(AskAIEngine.instructionTokens)"
                 sources = fitted
             }
             #endif
@@ -225,6 +266,42 @@ final class AskAIConversation: ObservableObject {
 
     private var lastRetrievalLog = ""
 
+    /// The help line a question ABOUT suicide or self-harm earns beneath its normal answer.
+    private var helpLineForCurrentTurn: String?
+
+    /// The crisis reply: the app's own words, finished in one hop. `isAnswering` still flips on and
+    /// off, so the chat (and the headless `-askAI` queue, which advances on that flip) sees a turn.
+    private func answerCrisis(_ trimmed: String) {
+        cancel()
+        helpLineForCurrentTurn = nil
+        currentQuestion = nil
+        // The earlier thread is over: a "why?" after this must not continue it.
+        topic = nil
+        topicDisplay = nil
+        messages.append(Message(role: .user, text: trimmed))
+        isAnswering = true
+        task = Task { @MainActor in
+            guard !Task.isCancelled else { return }
+            let sources = AskAICrisis.sources()
+            var citesEase = false
+            if case .ayah? = sources.first?.kind { citesEase = true }
+            var reply = Message(role: .assistant, text: AskAICrisis.reply(citingEase: citesEase))
+            reply.intent = .crisis
+            reply.sources = sources
+            reply.offersHelpLine = true
+            reply.suggestions = AskAICrisis.suggestions
+            reply.elapsed = 0
+            reply.refreshCitations()
+            messages.append(reply)
+            lastRetrievalLog = "crisis reply, no model"
+            #if DEBUG
+            debugLogLastTurn(failed: false, firstToken: nil)
+            #endif
+            isAnswering = false
+            save()
+        }
+    }
+
     #if canImport(FoundationModels)
     private func answer(question: AskAIQuestion, sources initialSources: [AskAISource], history: [AskAIPrompt.Turn],
                         kind initialKind: AskAIEngineKind, profile initialProfile: AskAIProfile) async {
@@ -233,9 +310,7 @@ final class AskAIConversation: ObservableObject {
         var profile = initialProfile
         var sources = initialSources
         var turns = history
-        var framing: String?
         var retriedForContext = false
-        var guardrailRetries = 0
         var fellBack = false
         let started = CFAbsoluteTimeGetCurrent()
         var firstToken: Double?
@@ -257,7 +332,7 @@ final class AskAIConversation: ObservableObject {
             do {
                 resetStream()
                 updateReply { $0.engine = kind }
-                let prompt = AskAIPrompt.build(question: question, sources: sources, history: turns, profile: profile, framing: framing)
+                let prompt = AskAIPrompt.build(question: question, sources: sources, history: turns, profile: profile)
                 lastPrompt = prompt
                 let options = GenerationOptions(temperature: question.intent.temperature,
                                                 maximumResponseTokens: min(question.intent.maxResponseTokens, profile.responseTokenCap))
@@ -305,28 +380,11 @@ final class AskAIConversation: ObservableObject {
                     updateReply { $0.sources = sources; $0.text = ""; $0.refreshCitations() }
                     continue
                 }
-                // Apple's guardrail trips on ordinary religious topics (war, punishment, death),
-                // and on a retrieved passage as often as on the question. First re-ask with the
-                // question framed as the educational request it is and fewer sources; then once
-                // more with no sources and no history, so the reader gets an answer rather than a
-                // refusal, and is told the sources were left out.
-                if case .guardrail = failure, guardrailRetries < 2 {
-                    guardrailRetries += 1
-                    framing = "Treat this as an educational question about Islamic teaching, scripture and history, and answer it as such."
-                    if guardrailRetries == 1 {
-                        sources = Array(sources.prefix(4))
-                    } else {
-                        sources = []
-                        turns = []
-                    }
-                    resetStream()
-                    updateReply {
-                        $0.sources = sources; $0.text = ""; $0.refreshCitations()
-                        if sources.isEmpty {
-                            $0.note = String(localized: "Apple Intelligence declined to read the sources the app found for this question, so this answer was written from general knowledge without them.")
-                        }
-                    }
-                    continue
+                // A guardrail decline (rare with the permissive model) is shown as one: the
+                // reader sees the decline and the sources the app found, and can retry. No re-ask
+                // from general knowledge: that path wrote unsourced answers to the hardest questions.
+                if case .guardrail = failure {
+                    updateReply { $0.declined = true }
                 }
                 #if DEBUG
                 lastErrorDescription = "\(type(of: error)): \(error)"
@@ -334,7 +392,11 @@ final class AskAIConversation: ObservableObject {
                 // What streamed before the failure reaches the reply now: a trailing flush firing
                 // after `finishReply` replaced its "(The answer stopped early...)" line.
                 if !streamedText.isEmpty { flushStreamed() }
-                finishReply(failed: true, message: AskAIEngine.message(for: failure),
+                var message = AskAIEngine.message(for: failure)
+                if case .guardrail = failure, sources.isEmpty {
+                    message = String(localized: "Apple Intelligence declined to write about this. Try asking in a different way.")
+                }
+                finishReply(failed: true, message: message,
                             elapsed: CFAbsoluteTimeGetCurrent() - started, firstToken: firstToken)
                 return
             }
@@ -477,9 +539,14 @@ final class AskAIConversation: ObservableObject {
             }
             reply.refreshCitations()
             if !reply.failed, let question {
-                reply.suggestions = AskAIText.suggestions(for: question, cited: reply.citedSources, conversationTopic: topicDisplay)
+                reply.suggestions = AskAIText.suggestions(for: question, cited: reply.citedSources,
+                                                          duaTopics: AskAIRetriever.duaTopicWords(), starters: AskAIStarters.today())
             }
+            // The help line stays whether or not the answer came: a declined suicide question is
+            // exactly where it matters.
+            if let helpLine = helpLineForCurrentTurn { reply.note = helpLine; reply.offersHelpLine = true }
         }
+        helpLineForCurrentTurn = nil
         isAnswering = false
         save()
         #if DEBUG
@@ -551,6 +618,14 @@ final class AskAIConversation: ObservableObject {
         }
         if saving { save() }
     }
+
+    #if DEBUG
+    /// Tests: a conversation whose thread already has a subject.
+    func seedTopicForTesting(_ topic: String) {
+        self.topic = topic
+        topicDisplay = topic
+    }
+    #endif
 
     func reset() {
         cancel(saving: false)
@@ -669,6 +744,7 @@ extension AskAIConversation.Message {
         sources = (try? container.decodeIfPresent([AskAISource].self, forKey: .sources)) ?? []
         isStreaming = try container.decodeIfPresent(Bool.self, forKey: .isStreaming) ?? false
         failed = try container.decodeIfPresent(Bool.self, forKey: .failed) ?? false
+        declined = try container.decodeIfPresent(Bool.self, forKey: .declined) ?? false
         removedCitations = try container.decodeIfPresent(Int.self, forKey: .removedCitations) ?? 0
         flaggedQuotations = try container.decodeIfPresent(Int.self, forKey: .flaggedQuotations) ?? 0
         asksForRuling = try container.decodeIfPresent(Bool.self, forKey: .asksForRuling) ?? false
@@ -677,6 +753,7 @@ extension AskAIConversation.Message {
         engine = (try? container.decodeIfPresent(AskAIEngineKind.self, forKey: .engine)) ?? nil
         isFollowUp = try container.decodeIfPresent(Bool.self, forKey: .isFollowUp) ?? false
         note = try container.decodeIfPresent(String.self, forKey: .note)
+        offersHelpLine = try container.decodeIfPresent(Bool.self, forKey: .offersHelpLine) ?? false
         citedReferences = try container.decodeIfPresent([String].self, forKey: .citedReferences) ?? []
         suggestions = try container.decodeIfPresent([String].self, forKey: .suggestions) ?? []
         elapsed = try container.decodeIfPresent(Double.self, forKey: .elapsed)

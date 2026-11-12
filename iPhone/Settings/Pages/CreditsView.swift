@@ -184,6 +184,19 @@ struct CreditItem: Identifiable, Hashable {
         CreditItem(id: "hadith-gradings", title: String(localized: "Hadith gradings and numbering: sunnah.com"),
                    detail: String(localized: "The scholar gradings (sahih, hasan, da'if) and the standard hadith numbering shown throughout the app also come from those two scrapes of sunnah.com, which quotes the published verdicts of Al-Albani, Zubair Ali Zai, Ahmad Muhammad Shakir, Shuaib Al Arnaut, the Darussalam editors, and others"),
                    url: "https://sunnah.com", group: .hadith, keywords: "grade authentic weak albani"),
+        // The Musnad past its sunnah.com slice (2026-11-10). Open-Hadith-Data is under the Open Database
+        // License, which asks for a notice carrying the license's address (the first row) and an open copy
+        // of the rows as arranged here (the third, the Hadith-JSON-Engine). The second credits the copy
+        // the numbers and the Arabic section headings were read from, under its own license.
+        CreditItem(id: "musnad-arabic", title: String(localized: "Full Arabic text of Musnad Ahmad: Open-Hadith-Data (ODbL)"),
+                   detail: String(localized: "The Arabic text of Musnad Ahmad, apart from the 1,374 narrations that carry an English translation, contains information from Open-Hadith-Data by Muhammad Hashim, which is made available under the Open Database License (ODbL) 1.0, opendatacommons.org/licenses/odbl, with its contents under the Database Contents License 1.0"),
+                   url: "https://github.com/mhashim6/Open-Hadith-Data", group: .hadith, keywords: "ahmad ahmed ibn hanbal musnad arabic odbl open database license mhashim6"),
+        CreditItem(id: "musnad-numbering", title: String(localized: "Musnad Ahmad numbering and section headings: ar-Risalah edition, via OpenITI (CC BY-NC-SA 4.0)"),
+                   detail: String(localized: "The numbers and section headings of Musnad Ahmad follow the ar-Risalah edition (Shuaib Al Arnaut, Adil Murshid and others, 2001), read from the OpenITI corpus's copy of the Shamela text, which is released under CC BY-NC-SA 4.0; the Arabic section headings come from that copy, the narrations' wording does not"),
+                   url: "https://github.com/OpenITI/0250AH", group: .hadith, keywords: "ahmad ahmed ibn hanbal musnad risalah arnaut shamela numbers chapters companions creative commons license"),
+        CreditItem(id: "musnad-open-copy", title: String(localized: "Musnad Ahmad as arranged here, open copy: Hadith-JSON-Engine (ODbL)"),
+                   detail: String(localized: "The Musnad Ahmad narrations taken from Open-Hadith-Data, as this app arranges and numbers them, are published with the method that built them under the same Open Database License in the Hadith-JSON-Engine, the open data behind this app's Hadith tab"),
+                   url: "https://github.com/TheAbubakrAbu/Hadith-JSON-Engine", group: .hadith, keywords: "ahmad ahmed musnad odbl open database license share alike source data github"),
 
         // Islam
         CreditItem(id: "names-of-allah", title: String(localized: "99 Names of Allah: MyIslam"),

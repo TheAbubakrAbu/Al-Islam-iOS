@@ -322,8 +322,11 @@ enum MemoryTrim {
         SimilarHadithsStore.shared.purge()
         HadithNarratorStore.shared.purge()
         HadithIsnadTreeStore.shared.purge()
+        HadithExplanationStore.shared.purge()
         #endif
         #if HAS_QURAN
+        // The recited-word timings (the inflated shipped blobs and the per-surah tables).
+        AyahWordTimingStore.shared.purge()
         // The explorer's computed place tables and counts.
         QiraatPlacesStore.shared.purgeComputed()
         // The mushaf fit's fonts (bounded, but a page fit's probes fill it; rebuilt on the next fit).

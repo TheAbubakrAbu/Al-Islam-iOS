@@ -253,6 +253,12 @@ struct ArabicView: View {
         }
     }
 
+    /// The screen's own sections and pages that answer the query (Abu, 2026-11-08: "I'll say hamzatul
+    /// wasl and only the letter will show up not the section"), offered above the families and letters.
+    private var matchingTopics: [ArabicTopic] {
+        ArabicTopicCatalog.matching(searchText)
+    }
+
     private var filteredStandardForMode: [LetterData] { filteredStandard }
 
     #if os(iOS)
@@ -770,28 +776,12 @@ struct ArabicView: View {
     @ViewBuilder
     private var debugTopicDestination: some View {
         switch Self.debugTopic {
-        case "tashkeel": TashkeelLettersView()
-        case "defaultTashkeel": DefaultTashkeelView()
-        case "baaHaa": BaaHaaShapesView()
-        case "laamAlif": LaamAlifShapesView()
-        case "maqsurahYaa": MaqsurahOrYaaView()
+        // The search catalogue's ids ("wasl", "waslTanween", "tier:tanween", ...) open through the one
+        // switch the search rows use; only the screens with no row of their own are listed here.
+        case let topic? where ArabicTopicCatalog.topic(id: topic) != nil: ArabicTopicDestination(id: topic)
         case "maqsurahPractice": MaqsurahPracticeView(mode: .letter)
         case "maqsurahLength": MaqsurahPracticeView(mode: .length)
-        case "wasl": HamzatulWaslView()
-        case "waslStart": HamzatulWaslPracticeView(mode: .start)
-        case "waslTanween": HamzatulWaslPracticeView(mode: .tanween)
-        case "waslReadOn": HamzatulWaslPracticeView(mode: .readOn)
-        case "pronouns": ArabicPronounsView()
-        case "noun": ArabicNounView()
-        case "verb": ArabicVerbView()
-        case "harf": ArabicHarfView()
-        case "families": LetterFamiliesView()
-        case "soundAlikes": SoundAlikeLettersView()
-        case "quiz": LetterQuizView()
-        case "readingTest": ReadingTestView()
         #if os(iOS)
-        case "vowelLetters": VowelLettersView()
-        case "vowelPractice": VowelOrConsonantPracticeView(letter: nil)
         case "vowelPracticeWaaw": VowelOrConsonantPracticeView(letter: VowelLetterRoles.waaw)
         #endif
         case let topic? where topic.hasPrefix("family:"):
@@ -909,7 +899,9 @@ struct ArabicView: View {
             // Tashkeel, Default Tashkeel and Basic Grammar used to be link rows here too. They are
             // Explore tiles at the top now (Abu, 2026-09-22), so everything there is to STUDY is in
             // one place; the two shape pages stayed behind, next to the letters they are made of.
-            Section(header: SectionPillHeader(title: String(localized: "ARABIC NUMBERS"), count: numbers.count)) {
+            // The two sections a search result scrolls to carry their id on the HEADER: a Section has
+            // no scroll identity of its own, and the header is the first row of it.
+            Section(header: SectionPillHeader(title: String(localized: "ARABIC NUMBERS"), count: numbers.count).id(ArabicTopicRowID.numbers)) {
                 numberCollection
             }
 
@@ -928,33 +920,23 @@ struct ArabicView: View {
     /// `one-link-per-list-row`) - so these are ordinary links, not `door` buttons like the tiles.
     private var letterShapesSection: some View {
         Section {
-            NavigationLink(destination: LazyDestination { BaaHaaShapesView() }) {
-                ArabicTopicLinkLabel(specimen: BaaHaaShapesView.skeleton,
-                                     title: String(localized: "Baa on Haa"),
-                                     caption: String(localized: "One shape, fifteen pairs"),
-                                     face: .uthmani)
-            }
-            .tint(settings.accentColor.color)
-
-            NavigationLink(destination: LazyDestination { LaamAlifShapesView() }) {
-                ArabicTopicLinkLabel(specimen: LaamAlifShapesView.skeleton,
-                                     title: String(localized: "Laam Alif"),
-                                     caption: String(localized: "The compulsory ligature"))
-            }
-            .tint(settings.accentColor.color)
-
-            // The shape a final yaa and alif maqSoorah share in the mushaf, after the two above
-            // (Abu, 2026-10-24). Plain print in the tile: there the dots still tell them apart.
-            NavigationLink(destination: LazyDestination { MaqsurahOrYaaView() }) {
-                ArabicTopicLinkLabel(specimen: MaqsurahOrYaaView.specimen,
-                                     title: String(localized: "Alif MaqSoorah or Yaa"),
-                                     caption: String(localized: "One shape at the end, two letters"),
-                                     face: .plain)
-            }
-            .tint(settings.accentColor.color)
+            // The shape a final yaa and alif maqSoorah share in the mushaf comes after the two
+            // ligatures (Abu, 2026-10-24). Plain print in its tile: there the dots still tell them apart.
+            ForEach(ArabicTopicCatalog.shapes) { topicRow($0) }
         } header: {
             Text("LETTER SHAPES")
         }
+    }
+
+    /// One topic of the catalogue as a link row: the row every section below the letters is made
+    /// of, and the row a search result draws (with the section it sits in as its eyebrow). The same
+    /// `ArabicTopic` feeds both, so a row and its search result can never say different things.
+    private func topicRow(_ topic: ArabicTopic, inSearch: Bool = false) -> some View {
+        NavigationLink(destination: LazyDestination { ArabicTopicDestination(id: topic.id) }) {
+            ArabicTopicLinkLabel(specimen: topic.specimen, title: topic.title, caption: topic.caption,
+                                 eyebrow: inSearch ? topic.section.title : nil, face: topic.face)
+        }
+        .tint(settings.accentColor.color)
     }
 
     #if os(iOS)
@@ -963,15 +945,7 @@ struct ArabicView: View {
     /// the Reading Test bank every example on it comes from.
     private var vowelLettersSection: some View {
         Section {
-            NavigationLink(destination: LazyDestination { VowelLettersView() }) {
-                ArabicTopicLinkLabel(specimen: VowelLettersView.specimen,
-                                     title: String(localized: "Vowel Letters"),
-                                     caption: String(localized: "When alif, waaw and yaa are vowels, and when consonants"),
-                                     face: .plain)
-            }
-            .tint(settings.accentColor.color)
-
-            VowelOrConsonantPracticeLink(letter: nil)
+            ForEach(ArabicTopicCatalog.vowelLetterTopics) { topicRow($0) }
         } header: {
             Text("VOWEL LETTERS")
         }
@@ -983,22 +957,8 @@ struct ArabicView: View {
     /// first, then each drill on a row of its own, so the practice is one tap from the alphabet.
     private var hamzatulWaslSection: some View {
         Section {
-            NavigationLink(destination: LazyDestination { HamzatulWaslView() }) {
-                ArabicTopicLinkLabel(specimen: HamzatulWaslView.specimen,
-                                     title: String(localized: "Hamzatul WaSl"),
-                                     caption: String(localized: "The hamza you only say at a start"),
-                                     face: .uthmani)
-            }
-            .tint(settings.accentColor.color)
-
-            #if os(iOS)
-            ForEach(HamzatulWaslPracticeView.Mode.allCases) { mode in
-                NavigationLink(destination: LazyDestination { HamzatulWaslPracticeView(mode: mode) }) {
-                    ArabicTopicLinkLabel(specimen: mode.specimen, title: mode.title, caption: mode.caption, face: .uthmani)
-                }
-                .tint(settings.accentColor.color)
-            }
-            #endif
+            topicRow(ArabicTopicCatalog.wasl)
+            ForEach(ArabicTopicCatalog.waslDrills) { topicRow($0) }
         } header: {
             Text("HAMZATUL WASL")
         }
@@ -1587,7 +1547,30 @@ struct ArabicView: View {
             // ONE scan per pass: the rows and the count pill share the same merged result list -
             // as two separate accesses each computed property re-filtered every letter per keystroke.
             let results = filteredStandardForMode + filteredOther
+            let topics = matchingTopics
             let families = matchingFamilies
+            if !topics.isEmpty {
+                Section(header: SectionPillHeader(title: String(localized: "TOPICS"), count: topics.count)) {
+                    ForEach(topics) { topic in
+                        switch topic.opens {
+                        case .page:
+                            topicRow(topic, inSearch: true)
+                        case .scroll(let rowID):
+                            // A section of this screen: the row clears the search and scrolls to it,
+                            // the way a letter result's "Scroll To Letter" does.
+                            Button {
+                                settings.hapticFeedback()
+                                withAnimation { searchText = "" }
+                                scrollTarget = rowID
+                            } label: {
+                                ArabicTopicLinkLabel(specimen: topic.specimen, title: topic.title, caption: topic.caption,
+                                                     eyebrow: topic.section.title, face: topic.face, trailingSymbol: "arrow.down.to.line")
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
             if !families.isEmpty {
                 Section(header: SectionPillHeader(title: String(localized: "LETTER FAMILIES"), count: families.count)) {
                     ForEach(families) { family in
@@ -1604,30 +1587,34 @@ struct ArabicView: View {
                     }
                 }
             }
-            Section {
-                if results.isEmpty {
-                    #if os(iOS)
-                    Text(aiHits.isEmpty
-                         ? String(localized: "No letters match your search.")
-                         : String(localized: "No keyword matches. See the AI results above."))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    #else
-                    Text("No letters match your search.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    #endif
-                } else {
-                    letterCollection(results)
-                }
-            } header: {
-                HStack {
-                    Text("ARABIC SEARCH RESULTS")
+            // A query that found a topic or a family but no letter has its answer above: no empty
+            // letters section under it saying so.
+            if !results.isEmpty || (topics.isEmpty && families.isEmpty) {
+                Section {
+                    if results.isEmpty {
+                        #if os(iOS)
+                        Text(aiHits.isEmpty
+                             ? String(localized: "No letters match your search.")
+                             : String(localized: "No keyword matches. See the AI results above."))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        #else
+                        Text("No letters match your search.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        #endif
+                    } else {
+                        letterCollection(results)
+                    }
+                } header: {
+                    HStack {
+                        Text("ARABIC SEARCH RESULTS")
 
-                    Spacer()
+                        Spacer()
 
-                    CountPill(count: results.count)
-                        .opacity(searchText.isEmpty ? 0 : 1)
+                        CountPill(count: results.count)
+                            .opacity(searchText.isEmpty ? 0 : 1)
+                    }
                 }
             }
         }
@@ -1641,8 +1628,10 @@ struct ArabicView: View {
 
     @ViewBuilder
     private var tajweedSection: some View {
-        Section("QURAN SIGNS") {
+        Section {
             QuranSignsSectionContent(accentColor: settings.accentColor.color)
+        } header: {
+            Text("QURAN SIGNS").id(ArabicTopicRowID.signs)
         }
     }
 }

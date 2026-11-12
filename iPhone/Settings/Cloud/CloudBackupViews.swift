@@ -23,6 +23,8 @@ struct CloudOfferView: View {
 
     /// True when Settings shows it again as a sheet ("Set Up iCloud Backup").
     var presentedAsSheet = false
+    /// True right after the welcome (a new install): the welcome's dots carry on, the last one lit.
+    var followsWelcome = false
 
     @State private var nickname = CloudDevice.suggestedNickname
     @State private var checked = false
@@ -41,9 +43,20 @@ struct CloudOfferView: View {
             backdrop
 
             VStack(spacing: 0) {
+                // The welcome's dots where its bar held them, so the page stands where its pages do
+                // (the room is kept without them too: everyone who already had the app meets this alone).
+                if !presentedAsSheet {
+                    // 19 and 54: where the welcome's navigation bar puts its dots and ends (iPhone 17 Pro).
+                    WelcomeProgressDots(count: SplashScreen.dotCount, index: SplashScreen.dotCount - 1)
+                        .padding(.top, 19)
+                        .frame(height: 54, alignment: .top)
+                        .opacity(followsWelcome ? 1 : 0)
+                        .accessibilityHidden(!followsWelcome)
+                }
+
                 ScrollViewReader { proxy in
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: 18) {
+                        VStack(spacing: 22) {
                             header
                             if !checked {
                                 ProgressView().padding(.top, 24)
@@ -69,7 +82,7 @@ struct CloudOfferView: View {
                         .frame(maxWidth: 560)
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 22)
-                        .padding(.top, presentedAsSheet ? 24 : 36)
+                        .padding(.top, presentedAsSheet ? 24 : 8)
                         .padding(.bottom, 16)
                     }
                     .scrollDismissesKeyboard(.interactively)
@@ -89,7 +102,7 @@ struct CloudOfferView: View {
                 actions
                     .frame(maxWidth: 560)
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, 16)
             }
         }
         .task { await check() }
@@ -98,24 +111,11 @@ struct CloudOfferView: View {
         }
     }
 
+    /// The welcome's header (WelcomePages.swift), so this reads as one more page of it.
     private var header: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "icloud.fill")
-                .font(.system(size: 44, weight: .semibold))
-                .foregroundColor(accent)
-                .padding(.bottom, 2)
-
-            Text("Save your progress to iCloud?")
-                .font(.title.bold())
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text("Your bookmarks, prayer tracker, khatm, tasbih counts, journal and settings, kept in your own iCloud so a new \(CloudDevice.kind) can pick up where this one left off. Optional, and off until you turn it on. Your location is never included.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-        }
+        WelcomeHeader(systemImage: "icloud.fill",
+                      title: String(localized: "Save your progress to iCloud?"),
+                      text: String(localized: "Bookmarks, prayer tracker, khatm, journal and settings, in your own private iCloud. Optional."))
     }
 
     private var noAccountCard: some View {
@@ -171,7 +171,7 @@ struct CloudOfferView: View {
                     .disabled(working)
                 Text(manager.profiles.count >= CloudBackupManager.maxProfiles
                      ? "You already have \(CloudBackupManager.maxProfiles) profiles. Delete one in Settings to add another."
-                     : "The name you will see when restoring. Up to \(CloudBackupManager.maxProfiles) people or devices can share one iCloud account, each with a backup of their own.")
+                     : "The name you will see when restoring.")
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

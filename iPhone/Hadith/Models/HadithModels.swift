@@ -285,7 +285,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Ahmad ibn Hanbal", authorArabic: "الإِمَامُ أَحمَدُ بنُ حَنبَلٍ",
             era: "d. 241 AH / 855 CE",
             shortDescription: String(localized: "The great Musnad, arranged by the Companion who narrates each hadith."),
-            longDescription: String(localized: "The great Musnad of Imam Ahmad (الإِمَامُ أَحمَدُ بنُ حَنبَلٍ), founder of the Hanbali school and the towering hadith scholar of his age.\n\nUnlike the Sunan books it is arranged by the narrating Companion rather than by topic; the full Musnad spans over 27,000 narrations, of which this dataset carries a selection of 1,374."),
+            longDescription: String(localized: "The great Musnad of Imam Ahmad (الإِمَامُ أَحمَدُ بنُ حَنبَلٍ), founder of the Hanbali school and the towering hadith scholar of his age.\n\nUnlike the Sunan books it is arranged by the narrating Companion rather than by topic. The whole Musnad is here in Arabic, over 27,000 narrations numbered as in the ar-Risalah edition; the opening 1,359, the musnads of the first Companions, also carry an English translation."),
             aliases: ["ahmad", "ahmed", "musnadahmad", "musnadahmed"],
             arabicAliases: ["أحمد", "مسند أحمد", "مسند الإمام أحمد"],
             name: Name(

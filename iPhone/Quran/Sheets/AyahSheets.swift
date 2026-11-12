@@ -32,8 +32,9 @@ final class AyahSheetStack: ObservableObject {
 
     /// The sheet the actions sheet should stack on top of itself, cleared when it closes.
     @Published var pending: AyahSecondarySheet?
-    /// Set by a stacked range sheet that played a range wider than the actions sheet's own ayah: the
-    /// actions sheet reads it when `pending` clears and closes itself too (2026-10-31).
+    /// Set by a stacked range sheet that played a range wider than the actions sheet's own ayah
+    /// (2026-10-31), or by a stacked Share Ayah sheet that copied or shared (2026-11-04): the actions
+    /// sheet reads it when `pending` clears and closes itself too.
     var closeHostWhenCleared = false
 
     func present(_ sheet: AyahSecondarySheet) {
@@ -59,6 +60,22 @@ struct AyahRowSheetRequest: Identifiable {
     let surah: Surah
     let ayah: Ayah
     let kind: AyahRowSheetKind
+    /// Whether the ACTIONS sheet opens at the large detent, decided here, ONCE, as the request is made:
+    /// the decision measures the ayah card (`AyahActionsSheet.opensLarge(surah:ayah:)`), and the host's
+    /// body, which presents the sheet, re-evaluates on every reader change while the sheet is up.
+    /// False for every other kind (they open medium, or set their own detents).
+    let opensLarge: Bool
+
+    init(surah: Surah, ayah: Ayah, kind: AyahRowSheetKind) {
+        self.surah = surah
+        self.ayah = ayah
+        self.kind = kind
+        if case .actions = kind {
+            opensLarge = AyahActionsSheet.opensLarge(surah: surah, ayah: ayah)
+        } else {
+            opensLarge = false
+        }
+    }
 
     var id: String {
         let kindKey: String
@@ -103,8 +120,8 @@ struct AyahRowSheetContent: View {
                 // per-ayah "Word by Word" pin; the page reader's cannot. One host serves both readers
                 // now (the page reader routes its sheets here too), so the mode decides.
                 AyahActionsSheet(surah: surah, ayah: ayah, onRequestSheet: onRequestSecondary,
-                                 offersWordByWord: !settings.quranPageMode)
-                    .smallMediumSheetPresentation(startLarge: AyahActionsSheet.opensLarge(for: ayah))
+                                 offersWordByWord: !settings.quranPageMode, opensLarge: request.opensLarge)
+                    .smallMediumSheetPresentation(startLarge: request.opensLarge)
 
             case .word(let tapped):
                 WordMeaningSheet(
@@ -215,7 +232,15 @@ struct AyahSecondarySheetContent: View {
             AyahNoteSheet(surah: surah, ayah: ayah)
 
         case .share:
-            ShareAyahSheet(surahNumber: surah.id, ayahNumber: ayah.id)
+            // Stacked on the actions sheet (Keep Sheet Open), a copy or a completed share closes that
+            // sheet too once this one is down (Abu, 2026-11-04: "why doesn't share ayah collapse the
+            // ayah sheet"): sharing is what the ayah was opened for. A cancel or the X still lands
+            // back on the actions.
+            ShareAyahSheet(surahNumber: surah.id, ayahNumber: ayah.id, onShared: {
+                if AyahSheetStack.shared.pending == .share {
+                    AyahSheetStack.shared.closeHostWhenCleared = true
+                }
+            })
 
         case .selectText:
             SelectAyahTextSheet(surah: surah, ayah: ayah)
@@ -403,9 +428,10 @@ struct AyahPreviewCard: View {
         return !tag.isEmpty && QiraahTajweedStore.shared.isAvailable(tag: tag) ? tag : nil
     }
 
-    private func piece(for ayah: Ayah) -> Piece {
+    /// `plain`: the card's plain-text switch (`showPlainText`), or false for a measurement made before
+    /// the card exists (`estimatedHeight`).
+    private func piece(for ayah: Ayah, plain: Bool) -> Piece {
         let choices = displayOverrides.choices(surah: surah.id, ayah: ayah.id, settings: settings)
-        let plain = showPlainText
         let clean = choices.hideTashkeel && !plain
         let dots = choices.hideDots && !plain
         let beginner = choices.beginner && !plain
@@ -547,6 +573,150 @@ struct AyahPreviewCard: View {
     /// The stepper only where the size is the reader's to change.
     private var showsStepper: Bool { showsSizeStepper && fixedScale == nil }
 
+    /// The reference line and the translations under it. Also what `estimatedHeight` measures, hosted
+    /// offscreen, so the estimate and the card can never disagree on a wrap.
+    private func captionsBlock(title: String) -> some View {
+        VStack(alignment: .leading, spacing: Self.captionSpacing) {
+            // The reference both ways (Abu, 2026-10-26): the interface's name leading, the
+            // other language's trailing, a spacer between them, as the reader's title pill
+            // names the surah in both scripts.
+            HStack(alignment: .firstTextBaseline) {
+                Text(title)
+                Spacer(minLength: 8)
+                if let counterpartTitle {
+                    Text(counterpartTitle)
+                }
+            }
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+
+            ForEach(translationBlocks) { block in
+                VStack(alignment: .leading, spacing: Self.translationNameSpacing) {
+                    Text(block.name)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(settings.accentColor.accent1)
+
+                    Text(block.text)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                // An English translation under its English name: left to right in the Arabic interface.
+                .leftToRightContent()
+                .padding(.top, Self.translationTopPadding)
+            }
+        }
+    }
+
+    /// One bookmark note under its ayah, numbered when the card holds several. Measured by
+    /// `estimatedHeight` the same way as the captions.
+    private func noteRow(ayah: Ayah, note: String) -> some View {
+        HStack(alignment: .top, spacing: Self.noteIconSpacing) {
+            Image(systemName: "note.text")
+                .font(.caption2)
+                .foregroundStyle(settings.accentColor.accent1)
+                .padding(.top, 1)
+
+            Text(ayahs.count > 1 ? "\(String(ayah.id).localizedDigits). \(note)" : note)
+                .font(.caption)
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, Self.noteHorizontalPadding)
+        .padding(.vertical, Self.noteVerticalPadding)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(settings.accentColor.accent1.opacity(0.08))
+        )
+    }
+
+    // MARK: Height before layout
+
+    /// The card's chrome, named once so the body and `estimatedHeight` cannot drift apart.
+    private static let rowSpacing: CGFloat = 6
+    private static let horizontalPadding: CGFloat = 12
+    private static let verticalPadding: CGFloat = 10
+    private static let stepperButtonSize: CGFloat = 26
+    private static let captionSpacing: CGFloat = 3
+    private static let translationTopPadding: CGFloat = 2
+    private static let translationNameSpacing: CGFloat = 1
+    private static let noteIconSpacing: CGFloat = 6
+    private static let noteHorizontalPadding: CGFloat = 10
+    private static let noteVerticalPadding: CGFloat = 8
+
+    /// The card's height at `width` BEFORE it is on screen, for the ayah actions sheet's opening detent
+    /// (`AyahActionsSheet.opensLarge(surah:ayah:)`). The Arabic run is measured for real
+    /// (`WordByWordText.measuredHeight`: the TextKit layout the card draws, at the same width and
+    /// size); the captions and the notes are the body's own views laid out offscreen; the chrome is
+    /// the body's own numbers above, each used by the modifier it stands for. Plain text off, as a
+    /// fresh card opens. `-ayahSheetFitLog` prints the estimate beside the laid-out height to check it
+    /// (2026-11-09, three simulators: the run and the card matched to the point).
+    func estimatedHeight(width: CGFloat) -> CGFloat {
+        let inner = width - 2 * Self.horizontalPadding
+        guard inner > 0 else { return 0 }
+        let pieces = ayahs.map { piece(for: $0, plain: false) }
+        var rows: [(String, CGFloat)] = []
+
+        if showsStepper || pieces.contains(where: \.modified) {
+            rows.append(("stepper", Self.stepperButtonSize))
+        }
+
+        if pieces.isEmpty {
+            rows.append(("unavailable", Self.lineHeight(.subheadline)))
+        } else {
+            let run = WordByWordText(
+                segments: pieces.map(\.segment),
+                fontName: settings.quranDisplayUsesCustomArabicFace ? settings.quranDisplayFontName : nil,
+                fontSize: cardFontSize,
+                tapsRequired: 1,
+                selectable: true,
+                selectedWord: nil,
+                onSelectWord: { _ in }
+            )
+            rows.append(("run", run.measuredHeight(width: inner)))
+        }
+
+        if let title {
+            rows.append(("captions", Self.hostedHeight(captionsBlock(title: title), width: inner)))
+        }
+
+        for ayah in ayahs {
+            let note = settings.bookmarkNoteText(surah: surah.id, ayah: ayah.id)
+            guard !note.isEmpty else { continue }
+            rows.append(("note", Self.hostedHeight(noteRow(ayah: ayah, note: note), width: inner)))
+        }
+
+        let total = 2 * Self.verticalPadding + rows.map(\.1).reduce(0, +)
+            + CGFloat(max(0, rows.count - 1)) * Self.rowSpacing
+        #if DEBUG
+        Self.lastBreakdown = "width=\(Int(width)) " + rows.map { "\($0.0)=\(Int($0.1.rounded()))" }.joined(separator: " ")
+        #endif
+        return total
+    }
+
+    #if DEBUG
+    /// The last estimate's rows, for `-ayahSheetFitLog`.
+    static var lastBreakdown = ""
+    #endif
+
+    private static func lineHeight(_ style: UIFont.TextStyle) -> CGFloat {
+        ceil(UIFont.preferredFont(forTextStyle: style).lineHeight)
+    }
+
+    /// A SwiftUI view's height at `width`, laid out offscreen by a hosting controller. The captions and
+    /// the notes are plain `Text`, so this is exact; a UIKit string measurement of the same words
+    /// wrapped a line earlier than `Text` did (2026-11-09).
+    private static func hostedHeight<V: View>(_ view: V, width: CGFloat) -> CGFloat {
+        let host = UIHostingController(rootView: view.frame(width: width))
+        let size = host.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
+        return ceil(size.height)
+    }
+
     private func stepScale(_ direction: Double) {
         let range = Settings.ayahPreviewScaleRange
         let next = (settings.ayahPreviewCardScale + direction * Settings.ayahPreviewScaleStep)
@@ -585,7 +755,7 @@ struct AyahPreviewCard: View {
             Image(systemName: systemImage)
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(enabled ? settings.accentColor.accent1 : .secondary)
-                .frame(width: 26, height: 26)
+                .frame(width: Self.stepperButtonSize, height: Self.stepperButtonSize)
                 .contentShape(Rectangle())
                 .conditionalGlassEffect(clear: true, circle: true)
         }
@@ -595,10 +765,10 @@ struct AyahPreviewCard: View {
     }
 
     var body: some View {
-        let pieces = ayahs.map(piece(for:))
+        let pieces = ayahs.map { piece(for: $0, plain: showPlainText) }
         let anyModified = pieces.contains { $0.modified }
 
-        return VStack(spacing: 6) {
+        return VStack(spacing: Self.rowSpacing) {
             // The controls ride ABOVE the Arabic (Abu, 2026-10-22: "put the + and - and the zoom in at
             // the top so when i shrink and enlarge it doesnt move the buttons"): under it, every step
             // of the size moved the row the stepper sat on. The row is skipped only when it would be
@@ -650,16 +820,28 @@ struct AyahPreviewCard: View {
                 // Selectable (Abu, 2026-10-22: the word card's hero selects, "allow me to do the same
                 // thing" on the held ayah): a press-and-drag on the run highlights any part of it and
                 // offers Copy / Look Up on exactly that range. A tap still opens the word.
-                WordByWordText(
-                    segments: pieces.map(\.segment),
-                    fontName: settings.quranDisplayUsesCustomArabicFace ? settings.quranDisplayFontName : nil,
-                    fontSize: cardFontSize,
-                    tapsRequired: 1,
-                    selectable: true,
-                    selectedWord: selectedWord,
-                    onSelectWord: { ref in select(ref, pieces: pieces) }
-                )
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                // The recited word (a recitation behind the sheet, or Play Word by Word from it) lights
+                // on the card too; the host re-renders this run alone on each word.
+                PlayingWordHost(surah: surah.id, ayahs: ayahs.map(\.id)) { playingWord in
+                    WordByWordText(
+                        segments: pieces.map(\.segment),
+                        fontName: settings.quranDisplayUsesCustomArabicFace ? settings.quranDisplayFontName : nil,
+                        fontSize: cardFontSize,
+                        tapsRequired: 1,
+                        selectable: true,
+                        selectedWord: selectedWord,
+                        playingWord: playingWord.flatMap { word in
+                            guard let segment = pieces.firstIndex(where: { $0.ayah.id == word.ayah }),
+                                  let token = QuranWords.tokenIndex(ofWord: word.index,
+                                                                    in: pieces[segment].segment.displayText,
+                                                                    expecting: word.count) else { return nil }
+                            return WordByWordRef(segment: segment, index: token)
+                        },
+                        onSelectWord: { ref in select(ref, pieces: pieces) }
+                    )
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+                .ayahSheetFitProbe("run")
             }
 
             // The reference caption, then the ayah's ACTUAL text in BOTH bundled translations, each
@@ -667,68 +849,17 @@ struct AyahPreviewCard: View {
             // i long hold an ayah"), the reader's current one first: one flowing paragraph each,
             // numbered inline when the group spans several.
             if let title {
-                VStack(alignment: .leading, spacing: 3) {
-                    // The reference both ways (Abu, 2026-10-26): the interface's name leading, the
-                    // other language's trailing, a spacer between them, as the reader's title pill
-                    // names the surah in both scripts.
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(title)
-                        Spacer(minLength: 8)
-                        if let counterpartTitle {
-                            Text(counterpartTitle)
-                        }
-                    }
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-
-                    ForEach(translationBlocks) { block in
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(block.name)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(settings.accentColor.accent1)
-
-                            Text(block.text)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        // An English translation under its English name: left to right in the Arabic interface.
-                        .leftToRightContent()
-                        .padding(.top, 2)
-                    }
-                }
+                captionsBlock(title: title)
             }
 
             // The bookmark notes, right under the ayahs they belong to - they existed only behind "Edit
             // Note", so the one place you tapped the ayah never showed you what you'd written about it.
             ForEach(ayahs.filter { !settings.bookmarkNoteText(surah: surah.id, ayah: $0.id).isEmpty }) { ayah in
-                let note = settings.bookmarkNoteText(surah: surah.id, ayah: ayah.id)
-                HStack(alignment: .top, spacing: 6) {
-                    Image(systemName: "note.text")
-                        .font(.caption2)
-                        .foregroundStyle(settings.accentColor.accent1)
-                        .padding(.top, 1)
-
-                    Text(ayahs.count > 1 ? "\(String(ayah.id).localizedDigits). \(note)" : note)
-                        .font(.caption)
-                        .foregroundStyle(.primary)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(settings.accentColor.accent1.opacity(0.08))
-                )
+                noteRow(ayah: ayah, note: settings.bookmarkNoteText(surah: surah.id, ayah: ayah.id))
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, Self.horizontalPadding)
+        .padding(.vertical, Self.verticalPadding)
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -781,6 +912,8 @@ struct AyahActionsSheet: View {
     @ObservedObject private var displayOverrides = AyahDisplayOverrides.shared
     /// The "Keep Sheet Open" channel: non-nil while a secondary sheet is stacked over this one.
     @ObservedObject private var sheetStack = AyahSheetStack.shared
+    /// Play Word by Word's run (publishes on start and stop only): the tile reads Play or Stop.
+    @ObservedObject private var wordClips = WordClipPlayer.shared
     @Environment(\.dismiss) private var dismiss
     /// The reciter list, presented ON this sheet rather than swapped for it, so the voice can be
     /// changed and the ayah played without leaving the actions (Abu, 2026-10-25).
@@ -794,6 +927,9 @@ struct AyahActionsSheet: View {
     /// Whether the host can draw the inline study layout (the list reader), so the "Apply Settings"
     /// menu offers the per-ayah "Word by Word" pin.
     var offersWordByWord: Bool = false
+    /// The detent this sheet opened at (`AyahRowSheetRequest.opensLarge`), so a sheet stacked on it
+    /// (`StackedSecondaryPresentation`) rises to the same height instead of deciding again.
+    var opensLarge: Bool = false
 
     private var isBookmarked: Bool { settings.bookmarkIndex(surah: surah.id, ayah: ayah.id) != nil }
     private var currentNote: String { settings.bookmarkNoteText(surah: surah.id, ayah: ayah.id) }
@@ -826,12 +962,82 @@ struct AyahActionsSheet: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { dismiss() }
     }
 
-    /// Whether the sheet opens at the large detent. The preview card reads at the reader's size
-    /// now, so a long ayah fills the medium detent by itself and every action would start below
-    /// the fold; short ayahs keep the lighter medium opening (the other detent stays a drag away
-    /// either way). Counted on the Hafs text whatever riwayah is displayed: a proxy for length,
-    /// not a rendering.
-    static func opensLarge(for ayah: Ayah) -> Bool {
+    // MARK: The opening detent
+
+    /// The sheet content's geometry, named once so the body and the fit decision stay in step.
+    static let contentHorizontalPadding: CGFloat = 16
+    static let contentTopPadding: CGFloat = 8
+    static let contentSpacing: CGFloat = 14
+    static let actionTileHeight: CGFloat = 62
+    /// Air under the first row of actions before the medium detent counts as "fits". A hair only: the
+    /// room is measured above the home indicator's safe area, under which the sheet's own background
+    /// goes on, so a row that ends at the fold still has 34 pt of sheet beneath it (al-Fatihah 1:7 ends
+    /// 6 pt above the fold and opens medium; a 12 pt allowance sent it large, 2026-11-09).
+    private static let fitAllowance: CGFloat = 4
+    /// The Now Playing bar at the sheet's foot while a recitation plays (`SheetNavigationContainer`),
+    /// counted generously: over-counting only tips a borderline card to the large detent.
+    private static let nowPlayingBarAllowance: CGFloat = 64
+
+    /// Whether the sheet opens at the large detent: when the ayah card and one full row of actions
+    /// would NOT both fit at the medium one (Abu, 2026-11-08: "if it can all fit and there are some
+    /// other options it should open half, else if the whole ayah won't fit open full screen"). The card
+    /// is measured before the sheet exists (`AyahPreviewCard.estimatedHeight`: the run's real TextKit
+    /// layout at the reader's size, the captions at their fonts) and set against the room the medium
+    /// detent leaves under the sheet's navigation bar; the other detent stays a drag away either way.
+    /// Until 2026-11-08 a 24-Hafs-word proxy decided, which opened a 23-word ayah at a large reader
+    /// size with no action in sight and a short one at a huge card size folded in half; the proxy
+    /// (`opensLargeByLength`) is the fallback when there is no portrait window to measure against.
+    /// Phones only: `SheetPresentationModifier` presents large on every other idiom regardless.
+    static func opensLarge(surah: Surah, ayah: Ayah) -> Bool {
+        guard UIDevice.current.userInterfaceIdiom == .phone else { return false }
+        guard let window = ayahSheetKeyWindow(),
+              window.bounds.width > 0, window.bounds.height > window.bounds.width else {
+            return opensLargeByLength(for: ayah)
+        }
+        let recorded = AyahSheetMediumRoom.recorded(for: window)
+        var room = recorded ?? mediumDetentRoomEstimate(in: window)
+        if PlaybackVisibility.shared.showsNowPlaying { room -= nowPlayingBarAllowance }
+        let card = AyahPreviewCard(surah: surah, ayahs: [ayah])
+            .estimatedHeight(width: sheetWidth(in: window) - 2 * contentHorizontalPadding)
+        let needed = contentTopPadding + card + contentSpacing + actionTileHeight + fitAllowance
+        #if DEBUG
+        if AyahSheetFitProbe.enabled {
+            NSLog("AyahSheetFit decide %d:%d window=%.0fx%.0f safe(top=%.0f,bottom=%.0f) card=%.1f [%@] needed=%.1f room=%.1f (%@) -> %@",
+                  surah.id, ayah.id, window.bounds.width, window.bounds.height,
+                  window.safeAreaInsets.top, window.safeAreaInsets.bottom, card, AyahPreviewCard.lastBreakdown,
+                  needed, room, recorded == nil ? "estimated" : "measured", needed > room ? "large" : "medium")
+        }
+        #endif
+        return needed > room
+    }
+
+    /// The width the sheet lays its content out in: the window's, less 8 pt on iOS 26, whose sheets
+    /// inset their scrolling content by 4 pt a side (the card measured 40 pt narrower than the window
+    /// on three simulators, 2026-11-09).
+    private static func sheetWidth(in window: UIWindow) -> CGFloat {
+        if #available(iOS 26.0, *) { return window.bounds.width - 8 }
+        return window.bounds.width
+    }
+
+    /// What the medium detent shows of the sheet's scrolling content, above the home indicator, until a
+    /// sheet has stood at that detent and MEASURED it (`AyahSheetMediumRoom`, which the decision prefers).
+    /// Not derivable with confidence: on iOS 26 the medium sheet floats and its height follows the
+    /// device (365.7 pt of room on an iPhone 17 Pro, 407.7 on a 17 Pro Max, the same safe areas either
+    /// side; the large sheet's top sits at the Dynamic Island on those and 10 pt under the status bar on
+    /// an iPhone 16e), so this fits those readings: half the window under the status bar, less 40.
+    /// Before iOS 26, UIKit's medium is half of the large detent (the window less the status bar and a
+    /// 10 pt gap), with the 56 pt navigation bar and the bottom safe area inside it.
+    private static func mediumDetentRoomEstimate(in window: UIWindow) -> CGFloat {
+        let bounds = window.bounds, safe = window.safeAreaInsets
+        if #available(iOS 26.0, *) {
+            return ((bounds.height - safe.top) / 2).rounded(.down) - 40
+        }
+        return ((bounds.height - safe.top - 10) / 2).rounded(.down) - 56 - safe.bottom
+    }
+
+    /// The length proxy the decision falls back on without a window to measure against: 24 Hafs words
+    /// and up opens large. Counted on the Hafs text whatever riwayah is displayed.
+    static func opensLargeByLength(for ayah: Ayah) -> Bool {
         WordTokens.tokens(in: ayah.textHafs).count >= 24
     }
 
@@ -874,7 +1080,7 @@ struct AyahActionsSheet: View {
         .padding(.horizontal, 6)
         .foregroundStyle(color)
         .frame(maxWidth: .infinity)
-        .frame(height: 62)
+        .frame(height: Self.actionTileHeight)
         .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -1032,6 +1238,17 @@ struct AyahActionsSheet: View {
             // unchanged; picking how far it carries is the choice the menu asks for.
             list.append(AyahAction(id: "playFrom", title: String(localized: "Play From Ayah"), systemImage: "play.circle.fill",
                                    kind: .playFromMenu))
+
+            // Play Word by Word (Abu, 2026-11-02): quran.com's clip of each word in turn, the word lit
+            // on the card above as it sounds (WordClipPlayer). The sheet stays up, following along being
+            // the point; the same tile stops the run.
+            let wordsPlaying = wordClips.isPlaying(surah: surah.id, ayah: ayah.id)
+            list.append(AyahAction(id: "wordByWord",
+                                   title: wordsPlaying ? String(localized: "Stop Word by Word") : String(localized: "Play Word by Word"),
+                                   systemImage: wordsPlaying ? "stop.circle" : "text.word.spacing", action: {
+                settings.hapticFeedback()
+                WordClipPlayer.shared.toggle(surah: surah.id, ayah: ayah.id)
+            }))
 
             list.append(AyahAction(id: "play", title: String(localized: "Play This Ayah"), systemImage: "play.circle", action: {
                 settings.hapticFeedback()
@@ -1350,10 +1567,13 @@ struct AyahActionsSheet: View {
     var body: some View {
         SheetNavigationContainer {
             ScrollView {
-                VStack(spacing: 14) {
+                VStack(spacing: Self.contentSpacing) {
                     // The ayah itself, so the sheet says what you tapped rather than only naming it - the
                     // same card the tafsir sheet shows (word taps, plain-text toggle, translation, note).
                     AyahPreviewCard(surah: surah, ayahs: [ayah])
+                        .ayahSheetFitProbe("card") { width in
+                            AyahPreviewCard(surah: surah, ayahs: [ayah]).estimatedHeight(width: width)
+                        }
 
                     actionGrid
 
@@ -1372,15 +1592,18 @@ struct AyahActionsSheet: View {
                     // and the topics that annotate it, headed by what the card is.
                     AyahInsightsCard(surah: surah, ayah: ayah, explains: true)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
+                .padding(.horizontal, Self.contentHorizontalPadding)
+                .padding(.top, Self.contentTopPadding)
                 .padding(.bottom, 16)
             }
+            .ayahSheetFitProbe("content")
+            .recordAyahSheetMediumRoom()
             .navigationTitle(ayahSheetTitle(surahNumber: surah.id, ayahNumber: ayah.id))
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
             .accentWashedBackground()
         }
+        .ayahSheetFitProbe("sheet")
         // "Keep Screen On": held while this sheet is up, including under a sheet stacked on it, and
         // let go the moment it closes (`KeepScreenAwake` releases on disappear).
         .keepScreenAwake(while: quranDisplay.ayahSheetKeepsScreenOn)
@@ -1394,7 +1617,7 @@ struct AyahActionsSheet: View {
                 ayah: ayah,
                 onDismiss: { sheetStack.pending = nil }
             )
-            .modifier(StackedSecondaryPresentation(kind: secondary, ayah: ayah))
+            .modifier(StackedSecondaryPresentation(kind: secondary, startLarge: opensLarge))
         }
         .onChange(of: quranDisplay.displayQiraah) { _ in
             riwayahChanged = true
@@ -1403,9 +1626,10 @@ struct AyahActionsSheet: View {
         .onChange(of: showReciterPicker) { _ in closeAfterRiwayahChange() }
         .onChange(of: sheetStack.pending == nil) { cleared in
             closeAfterRiwayahChange()
-            // A custom range wider than this ayah was played from the range sheet stacked here: this
-            // sheet goes too, once that one is down (`AyahSheetStack.closeHostWhenCleared`). A beat
-            // later, so the two do not fight over one dismissal.
+            // A custom range wider than this ayah was played from the range sheet stacked here, or
+            // the Share Ayah sheet stacked here copied or shared: this sheet goes too, once that one
+            // is down (`AyahSheetStack.closeHostWhenCleared`). A beat later, so the two do not fight
+            // over one dismissal.
             if cleared, sheetStack.closeHostWhenCleared {
                 sheetStack.closeHostWhenCleared = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { dismiss() }
@@ -1414,20 +1638,139 @@ struct AyahActionsSheet: View {
     }
 }
 
+/// The key window, for the sheet geometry the detent decision measures against.
+private func ayahSheetKeyWindow() -> UIWindow? {
+    UIApplication.shared.connectedScenes
+        .compactMap { $0 as? UIWindowScene }
+        .flatMap(\.windows)
+        .first { $0.isKeyWindow }
+}
+
+/// How much of the ayah actions sheet's scrolling content the MEDIUM detent shows above the home
+/// indicator, as measured the last time a sheet stood there (`MediumRoomRecorder`), per window size
+/// (devices and orientations differ) and kept across launches. `AyahActionsSheet.opensLarge` decides
+/// from this and estimates only until the first measurement.
+enum AyahSheetMediumRoom {
+    private static var cache: [String: CGFloat] = [:]
+
+    private static func key(for window: UIWindow) -> String {
+        "ayahSheetMediumRoom.\(Int(window.bounds.width))x\(Int(window.bounds.height))"
+    }
+
+    static func recorded(for window: UIWindow) -> CGFloat? {
+        let key = key(for: window)
+        if let hit = cache[key] { return hit }
+        let stored = UserDefaults.standard.double(forKey: key)
+        guard stored > 0 else { return nil }
+        cache[key] = stored
+        return stored
+    }
+
+    static func record(_ room: CGFloat, for window: UIWindow) {
+        let key = key(for: window)
+        guard room > 0, abs((cache[key] ?? 0) - room) > 0.5 else { return }
+        cache[key] = room
+        UserDefaults.standard.set(Double(room), forKey: key)
+    }
+}
+
+/// Measures the medium detent's room for `AyahSheetMediumRoom`: the scroll view's own height, once it
+/// has held still for half a second. Only a height under 60% of the window's can be the medium detent
+/// (the large one shows over 80% on every phone), which keeps a sheet dragged to the large detent, and
+/// the frames on the way there, out of the record; so does the Now Playing bar, which shortens the
+/// content while a recitation plays.
+private struct MediumRoomRecorder: ViewModifier {
+    @ObservedObject private var playback = PlaybackVisibility.shared
+    @State private var pending: DispatchWorkItem?
+
+    func body(content: Content) -> some View {
+        content.background(
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { schedule(proxy.size.height) }
+                    .onChange(of: proxy.size.height) { schedule($0) }
+            }
+        )
+    }
+
+    private func schedule(_ height: CGFloat) {
+        pending?.cancel()
+        let barShown = playback.showsNowPlaying
+        let work = DispatchWorkItem {
+            guard !barShown, height > 0, let window = ayahSheetKeyWindow(),
+                  height < window.bounds.height * 0.6 else { return }
+            AyahSheetMediumRoom.record(height, for: window)
+        }
+        pending = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: work)
+    }
+}
+
+extension View {
+    func recordAyahSheetMediumRoom() -> some View { modifier(MediumRoomRecorder()) }
+}
+
 /// The stacked sheet's detents: the range picker opens full height, everything else takes the
-/// small/medium pair the swapped copy uses.
+/// small/medium pair the swapped copy uses, opening at the detent the actions sheet beneath it
+/// opened at, so the stack rises as one.
 private struct StackedSecondaryPresentation: ViewModifier {
     let kind: AyahSecondarySheet
-    let ayah: Ayah
+    let startLarge: Bool
 
     @ViewBuilder
     func body(content: Content) -> some View {
         if kind == .customRange {
             content
         } else {
-            content.smallMediumSheetPresentation(startLarge: AyahActionsSheet.opensLarge(for: ayah))
+            content.smallMediumSheetPresentation(startLarge: startLarge)
         }
     }
 }
+
+#if DEBUG
+/// `-ayahSheetFitLog`: prints a view's laid-out size and safe-area insets whenever they change, and
+/// an estimate made from its width, so the detent decision's constants (`AyahActionsSheet.opensLarge`)
+/// can be read against the real layout. Nothing without the flag; nothing at all in Release.
+struct AyahSheetFitProbe: ViewModifier {
+    static let enabled = ProcessInfo.processInfo.arguments.contains("-ayahSheetFitLog")
+
+    let label: String
+    let estimate: ((CGFloat) -> CGFloat)?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if Self.enabled {
+            content.background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .onAppear { report(proxy) }
+                        .onChange(of: proxy.size.height) { _ in report(proxy) }
+                }
+            )
+        } else {
+            content
+        }
+    }
+
+    private func report(_ proxy: GeometryProxy) {
+        let estimated = estimate.map { String(format: "%.1f [%@]", $0(proxy.size.width), AyahPreviewCard.lastBreakdown) } ?? "-"
+        let global = proxy.frame(in: .global)
+        NSLog("AyahSheetFit %@ size=%.1fx%.1f global(x=%.1f-%.1f,y=%.1f-%.1f) safe(top=%.1f,bottom=%.1f) estimate=%@",
+              label, proxy.size.width, proxy.size.height,
+              global.minX, global.maxX, global.minY, global.maxY,
+              proxy.safeAreaInsets.top, proxy.safeAreaInsets.bottom, estimated)
+    }
+}
+
+extension View {
+    func ayahSheetFitProbe(_ label: String, estimate: ((CGFloat) -> CGFloat)? = nil) -> some View {
+        modifier(AyahSheetFitProbe(label: label, estimate: estimate))
+    }
+}
+#else
+extension View {
+    func ayahSheetFitProbe(_ label: String, estimate: ((CGFloat) -> CGFloat)? = nil) -> some View { self }
+}
+#endif
 
 #endif

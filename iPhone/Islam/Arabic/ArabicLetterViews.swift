@@ -119,11 +119,13 @@ struct TashkeelLettersView: View {
     }
 
     var body: some View {
+        ScrollViewReader { proxy in
         List {
             Group {
                 markPickerSection
                 lettersSection
                 allMarksSection
+                tanweenWordsSection
                 defaultTashkeelSection
             }
             .themedListRowBackground()
@@ -135,6 +137,19 @@ struct TashkeelLettersView: View {
             ArabicSpeech.shared.stop()
             ArabicPracticeSelection.shared.clear()
         }
+        #if DEBUG
+        // "-tashkeelScrollTo tanweenWords": the section below the fold into a screenshot (the page
+        // cannot be scrolled from a script).
+        .onAppear {
+            let arguments = ProcessInfo.processInfo.arguments
+            if let idx = arguments.firstIndex(of: "-tashkeelScrollTo"), arguments.indices.contains(idx + 1) {
+                let target = arguments[idx + 1]
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    withAnimation { proxy.scrollTo("tashkeelSection_" + target, anchor: .top) }
+                }
+            }
+        }
+        #endif
         #if os(iOS)
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
         .collapseBarsOnScroll($barsCollapsed)
@@ -161,6 +176,7 @@ struct TashkeelLettersView: View {
             }
         }
         #endif
+        }
     }
 
     /// The marks in the families they are taught in, three to a family so each fills one row of chips.
@@ -439,6 +455,22 @@ struct TashkeelLettersView: View {
             Text("EVERY MARK ON EVERY LETTER")
         } footer: {
             Text("Read each row right to left: fatha, kasra, damma, sukoon, then the three tanween, and beneath them the shaddah carrying each vowel. The \"an\" tanween is written with its silent alif, as it appears at the end of words. Tap a row to select it: the selected row offers play, and a chevron that writes the shaddah line out beneath as the two letters it stands for.")
+        }
+    }
+
+    /// The three tanween on a whole word, each beside the noon it hides (Abu, 2026-11-08: "when it says
+    /// كتابٌ say this is really pronounced كتابُنْ"). The chevron on a letter's tanween row writes ONE
+    /// letter out; this is the same lesson on a word, with the sukoon the practice is set to.
+    private var tanweenWordsSection: some View {
+        Section {
+            ForEach(TanweenWord.all) { word in
+                TanweenWordRow(word: word, sukoon: LetterPracticeSukoon.mark(quranic: useQuranicSukoon),
+                               face: useQuranicFont ? .reader : .plain)
+            }
+        } header: {
+            Text("TANWEEN WRITTEN OUT").id("tashkeelSection_tanweenWords")
+        } footer: {
+            Text("A tanween is a short vowel followed by a noon with sukoon: said, never written. The \"an\" tanween's alif is only a seat for the mark, sounded only when you stop on the word. Before hamzatul waSl that hidden noon is what joins the words: see the Hamzatul WaSl page.")
         }
     }
 
@@ -2082,6 +2114,124 @@ func tanweenWrittenOut(letter: String, tanweenName: String, sukoon: String = Let
     default: return nil
     }
     return letter + vowel + "\u{0646}" + sukoon
+}
+
+/// A whole word carrying each tanween, beside the noon it hides: كِتَابٌ is really said كِتَابُنۡ (Abu,
+/// 2026-11-08: "when it says كتابٌ say this is really pronounced كتابُنْ"). `tanweenWrittenOut` writes
+/// one LETTER out on the tables; these say the same thing on a word, the way a reader meets it: on
+/// the Tashkeel page, on the hamzatul waSl page (where that noon is what joins), and in the Reading
+/// Test's Tanween tier. A teaching word, not a Quran spelling (the mushaf writes كِتَٰبٌ with a dagger).
+struct TanweenWord: Identifiable {
+    /// The mark's catalogue name ("Dammatayn", "Fathatayn", "Kasratayn").
+    let tanweenName: String
+    /// The word as it is written, the "an" one with its seat alif.
+    let word: String
+    /// The short vowel the tanween doubles.
+    let vowel: String
+    /// Read with the noon, the way the readings spell it.
+    let reading: String
+    /// The ending as the alphabet names it: "-un", "-an", "-in".
+    let ending: String
+
+    var id: String { tanweenName }
+
+    private static let stem = "\u{0643}\u{0650}\u{062A}\u{064E}\u{0627}\u{0628}"
+
+    /// The word with its tanween written out: the vowel, then a noon carrying `sukoon` (the "an"
+    /// tanween's alif, only a seat, is gone).
+    func writtenOut(sukoon: String = LetterPracticeSukoon.mark) -> String {
+        Self.stem + vowel + "\u{0646}" + sukoon
+    }
+
+    static let all: [TanweenWord] = [
+        TanweenWord(tanweenName: "Dammatayn", word: stem + "\u{064C}", vowel: "\u{064F}", reading: "kitaabun", ending: "-un"),
+        TanweenWord(tanweenName: "Fathatayn", word: stem + "\u{064B}\u{0627}", vowel: "\u{064E}", reading: "kitaaban", ending: "-an"),
+        TanweenWord(tanweenName: "Kasratayn", word: stem + "\u{064D}", vowel: "\u{0650}", reading: "kitaabin", ending: "-in"),
+    ]
+}
+
+/// One `TanweenWord` as a row: the reading and the mark's name on the leading side, and on the
+/// trailing side the word, an equals sign, and the word written out with its noon, right to left
+/// like the script. Tap to select; the selected row offers play.
+struct TanweenWordRow: View {
+    @Environment(\.appearance) private var appearance
+    /// Snapshotted at creation (the NameRow rule): the page observes the slices and rebuilds the rows.
+    var letterSizeSteps: Int = Settings.shared.arabicLetterSizeIndex
+    var hideEnglish: Bool = Settings.shared.hideEnglishInArabicLetters
+    @ObservedObject private var selection = ArabicPracticeSelection.shared
+
+    let word: TanweenWord
+    /// The sukoon the written-out noon carries: the page's own hand, or the practice setting.
+    var sukoon: String = LetterPracticeSukoon.mark
+    var face: ArabicTopicLinkLabel.Face = .reader
+
+    private func arabicFont(base: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+        switch face {
+        case .uthmani: return Font.arabic(Settings.hafsUthmaniFontName, size: base, relativeTo: style)
+        case .reader where appearance.useFontArabic: return appearance.islamArabicFont(base: base, relativeTo: style)
+        case .reader, .plain: return .system(style)
+        }
+    }
+
+    private var usesCustomFace: Bool {
+        switch face {
+        case .uthmani: return true
+        case .reader: return appearance.useFontArabic && appearance.islamUsesCustomArabicFace
+        case .plain: return false
+        }
+    }
+
+    var body: some View {
+        let id = "tanweenWord:" + word.id
+        let isSelected = selection.isSelected(id)
+
+        return HStack(alignment: .center, spacing: 12) {
+            if isSelected {
+                PracticeListenButton(text: word.word)
+            }
+
+            if !hideEnglish {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(word.reading)
+                        .font(.subheadline.weight(.semibold))
+
+                    Text("\(word.tanweenName.localizedDisplay): \(word.ending)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            HStack(spacing: 10) {
+                Text(word.word)
+                    .font(arabicFont(base: 24, relativeTo: .title2))
+
+                Text(verbatim: "=")
+                    .font(.title3)
+                    .foregroundColor(.secondary)
+
+                Text(word.writtenOut(sukoon: sukoon))
+                    .font(arabicFont(base: 24, relativeTo: .title2))
+                    .foregroundColor(appearance.accent)
+            }
+            .arabicFontDesign(custom: usesCustomFace)
+            .arabicLetterTypeFloor(steps: letterSizeSteps)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            // Right to left, like the script: the word on the right, its spelling-out on the left.
+            .environment(\.layoutDirection, .rightToLeft)
+        }
+        .padding(.vertical, 2)
+        .contentShape(Rectangle())
+        .arabicPracticeRowSelection(isSelected, hInset: -8, vInset: -2)
+        .onTapGesture {
+            Settings.shared.hapticFeedback()
+            withAnimation(.easeInOut) { selection.toggle(id) }
+        }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(String(localized: "\(word.reading), \(word.tanweenName.localizedDisplay)"))
+    }
 }
 
 struct TashkeelRow: View {

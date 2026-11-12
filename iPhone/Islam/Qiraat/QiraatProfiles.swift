@@ -82,8 +82,8 @@ enum QiraatProfiles {
         Settings.Riwayah.kisaiTeacher,
     ]
 
-    /// The three Ibn al-Jazari (d. 833 AH) established as equally mutawatir in al-Durrah
-    /// al-Mutammimah, completing the ten, in his order.
+    /// The three Ibn al-Jazari (d. 833 AH) set out in ad-Durrah al-Mudiyyah, completing the ten,
+    /// in his order.
     static let threeIDs: [String] = [
         Settings.Riwayah.abiJafarTeacher, Settings.Riwayah.yaqubTeacher, Settings.Riwayah.khalafAshirTeacher,
     ]
@@ -169,7 +169,7 @@ enum QiraatProfiles {
 
     /// Riwayat whose texts match because the transmission does not separate them.
     ///
-    /// Ishaq and Idris are the two narrators of Khalaf al-Ashir, and via al-Durrah al-Mutammimah
+    /// Ishaq and Idris are the two narrators of Khalaf al-Ashir, and via ad-Durrah al-Mudiyyah
     /// nothing is transmitted differently between them: not in the usul, and no difference in the
     /// farsh is reported either. The electronic mushaf the app's Arabic comes from prints one body
     /// text under both names, and every other narrator pair in that same series does differ (58
@@ -202,7 +202,7 @@ enum QiraatProfiles {
 
     /// The explanation itself, shared by the profile pages and the comparison sheet so the reader
     /// meets one account of this rather than two that drift apart.
-    static let sharedTextExplanation = String(localized: "Ishaq and Idris are the two narrators of Khalaf al-Ashir, and via al-Durrah al-Mutammimah nothing is transmitted differently between them: they agree in the usul, and no difference in the farsh is reported either. The mushaf this app's Arabic is taken from prints one body text under both narrators' names, so the two read alike in every ayah. The places where the two narrations do part company belong to Tayyibat al-Nashr, the greater ten, in which Ibn al-Jazari gives Idris two turuq.")
+    static let sharedTextExplanation = String(localized: "Ishaq and Idris are the two narrators of Khalaf al-Ashir, and via ad-Durrah al-Mudiyyah nothing is transmitted differently between them: they agree in the usul, and no difference in the farsh is reported either. The mushaf this app's Arabic is taken from prints one body text under both narrators' names, so the two read alike in every ayah. The places where the two narrations do part company belong to Tayyibat an-Nashr, the greater ten, which brings in more routes (turuq) from Idris.")
 
     /// The one-line form, for a footer under a list that already names the two.
     static let sharedTextShortNote = String(localized: "Nothing is transmitted differently between these two narrators via al-Durrah, so they carry one text. Open either for the detail.")
@@ -227,7 +227,7 @@ enum QiraatProfiles {
             hallmarks: [
                 String(localized: "Every resting hamzah becomes a long vowel: يُؤۡمِنُونَ is read يُومِنُونَ and بِئۡسَ as بِيسَ. The mushaf writes it so, which is why it carries about 1,500 fewer hamzah signs than Hafs's."),
                 String(localized: "The plural mim is joined with a waw before a vowel, قُلُوبِهِمُۥ, رَزَقۡنَٰهُمُۥ, as Ibn Kathir reads it."),
-                String(localized: "Two hamzahs in one word: the second is softened and an alef slipped between them, ءَٰا۬نذَرۡتَهُمُۥ. The name إِسۡرَآيلَ loses its hamzah altogether."),
+                String(localized: "Two hamzahs in one word: the second is softened and an alef slipped between them, ءَٰا۬نذَرۡتَهُمُۥ. The hamzah of إِسۡرَٰٓءِيلَ is softened too, and his mushaf writes it without the hamzah sign, إِسۡرَآٰيلَ."),
                 String(localized: "The resting nun is hidden before خ and غ, مِن غَيۡرِ, where every other reading sounds it clearly."),
                 String(localized: "The letters that open a surah are read with a breath-less pause after each one, and the separated madd is kept short, two counts."),
                 String(localized: "No imalah: the reading stays level (fath) throughout."),
@@ -329,7 +329,7 @@ enum QiraatProfiles {
             city: "Damascus", bornAH: 21, diedAH: 118, diedCE: 736,
             summary: String(localized: "The Damascene reading, and the earliest-born of the ten."),
             paragraphs: [
-                String(localized: "Ibn Amir was born in the lifetime of the Companions and is counted among the Successors. He served as judge of Damascus and as imam of its great Umayyad Mosque, and he led recitation there through the whole of the early Umayyad period."),
+                String(localized: "Ibn Amir was born in the lifetime of the Companions and is counted among the Successors: in 21 AH according to his student Yahya adh-Dhimari, or in 8 AH by another report. He served as judge of Damascus and as imam of its great Umayyad Mosque, and he led recitation there through the whole of the early Umayyad period."),
                 String(localized: "He learned from Abu ad-Darda and from al-Mughirah ibn Abi Shihab al-Makhzumi, who read on Uthman ibn Affan (may Allah be pleased with them). His is the reading of Sham, and it remained the recitation of Damascus for centuries."),
                 String(localized: "Both of his canonical narrators, Hisham and Ibn Dhakwan, came generations later and received the reading through intermediate teachers."),
             ],
@@ -358,8 +358,8 @@ enum QiraatProfiles {
                 String(localized: "The pronoun ha is drawn out even after a resting letter: فِيهِۦ, مِنۡهُۥ, عَنۡهُۥ, read fihee, minhoo. No other reading does this throughout."),
                 String(localized: "The plural mim is joined with a waw before a vowel: رَزَقۡنَٰهُمُۥ, قُلُوبِهِمُۥ."),
                 String(localized: "The separated madd kept short, two counts, and no imalah: the reading stays level (fath) throughout."),
-                String(localized: "Two hamzahs meeting between words: al-Bazzi drops the first, جَا أَحَدٞ; Qunbul softens the second. Qunbul also reads الصراط with a seen, ٱلصِّۜرَٰطَ."),
-                String(localized: "Al-Bazzi doubles the ta of a set of verbs, وَلَا تَّفَرَّقُواْ, and carries the takbir, Allahu akbar, before the basmalah of every surah from ad-Duha to the end."),
+                String(localized: "Two hamzahs with the same vowel meeting between words: al-Bazzi drops the first when both carry a fathah, جَا أَحَدٞ, and softens it otherwise; Qunbul softens the second or makes it a long vowel. Qunbul also reads الصراط with a seen, ٱلصِّۜرَٰطَ."),
+                String(localized: "Al-Bazzi doubles the ta of a set of verbs, وَلَا تَّفَرَّقُواْ, and carries the takbir, Allahu akbar, between the surahs from the end of ad-Duha to the end of the Quran; by another route it begins at the start of ad-Duha."),
                 String(localized: "Basmalah between every two surahs."),
             ],
             companions: String(localized: "Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka'b, Abdullah ibn Abbas, and Abdullah ibn as-Sa'ib (may Allah be pleased with them)."),
@@ -403,7 +403,7 @@ enum QiraatProfiles {
                 String(localized: "Warsh moves a hamzah's vowel onto the resting letter before it, قَدَ اَفۡلَحَ, وَبِالَاخِرَةِ, and turns a resting hamzah into a long vowel, يُومِنُونَ; Qalun keeps the hamzah, يُؤۡمِنُونَ."),
                 String(localized: "The separated madd: six counts for Warsh, the longest, two for Qalun as his mushaf prints it. Warsh also stretches the alef after a hamzah, ءَامَنُواْ, by three transmitted lengths (madd al-badal)."),
                 String(localized: "A half tilt (taqlil) for Warsh on words ending in ى and on ٱلدُّنۡيَا, مُوس۪ىٰ, ٱلۡهُد۪ىٰ, ٱلنّ۪ارِ, ٱلۡكٰ۪فِرِينَ; Qalun reads them level."),
-                String(localized: "Two hamzahs meeting between words: Qalun drops the first, جَا أَحَدٞ, هَٰؤُلَآ۟ إِن; Warsh softens the second. The plural mim: Qalun may join it with a waw (two ways are transmitted), Warsh only before a hamzah, عَلَيۡهِمُۥٓ ءَآنذَرۡتَهُمُۥٓ."),
+                String(localized: "Two hamzahs with the same vowel meeting between words: Qalun drops the first when both carry a fathah, جَا أَحَدٞ, and softens it otherwise; Warsh softens the second or makes it a long vowel. The plural mim: Qalun may join it with a waw (two ways are transmitted), Warsh only before a hamzah, عَلَيۡهِمُۥٓ ءَآنذَرۡتَهُمُۥٓ."),
                 String(localized: "Warsh thickens the lam after ص, ط and ظ, ٱلصَّلَوٰةَ, and thins the ra after a kasra, sounds a Hafs reader notices at once. Basmalah between every two surahs for Qalun; Warsh has three ways."),
             ],
             companions: String(localized: "Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka'b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them)."),
@@ -424,8 +424,8 @@ enum QiraatProfiles {
                 String(localized: "The ha of عَلَيۡهُمۡ, إِلَيۡهُمۡ and لَدَيۡهُمۡ read with a damma, as Hamzah."),
                 String(localized: "At a pause a soft ha is added to هُوَ and هِيَ, هُوَهۡ, هِيَهۡ, so the vowel is heard."),
                 String(localized: "The separated madd kept short, two counts, and every hamzah in full; Ruways softens the second of two that meet between words, ٱلسُّفَهَآءُ اَلَآ."),
-                String(localized: "Imalah only in ٱلۡكَٰٜفِرِينَ, through Ruways; Rawh reads level. Ruways also reads الصراط with a seen, صِۜرَٰطَ."),
-                String(localized: "Basmalah between every two surahs."),
+                String(localized: "Almost no imalah: Ruways tilts ٱلۡكَٰٜفِرِينَ wherever it comes, and Rawh's mushaf only a few words. Ruways also reads الصراط with a seen, صِۜرَٰطَ."),
+                String(localized: "Between two surahs three ways are transmitted: the basmalah, a breath-less pause, or running straight on."),
             ],
             companions: String(localized: "Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka'b, Zayd ibn Thabit, Abdullah ibn Mas'ud, Abu Musa al-Ash'ari, Abdullah ibn Abbas, and Abu Hurayrah (may Allah be pleased with them)."),
             narratorTags: [Settings.Riwayah.ruways, Settings.Riwayah.rawh]
@@ -443,7 +443,7 @@ enum QiraatProfiles {
             summary: String(localized: "The narration almost the entire Muslim world recites from today."),
             paragraphs: [
                 String(localized: "Hafs was the stepson of Asim and read on him over many years. Of the two narrators of Asim, Hafs is the one described as the more precise in conveying exactly what Asim taught."),
-                String(localized: "His narration became the basis of the Ottoman printed mushaf and then of the Madinah mushaf, and through printing it spread until it became the recitation of the overwhelming majority of Muslims, commonly estimated at more than nine in ten."),
+                String(localized: "His narration is the text of the Ottoman printed mushafs, of the Cairo edition of 1924 and of the Madinah mushaf, and through printing it spread until it became the recitation of the overwhelming majority of Muslims, commonly estimated at more than nine in ten."),
                 String(localized: "That dominance is a fact of history and printing, not of rank: every one of the twenty riwayat is equally the Quran."),
             ],
             hallmarks: [
@@ -457,10 +457,9 @@ enum QiraatProfiles {
             id: Settings.Riwayah.shubah, name: "Shu'bah", arabic: "شُعبَة",
             fullName: String(localized: "Abu Bakr Shu'bah ibn Ayyash ibn Salim al-Kufi"),
             masterID: Settings.Riwayah.asimTeacher, city: "Kufa", bornAH: 95, diedAH: 193,
-            summary: String(localized: "Asim's other narrator, famed for caution and for long worship."),
+            summary: String(localized: "Asim's other narrator, famed for his long worship."),
             paragraphs: [
-                String(localized: "Shu'bah read the Quran on Asim three times over and was one of the great worshippers of his age; the reports say he completed the Quran in prayer regularly for decades."),
-                String(localized: "He was so cautious about transmitting that he is said to have wished he had never narrated at all rather than risk a single error, a scrupulousness that is itself part of why his narration is trusted."),
+                String(localized: "Shu'bah read the Quran on Asim three times over and was one of the great worshippers of his age. Tarikh Baghdad reports that as he lay dying he pointed to a corner of his house and said he had completed the Quran there eighteen thousand times."),
                 String(localized: "His riwayah differs from Hafs in a few hundred places, most of them small differences of vowel or of assimilation."),
             ],
             hallmarks: [
@@ -494,13 +493,13 @@ enum QiraatProfiles {
             masterID: Settings.Riwayah.nafiTeacher, city: "Madinah", bornAH: 120, diedAH: 220,
             summary: String(localized: "Nafi's closest Madinan student; the reading of Libya."),
             paragraphs: [
-                String(localized: "Qalun was Nafi's stepson and read on him for some twenty years. The name Qalun was given to him by Nafi himself and is said to be a Byzantine word for 'good', a comment on the quality of his recitation."),
+                String(localized: "Qalun was Nafi's stepson and read on him many times over. The name Qalun was given to him by Nafi himself and is said to be a Byzantine word for 'good', a comment on the quality of his recitation."),
                 String(localized: "He is reported to have gone deaf in later life and yet to have continued correcting students by watching their lips, a story the biographers tell to convey how completely he had internalised the reading."),
                 String(localized: "His narration is the recitation of Libya and of parts of Tunisia today."),
             ],
             hallmarks: [
                 String(localized: "Shorter madd than Warsh, two counts on the separated madd as his mushaf prints it, and a lighter touch overall."),
-                String(localized: "Keeps the hamzah where Warsh drops it, يُؤۡمِنُونَ, and drops the first of two hamzahs meeting between words, جَا أَحَدٞ, هَٰؤُلَآ۟ إِن."),
+                String(localized: "Keeps the hamzah where Warsh drops it, يُؤۡمِنُونَ, and of two hamzahs with a fathah meeting between words drops the first, جَا أَحَدٞ, softening it when both carry a kasrah or a dammah."),
                 String(localized: "Two hamzahs in one word: the second softened with an alef slipped between, ءَٰا۬نذَرۡتَهُمۡ."),
                 String(localized: "The plural mim may be joined with a waw: both ways are transmitted, and the printed text keeps it closed, عَلَيۡهِمۡ."),
                 String(localized: "Level reading (fath) where Warsh tilts, and the basmalah between every two surahs."),
@@ -518,7 +517,7 @@ enum QiraatProfiles {
             ],
             hallmarks: [
                 String(localized: "The doubled ta in a defined set of verbs, وَلَا تَّفَرَّقُواْ, when read on from the word before."),
-                String(localized: "Drops the first of two hamzahs meeting between words, جَا أَحَدٞ."),
+                String(localized: "Of two hamzahs with a fathah meeting between words, drops the first, جَا أَحَدٞ, and softens it when both carry a kasrah or a dammah."),
                 String(localized: "Carries Ibn Kathir's drawn-out pronoun ha, فِيهِۦ, مِنۡهُۥ, and the joined plural mim, رَزَقۡنَٰهُمُۥ."),
                 String(localized: "The takbir between the surahs from ad-Duha to the end of the Quran is transmitted through him."),
             ]
@@ -527,10 +526,10 @@ enum QiraatProfiles {
             id: Settings.Riwayah.qunbul, name: "Qunbul", arabic: "قُنبُل",
             fullName: String(localized: "Abu Amr Muhammad ibn Abd ar-Rahman al-Makhzumi al-Makki"),
             masterID: Settings.Riwayah.ibnKathirTeacher, city: "Makkah", bornAH: 195, diedAH: 291,
-            summary: String(localized: "The other Makkan narrator, who taught into his nineties."),
+            summary: String(localized: "The other Makkan narrator, in whom the leadership of recitation in the Hijaz came to rest."),
             paragraphs: [
                 String(localized: "Qunbul read on al-Qawwas, and through him on the chain back to Ibn Kathir. He led recitation in Makkah for many years and students travelled to him from across the Muslim world."),
-                String(localized: "He lived to a great age and continued teaching almost to the end, which is part of why his narration is so widely attested."),
+                String(localized: "He lived to ninety-six, and stopped teaching seven years before his death, or ten by another report, when age had weakened him."),
             ],
             hallmarks: [
                 String(localized: "Differs from al-Bazzi in a modest number of places, the best known being الصراط read with a seen, ٱلصِّۜرَٰطَ."),
@@ -559,10 +558,10 @@ enum QiraatProfiles {
         RiwayahNarratorProfile(
             id: Settings.Riwayah.susi, name: "as-Susi", arabic: "السُّوسِي",
             fullName: String(localized: "Abu Shu'ayb Salih ibn Ziyad as-Susi"),
-            masterID: Settings.Riwayah.abiAmrTeacher, city: "Basra", bornAH: nil, diedAH: 261,
+            masterID: Settings.Riwayah.abiAmrTeacher, city: "Raqqa", bornAH: nil, diedAH: 261,
             summary: String(localized: "Abu Amr's other narrator, through al-Yazidi."),
             paragraphs: [
-                String(localized: "As-Susi read on Yahya al-Yazidi, Abu Amr's foremost student, and transmitted the Basran reading alongside ad-Duri."),
+                String(localized: "As-Susi read on Yahya al-Yazidi, Abu Amr's foremost student, and transmitted the Basran reading alongside ad-Duri. He came from as-Sus in Khuzistan and settled in ar-Raqqah on the Euphrates, where he taught; an-Nasa'i, who narrates hadith from him, called him trustworthy."),
                 String(localized: "His narration takes Abu Amr's assimilation furthest: the large idgham, where a final letter merges into the first letter of the next word, is applied more consistently in as-Susi than anywhere else among the twenty."),
             ],
             hallmarks: [
@@ -677,7 +676,7 @@ enum QiraatProfiles {
                 String(localized: "He died a generation before most of the other narrators of the twenty, which is consistent with Abu Ja'far being among the earliest of the ten imams."),
             ],
             hallmarks: [
-                String(localized: "Every resting hamzah a long vowel, يُومِنُونَ, and the name إِسۡرَآيلَ without its hamzah."),
+                String(localized: "Every resting hamzah a long vowel, يُومِنُونَ, and the hamzah of إِسۡرَٰٓءِيلَ softened, written without its sign, إِسۡرَآٰيلَ."),
                 String(localized: "The joined plural mim, قُلُوبِهِمُۥ, and the softened second hamzah with an alef between, ءَٰا۬نذَرۡتَهُمُۥ."),
                 String(localized: "The resting nun hidden before خ and غ, مِن غَيۡرِ, and a breath-less pause after each opening letter of a surah."),
                 String(localized: "Level reading (fath) throughout, with the separated madd kept short."),
@@ -724,7 +723,7 @@ enum QiraatProfiles {
             ],
             hallmarks: [
                 String(localized: "Very close to Ruways, with a small set of differences."),
-                String(localized: "Every hamzah in full and no imalah: the most level of Ya'qub's two riwayat."),
+                String(localized: "Every hamzah in full and almost no imalah, a few words in his mushaf: the more level of Ya'qub's two riwayat."),
                 String(localized: "Preserves Ya'qub's characteristic word-forms and the damma of عَلَيۡهُمۡ."),
             ]
         ),
@@ -751,7 +750,7 @@ enum QiraatProfiles {
             summary: String(localized: "The last of the twenty narrators to die."),
             paragraphs: [
                 String(localized: "Idris al-Haddad read on Khalaf al-Bazzar and became the leading teacher of the tenth reading in Baghdad. He was also a trusted transmitter of hadith."),
-                String(localized: "He died in 292 AH, the latest death date among the twenty narrators, which makes him the closing link of the whole canonical chain."),
+                String(localized: "He died in 292 AH, the latest death date among the twenty narrators."),
             ],
             hallmarks: [
                 String(localized: "The most widely transmitted of the two narrations of Khalaf al-Ashir."),

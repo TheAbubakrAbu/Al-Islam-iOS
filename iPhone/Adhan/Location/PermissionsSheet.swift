@@ -1,18 +1,17 @@
-// The permissions sheet (Abu, 2026-10-11: "have location and notification permissions come as a
-// separate sheet"). A new install used to meet the two bare system prompts the moment the Adhan tab
-// was in front, one after the other, with nothing to say why. Now the tab presents this sheet first:
-// one card per permission that says what it is for, with the status beside it and its own Allow
-// button, and one primary button that asks for both in turn (location first, so two system prompts
-// never stand on top of each other). Not Now puts the sheet away for a day (the same snooze the
-// tab's Location Access Needed and Notifications Off dialogs use) and, while it stands, the tab
-// never raises a system prompt on its own: this sheet is the one door to them. Settings' Request
-// Access still asks on demand.
+// Location and notifications, asked for where they are explained (Abu, 2026-10-11: "have location and
+// notification permissions come as a separate sheet"; 2026-10-19: "have them be buttons in a splash
+// screen page"; 2026-11-05: "if location or notification is not given then have it be in the actual app
+// to give it"). Two places ask, over one state (`PermissionAsker`):
 //
-// Since 2026-10-19 the first launch asks on a page of the welcome instead (WelcomePages.swift,
-// `WelcomePermissionsPage`; Abu: "instead of asking location and notification at the same time have
-// them be buttons in a splash screen page"). That page and this sheet are the same two cards over the
-// same state, `PermissionAsker` and `PermissionCards` below; its Skip snoozes like Not Now does, so
-// the sheet never follows the welcome with the same question.
+// - the welcome's page (WelcomePages.swift, `WelcomePermissionsPage`), over the two rows of
+//   `PermissionCards`;
+// - the Adhan tab (`AdhanPermissionSection`): a card where the prayer times would be while location is
+//   not allowed, and a smaller one above the list while notifications are not.
+//
+// The tab's cards replaced the permissions sheet this file was named for, and the daily "Location Access
+// Needed" and "Notifications Off" dialogs (2026-11-05). The tab never raises a system prompt or a dialog
+// of its own now: a card stays until its permission is given or, where the tab has something else to
+// show, until it is put away. Settings' Request Access still asks on demand.
 #if os(iOS)
 import SwiftUI
 import Combine
@@ -21,9 +20,12 @@ import UserNotifications
 
 // MARK: - The state
 
-/// The two permissions' status and the asking of them, for the sheet and the welcome's page.
+/// The two permissions' status and the asking of them, for the welcome's page and the Adhan tab's cards.
 @MainActor
 final class PermissionAsker: ObservableObject {
+    /// The Adhan tab's, kept current by the tab's own refreshes (`AdhanView.prayerTimeRefresh`).
+    static let shared = PermissionAsker()
+
     @Published private(set) var locationStatus = Settings.locationManager.authorizationStatus
     /// Nil until the first look at the notification center.
     @Published private(set) var notificationStatus: UNAuthorizationStatus?
@@ -36,7 +38,7 @@ final class PermissionAsker: ObservableObject {
         cancellable = NotificationCenter.default.publisher(for: Settings.locationAuthorizationDidChange)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                Task { @MainActor in self?.locationStatus = Settings.locationManager.authorizationStatus }
+                Task { @MainActor in self?.note(location: Settings.locationManager.authorizationStatus) }
             }
     }
 
@@ -64,137 +66,85 @@ final class PermissionAsker: ObservableObject {
         notificationStatus == nil || notificationStatus == .notDetermined
     }
 
-    var anythingUndetermined: Bool { locationUndetermined || notificationsUndetermined }
-
-    var locationStatusText: String {
-        switch locationStatus {
-        case .notDetermined: return String(localized: "Not asked")
-        case .authorizedAlways: return String(localized: "Always")
-        case .authorizedWhenInUse: return String(localized: "While Using")
-        case .denied: return String(localized: "Denied")
-        case .restricted: return String(localized: "Restricted")
-        @unknown default: return String(localized: "Unknown")
-        }
-    }
-
-    var notificationStatusText: String {
-        switch notificationStatus {
-        case nil: return String(localized: "Checking")
-        case .notDetermined?: return String(localized: "Not asked")
-        case .denied?: return String(localized: "Denied")
-        case .authorized?: return String(localized: "Allowed")
-        case .provisional?: return String(localized: "Provisional")
-        case .ephemeral?: return String(localized: "Ephemeral")
-        default: return String(localized: "Unknown")
-        }
-    }
-
     func refresh() async {
-        notificationStatus = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
-        locationStatus = Settings.locationManager.authorizationStatus
+        let notifications = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+        note(location: Settings.locationManager.authorizationStatus)
+        note(notifications: notifications)
     }
 
-    func askLocation() {
+    /// Only a change publishes (the Adhan tab refreshes on every activation), and it animates: a card
+    /// leaves the tab as its permission arrives.
+    private func note(location status: CLAuthorizationStatus) {
+        guard status != locationStatus else { return }
+        withAnimation(.easeInOut) { locationStatus = status }
+    }
+
+    private func note(notifications status: UNAuthorizationStatus) {
+        guard status != notificationStatus else { return }
+        withAnimation(.easeInOut) { notificationStatus = status }
+    }
+
+    /// Raises the system's location prompt; `done` runs once it is answered (at once when it already is).
+    func askLocation(then done: (() -> Void)? = nil) {
         asking = true
         Settings.shared.requestLocationIfUndetermined { [weak self] in
             Task { @MainActor in
-                self?.locationStatus = Settings.locationManager.authorizationStatus
+                self?.note(location: Settings.locationManager.authorizationStatus)
                 self?.asking = false
+                done?()
             }
         }
     }
 
-    func askNotifications() {
+    /// Raises the system's notification prompt; `done` runs once it is answered (or was not put: Allow
+    /// Notifications off in the app).
+    func askNotifications(then done: (() -> Void)? = nil) {
         asking = true
         Settings.shared.requestNotificationAuthorization { [weak self] in
             Task { @MainActor in
                 await self?.refresh()
                 self?.asking = false
+                done?()
             }
         }
     }
 
-    /// Both in turn (location first), so two system prompts never stand on top of each other.
-    func askBoth() {
-        asking = true
-        Settings.shared.requestLocationIfUndetermined { [weak self] in
-            Task { @MainActor in
-                self?.locationStatus = Settings.locationManager.authorizationStatus
-                Settings.shared.requestNotificationAuthorization { [weak self] in
-                    Task { @MainActor in
-                        await self?.refresh()
-                        self?.asking = false
-                    }
-                }
-            }
-        }
-    }
-
-    /// Whatever is still unanswered waits a day (the dialogs' snooze), so nothing asks again the moment
-    /// the welcome or the sheet is put away.
-    func snoozeUnanswered() {
-        if locationUndetermined { Settings.shared.snoozePermissionAlert(location: true) }
-        if notificationsUndetermined { Settings.shared.snoozePermissionAlert(location: false) }
-    }
-}
-
-// MARK: - The pieces
-
-/// "Prayer times for where you are": the sentence above the two cards.
-struct PermissionsIntro: View {
-    @Environment(\.appearance) private var appearance
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "location.north.circle.fill")
-                .font(.system(size: 44, weight: .semibold))
-                .foregroundColor(appearance.accent)
-                .padding(.bottom, 2)
-                .accessibilityHidden(true)
-
-            Text("Prayer times for where you are")
-                .font(.title2.bold())
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityAddTraits(.isHeader)
-
-            Text("Two permissions make \(AppIdentifiers.displayName) work on its own: one to find today's times, one to call you to them.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+    /// The app's page in the Settings app: the only door once iOS holds a permission denied.
+    static func openAppSettings() {
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
         }
     }
 }
 
-/// The two cards, each with its status and its own Allow button.
+// MARK: - The welcome's card
+
+/// The two permissions as two rows of one card, each with its status: an empty ring until it is asked, a
+/// tick once it is allowed, Open Settings once iOS holds it denied. The welcome's one button does the
+/// asking (`WelcomePermissionsPage`).
 struct PermissionCards: View {
     @ObservedObject var asker: PermissionAsker
     private let settings = Settings.shared
     @ObservedObject private var adhanSettings = AdhanSettings.shared
-    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
-    @ObservedObject private var systemSettings = SystemSettings.shared
+    @Environment(\.appearance) private var appearance
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var showHomePicker = false
 
-    private var accent: Color { settings.accentColor.color }
-
     /// The system prompt's own promise: only Apple's services ever receive the location (the city
     /// name, nearby places, and on Al-Islam the opt-in sky weather), never anyone else.
     static var footnote: String {
-        String(localized: "You can change either later in the Settings app. Only \(AppIdentifiers.displayName) and Apple ever see your location, and it is never shared with anyone else.")
+        String(localized: "Only \(AppIdentifiers.displayName) and Apple ever see your location.")
     }
 
-    /// The Location card's text. The first fix is saved as the home city (`seedHomeLocationIfNeeded`) and
+    /// The Location row's text. The first fix is saved as the home city (`seedHomeLocationIfNeeded`) and
     /// Traveling Mode measures from it, which readers who installed away from home never knew (Abu,
-    /// 2026-10-31), so the card says it. Two whole sentences, so the first keeps its translations.
+    /// 2026-10-31), so the row says it; the Adhan tutorial tells the rest.
     static var locationText: String {
-        String(localized: "Prayer times, the Qibla and Traveling Mode all start from where you are. Always lets the times and the widgets follow you without opening the app.")
-            + " " + String(localized: "Where you are now is saved as your home city, and Traveling Mode turns on when you are more than 48 mi from it.").localizedDigits
+        String(localized: "Where you are now is saved as your home city.")
     }
 
-    /// The home city the Location card names, with its Change button: only once location is allowed and a
+    /// The home city the Location row names, with its Change button: only once location is allowed and a
     /// fix has named a city, so the row never shows an empty or stale guess.
     static func homeCity(locationAllowed: Bool, home: Location?) -> String? {
         guard locationAllowed,
@@ -204,96 +154,80 @@ struct PermissionCards: View {
     }
 
     var body: some View {
-        VStack(spacing: 18) {
-            card(systemImage: "location.fill", title: String(localized: "Location"),
-                 text: Self.locationText,
-                 status: asker.locationStatusText, allowed: asker.locationAllowed, denied: asker.locationDenied,
-                 identifier: "permissionsAllowLocation", allow: asker.askLocation,
-                 homeCity: Self.homeCity(locationAllowed: asker.locationAllowed, home: adhanSettings.homeLocation))
+        VStack(spacing: 0) {
+            row(systemImage: "location.fill", title: String(localized: "Location"), text: Self.locationText,
+                allowed: asker.locationAllowed, denied: asker.locationDenied)
 
-            card(systemImage: "bell.badge.fill", title: String(localized: "Notifications"),
-                 text: String(localized: "The adhan at each prayer, and reminders before them if you want them."),
-                 status: asker.notificationStatusText, allowed: asker.notificationsAllowed, denied: asker.notificationsDenied,
-                 identifier: "permissionsAllowNotifications", allow: asker.askNotifications)
+            if let city = Self.homeCity(locationAllowed: asker.locationAllowed, home: adhanSettings.homeLocation) {
+                homeRow(city)
+            }
+
+            Divider()
+                .padding(.leading, 61)
+
+            row(systemImage: "bell.badge.fill", title: String(localized: "Notifications"),
+                text: String(localized: "The adhan at each prayer."),
+                allowed: asker.notificationsAllowed, denied: asker.notificationsDenied)
+        }
+        .padding(.vertical, 4)
+        .background(WelcomeCardSurface())
+        .sheet(isPresented: $showHomePicker) {
+            MapView(choosingPrayerTimes: false)
+                .environmentObject(settings)
+                .smallMediumSheetPresentation()
         }
     }
 
-    private func card(systemImage: String, title: String, text: String, status: String, allowed: Bool,
-                      denied: Bool, identifier: String, allow: @escaping () -> Void,
-                      homeCity: String? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 13) {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(LinearGradient(colors: [accent, accent.opacity(0.74)],
-                                         startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 34, height: 34)
-                    .overlay(
-                        Image(systemName: systemImage)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                    )
-                    .accessibilityHidden(true)
+    private func row(systemImage: String, title: String, text: String, allowed: Bool, denied: Bool) -> some View {
+        HStack(alignment: .center, spacing: 13) {
+            AccentIconChip(systemImage: systemImage, size: 34)
+                .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 8) {
-                        Text(title)
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        Spacer(minLength: 4)
-                        statusPill(status, allowed: allowed, denied: denied)
-                    }
-                    Text(text)
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+                Text(text)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
-            if !allowed {
-                Button {
-                    settings.hapticFeedback()
-                    if denied { openAppSettings() } else { allow() }
-                } label: {
-                    Text(denied ? "Open Settings" : "Allow \(title)")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(accent)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 9)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(accent.opacity(0.14))
-                        )
-                }
-                .buttonStyle(.plain)
-                .disabled(asker.asking)
-                .padding(.leading, dynamicTypeSize.isAccessibilitySize ? 0 : 47)
-                .accessibilityIdentifier(identifier)
-            }
+            Spacer(minLength: 8)
 
-            if let homeCity {
-                homeRow(homeCity)
-            }
+            status(allowed: allowed, denied: denied)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(UIColor.secondarySystemBackground))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-                )
-        )
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+    }
+
+    @ViewBuilder
+    private func status(allowed: Bool, denied: Bool) -> some View {
+        if denied {
+            Button {
+                settings.hapticFeedback()
+                PermissionAsker.openAppSettings()
+            } label: {
+                Text("Open Settings")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(appearance.accent)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(appearance.accent.opacity(0.14)))
+            }
+            .buttonStyle(.plain)
+        } else {
+            Image(systemName: allowed ? "checkmark.circle.fill" : "circle")
+                .font(.title3)
+                .foregroundColor(allowed ? appearance.accent : Color.secondary.opacity(0.5))
+                .accessibilityLabel(allowed ? Text("Allowed") : Text("Not asked"))
+        }
     }
 
     /// "Home city: X" and a Change button that opens the same map as Settings › Prayer Settings ›
     /// Traveling Mode › Set Home City, for whoever is not at home right now.
     private func homeRow(_ city: String) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: "house.fill")
-                .font(.caption)
-                .foregroundColor(accent)
-                .accessibilityHidden(true)
             Text("Home city: \(city)")
                 .font(.footnote.weight(.semibold))
                 .foregroundColor(.primary)
@@ -305,139 +239,193 @@ struct PermissionCards: View {
             } label: {
                 Text("Change")
                     .font(.footnote.weight(.semibold))
-                    .foregroundColor(accent)
+                    .foregroundColor(appearance.accent)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(Capsule().fill(accent.opacity(0.14)))
+                    .background(Capsule().fill(appearance.accent.opacity(0.14)))
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("permissionsChangeHomeCity")
         }
-        .padding(.leading, dynamicTypeSize.isAccessibilitySize ? 0 : 47)
-        .sheet(isPresented: $showHomePicker) {
-            MapView(choosingPrayerTimes: false)
-                .environmentObject(settings)
-                .smallMediumSheetPresentation()
-        }
-    }
-
-    private func statusPill(_ text: String, allowed: Bool, denied: Bool) -> some View {
-        Text(text)
-            .font(.caption2.weight(.bold))
-            .foregroundColor(allowed ? .green : (denied ? .red : .secondary))
-            .lineLimit(1)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 2)
-            .background(Capsule().fill((allowed ? Color.green : (denied ? Color.red : Color.secondary)).opacity(0.14)))
-            .accessibilityLabel("Status, \(text)")
-    }
-
-    private func openAppSettings() {
-        if let url = URL(string: UIApplication.openSettingsURLString) {
-            UIApplication.shared.open(url, options: [:], completionHandler: nil)
-        }
+        .padding(.leading, dynamicTypeSize.isAccessibilitySize ? 14 : 61)
+        .padding(.trailing, 14)
+        .padding(.bottom, 11)
     }
 }
 
-// MARK: - The sheet
+// MARK: - On the Adhan tab
 
-struct PermissionsSheet: View {
+/// Which of the two asks the Adhan tab shows. Pure, so SkyWeatherTests can pin it.
+enum PermissionAsk {
+    /// Location, until it is allowed. With no times to show, the card is all the tab has and cannot be
+    /// put away; over times from a stored place, its X is Never Ask Again.
+    static func showsLocation(allowed: Bool, hasTimes: Bool, neverAskAgain: Bool) -> Bool {
+        !allowed && !(hasTimes && neverAskAgain)
+    }
+
+    /// Notifications, unanswered or denied, while the app's own Allow Notifications is on and the card
+    /// has not been put away. Not looked at yet (nil) shows nothing, so no card flashes at launch.
+    static func showsNotifications(status: UNAuthorizationStatus?, enabledInApp: Bool, neverAskAgain: Bool) -> Bool {
+        guard enabledInApp, !neverAskAgain else { return false }
+        return status == .notDetermined || status == .denied
+    }
+}
+
+/// The Adhan tab's asks, as rows of the tab: "Turn On Location" where the prayer times would be, and
+/// "Turn On Notifications" above the list. A button asks right there, or opens the Settings app once iOS
+/// holds the permission denied (the system prompt is put only once).
+struct AdhanPermissionSection: View {
     private let settings = Settings.shared
+    @ObservedObject private var asker = PermissionAsker.shared
+    /// The slice that publishes the two Never Ask Again flags and Allow Notifications.
     @ObservedObject private var adhanSettings = AdhanSettings.shared
-    @StateObject private var asker = PermissionAsker()
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.appearance) private var appearance
 
-    /// Whether the tab should put this sheet up: a permission is still unanswered, not snoozed and not
-    /// declared Never Ask Again. Pure, so SimpleModeTests can pin it. DEBUG: `-skipNotificationPrompt`
-    /// (every headless recipe) never shows it, and `-showPermissionsSheet` always does.
-    static func shouldPresent(locationUndetermined: Bool, notificationsUndetermined: Bool,
-                              locationSnoozedUntil: Double, notificationSnoozedUntil: Double,
-                              locationNeverAskAgain: Bool, notificationNeverAskAgain: Bool,
-                              now: Date = Date()) -> Bool {
-        let location = locationUndetermined && !locationNeverAskAgain
-            && !SimpleMode.isSnoozed(until: locationSnoozedUntil, now: now)
-        let notifications = notificationsUndetermined && !notificationNeverAskAgain
-            && !SimpleMode.isSnoozed(until: notificationSnoozedUntil, now: now)
-        return location || notifications
-    }
-
-    @MainActor
-    static func shouldPresent(_ settings: Settings) async -> Bool {
-        #if DEBUG
-        let arguments = ProcessInfo.processInfo.arguments
-        if arguments.contains("-showPermissionsSheet") { return true }
-        if arguments.contains("-skipNotificationPrompt") { return false }
-        #endif
-        let notifications = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
-        return shouldPresent(
-            locationUndetermined: Settings.locationManager.authorizationStatus == .notDetermined,
-            // Allow Notifications off: the permission is not asked for (`notificationAuthorizationResult`),
-            // so the card's Allow did nothing and the sheet came back every day for a question the
-            // reader had already answered in the app.
-            notificationsUndetermined: notifications == .notDetermined && settings.notificationsEnabled,
-            locationSnoozedUntil: settings.locationAlertSnoozedUntil,
-            notificationSnoozedUntil: settings.notificationAlertSnoozedUntil,
-            locationNeverAskAgain: settings.locationNeverAskAgain,
-            notificationNeverAskAgain: settings.notificationNeverAskAgain)
-    }
+    /// Whether the tab has prayer times on screen (from a stored place, while location is not allowed).
+    let hasTimes: Bool
+    /// An ask was answered: the tab refreshes its times and its schedule.
+    let onAnswered: () -> Void
 
     var body: some View {
-        SheetNavigationContainer {
-            VStack(spacing: 0) {
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 18) {
-                        PermissionsIntro()
-                        PermissionCards(asker: asker)
-                        Text(PermissionCards.footnote)
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .frame(maxWidth: 560)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 22)
-                    .padding(.top, 8)
-                    .padding(.bottom, 16)
+        if PermissionAsk.showsLocation(allowed: asker.locationAllowed, hasTimes: hasTimes,
+                                       neverAskAgain: settings.locationNeverAskAgain) {
+            Section {
+                if hasTimes {
+                    row(systemImage: "location.fill", title: String(localized: "Turn On Location"),
+                        text: String(localized: "Location is off, so these times are for the last place \(AppIdentifiers.displayName) knew."),
+                        button: locationButtonTitle, identifier: "adhanAllowLocation", action: askLocation,
+                        close: { settings.locationNeverAskAgain = true })
+                } else {
+                    locationCard
                 }
-
-                WelcomeActionBar(
-                    primaryTitle: primaryTitle,
-                    primaryBusy: asker.asking,
-                    primaryIdentifier: "permissionsPrimary",
-                    primaryAction: primaryAction,
-                    secondaryTitle: asker.anythingUndetermined ? String(localized: "Not Now") : nil,
-                    secondaryIdentifier: "permissionsNotNow",
-                    secondaryAction: { dismiss() }
-                )
-                .frame(maxWidth: 560)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
             }
-            .accentWashedBackground()
-            .navigationBarTitleDisplayMode(.inline)
-            .sheetDismissToolbar()
+            .transition(.opacity)
         }
-        .smallMediumSheetPresentation(startLarge: true, dismissDisabled: asker.asking)
-        .task { await asker.refresh() }
+
+        if PermissionAsk.showsNotifications(status: asker.notificationStatus, enabledInApp: settings.notificationsEnabled,
+                                            neverAskAgain: settings.notificationNeverAskAgain) {
+            Section {
+                row(systemImage: "bell.badge.fill", title: String(localized: "Turn On Notifications"),
+                    text: asker.notificationsDenied
+                        ? String(localized: "Notifications are off for \(AppIdentifiers.displayName) in the Settings app.")
+                        : String(localized: "Hear the adhan at each prayer."),
+                    button: asker.notificationsDenied ? String(localized: "Open Settings") : String(localized: "Allow Notifications"),
+                    identifier: "adhanAllowNotifications", action: askNotifications,
+                    close: { settings.notificationNeverAskAgain = true })
+            }
+            .transition(.opacity)
+        }
     }
 
-    private var primaryTitle: String {
-        let location = asker.locationUndetermined
-        let notifications = asker.notificationsUndetermined
-        if location && notifications { return String(localized: "Allow Location & Notifications") }
-        if location { return String(localized: "Allow Location") }
-        if notifications { return String(localized: "Allow Notifications") }
-        return String(localized: "Done")
+    private var locationButtonTitle: String {
+        asker.locationDenied ? String(localized: "Open Settings") : String(localized: "Allow Location")
     }
 
-    /// Both in turn (location first), or whichever is left, or done.
-    private func primaryAction() {
-        guard asker.anythingUndetermined else {
-            dismiss()
-            return
+    /// With no times to show, the ask is the tab's whole middle: centred, with the one prominent button.
+    private var locationCard: some View {
+        VStack(spacing: 8) {
+            AccentIconChip(systemImage: "location.fill", size: 48)
+                .padding(.bottom, 4)
+                .accessibilityHidden(true)
+
+            Text("Turn On Location")
+                .font(.title3.bold())
+                .foregroundColor(.primary)
+                .multilineTextAlignment(.center)
+                .accessibilityAddTraits(.isHeader)
+
+            Text(asker.locationDenied
+                 ? String(localized: "Location is off for \(AppIdentifiers.displayName) in the Settings app. Prayer times and the Qibla need it.")
+                 : String(localized: "Prayer times and the Qibla need to know where you are."))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(action: askLocation) {
+                Text(locationButtonTitle)
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(appearance.accent)
+            .disabled(asker.asking)
+            .padding(.top, 8)
+            .accessibilityIdentifier("adhanAllowLocation")
         }
-        asker.askBoth()
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+    }
+
+    /// The smaller ask, in the grammar of the tab's other notices (`TutorialNudgeSection`): what it is,
+    /// one line on why, its button, and an X that puts it away for good.
+    private func row(systemImage: String, title: String, text: String, button: String, identifier: String,
+                     action: @escaping () -> Void, close: @escaping () -> Void) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            AccentIconChip(systemImage: systemImage, size: 34)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(text)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                // Borderless: two buttons in one List row each keep their own tap.
+                Button(action: action) {
+                    Text(button)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundColor(appearance.accent)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(appearance.accent.opacity(0.14)))
+                }
+                .buttonStyle(.borderless)
+                .disabled(asker.asking)
+                .padding(.top, 4)
+                .accessibilityIdentifier(identifier)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) { close() }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(Text("Close"))
+            .accessibilityIdentifier("\(identifier)Close")
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func askLocation() {
+        settings.hapticFeedback()
+        if asker.locationUndetermined {
+            asker.askLocation(then: onAnswered)
+        } else {
+            PermissionAsker.openAppSettings()
+        }
+    }
+
+    private func askNotifications() {
+        settings.hapticFeedback()
+        if asker.notificationsUndetermined {
+            asker.askNotifications(then: onAnswered)
+        } else {
+            PermissionAsker.openAppSettings()
+        }
     }
 }
 #endif

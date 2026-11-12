@@ -1544,8 +1544,7 @@ struct TipsTourView: View {
     @Environment(\.dismiss) private var dismiss
 
     let area: TipArea
-    /// A hand-picked set in place of the area's own cards (the welcome's tour passes the spotlight tips,
-    /// WelcomePages.swift).
+    /// A hand-picked set in place of the area's own cards (the spotlight tips, for one).
     var tips: [AppTip]? = nil
     /// A title of its own, when the cards are not one area's ("Only in Al-Islam").
     var title: String? = nil

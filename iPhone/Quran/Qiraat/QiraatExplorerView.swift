@@ -41,8 +41,12 @@ struct QiraatExplorerView: View {
     @State private var seekFirstPlace: Bool
     /// A surah picked in the place picker: Compare Two moves to its first place once that is known.
     @State private var seekInSurah = false
-    /// The riwayah a narrator's page opened this walk with, until the first build writes the pair.
-    @State private var pendingSurahWalk: String?
+    /// The pair this screen was opened to compare (a narrator's page walks him against Hafs; the
+    /// comparison sheet's Compare Two hands over its two sides), until the first build writes it.
+    @State private var pendingPair: (a: String, b: String)?
+    /// Opened from the reader's own comparison sheet, which already stands on the ayah: the door back
+    /// to the reader would only stack a second copy of it.
+    private let openedFromReader: Bool
     /// Counts builds, so a superseded build's `defer` cannot put away the spinner its successor raised.
     @State private var buildGeneration = 0
 
@@ -56,6 +60,8 @@ struct QiraatExplorerView: View {
     @AppStorage("qiraatExplorerDuelB") private var duelBRaw: String = Settings.Riwayah.warsh
     /// Which riwayat may render text, read from its key rather than by observing all of Settings.
     @AppStorage("betaQiraatEnabled") private var betaQiraatEnabled = false
+    /// The first-visit card closed (Abu, 2026-11-01: "make qiraat explorer ... very easy and navigable").
+    @AppStorage("qiraatExplorerIntroSeen") private var introSeen = false
 
     @State private var place: QiraatPlace?
     @State private var duel: QiraatDuelPlace?
@@ -69,6 +75,7 @@ struct QiraatExplorerView: View {
     @State private var bandMemo = BandMemo()
 
     private static let topRow = "explorer-top"
+    private static let introRow = "explorer-intro"
 
     /// `ayah` in the reader's riwayah numbering (`originTag`); the explorer thinks in Hafs numbers.
     init(surah: Int, ayah: Int, originTag: String? = nil) {
@@ -77,6 +84,15 @@ struct QiraatExplorerView: View {
         _surahID = State(initialValue: surah)
         _hafsAyah = State(initialValue: anchor)
         _seekFirstPlace = State(initialValue: false)
+        openedFromReader = originTag != nil
+    }
+
+    /// The comparison sheet's Compare Two door: the same ayah with the same two sides, so the walk
+    /// goes on from the pair the reader was looking at rather than from the Explorer's last pair.
+    init(surah: Int, ayah: Int, originTag: String?, duelA: String, duelB: String) {
+        self.init(surah: surah, ayah: ayah, originTag: originTag)
+        _mode = State(initialValue: .duel)
+        _pendingPair = State(initialValue: (duelA, duelB))
     }
 
     /// Opens on the first place in the Quran where a riwayah differs: al-Fatiha's مالك / ملك (1:4), the
@@ -92,6 +108,7 @@ struct QiraatExplorerView: View {
         _surahID = State(initialValue: 1)
         _hafsAyah = State(initialValue: 4)
         _seekFirstPlace = State(initialValue: true)
+        openedFromReader = false
     }
 
     /// Walks one riwayah against Hafs (a narrator's page in the Qiraat guide): Compare Two with Hafs on
@@ -101,7 +118,7 @@ struct QiraatExplorerView: View {
         // Applied by the first build (see `rebuild`), not here: a View initializer runs again on every
         // re-render of the pushing page (any Settings publish), and writing the defaults from it
         // snapped the pair the user had since picked back to Hafs and the narrator.
-        _pendingSurahWalk = State(initialValue: tag)
+        _pendingPair = State(initialValue: (Settings.Riwayah.hafsTag, tag))
     }
 
     // MARK: Inputs
@@ -186,7 +203,7 @@ struct QiraatExplorerView: View {
             // The place row is the bottom bar, where the readers keep their Previous | Next pair.
             .adaptiveSafeArea(edge: .bottom, spacing: 0) { placeBar }
             .onChange(of: shownKey) { _ in
-                proxy.scrollTo(Self.topRow, anchor: .top)
+                proxy.scrollTo(introSeen ? Self.topRow : Self.introRow, anchor: .top)
             }
         }
         .navigationTitle("Qiraat Explorer")
@@ -449,8 +466,53 @@ struct QiraatExplorerView: View {
         key == bandPlaceKey || !showBusy
     }
 
+    /// A first-visit card, closed once and remembered: what a place is, what the tint means, how to
+    /// step. The screen is the one place in the app where "place", the tint and the bottom bar all
+    /// have to be understood at once; one short card beats learning them by trial.
+    @ViewBuilder
+    private var introSection: some View {
+        if !introSeen {
+            Section {
+                HStack(alignment: .top, spacing: 12) {
+                    AccentIconChip(systemImage: "arrow.left.and.right.text.vertical", size: 34)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("New to the Explorer?")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("Every place where a riwayah reads a word differently, one ayah at a time. The tint marks what changes, down to the letter; each card under the ayah shows one such word, who reads it each way, and what it means. The bar at the bottom steps between places, and its title lists them.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Button {
+                        Settings.shared.hapticFeedback()
+                        withAnimation(.easeInOut) { introSeen = true }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(Text("Close"))
+                }
+                .padding(.vertical, 4)
+                .id(Self.introRow)
+            }
+            .transition(.opacity)
+        }
+    }
+
     @ViewBuilder
     private var allSections: some View {
+        introSection
+
         if let place, isShowable(place.key) {
             Section {
                 ayahCard(place)
@@ -486,18 +548,18 @@ struct QiraatExplorerView: View {
     private func ayahCard(_ place: QiraatPlace) -> some View {
         let differing = place.differingTags.count
         let available = place.sides.count - place.unavailableTags.count
-        return ayahCard(text: place.hafsText, tokens: place.hafsTokens, tinted: place.hafsTinted, english: place.english,
+        return ayahCard(text: place.hafsText, tokens: place.hafsTokens, tinted: place.hafsTint, english: place.english,
                         summary: differing == 0 ? String(localized: "No riwayah differs") : String(localized: "\(differing) of \(available) riwayat differ"),
                         summaryTinted: differing > 0)
     }
 
     private var pendingAyahCard: some View {
         let ayah = QuranData.shared.ayah(surah: surahID, ayah: hafsAyah)
-        return ayahCard(text: ayah?.rawArabicText(surahId: surahID, qiraahOverride: "") ?? "", tokens: [], tinted: [],
+        return ayahCard(text: ayah?.rawArabicText(surahId: surahID, qiraahOverride: "") ?? "", tokens: [], tinted: .none,
                         english: ayah?.textEnglishSaheeh ?? "", summary: nil, summaryTinted: false)
     }
 
-    private func ayahCard(text: String, tokens: [QiraatWordDiff.Token], tinted: Set<Int>, english: String,
+    private func ayahCard(text: String, tokens: [QiraatWordDiff.Token], tinted: QiraatTint.Spec, english: String,
                           summary: String?, summaryTinted: Bool) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -535,116 +597,22 @@ struct QiraatExplorerView: View {
     @ViewBuilder
     private func siteSections(_ sites: [QiraatSite], label: ((QiraatSiteReading) -> String)?) -> some View {
         ForEach(Array(sites.enumerated()), id: \.element.id) { index, site in
-            let stacked = isStacked(site)
+            let stacked = QiraatSiteCopy.isStacked(site, at: dynamicTypeSize)
             Section {
                 ForEach(site.readings) { reading in
-                    readingRow(reading, in: site, label: label?(reading),
-                               emphasized: label == nil ? !reading.isHafs : reading.id != site.readings.first?.id,
-                               stacked: stacked)
+                    QiraatSiteReadingRow(reading: reading, site: site, label: label?(reading),
+                                         emphasized: QiraatSiteCopy.isEmphasized(reading, in: site, labeled: label != nil),
+                                         stacked: stacked, compared: comparedSet, accent: accent,
+                                         fontName: face(reading.fontTag), fontSize: fontSize, customFace: customFace)
                 }
             } header: {
-                Text(siteHeader(site, index: index, of: sites.count))
+                Text(QiraatSiteCopy.header(site, index: index, of: sites.count))
             } footer: {
-                siteFooter(site)
-            }
-        }
-    }
-
-    private func siteHeader(_ site: QiraatSite, index: Int, of count: Int) -> String {
-        let caption = site.caption?.uppercased()
-        guard count > 1 else { return caption ?? String(localized: "READ DIFFERENTLY") }
-        return caption.map { String(localized: "\(index + 1) OF \(count) · \($0)") } ?? String(localized: "\(index + 1) OF \(count)")
-    }
-
-    @ViewBuilder
-    private func siteFooter(_ site: QiraatSite) -> some View {
-        // The reference's renderings carry their own quotation marks.
-        let shared = site.sharedEnglish.map { String(localized: "Every reading here is rendered \($0).") }
-        let parts = [shared, site.note.isEmpty ? nil : site.note].compactMap { $0 }
-        if !parts.isEmpty {
-            Text(parts.joined(separator: " "))
-                .font(.caption)
-        }
-    }
-
-    /// A site whose readings run past two words, or any site at an accessibility text size, sets each
-    /// reading's Arabic above its readers; otherwise the word sits beside them at its own width.
-    private func isStacked(_ site: QiraatSite) -> Bool {
-        dynamicTypeSize.isAccessibilitySize
-            || site.readings.contains { $0.text.split(separator: " ").count > 2 }
-    }
-
-    private func readingRow(_ reading: QiraatSiteReading, in site: QiraatSite, label: String?,
-                            emphasized: Bool, stacked: Bool) -> some View {
-        let arabic = Text(reading.text.isEmpty ? String(localized: "(none)") : reading.text)
-            .font(.custom(face(reading.fontTag), size: CGFloat(fontSize * 1.08)))
-            .arabicFontDesign(custom: customFace)
-            .foregroundColor(emphasized ? accent : .primary)
-            .multilineTextAlignment(.trailing)
-        let details = VStack(alignment: .leading, spacing: 3) {
-            readersLine(reading, label: label)
-
-            if !reading.transliteration.isEmpty {
-                Text(reading.transliteration)
-                    .font(.caption)
-                    .italic()
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    // The reading's transliteration and English rendering keep their own direction in
-                    // the Arabic interface; the row around them follows it.
-                    .leftToRightContent()
-            }
-            if site.sharedEnglish == nil, !reading.english.isEmpty {
-                Text(reading.english)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .leftToRightContent()
-            }
-        }
-        return Group {
-            if stacked {
-                VStack(alignment: .leading, spacing: 6) {
-                    arabic
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                        // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
-                        .environment(\.layoutDirection, .leftToRight)
-                    details
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            } else {
-                HStack(alignment: .center, spacing: 14) {
-                    details
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    arabic
-                        .fixedSize()
+                if let note = QiraatSiteCopy.footer(site) {
+                    Text(note)
+                        .font(.caption)
                 }
             }
-        }
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-    }
-
-    @ViewBuilder
-    private func readersLine(_ reading: QiraatSiteReading, label: String?) -> some View {
-        if let label {
-            Text(label)
-                .font(.subheadline.weight(.semibold))
-        } else if reading.isHafs {
-            let others = QiraatReaderNames.names(reading.tags.filter { !$0.isEmpty }, compared: comparedSet.subtracting([""]), display: true)
-            Text("Hafs")
-                .font(.subheadline.weight(.semibold))
-            if !others.isEmpty {
-                Text("also \(QiraatReaderNames.list(others))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        } else {
-            Text(QiraatReaderNames.list(QiraatReaderNames.names(reading.tags, compared: comparedSet, display: true)))
-                .font(.subheadline.weight(.semibold))
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -724,7 +692,7 @@ struct QiraatExplorerView: View {
                     .foregroundStyle(.secondary)
             }
             if let change = side?.change {
-                QiraatArabicText(text: change.riwayahText, tokens: change.diff.riwayah, tinted: place.tinted(tag),
+                QiraatArabicText(text: change.riwayahText, tokens: change.diff.riwayah, tinted: place.tint(tag),
                                  accent: accent, fontName: face(tag), size: fontSize, customFace: customFace)
                     .equatable()
             }
@@ -735,6 +703,19 @@ struct QiraatExplorerView: View {
     @ViewBuilder
     private func moreSection(hasReference: Bool) -> some View {
         Section {
+            // The way from a place to the page itself: the Quran tab opens the reader at this ayah, in
+            // the riwayah the reader displays. Not from the reader's own sheet, which stands on it.
+            if !openedFromReader {
+                Button {
+                    Settings.shared.hapticFeedback()
+                    AppNavigation.shared.open(.ayah(surahID, readerAyahObject?.id ?? hafsAyah))
+                } label: {
+                    SettingsRowLabel(title: String(localized: "Read in the Quran Tab"), systemImage: "book",
+                                     subtitle: String(localized: "Open \(ayahSheetTitle(surahNumber: surahID, ayahNumber: hafsAyah)) in the reader"))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
             // The reference is keyed by the Hafs number; the page's preview card wants the reader's own
             // row for it (see `readerAyahObject`).
             if hasReference, let surah = QuranData.shared.surah(surahID), let ayah = readerAyahObject {
@@ -801,11 +782,13 @@ struct QiraatExplorerView: View {
 
     @ViewBuilder
     private var duelSections: some View {
+        introSection
+
         if let duel, isShowable(duel.place.key), (duel.a == duelA && duel.b == duelB) || !showBusy {
             Section {
-                duelTextRow(duel, tag: duel.a, tinted: duel.aTinted)
+                duelTextRow(duel, tag: duel.a, tinted: duel.aTint)
                     .id(Self.topRow)
-                duelTextRow(duel, tag: duel.b, tinted: duel.bTinted)
+                duelTextRow(duel, tag: duel.b, tinted: duel.bTint)
             }
 
             if QiraatProfiles.shareOneText(duel.a, duel.b) {
@@ -836,7 +819,7 @@ struct QiraatExplorerView: View {
         }
     }
 
-    private func duelTextRow(_ duel: QiraatDuelPlace, tag: String, tinted: Set<Int>) -> some View {
+    private func duelTextRow(_ duel: QiraatDuelPlace, tag: String, tinted: QiraatTint.Spec) -> some View {
         let option = Settings.Riwayah.option(for: tag)
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -924,13 +907,13 @@ struct QiraatExplorerView: View {
         let currentMode = mode
         let a = duelA
         let b = duelB
-        if let tag = pendingSurahWalk {
-            // A narrator's page opened this walk: its pair is written here, on the first build. When the
+        if let pair = pendingPair {
+            // The screen was opened to compare a pair: it is written here, on the first build. When the
             // derived pair changes, the changed key cancels this build and starts the right one; when it
-            // does not (the riwayah is not enabled, so `duelB` falls back as before), this build is it.
-            pendingSurahWalk = nil
-            if duelARaw != Settings.Riwayah.hafsTag { duelARaw = Settings.Riwayah.hafsTag }
-            if duelBRaw != tag { duelBRaw = tag }
+            // does not (a side is not enabled, so `duelB` falls back as before), this build is it.
+            pendingPair = nil
+            if duelARaw != pair.a { duelARaw = pair.a }
+            if duelBRaw != pair.b { duelBRaw = pair.b }
         }
         #if DEBUG
         if RenderCounter.enabled { NSLog("EXPLORER build start %d:%d", surah, ayah) }
@@ -1053,12 +1036,12 @@ struct QiraatExplorerView: View {
 
 // MARK: - Pieces
 
-/// An ayah (or a riwayah's text of it) with chosen words tinted. Compared by value, so a parent's
-/// re-render (a sheet opening, the texts folding out) leaves its layout alone.
+/// An ayah (or a riwayah's text of it) with chosen words, or chosen letters, tinted. Compared by
+/// value, so a parent's re-render (a sheet opening, the texts folding out) leaves its layout alone.
 struct QiraatArabicText: View, Equatable {
     let text: String
     let tokens: [QiraatWordDiff.Token]
-    let tinted: Set<Int>
+    let tinted: QiraatTint.Spec
     let accent: Color
     let fontName: String
     let size: Double
@@ -1070,7 +1053,7 @@ struct QiraatArabicText: View, Equatable {
     }
 
     var body: some View {
-        Text(QiraatTint.attributed(text, tokens: tokens, words: tinted, base: .primary, tint: accent))
+        Text(QiraatTint.attributed(text, tokens: tokens, spec: tinted, base: .primary, tint: accent))
             .font(.custom(fontName, size: CGFloat(size)))
             .arabicFontDesign(custom: customFace)
             .multilineTextAlignment(.trailing)
@@ -1079,6 +1062,144 @@ struct QiraatArabicText: View, Equatable {
             // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
             .environment(\.layoutDirection, .leftToRight)
             .textSelection(.enabled)
+    }
+}
+
+/// One way a site is read: who reads it so (or the side's name in Compare Two), the reference's
+/// transliteration and meaning, and the words themselves in that print's face. The Explorer's cards
+/// and the comparison sheet's WHAT CHANGES HERE draw the same row (2026-11-01).
+struct QiraatSiteReadingRow: View {
+    let reading: QiraatSiteReading
+    let site: QiraatSite
+    /// Names the reading by its side (Compare Two) instead of by everyone who reads it.
+    var label: String? = nil
+    /// The words in the accent: every reading but Hafs's, or Compare Two's second side.
+    let emphasized: Bool
+    /// The words above their readers instead of beside them (long readings, accessibility sizes).
+    let stacked: Bool
+    /// Every riwayah on the screen, Hafs included: an imam stands for both his narrators when both agree.
+    let compared: Set<String>
+    let accent: Color
+    let fontName: String
+    let fontSize: Double
+    let customFace: Bool
+
+    var body: some View {
+        let arabic = arabicLabel
+            .font(.custom(fontName, size: CGFloat(fontSize * 1.08)))
+            .arabicFontDesign(custom: customFace)
+            .multilineTextAlignment(.trailing)
+        let details = VStack(alignment: .leading, spacing: 3) {
+            readersLine
+
+            if !reading.transliteration.isEmpty {
+                Text(reading.transliteration)
+                    .font(.caption)
+                    .italic()
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    // The reading's transliteration and English rendering keep their own direction in
+                    // the Arabic interface; the row around them follows it.
+                    .leftToRightContent()
+            }
+            if site.sharedEnglish == nil, !reading.english.isEmpty {
+                Text(reading.english)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .leftToRightContent()
+            }
+        }
+        return Group {
+            if stacked {
+                VStack(alignment: .leading, spacing: 6) {
+                    arabic
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                        .environment(\.layoutDirection, .leftToRight)
+                    details
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } else {
+                HStack(alignment: .center, spacing: 14) {
+                    details
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    arabic
+                        .fixedSize()
+                }
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// The words, in the accent when emphasized: only the letters that change (the print's, or the
+    /// words' own where the print marks none) when the reading is set against Hafs's reading, which
+    /// is what the letters were measured from, in either position (Compare Two puts the riwayah first
+    /// and carries its letters onto Hafs's words); whole where it is set against another riwayah's
+    /// own reading (two riwayat that both change the word).
+    private var arabicLabel: Text {
+        if reading.text.isEmpty {
+            return Text(String(localized: "(none)")).foregroundColor(emphasized ? accent : .primary)
+        }
+        if emphasized, let letters = reading.letters, reading.readsAsHafs || site.readings.first?.readsAsHafs == true {
+            return Text(QiraatTint.attributed(reading.text, tokens: [], spec: QiraatTint.Spec(letters: letters),
+                                              base: .primary, tint: accent))
+        }
+        return Text(reading.text).foregroundColor(emphasized ? accent : .primary)
+    }
+
+    @ViewBuilder
+    private var readersLine: some View {
+        if let label {
+            Text(label)
+                .font(.subheadline.weight(.semibold))
+        } else if reading.isHafs {
+            let others = QiraatReaderNames.names(reading.tags.filter { !$0.isEmpty }, compared: compared.subtracting([""]), display: true)
+            Text("Hafs")
+                .font(.subheadline.weight(.semibold))
+            if !others.isEmpty {
+                Text("also \(QiraatReaderNames.list(others))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } else {
+            Text(QiraatReaderNames.list(QiraatReaderNames.names(reading.tags, compared: compared, display: true)))
+                .font(.subheadline.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// What a site's card says around its readings, shared by the two screens that draw one.
+enum QiraatSiteCopy {
+    /// "2 OF 3 · DIFFERS IN SENSE": the site's place among the ayah's sites and the reference's caption.
+    static func header(_ site: QiraatSite, index: Int, of count: Int) -> String {
+        let caption = site.caption?.uppercased()
+        guard count > 1 else { return caption ?? String(localized: "READ DIFFERENTLY") }
+        return caption.map { String(localized: "\(index + 1) OF \(count) · \($0)") } ?? String(localized: "\(index + 1) OF \(count)")
+    }
+
+    /// The reference's shared rendering and its note, or nil when it says nothing here.
+    static func footer(_ site: QiraatSite) -> String? {
+        // The reference's renderings carry their own quotation marks.
+        let shared = site.sharedEnglish.map { String(localized: "Every reading here is rendered \($0).") }
+        let parts = [shared, site.note.isEmpty ? nil : site.note].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
+    }
+
+    /// A site whose readings run past two words, or any site at an accessibility text size, sets each
+    /// reading's Arabic above its readers; otherwise the word sits beside them at its own width.
+    static func isStacked(_ site: QiraatSite, at size: DynamicTypeSize) -> Bool {
+        size.isAccessibilitySize || site.readings.contains { $0.text.split(separator: " ").count > 2 }
+    }
+
+    /// Which readings take the accent: every one but Hafs's, or, with the readings named by side
+    /// (`labeled`), every one but the first.
+    static func isEmphasized(_ reading: QiraatSiteReading, in site: QiraatSite, labeled: Bool) -> Bool {
+        labeled ? reading.id != site.readings.first?.id : !reading.isHafs
     }
 }
 

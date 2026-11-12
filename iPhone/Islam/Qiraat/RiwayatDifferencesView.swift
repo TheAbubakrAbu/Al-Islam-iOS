@@ -60,7 +60,7 @@ struct RiwayatDifferencesView: View {
                     ArticleCallout("**Hafs, Shu’bah, Ibn Dhakwan, Rawh, Ishaq, Idris, Abu al-Harith, and ad-Duri from al-Kisa’i.** Hamzah’s two narrators, **Khalaf and Khallad**, belong here too while they read on, but they ease the hamzah when they stop on a word that has one, a chapter of the science in itself.",
                                    title: "Pronounce it almost everywhere", systemImage: "circle.fill")
 
-                    ArticleCallout("**Qalun, ad-Duri, al-Bazzi, Qunbul and Ruways**, and **Hisham** in one of his two ways, soften the second of two hamzahs that meet in one word (tas-hil). Qalun, ad-Duri and Hisham also put a short alef between the two (idkhal). Elsewhere they pronounce the hamzah.",
+                    ArticleCallout("**Qalun, ad-Duri, as-Susi, al-Bazzi, Qunbul, Ruways, Ibn Wardan and Ibn Jammaz**, and **Hisham** in one of his two ways, soften the second of two hamzahs that meet in one word (tas-hil); **Warsh** softens it or turns it into a long vowel. Qalun, ad-Duri, as-Susi, Ibn Wardan, Ibn Jammaz and Hisham also put a short alef between the two (idkhal).",
                                    title: "Ease the second of two", systemImage: "circle.lefthalf.filled")
 
                     ArticleCallout("**Warsh, as-Susi, Ibn Wardan and Ibn Jammaz** turn a hamzah that carries a sukoon into the long vowel before it (ibdal), in most words, so يُؤۡمِنُونَ is read yūminūn. Warsh goes furthest: he also moves a hamzah’s vowel onto a quiet letter before it and drops the hamzah (naql).",
@@ -68,7 +68,7 @@ struct RiwayatDifferencesView: View {
 
                     RiwayahSpellingCard(title: "Quran 2:6 (2:5 outside the Kufan count): “whether you warn them”", [
                         RiwayahSpelling("Hafs, Shu’bah", arabic: "ءَأَنذَرۡتَهُمۡ", note: "Both hamzahs pronounced"),
-                        RiwayahSpelling("Qalun, ad-Duri", arabic: "ءَٰا۬نذَرۡتَهُمۡ", note: "The second eased, with a short alef between the two; the dot on the second alef is the eased hamzah"),
+                        RiwayahSpelling("Qalun, ad-Duri, as-Susi", arabic: "ءَٰا۬نذَرۡتَهُمۡ", note: "The second eased, with a short alef between the two; the dot on the second alef is the eased hamzah"),
                         RiwayahSpelling("al-Bazzi, Qunbul", arabic: "ءَا۬نذَرۡتَهُمُۥ", note: "The second eased, with no alef between; the small waw is Ibn Kathir’s silah"),
                         RiwayahSpelling("Warsh", arabic: "ءَآنذَرۡتَهُمُۥٓ", note: "The second made a long vowel; the meem is joined to the hamzah that follows it"),
                     ])
@@ -91,7 +91,7 @@ struct RiwayatDifferencesView: View {
                 }
 
                 Section(header: ArticleHeader("WHERE A DOT STANDS FOR THE HAMZAH")) {
-                    ArticleParagraph(verbatim: "An eased hamzah is pronounced between a hamzah and the long vowel it leans towards, and the mushafs of the readings that ease it do not draw a hamzah there at all: a small dot takes its place. That is the dot on the second alef in Qalun’s and ad-Duri’s spelling of 2:6 above, and in al-Bazzi’s.")
+                    ArticleParagraph(verbatim: "An eased hamzah is pronounced between a hamzah and the long vowel it leans towards, and the mushafs of the readings that ease it do not draw a hamzah there at all: a small dot takes its place. That is the dot on the second alef in Qalun’s, ad-Duri’s and as-Susi’s spelling of 2:6 above, and in al-Bazzi’s.")
 
                     ArticleParagraph(verbatim: "Hafs eases a hamzah only once in the whole Quran, and his mushaf marks it the same way:")
 
@@ -235,11 +235,11 @@ struct RiwayatDifferencesView: View {
                         RiwayahSpelling("Qalun, Warsh and the others", arabic: "مَلِكِ", note: "Maliki: the King"),
                     ])
 
-                    ArticleParagraph(verbatim: "Ayah numbers shift too, because each riwayah’s mushaf follows one of the schools of counting ayahs. The words are the same; only where an ayah ends differs. Hafs’s mushaf follows the Kufan count of 6,236 ayahs, Warsh’s and Qalun’s the later Madinan count of 6,214, al-Bazzi’s and Qunbul’s the Makkan count of 6,220, and Hisham’s and Ibn Dhakwan’s the Syrian count of 6,226.")
+                    ArticleParagraph(verbatim: "Ayah numbers shift too, because each riwayah’s mushaf follows one of the schools of counting ayahs. The words are the same; only where an ayah ends differs. Hafs’s mushaf follows the Kufan count of 6,236 ayahs, Warsh’s and Qalun’s the later Madinan count of 6,214, al-Bazzi’s and Qunbul’s the Makkan count of 6,220, and Hisham’s and Ibn Dhakwan’s the Syrian count of 6,226. The names follow al-Dani, for whom the later Madinan count is 6,214 and the earlier 6,217; some books give the two names the other way round.")
                 }
 
                 Section(header: ArticleHeader("THE COLORS OF A RIWAYAH’S MUSHAF")) {
-                    ArticleParagraph(verbatim: "Open the Quran tab in any riwayah but Hafs with tajweed colors on, and the page is colored the way that riwayah’s printed mushaf colors it. Each of the nineteen prints carries a legend box at the foot of its pages: a color for the word or letter that differs from Hafs, one for a letter merged into the next, one for a tilted vowel, and so on, up to the eight colors of Warsh’s. The Legend button in the reader reproduces each print’s box, and the sections below take the rules in the Legend’s order: what differs from Hafs, the merges, the tilts and the joins above, then the pauses and blends, and last the rules that one reading alone marks.")
+                    ArticleParagraph(verbatim: "Open the Quran tab in any riwayah but Hafs with tajweed colors on, and the page is colored the way that riwayah’s printed mushaf colors it. Each of the nineteen prints carries a legend box at the foot of its pages: a color for the word or letter that differs from Hafs, one for a letter merged into the next, one for a tilted vowel, and so on, up to the eight colors of Warsh’s. The Legend button in the reader reproduces each print’s box, and the sections below take the rules in the Legend’s order, grouped by what the ear hears: what differs from Hafs; the tilted vowel (imalah and taqlil, above); the lengthenings, Warsh’s two madds; the joins, where a pronoun takes a long vowel (the small wāw after a mīm, above, and the pronoun hā); the letters sounded differently, merged, doubled, hummed or blended; Warsh’s thin rā and thick lām; and last the pauses and the beginnings.")
 
                     ArticleParagraph(verbatim: "Under each rule is every print that marks it, with its own color and the number of words it colors, and an example from the print that colors the most: one ayah of that riwayah’s text with the rule alone lit. Hafs’s mushaf is the exception. It prints no khilaf, since Hafs is the reading the others are measured against, and the app colors it by the ordinary tajweed code on the Legend’s first page.")
                 }
@@ -268,6 +268,26 @@ struct RiwayatDifferencesView: View {
                     #endif
                 }
 
+                Section(header: ArticleHeader("WARSH’S TWO MADDS")) {
+                    ArticleParagraph(verbatim: "Warsh’s print is the most colored of the twenty, and four of its eight colors are his alone: the two lengthenings here, and the thin rā and thick lām further down. Madd al-badal is the long vowel after a hamzah, ءَامَنُواْ, ءَالَ, بِـَٔايَٰتِنَآ: every reading gives it two counts, and Warsh has three lengths transmitted from him, two, four and six. Madd al-līn is the soft wāw or yā before a hamzah in the same word, بِشَيۡءٖ, شَيۡءٞ: Warsh stretches it to four or six counts where the others read it short. Neither changes a letter on the page, so the color is the only sign of them, as the examples show.")
+                    #if os(iOS)
+                    RiwayahRuleCard(model: colorCode, key: "madd_badal")
+                    RiwayahRuleCard(model: colorCode, key: "madd_leen")
+                    #endif
+                }
+
+                Section(header: ArticleHeader("THE PRONOUN HA")) {
+                    ArticleParagraph(verbatim: "The pronoun hā, the -hu or -hi of “him” and “his” at the end of a word, is joined to a long vowel by every reading when it stands between two vowels: بِهِۦ is bihī, لَهُۥ is lahū. Ibn Kathir’s reading, through al-Bazzi and Qunbul, joins it after a resting letter as well: عَلَيۡهِۦ is ʿalayhī, فِيهِۦ is fīhī. Hafs does this once, in fīhī muhānā (25:69); Ibn Kathir does it throughout, and his two prints color the hā with the small letter that lengthens it.")
+
+                    RiwayahSpellingCard(title: "Quran 2:46 (2:45 in the Makkan count): “to Him they will return”", [
+                        RiwayahSpelling("Hafs", arabic: "إِلَيۡهِ رَٰجِعُونَ", note: "ilayhi rājiʿūn"),
+                        RiwayahSpelling("al-Bazzi, Qunbul", arabic: "إِلَيۡهِۦ رَٰجِعُونَ", note: "The hā joined to a long ī, written with a small yā: ilayhī rājiʿūn"),
+                    ])
+                    #if os(iOS)
+                    RiwayahRuleCard(model: colorCode, key: "ha_dhamir")
+                    #endif
+                }
+
                 Section(header: ArticleHeader("IDGHAM: ONE LETTER MERGED INTO THE NEXT")) {
                     ArticleParagraph(verbatim: "Idgham (إِدغَام) is the merging of one letter into the letter after it, so that the two are pronounced as a single doubled letter. Every reading merges a resting nūn or a tanween into the letters that take it, and the dhāl of إِذۡ, the dāl of قَدۡ, the tā of a feminine verb and the lām of هَلۡ and بَلۡ into certain letters after them; what differs is the list. Abu ‘Amr, Hisham, Hamzah, al-Kisa’i and Khalaf al-‘Ashir each carry more of these small mergings (al-idgham as-saghir) than Hafs, and the prints differ in how much of the ordinary merging they color at all, which is why the counts below range from a few dozen words to thousands.")
 
@@ -292,15 +312,55 @@ struct RiwayatDifferencesView: View {
                     #endif
                 }
 
-                Section(header: ArticleHeader("THE PRONOUN HA")) {
-                    ArticleParagraph(verbatim: "The pronoun hā, the -hu or -hi of “him” and “his” at the end of a word, is joined to a long vowel by every reading when it stands between two vowels: بِهِۦ is bihī, لَهُۥ is lahū. Ibn Kathir’s reading, through al-Bazzi and Qunbul, joins it after a resting letter as well: عَلَيۡهِۦ is ʿalayhī, فِيهِۦ is fīhī. Hafs does this once, in fīhī muhānā (25:69); Ibn Kathir does it throughout, and his two prints color the hā with the small letter that lengthens it.")
+                Section(header: ArticleHeader("AL-BAZZI’S DOUBLED TA")) {
+                    ArticleParagraph(verbatim: "Al-Bazzi, from Ibn Kathir, doubles the tā that begins a present-tense verb in thirty-one places when the word before it is joined to it: وَلَآ تَّيَمَّمُواْ, وَلَآ تَّفَرَّقُواْ, فَإِذَا هِيَ تَّلَقَّفُ. The doubling only happens in joining, so his print colors the particle before the verb together with it; a reciter who stops before the tā reads it single. Where a long vowel comes before the doubled tā, as in وَلَآ, the print adds the madd sign, because the vowel is now stretched before a doubled letter.")
 
-                    RiwayahSpellingCard(title: "Quran 2:46 (2:45 in the Makkan count): “to Him they will return”", [
-                        RiwayahSpelling("Hafs", arabic: "إِلَيۡهِ رَٰجِعُونَ", note: "ilayhi rājiʿūn"),
-                        RiwayahSpelling("al-Bazzi, Qunbul", arabic: "إِلَيۡهِۦ رَٰجِعُونَ", note: "The hā joined to a long ī, written with a small yā: ilayhī rājiʿūn"),
+                    RiwayahSpellingCard(title: "Quran 2:267 (2:266 in the Makkan count): “do not aim at the bad”", [
+                        RiwayahSpelling("Hafs", arabic: "وَلَا تَيَمَّمُواْ", note: "wa-lā tayammamū"),
+                        RiwayahSpelling("al-Bazzi", arabic: "وَلَآ تَّيَمَّمُواْ", note: "The tā doubled onto the word before, wa-lāt-tayammamū, with the madd sign over لَآ"),
+                    ])
+
+                    RiwayahSpellingCard(title: "Quran 3:103: “and do not become divided”", [
+                        RiwayahSpelling("Hafs", arabic: "وَلَا تَفَرَّقُواْۚ", note: "wa-lā tafarraqū"),
+                        RiwayahSpelling("al-Bazzi", arabic: "وَلَآ تَّفَرَّقُواْۚ", note: "wa-lāt-tafarraqū"),
                     ])
                     #if os(iOS)
-                    RiwayahRuleCard(model: colorCode, key: "ha_dhamir")
+                    RiwayahRuleCard(model: colorCode, key: "tashdid_ta")
+                    #endif
+                }
+
+                Section(header: ArticleHeader("ABU JA’FAR’S GHUNNAH")) {
+                    ArticleParagraph(verbatim: "Two colors belong to Abu Ja’far’s prints alone, and this is the first. A nūn or a tanween before خ or غ is pronounced clearly (izhar) by every other reading; Abu Ja’far hides it in a nasal hum (ikhfa with ghunnah), as every reading does before ت or ك. His prints leave the sukūn off the nūn and color the two words.")
+
+                    RiwayahSpellingCard(title: "Quran 3:115: “of good”", [
+                        RiwayahSpelling("Hafs", arabic: "مِنۡ خَيۡرٖ", note: "A sukūn on the nūn: pronounced clearly, min khayr"),
+                        RiwayahSpelling("Ibn Wardan, Ibn Jammaz", arabic: "مِن خَيۡرٖ", note: "No sukūn: the nūn hums into the khā"),
+                    ])
+                    #if os(iOS)
+                    RiwayahRuleCard(model: colorCode, key: "ghunnah_kha_ghayn")
+                    #endif
+                }
+
+                Section(header: ArticleHeader("ISHMAM: A SAD WITH A SHADE OF ZAY")) {
+                    ArticleParagraph(verbatim: "Ishmam (إِشمَام) here is a ṣād pronounced with a trace of the sound of zāy in it. Where a resting ṣād comes before a dāl, in أَصۡدَقُ, يَصۡدِفُونَ, وَتَصۡدِيَةٗ, تَصۡدِيقَ, فَٱصۡدَعۡ, قَصۡدُ, يُصۡدِرَ and يَصۡدُرُ, Hamzah, al-Kisa’i, Khalaf al-‘Ashir and Ruways give the ṣād that shade, and their prints color it: twelve words in each. Khalaf from Hamzah does the same to the ṣād of ٱلصِّرَٰطَ wherever it comes, in al-Fatihah and beyond, which lifts his count to fifty-nine; Khallad does so in al-Fatihah, in one of two ways transmitted from him.")
+
+                    ArticleParagraph(verbatim: "The same word shows the other way a ṣād can go. Qunbul, from Ibn Kathir, reads it with a plain sīn, and his print writes a small sīn over the letter to say so:")
+
+                    RiwayahSpellingCard(title: "Quran 1:6: “the path”", [
+                        RiwayahSpelling("Hafs and most readings", arabic: "ٱلصِّرَٰطَ", note: "ṣirāṭ, with a ṣād"),
+                        RiwayahSpelling("Qunbul", arabic: "ٱلصِّۜرَٰطَ", note: "A small sīn over the ṣād: Qunbul reads it sirāṭ, with an s"),
+                        RiwayahSpelling("Khalaf", arabic: "ٱلصِّرَٰطَ", note: "Written as Hafs writes it; the print colors the ṣād for its shade of zāy"),
+                    ])
+                    #if os(iOS)
+                    RiwayahRuleCard(model: colorCode, key: "ishmam_sad")
+                    #endif
+                }
+
+                Section(header: ArticleHeader("WARSH’S THIN RA AND THICK LAM")) {
+                    ArticleParagraph(verbatim: "The other two colors of Warsh’s own change how a letter is weighed. A rā with a fatḥah or a ḍammah after a kasrah, or after a resting yā, is read thin (tarqīq) by Warsh where Hafs reads it full: لَكَبِيرَةٌ, بَشِيرٗا وَنَذِيرٗا, خَيۡرُ. A lām with a fatḥah after ص, ط or ظ is read thick (taghlīẓ): اَ۬لصَّلَوٰةَ, صَلَوَٰتٞ, with the weight the lām of Allāh has. Neither changes a letter on the page either, so here too the color is the only sign.")
+                    #if os(iOS)
+                    RiwayahRuleCard(model: colorCode, key: "raa_muraqqaqah")
+                    RiwayahRuleCard(model: colorCode, key: "lam_mughallazah")
                     #endif
                 }
 
@@ -322,62 +382,10 @@ struct RiwayatDifferencesView: View {
                     #endif
                 }
 
-                Section(header: ArticleHeader("ISHMAM: A SAD WITH A SHADE OF ZAY")) {
-                    ArticleParagraph(verbatim: "Ishmam (إِشمَام) here is a ṣād pronounced with a trace of the sound of zāy in it. Where a resting ṣād comes before a dāl, in أَصۡدَقُ, يَصۡدِفُونَ, وَتَصۡدِيَةٗ, تَصۡدِيقَ, فَٱصۡدَعۡ, قَصۡدُ, يُصۡدِرَ and يَصۡدُرُ, Hamzah, al-Kisa’i, Khalaf al-‘Ashir and Ruways give the ṣād that shade, and their prints color it: twelve words in each. Khalaf from Hamzah does the same to the ṣād of ٱلصِّرَٰطَ wherever it comes, in al-Fatihah and beyond, which lifts his count to fifty-nine; Khallad does so in al-Fatihah, in one of two ways transmitted from him.")
-
-                    ArticleParagraph(verbatim: "The same word shows the other way a ṣād can go. Qunbul, from Ibn Kathir, reads it with a plain sīn, and his print writes a small sīn over the letter to say so:")
-
-                    RiwayahSpellingCard(title: "Quran 1:6: “the path”", [
-                        RiwayahSpelling("Hafs and most readings", arabic: "ٱلصِّرَٰطَ", note: "ṣirāṭ, with a ṣād"),
-                        RiwayahSpelling("Qunbul", arabic: "ٱلصِّۜرَٰطَ", note: "A small sīn over the ṣād: Qunbul reads it sirāṭ, with an s"),
-                        RiwayahSpelling("Khalaf", arabic: "ٱلصِّرَٰطَ", note: "Written as Hafs writes it; the print colors the ṣād for its shade of zāy"),
-                    ])
+                Section(header: ArticleHeader("BEGINNING ON A WASL HAMZAH")) {
+                    ArticleParagraph(verbatim: "The second of Abu Ja’far’s two colors is for the reciter who begins at a word that opens with a waṣl hamzah followed by a resting hamzah, ٱئۡتِنَا, ٱؤۡتُمِنَ. Joined to the word before, the waṣl hamzah is silent and the second hamzah is pronounced. Begun on, the waṣl hamzah takes a vowel and, in every reading, the hamzah after it softens into the long vowel of that vowel: ٱئۡتِنَا is begun ītinā. Abu Ja’far’s prints are the ones that write this down, with a dot on the alef at the height of the vowel and the second hamzah drawn as the letter it becomes, in the sixteen places where it happens.")
                     #if os(iOS)
-                    RiwayahRuleCard(model: colorCode, key: "ishmam_sad")
-                    #endif
-                }
-
-                Section(header: ArticleHeader("ABU JA’FAR’S GHUNNAH, AND BEGINNING ON A WASL HAMZAH")) {
-                    ArticleParagraph(verbatim: "Two colors belong to Abu Ja’far’s prints alone. A nūn or a tanween before خ or غ is pronounced clearly (izhar) by every other reading; Abu Ja’far hides it in a nasal hum (ikhfa with ghunnah), as every reading does before ت or ك. His prints leave the sukūn off the nūn and color the two words.")
-
-                    RiwayahSpellingCard(title: "Quran 3:115: “of good”", [
-                        RiwayahSpelling("Hafs", arabic: "مِنۡ خَيۡرٖ", note: "A sukūn on the nūn: pronounced clearly, min khayr"),
-                        RiwayahSpelling("Ibn Wardan, Ibn Jammaz", arabic: "مِن خَيۡرٖ", note: "No sukūn: the nūn hums into the khā"),
-                    ])
-
-                    ArticleParagraph(verbatim: "The second color is for the reciter who begins at a word that opens with a waṣl hamzah followed by a resting hamzah, ٱئۡتِنَا, ٱؤۡتُمِنَ. Joined to the word before, the waṣl hamzah is silent and the second hamzah is pronounced. Begun on, the waṣl hamzah takes a vowel and, in every reading, the hamzah after it softens into the long vowel of that vowel: ٱئۡتِنَا is begun ītinā. Abu Ja’far’s prints are the ones that write this down, with a dot on the alef at the height of the vowel and the second hamzah drawn as the letter it becomes, in the sixteen places where it happens.")
-                    #if os(iOS)
-                    RiwayahRuleCard(model: colorCode, key: "ghunnah_kha_ghayn")
                     RiwayahRuleCard(model: colorCode, key: "ibtida_wasl")
-                    #endif
-                }
-
-                Section(header: ArticleHeader("WARSH’S FOUR MARKS")) {
-                    ArticleParagraph(verbatim: "Warsh’s print is the most colored of the twenty, and four of its eight colors are his alone. Madd al-badal is the long vowel after a hamzah, ءَامَنُواْ, ءَالَ, بِـَٔايَٰتِنَآ: every reading gives it two counts, and Warsh has three lengths transmitted from him, two, four and six. Madd al-līn is the soft wāw or yā before a hamzah in the same word, بِشَيۡءٖ, شَيۡءٞ: Warsh stretches it to four or six counts where the others read it short.")
-
-                    ArticleParagraph(verbatim: "A rā with a fatḥah or a ḍammah after a kasrah, or after a resting yā, is read thin (tarqīq) by Warsh where Hafs reads it full: لَكَبِيرَةٌ, بَشِيرٗا وَنَذِيرٗا, خَيۡرُ. A lām with a fatḥah after ص, ط or ظ is read thick (taghlīẓ): اَ۬لصَّلَوٰةَ, صَلَوَٰتٞ, with the weight the lām of Allāh has. None of the four changes a letter on the page, so the color is the only sign of them, as the examples show.")
-                    #if os(iOS)
-                    RiwayahRuleCard(model: colorCode, key: "madd_badal")
-                    RiwayahRuleCard(model: colorCode, key: "madd_leen")
-                    RiwayahRuleCard(model: colorCode, key: "raa_muraqqaqah")
-                    RiwayahRuleCard(model: colorCode, key: "lam_mughallazah")
-                    #endif
-                }
-
-                Section(header: ArticleHeader("AL-BAZZI’S DOUBLED TA")) {
-                    ArticleParagraph(verbatim: "Al-Bazzi, from Ibn Kathir, doubles the tā that begins a present-tense verb in thirty-one places when the word before it is joined to it: وَلَآ تَّيَمَّمُواْ, وَلَآ تَّفَرَّقُواْ, فَإِذَا هِيَ تَّلَقَّفُ. The doubling only happens in joining, so his print colors the particle before the verb together with it; a reciter who stops before the tā reads it single. Where a long vowel comes before the doubled tā, as in وَلَآ, the print adds the madd sign, because the vowel is now stretched before a doubled letter.")
-
-                    RiwayahSpellingCard(title: "Quran 2:267 (2:266 in the Makkan count): “do not aim at the bad”", [
-                        RiwayahSpelling("Hafs", arabic: "وَلَا تَيَمَّمُواْ", note: "wa-lā tayammamū"),
-                        RiwayahSpelling("al-Bazzi", arabic: "وَلَآ تَّيَمَّمُواْ", note: "The tā doubled onto the word before, wa-lāt-tayammamū, with the madd sign over لَآ"),
-                    ])
-
-                    RiwayahSpellingCard(title: "Quran 3:103: “and do not become divided”", [
-                        RiwayahSpelling("Hafs", arabic: "وَلَا تَفَرَّقُواْۚ", note: "wa-lā tafarraqū"),
-                        RiwayahSpelling("al-Bazzi", arabic: "وَلَآ تَّفَرَّقُواْۚ", note: "wa-lāt-tafarraqū"),
-                    ])
-                    #if os(iOS)
-                    RiwayahRuleCard(model: colorCode, key: "tashdid_ta")
                     #endif
                 }
 
@@ -430,15 +438,15 @@ struct RiwayatDifferencesView: View {
                     ArticleTermCard("Silah", arabic: "صِلَة", meaning: "From **و-ص-ل**, to join: joining a pronoun’s vowel to a long vowel, written with a small waw.")
                     ArticleTermCard("Al-madd al-munfasil", arabic: "المَدّ المُنفَصِل", meaning: "The separated madd: a long vowel ending one word before a hamzah beginning the next.")
                     ArticleTermCard("Al-idgham al-kabir", arabic: "الإِدغَام الكَبِير", meaning: "The great merging: a voweled letter merged into the same or a close letter after it, a mark of as-Susi’s reading.")
-                    ArticleTermCard("Al-idgham as-saghir", arabic: "الإِدغَام الصَّغِير", meaning: "The small merging: a resting letter merged into the letter after it, the dhāl of إِذۡ, the dāl of قَدۡ, a nūn or a tanween, in the lists each reading carries.")
                     ArticleTermCard("Khilaf", arabic: "خِلَاف", meaning: "From **خ-ل-ف**, to differ: the word or letter a riwayah reads differently from Hafs, the first color in every print’s legend.")
-                    ArticleTermCard("Sakt", arabic: "سَكت", meaning: "From **س-ك-ت**, to fall silent: a short pause on a resting letter without taking a breath; Hafs’s four places, Hamzah’s rule, Abu Ja’far’s opening letters.")
-                    ArticleTermCard("Ishmam", arabic: "إِشمَام", meaning: "From **ش-م-م**, to give a scent of: here, a ṣād pronounced with a trace of zāy, in أَصۡدَقُ and its like, and in ٱلصِّرَٰطَ for Khalaf.")
-                    ArticleTermCard("Ghunnah", arabic: "غُنَّة", meaning: "The nasal hum of nūn and mīm; Abu Ja’far keeps it on a nūn before خ and غ, where the other readings pronounce the nūn clearly.")
-                    ArticleTermCard("Tarqiq and taghlidh", arabic: "تَرقِيق وَتَغلِيظ", meaning: "Thinning and thickening: Warsh’s thin rā after a kasrah or a yā, and his thick lām after ص, ط and ظ.")
                     ArticleTermCard("Madd al-badal", arabic: "مَدّ البَدَل", meaning: "The madd of exchange: the long vowel after a hamzah, ءَامَنُواْ, which Warsh may stretch to four or six counts.")
                     ArticleTermCard("Madd al-lin", arabic: "مَدّ اللِّين", meaning: "The soft madd: a wāw or yā resting after a fatḥah, as in شَيۡءٞ, which Warsh stretches before a hamzah.")
                     ArticleTermCard("Ha ad-damir", arabic: "هَاء الضَّمِير", meaning: "The pronoun hā, -hu and -hi; Ibn Kathir joins it to a long vowel after a resting letter too, عَلَيۡهِۦ.")
+                    ArticleTermCard("Al-idgham as-saghir", arabic: "الإِدغَام الصَّغِير", meaning: "The small merging: a resting letter merged into the letter after it, the dhāl of إِذۡ, the dāl of قَدۡ, a nūn or a tanween, in the lists each reading carries.")
+                    ArticleTermCard("Ghunnah", arabic: "غُنَّة", meaning: "The nasal hum of nūn and mīm; Abu Ja’far keeps it on a nūn before خ and غ, where the other readings pronounce the nūn clearly.")
+                    ArticleTermCard("Ishmam", arabic: "إِشمَام", meaning: "From **ش-م-م**, to give a scent of: here, a ṣād pronounced with a trace of zāy, in أَصۡدَقُ and its like, and in ٱلصِّرَٰطَ for Khalaf.")
+                    ArticleTermCard("Tarqiq and taghlidh", arabic: "تَرقِيق وَتَغلِيظ", meaning: "Thinning and thickening: Warsh’s thin rā after a kasrah or a yā, and his thick lām after ص, ط and ظ.")
+                    ArticleTermCard("Sakt", arabic: "سَكت", meaning: "From **س-ك-ت**, to fall silent: a short pause on a resting letter without taking a breath; Hafs’s four places, Hamzah’s rule, Abu Ja’far’s opening letters.")
                 }
 
                 ArticleSourcesSection(article: "RiwayatDifferencesView")

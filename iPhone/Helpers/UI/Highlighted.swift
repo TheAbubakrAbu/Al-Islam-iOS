@@ -80,11 +80,17 @@ struct HighlightedSnippet: View {
     /// through the word-by-word gloss pack, which English words align with an Arabic query hit (and
     /// vice versa) and hands the spans in here - the snippet itself stays language-agnostic.
     var extraHighlightRanges: [NSRange] = []
+    /// Spans (UTF-16 offsets into `source`) washed with `washColor` BEHIND the text - the recited
+    /// word (WordHighlight.swift) on a row drawn through this one-Text renderer. A background, so
+    /// tajweed and the rest of the paint stay as they are.
+    var washRanges: [NSRange] = []
+    var washColor: Color? = nil
     var body: some View {
         let resolvedSearchTerm = searchTerm
         let needsSearchHighlight = !resolvedSearchTerm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             || !extraHighlightRanges.isEmpty
         let needsAttributedWork = needsSearchHighlight || highlightAllahNames || preStyledSource != nil
+            || !washRanges.isEmpty
         let suffixText = Text(trailingSuffix)
             .font(trailingSuffixFont ?? font)
             .foregroundColor(trailingSuffixColor ?? fg)
@@ -108,7 +114,8 @@ struct HighlightedSnippet: View {
         let memoKey = Self.memoKey(
             source: source, term: term, font: font, accent: accent, fg: fg,
             preStyled: preStyledSource, beginner: beginnerMode, allah: highlightAllahNames,
-            guarantee: guaranteeMatch, extra: extraHighlightRanges, wordRule: wordRule
+            guarantee: guaranteeMatch, extra: extraHighlightRanges, wordRule: wordRule,
+            wash: washRanges, washColor: washColor
         )
         if let hit = Self.memo.object(forKey: memoKey) { return hit.value }
         // When highlighting a search term, base the attributed text on the PLAIN `source` - never a
@@ -118,12 +125,12 @@ struct HighlightedSnippet: View {
         // returns nil) and a real - even exact - match never gets colored. On a matched row the search
         // highlight takes priority over tajweed, matching how text-search results are shown elsewhere.
         let base = needsSearchHighlight ? plainSourceAttributed() : baseAttributedText()
-        let built = applyExtraRanges(
+        let built = applyWashRanges(to: applyExtraRanges(
             to: highlightAllahIfNeeded(
                 source: source,
                 baseAttributed: highlight(source: source, baseAttributed: base, term: term)
             )
-        )
+        ))
         Self.memo.setObject(SnippetBox(built), forKey: memoKey)
         return built
     }
@@ -144,11 +151,13 @@ struct HighlightedSnippet: View {
     /// render digest (characters plus the colour runs), so a tajweed recolour is a different key.
     private static func memoKey(source: String, term: String, font: Font, accent: Color, fg: Color,
                                 preStyled: AttributedString?, beginner: Bool, allah: Bool,
-                                guarantee: Bool, extra: [NSRange], wordRule: SearchWordRule) -> NSString {
+                                guarantee: Bool, extra: [NSRange], wordRule: SearchWordRule,
+                                wash: [NSRange] = [], washColor: Color? = nil) -> NSString {
         var parts: [String] = [
             source, term, DescriptionMemo.describe(font), DescriptionMemo.describe(accent), DescriptionMemo.describe(fg),
             beginner ? "b" : "-", allah ? "a" : "-", guarantee ? "g" : "-", wordRule.rawValue,
             extra.map { "\($0.location):\($0.length)" }.joined(separator: ","),
+            wash.map { "\($0.location):\($0.length)" }.joined(separator: ",") + (washColor.map { DescriptionMemo.describe($0) } ?? ""),
         ]
         parts.append(preStyled.map { "\($0.renderDigest)" } ?? "plain")
         return parts.joined(separator: "\u{1F}") as NSString
@@ -165,6 +174,20 @@ struct HighlightedSnippet: View {
                   let start = AttributedString.Index(range.lowerBound, within: result),
                   let end = AttributedString.Index(range.upperBound, within: result) else { continue }
             result[start..<end].foregroundColor = accent
+        }
+        return result
+    }
+
+    /// Washes `washRanges` behind the text (the recited word), the same span rule as `applyExtraRanges`.
+    private func applyWashRanges(to attributed: AttributedString) -> AttributedString {
+        guard !washRanges.isEmpty else { return attributed }
+        var result = attributed
+        let color = (washColor ?? accent).opacity(0.3)
+        for span in washRanges {
+            guard let range = Range(span, in: source),
+                  let start = AttributedString.Index(range.lowerBound, within: result),
+                  let end = AttributedString.Index(range.upperBound, within: result) else { continue }
+            result[start..<end].backgroundColor = color
         }
         return result
     }

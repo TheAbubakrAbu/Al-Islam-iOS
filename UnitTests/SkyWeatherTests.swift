@@ -1,10 +1,11 @@
 import XCTest
+import UserNotifications
 @testable import iPhone
 
 /// The sky's weather (SkyWeather.swift, 2026-10-11): the look a condition maps to, how it greys a
 /// prayer's gradient, when a reading is fresh, and what a widget redraws for. Plus the two other
-/// pure pieces that landed with it: the automatic-change cards' copy and the permissions sheet's
-/// rule for when it stands in front of the system prompts.
+/// pure pieces that landed with it: the automatic-change cards' copy and the rule for when the Adhan
+/// tab's permission cards stand (they replaced the permissions sheet, 2026-11-05).
 final class SkyWeatherTests: XCTestCase {
     private func reading(condition: String, cover: Double, fetchedAt: Date = Date(), latitude: Double = 33.7,
                          longitude: Double = -117.8, tempC: Double = 20) -> SkyWeather {
@@ -166,23 +167,33 @@ final class SkyWeatherTests: XCTestCase {
         XCTAssertTrue(unknown.message.contains("this region"))
     }
 
-    // MARK: The permissions sheet
+    // MARK: The Adhan tab's permission cards
 
-    func testPermissionsSheetStandsOnlyForAnUnansweredUnsnoozedPermission() {
-        let now = Date(timeIntervalSince1970: 1_000_000)
-        func due(location: Bool = false, notifications: Bool = false, locationSnoozedUntil: Double = 0,
-                 notificationSnoozedUntil: Double = 0, locationNever: Bool = false, notificationNever: Bool = false) -> Bool {
-            PermissionsSheet.shouldPresent(locationUndetermined: location, notificationsUndetermined: notifications,
-                                           locationSnoozedUntil: locationSnoozedUntil, notificationSnoozedUntil: notificationSnoozedUntil,
-                                           locationNeverAskAgain: locationNever, notificationNeverAskAgain: notificationNever, now: now)
+    /// Turn On Location stands until location is allowed; only over times from a stored place can it be
+    /// put away, since with no times it is all the tab has to show.
+    func testLocationCardStandsUntilLocationIsAllowed() {
+        XCTAssertTrue(PermissionAsk.showsLocation(allowed: false, hasTimes: false, neverAskAgain: false))
+        XCTAssertFalse(PermissionAsk.showsLocation(allowed: true, hasTimes: false, neverAskAgain: false), "allowed")
+        XCTAssertFalse(PermissionAsk.showsLocation(allowed: true, hasTimes: true, neverAskAgain: false), "allowed")
+        XCTAssertTrue(PermissionAsk.showsLocation(allowed: false, hasTimes: true, neverAskAgain: false), "times from a stored place")
+        XCTAssertFalse(PermissionAsk.showsLocation(allowed: false, hasTimes: true, neverAskAgain: true), "put away over the times")
+        XCTAssertTrue(PermissionAsk.showsLocation(allowed: false, hasTimes: false, neverAskAgain: true),
+                      "with no times the card cannot be put away")
+    }
+
+    /// Turn On Notifications stands while the permission is unanswered or denied, the app's own Allow
+    /// Notifications is on, and the card has not been put away.
+    func testNotificationCardStandsOnlyForAMissingPermission() {
+        func shows(_ status: UNAuthorizationStatus?, enabled: Bool = true, never: Bool = false) -> Bool {
+            PermissionAsk.showsNotifications(status: status, enabledInApp: enabled, neverAskAgain: never)
         }
-        XCTAssertFalse(due(), "both answered")
-        XCTAssertTrue(due(location: true))
-        XCTAssertTrue(due(notifications: true))
-        XCTAssertFalse(due(location: true, locationSnoozedUntil: now.timeIntervalSince1970 + 60), "Not Now holds for a day")
-        XCTAssertTrue(due(location: true, locationSnoozedUntil: now.timeIntervalSince1970 - 60), "and then it returns")
-        XCTAssertFalse(due(location: true, locationNever: true))
-        XCTAssertTrue(due(location: true, notifications: true, locationNever: true), "the other permission still asks")
+        XCTAssertTrue(shows(.notDetermined))
+        XCTAssertTrue(shows(.denied))
+        XCTAssertFalse(shows(.authorized))
+        XCTAssertFalse(shows(.provisional))
+        XCTAssertFalse(shows(nil), "not looked at yet: no card flashes at launch")
+        XCTAssertFalse(shows(.notDetermined, enabled: false), "Allow Notifications is off in the app")
+        XCTAssertFalse(shows(.denied, never: true), "put away")
     }
 
     /// The first fix becomes the home city (`seedHomeLocationIfNeeded`), and readers who installed away from

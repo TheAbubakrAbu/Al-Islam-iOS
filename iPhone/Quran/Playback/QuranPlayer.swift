@@ -357,6 +357,20 @@ final class QuranPlayer: ObservableObject {
 
     /// Periodic observer on the surah player used to prewarm the next surah near the end of the current one.
     private var surahTimeObserver: Any?
+    /// The recited word's follower (WordHighlight.swift): started when an ayah item becomes current,
+    /// stopped with the other observers. Main-actor work, reached through `withWordTracker`.
+    let wordTracker = WordHighlightTracker()
+
+    /// Every caller is on main already (the status and queue observers hop there; stop and the ready
+    /// handlers run from the UI), so this is the isolation statement, with a hop for any future path.
+    private func withWordTracker(_ body: @escaping @MainActor (WordHighlightTracker) -> Void) {
+        let tracker = wordTracker
+        if Thread.isMainThread {
+            MainActor.assumeIsolated { body(tracker) }
+        } else {
+            DispatchQueue.main.async { MainActor.assumeIsolated { body(tracker) } }
+        }
+    }
 
     /// The next surah, already created and buffering in a paused player, ready to be promoted for a gapless
     /// hand-off (mirrors the AVQueuePlayer next-ayah prefetch). Built ~`surahPrewarmLeadTime` before the end.
@@ -504,6 +518,32 @@ final class QuranPlayer: ObservableObject {
                 QuranPlayer.shared.logPlaybackProbe()
             }
         }
+        #if os(iOS)
+        // `-playWordByWord s:a`: Play Word by Word on one ayah (WordClipPlayer), so the recited-word
+        // highlight can be screenshotted without a tap.
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-playWordByWord"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+            let parts = ProcessInfo.processInfo.arguments[idx + 1].split(separator: ":").compactMap { Int($0) }
+            if parts.count == 2 {
+                debugStartWhenDataReady {
+                    MainActor.assumeIsolated { WordClipPlayer.shared.play(surah: parts[0], ayah: parts[1]) }
+                }
+            }
+        }
+        // `-playWord s:a:p`: one word's clip (the word card's Listen), lit on its own. A clip lasts
+        // about a second, so it waits out the splash (data is ready long before the reader shows).
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-playWord"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+            let parts = ProcessInfo.processInfo.arguments[idx + 1].split(separator: ":").compactMap { Int($0) }
+            if parts.count == 3 {
+                debugStartWhenDataReady {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                        MainActor.assumeIsolated { WordClipPlayer.shared.playWord(surah: parts[0], ayah: parts[1], position: parts[2]) }
+                    }
+                }
+            }
+        }
+        #endif
         // `-playCustomRange s:a:b[:perAyah[:section[:endSurah]]]`: ayah-by-ayah range playback, for
         // verifying the reader's playback-driven page turns headlessly (pick a range that crosses a page
         // boundary), and repeats: `112:1:4:2:inf` plays each ayah twice and the range forever;
@@ -1368,6 +1408,7 @@ final class QuranPlayer: ObservableObject {
     func stop() {
         pendingRepeatFetch = nil
         pausedDuringRepeatFetch = false
+        withWordTracker { $0.stop() }
         cancelSurahCopy()
         didHandleSingleAyahEnd = false
         repeatCount = 1
@@ -1453,6 +1494,7 @@ final class QuranPlayer: ObservableObject {
     }
     
     private func removeAllObservers() {
+        withWordTracker { $0.stop() }
         notificationObservers.forEach(NotificationCenter.default.removeObserver)
         notificationObservers.removeAll()
         queuePlayerItemObserver = nil
@@ -1739,6 +1781,10 @@ final class QuranPlayer: ObservableObject {
         isLoading = false
         isPlaying = true
         isPaused = false
+        // Words follow only a downloaded quran.com file (the tracker checks the item's URL).
+        if let p = player, let item = p.currentItem {
+            withWordTracker { $0.trackSurah(player: p, item: item, surah: surahNumber, reciter: reciter) }
+        }
         nowPlayingTitle = String(localized: "Surah \(surahNumber): \(Surah.displayName(id: surahNumber, stored: surahName))") +
             repeatSuffix(total: repeatCount, remaining: repeatRemaining)
         nowPlayingReciter = reciter.displayNameForNowPlaying
@@ -2401,6 +2447,9 @@ final class QuranPlayer: ObservableObject {
                     self.nowPlayingTitle = self.customRangeTitle(at: initialIndex, pass: initialPass)
                     self.nowPlayingReciter = self.ayahNowPlayingReciterName(for: reciter)
                     self.updateNowPlayingInfo()
+                    self.withWordTracker {
+                        $0.trackAyah(player: q, item: itm, surah: first.surahNumber, ayah: first.ayahNumber, reciter: reciter)
+                    }
                 } else if itm.status == .failed {
                     PlaybackAudioCache.shared.discardCopy(at: (itm.asset as? AVURLAsset)?.url)
                     let details = self.playbackFailureDetails(for: itm.error, reciter: reciter, what: String(localized: "custom range"))
@@ -2457,6 +2506,9 @@ final class QuranPlayer: ObservableObject {
                 self.nowPlayingReciter = self.ayahNowPlayingReciterName(for: reciter)
                 self.updateNowPlayingInfo()
                 self.saveLastListenedAyah()
+                self.withWordTracker {
+                    $0.trackAyah(player: qPlayer, item: currentItem, surah: entry.surahNumber, ayah: entry.ayahNumber, reciter: reciter)
+                }
 
                 // Forget the items that have left the queue (an endless loop would otherwise grow this).
                 let queued = Set(qPlayer.items().map(ObjectIdentifier.init))
@@ -2932,6 +2984,10 @@ final class QuranPlayer: ObservableObject {
                         self.nowPlayingTitle = base + self.repeatSuffix(total: self.ayahRepeatCount, remaining: self.ayahRepeatRemaining)
                         self.nowPlayingReciter = self.ayahNowPlayingReciterName(for: reciter)
                         self.updateNowPlayingInfo()
+                        self.withWordTracker {
+                            $0.trackAyah(player: single, item: itm, surah: surahNumber, ayah: ayahNumber,
+                                         reciter: reciter, isBismillah: isBismillah)
+                        }
                     } else if itm.status == .failed {
                         self.isLoading = false
                         PlaybackAudioCache.shared.discardCopy(at: (itm.asset as? AVURLAsset)?.url)
@@ -3030,6 +3086,9 @@ final class QuranPlayer: ObservableObject {
                     self.nowPlayingTitle = base
                     self.nowPlayingReciter = self.ayahNowPlayingReciterName(for: reciter)
                     self.updateNowPlayingInfo()
+                    self.withWordTracker {
+                        $0.trackAyah(player: q, item: itm, surah: surahNumber, ayah: ayahNumber, reciter: reciter)
+                    }
                 } else if itm.status == .failed {
                     self.isLoading = false
                     PlaybackAudioCache.shared.discardCopy(at: (itm.asset as? AVURLAsset)?.url)
@@ -3122,6 +3181,9 @@ final class QuranPlayer: ObservableObject {
                 if let recNow = self.playbackReciter ?? self.resolvedSelectedReciter() {
                     self.nowPlayingTitle = "\(posSurah.displayName) \(pos.surahNumber):\(pos.ayahNumber)"
                     self.nowPlayingReciter = self.ayahNowPlayingReciterName(for: recNow)
+                    self.withWordTracker {
+                        $0.trackAyah(player: qPlayer, item: newItem, surah: pos.surahNumber, ayah: pos.ayahNumber, reciter: recNow)
+                    }
                     // The item that just became current starts at zero; `lastKnownSeconds` may still
                     // hold the previous item's last tick (the queue's rate never changes across an
                     // advance, so the `.playing` refresh in `bufferingStateChanged` does not fire here).
@@ -4123,6 +4185,14 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
             .appendingPathComponent(String(format: "%03d.timings.json", surahNumber), isDirectory: false)
     }
 
+    /// Where a surah's WORD timings live (`AyahWordTimingStore`): beside the ayah table, fetched for
+    /// the recited-word highlight whether or not the surah is downloaded.
+    func wordTimingsFileURL(reciter: Reciter, surahNumber: Int) -> URL {
+        try? ensureReciterDirectoryExists(reciter: reciter)
+        return reciterDirectoryURL(reciter: reciter)
+            .appendingPathComponent(String(format: "%03d.words.json", surahNumber), isDirectory: false)
+    }
+
     func localSurahURL(reciter: Reciter, surahNumber: Int) -> URL? {
         let url = localSurahFileURL(reciter: reciter, surahNumber: surahNumber)
         return fileManager.fileExists(atPath: url.path) ? url : nil
@@ -4900,6 +4970,7 @@ final class AyahTimingStore {
     /// Drops every cached table for a reciter - called when its downloads are deleted.
     func forgetTimings(reciterID: String) {
         cache = cache.filter { !$0.key.hasPrefix("\(reciterID)|") }
+        AyahWordTimingStore.shared.forget(reciterID: reciterID)
     }
 
     /// Drops one surah's table, on disk and in memory: its audio is about to come from another encode.
@@ -5207,3 +5278,19 @@ final class PlaybackAudioCache: @unchecked Sendable {
         }
     }
 }
+
+#if !os(iOS)
+// The watch compiles this player too, and has no recited-word highlight (WordHighlight.swift is
+// iPhone-only): the player's hooks above land on these, which do nothing.
+final class WordHighlightTracker {
+    nonisolated init() {}
+    func stop() {}
+    func trackAyah(player: AVPlayer, item: AVPlayerItem, surah: Int, ayah: Int, reciter: Reciter, isBismillah: Bool = false) {}
+    func trackSurah(player: AVPlayer, item: AVPlayerItem, surah: Int, reciter: Reciter) {}
+}
+
+final class AyahWordTimingStore {
+    static let shared = AyahWordTimingStore()
+    func forget(reciterID: String) {}
+}
+#endif

@@ -36,6 +36,13 @@ enum OnDeviceAsk {
         if let cached = availabilityCache, now - cached.at < availabilityTTL { return cached.available }
         var available = false
         if case .available = SystemLanguageModel.default.availability { available = true }
+        #if DEBUG
+        // `-askAILog`: why Apple Intelligence is missing, in the console (a per-app language the
+        // model does not support reads as unavailable, not as an unsupported-language error).
+        if !available, ProcessInfo.processInfo.arguments.contains("-askAILog") {
+            print("askai: availability \(SystemLanguageModel.default.availability) languages \(Locale.preferredLanguages) supportsLocale(ar) \(SystemLanguageModel.default.supportsLocale(Locale(identifier: "ar")))")
+        }
+        #endif
         availabilityCache = (available, now)
         return available
     }

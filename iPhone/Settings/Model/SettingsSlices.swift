@@ -1072,7 +1072,7 @@ final class QuranDisplay: ObservableObject, SettingsSlice {
         "THEfontArabic", "acceptedBetaQiraatNotice", "automaticKhatmCompletion", "ayahPreviewCardScale",
         "ayahSheetKeepsScreenOn", "beginnerMode", "betaQiraatEnabled", "cleanArabicText",
         "copyAyahArabic", "copyAyahEnglishMustafa", "copyAyahEnglishSaheeh", "copyAyahTransliteration",
-        "displayQiraah", "englishFontSize", "fontArabicSize", "highlightAllahNames",
+        "displayQiraah", "englishFontSize", "fontArabicSize", "highlightAllahNames", "highlightPlayingWords",
         "keepAyahSheetOpen", "keepAyahSheetOpenOnPlay", "khatmGroupByJuz", "mushafFitPage",
         "mushafHafsPDFEdition", "mushafPDFAppearance", "mushafPageLanguage", "mushafTwoPageSpread",
         "qiraatComparisonMode", "quranArabicScriptStyle", "quranPageMode", "quranSortDirection",
@@ -1191,6 +1191,11 @@ final class QuranDisplay: ObservableObject, SettingsSlice {
     var keepAyahSheetOpenOnPlay: Bool {
         get { Settings.shared.keepAyahSheetOpenOnPlay }
         set { Settings.shared.keepAyahSheetOpenOnPlay = newValue }
+    }
+
+    var highlightPlayingWords: Bool {
+        get { Settings.shared.highlightPlayingWords }
+        set { Settings.shared.highlightPlayingWords = newValue }
     }
 
     var khatmGroupByJuz: Bool {
@@ -1575,7 +1580,7 @@ final class HadithSettings: ObservableObject, SettingsSlice {
     static let shared = HadithSettings()
     static let label = "HadithSettings"
     static let keys: Set<String> = [
-        "hadithArabicFontSize", "hadithEnglishFontSize", "hadithOfTheDayHiddenDate", "hadithSearchHistoryData",
+        "hadithArabicFontSize", "hadithChainFirst", "hadithEnglishFontSize", "hadithOfTheDayHiddenDate", "hadithSearchHistoryData",
         "highlightAllahNamesHadith", "showHadithArabic", "showHadithEnglish", "showHadithOfTheDay",
     ]
 
@@ -1613,6 +1618,11 @@ final class HadithSettings: ObservableObject, SettingsSlice {
     var showHadithEnglish: Bool {
         get { Settings.shared.showHadithEnglish }
         set { Settings.shared.showHadithEnglish = newValue }
+    }
+
+    var hadithChainFirst: Bool {
+        get { Settings.shared.hadithChainFirst }
+        set { Settings.shared.hadithChainFirst = newValue }
     }
 
     var showHadithOfTheDay: Bool {

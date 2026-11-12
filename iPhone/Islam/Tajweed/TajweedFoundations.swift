@@ -987,46 +987,6 @@ struct TajweedFamilyRow: View {
     }
 }
 
-/// A video lesson, opened in YouTube.
-struct TajweedVideoLink: View {
-    let title: String
-    let url: String
-    var channel: String = "Arabic 101"
-
-    var body: some View {
-        if let destination = URL(string: url) {
-            Link(destination: destination) {
-                HStack(spacing: 12) {
-                    AccentIconChip(systemImage: "play.fill", tint: .red, size: 30)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(title)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        // Explicit greys: inside a Link the hierarchical styles take the link's tint.
-                        Text("\(channel), on YouTube")
-                            .font(.caption)
-                            .foregroundColor(Self.secondaryInk)
-                    }
-                    Spacer(minLength: 8)
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(Self.secondaryInk)
-                }
-                .padding(.vertical, 2)
-            }
-        }
-    }
-
-    private static var secondaryInk: Color {
-        #if os(iOS)
-        Color(UIColor.secondaryLabel)
-        #else
-        Color.gray
-        #endif
-    }
-}
-
 /// A lesson of the Tajweed Course, as a page names it.
 struct TajweedCourseLesson: Hashable {
     let id: String

@@ -24,8 +24,8 @@ final class SimpleModeUITests: XCTestCase {
         super.tearDown()
     }
 
-    /// The welcome's permissions page: Skip while something is unanswered (notifications under
-    /// -skipNotificationPrompt, unless this simulator answered them in an earlier run), else Continue.
+    /// The welcome's permissions page: Skip, which stands whatever was answered (its one button reads
+    /// Allow Location, Allow Notifications, then Continue).
     private func leavePermissionsPage(_ app: XCUIApplication) {
         let skip = app.buttons["welcomeSkip"]
         let proceed = app.buttons["Continue"]
@@ -416,9 +416,9 @@ final class SimpleModeUITests: XCTestCase {
                       "More Resources does not list the Zakah Calculator")
     }
 
-    /// A first launch walks the welcome's pages (2026-10-19: what the app is, About You, Location and
-    /// Notifications, A lot to discover), each skippable on its own, and the last can choose Simple:
-    /// the app then opens in Simple Mode.
+    /// A first launch walks the welcome's pages (what the app is, About You, Location and Notifications,
+    /// Simple or Full), each after the first skippable on its own, and the last can choose Simple: the
+    /// app then opens in Simple Mode.
     func testSplashCanChooseSimple() {
         // Page mode off: with it on, the Quran tab opens straight onto the mushaf (the reader hides
         // the root's More button this test looks for), which has nothing to do with the welcome.
@@ -432,8 +432,8 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Prayer times for where you are"].waitForExistence(timeout: 5),
                       "skipping About You did not move to the permissions page")
         leavePermissionsPage(app)
-        XCTAssertTrue(app.staticTexts["A lot to discover"].waitForExistence(timeout: 5),
-                      "leaving the permissions did not move to the discover page")
+        XCTAssertTrue(app.staticTexts["Simple or Full?"].waitForExistence(timeout: 5),
+                      "leaving the permissions did not move to the Simple or Full page")
         app.buttons["splashChoiceSimple"].tap()
         app.buttons["Continue"].tap()
         let quranTab = app.tabBars.buttons["Quran"].firstMatch
@@ -443,17 +443,21 @@ final class SimpleModeUITests: XCTestCase {
                       "choosing Simple on the splash did not turn Simple Mode on")
     }
 
-    /// Every page of the welcome has a Skip of its own, and Skip moves one page on, never out of the
-    /// whole walk (Abu, 2026-10-19: "have each page option have a skip button but don't have way to
-    /// leave the tutorial completely"). About You's tailored page carries Skip with Back beside it.
+    /// Every page of the welcome that asks something has a Skip of its own, and Skip moves one page on,
+    /// never out of the whole walk (Abu, 2026-10-19: "have each page option have a skip button but don't
+    /// have way to leave the tutorial completely"). The first page asks nothing and has Get Started
+    /// alone (2026-11-05); About You's second step carries Skip with Back beside it.
     func testEveryWelcomePageSkipsOnlyItself() {
         let app = launch(["-seedBool", "THEfirstLaunch=1,simpleMode=0,quranPageMode=0"])
         let skip = app.buttons["welcomeSkip"]
-        XCTAssertTrue(app.buttons["Get Started"].waitForExistence(timeout: 15), "no splash on a first launch")
-        XCTAssertTrue(skip.exists, "the first page has no Skip")
-        skip.tap()
+        let getStarted = app.buttons["Get Started"]
+        XCTAssertTrue(getStarted.waitForExistence(timeout: 15), "no splash on a first launch")
+        // Hittable, not merely there: a stage mounted under the welcome can carry a Skip of its own.
+        XCTAssertFalse(skip.exists && skip.isHittable, "the first page has a Skip beside Get Started")
+        getStarted.tap()
         XCTAssertTrue(app.staticTexts["Which describes you best?"].waitForExistence(timeout: 5),
-                      "Skip on the first page did not move to About You")
+                      "Get Started did not move to About You")
+        XCTAssertTrue(skip.waitForExistence(timeout: 5), "About You has no Skip")
         app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Revert'")).firstMatch.tap()
         app.buttons["Continue"].tap()
         XCTAssertTrue(app.buttons["welcomeBack"].waitForExistence(timeout: 5), "About You's second step has no Back")
@@ -463,17 +467,17 @@ final class SimpleModeUITests: XCTestCase {
                       "Skip on About You did not move to the permissions page")
         XCTAssertTrue(skip.waitForExistence(timeout: 5), "the permissions page has no Skip")
         skip.tap()
-        XCTAssertTrue(app.staticTexts["A lot to discover"].waitForExistence(timeout: 5),
-                      "Skip on the permissions page did not move to the discover page")
-        XCTAssertTrue(skip.exists, "the discover page has no Skip")
+        XCTAssertTrue(app.staticTexts["Simple or Full?"].waitForExistence(timeout: 5),
+                      "Skip on the permissions page did not move to the Simple or Full page")
+        XCTAssertTrue(skip.exists, "the Simple or Full page has no Skip")
         skip.tap()
         XCTAssertTrue(app.tabBars.buttons["Quran"].firstMatch.waitForExistence(timeout: 10),
                       "Skip on the last page did not end the welcome")
     }
 
-    /// Nothing asks for location over the welcome's first pages; the permissions page asks when its own
-    /// Allow Location button is tapped, and a skipped permission is not asked again by the Adhan tab
-    /// the moment the welcome ends (its sheet is snoozed a day, like its Not Now).
+    /// Nothing asks for location over the welcome's first pages; the permissions page asks when its
+    /// button, reading Allow Location, is tapped, and nothing rises over the Adhan tab when the welcome
+    /// ends (the tab asks from its own cards, never with a prompt or a sheet of its own).
     func testLocationPromptWaitsForTheWelcome() {
         let app = XCUIApplication()
         app.resetAuthorizationStatus(for: .location)
@@ -497,12 +501,39 @@ final class SimpleModeUITests: XCTestCase {
         let allow = prompt.buttons["Allow While Using App"]
         if allow.exists { allow.tap() } else { prompt.buttons.firstMatch.tap() }
         leavePermissionsPage(app)
-        XCTAssertTrue(app.staticTexts["A lot to discover"].waitForExistence(timeout: 5), "no discover page")
+        XCTAssertTrue(app.staticTexts["Simple or Full?"].waitForExistence(timeout: 5), "no Simple or Full page")
         app.buttons["Continue"].tap()
         XCTAssertTrue(app.tabBars.buttons["Quran"].firstMatch.waitForExistence(timeout: 10), "the splash did not end")
         Thread.sleep(forTimeInterval: 3)
         XCTAssertFalse(springboard.alerts.firstMatch.exists, "the tab asked again right after the welcome")
-        XCTAssertFalse(app.buttons["permissionsPrimary"].exists, "the permissions sheet followed the welcome")
+        XCTAssertFalse(app.buttons["adhanAllowLocation"].exists, "the tab offers a permission that was just given")
+    }
+
+    /// A skipped location is asked for in the app itself (Abu, 2026-11-05: "if location or notification
+    /// is not given then have it be in the actual app to give it"): the Adhan tab raises no prompt of
+    /// its own, shows Turn On Location where the prayer times would be, and its button asks.
+    func testAdhanTabOffersASkippedLocation() {
+        let app = XCUIApplication()
+        app.resetAuthorizationStatus(for: .location)
+        // Never Ask Again off: a simulator whose card was put away with its X (over times from a stored
+        // place) would show none.
+        app.launchArguments = ["-skipNotificationPrompt", "-travelingMode", "0",
+                               "-seedBool", "THEfirstLaunch=0,simpleMode=0,locationNeverAskAgain=0"]
+        app.launch()
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let allowLocation = app.buttons["adhanAllowLocation"]
+        XCTAssertTrue(allowLocation.waitForExistence(timeout: 20), "no Turn On Location card on the Adhan tab")
+        // Past the launch cover, which takes the taps of its first seconds.
+        Thread.sleep(forTimeInterval: 8)
+        XCTAssertFalse(springboard.alerts.firstMatch.exists, "the tab raised a system prompt on its own")
+        allowLocation.tap()
+        let prompt = springboard.alerts.firstMatch
+        XCTAssertTrue(prompt.waitForExistence(timeout: 15), "Allow Location on the tab did not ask")
+        let allow = prompt.buttons["Allow While Using App"]
+        if allow.exists { allow.tap() } else { prompt.buttons.firstMatch.tap() }
+        let gone = NSPredicate(format: "exists == false")
+        expectation(for: gone, evaluatedWith: allowLocation)
+        waitForExpectations(timeout: 15)
     }
 
     /// A folded Quick Search Help can be put away for good, after asking (Abu, 2026-10-10: "when a tips
@@ -822,6 +853,64 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertTrue(actionsSheetSwitch(app).waitForExistence(timeout: 5), "closing the reciter list also closed the actions sheet")
     }
 
+    private func launchActionsSheet(keepSheetOpen: Bool) -> XCUIApplication {
+        launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:2", "-openRowSheet", "actions", "-sheetLarge",
+                "-seedBool", "simpleMode=0,THEfirstLaunch=0,ayahSheetKeepsScreenOn=0,keepAyahSheetOpenOnPlay=0,keepAyahSheetOpen=\(keepSheetOpen ? 1 : 0)",
+                "-seedString", "shareAyahLastActionMode=text"])
+    }
+
+    /// Share Ayah with Keep Sheet Open off, its default: the actions sheet closes as the share editor opens.
+    func testActionsSheetShareSwapsSheetByDefault() {
+        let app = launchActionsSheet(keepSheetOpen: false)
+        let share = app.buttons["Share Ayah"]
+        XCTAssertTrue(share.waitForExistence(timeout: 10), "the actions sheet has no Share Ayah row")
+        share.tap()
+        XCTAssertTrue(app.buttons["Copy"].waitForExistence(timeout: 10), "Share Ayah did not open the share editor")
+        XCTAssertFalse(actionsSheetSwitch(app).exists, "the actions sheet stayed under the share editor with Keep Sheet Open off")
+    }
+
+    /// Share Ayah with Keep Sheet Open on (Abu, 2026-11-04: "why doesn't share ayah collapse the ayah
+    /// sheet"): the editor stacks on the actions sheet, and a copy (or a completed share) closes both.
+    func testActionsSheetShareCopyClosesStackedSheet() {
+        let app = launchActionsSheet(keepSheetOpen: true)
+        let share = app.buttons["Share Ayah"]
+        XCTAssertTrue(share.waitForExistence(timeout: 10), "the actions sheet has no Share Ayah row")
+        share.tap()
+        let copy = app.buttons["Copy"]
+        XCTAssertTrue(copy.waitForExistence(timeout: 10), "Share Ayah did not open the share editor")
+        XCTAssertTrue(actionsSheetSwitch(app).exists, "Keep Sheet Open did not keep the actions sheet under the share editor")
+        copy.tap()
+        XCTAssertTrue(copy.waitForNonExistence(timeout: 8), "Copy left the share editor up")
+        let closed = actionsSheetSwitch(app).waitForNonExistence(timeout: 8)
+        if !closed {
+            attachScreenshot("Actions sheet after a stacked copy")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(closed, "a copy from the stacked share editor left the actions sheet open")
+    }
+
+    /// The other half: closing the stacked share editor without sharing hands the actions sheet back.
+    func testActionsSheetShareClosedKeepsStackedSheet() {
+        let app = launchActionsSheet(keepSheetOpen: true)
+        let share = app.buttons["Share Ayah"]
+        XCTAssertTrue(share.waitForExistence(timeout: 10), "the actions sheet has no Share Ayah row")
+        share.tap()
+        let copy = app.buttons["Copy"]
+        XCTAssertTrue(copy.waitForExistence(timeout: 10), "Share Ayah did not open the share editor")
+        // Both sheets carry a Close; the editor's is the one on top.
+        let closes = app.buttons.matching(NSPredicate(format: "label == %@", "Close")).allElementsBoundByIndex
+        guard let close = closes.last(where: { $0.isHittable }) else { return XCTFail("the share editor has no Close button") }
+        close.tap()
+        XCTAssertTrue(copy.waitForNonExistence(timeout: 8), "Close left the share editor up")
+        Thread.sleep(forTimeInterval: 1.5)
+        let kept = actionsSheetSwitch(app).exists
+        if !kept {
+            attachScreenshot("Actions sheet after closing the stacked share editor")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(kept, "closing the share editor without sharing closed the actions sheet too")
+    }
+
     func testAyahPlayButtonHoldOpensCustomRange() {
         let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1",
                           "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
@@ -847,6 +936,19 @@ final class SimpleModeUITests: XCTestCase {
                           "-seedBool", "simpleMode=0,THEfirstLaunch=0", "-seedString", "customRangeSelectionMode=ayahs"])
         let surahChip = app.buttons["Surah"].firstMatch
         XCTAssertTrue(surahChip.waitForExistence(timeout: 15), "the range card has no Surah menu")
+        // The reciter sits above the range card since 2026-11-04, so the chips open under the Play bar,
+        // where a tap lands on Play Range (`isHittable` says yes there all the same). The list is nudged
+        // up until the chip clears the bar's top, the play summary over the button.
+        let playSummary = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "plays")).firstMatch
+        func playBarTop() -> CGFloat {
+            playSummary.exists ? playSummary.frame.minY : app.buttons["Play Range"].frame.minY - 40
+        }
+        var drags = 0
+        while surahChip.frame.maxY > playBarTop() - 8, drags < 6 {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
+                .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.42)))
+            drags += 1
+        }
         surahChip.tap()
         let toEnd = app.buttons["To End of Surah"]
         if !toEnd.waitForExistence(timeout: 5) {

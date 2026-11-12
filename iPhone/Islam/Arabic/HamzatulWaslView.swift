@@ -19,7 +19,12 @@ import SwiftUI
 /// inside an ayah were listed from it, and the examples come from them), drawn in the Uthmani hand.
 /// The "said as" lines are NOT mushaf spellings: they write out what is heard, as the Tajweed topic's
 /// بِغُلَٰمِنِ سۡمُهُۥ does, and the voice reads those respellings, because read as printed it says the
-/// hamza the rule drops.
+/// hamza the rule drops. Since 2026-11-08 (Abu: "break down tanween and hamzatul wasl more ... be
+/// clear give examples") every phrase row shows what is heard in ONE breath (فِلۡأَرۡضِ, نُوحُنِبۡنَهُۥ),
+/// a selected row opens the ladder from the printed phrase to the said one (`Phrase.steps`, derived
+/// from `saidAs`), a tanween row adds the contrast with a plain vowel (نُوحُبۡنَهُۥ), the tanween
+/// section opens on كِتَابٌ = كِتَابُنۡ, and the drills' choices carry the Arabic of each reading
+/// (`Phrase.wrongArabic`).
 ///
 /// Hafs throughout. Some readers give that noon a damma before a verb that starts on a damma (see
 /// `wasl-sign-notation-setting`); Hafs always says the kasra, and the drill asks about it once
@@ -40,6 +45,7 @@ struct HamzatulWaslView: View {
     }
 
     var body: some View {
+        ScrollViewReader { proxy in
         List {
             Group {
                 letterSection
@@ -66,6 +72,31 @@ struct HamzatulWaslView: View {
             ArabicSpeech.shared.stop()
             ArabicPracticeSelection.shared.clear()
         }
+        #if DEBUG
+        // "-waslScrollTo <section>" (readOn, longVowel, sukoon, tanween, tanweenRows: the section ids
+        // below) brings a section below the fold into a screenshot, and "-waslSelect <reference>"
+        // ("11:42") selects that phrase's row so its ladder is open. The page cannot be scrolled or
+        // tapped from a script.
+        .onAppear {
+            let arguments = ProcessInfo.processInfo.arguments
+            if let idx = arguments.firstIndex(of: "-waslSelect"), arguments.indices.contains(idx + 1) {
+                let reference = arguments[idx + 1]
+                if let phrase = WaslData.phrases.first(where: { $0.reference == reference }) {
+                    // After the alphabet's onDisappear, which clears the shared selection as this
+                    // page is pushed over it.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        ArabicPracticeSelection.shared.toggle("wasl:" + phrase.arabic)
+                    }
+                }
+            }
+            if let idx = arguments.firstIndex(of: "-waslScrollTo"), arguments.indices.contains(idx + 1) {
+                let target = arguments[idx + 1]
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    withAnimation { proxy.scrollTo("waslSection_" + target, anchor: .top) }
+                }
+            }
+        }
+        #endif
         #if os(iOS)
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
         .collapseBarsOnScroll($barsCollapsed)
@@ -83,6 +114,7 @@ struct HamzatulWaslView: View {
             }
         }
         #endif
+        }
     }
 
     // MARK: The letter
@@ -251,7 +283,7 @@ struct HamzatulWaslView: View {
         Section {
             ForEach(WaslData.phrases.filter { $0.kind == .vowel }, id: \.arabic) { waslRow($0) }
         } header: {
-            Text("READING ON: IT IS SILENT")
+            Text("READING ON: IT IS SILENT").id("waslSection_readOn")
         } footer: {
             Text("The vowel at the end of the word before carries you straight into the letter after the alif. The alif stays written, and nothing of it is said.")
         }
@@ -261,7 +293,7 @@ struct HamzatulWaslView: View {
         Section {
             ForEach(WaslData.phrases.filter { $0.kind == .longVowel }, id: \.arabic) { waslRow($0) }
         } header: {
-            Text("AFTER A LONG VOWEL: IT SHORTENS")
+            Text("AFTER A LONG VOWEL: IT SHORTENS").id("waslSection_longVowel")
         } footer: {
             Text("The letter after the alif has a sukoon or a shaddah, and Arabic never says a long vowel straight into one. So the long vowel is written but said short: fee becomes fi.")
         }
@@ -271,7 +303,7 @@ struct HamzatulWaslView: View {
         Section {
             ForEach(WaslData.phrases.filter { $0.kind == .sukoon }, id: \.arabic) { waslRow($0) }
         } header: {
-            Text("AFTER A SUKOON: IT TAKES A VOWEL")
+            Text("AFTER A SUKOON: IT TAKES A VOWEL").id("waslSection_sukoon")
         } footer: {
             Text("Two sukoons cannot be said one after the other, so the first takes a vowel: usually a kasra, a damma on the meem of a plural (ـهُمُ، ـكُمُ) and on a plural verb's waaw, and a fatha on مِنَ before the article. You never have to work it out: the mushaf prints the vowel.")
         }
@@ -281,17 +313,25 @@ struct HamzatulWaslView: View {
 
     private var tanweenSection: some View {
         Section {
-            ArticleLead(String(localized: "A tanween before hamzatul waSl is the one the mushaf does not write out. Say its noon with a kasra and join on: نُوحٌ ٱبۡنَهُۥ is read nooHunibnahu."), eyebrow: String(localized: "TANWEEN THEN WASL"))
+            ArticleLead(String(localized: "A tanween is a hidden noon. كِتَابٌ is really said كِتَابُنۡ: the damma, then a noon with a sukoon that is never written. Before hamzatul waSl that noon is what joins: نُوحٌ ٱبۡنَهُۥ is read نُوحُنِبۡنَهُۥ (nooHunibnahu)."), eyebrow: String(localized: "TANWEEN THEN WASL"))
+                .id("waslSection_tanween")
+
+            // The three tanween on one word, each beside the noon it hides (Abu, 2026-11-08: "when it
+            // says كتابٌ say this is really pronounced كتابُنْ").
+            ForEach(TanweenWord.all) { word in
+                TanweenWordRow(word: word, sukoon: "\u{06E1}", face: .uthmani)
+            }
 
             VStack(alignment: .leading, spacing: 6) {
-                ArticleBullet(String(localized: "- **Why:** a tanween is a noon with a sukoon at the end of the word. With the alif silent, it meets the sukoon after the alif, so it takes a vowel like any other sukoon: a kasra."))
-                ArticleBullet(String(localized: "- **All three:** -un, -an and -in become -uni, -ani and -ini."))
-                ArticleBullet(String(localized: "- **Hafs says the kasra even before a verb you would start on a damma:** خَبِيثَةٍ ٱجۡتُثَّتۡ is khabeethatinij-tuththat (14:26)."))
-                ArticleBullet(String(localized: "- **Stopping instead:** stop on the tanween word the way any stop goes (خَيۡرًا, khayraa), then start the next on its hamza (al-waSiyyatu)."))
+                ArticleBullet(String(localized: "- **Why the kasra:** with the alif silent, the tanween\u{2019}s noon meets the sukoon of the letter after it. Two sukoons cannot be said together, so the noon takes a vowel like any other sukoon does: a kasra."))
+                ArticleBullet(String(localized: "- **Compare a plain damma:** نُوحُ ٱبۡنَهُۥ would be said نُوحُبۡنَهُۥ, the damma running straight into the baa. With the tanween you hear نُوحُنِبۡنَهُۥ: the extra نِ is the hidden noon."))
+                ArticleBullet(String(localized: "- **All three:** -un, -an and -in become -uni, -ani and -ini: نُوحٌ ٱبۡنَهُۥ is نُوحُنِبۡنَهُۥ, خَيۡرًا ٱلۡوَصِيَّةُ is خَيۡرَنِلۡوَصِيَّةُ, بِغُلَٰمٍ ٱسۡمُهُۥ is بِغُلَٰمِنِسۡمُهُۥ."))
+                ArticleBullet(String(localized: "- **Hafs says the kasra even before a verb you would start on a damma:** خَبِيثَةٍ ٱجۡتُثَّتۡ is خَبِيثَتِنِجۡتُثَّتۡ, khabeethatinij-tuththat (14:26)."))
+                ArticleBullet(String(localized: "- **Stopping instead:** stop on the tanween word the way any stop goes (خَيۡرًا, khayraa), then start the next on its hamza (أَلۡوَصِيَّةُ, al-waSiyyatu)."))
             }
             .font(.body)
 
-            Text("It happens 46 times inside an ayah in the Hafs text. Tap a row to hear it as it is said.")
+            Text("It happens 46 times inside an ayah in the Hafs text. Tap a row to hear it as it is said, and to see it taken apart step by step.")
                 .font(.body)
         }
     }
@@ -300,9 +340,9 @@ struct HamzatulWaslView: View {
         Section {
             ForEach(WaslData.tanween.prefix(7), id: \.arabic) { waslRow($0) }
         } header: {
-            Text("TANWEEN THEN WASL IN THE QURAN")
+            Text("TANWEEN THEN WASL IN THE QURAN").id("waslSection_tanweenRows")
         } footer: {
-            Text("Under each phrase, \u{201C}said as\u{201D} writes out what you hear: the tanween turned into a noon with a kasra, and the alif gone. It is not how the mushaf spells it.")
+            Text("Under each phrase, \u{201C}said as\u{201D} writes out what you hear in one breath: the tanween turned into a noon with a kasra, and the alif gone. It is not how the mushaf spells it. Select a row for the steps in between, and for how it would sound with a plain vowel instead.")
         }
     }
 
@@ -355,14 +395,19 @@ struct HamzatulWaslView: View {
                        highlightsWasla: true)
     }
 
+    /// Every kind of phrase shows what is heard, in one breath (Abu, 2026-11-08: "في الأرض it's
+    /// pronounced فِلْأرض"); the tanween rows used to be the only ones that did. Selecting the row
+    /// opens the ladder from the printed phrase to the said one.
     private func waslRow(_ phrase: WaslData.Phrase, selectionScope: String = "") -> some View {
         WaslExampleRow(arabic: phrase.arabic,
                        reading: phrase.reading,
                        note: "\(phrase.gloss) (\(phrase.reference.localizedDigits))",
-                       saidAs: phrase.kind == .tanween ? phrase.saidAs : nil,
+                       saidAs: phrase.joined,
                        spoken: phrase.spoken,
                        highlightsWasla: true,
-                       selectionScope: selectionScope)
+                       selectionScope: selectionScope,
+                       steps: phrase.steps,
+                       withoutTanween: phrase.withoutTanween)
     }
 
     private static let ihdinaSirat = WaslData.phrases.first { $0.reference == "1:6" } ?? WaslData.phrases[0]
@@ -382,19 +427,29 @@ private struct WaslExampleRow: View {
     let arabic: String
     let reading: String
     let note: String
-    /// What you hear, written out, under the phrase. Not a mushaf spelling.
+    /// What you hear, written out in one breath, under the phrase. Not a mushaf spelling.
     let saidAs: String?
     let spoken: String
     var highlightsWasla = false
     /// Set where a phrase is shown twice on the page, so the two rows keep separate selections.
     var selectionScope = ""
+    /// The ladder from the printed phrase to the said one, shown while the row is selected (Abu,
+    /// 2026-11-08: "break down tanween and hamzatul wasl more ... be clear give examples").
+    var steps: [WaslData.Phrase.Step] = []
+    /// A tanween phrase as it would sound with a plain vowel instead, the contrast under its ladder.
+    var withoutTanween: (printed: String, joined: String)? = nil
 
     private var arabicText: Text {
         guard highlightsWasla else { return Text(arabic) }
-        var attributed = AttributedString(arabic)
+        return Self.tinting(arabic, accent: appearance.accent)
+    }
+
+    /// `text` with every hamzatul waSl in the accent, one colour run per alif in one Text.
+    static func tinting(_ text: String, accent: Color) -> Text {
+        var attributed = AttributedString(text)
         var cursor = attributed.startIndex
         while let range = attributed[cursor...].range(of: "ٱ") {
-            attributed[range].foregroundColor = appearance.accent
+            attributed[range].foregroundColor = accent
             cursor = range.upperBound
         }
         return Text(attributed)
@@ -404,52 +459,59 @@ private struct WaslExampleRow: View {
         let id = "wasl:" + selectionScope + arabic
         let isSelected = selection.isSelected(id)
 
-        return HStack(alignment: .center, spacing: 12) {
-            if isSelected {
-                PracticeListenButton(text: spoken)
-            }
-
-            if !hideEnglish {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(reading)
-                        .font(.subheadline.weight(.semibold))
-
-                    Text(note)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 12) {
+                if isSelected {
+                    PracticeListenButton(text: spoken)
                 }
-            }
 
-            Spacer(minLength: 8)
+                if !hideEnglish {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(reading)
+                            .font(.subheadline.weight(.semibold))
 
-            VStack(alignment: .trailing, spacing: 2) {
-                arabicText
-                    .font(Font.arabic(Settings.hafsUthmaniFontName, size: 24, relativeTo: .title2))
-                    .arabicFontDesign(custom: true)
-                    .arabicLetterTypeFloor(steps: letterSizeSteps)
-                    .multilineTextAlignment(.trailing)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.5)
-
-                if let saidAs {
-                    HStack(spacing: 4) {
-                        Text(saidAs)
-                            .font(Font.arabic(Settings.hafsUthmaniFontName, size: 17, relativeTo: .body))
-                            .arabicFontDesign(custom: true)
-                            .foregroundColor(appearance.accent)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.5)
-
-                        if !hideEnglish {
-                            Text("said as")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
+                        Text(note)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    // Right to left, like the script: the respelling on the right, under the phrase.
-                    .environment(\.layoutDirection, .rightToLeft)
                 }
+
+                Spacer(minLength: 8)
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    arabicText
+                        .font(Font.arabic(Settings.hafsUthmaniFontName, size: 24, relativeTo: .title2))
+                        .arabicFontDesign(custom: true)
+                        .arabicLetterTypeFloor(steps: letterSizeSteps)
+                        .multilineTextAlignment(.trailing)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.5)
+
+                    if let saidAs {
+                        HStack(spacing: 4) {
+                            Text(saidAs)
+                                .font(Font.arabic(Settings.hafsUthmaniFontName, size: 17, relativeTo: .body))
+                                .arabicFontDesign(custom: true)
+                                .foregroundColor(appearance.accent)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
+
+                            if !hideEnglish {
+                                Text("said as")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        // Right to left, like the script: the respelling on the right, under the phrase.
+                        .environment(\.layoutDirection, .rightToLeft)
+                    }
+                }
+            }
+
+            if isSelected, !steps.isEmpty {
+                WaslStepLadder(steps: steps, withoutTanween: withoutTanween,
+                               letterSizeSteps: letterSizeSteps, hideEnglish: hideEnglish)
             }
         }
         .padding(.vertical, 2)
@@ -463,6 +525,82 @@ private struct WaslExampleRow: View {
         .accessibilityLabel(isSelected
             ? String(localized: "\(reading), \(note), selected")
             : String(localized: "\(reading), \(note)"))
+    }
+}
+
+/// The phrase taken apart under its row: each rung is the Arabic at that stage, in the mushaf's
+/// hand, with one line saying what changed. A tanween phrase ends with the contrast that shows the
+/// noon: the same words with a plain vowel, and what THEY would sound like.
+private struct WaslStepLadder: View {
+    @Environment(\.appearance) private var appearance
+
+    let steps: [WaslData.Phrase.Step]
+    let withoutTanween: (printed: String, joined: String)?
+    let letterSizeSteps: Int
+    let hideEnglish: Bool
+
+    private func arabicLine(_ text: String, size: CGFloat) -> some View {
+        WaslExampleRow.tinting(text, accent: appearance.accent)
+            .font(Font.arabic(Settings.hafsUthmaniFontName, size: size, relativeTo: .title3))
+            .arabicFontDesign(custom: true)
+            .arabicLetterTypeFloor(steps: letterSizeSteps)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
+                HStack(alignment: .top, spacing: 10) {
+                    Text("\(index + 1)".localizedDigits)
+                        .font(.caption.weight(.semibold).monospacedDigit())
+                        .foregroundColor(appearance.accent)
+                        .frame(width: 18, height: 18)
+                        .background(Circle().fill(appearance.accent.opacity(0.12)))
+
+                    if !hideEnglish {
+                        Text(step.note)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    arabicLine(step.arabic, size: 21)
+                        // The last rung is the answer: in the accent, like the "said as" line.
+                        .foregroundColor(index == steps.count - 1 ? appearance.accent : .primary)
+                }
+            }
+
+            if let withoutTanween {
+                Divider()
+
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.secondary)
+                        .frame(width: 18, height: 18)
+
+                    if !hideEnglish {
+                        Text("With a plain vowel instead of the tanween, there would be no noon to hear.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    VStack(alignment: .trailing, spacing: 2) {
+                        arabicLine(withoutTanween.printed, size: 19)
+                        arabicLine(withoutTanween.joined, size: 19)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+        .padding(.top, 2)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -520,14 +658,90 @@ enum WaslData {
         let reading: String
         /// Two wrong readings: the hamza said, and the other slip this kind invites.
         let wrong: [String]
+        /// The two wrong readings written in Arabic, as each slip would sound (Abu, 2026-11-08:
+        /// "include Arabic in the test in how it's pronounced"), in `wrong`'s order. Hand-written:
+        /// the hamza said with its start vowel in place of the ٱ (a sukoon word back on its sukoon,
+        /// a tanween as its bare noon), and the second slip (a long vowel kept, a wrong helping
+        /// vowel, the tanween's noon dropped) spelled out. `WaslDataTests` cross-checks their
+        /// skeletons against the derived forms.
+        let wrongArabic: [String]
         let gloss: String
         let reference: String
         let kind: Kind
-        /// What you hear, written out (shown for a tanween).
+        /// What you hear, written out, with the alif gone and ONE space left at the join so the two
+        /// words can still be told apart: نُوحُنِ بۡنَهُۥ. Not a mushaf spelling.
         let saidAs: String
         /// What the voice reads.
         let spoken: String
         let why: String
+
+        /// `saidAs` said in one breath, the space at the join closed: نُوحُنِبۡنَهُۥ, فِلۡأَرۡضِ. The
+        /// "said as" line under every phrase (Abu, 2026-11-08: "في الأرض it's pronounced فِلْأرض").
+        var joined: String { saidAs.replacingOccurrences(of: " ", with: "") }
+
+        /// The word before the join as `saidAs` writes it, and the word after.
+        private var saidAsWords: (before: String, after: String) {
+            let parts = saidAs.split(separator: " ", maxSplits: 1).map(String.init)
+            return (parts.first ?? saidAs, parts.count > 1 ? parts[1] : "")
+        }
+
+        /// The word after the join as the mushaf prints it, ٱ and all.
+        private var printedAfter: String {
+            let parts = arabic.split(separator: " ", maxSplits: 1).map(String.init)
+            return parts.count > 1 ? parts[1] : ""
+        }
+
+        /// A tanween phrase with its hidden noon written out and nothing else changed yet: the noon
+        /// with a sukoon, the alif still there (نُوحُنۡ ٱبۡنَهُۥ). `saidAs` always ends its first word
+        /// in the noon with a kasra; this is that noon before it took the kasra. Nil for other kinds.
+        var noonWritten: String? {
+            guard kind == .tanween else { return nil }
+            let before = saidAsWords.before
+            guard before.hasSuffix(Self.noonKasra) else { return nil }
+            return String(before.dropLast(Self.noonKasra.count)) + Self.noonSukoon + " " + printedAfter
+        }
+
+        /// The same phrase if the tanween were a PLAIN vowel, printed (نُوحُ ٱبۡنَهُۥ) and joined
+        /// (نُوحُبۡنَهُۥ): the contrast that shows the نِ you hear is the tanween (Abu, 2026-11-08:
+        /// "where it would normally be نوحُبنه"). Nil for other kinds.
+        var withoutTanween: (printed: String, joined: String)? {
+            guard kind == .tanween else { return nil }
+            let before = saidAsWords.before
+            guard before.hasSuffix(Self.noonKasra) else { return nil }
+            let bare = String(before.dropLast(Self.noonKasra.count))
+            return (bare + " " + printedAfter, bare + saidAsWords.after)
+        }
+
+        /// One rung of the ladder from the printed phrase to what is heard.
+        struct Step: Identifiable {
+            let arabic: String
+            let note: String
+            var id: String { arabic }
+        }
+
+        /// The phrase taken apart, written to said: how the mushaf prints it, what changes at the
+        /// join, and the one-breath result. A tanween gets the extra rung where its noon appears.
+        var steps: [Step] {
+            var steps = [Step(arabic: arabic, note: String(localized: "As the mushaf writes it."))]
+            switch kind {
+            case .vowel:
+                steps.append(Step(arabic: saidAs, note: String(localized: "The alif is silent: the vowel at the end of the word before runs straight into the letter after it.")))
+            case .longVowel:
+                steps.append(Step(arabic: saidAs, note: String(localized: "The alif is silent, and the long vowel before it is said short: a sukoon or a shaddah comes next, and Arabic never holds a long vowel into one.")))
+            case .sukoon:
+                steps.append(Step(arabic: saidAs, note: String(localized: "The alif is silent. The sukoon that ended the word before already carries the vowel the mushaf printed for it, so the two words meet on that vowel.")))
+            case .tanween:
+                if let noonWritten {
+                    steps.append(Step(arabic: noonWritten, note: String(localized: "The tanween is a hidden noon with a sukoon. Written out, it shows.")))
+                }
+                steps.append(Step(arabic: saidAs, note: String(localized: "The alif is silent, so that noon meets the sukoon of the letter after it. Two sukoons cannot be said together: the noon takes a kasra.")))
+            }
+            steps.append(Step(arabic: joined, note: String(localized: "Said in one breath.")))
+            return steps
+        }
+
+        private static let noonKasra = "\u{0646}\u{0650}"
+        private static let noonSukoon = "\u{0646}\u{06E1}"
     }
 
     static let starts: [Start] = [
@@ -609,58 +823,71 @@ enum WaslData {
     static let phrases: [Phrase] = [
         // A vowel before it.
         Phrase(arabic: "بِسۡمِ ٱللَّهِ", reading: "bismil-laahi", wrong: ["bismi allaahi", "bismal-laahi"],
+               wrongArabic: ["بِسۡمِ أَللَّهِ", "بِسۡمَللَّهِ"],
                gloss: String(localized: "in the name of Allah"), reference: "1:1", kind: .vowel,
                saidAs: "بِسۡمِ للَّهِ", spoken: "بِسْمِلَّاهِ",
                why: String(localized: "The kasra on the meem carries you straight into the laam; the alif is silent.")),
         Phrase(arabic: "رَبِّ ٱلۡعَٰلَمِينَ", reading: "rabbil-\u{2019}aalameen", wrong: ["rabbi al-\u{2019}aalameen", "rabbal-\u{2019}aalameen"],
+               wrongArabic: ["رَبِّ أَلۡعَٰلَمِينَ", "رَبَّلۡعَٰلَمِينَ"],
                gloss: String(localized: "Lord of the worlds"), reference: "1:2", kind: .vowel,
                saidAs: "رَبِّ لۡعَٰلَمِينَ", spoken: "رَبِّلْعَالَمِينَ",
                why: String(localized: "The kasra under the baa joins straight onto the laam: \u{201C}rabbil\u{201D}.")),
         Phrase(arabic: "ذَٰلِكَ ٱلۡكِتَٰبُ", reading: "dhaalikal-kitaabu", wrong: ["dhaalika al-kitaabu", "dhaalikil-kitaabu"],
+               wrongArabic: ["ذَٰلِكَ أَلۡكِتَٰبُ", "ذَٰلِكِلۡكِتَٰبُ"],
                gloss: String(localized: "that is the Book"), reference: "2:2", kind: .vowel,
                saidAs: "ذَٰلِكَ لۡكِتَٰبُ", spoken: "ذَالِكَلْكِتَابُ",
                why: String(localized: "The kaaf's fatha runs into the laam: \u{201C}dhaalikal\u{201D}. The article's own fatha is only for a start.")),
 
         // A long vowel before it.
         Phrase(arabic: "ٱهۡدِنَا ٱلصِّرَٰطَ", reading: "ihdinaS-Siraata", wrong: ["ihdinaa aS-Siraata", "ihdinaaS-Siraata"],
+               wrongArabic: ["إِهۡدِنَا أَلصِّرَٰطَ", "إِهۡدِنَاصِّرَٰطَ"],
                gloss: String(localized: "guide us to the path"), reference: "1:6", kind: .longVowel,
                saidAs: "إِهۡدِنَ صِّرَٰطَ", spoken: "إِهْدِنَصِّرَاطَ",
                why: String(localized: "The alif after the noon is written but not lengthened: a doubled Saad comes next, so \u{201C}naa\u{201D} is said \u{201C}na\u{201D}.")),
         Phrase(arabic: "فِي ٱلۡأَرۡضِ", reading: "fil-arDi", wrong: ["fee al-arDi", "feel-arDi"],
+               wrongArabic: ["فِي أَلۡأَرۡضِ", "فِيلۡأَرۡضِ"],
                gloss: String(localized: "on the earth"), reference: "2:11", kind: .longVowel,
                saidAs: "فِ لۡأَرۡضِ", spoken: "فِلْأَرْضِ",
                why: String(localized: "A laam with a sukoon follows, so the long \u{201C}ee\u{201D} of فِي is said short: \u{201C}fil\u{201D}.")),
         Phrase(arabic: "إِذَا ٱلشَّمۡسُ", reading: "idhash-shamsu", wrong: ["idhaa ash-shamsu", "idhaash-shamsu"],
+               wrongArabic: ["إِذَا أَلشَّمۡسُ", "إِذَاشَّمۡسُ"],
                gloss: String(localized: "when the sun"), reference: "81:1", kind: .longVowel,
                saidAs: "إِذَ شَّمۡسُ", spoken: "إِذَشَّمْسُ",
                why: String(localized: "A doubled sheen follows, so the alif of إِذَا is not lengthened: \u{201C}idhash\u{201D}.")),
         Phrase(arabic: "عَلَى ٱلۡمَلَٰٓئِكَةِ", reading: "\u{2019}alal-malaa\u{2019}ikati", wrong: ["\u{2019}alaa al-malaa\u{2019}ikati", "\u{2019}alaal-malaa\u{2019}ikati"],
+               wrongArabic: ["عَلَى أَلۡمَلَٰٓئِكَةِ", "عَلَالۡمَلَٰٓئِكَةِ"],
                gloss: String(localized: "to the angels"), reference: "2:31", kind: .longVowel,
                saidAs: "عَلَ لۡمَلَٰٓئِكَةِ", spoken: "عَلَلْمَلَائِكَةِ",
                why: String(localized: "The alif maqSoorah is not read before hamzatul waSl; you go straight to the laam: \u{201C}\u{2019}alal\u{201D}.")),
         Phrase(arabic: "وَأَقِيمُواْ ٱلصَّلَوٰةَ", reading: "wa aqeemuS-Salaata", wrong: ["wa aqeemoo aS-Salaata", "wa aqeemooS-Salaata"],
+               wrongArabic: ["وَأَقِيمُواْ أَلصَّلَوٰةَ", "وَأَقِيمُوصَّلَوٰةَ"],
                gloss: String(localized: "and establish prayer"), reference: "2:43", kind: .longVowel,
                saidAs: "وَأَقِيمُ صَّلَوٰةَ", spoken: "وَأَقِيمُصَّلَاةَ",
                why: String(localized: "The waaw and the alif after the meem are written, but the long \u{201C}oo\u{201D} is said short before the doubled Saad: \u{201C}aqeemuS\u{201D}.")),
 
         // A sukoon before it.
         Phrase(arabic: "وَقَالَتِ ٱلۡيَهُودُ", reading: "wa qaalatil-yahoodu", wrong: ["wa qaalat al-yahoodu", "wa qaalatul-yahoodu"],
+               wrongArabic: ["وَقَالَتۡ أَلۡيَهُودُ", "وَقَالَتُلۡيَهُودُ"],
                gloss: String(localized: "and the Jews said"), reference: "2:113", kind: .sukoon,
                saidAs: "وَقَالَتِ لۡيَهُودُ", spoken: "وَقَالَتِلْيَهُودُ",
                why: String(localized: "The sukoon that ends قَالَتۡ takes a kasra before hamzatul waSl, and the mushaf prints it: \u{201C}qaalatil\u{201D}.")),
         Phrase(arabic: "قُلِ ٱللَّهُمَّ", reading: "qulil-laahumma", wrong: ["qul allaahumma", "qulal-laahumma"],
+               wrongArabic: ["قُلۡ أَللَّهُمَّ", "قُلَللَّهُمَّ"],
                gloss: String(localized: "say, O Allah"), reference: "3:26", kind: .sukoon,
                saidAs: "قُلِ للَّهُمَّ", spoken: "قُلِلَّاهُمَّ",
                why: String(localized: "The laam of قُلۡ takes the printed kasra: \u{201C}qulil-laahumma\u{201D}.")),
         Phrase(arabic: "أَوِ ٱدۡعُواْ", reading: "awid-\u{2019}oo", wrong: ["aw ud\u{2019}oo", "awud-\u{2019}oo"],
+               wrongArabic: ["أَوۡ أُدۡعُواْ", "أَوُدۡعُواْ"],
                gloss: String(localized: "or call upon"), reference: "17:110", kind: .sukoon,
                saidAs: "أَوِ دۡعُواْ", spoken: "أَوِدْعُوا",
                why: String(localized: "The waaw of أَوۡ takes the printed kasra and joins onto the daal: \u{201C}awid-\u{2019}oo\u{201D}. The damma you would start ٱدۡعُواْ on is never heard here.")),
         Phrase(arabic: "عَلَيۡهِمُ ٱلذِّلَّةُ", reading: "\u{2019}alayhimudh-dhillatu", wrong: ["\u{2019}alayhim adh-dhillatu", "\u{2019}alayhimidh-dhillatu"],
+               wrongArabic: ["عَلَيۡهِمۡ أَلذِّلَّةُ", "عَلَيۡهِمِذِّلَّةُ"],
                gloss: String(localized: "humiliation upon them"), reference: "2:61", kind: .sukoon,
                saidAs: "عَلَيۡهِمُ ذِّلَّةُ", spoken: "عَلَيْهِمُذِّلَّةُ",
                why: String(localized: "The meem of a plural takes a damma, printed in the mushaf: \u{201C}\u{2019}alayhimudh\u{201D}.")),
         Phrase(arabic: "ٱشۡتَرَوُاْ ٱلضَّلَٰلَةَ", reading: "ishtarawuD-Dalaalata", wrong: ["ishtaraw aD-Dalaalata", "ishtarawiD-Dalaalata"],
+               wrongArabic: ["إِشۡتَرَوۡاْ أَلضَّلَٰلَةَ", "إِشۡتَرَوِضَّلَٰلَةَ"],
                gloss: String(localized: "they bought error"), reference: "2:16", kind: .sukoon,
                saidAs: "إِشۡتَرَوُ ضَّلَٰلَةَ", spoken: "إِشْتَرَوُضَّلَالَةَ",
                why: String(localized: "A plural verb's waaw takes a damma, printed: \u{201C}ishtarawuD\u{201D}.")),
@@ -668,58 +895,72 @@ enum WaslData {
 
     static let tanween: [Phrase] = [
         Phrase(arabic: "نُوحٌ ٱبۡنَهُۥ", reading: "nooHunibnahu", wrong: ["nooHun ibnahu", "nooHubnahu"],
+               wrongArabic: ["نُوحُنۡ إِبۡنَهُۥ", "نُوحُبۡنَهُۥ"],
                gloss: String(localized: "Nuh (called) his son"), reference: "11:42", kind: .tanween,
                saidAs: "نُوحُنِ بۡنَهُۥ", spoken: "نُوحُنِبْنَهُ",
                why: String(localized: "The tanween\u{2019}s noon takes a kasra and joins on: \u{201C}nooHu-ni-bnahu\u{201D}. The hamza of ٱبۡنَهُۥ is not said.")),
         Phrase(arabic: "خَيۡرًا ٱلۡوَصِيَّةُ", reading: "khayranil-waSiyyatu", wrong: ["khayran al-waSiyyatu", "khayral-waSiyyatu"],
+               wrongArabic: ["خَيۡرَنۡ أَلۡوَصِيَّةُ", "خَيۡرَلۡوَصِيَّةُ"],
                gloss: String(localized: "wealth, the bequest"), reference: "2:180", kind: .tanween,
                saidAs: "خَيۡرَنِ لۡوَصِيَّةُ", spoken: "خَيْرَنِلْوَصِيَّةُ",
                why: String(localized: "-an becomes -ani and runs into the laam: \u{201C}khayra-nil-waSiyyatu\u{201D}.")),
         Phrase(arabic: "بِغُلَٰمٍ ٱسۡمُهُۥ", reading: "bighulaaminismuhu", wrong: ["bighulaamin ismuhu", "bighulaamismuhu"],
+               wrongArabic: ["بِغُلَٰمِنۡ إِسۡمُهُۥ", "بِغُلَٰمِسۡمُهُۥ"],
                gloss: String(localized: "of a boy whose name"), reference: "19:7", kind: .tanween,
                saidAs: "بِغُلَٰمِنِ سۡمُهُۥ", spoken: "بِغُلَامِنِسْمُهُ",
                why: String(localized: "-in becomes -ini and joins the seen: \u{201C}bighulaami-ni-smuhu\u{201D}.")),
         Phrase(arabic: "عُزَيۡرٌ ٱبۡنُ", reading: "\u{2019}Uzayrunibnu", wrong: ["\u{2019}Uzayrun ibnu", "\u{2019}Uzayrubnu"],
+               wrongArabic: ["عُزَيۡرُنۡ إِبۡنُ", "عُزَيۡرُبۡنُ"],
                gloss: String(localized: "\u{2019}Uzayr is the son of"), reference: "9:30", kind: .tanween,
                saidAs: "عُزَيۡرُنِ بۡنُ", spoken: "عُزَيْرُنِبْنُ",
                why: String(localized: "-un becomes -uni: \u{201C}\u{2019}Uzayru-ni-bnu\u{201D}, with no hamza.")),
         Phrase(arabic: "يَوۡمَئِذٍ ٱلۡحَقُّ", reading: "yawma\u{2019}idhinil-Haqqu", wrong: ["yawma\u{2019}idhin al-Haqqu", "yawma\u{2019}idhil-Haqqu"],
+               wrongArabic: ["يَوۡمَئِذِنۡ أَلۡحَقُّ", "يَوۡمَئِذِلۡحَقُّ"],
                gloss: String(localized: "that Day, the true"), reference: "25:26", kind: .tanween,
                saidAs: "يَوۡمَئِذِنِ لۡحَقُّ", spoken: "يَوْمَئِذِنِلْحَقُّ",
                why: String(localized: "-in becomes -ini and joins the laam: \u{201C}yawma\u{2019}idhi-nil-Haqqu\u{201D}.")),
         Phrase(arabic: "جَمِيعًا ٱلَّذِي", reading: "jamee\u{2019}anil-ladhee", wrong: ["jamee\u{2019}an alladhee", "jamee\u{2019}al-ladhee"],
+               wrongArabic: ["جَمِيعَنۡ أَلَّذِي", "جَمِيعَلَّذِي"],
                gloss: String(localized: "all, (from) the One who"), reference: "7:158", kind: .tanween,
                saidAs: "جَمِيعَنِ لَّذِي", spoken: "جَمِيعَنِلَّذِي",
                why: String(localized: "-an becomes -ani and runs into the doubled laam: \u{201C}jamee\u{2019}a-nil-ladhee\u{201D}.")),
         Phrase(arabic: "رَجُلٌ ٱفۡتَرَىٰ", reading: "rajulunif-taraa", wrong: ["rajulun iftaraa", "rajuluf-taraa"],
+               wrongArabic: ["رَجُلُنۡ إِفۡتَرَىٰ", "رَجُلُفۡتَرَىٰ"],
                gloss: String(localized: "a man who invented"), reference: "23:38", kind: .tanween,
                saidAs: "رَجُلُنِ فۡتَرَىٰ", spoken: "رَجُلُنِفْتَرَى",
                why: String(localized: "-un becomes -uni and joins the faa: \u{201C}rajulu-nif-taraa\u{201D}.")),
         Phrase(arabic: "لُوطٍ ٱلۡمُرۡسَلِينَ", reading: "Lootinil-mursaleen", wrong: ["Lootin al-mursaleen", "Lootil-mursaleen"],
+               wrongArabic: ["لُوطِنۡ أَلۡمُرۡسَلِينَ", "لُوطِلۡمُرۡسَلِينَ"],
                gloss: String(localized: "(the people of) Lut, the messengers"), reference: "26:160", kind: .tanween,
                saidAs: "لُوطِنِ لۡمُرۡسَلِينَ", spoken: "لُوطِنِلْمُرْسَلِينَ",
                why: String(localized: "-in becomes -ini: \u{201C}Looti-nil-mursaleen\u{201D}.")),
         Phrase(arabic: "قَرۡيَةٍ ٱسۡتَطۡعَمَآ", reading: "qaryatinis-taT\u{2019}amaa", wrong: ["qaryatin istaT\u{2019}amaa", "qaryatis-taT\u{2019}amaa"],
+               wrongArabic: ["قَرۡيَتِنۡ إِسۡتَطۡعَمَآ", "قَرۡيَتِسۡتَطۡعَمَآ"],
                gloss: String(localized: "a town, they asked for food"), reference: "18:77", kind: .tanween,
                saidAs: "قَرۡيَتِنِ سۡتَطۡعَمَآ", spoken: "قَرْيَتِنِسْتَطْعَمَا",
                why: String(localized: "The taa marbuuTah is read as a taa, and its -in becomes -ini: \u{201C}qaryati-nis-taT\u{2019}amaa\u{201D}.")),
         Phrase(arabic: "خَبِيثَةٍ ٱجۡتُثَّتۡ", reading: "khabeethatinij-tuththat", wrong: ["khabeethatin ujtuththat", "khabeethatinuj-tuththat"],
+               wrongArabic: ["خَبِيثَتِنۡ أُجۡتُثَّتۡ", "خَبِيثَتِنُجۡتُثَّتۡ"],
                gloss: String(localized: "a bad tree, uprooted"), reference: "14:26", kind: .tanween,
                saidAs: "خَبِيثَتِنِ جۡتُثَّتۡ", spoken: "خَبِيثَتِنِجْتُثَّتْ",
                why: String(localized: "Started on, ٱجۡتُثَّتۡ takes a damma (ujtuththat). Joined to a tanween, Hafs still gives the noon a kasra: \u{201C}khabeethati-nij-tuththat\u{201D}.")),
         Phrase(arabic: "وَرَهۡبَانِيَّةً ٱبۡتَدَعُوهَا", reading: "wa rahbaaniyyatanib-tada\u{2019}oohaa", wrong: ["wa rahbaaniyyatan ibtada\u{2019}oohaa", "wa rahbaaniyyatab-tada\u{2019}oohaa"],
+               wrongArabic: ["وَرَهۡبَانِيَّتَنۡ إِبۡتَدَعُوهَا", "وَرَهۡبَانِيَّتَبۡتَدَعُوهَا"],
                gloss: String(localized: "and monasticism, which they invented"), reference: "57:27", kind: .tanween,
                saidAs: "وَرَهۡبَانِيَّتَنِ بۡتَدَعُوهَا", spoken: "وَرَهْبَانِيَّتَنِبْتَدَعُوهَا",
                why: String(localized: "-an becomes -ani and joins the baa: \u{201C}rahbaaniyyata-nib-tada\u{2019}oohaa\u{201D}.")),
         Phrase(arabic: "كَرَمَادٍ ٱشۡتَدَّتۡ", reading: "karamaadinish-taddat", wrong: ["karamaadin ishtaddat", "karamaadish-taddat"],
+               wrongArabic: ["كَرَمَادِنۡ إِشۡتَدَّتۡ", "كَرَمَادِشۡتَدَّتۡ"],
                gloss: String(localized: "like ashes, blown hard upon"), reference: "14:18", kind: .tanween,
                saidAs: "كَرَمَادِنِ شۡتَدَّتۡ", spoken: "كَرَمَادِنِشْتَدَّتْ",
                why: String(localized: "-in becomes -ini and joins the sheen: \u{201C}karamaadi-nish-taddat\u{201D}.")),
         Phrase(arabic: "يَوۡمَئِذٍ ٱلسَّلَمَۖ", reading: "yawma\u{2019}idhinis-salama", wrong: ["yawma\u{2019}idhin as-salama", "yawma\u{2019}idhis-salama"],
+               wrongArabic: ["يَوۡمَئِذِنۡ أَلسَّلَمَ", "يَوۡمَئِذِسَّلَمَ"],
                gloss: String(localized: "that Day, submission"), reference: "16:87", kind: .tanween,
                saidAs: "يَوۡمَئِذِنِ سَّلَمَ", spoken: "يَوْمَئِذِنِسَّلَمَ",
                why: String(localized: "Before a sun letter too: -in becomes -ini and the seen doubles, \u{201C}yawma\u{2019}idhi-nis-salama\u{201D}.")),
         Phrase(arabic: "لَهۡوًا ٱنفَضُّوٓاْ", reading: "lahwaninfaDDoo", wrong: ["lahwan infaDDoo", "lahwanfaDDoo"],
+               wrongArabic: ["لَهۡوَنۡ إِنفَضُّوٓاْ", "لَهۡوَنفَضُّوٓاْ"],
                gloss: String(localized: "some amusement, they rushed to it"), reference: "62:11", kind: .tanween,
                saidAs: "لَهۡوَنِ نفَضُّوٓاْ", spoken: "لَهْوَنِنْفَضُّوا",
                why: String(localized: "-an becomes -ani, then the noon of the verb: \u{201C}lahwa-nin-faDDoo\u{201D}, two noons heard.")),
@@ -961,21 +1202,25 @@ struct HamzatulWaslPracticeView: View {
             if isAnswer { correct += 1 }
         } label: {
             VStack(spacing: 2) {
+                // The start drill's hamza with its vowel; on the phrase drills, how this reading would
+                // sound, written out in Arabic, above its Latin (Abu, 2026-11-08).
                 if let arabic = choice.arabic {
                     Text(arabic)
-                        .font(Font.arabic(Settings.hafsUthmaniFontName, size: 30, relativeTo: .title))
+                        .font(Font.arabic(Settings.hafsUthmaniFontName, size: current == .start ? 30 : 27,
+                                          relativeTo: current == .start ? .title : .title2))
                         .arabicFontDesign(custom: true)
                         .foregroundColor(appearance.accent)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                 }
 
                 Text(choice.text)
-                    .font(current == .start ? .title3.weight(.semibold) : .body.weight(.semibold))
-                    .foregroundColor(.primary)
+                    .font(current == .start ? .title3.weight(.semibold) : .subheadline.weight(.semibold))
+                    .foregroundColor(current == .start ? .primary : .secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
             }
-            .frame(maxWidth: .infinity, minHeight: current == .start ? 76 : 48)
+            .frame(maxWidth: .infinity, minHeight: current == .start ? 76 : 66)
             .padding(.horizontal, 6)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -1096,14 +1341,15 @@ struct HamzatulWaslPracticeView: View {
                         saidAs: item.saidAs, spoken: item.saidAs, why: item.why)
     }
 
-    /// The right reading and the two slips, in a shuffled order.
+    /// The right reading and the two slips, in a shuffled order, each with how it would sound written
+    /// in Arabic (Abu, 2026-11-08: "include Arabic in the test in how it's pronounced").
     private static func phraseQuestion(_ phrase: WaslData.Phrase) -> Question {
-        let readings = ([phrase.reading] + phrase.wrong).shuffled()
-        let choices = readings.enumerated().map { Choice(id: $0.offset, text: $0.element) }
-        let answer = readings.firstIndex(of: phrase.reading) ?? 0
+        let pairs = zip([phrase.reading] + phrase.wrong, [phrase.joined] + phrase.wrongArabic).shuffled()
+        let choices = pairs.enumerated().map { Choice(id: $0.offset, text: $0.element.0, arabic: $0.element.1) }
+        let answer = pairs.firstIndex { $0.0 == phrase.reading } ?? 0
         return Question(arabic: phrase.arabic, reading: phrase.reading, gloss: phrase.gloss, reference: phrase.reference,
                         choices: choices, answer: answer,
-                        saidAs: phrase.saidAs, spoken: phrase.spoken, why: phrase.why)
+                        saidAs: phrase.joined, spoken: phrase.spoken, why: phrase.why)
     }
 }
 #endif

@@ -184,6 +184,17 @@ final class HadithChainStore: @unchecked Sendable {
                                         english: english ? HadithIsnadEnglish(slug: slug) : nil)
     }
 
+    /// Where the narration's own words begin after its chain (Abu, 2026-11-02: "Put Hadith chain back
+    /// at the bottom so it matches with English"): the UTF-16 offset of the word of transmission before
+    /// the final narrator, so the Arabic can open `عَنْ أَبِي هُرَيْرَةَ قَالَ...` as the English line
+    /// does, with the chain drawn beneath it. Nil when the app read no chain for the row, or the code
+    /// no longer fits the text. A binary search and a short parse, what a row asks on every render.
+    func matnStart(slug: String, idInBook: Int, arabic: String) -> Int? {
+        guard let code = pack?.code(slug: slug, idInBook: idInBook),
+              let parsed = HadithChainDecoder.parse(code) else { return nil }
+        return HadithChainDecoder.matnStart(parsed, arabic: arabic)
+    }
+
     /// The group of chains this narration's is the same as (HadithNarrators.qpk), or nil when no other
     /// narration on the shelf is carried by exactly this chain. A binary search and a short parse.
     func chainGroup(slug: String, idInBook: Int) -> Int? {
@@ -198,6 +209,40 @@ final class HadithChainStore: @unchecked Sendable {
         let loaded = openedPack
         lock.unlock()
         loaded?.purge()
+    }
+}
+
+/// A narration cut at `HadithChainStore.matnStart`: the chain and the hadith as two strings, with any
+/// highlight spans of the whole text re-based onto the part they fall in. Nil when a span straddles
+/// the cut (the row then draws the text whole, as a searched row must show its match).
+enum HadithChainCut {
+    struct Parts {
+        let chain: String
+        let matn: String
+        let chainSpans: [NSRange]
+        let matnSpans: [NSRange]
+    }
+
+    static func split(_ text: String, at cut: Int, spans: [NSRange]) -> Parts? {
+        let ns = text as NSString
+        guard cut > 0, cut < ns.length else { return nil }
+        var chainSpans: [NSRange] = []
+        var matnSpans: [NSRange] = []
+        for span in spans {
+            if NSMaxRange(span) <= cut {
+                chainSpans.append(span)
+            } else if span.location >= cut {
+                matnSpans.append(NSRange(location: span.location - cut, length: span.length))
+            } else {
+                return nil
+            }
+        }
+        // The cut sits at a token's start, so the hadith opens on its word; the chain keeps its own
+        // offsets and only loses the air before the cut.
+        var chain = ns.substring(to: cut)
+        while let last = chain.unicodeScalars.last, last.properties.isWhitespace { chain.unicodeScalars.removeLast() }
+        guard !chain.isEmpty else { return nil }
+        return Parts(chain: chain, matn: ns.substring(from: cut), chainSpans: chainSpans, matnSpans: matnSpans)
     }
 }
 
@@ -242,6 +287,35 @@ enum HadithChainDecoder {
         }
         if !current.isEmpty { out.append(String(current)) }
         return out
+    }
+
+    /// `tokens(_:)` as UTF-16 ranges into `text`, the same cut (runs of non-whitespace scalars).
+    static func tokenRanges(_ text: String) -> [NSRange] {
+        var out: [NSRange] = []
+        var offset = 0
+        var start: Int?
+        for scalar in text.unicodeScalars {
+            let width = scalar.utf16.count
+            if scalar.properties.isWhitespace {
+                if let s = start { out.append(NSRange(location: s, length: offset - s)); start = nil }
+            } else if start == nil {
+                start = offset
+            }
+            offset += width
+        }
+        if let s = start { out.append(NSRange(location: s, length: offset - s)) }
+        return out
+    }
+
+    /// The UTF-16 offset where the hadith opens after its chain: the word by which the last narrator
+    /// (the top of the chain, the Companion) received it, or his name when the text gives no such word.
+    /// Nil when the code's token count no longer matches the text, or when nothing precedes the cut.
+    static func matnStart(_ parsed: Parsed, arabic: String) -> Int? {
+        let ranges = tokenRanges(arabic)
+        guard ranges.count == parsed.tokenCount, let top = parsed.shared.last, !top.isEmpty else { return nil }
+        let cut = top.map { min($0.verb ?? $0.first, $0.first) }.min() ?? 0
+        guard cut > 0, ranges.indices.contains(cut) else { return nil }
+        return ranges[cut].location
     }
 
     private static let stripped: Set<UInt32> = [0x060C, 0x2C, 0x200F, 0x200E, 0x22, 0x201C, 0x201D, 0x3A, 0x061B, 0x3B, 0x2E]
