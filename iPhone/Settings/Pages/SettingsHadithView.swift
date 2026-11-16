@@ -172,11 +172,11 @@ struct SettingsHadithView: View {
                 }
 
                 if settings.showHadithArabic {
-                    // Where the isnad sits (Abu, 2026-11-02: "Put Hadith chain back at the bottom so it
-                    // matches with English"): off, the Arabic opens at the final narrator like the
-                    // English line and the chain follows beneath it; on, the book's own order.
+                    // Where the isnad sits (Abu, 2026-11-15: "For chain of narration put it at the top
+                    // not the bottom"): on, the default, the chain stands above the hadith, smaller and
+                    // secondary, in both languages; off, beneath it, as from 2026-11-02 until then.
                     Section(header: Text("CHAIN OF NARRATORS"),
-                            footer: Text("Off, a hadith opens at its final narrator, as the English does, and its chain of narrators follows beneath it in smaller text. On, the Arabic reads as the book writes it, the chain first. Only a narration whose chain the app can read is rearranged.")) {
+                            footer: Text("On, a hadith's chain of narrators stands above it in smaller text, in Arabic and in English, and the hadith opens at its final narrator. Off, the chain follows beneath it. Only a narration whose chain the app can read is set apart this way.")) {
                         SettingsToggle(String(localized: "Chain Before the Hadith"), isOn: $hadithSettings.hadithChainFirst)
                     }
 

@@ -2232,10 +2232,11 @@ extension Settings {
             
             reschedules = true
             reloadWidgets(deferred: deferWork)
-        } else if notification {
+        } else if notification || Self.simulatorScheduleIsStale {
             // Notification preferences only: no widget shows them, so no reload. This branch is the
             // didSet of ~45 properties, and reloading all 37 kinds from each one exhausted WidgetKit's
             // daily budget in a minute of toggling (stale widgets later in the day).
+            // Also a simulator whose pending requests still carry sound (never true on a device).
             reschedules = true
         }
         
@@ -2568,15 +2569,18 @@ extension Settings {
 
     /// Builds the request for one spec. Off main by design (`notificationBuildQueue`); nothing in it
     /// touches Settings. The one-shot schedulers below call it inline on main for their single request.
-    private static func buildNotificationRequest(from spec: PendingNotificationSpec) -> UNNotificationRequest {
+    static func buildNotificationRequest(from spec: PendingNotificationSpec) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
         content.title = AppIdentifiers.displayName
         content.body = spec.body
-        #if os(iOS)
-        content.sound = spec.soundFile.map(notificationSound(named:)) ?? .default
-        #else
-        content.sound = .default
-        #endif
+        // No sound in a simulator (`mutesAdhanInSimulator`); the banner arrives all the same.
+        if !mutesAdhanInSimulator {
+            #if os(iOS)
+            content.sound = spec.soundFile.map(notificationSound(named:)) ?? .default
+            #else
+            content.sound = .default
+            #endif
+        }
         content.userInfo[intendedFireDateUserInfoKey] = spec.intendedFireDate.timeIntervalSince1970
         #if os(iOS)
         if #available(iOS 15.0, *) {
@@ -3000,6 +3004,7 @@ extension Settings {
             logger.debug("Prayer schedule skipped: Allow Notifications is off")
             _ = Self.nextNotificationPassGeneration()
             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            Self.noteSimulatorScheduleBuilt()
             completion?()
             return
         }
@@ -3026,6 +3031,7 @@ extension Settings {
         }
         if Self.notificationsDeliverable == false, !plansAnyway {
             logger.debug("Prayer schedule skipped: notifications are not authorized")
+            Self.noteSimulatorScheduleBuilt()
             completion?()
             return
         }
@@ -3255,6 +3261,8 @@ extension Settings {
         // nothing below reads Settings. A pass started after this one supersedes it (generation check),
         // so back-to-back passes cannot add in the wrong order.
         let desiredIDs = Set(finalSpecs.map(\.identifier))
+        // Without prayers this pass leaves the pending prayer requests as they are (see the prune).
+        if hasPrayers { Self.noteSimulatorScheduleBuilt() }
         let generation = Self.nextNotificationPassGeneration()
         Self.notificationBuildQueue.async {
             #if DEBUG
@@ -4311,6 +4319,47 @@ extension Settings {
     /// userInfo key carrying the absolute instant (epoch seconds) a scheduled notification is FOR. The
     /// foreground delegate compares it to "now" at delivery and silences anything that arrives late.
     static let intendedFireDateUserInfoKey = "intendedFireDate"
+
+    // MARK: A simulator stays quiet
+
+    /// A simulator's sound comes out of the Mac it runs on, and one booted from the command line has
+    /// no window to show it is there. One left running kept its two weeks of scheduled adhans and
+    /// rang them through the Mac at its own location's times: San Francisco by default, ten to
+    /// twenty minutes after Irvine's (Abu, 2026-11-16: "adhan randomly playing especially late on my
+    /// mac"). So in a simulator nothing the clock starts makes a sound: the scheduled prayer
+    /// notifications carry none, and the in-app adhan plays at volume zero. Banners, the playing
+    /// card and every decision are unchanged. To hear them there, launch once with
+    /// `-seedBool simulatorAdhanSound=1` (`=0` goes quiet again). Always false on a device.
+    static var mutesAdhanInSimulator: Bool {
+        #if targetEnvironment(simulator)
+        return !UserDefaults.standard.bool(forKey: simulatorAdhanSoundKey)
+        #else
+        return false
+        #endif
+    }
+
+    static let simulatorAdhanSoundKey = "simulatorAdhanSound"
+    static let simulatorScheduleSoundKey = "simulatorScheduleBuiltWithSound"
+
+    /// True while a simulator's pending schedule was built before the rule above, or under the other
+    /// answer to it. A fetch then rebuilds it once (`fetchPrayerTimesCore`): a plain launch
+    /// reschedules nothing while today's times are current, so without this a simulator already
+    /// holding two weeks of adhans kept ringing, and the switch did nothing until the next day.
+    static var simulatorScheduleIsStale: Bool {
+        #if targetEnvironment(simulator)
+        return (UserDefaults.standard.object(forKey: simulatorScheduleSoundKey) as? Bool) != !mutesAdhanInSimulator
+        #else
+        return false
+        #endif
+    }
+
+    /// A pass has settled the pending prayer requests under the current answer: it rebuilt them, or
+    /// it cleared the queue, or nothing can be delivered at all.
+    static func noteSimulatorScheduleBuilt() {
+        #if targetEnvironment(simulator)
+        UserDefaults.standard.set(!mutesAdhanInSimulator, forKey: simulatorScheduleSoundKey)
+        #endif
+    }
 
     /// One `UNNotificationSound` per filename: a scheduling pass builds a few hundred candidate
     /// requests, and every one of them made its own sound object for one of the two or three files

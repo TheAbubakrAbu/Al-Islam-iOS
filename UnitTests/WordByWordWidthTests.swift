@@ -51,15 +51,76 @@ final class WordByWordWidthTests: XCTestCase {
         XCTAssertGreaterThan(wide.frame.width, 700, "The text did not grow into the wider container")
     }
 
+    // MARK: - One typesetting per run
+
+    /// The run is typeset in a column only the view itself resizes (`OwnedTextContainer`). A frame
+    /// change and a measurement, the two things a non-scrolling text view answers by writing its own
+    /// geometry into its container, each used to typeset the whole ayah again: three typesettings
+    /// in the frame that built a reader row (2026-11-13). Neither may touch the layout now.
+    @MainActor
+    func testFrameChangesAndMeasurementsLeaveTheTypesettingAlone() async throws {
+        let host = makeHost(width: 402, text: try await longAyah())
+        let column = try XCTUnwrap(Self.column(in: host.view), "the ayah must render through the text view")
+        let textView = column.textView
+        let container = try XCTUnwrap(textView.textContainer as? OwnedTextContainer,
+                                      "The run must be typeset in a container the text view cannot resize")
+        let typeset = container.size
+        XCTAssertEqual(typeset.height, .greatestFiniteMagnitude, "The column has no height limit")
+        XCTAssertEqual(typeset.width, column.frame.width, accuracy: 0.5, "The column is the row's width")
+
+        let counter = InvalidationCounter()
+        textView.layoutManager.delegate = counter
+        textView.frame = textView.frame.insetBy(dx: 0, dy: -40)
+        _ = textView.sizeThatFits(CGSize(width: 250, height: 90))
+        column.setNeedsLayout()
+        column.layoutIfNeeded()
+
+        XCTAssertEqual(container.size, typeset, "A frame change or a measurement resized the run's column")
+        XCTAssertEqual(counter.invalidations, 0, "A frame change or a measurement threw the typesetting away")
+    }
+
+    /// The height a row takes is read off that one layout. It must be the text view's own answer
+    /// for the column, at every width, or a row would clip its last line or carry a band of air.
+    @MainActor
+    func testTheRowHeightIsTheTextViewsOwnAnswer() async throws {
+        let ayah = try await longAyah()
+        for width: CGFloat in [320, 402, 800] {
+            let host = makeHost(width: width, text: ayah)
+            let column = try XCTUnwrap(Self.column(in: host.view), "the ayah must render through the text view")
+            let own = ceil(column.textView.sizeThatFits(
+                CGSize(width: column.frame.width + 2 * ArabicInkBleedHost.bleed, height: .greatestFiniteMagnitude)
+            ).height)
+            XCTAssertGreaterThan(own, 80, "Precondition: the ayah wraps to several lines at \(width)pt")
+            XCTAssertEqual(column.frame.height, own, accuracy: 0.5, "At \(width)pt the row is not the text's height")
+            window?.isHidden = true
+            window?.rootViewController = nil
+            window = nil
+        }
+    }
+
+    private final class InvalidationCounter: NSObject, NSLayoutManagerDelegate {
+        var invalidations = 0
+        func layoutManagerDidInvalidateLayout(_ sender: NSLayoutManager) { invalidations += 1 }
+    }
+
+    /// Ayat al-Kursi (2:255), from the app's own text: long enough to wrap to several lines at every
+    /// width tested.
+    @MainActor
+    private func longAyah() async throws -> String {
+        await QuranData.shared.waitUntilLoaded()
+        return try XCTUnwrap(QuranData.shared.ayah(surah: 2, ayah: 255)?.textArabic, "2:255 must load")
+    }
+
     // MARK: - Harness
 
     private static let margin: CGFloat = 16
 
     /// The actions sheet's shape: a vertical ScrollView holding a padded stack with the text in it.
     @MainActor
-    private func makeHost(width: CGFloat) -> UIHostingController<AnyView> {
+    private func makeHost(width: CGFloat,
+                          text: String = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ") -> UIHostingController<AnyView> {
         let segment = WordByWordSegment(
-            displayText: "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+            displayText: text,
             preStyled: nil,
             ayahNumberArabic: "١",
             glosses: [],

@@ -120,7 +120,8 @@ struct QuranWidgetSnapshot: Codable {
 /// The app's URL scheme, as the Quran widgets use it: a tap on an ayah widget opens that ayah
 /// (`MainTabView.onOpenURL` routes it through `AppNavigation`). Registered in Info-Main.plist.
 enum QuranDeepLink {
-    static let scheme = "alislam"
+    /// The app's own scheme, the one `AppLink` reads: "alislam" here, "alquran" in Al-Quran.
+    static let scheme = AppIdentifiers.linkScheme
 
     /// `alislam://ayah/2/255`
     static func ayah(surah: Int, ayah: Int) -> URL? {

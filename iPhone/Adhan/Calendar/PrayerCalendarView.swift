@@ -51,7 +51,9 @@ struct PrayerCalendarView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { exportMenu }
         .task { await buildMonthsIfNeeded() }
-        .sheet(item: $shareItem) { item in
+        // The share sheet closing is a natural break for the review prompt (AppReview.swift); a share
+        // that went through is already counted as a small win by `ActivityView` itself.
+        .sheet(item: $shareItem, onDismiss: { AppReviewManager.shared.notePause() }) { item in
             ActivityView(activityItems: [item.url])
         }
     }
@@ -160,6 +162,8 @@ struct PrayerCalendarView: View {
                 isExporting = false
                 guard let url else {
                     logger.error("Prayer calendar export failed")
+                    // An export that came to nothing: no review prompt on its heels (AppReview.swift).
+                    AppReviewManager.shared.noteSetback(.major)
                     return
                 }
                 shareItem = ShareItem(url: url)

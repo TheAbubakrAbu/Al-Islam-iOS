@@ -657,6 +657,8 @@ struct CloudRestoreSheet: View {
                 onDone?()
             } catch {
                 errorMessage = error.localizedDescription
+                // A restore that failed: no review prompt on its heels (AppReview.swift).
+                AppReviewManager.shared.noteSetback(.major)
             }
             working = false
         }
@@ -919,6 +921,10 @@ struct CloudBackupSettingsView: View {
                             Label("Restore and Switch to This Profile", systemImage: "arrow.triangle.swap")
                         }
                     }
+
+                    // The row that cannot be undone stands apart from the restores.
+                    Divider()
+
                     Button(role: .destructive) {
                         confirmDelete(profile)
                     } label: {
@@ -982,7 +988,15 @@ struct CloudBackupSettingsView: View {
     private func backUpNow() {
         errorMessage = nil
         Task {
-            do { try await manager.backUpNow() } catch { errorMessage = error.localizedDescription }
+            // For the review prompt (AppReview.swift): a backup the user asked for and got is a small
+            // win, and one that failed is no moment to ask for anything.
+            do {
+                try await manager.backUpNow()
+                AppReviewManager.shared.bank(.small)
+            } catch {
+                errorMessage = error.localizedDescription
+                AppReviewManager.shared.noteSetback(.major)
+            }
         }
     }
 

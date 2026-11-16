@@ -907,9 +907,9 @@ struct NowPlayingView: View {
         }
         #endif
 
-        Divider()
-
         if quranView {
+            Divider()
+
             Button {
                 settings.hapticFeedback()
                 searchText = ""

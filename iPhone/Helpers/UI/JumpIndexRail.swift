@@ -310,8 +310,8 @@ private struct ScrollIndicatorHider: UIViewRepresentable {
         }
 
         func attach() {
-            guard let window else { return }
-            if list == nil { list = findList(in: window) }
+            guard window != nil else { return }
+            if list == nil { list = OverlaidList.find(from: self, minimumHeight: listMinimumHeight) }
             if list?.showsVerticalScrollIndicator == true { list?.showsVerticalScrollIndicator = false }
         }
 
@@ -319,35 +319,42 @@ private struct ScrollIndicatorHider: UIViewRepresentable {
             list?.showsVerticalScrollIndicator = true
             list = nil
         }
+    }
+}
 
-        /// The nearest ancestors first, so the rail's own list wins over any further away.
-        private func findList(in window: UIWindow) -> UIScrollView? {
-            let point = convert(CGPoint(x: bounds.midX, y: bounds.midY), to: window)
-            var branch: UIView = self
-            var ancestor = superview
-            var levels = 0
-            while let container = ancestor, container !== window, levels < 8 {
-                for view in container.subviews.reversed() where view !== branch {
-                    if let found = scrollView(in: view, under: point, window: window) { return found }
-                }
-                branch = container
-                ancestor = container.superview
-                levels += 1
+/// The list an overlay lies over, found from a probe view inside that overlay: the scroll view under
+/// the probe's own point, among the views beside it, that is at least `minimumHeight` tall (a row's
+/// horizontal strip never is). The nearest ancestors first, so the overlay's own list wins over any
+/// further away. The rail's indicator switch and the progress bar both look this way.
+private enum OverlaidList {
+    static func find(from probe: UIView, minimumHeight: CGFloat) -> UIScrollView? {
+        guard let window = probe.window else { return nil }
+        let point = probe.convert(CGPoint(x: probe.bounds.midX, y: probe.bounds.midY), to: window)
+        var branch: UIView = probe
+        var ancestor = probe.superview
+        var levels = 0
+        while let container = ancestor, container !== window, levels < 8 {
+            for view in container.subviews.reversed() where view !== branch {
+                if let found = scrollView(in: view, under: point, window: window, minimumHeight: minimumHeight) { return found }
             }
-            return nil
+            branch = container
+            ancestor = container.superview
+            levels += 1
         }
+        return nil
+    }
 
-        private func scrollView(in view: UIView, under point: CGPoint, window: UIWindow) -> UIScrollView? {
-            guard !view.isHidden, view.alpha > 0 else { return nil }
-            if let scroll = view as? UIScrollView, !(scroll is UITextView) {
-                let frame = scroll.convert(scroll.bounds, to: window)
-                return frame.contains(point) && frame.height >= listMinimumHeight ? scroll : nil
-            }
-            for sub in view.subviews.reversed() {
-                if let found = scrollView(in: sub, under: point, window: window) { return found }
-            }
-            return nil
+    private static func scrollView(in view: UIView, under point: CGPoint, window: UIWindow,
+                                   minimumHeight: CGFloat) -> UIScrollView? {
+        guard !view.isHidden, view.alpha > 0 else { return nil }
+        if let scroll = view as? UIScrollView, !(scroll is UITextView) {
+            let frame = scroll.convert(scroll.bounds, to: window)
+            return frame.contains(point) && frame.height >= minimumHeight ? scroll : nil
         }
+        for sub in view.subviews.reversed() {
+            if let found = scrollView(in: sub, under: point, window: window, minimumHeight: minimumHeight) { return found }
+        }
+        return nil
     }
 }
 
@@ -361,13 +368,10 @@ extension View {
     /// is a bottom inset on the styled list, and padding laid around that squeezed the bar in from
     /// the same edge (measured 2026-11-10 on the Musnad's chapters, 19 pt). No stops is no room, so
     /// it stays on the List while a search hides the rail.
-    @ViewBuilder
+    ///
+    /// No room either while the rails are switched off (`Settings.showJumpRail`).
     func jumpIndexRailRoom(_ items: [JumpIndexItem]) -> some View {
-        if #available(iOS 17.0, *) {
-            safeAreaPadding(.trailing, JumpIndexRail.listRoom(for: items))
-        } else {
-            self
-        }
+        modifier(JumpIndexRailRoom(items: items))
     }
 
     /// A `JumpIndexRail` down the trailing edge of a List that jumps by row id (the reader's ayahs, a
@@ -375,15 +379,230 @@ extension View {
     /// 2026-10-27, on the rail going to other screens: "could be fire"). A stop scrolls its row to the
     /// top at once, unanimated so a drag along the rail keeps up; when the finger lifts, the same row
     /// once more, after the rows a far jump passed over have measured themselves (a lazy List lands
-    /// the first time on estimated heights). No `items` draws nothing. The List takes the same
-    /// `items` in `jumpIndexRailRoom`, so its rows clear the labels.
+    /// the first time on estimated heights). No `items` draws nothing, and neither does a rail
+    /// switched off (`Settings.showJumpRail`). The List takes the same `items` in
+    /// `jumpIndexRailRoom`, so its rows clear the labels.
+    ///
+    /// With the rail comes the bar under the navigation bar that says how far down the list is
+    /// (`scrollProgressBar`). `showsProgress` is false on the two readers, which draw that bar in
+    /// their own pinned header.
     func jumpIndexRail<ID: Hashable>(_ items: [JumpIndexItem], accessibilityName: String,
-                                     proxy: ScrollViewProxy, rowID: @escaping (JumpIndexItem) -> ID?) -> some View {
-        overlay(alignment: .trailing) {
-            if !items.isEmpty {
+                                     proxy: ScrollViewProxy, showsProgress: Bool = true,
+                                     rowID: @escaping (JumpIndexItem) -> ID?) -> some View {
+        modifier(JumpIndexRailOverlay(items: items, accessibilityName: accessibilityName, proxy: proxy,
+                                      showsProgress: showsProgress, rowID: rowID))
+    }
+
+    /// How far down a long list is, as the 3 pt bar the surah reader and a hadith chapter carry
+    /// under the navigation bar (Abu, 2026-11-15: "For all places with the right hand buttons have a
+    /// progress view at the top showing how far we are"): the Quran tab, a book's chapters, the 99
+    /// Names and Hisn al-Muslim draw it here, wherever their rail shows. `shown` is the screen's own
+    /// rule for the rail (stops to show, no search typed); the rails' switch is watched here. An
+    /// overlay, so the rows do not move for it.
+    ///
+    /// It fills by ROWS, not by points scrolled (`ListProgressProbe`): a lazy list only guesses the
+    /// height of the rows it has not laid out, and guesses low for a grid's tiles, so the scrolled
+    /// share of the content ran ahead of the truth (measured 2026-11-15 on the Quran grid: 36% shown
+    /// at surah 17, where 23% of the list lay above).
+    func scrollProgressBar(_ shown: Bool) -> some View {
+        modifier(ScrollProgressBarModifier(shown: shown))
+    }
+}
+
+/// How far down a list is, 0 to 1, or nil while it fits its screen. Held outside the screen's own
+/// state, as the readers' visibility models are, so a scroll redraws the strip and nothing else.
+/// Half-percent steps: a full pass down a list publishes at most 200 times, not once a frame.
+final class ScrollProgressModel: ObservableObject {
+    @Published private(set) var fraction: Double?
+
+    func set(_ value: Double?) {
+        let quantized = value.map { ($0 * 200).rounded() / 200 }
+        if quantized != fraction { fraction = quantized }
+    }
+}
+
+/// The bar itself, the one observer of `ScrollProgressModel`, with the probe that feeds it.
+private struct ScrollProgressStrip: View {
+    @ObservedObject var model: ScrollProgressModel
+    let color: Color
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            GeometryReader { proxy in
+                ListProgressProbe(model: model, listMinimumHeight: proxy.size.height / 2)
+                    .frame(width: 1, height: 1)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+            if let fraction = model.fraction {
+                TrackedBar(fraction: CGFloat(fraction), height: 3, color: color)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+/// `scrollProgressBar`. The model is plain `@State`, a reference nobody here observes: the list this
+/// wraps is never asked to redraw by its own scrolling.
+private struct ScrollProgressBarModifier: ViewModifier {
+    let shown: Bool
+    @State private var model = ScrollProgressModel()
+    @ObservedObject private var systemSettings = SystemSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+
+    func body(content: Content) -> some View {
+        content.overlay(alignment: .top) {
+            if shown, systemSettings.showJumpRail {
+                ScrollProgressStrip(model: model, color: appearanceSettings.accentColor.color)
+            }
+        }
+    }
+}
+
+/// Reads how far down its list is and hands it to the model: a 1 pt view in the bar's overlay that
+/// finds the list beside it (`OverlaidList`) and watches its offset and its content size.
+///
+/// The measure is rows. With `above` the rows over the top edge of the visible area and `below` the
+/// rows under its bottom edge, each counted with the visible part of the row that edge cuts, the
+/// bar shows above / (above + below): 0 at the top, 1 at the very end, rising all the way, and the
+/// same whether or not the rows further down have been measured yet. A scroll view that is not a
+/// List's collection view falls back to the share of its content scrolled.
+private struct ListProgressProbe: UIViewRepresentable {
+    let model: ScrollProgressModel
+    let listMinimumHeight: CGFloat
+
+    func makeUIView(context: Context) -> ProbeView {
+        let view = ProbeView()
+        view.isUserInteractionEnabled = false
+        view.model = model
+        view.listMinimumHeight = listMinimumHeight
+        return view
+    }
+
+    func updateUIView(_ uiView: ProbeView, context: Context) {
+        uiView.model = model
+        uiView.listMinimumHeight = listMinimumHeight
+        uiView.attach()
+    }
+
+    static func dismantleUIView(_ uiView: ProbeView, coordinator: ()) {
+        uiView.release()
+    }
+
+    final class ProbeView: UIView {
+        weak var model: ScrollProgressModel?
+        var listMinimumHeight: CGFloat = 0
+        private weak var list: UIScrollView?
+        private var observations: [NSKeyValueObservation] = []
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            guard window != nil else { return release() }
+            attach()
+            // The list can join the window a pass after the overlay does.
+            DispatchQueue.main.async { [weak self] in self?.attach() }
+        }
+
+        func attach() {
+            guard window != nil else { return }
+            if list == nil, let found = OverlaidList.find(from: self, minimumHeight: listMinimumHeight) {
+                list = found
+                observations = [
+                    found.observe(\.contentOffset) { [weak self] _, _ in self?.measure() },
+                    found.observe(\.contentSize) { [weak self] _, _ in self?.measure() },
+                ]
+            }
+            // After this pass, never inside it: `attach` is also called while SwiftUI updates the
+            // strip, and the model must not publish from within that update.
+            DispatchQueue.main.async { [weak self] in self?.measure() }
+        }
+
+        func release() {
+            observations.forEach { $0.invalidate() }
+            observations = []
+            list = nil
+        }
+
+        private func measure() {
+            guard let list else { return }
+            model?.set(Self.fraction(of: list))
+        }
+
+        static func fraction(of list: UIScrollView) -> Double? {
+            let top = list.contentOffset.y + list.adjustedContentInset.top
+            let bottom = list.contentOffset.y + list.bounds.height - list.adjustedContentInset.bottom
+            guard bottom > top else { return nil }
+            guard let collection = list as? UICollectionView else {
+                let span = list.contentSize.height - (bottom - top)
+                return span > 1 ? Double(min(max(top / span, 0), 1)) : nil
+            }
+
+            var starts: [Int] = []
+            var total = 0
+            for section in 0..<collection.numberOfSections {
+                starts.append(total)
+                total += collection.numberOfItems(inSection: section)
+            }
+            guard total > 0 else { return nil }
+            // The rows the visible area touches, bars aside: the list also keeps the rows under the
+            // navigation bar and the tab bar.
+            var first: (index: Int, frame: CGRect)?
+            var last: (index: Int, frame: CGRect)?
+            for path in collection.indexPathsForVisibleItems where starts.indices.contains(path.section) {
+                guard let frame = collection.layoutAttributesForItem(at: path)?.frame,
+                      frame.maxY > top, frame.minY < bottom, frame.height > 0 else { continue }
+                let index = starts[path.section] + path.item
+                if first == nil || index < first!.index { first = (index, frame) }
+                if last == nil || index > last!.index { last = (index, frame) }
+            }
+            guard let first, let last else { return nil }
+            let above = Double(first.index) + Double(min(max((top - first.frame.minY) / first.frame.height, 0), 1))
+            let below = Double(total - 1 - last.index) + Double(min(max((last.frame.maxY - bottom) / last.frame.height, 0), 1))
+            // Nothing above and nothing below: the list fits its screen.
+            guard above + below > 0.01 else { return nil }
+            return above / (above + below)
+        }
+    }
+}
+
+/// `jumpIndexRailRoom`: it watches the rails' switch itself, so a screen that carries a rail needs
+/// no observation of its own for it and gives the room back the moment the switch goes off.
+private struct JumpIndexRailRoom: ViewModifier {
+    let items: [JumpIndexItem]
+    @ObservedObject private var systemSettings = SystemSettings.shared
+
+    func body(content: Content) -> some View {
+        if #available(iOS 17.0, *) {
+            content.safeAreaPadding(.trailing, JumpIndexRail.listRoom(for: systemSettings.showJumpRail ? items : []))
+        } else {
+            content
+        }
+    }
+}
+
+/// `jumpIndexRail`: the rail itself, under the same switch.
+private struct JumpIndexRailOverlay<ID: Hashable>: ViewModifier {
+    let items: [JumpIndexItem]
+    let accessibilityName: String
+    let proxy: ScrollViewProxy
+    let showsProgress: Bool
+    let rowID: (JumpIndexItem) -> ID?
+    @ObservedObject private var systemSettings = SystemSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+
+    func body(content: Content) -> some View {
+        if showsProgress {
+            rail(content).scrollProgressBar(!items.isEmpty)
+        } else {
+            rail(content)
+        }
+    }
+
+    private func rail(_ content: Content) -> some View {
+        content.overlay(alignment: .trailing) {
+            if systemSettings.showJumpRail, !items.isEmpty {
                 JumpIndexRail(
                     items: items,
-                    accent: Settings.shared.accentColor.color,
+                    accent: appearanceSettings.accentColor.color,
                     accessibilityName: accessibilityName,
                     onSelect: { item in
                         Settings.shared.hapticFeedback()

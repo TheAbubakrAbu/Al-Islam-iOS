@@ -750,6 +750,36 @@ struct HadithBookData: @unchecked Sendable {
         pack.prefetchText(rows: range)
     }
 
+    /// How far past the hadith a reader lands on the text must be resident before the chapter's
+    /// rows are laid out: a screenful and what the List builds ahead of it (a screen holds one to four).
+    static let landingReach = 12
+
+    /// The rows a reader lands on, `index` hadiths into a chapter: what `HadithChapterView` asks
+    /// for before it lays its rows out, and so what is worth decoding before the tap. A chapter is
+    /// one unbroken run of rows (the packer's invariant), so a place in it is a row. Two rows back
+    /// as well: the List builds the row above the one it scrolls to the top.
+    static func landingRows(firstRow: Int, count: Int, index: Int) -> Range<Int> {
+        guard count > 0 else { return 0..<0 }
+        let index = min(max(0, index), count - 1)
+        return (firstRow + max(0, index - 2))..<(firstRow + min(count, index + landingReach))
+    }
+
+    /// Where `chapter` opens: its head, or around the hadith a last-read record or a result points at.
+    func landingRows(of chapter: Chapter, at hadith: Hadith? = nil) -> Range<Int> {
+        Self.landingRows(firstRow: chapter.firstRow, count: chapter.rowCount,
+                         index: hadith.map { $0.row - chapter.firstRow } ?? 0)
+    }
+
+    /// Decode the text behind `landings` ahead of the tap, first come first served (the callers
+    /// order them by what is likeliest to be opened), within three quarters of the text cache: the
+    /// rest is left to whatever else is on screen. On a weak or power-saving phone, the first two
+    /// blocks only. So a chapter finds its opening text in memory (Abu, 2026-11-13: "should be
+    /// preprocessed before it opens"). Call from a detached task.
+    func prewarmLandingText(_ landings: [Range<Int>]) {
+        let allowance = AppPerformance.shouldAvoidBroadPrewarm ? 600_000 : HadithBlockCache.shared.textRoom * 3 / 4
+        pack.prefetchText(landings: landings, allowance: allowance)
+    }
+
     /// The rows in `range` matching the query, at most `limit`, scanned one search block at a
     /// time - the sweep primitive every hadith search uses (`HadithPack.matchingRows`).
     func matchingRows(in range: Range<Int>, query: HadithFold.Query, limit: Int) -> [Int] {

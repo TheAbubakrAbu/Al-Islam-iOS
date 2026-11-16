@@ -170,17 +170,33 @@ extension Settings {
             .sorted { $0.time < $1.time }
     }
 
-    /// Records the mark and, when a prayed mark completes today's last open slot, asks for a rating at
-    /// the app's clearest moment of delight. Every gate (cooldown, session and usage minimums, yearly
-    /// quota) re-checks inside the manager, so this is safe to call on every mark. Main-actor, like
-    /// the review manager it calls; every caller is a view action.
+    /// Records the mark and tells the review prompt what it meant (`noteReviewMoment`). Main-actor,
+    /// like the review manager it calls; every caller is a view action.
     @MainActor
     fileprivate func recordTrackerMark(_ mark: PrayerMark?, for prayerName: String, on date: Date) {
         setPrayerMark(prayerName, on: date, mark: mark)
-        guard let mark = mark, mark.isPrayed, Calendar.current.isDateInToday(date) else { return }
+        if let mark { noteReviewMoment(for: mark, on: date) }
+    }
+
+    /// What a prayer just marked means to the review prompt (AppReview.swift). A prayed mark that
+    /// completes today's last open slot is the app's clearest moment of delight, and asks. Any other
+    /// prayed mark is a small win, remembered for the next pause. A prayer just recorded as missed is
+    /// no moment to ask for anything, so the prompt keeps quiet for a few minutes. Only today's marks
+    /// count: filling in last week's history is bookkeeping. Every rule (spacing between asks, real
+    /// use since the last one, the launch cover) is checked again inside the manager, so this is safe
+    /// to call on every mark. Called after the mark is stored.
+    @MainActor
+    func noteReviewMoment(for mark: PrayerMark, on date: Date) {
+        guard Calendar.current.isDateInToday(date) else { return }
+        guard mark.isPrayed else {
+            AppReviewManager.shared.noteSetback(.minor)
+            return
+        }
         let slots = trackableSlots(for: date)
         if !slots.isEmpty, trackedPrayerCount(slots.map(\.nameTransliteration)) == slots.count {
-            AppReviewManager.shared.requestAtMomentOfDelight()
+            AppReviewManager.shared.celebrate(.big)
+        } else {
+            AppReviewManager.shared.bank(.small)
         }
     }
 }

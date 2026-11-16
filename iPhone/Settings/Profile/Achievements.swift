@@ -785,6 +785,13 @@ final class AchievementsStore: ObservableObject {
         guard !silent else { return }
         queue.append(contentsOf: fresh)
         showNext()
+        // A badge about to be announced is a big win for the review prompt (AppReview.swift). Only
+        // remembered, because the banner lands on top of whatever the user is doing, and only with
+        // the app in front: a badge earned from a notification's button or by listening with the
+        // screen locked is real, but nobody is here to have the moment.
+        if UIApplication.shared.applicationState == .active {
+            AppReviewManager.shared.bank(.big)
+        }
     }
 
     private func persist() {

@@ -112,7 +112,15 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
     /// The window, for the tests that pin it. They assert the figure AND use it for the lookback, so
     /// a test cannot pass against a window the player no longer uses.
     static var catchUpWindowForTesting: TimeInterval { catchUpWindow }
+
+    /// The volume of the recording now playing, nil with none: what the simulator test reads.
+    var playbackVolumeForTesting: Float? { player?.volume }
     #endif
+
+    /// The volume a recording starts at: zero in a simulator, whose sound comes out of the Mac it
+    /// runs on (`Settings.mutesAdhanInSimulator`), and full everywhere else. The recording still
+    /// "plays" there, so the card, the stop button and the spent moment behave as on a phone.
+    static var startingVolume: Float { Settings.mutesAdhanInSimulator ? 0 : 1 }
 
     /// How long after an activation a prayer-time refresh may still trigger the catch-up. The first
     /// attempt can run before today's times (or the location) are in; the refresh that follows is
@@ -502,6 +510,7 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
             // explicit activation, so the session work never happens on the main thread.
             let p = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: path))
             p.delegate = self
+            p.volume = Self.startingVolume
             // Retire a still-playing previous adhan through a local (the stopAdhan idiom): stop it
             // explicitly, and never let its release run inside the `player = p` write - the shape of
             // the achievement-banner exclusivity crash.

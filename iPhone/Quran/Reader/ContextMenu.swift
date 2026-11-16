@@ -331,6 +331,12 @@ struct SurahContextMenu: View {
             )
         }
 
+        // The playback rows are a group of their own. Each is conditional, so their divider shows
+        // only when one of them does.
+        if settings.isHafsDisplay || lastListened == nil || canAddToQueue {
+            Divider()
+        }
+
         // An ayah's audio is Hafs-numbered, so the pick is a Hafs ayah (never one of the textless ids
         // minted for the beta riwayat) and the option shows in a Hafs display only (A5).
         if settings.isHafsDisplay {
@@ -373,6 +379,8 @@ struct SurahContextMenu: View {
                 Label("Add to Queue", systemImage: "text.line.last.and.arrowtriangle.forward")
             }
         }
+
+        Divider()
 
         Button {
             settings.hapticFeedback()
@@ -1017,7 +1025,7 @@ struct AyahContextMenuModifier: ViewModifier {
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 19, height: 19)
                             .foregroundColor(settings.accentColor.color)
-                            .conditionalGlassEffect()
+                            .conditionalGlassEffect(inRow: true)
                             .frame(width: 22, height: 22)
                             .frame(width: 28, height: 28)
                             .contentShape(Rectangle())
@@ -1452,6 +1460,9 @@ struct NoteEditorSheet: View {
                     Button {
                         settings.hapticFeedback()
                         if onAttemptSave(text) {
+                            // A note worth writing down is a small win for the review prompt
+                            // (AppReview.swift). Only remembered: the reading resumes as this closes.
+                            AppReviewManager.shared.bank(.small)
                             dismiss()
                         }
                     } label: {
@@ -1515,6 +1526,7 @@ extension FocusItem {
                 shareLabel: String(localized: "Share Surah"),
                 shareText: String(localized: "Surah \(surah.id): \(surah.displayName)") + "\n" + footnote
             )
+            .linked(to: .surah(surah.id), title: String(localized: "Surah \(surah.id): \(surah.displayName)"))
         }
         return FocusItem(
             id: "surah-\(surah.id)",
@@ -1530,6 +1542,7 @@ extension FocusItem {
             \(surah.type.capitalized.localizedDisplay) · \(surah.numberOfAyahs) ayahs
             """)
         )
+        .linked(to: .surah(surah.id), title: String(localized: "Surah \(surah.id): \(surah.displayName)"))
     }
 }
 

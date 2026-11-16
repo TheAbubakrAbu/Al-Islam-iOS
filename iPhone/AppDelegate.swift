@@ -39,6 +39,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         // iPad: two Dynamic Type changes inside a second hang UIKit's floating tab bar for good
         // (DynamicTypeCoalescer.swift); the windows follow a managed, settled copy of the category.
         DynamicTypeCoalescer.install()
+        // The review prompt (AppReview.swift) asks only when the app itself is on screen with nothing
+        // over it: not under the launch cover, the splash or About You (the LIVE reveal mirror;
+        // `AppReveal`'s note says why an environment read cannot do this), and not on top of a sheet,
+        // an alert or a share sheet, and not while someone is typing. A good moment that lands while
+        // one of those is in the way is kept for ten minutes, and the next pause asks.
+        KeyboardPresence.install()
+        AppReviewManager.shared.isInterfaceReady = {
+            AppReveal.revealed && !ModalPresence.isPresenting && !KeyboardPresence.isUp
+        }
         #if HAS_ADHAN
         registerBackgroundRefreshTask()
         // The two `BGTaskScheduler.submit`s are synchronous XPC round trips: off the first-paint path.
@@ -88,6 +97,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         }
         #if DEBUG
         PrayerNotificationPrompt.handleLaunchArguments()
+        #endif
+        #if targetEnvironment(simulator)
+        // A simulator still holding adhans that would sound through the Mac is rebuilt quiet now,
+        // whatever tab this launch lands on (`Settings.simulatorScheduleIsStale`). The fetch that
+        // would otherwise notice waits for the Adhan tab to appear.
+        if Settings.simulatorScheduleIsStale {
+            DispatchQueue.main.async { Settings.shared.fetchPrayerTimes() }
+        }
         #endif
         #endif
         return true
@@ -414,6 +431,9 @@ enum PrayerNotificationPrompt {
             { _ in
                 settings.hapticFeedback()
                 settings.answer(question, mark: mark, from: moment)
+                // The same moment for the review prompt as a mark made in the tracker itself
+                // (`noteReviewMoment`, PrayerTrackerView.swift).
+                settings.noteReviewMoment(for: mark, on: question.trackerDay)
             }
         }
         // "Late" only once the prayer's window has closed. Until then a prayer that was prayed was

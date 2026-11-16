@@ -700,6 +700,9 @@ struct ActiveTasbihCard: View {
 
                 counterButton(systemImage: "plus", prominent: true) {
                     counterBinding.wrappedValue = count + 1
+                    #if os(iOS)
+                    noteCountForReview(count + 1, cycle: cycle)
+                    #endif
                 }
             }
         }
@@ -719,8 +722,20 @@ struct ActiveTasbihCard: View {
             // No per-tap transaction: the ring animates via its own scoped .animation(value:), and a
             // withAnimation per tap queued overlapping transactions under rapid dhikr tapping.
             counterBinding.wrappedValue += 1
+            #if os(iOS)
+            noteCountForReview(count + 1, cycle: cycle)
+            #endif
         }
     }
+
+    #if os(iOS)
+    /// A full turn of the ring (33, or the free counter's own cycle) is a small win for the review
+    /// prompt (AppReview.swift). Only remembered, never asked about here: whoever is counting is in
+    /// the middle of their dhikr.
+    private func noteCountForReview(_ newCount: Int, cycle: Int) {
+        if cycle > 0, newCount > 0, newCount % cycle == 0 { AppReviewManager.shared.bank(.small) }
+    }
+    #endif
 
     private func counterButton(systemImage: String, prominent: Bool = false, disabled: Bool = false,
                                action: @escaping () -> Void) -> some View {

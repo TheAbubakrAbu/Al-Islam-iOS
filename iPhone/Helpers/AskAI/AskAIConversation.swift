@@ -549,6 +549,10 @@ final class AskAIConversation: ObservableObject {
         helpLineForCurrentTurn = nil
         isAnswering = false
         save()
+        // An answer that did not come is no moment for the review prompt (AppReview.swift): it keeps
+        // quiet for a few minutes. An answer that did come is not counted as a win, since only the
+        // reader knows whether it was a good one.
+        if messages.last?.failed == true { AppReviewManager.shared.noteSetback(.minor) }
         #if DEBUG
         debugLogLastTurn(failed: failed, firstToken: firstToken)
         #endif

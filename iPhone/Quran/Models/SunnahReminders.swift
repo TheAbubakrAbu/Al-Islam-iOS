@@ -55,6 +55,21 @@ enum IslamOpenTarget: Equatable {
     case duas
     case adhkar
     case names(Int?)
+    /// A resource by its `IslamDestination` raw value ("zakahCalculator"): a shared link's landing.
+    case resource(String)
+    /// One page pushed on the tab: an article, a sunnah, a prophecy (a shared link's landing).
+    case page(IslamLinkedPage)
+}
+
+/// A page a shared link opens on the Islam tab (AppLink.swift). The tab builds the screen from it.
+enum IslamLinkedPage: Hashable {
+    /// A Pillars & Beliefs, How-To or Proving Islam article, by its catalog id ("ShahadahView").
+    case article(String)
+    case sunnah(String)
+    case prophecy(String)
+    case prophetMiracle(String)
+    /// A Miracles of the Quran article, by its slug.
+    case miracle(String)
 }
 
 /// Cross-tab navigation requests. A notification tap arrives in the AppDelegate with no view in
@@ -93,6 +108,14 @@ final class AppNavigation: ObservableObject {
     func openHadith(slug: String, idInBook: Int) {
         pendingHadith = HadithOpenTarget(slug: slug, idInBook: idInBook)
     }
+
+    /// A hadith book to open at its chapter list, by slug (a shared link to the book itself):
+    /// MainTabView switches tabs, HadithView pushes the book and clears it.
+    @Published var pendingHadithBook: String?
+
+    /// A tab to switch to, by `AppTab` raw value ("settings"), with nothing pushed: a shared link
+    /// to the tab itself. MainTabView selects it and clears it.
+    @Published var pendingTab: String?
 
     func open(_ target: QuranOpenTarget) {
         pendingQuran = target

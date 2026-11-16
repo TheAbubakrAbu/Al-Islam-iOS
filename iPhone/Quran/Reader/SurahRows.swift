@@ -245,7 +245,8 @@ struct SurahRow: View, Equatable {
             .frame(maxHeight: .infinity)
             .conditionalGlassEffect(
                 useColor: favoriteState ? 0.3 : nil,
-                customTint: favoriteState ? accentColor.color : nil
+                customTint: favoriteState ? accentColor.color : nil,
+                inRow: true
             )
             .onTapGesture {
                 settings.hapticFeedback()
@@ -594,7 +595,8 @@ struct SurahRow: View, Equatable {
             clear: !favoriteState,
             rectangle: true,
             useColor: favoriteState ? 0.25 : nil,
-            customTint: favoriteState ? accentColor.color : nil
+            customTint: favoriteState ? accentColor.color : nil,
+            inRow: true
         )
         .contentShape(Rectangle())
     }
@@ -774,7 +776,8 @@ struct SurahAyahRow: View, Equatable {
                         .conditionalGlassEffect(
                             useColor: isBookmarked ? 0.3 : nil,
                             customTint: isBookmarked ? bookmarkTint : nil,
-                            interactive: false
+                            interactive: false,
+                            inRow: true
                         )
                         .onTapGesture {
                             settings.hapticFeedback()
@@ -898,7 +901,7 @@ struct SurahAyahRow: View, Equatable {
         .padding(12)
         // Always CLEAR glass, even when bookmarked - the accent-filled bookmark icon in the corner carries
         // the state; a tinted card here read as too loud next to the surah grid.
-        .conditionalGlassEffect(clear: true, rectangle: true)
+        .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
         .overlay(alignment: .topTrailing) {
             Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                 .font(.system(size: 11, weight: .semibold))
@@ -1323,7 +1326,8 @@ struct AyahSearchRow: View, Equatable {
                 .conditionalGlassEffect(
                     useColor: isBookmarked ? 0.3 : nil,
                     customTint: isBookmarked ? bookmarkTint : nil,
-                    interactive: false
+                    interactive: false,
+                    inRow: true
                 )
                 .onTapGesture {
                     settings.hapticFeedback()
@@ -1526,41 +1530,10 @@ struct AyahSearchRow: View, Equatable {
             ? (QuranData.shared.ayah(surah: surah, ayah: ayah)?.displayArabicText(surahId: surah, clean: false) ?? displayText)
             : arabic
 
-        if trimmed.containsArabicLetters {
-            // Per-ayah exact terms UNIONED with the corpus lexicon's - not a fallback. The aligned gloss
-            // is one wording of the word ("straitened"); the lexicon carries the word family's gloss
-            // variants from every occurrence, which is what bridges to a translation that phrased it
-            // differently ("confining"). The union is what "maximize" buys here.
-            var terms = CrossLanguageWordHighlight.englishTermsForArabicMatch(
-                query: trimmed, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText,
-                wordRule: wordRule
-            )
-            for term in CrossLanguageWordHighlight.englishTermsForUnalignedArabicQuery(trimmed)
-            where !terms.contains(term) {
-                terms.append(term)
-            }
-            // The morphological Arabic spans are ADDITIVE: tokens of the same word family the plain
-            // highlighter misses (صلاتهم for a صلاة query) light up in the Arabic line too.
-            let arabicExtra = CrossLanguageWordHighlight.arabicSpansForArabicQuery(
-                query: trimmed, in: displayText, wordRule: wordRule
-            )
-            guard !terms.isEmpty || !arabicExtra.isEmpty else { return ([], [], []) }
-            return (arabicExtra,
-                    CrossLanguageWordHighlight.wordSpans(of: terms, in: englishSaheeh),
-                    CrossLanguageWordHighlight.wordSpans(of: terms, in: englishMustafa))
-        } else {
-            // Union here too: the per-ayah alignment and the corpus lexicon each catch tokens the
-            // other misses (an inflected form the exact gloss missed; a gloss wording the lexicon
-            // dropped under its noise cap).
-            var spans = CrossLanguageWordHighlight.arabicSpansForEnglishMatch(
-                query: trimmed, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText
-            )
-            for span in CrossLanguageWordHighlight.arabicSpansForEnglishQuery(trimmed, arabicText: displayText)
-            where !spans.contains(where: { NSIntersectionRange($0, span).length > 0 }) {
-                spans.append(span)
-            }
-            return (spans, [], [])
-        }
+        return CrossLanguageWordHighlight.quranSpans(
+            query: trimmed, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText,
+            saheeh: englishSaheeh, mustafa: englishMustafa, wordRule: wordRule
+        )
         #else
         return ([], [], [])
         #endif

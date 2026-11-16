@@ -571,12 +571,14 @@ struct SkyCard: View {
                 // sets it off, and a hairline around a panel of the same sky looked like a window frame.
                 .strokeBorder(Color.primary.opacity(pageSky ? 0 : 0.10), lineWidth: 1)
         )
+        // Closing the weather sheet or the moon viewer is a natural break for the review prompt
+        // (AppReview.swift): nothing is in progress, and the look around was a pleasant one.
         #if HAS_WEATHER
-        .sheet(isPresented: $weatherSheet) { WeatherDetailSheet() }
+        .sheet(isPresented: $weatherSheet, onDismiss: { AppReviewManager.shared.notePause() }) { WeatherDetailSheet() }
         #endif
         // Full screen, the "whole space" (Abu, 2026-09-25). On iOS 18 it zooms out of the moon that
         // was touched; before that it rises like any full-screen cover.
-        .fullScreenCover(item: $moonViewer) { request in
+        .fullScreenCover(item: $moonViewer, onDismiss: { AppReviewManager.shared.notePause() }) { request in
             MoonViewer(date: request.date, isLive: request.isLive)
                 .moonZoomTransition(request.source, in: moonZoom)
         }

@@ -19,6 +19,7 @@ One at a time:
 | `settings_actions.sh <udid> <tag>` | one settings flip per screen (`-settingsProbe`): Settings publishes and body evaluations per label it caused |
 | `settings_probeshots.sh <udid> <tag>` | screenshot pairs around one settings flip per screen; an identical pair is a stale view |
 | `launch.sh <udid> [runs]` | `-launchTiming` medians per start screen |
+| `scroll.sh <udid> [screens] [runs]` | the scroll stopwatch (`-scrollProbe`, ScrollProbe in StressWalker.swift): one six-second scroll per line of `scroll-screens.txt`, one `SCROLLPROBE` line each (frames per second, late ms per second, main-thread ms per second, the List's section and row counts, one full layout pass in ms) |
 | `tripwire.sh <udid>` | lldb backtrace of the first appearance-default read |
 | `tsan.sh <udid>` | the Thread Sanitizer flows (needs a TSan build in `$QA_OUT/dd-tsan`) |
 | `mac-sweep.sh <tag> [screens.txt]` | the sweep on "My Mac (Designed for iPad)", one hosted `HostSmokeTests` run per screen (held at `_dyld_start` on this Mac since 2026-09-29, see stress-mac.sh) |
@@ -43,6 +44,14 @@ iOS 27 runtime `simctl spawn defaults write <bundle id>` writes a domain the app
 boots the device again and retries a screen once when the simulator went down under it (another session on
 this Mac shuts every simulator down now and then). On a fresh simulator seed the first launch off once
 (`-seedBool THEfirstLaunch=0`) and grant location, or every screen lands on the splash.
+
+The scroll stopwatch (2026-11-13) needs an OPTIMIZED build that still carries the DEBUG probes, or the
+numbers are the unoptimized compiler's: `xcodebuild build -scheme iPhone -configuration Debug
+-derivedDataPath build/DerivedDataOpt SWIFT_OPTIMIZATION_LEVEL=-O` and install that. Compare two builds by
+`main` (main-thread ms per second scrolled), three runs each, with the Mac quiet (a build beside the run
+doubles every number; `idleAt` far from 6 or `openMain` far from 4.5 marks a disturbed run). `QA_ONLY`
+filters the screens by name and `QA_SCROLL_SECONDS` lengthens the scroll. To see what a screen spends its
+time on, `sample <pid> 8 1 -file out.txt` while a long probe runs and read the main thread's call tree.
 
 The test targets (Quality Guide T7): `xcodebuild test -scheme iPhone -destination <sim> -only-testing:UnitTests`
 for the 81 unit tests; `-only-testing:UITests` for the XCUITest sweep and the seeded monkey, with

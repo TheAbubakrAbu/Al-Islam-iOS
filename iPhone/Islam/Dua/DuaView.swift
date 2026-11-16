@@ -1526,10 +1526,15 @@ struct HisnDuaLibraryView: View {
     private let settings = Settings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @State private var searchText = ""
-    @State private var library: HisnDuasStore.Library?
+    /// The book, from the first frame when it is in memory, which it is by the time the Dua page's
+    /// row can be tapped (that page loads it to show the row at all). It used to start nil and be
+    /// fetched from `.task` regardless, so every open drew a spinner first (Abu, 2026-11-13: "When
+    /// page first opens there's a progress view I don't want"). Only a door that reaches this page
+    /// before the Dua page ever loaded (Ask AI's) still waits on the parse, off the main thread.
+    @State private var library: HisnDuasStore.Library? = HisnDuasStore.shared.libraryIfLoaded
     /// The situations and duas matching the settled query: from `.onChange` (150 ms after the last
     /// keystroke) and the library's arrival, never from the body, which re-folded every row per evaluation.
-    @State private var shownCategories: [HisnDuasStore.Category] = []
+    @State private var shownCategories: [HisnDuasStore.Category] = HisnDuasStore.shared.libraryIfLoaded?.categories ?? []
     @State private var shownMatches: [HisnDuasStore.Entry] = []
     @State private var filterTask: Task<Void, Never>?
 

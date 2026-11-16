@@ -77,6 +77,24 @@ final class SettingsSliceTests: XCTestCase {
         XCTAssertEqual(UserDefaults.standard.object(forKey: "showMuqattaatHelper") as? Bool, flipped)
     }
 
+    /// The numbers down the edge of the long lists (`JumpIndexRail`) are on until switched off (Abu,
+    /// 2026-11-15: "I change my mind by default have it true"; they were off by default for the two
+    /// days before), and the switch publishes the slice the rails watch, so a flip in Settings
+    /// reaches a list that is already open.
+    func testSideNumbersAreOnUntilSwitchedOff() {
+        let key = "showJumpRail"
+        let stored = UserDefaults.standard.object(forKey: key)
+        defer {
+            if let stored { UserDefaults.standard.set(stored, forKey: key) } else { UserDefaults.standard.removeObject(forKey: key) }
+        }
+        UserDefaults.standard.removeObject(forKey: key)
+        XCTAssertTrue(Settings.shared.showJumpRail)
+        XCTAssertTrue(SystemSettings.keys.contains(key))
+        XCTAssertEqual(publishes(of: SystemSettings.shared) { Settings.shared.showJumpRail = false }, 1)
+        XCTAssertFalse(SystemSettings.shared.showJumpRail)
+        XCTAssertEqual(publishes(of: QuranDisplay.shared) { Settings.shared.showJumpRail = true }, 0)
+    }
+
     /// Every `@Setting` on `Settings` belongs to exactly one slice: a new field that nobody assigned
     /// would publish no slice, and the views observing slices would miss it.
     func testEveryStoredSettingBelongsToExactlyOneSlice() {

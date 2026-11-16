@@ -258,9 +258,33 @@ enum AppIdentifiers {
     static let bundleIdentifier = "com.Quran.Elmallah.Islamic-Pillars"
 
     /// The app's App Store id (the number in its store URL): the review links and the update dialog
-    /// (AppUpdateCheck.swift) open the store page by it.
-    static let appStoreID = "6449729655"
+    /// (AppUpdateCheck.swift) open the store page by it. The app picks its own number from the
+    /// three by its bundle id, and these lines are the same in every app on purpose: this file is
+    /// merged into the companion apps, and a single written-out number arrived there unchanged, so
+    /// their "Leave a Review" and "Share" opened Al-Islam's page.
+    static let appStoreIDs = [
+        "com.Quran.Elmallah.Islamic-Pillars": "6449729655",
+        "com.Quran.Elmallah.Beginner-Quran": "6474894373",
+        "com.Quran.Elmallah.Prayer-Times": "6475015493",
+    ]
+    static let appStoreID = appStoreIDs[bundleIdentifier] ?? "6449729655"
     static var appStoreURL: URL { URL(string: "https://apps.apple.com/app/id\(appStoreID)")! }
+
+    /// The app's own URL scheme (Info-Main.plist): what the widgets tap through, and what a shared
+    /// link's web page falls back to. See AppLink.swift. It is the app's name in lowercase letters
+    /// ("alislam", "alquran", "aladhan"), and it is DERIVED on purpose: this file is merged into the
+    /// companion apps, where a written-out "alislam" would arrive unchanged and send their links
+    /// to Al-Islam (`appStoreID` above arrived exactly that way). Each app's Info-Main.plist has to
+    /// register the same word.
+    static let linkScheme = appName.lowercased().filter(\.isLetter)
+    /// Where a shared link lives on the web: `https://<linkHost><linkPath>?quran=2:255`. The host
+    /// serves `.well-known/apple-app-site-association` (Al-Islam's Website folder, one file for the
+    /// three apps), which is what lets iOS open the app straight from the link, and the page at
+    /// `linkPath` sends everyone else to the App Store. The same host is named in the app's
+    /// Associated Domains entitlement: change the three together. The path is the scheme's word,
+    /// so each app has its own folder on the site.
+    static let linkHost = "theabubakrabu.github.io"
+    static let linkPath = "/\(linkScheme)/"
 
     static let backgroundFetchPrayerTimesTaskIdentifier = "\(bundleIdentifier).fetchPrayerTimes"
     /// The overnight BGProcessingTask twin of the refresh above. Processing tasks get the system's
@@ -402,6 +426,21 @@ final class PerformanceProfile: ObservableObject {
 
     /// Drop shadows are offscreen render passes; skipped entirely on the reduced tier (`.softShadow`).
     var shouldDropShadows: Bool { tier == .reduced }
+
+    /// Glass that repeats down a scrolling list (a row's number pill, its buttons, a grid tile) draws
+    /// the Classic Look's fill instead of Liquid Glass: on a hot phone (a serious or critical thermal
+    /// state) and on a 3 GB-class one. Every glass shape costs 2.5 to 4 ms of main thread when its row
+    /// is built, the largest single cost of scrolling, and the fill costs nothing measurable
+    /// (Performance Guide, section 19). Bars, cards, buttons and sheets keep their glass (Abu,
+    /// 2026-11-13). Low Power Mode is not part of it: that has its own switch
+    /// (`Settings.classicLookInLowPower`), and someone who turned it off asked to keep the glass.
+    var shouldPlainRowGlass: Bool {
+        #if DEBUG
+        // "-perfTierReduced" stands in for the 3 GB phone the simulator cannot be.
+        if ProcessInfo.processInfo.arguments.contains("-perfTierReduced") { return true }
+        #endif
+        return isThermallyThrottled || Self.isLowEndDevice
+    }
 
     private var observers: [NSObjectProtocol] = []
 
@@ -1164,6 +1203,28 @@ func arabicNumberString(from number: Int) -> String {
         guard let digit = ch.wholeNumberValue, digit >= 0, digit <= 9 else { return String(ch) }
         return arabicNumbers[digit]
     }.joined()
+}
+
+/// Which numbers an Arabic face can draw in Arabic-Indic digits.
+///
+/// The Quran faces (the KFGQPC Hafs face, its Warsh twin and the retired Qiraat face) draw a number
+/// as the end-of-ayah medallion, and they carry one medallion per NUMBER, only as far as the Quran
+/// needs: the longest surah has 286 ayahs. A bigger number has no medallion of its own and the face
+/// breaks it into two rings side by side ("٢٨" and "٨" for 288). Ayah, surah and Name numbers never
+/// get there; a hadith book's chapter count can (the Musnad had 1,287 sections on 2026-11-10; Abu,
+/// 2026-11-12: "if there's something bigger than 286 then use another font for Arabic numbers").
+/// The other faces (IndoPak, Kufi, Hijazi, the system face) write plain digits of any length.
+///
+/// A site that sets a number of no fixed ceiling in the Arabic face asks `draws` first and sets
+/// the number in the system face when the answer is no.
+enum ArabicNumberFace {
+    /// The last number the medallion faces ring whole.
+    static let medallionLimit = 286
+
+    static func draws(_ number: Int, in fontName: String) -> Bool {
+        guard fontName.hasPrefix("KFGQPC") else { return true }
+        return (0...medallionLimit).contains(number)
+    }
 }
 
 private let quranStripScalars: Set<UnicodeScalar> = {

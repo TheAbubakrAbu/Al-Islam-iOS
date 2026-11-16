@@ -18,6 +18,37 @@ final class WordStudyTests: XCTestCase {
         XCTAssertEqual(tokens[1], "\u{06DA}")
     }
 
+    /// The card's coloured word is cut from the painted ayah by TOKEN, never by the raw text's
+    /// offsets. Under the Dot notation each hamzat al-wasl is three characters where the raw text
+    /// has one, so a raw range sat two characters early per wasl before the word: the last word of
+    /// 58:5 showed "ذَابٌ مّ" and of 6:2 a stray mark and "تَمْتَرُو" (Abu, 2026-11-16).
+    func testStyledWordIsCutByTokenUnderTheDotNotation() throws {
+        let data = QuranData.shared
+        for (sid, aid) in [(58, 5), (6, 2), (1, 2)] {
+            let surah = try XCTUnwrap(data.quran.first { $0.id == sid })
+            let ayah = try XCTUnwrap(surah.ayahs.first { $0.id == aid })
+            let raw = ayah.rawArabicText(surahId: sid, qiraahOverride: "")
+            let dot = ayah.displayArabicText(surahId: sid, clean: false, removeDots: false, qiraahOverride: "", waslSign: .dot)
+            let styled = try XCTUnwrap(
+                TajweedStore.shared.attributedText(surah: sid, ayah: aid, text: raw, removeArabicDots: false, waslSign: .dot),
+                "\(sid):\(aid) painted nothing"
+            )
+            let rawRanges = WordTokens.ranges(in: raw)
+            let shown = WordTokens.tokens(in: dot)
+            XCTAssertEqual(shown.count, rawRanges.count, "\(sid):\(aid) the notation changed the word count")
+            for index in shown.indices {
+                let cut = try XCTUnwrap(WordTokens.styledToken(index, in: styled, expecting: rawRanges.count))
+                XCTAssertEqual(String(cut.characters), shown[index], "\(sid):\(aid) word \(index + 1)")
+            }
+            // What the card did before: the raw range, read off the painted text, is another word.
+            let last = try XCTUnwrap(rawRanges.last)
+            XCTAssertNotEqual(NSAttributedString(styled).attributedSubstring(from: last).string, shown[shown.count - 1],
+                              "\(sid):\(aid) no wasl before the last word: pick another ayah")
+            // A painted text that counts its words differently is refused, not cut on a guess.
+            XCTAssertNil(WordTokens.styledToken(0, in: styled, expecting: rawRanges.count + 1))
+        }
+    }
+
     /// K4: two prints read alike when only the silent letter ring (kept by Hafs's text alone), a stop
     /// sign, or the marks' byte order differ. A vowel is a reading.
     func testSpellingKey() {

@@ -574,6 +574,26 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
                 }
             }
         }
+        // "-seedDouble key=1.45[,key=0.8…]" - the Double twin (a Double setting reads only a stored
+        // number, so `-seedString` cannot stand in): `-seedDouble ayahPreviewCardScale=1.45`.
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-seedDouble"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+            for pair in ProcessInfo.processInfo.arguments[idx + 1].split(separator: ",") {
+                let kv = pair.split(separator: "=", maxSplits: 1)
+                if kv.count == 2, let value = Double(kv[1]) {
+                    UserDefaults.standard.set(value, forKey: String(kv[0]))
+                }
+            }
+        }
+        // "-seedClear key[,key…]" - removes stored values, so a launch shows what someone who never
+        // chose sees: the way to check a DEFAULT headlessly (`-seedClear quranGridMode`). Applied
+        // after the seeds above, so a key named in both ends up unset.
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-seedClear"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+            for key in ProcessInfo.processInfo.arguments[idx + 1].split(separator: ",") {
+                UserDefaults.standard.removeObject(forKey: String(key))
+            }
+        }
         // "-seedNagStarts shurooq=20,maghrib=90" - per-deadline nagging leads (`NaggingDeadline.id`
         // to minutes), which live in one JSON blob no other seed can write. Also switches the
         // per-deadline mode on, since the leads are ignored without it.
@@ -1353,13 +1373,19 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         "didPurgeLegacyQuranCaches", "hadithBookCorporaPurged1", "hadithCitationRefresh1", "hadithCitationRefresh2",
         "hadithLegacyCachePurged", "tafsirLegacyCachePurged",
         "appReviewAskDates", "appReviewSessionCount", "timeSpent",
+        // The rest of the review prompt's ledger (AppReview.swift keeps its keys in a private enum,
+        // which the source scan cannot see either): how this install has been used since it was
+        // last asked. A restore onto another phone must not carry one phone's asks to the next.
+        "appReviewSmallWins", "appReviewActiveDays", "appReviewLastActiveDay", "appReviewMutedUntil",
+        "appReviewMajorSetbacks", "appReviewBankedWin", "appReviewBankedAt",
         // Retired keys an older build left in the domain; nothing reads them now (`arabicGridMode`: the
         // pre-4.6.0 alphabet switch the per-screen `gridModeArabicRaw` replaced; `shouldShowRateAlert`:
         // the old review latch, migrated once by AppReview and never read again; the seven
         // `advancedSettings_<screen>` switches of the screens that lost theirs on 2026-10-25;
-        // `showJuzJumpGrid`: the fold of the JUMP TO JUZ card the juz rail replaced on 2026-10-27).
+        // `showJuzJumpGrid`: the fold of the JUMP TO JUZ card the juz rail replaced on 2026-10-27;
+        // `hadithChainShowsEnglish`: the chain sheet's English switch, always on since 2026-11-15).
         "foregroundAdhanLastPlayedID", "gridMode", "islamGridMode", "namesGridMode", "arabicGridMode",
-        "shouldShowRateAlert", "showJuzJumpGrid",
+        "shouldShowRateAlert", "showJuzJumpGrid", "hadithChainShowsEnglish",
     ] + AdvancedScreen.retiredStorageKeys + [
         // Today's picks: tomorrow they are wrong anyway.
         "hijriDate", "ayahOfTheDayHiddenDate", "ayahOfTheDayOverride", "hadithOfTheDayHiddenDate", "hadithOfTheDayOverride", "hadithOfTheDayResolved",
@@ -3348,12 +3374,13 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// pure-English reading experience).
     @Setting("showHadithArabic") var showHadithArabic = true
     @Setting("showHadithEnglish") var showHadithEnglish = true
-    /// Where a hadith's chain of narrators sits in its Arabic. OFF (the default since 2026-11-02, Abu:
-    /// "Put Hadith chain back at the bottom so it matches with English"): the Arabic opens at the
-    /// final narrator, as the English does ("Narrated Abu Hurairah:"), and the chain follows beneath
-    /// it, smaller. ON: the book's own order, the chain first. Only a narration whose chain the app
-    /// could read (HadithChains.qpk) is rearranged; the rest read as written either way.
-    @Setting("hadithChainFirst") var hadithChainFirst: Bool = false
+    /// Where a hadith's chain of narrators sits. ON (the default since 2026-11-15, Abu: "For chain
+    /// of narration put it at the top not the bottom"): the chain is drawn above the hadith, smaller
+    /// and secondary, in the Arabic and in the English alike, and the hadith opens under it at its
+    /// final narrator ("Narrated Abu Hurairah:"). OFF: the same two lines beneath the hadith, where
+    /// they sat from 2026-11-02 until then. Only a narration whose chain the app could read
+    /// (HadithChains.qpk) is set apart this way; the rest read as written either way.
+    @Setting("hadithChainFirst") var hadithChainFirst: Bool = true
     /// Hadith's own "Highlight Allah" toggle, split from the Quran's `highlightAllahNames` so the two
     /// readers can differ. Seeded from the Quran toggle once in `init` so the split changes nothing
     /// until the user actually flips it.
@@ -3379,10 +3406,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     // MARK: - [Islam tab] Arabic letters & 99 Names
     
     /// The Quran tab's grid/list choice. (The key keeps its historical name so existing users' Quran
-    /// preference carries over.) Grid is the DEFAULT everywhere (Abu, 2026-09-18), and every screen
-    /// owns its own choice since 2026-10-10: this one used to be the app-wide fallback the Alphabet,
-    /// the 99 Names, the Islam tab and Settings followed until each was set, so flipping the Quran tab
-    /// (or a Scroll To Surah, which wrote it off) rearranged screens nobody had touched.
+    /// preference carries over.) A GRID by default, as every screen with the switch is (Abu,
+    /// 2026-11-15: "Use grid mode everywhere default"). It was a list from 2026-11-13 until then, the
+    /// one screen that was ("grid everywhere except for maybe quran"): its grids are the longest in
+    /// the app (114 surahs, 604 pages in that sort), and a grid of glass tiles scrolls at about two
+    /// thirds of the rate the list holds (Performance Guide, section 19). Only the default: a
+    /// stored choice is kept. Every screen owns its own choice since 2026-10-10: this one used to be the app-wide
+    /// fallback the Alphabet, the 99 Names, the Islam tab and Settings followed until each was set, so
+    /// flipping the Quran tab (or a Scroll To Surah, which wrote it off) rearranged screens nobody had
+    /// touched.
     @Setting("quranGridMode") var gridMode = true
     
     /// Per-screen grid choices (Arabic Alphabet / 99 Names / Islam tab / Settings; the Hadith tab, its
@@ -3426,7 +3458,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
 
     /// One-time split of the grid switches (2026-10-10), so nothing on screen changes with it: every
     /// screen still following the Quran tab's switch is given what that switch shows, and the Hadith
-    /// chapters what they showed (the collections' stored choice, else a list).
+    /// chapters what they showed (the collections' stored choice, else the default: a list until
+    /// 2026-11-15, a grid since, when every screen's default became a grid).
     ///
     /// The values are written even where they equal the default, on purpose: a backup made after this
     /// carries every screen's choice, so an UNSET follower in a restored backup can only come from an
@@ -3437,12 +3470,17 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         let doneKey = "gridModesPerScreenMigrated"
         guard force || !defaults.bool(forKey: doneKey) else { return }
         defaults.set(true, forKey: doneKey)
+        // An unset Quran tab reads as a GRID here whatever its own default is (a list from
+        // 2026-11-13 to 2026-11-15): it was a grid whenever a screen still followed it, and these
+        // four stay grids on a new install, where nothing is stored at all.
         let quranShowsGrid = defaults.object(forKey: "quranGridMode") as? Bool ?? true
         for key in gridModeFollowerKeys where (defaults.object(forKey: key) as? Int ?? -1) == -1 {
             defaults.set(quranShowsGrid ? 1 : 0, forKey: key)
         }
+        // Nothing chosen on the Hadith tab either: the chapters take today's default, a grid. An
+        // install that ran this before 2026-11-15 has a list stored here and keeps it.
         if defaults.object(forKey: "hadithChapterGridMode") == nil {
-            defaults.set(defaults.object(forKey: "hadithGridMode") as? Bool ?? false, forKey: "hadithChapterGridMode")
+            defaults.set(defaults.object(forKey: "hadithGridMode") as? Bool ?? true, forKey: "hadithChapterGridMode")
         }
     }
 
@@ -4011,6 +4049,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     @Setting("launchTabChosen") var launchTabChosen: Bool = false
 
     @Setting("hapticOn") var hapticOn: Bool = true
+
+    /// The numbers down the right edge of the long lists (`JumpIndexRail`: the juz on the Quran tab,
+    /// a surah's ayahs, a book's chapters, a chapter's hadiths, the 99 Names, Hisn al-Muslim's
+    /// situations). One switch for all of them, ON by default again (Abu, 2026-11-15: "I change my
+    /// mind by default have it true"). It was off from 2026-11-13 until then ("it's too
+    /// overwhelming maybe by default false"), and before the switch existed the rails were always
+    /// on. The same switch carries the progress bar those lists draw under the navigation bar
+    /// (`scrollProgressBar`). Only the default: a stored choice is kept.
+    @Setting("showJumpRail") var showJumpRail: Bool = true
 
     /// When the display may not sleep on its own (Abu, 2026-10-27: "have a setting to always keep the
     /// display on in the app or at least for Quran ... always keep app open, only on Quran, never

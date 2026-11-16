@@ -54,6 +54,11 @@ struct ConditionalGlassEffect: ViewModifier {
     /// keeps the system glass field even when the rest of the app is on the classic fallback
     /// (Abu, 2026-09-04). Pre-26 systems still take the fallback.
     var systemGlass: Bool = false
+    /// A shape that repeats down a scrolling list: a row's number pill, its buttons, a grid tile. On a
+    /// hot or 3 GB-class phone these draw the Classic Look's fill while bars, cards, buttons and
+    /// sheets keep their glass (`AppearanceEnvironment.rowLiquidGlass`): each glass shape costs 2.5 to
+    /// 4 ms when its row is built, and a scroll builds rows without pause.
+    var inRow: Bool = false
 
     /// A 24pt radius reads right on iPhone-sized cards; on the watch's small tiles it rounds them into
     /// near-stadiums that look chopped, so the watch uses a gentler curve.
@@ -61,8 +66,10 @@ struct ConditionalGlassEffect: ViewModifier {
 
     func body(content: Content) -> some View {
         // `appearance.liquidGlass` is false on every pre-26 system and under the Classic Look (manual,
-        // or automatic in Low Power Mode), so one flag routes all ~207 sites to the fallback.
-        if #available(iOS 26.0, watchOS 26.0, *), appearance.liquidGlass || systemGlass {
+        // or automatic in Low Power Mode), so one flag routes all ~207 sites to the fallback. The
+        // shapes inside scrolling rows read their own flag, which a hot or 3 GB-class phone also clears.
+        let liquidGlass = inRow ? appearance.rowLiquidGlass : appearance.liquidGlass
+        if #available(iOS 26.0, watchOS 26.0, *), liquidGlass || systemGlass {
             modernGlass(content: content)
         } else {
             fallbackGlass(content: content)
@@ -421,9 +428,10 @@ extension View {
         interactive: Bool = true,
         themeTint: Bool = true,
         flat: Bool = false,
-        systemGlass: Bool = false
+        systemGlass: Bool = false,
+        inRow: Bool = false
     ) -> some View {
-        modifier(ConditionalGlassEffect(clear: clear, rectangle: rectangle, circle: circle, useColor: useColor, customTint: customTint, interactive: interactive, themeTint: themeTint, flat: flat, systemGlass: systemGlass))
+        modifier(ConditionalGlassEffect(clear: clear, rectangle: rectangle, circle: circle, useColor: useColor, customTint: customTint, interactive: interactive, themeTint: themeTint, flat: flat, systemGlass: systemGlass, inRow: inRow))
     }
 
     /// Presents a `Menu`'s items in DECLARED order, top to bottom, wherever the menu pops up from.

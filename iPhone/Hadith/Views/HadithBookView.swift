@@ -214,11 +214,13 @@ struct HadithBookView: View {
     let book: HadithCatalogBook
 
     @State private var searchText = ""
-    /// The chapter list's OWN grid/list choice, LIST by default: chapter titles are sentences, which a
-    /// tile cuts off. Until 2026-10-10 it shared the tab's `hadithGridMode` key with the opposite
-    /// default, so flipping the collections flipped the chapters too (`Settings.migrateGridModes`
-    /// carried each install's choice over).
-    @AppStorage("hadithChapterGridMode") private var chapterGridMode = false
+    /// The chapter list's OWN grid/list choice, a GRID by default as every screen with the switch is
+    /// (Abu, 2026-11-15: "Use grid mode everywhere default"). It was a list until then, because
+    /// chapter titles are sentences, which a tile cuts short. Until 2026-10-10 it shared the tab's
+    /// `hadithGridMode` key with the opposite default, so flipping the collections flipped the
+    /// chapters too (`Settings.migrateGridModes` carried each install's choice over, which is why an
+    /// install from before 2026-11-15 has a list stored here and keeps it).
+    @AppStorage("hadithChapterGridMode") private var chapterGridMode = true
     /// Scroll To Chapter from the grid shows the list for that one visit, the stored choice untouched.
     @State private var listForJump = false
     private var showsGrid: Bool { chapterGridMode && !listForJump }
@@ -694,6 +696,23 @@ struct HadithBookView: View {
         }
     }
 
+    /// Decode, while the reader is choosing a chapter, the text each chapter opens on: this book's
+    /// last read first (its own row leads the list), then the chapters in order, within what the
+    /// text cache spares (`prewarmLandingText`: every chapter of every book on a 4 GB phone, the
+    /// first two blocks on a weak or power-saving one). Off the main thread, about 3 ms a block,
+    /// and nothing at all when resident already (every return from a chapter runs this again). A
+    /// chapter it did not reach decodes its own landing as it opens.
+    private func prewarmChapterLandings(_ data: HadithBookData) {
+        var landings: [Range<Int>] = []
+        if let lastRead = store.lastRead(for: book.slug),
+           let hadith = data.hadiths.first(where: { $0.idInBook == lastRead.idInBook }),
+           let chapter = data.chapter(of: hadith) {
+            landings.append(data.landingRows(of: chapter, at: hadith))
+        }
+        landings += data.chapters.map { data.landingRows(of: $0) }
+        Task.detached(priority: .utility) { data.prewarmLandingText(landings) }
+    }
+
     private func loadedBody(_ data: HadithBookData) -> some View {
         // Matches come from STATE, filled by `runInBookSearch`'s debounced, off-main scan. Computing
         // them here walked up to the whole book (Bukhari's 7,277 hadiths of `.contains`) synchronously
@@ -914,6 +933,8 @@ struct HadithBookView: View {
             // Hadith Encyclopedia's explanations (HadithExplanations.swift).
             SimilarHadithsStore.shared.prewarm(slug: book.slug)
             HadithExplanationStore.shared.prewarm(slug: book.slug)
+            // And the text each chapter opens on, so the chapter opens with its rows.
+            prewarmChapterLandings(data)
 
             #if DEBUG
             // `-hadithBookSearch <term>` (with `-launchHadithBook <slug>`): the in-book search, headless.
@@ -1467,7 +1488,8 @@ struct HadithBookView: View {
                 .frame(maxHeight: .infinity)
                 .conditionalGlassEffect(
                     useColor: favorite ? 0.3 : nil,
-                    customTint: favorite ? settings.accentColor.color : nil
+                    customTint: favorite ? settings.accentColor.color : nil,
+                    inRow: true
                 )
                 .onTapGesture {
                     settings.hapticFeedback()
@@ -1528,11 +1550,15 @@ struct HadithBookView: View {
                         // the grid tile - both scripts carry the number.
                         // The surah row's colours: the number carries the accent, the Arabic name
                         // is content in the primary colour (2026-10-26).
-                        Text(arabicNumberString(from: chapterOrdinal(chapter, data: data)))
-                            .font(settings.useFontArabic
+                        // A number the Arabic face cannot ring whole (`ArabicNumberFace`) is set in
+                        // the system face, rounded like the rest of the interface.
+                        let ordinal = chapterOrdinal(chapter, data: data)
+                        let plainDigits = settings.useFontArabic && !ArabicNumberFace.draws(ordinal, in: settings.nonQuranArabicFontName)
+                        Text(arabicNumberString(from: ordinal))
+                            .font(settings.useFontArabic && !plainDigits
                                 ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .caption1).pointSize + 2)
                                 : .caption.weight(.semibold))
-                            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace && !plainDigits)
                             .foregroundColor(settings.accentColor.color)
                             .layoutPriority(1)
 
@@ -1615,11 +1641,14 @@ struct HadithBookView: View {
                     HStack(spacing: 4) {
                         // The surah grid tile's top-row grammar: the chapter number in Arabic-Indic
                         // digits beside the Arabic name, so both scripts carry the number.
-                        Text(arabicNumberString(from: chapterOrdinal(chapter, data: data)))
-                            .font(settings.useFontArabic
+                        // The list row's rule for a number past the face's medallions.
+                        let ordinal = chapterOrdinal(chapter, data: data)
+                        let plainDigits = settings.useFontArabic && !ArabicNumberFace.draws(ordinal, in: settings.nonQuranArabicFontName)
+                        Text(arabicNumberString(from: ordinal))
+                            .font(settings.useFontArabic && !plainDigits
                                 ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 2)
                                 : .subheadline.weight(.semibold))
-                            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace && !plainDigits)
                             .foregroundColor(settings.accentColor.color)
                             .layoutPriority(1)
 
@@ -1647,25 +1676,33 @@ struct HadithBookView: View {
                 // The Arabic interface leaves out the English line when the Arabic one above names
                 // the chapter (and its number) already.
                 if !AppLanguage.isArabicScript || chapter.arabic.isEmpty {
-                    HStack(spacing: 4) {
-                        Text("\(chapterOrdinal(chapter, data: data)):")
-                            .font(.subheadline.monospacedDigit().weight(.bold))
-                            .foregroundColor(settings.accentColor.color)
-                            .layoutPriority(1)
+                    // One run, number and title, on as many lines as it needs up to three (Abu,
+                    // 2026-11-15: "grid mode chapter lowkey chopped"). On one line, half the shelf's
+                    // chapter titles (median 22 letters, a tile holds about 19) were either shrunk,
+                    // each tile to its own size, or cut ("5: The Book of Mosques and..."). The book
+                    // tile's grammar: the number rides the first line of a title that wraps.
+                    Spacer(minLength: 0)
 
-                        HighlightedSnippet(
-                            source: chapter.english,
-                            term: searchText,
-                            font: .subheadline.weight(.semibold),
-                            accent: settings.accentColor.color,
-                            fg: .primary
-                        )
-                        .lineLimit(1)
-                    }
-                    .minimumScaleFactor(0.6)
+                    HighlightedSnippet(
+                        source: chapter.english,
+                        term: searchText,
+                        font: .subheadline.weight(.semibold),
+                        accent: settings.accentColor.color,
+                        fg: .primary,
+                        leadingPrefix: "\(chapterOrdinal(chapter, data: data)): ",
+                        leadingPrefixFont: .subheadline.monospacedDigit().weight(.bold),
+                        leadingPrefixColor: settings.accentColor.color,
+                        lineLimit: 3
+                    )
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.85)
+                    // Its lines are the tile's height: never squeezed back to one by the frame.
+                    .fixedSize(horizontal: false, vertical: true)
                     // "3: The Book of Faith" is an English line: the number stays before the name in the
                     // Arabic interface too.
                     .leftToRightContent()
+
+                    Spacer(minLength: 0)
                 }
 
                 // Simple Mode leaves the span and the count to the reader's chapter header.
@@ -1688,14 +1725,17 @@ struct HadithBookView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 }
-
-                Spacer(minLength: 0)
             }
             .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            // The Arabic at the top and the span at the foot of every tile, the title centred in
+            // what lies between: a row of tiles lines up whether a title takes one line or three.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .frame(height: settings.hides(.chapterStats) ? 60 : 76)
+            .padding(.vertical, 7)
+            // As tall as its title needs, never shorter than the one-line tile: the grid gives a
+            // row the height of its taller tile (`EqualColumnsLayout`) and each tile fills it. It
+            // was one fixed height, which is what held every title to a single line.
+            .frame(minHeight: settings.hides(.chapterStats) ? 62 : 78)
             .contentShape(Rectangle())
             // The chapter filling the detail column wears the sidebar's ring. It used to get a lighter
             // accent TINT, the favorite's own grammar, so the open chapter "just highlights the back as
@@ -1706,7 +1746,8 @@ struct HadithBookView: View {
             clear: !favorite,
             rectangle: true,
             useColor: favorite ? 0.25 : nil,
-            customTint: favorite ? settings.accentColor.color : nil
+            customTint: favorite ? settings.accentColor.color : nil,
+            inRow: true
         )
         .gridFavoriteStar(
             isFavorite: favorite,
@@ -1979,7 +2020,9 @@ struct ChapterProgressBar: View {
         if visibility.visibleIDs.contains(lastID) { return 1 }
         guard let current = visibility.visibleIDs.min() else { return 0 }
         // Never quite full while scrolling: cap below 1 so 100% is reserved for the chapter's end.
-        return min(CGFloat(current - firstID) / CGFloat(lastID - firstID), 0.97)
+        // Nor below empty: a chapter's ids need not rise all the way (the Musnad's fifteen rows of
+        // Abu Rimthah keep the low ids they always had, inside a chapter of later ones).
+        return min(max(CGFloat(current - firstID) / CGFloat(lastID - firstID), 0), 0.97)
     }
 
     var body: some View {
@@ -2043,11 +2086,21 @@ struct HadithChapterView: View {
     @State private var chapterIndex: Int
     @State private var allChapterHadiths: [HadithBookData.Hadith]
     @State private var chapterRange: ClosedRange<Int>?
-    /// Whether the chapter's text blocks are decoded and resident. True at init when they already
-    /// are (a chapter revisited, a neighbour of one just read); otherwise the rows wait behind a
-    /// detached prefetch so the LZMA inflate never runs inside a row body on the main thread
-    /// (Performance Guide, Phase 7 step 1). The push animation stays smooth; the rows land a beat later.
+    /// Whether the text the reader LANDS on is decoded and resident (`landingRows`): the gate the
+    /// rows wait behind. True at init when it already is, which is nearly always (the book screen
+    /// and the Hadith tab decode it ahead of the tap, `HadithBookData.prewarmLandingText`, and a
+    /// search result has drawn it); otherwise `prefetchText` decodes it as the screen appears, a
+    /// 256 KB block of about 3 ms, so the first frame still has its rows.
+    ///
+    /// It used to ask for the WHOLE chapter, decode it on a detached task and show a spinner
+    /// meanwhile (Abu, 2026-11-13: "When page first opens there's a progress view I don't want that
+    /// should be preprocessed before it opens"). That was sized for the 2 MB blocks of the time, at
+    /// 130 ms each; even at 3 ms the hop to the task and back was a frame or two of spinner on
+    /// every chapter's first visit, and forty-odd decodes of it on a long book of the Musnad.
     @State private var textReady: Bool
+    /// Index in `allChapterHadiths` of the first row laid out: 0, always, in a chapter shown whole;
+    /// the start of the part on screen in a long one (see "A long chapter, a part at a time").
+    @State private var partStart: Int
 
     init(
         book: HadithCatalogBook,
@@ -2065,7 +2118,11 @@ struct HadithChapterView: View {
         let hadiths = Array(bookData.hadiths(in: chapter))
         _allChapterHadiths = State(initialValue: hadiths)
         _chapterRange = State(initialValue: HadithChapterView.range(of: hadiths))
-        _textReady = State(initialValue: bookData.hasText(rows: HadithChapterView.rowRange(of: chapter)))
+        // Opened ON a hadith: the part that holds it is the one laid out.
+        let start = HadithChapterView.partStart(holding: scrollToHadithId, in: hadiths)
+        _partStart = State(initialValue: start)
+        _textReady = State(initialValue: bookData.hasText(
+            rows: HadithChapterView.landingRows(in: hadiths, partStart: start, target: scrollToHadithId)))
         #if DEBUG
         // Under `-renderCounter`: a chapter screen built before a tap (an eager link) shows here.
         if RenderCounter.enabled { NSLog("HADITH CHAPTER INIT %@ chapter %d", book.slug, chapter.id) }
@@ -2077,26 +2134,145 @@ struct HadithChapterView: View {
         chapter.firstRow..<(chapter.firstRow + chapter.rowCount)
     }
 
-    /// Inflate the chapter's text blocks OFF the main thread, the target hadith's block first, and
-    /// flip `textReady` when they are resident. A no-op (ready at once) when they already are.
-    private func prefetchChapterText(_ target: HadithBookData.Chapter, scrollTarget: Int?) {
-        let range = Self.rowRange(of: target)
-        if bookData.hasText(rows: range) {
-            if !textReady { textReady = true }
-            return
+    // MARK: A long chapter, a part at a time
+
+    /// The longest chapter laid out whole. The list gives every hadith its own Section (the ayah
+    /// list's shape), and a List's layout costs the SQUARE of its section count. Measured 2026-11-12
+    /// on the 17 Pro simulator, the push to a chapter of 921 hadiths (the longest the shelf had
+    /// before the whole Musnad) took under a second, one of 2,924 froze for six, and the 11,737 of
+    /// the Musnad's book of the Companions who narrated most had not come back after eighty.
+    ///
+    /// So a chapter longer than this is laid out a PART at a time, and the Previous | Next pair
+    /// steps through its parts before it steps to the neighbouring chapter. Every chapter outside
+    /// the Musnad is under the limit and renders whole, exactly as it always did.
+    static let wholeChapterLimit = 1_000
+    /// The most hadiths a part holds.
+    static let partSizeGoal = 500
+
+    /// How many hadiths a part of a chapter `count` long holds: the chapter cut into the fewest
+    /// parts of at most `partSizeGoal`, evened out so the last part is never a stub.
+    static func partLength(ofChapterWith count: Int) -> Int {
+        guard count > wholeChapterLimit else { return max(count, 1) }
+        let parts = (count + partSizeGoal - 1) / partSizeGoal
+        return (count + parts - 1) / parts
+    }
+
+    /// Where the part holding the chapter's hadith at `index` starts: 0 in a chapter shown whole.
+    static func partStart(holdingIndex index: Int, count: Int) -> Int {
+        guard count > wholeChapterLimit, index >= 0, index < count else { return 0 }
+        let length = partLength(ofChapterWith: count)
+        return index / length * length
+    }
+
+    private static func partStart(holding idInBook: Int?, in hadiths: [HadithBookData.Hadith]) -> Int {
+        guard hadiths.count > wholeChapterLimit, let idInBook,
+              let index = hadiths.firstIndex(where: { $0.idInBook == idInBook }) else { return 0 }
+        return partStart(holdingIndex: index, count: hadiths.count)
+    }
+
+    private var isInParts: Bool { allChapterHadiths.count > Self.wholeChapterLimit }
+
+    /// The hadiths laid out, as indices into `allChapterHadiths`: the whole chapter, or its part.
+    private var shownRange: Range<Int> {
+        let count = allChapterHadiths.count
+        guard isInParts else { return 0..<count }
+        let start = min(max(0, partStart), count - 1)
+        return start..<min(start + Self.partLength(ofChapterWith: count), count)
+    }
+
+    private var shownHadiths: [HadithBookData.Hadith] {
+        isInParts ? Array(allChapterHadiths[shownRange]) : allChapterHadiths
+    }
+
+    /// Where the part before this one starts; nil at the chapter's first part and in a whole chapter.
+    private var earlierPartStart: Int? {
+        guard isInParts, shownRange.lowerBound > 0 else { return nil }
+        return max(0, shownRange.lowerBound - Self.partLength(ofChapterWith: allChapterHadiths.count))
+    }
+
+    /// Where the part after this one starts; nil at the chapter's last part and in a whole chapter.
+    private var laterPartStart: Int? {
+        guard isInParts, shownRange.upperBound < allChapterHadiths.count else { return nil }
+        return shownRange.upperBound
+    }
+
+    /// "Hadiths 4037-4525": the numbers the part starting at `start` covers, in the chapter list's
+    /// own wording for a chapter's span.
+    private func partLabel(startingAt start: Int) -> String {
+        let count = allChapterHadiths.count
+        let end = min(start + Self.partLength(ofChapterWith: count), count)
+        guard start >= 0, start < end, let range = Self.range(of: Array(allChapterHadiths[start..<end])) else { return "" }
+        return range.lowerBound == range.upperBound
+            ? String(localized: "Hadith \(HadithBookView.citation(range.lowerBound))")
+            : String(localized: "Hadiths \(HadithBookView.citation(range.lowerBound))-\(HadithBookView.citation(range.upperBound))")
+    }
+
+    /// Step to another part of this chapter: a chapter swap's landing (the literal top, the pair
+    /// included, from the list's `onChange(of: partStart)`) and its last-read record.
+    private func showPart(startingAt start: Int) {
+        guard isInParts, allChapterHadiths.indices.contains(start) else { return }
+        settings.hapticFeedback()
+        // The part's text was never asked for before it was laid out (the chapter's first visit
+        // was trusted to have decoded all of it, and to still hold it): now its landing is, BEFORE
+        // the rows change, like a chapter swap's, so a step never decodes inside a row body.
+        prefetchText(hadiths: allChapterHadiths, partStart: start, scrollTarget: nil)
+        withAnimation(.easeInOut) {
+            partStart = start
+            visibility.visibleIDs = []
+            highlightedHadithID = nil
         }
+        let book = book
+        let first = allChapterHadiths[start]
+        HadithLastReadDebounce.schedule {
+            HadithStore.shared.recordLastRead(book: book, hadith: first)
+        }
+    }
+
+    /// Lay out the part that holds a hadith about to be scrolled to. Nothing to do in a chapter
+    /// shown whole, or when the hadith is in the part already on screen.
+    private func showPart(holding idInBook: Int) {
+        guard isInParts else { return }
+        let start = Self.partStart(holding: idInBook, in: allChapterHadiths)
+        guard start != partStart else { return }
+        // The match was a row a moment ago, so its text is resident nearly always; the rest of
+        // the part decodes behind it.
+        prefetchText(hadiths: allChapterHadiths, partStart: start, scrollTarget: idInBook)
+        partStart = start
+        visibility.visibleIDs = []
+    }
+
+    // MARK: Text before rows
+
+    /// The book rows the reader lands on in a chapter's `hadiths` (`HadithBookData.landingRows`):
+    /// around the hadith a search or a reference opens on, or else the head of the part laid out.
+    static func landingRows(in hadiths: [HadithBookData.Hadith], partStart: Int, target idInBook: Int?) -> Range<Int> {
+        guard let first = hadiths.first else { return 0..<0 }
+        let index = idInBook.flatMap { id in hadiths.firstIndex { $0.idInBook == id } } ?? partStart
+        return HadithBookData.landingRows(firstRow: first.row, count: hadiths.count, index: index)
+    }
+
+    /// The book rows of the part laid out: the whole chapter when it is shown whole.
+    private static func partRows(in hadiths: [HadithBookData.Hadith], partStart: Int) -> Range<Int> {
+        guard let first = hadiths.first else { return 0..<0 }
+        let count = hadiths.count
+        guard count > wholeChapterLimit else { return first.row..<(first.row + count) }
+        let start = min(max(0, partStart), count - 1)
+        return (first.row + start)..<(first.row + min(start + partLength(ofChapterWith: count), count))
+    }
+
+    /// Have the text the reader lands on resident NOW and open the gate, then decode the rest of
+    /// the part laid out off the main thread, so scrolling on through it never decodes inside a
+    /// row body. The landing is one block, two at a seam; when the prewarms missed it, it is
+    /// decoded right here (about 3 ms a block on the simulator's Debug build, measured 2026-11-13)
+    /// instead of on a task the first frame would have to be drawn without. Never the whole of a
+    /// long chapter: on a 3 GB phone a long book of the Musnad is twice what the cache keeps.
+    private func prefetchText(hadiths: [HadithBookData.Hadith], partStart start: Int, scrollTarget: Int?) {
         let data = bookData
-        let targetRow = scrollTarget.flatMap { id in data.hadiths(in: target).first { $0.idInBook == id }?.row }
-        let chapterID = target.id
-        Task.detached(priority: .userInitiated) {
-            if let targetRow { data.prewarmText(rows: targetRow..<(targetRow + 1)) }
-            data.prewarmText(rows: range)
-            await MainActor.run {
-                // A swap to another chapter meanwhile runs its own prefetch; this one stands down.
-                guard chapter.id == chapterID else { return }
-                textReady = true
-            }
-        }
+        data.prewarmText(rows: Self.landingRows(in: hadiths, partStart: start, target: scrollTarget))
+        if !textReady { textReady = true }
+        let part = Self.partRows(in: hadiths, partStart: start)
+        guard !data.hasText(rows: part) else { return }
+        Task.detached(priority: .userInitiated) { data.prewarmText(rows: part) }
     }
 
     /// The span of CITED hadith numbers a chapter covers ("1234-1256") - citation base numbers,
@@ -2125,7 +2301,7 @@ struct HadithChapterView: View {
     /// Whether to show the Previous | Next pair at all. Both slots render whenever there is anywhere
     /// to go, so the test is the BOOK having more than one chapter, not this chapter having a
     /// neighbour: at chapter 1 the Previous slot is the dimmed "First Chapter", not nothing.
-    private var showsChapterNav: Bool { bookData.chapters.count > 1 }
+    private var showsChapterNav: Bool { bookData.chapters.count > 1 || isInParts }
 
     /// The pair ABOVE the first hadith. Simple Mode keeps only the one below the last
     /// (Docs/Product/Simple Mode Guide.md), and the two scrolls that land "at the literal top" target the
@@ -2136,21 +2312,24 @@ struct HadithChapterView: View {
     /// and record it as Last Read - exactly as the surah reader swaps surahs without a new push.
     /// `recordLastRead: false` is for the page-mode entry jump TO the last read: recording the
     /// chapter's first hadith would overwrite the exact spot the page seed is about to land on.
-    private func navigateToChapter(_ target: HadithBookData.Chapter, recordLastRead: Bool = true) {
+    /// `landingOn` is the hadith the caller scrolls to next (a number match in another chapter): in a
+    /// long chapter its part is the one laid out; a plain swap opens the chapter's first.
+    private func navigateToChapter(_ target: HadithBookData.Chapter, recordLastRead: Bool = true, landingOn: Int? = nil) {
         settings.hapticFeedback()
         let hadiths = Array(bookData.hadiths(in: target))
-        let ready = bookData.hasText(rows: Self.rowRange(of: target))
+        let start = Self.partStart(holding: landingOn, in: hadiths)
+        // The new chapter's landing text first, so its rows are laid out with their text.
+        prefetchText(hadiths: hadiths, partStart: start, scrollTarget: landingOn)
         withAnimation(.easeInOut) {
             chapter = target
             chapterIndex = bookData.chapters.firstIndex(where: { $0.id == target.id }) ?? 0
             allChapterHadiths = hadiths
+            partStart = start
             chapterRange = Self.range(of: hadiths)
             searchText = ""
             visibility.visibleIDs = []
             highlightedHadithID = nil
-            textReady = ready
         }
-        prefetchChapterText(target, scrollTarget: nil)
         onChapterChanged?(target)
         if recordLastRead, let first = hadiths.first {
             // Through the shared debounce slot, like every other last-read record: an immediate store
@@ -2441,10 +2620,12 @@ struct HadithChapterView: View {
         let target = hadith.idInBook
         if hadith.chapterId != chapter.id, let home = bookData.chapter(of: hadith) {
             // Clears the search and fires the haptic itself.
-            navigateToChapter(home)
+            navigateToChapter(home, landingOn: target)
         } else {
             settings.hapticFeedback()
             withAnimation { searchText = "" }
+            // In a long chapter the match may sit in another part than the one laid out.
+            showPart(holding: target)
         }
         highlightedHadithID = target
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -2585,8 +2766,13 @@ struct HadithChapterView: View {
         }
         #endif
         .onAppear {
-            // The chapter's text, decoded off-main before any row asks for it (no-op when resident).
-            prefetchChapterText(chapter, scrollTarget: scrollToHadithId)
+            // The landing's text, then the rest of the part laid out, before any row asks for it
+            // (nothing at all when resident). The hadith opened on is the landing only while its
+            // part is the one on screen: back from a pushed screen after a step, the part's head is.
+            let opened = scrollToHadithId.flatMap { id in
+                Self.partStart(holding: id, in: allChapterHadiths) == partStart ? id : nil
+            }
+            prefetchText(hadiths: allChapterHadiths, partStart: partStart, scrollTarget: opened)
             // In LIST mode the chapter is the reading surface, so it owns the Last Read record - routed
             // through the ONE shared debounce slot, deferred past the push transition (`recordLastRead`
             // publishes through the store the PARENT book screen observes and renders, and re-diffing
@@ -2615,23 +2801,15 @@ struct HadithChapterView: View {
               bookData.chapters[index].id != chapter.id else { return }
         let target = bookData.chapters[index]
         let hadiths = Array(bookData.hadiths(in: target))
+        prefetchText(hadiths: hadiths, partStart: 0, scrollTarget: nil)
         chapter = target
         allChapterHadiths = hadiths
+        partStart = 0
         chapterRange = Self.range(of: hadiths)
         highlightedHadithID = nil
         isSelectingHadiths = false
         selectedHadithIDs = []
-        textReady = bookData.hasText(rows: Self.rowRange(of: target))
-        prefetchChapterText(target, scrollTarget: nil)
         onChapterChanged?(target)
-    }
-
-    /// What stands in for the rows while their blocks inflate off-main: a beat of spinner, never a
-    /// frozen push transition.
-    private var textLoadingPlaceholder: some View {
-        ProgressView()
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 40)
     }
 
     /// A search result or reference landed here: open on the hadith itself, and MARK
@@ -2761,7 +2939,11 @@ struct HadithChapterView: View {
                     // FULL row in its own Section, the count pill up top, no paging. Tapping a match
                     // clears the search, scrolls to the hadith, and MARKS it (the ayah list's arrival).
                     let numbered = numberMatches()
-                    let matches = chapterMatches()
+                    let allMatches = chapterMatches()
+                    // Every match is a full row in its own Section, which a List cannot lay out by
+                    // the thousand (`wholeChapterLimit`): a word half of a long chapter carries
+                    // lists its first thousand rows and says how many there are.
+                    let matches = allMatches.count > Self.wholeChapterLimit ? Array(allMatches.prefix(Self.wholeChapterLimit)) : allMatches
 
                     // A number query answers first: the labelled hadith(s) that number names, above
                     // whatever the same digits happen to match in the text.
@@ -2791,7 +2973,7 @@ struct HadithChapterView: View {
                     #if os(iOS)
                     // AI hits the keyword filter (or the number lookup) already shows would render
                     // twice - the AI section carries only the extras, above the keyword rows.
-                    let shownRows = Set(matches.map(\.row)).union(numbered.map(\.hadith.row))
+                    let shownRows = Set(allMatches.map(\.row)).union(numbered.map(\.hadith.row))
                     let aiOnly = chapterAIHits.filter { !shownRows.contains($0.row) }
                     if !aiOnly.isEmpty {
                         Section(header: SectionPillHeader(title: String(localized: "AI MATCHES"), count: aiOnly.count, icon: "sparkles")) {}
@@ -2811,9 +2993,11 @@ struct HadithChapterView: View {
                     // section stands down entirely once a number has answered.
                     // The ranked list (see `chapterRanked`) says so in its header, and says why it is
                     // not the exact one.
-                    let notice = chapterRanked.isEmpty ? nil : chapterRankedNotice
+                    let notice = matches.count < allMatches.count
+                        ? String(localized: "Showing \(matches.count) of \(allMatches.count)").localizedDigits
+                        : (chapterRanked.isEmpty ? nil : chapterRankedNotice)
                     if !matches.isEmpty || numbered.isEmpty {
-                        Section(header: SectionPillHeader(title: chapterMatchesTitle, count: matches.count)) {
+                        Section(header: SectionPillHeader(title: chapterMatchesTitle, count: allMatches.count)) {
                             if matches.isEmpty {
                                 Text(chapterEmptyMessage)
                                     .font(.subheadline)
@@ -2846,11 +3030,10 @@ struct HadithChapterView: View {
                             .id("chapter-top-nav")
                     }
 
-                    if !textReady {
-                        Section { textLoadingPlaceholder }
-                    }
-
-                    ForEach(textReady ? allChapterHadiths : []) { hadith in
+                    // No rows until the landing text is resident, which `prefetchText` sees to as
+                    // the screen appears (see `textReady`), and nothing in their place: the spinner
+                    // that stood here only ever flashed.
+                    ForEach(textReady ? shownHadiths : []) { hadith in
                         Section {
                             let isSelected = selectedHadithIDs.contains(hadith.idInBook)
                             HadithRow(book: book, hadith: hadith, searchText: searchText, showsChapterPosition: true).equatable()
@@ -2887,7 +3070,8 @@ struct HadithChapterView: View {
                         }
                     }
 
-                    if showsChapterNav {
+                    // With its rows: alone under the top pair it would show for a frame and jump away.
+                    if showsChapterNav, textReady {
                         Section { chapterNavButtonPair() }
                     }
                 }
@@ -2902,8 +3086,10 @@ struct HadithChapterView: View {
         .applyConditionalListStyle(topContentMargin: 11, readingWidth: true)
         .compactListSectionSpacing()
         #if os(iOS)
-        .jumpIndexRail(railItems, accessibilityName: String(localized: "Hadith index"), proxy: scrollProxy) { item in
-            allChapterHadiths.indices.contains(item.id) ? "chapter-hadith-\(allChapterHadiths[item.id].idInBook)" : nil
+        .jumpIndexRail(railItems, accessibilityName: String(localized: "Hadith index"), proxy: scrollProxy, showsProgress: false) { item in
+            // The stops index the hadiths laid out (`hadithRailItems`): the whole chapter, or its part.
+            let index = shownRange.lowerBound + item.id
+            return allChapterHadiths.indices.contains(index) ? "chapter-hadith-\(allChapterHadiths[index].idInBook)" : nil
         }
         #endif
         .onAppear {
@@ -2916,17 +3102,12 @@ struct HadithChapterView: View {
         .onChange(of: chapterIndex) { _ in
             // A Previous/Next chapter swap lands at the LITERAL top of the new chapter - the nav
             // buttons above the first hadith included - not at hadith 1 with them scrolled away.
-            let target: String
-            if showsTopChapterNav {
-                target = "chapter-top-nav"
-            } else if let first = allChapterHadiths.first?.idInBook {
-                target = "chapter-hadith-\(first)"
-            } else {
-                return
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                withAnimation { scrollProxy.scrollTo(target, anchor: .top) }
-            }
+            scrollToListTop(scrollProxy)
+        }
+        // A step to another part of a long chapter lands the same way. (A match that opens in
+        // another part moves the part too; its own scroll, a beat later, takes it to the hadith.)
+        .onChange(of: partStart) { _ in
+            scrollToListTop(scrollProxy)
         }
         // Apple Music-style: the bottom search bar minimizes while scrolling down. Select mode swaps
         // the search for the bulk-action bar, exactly like the surah reader's list.
@@ -2951,14 +3132,32 @@ struct HadithChapterView: View {
         }
     }
 
+    /// The literal top of what is laid out: the Previous | Next pair above the first hadith when it
+    /// is there, the first hadith otherwise. Where a chapter swap and a step between parts land.
+    private func scrollToListTop(_ scrollProxy: ScrollViewProxy) {
+        let target: String
+        if showsTopChapterNav {
+            target = "chapter-top-nav"
+        } else if let first = shownHadiths.first?.idInBook {
+            target = "chapter-hadith-\(first)"
+        } else {
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            withAnimation { scrollProxy.scrollTo(target, anchor: .top) }
+        }
+    }
+
     #if os(iOS)
-    /// The hadith rail's stops, by place in the chapter (1, 10, 20 ...), for a chapter of 20 or more.
+    /// The hadith rail's stops, by place in the chapter (1, 10, 20 ...), for a chapter of 20 or more:
+    /// over the hadiths laid out, so in a long chapter the rail rules the part on screen (501, 520 ...).
     private var hadithRailItems: [JumpIndexItem] {
         let hadiths = allChapterHadiths
         guard hadiths.count >= 20 else { return [] }
-        return JumpIndexItem.numberedStops(Array(1...hadiths.count),
-                                           title: { String(localized: "Hadith \($0 + 1)") },
-                                           subtitle: { book.displayReference(hadiths[$0].displayNumber) })
+        let shown = shownRange
+        return JumpIndexItem.numberedStops(Array((shown.lowerBound + 1)...shown.upperBound),
+                                           title: { String(localized: "Hadith \(shown.lowerBound + $0 + 1)") },
+                                           subtitle: { book.displayReference(hadiths[shown.lowerBound + $0].displayNumber) })
     }
     #endif
 
@@ -3042,14 +3241,18 @@ struct HadithChapterView: View {
             .accessibilityAddTraits(.isHeader)
     }
 
-    /// The whole chapter on screen, or none of it.
+    /// The whole chapter on screen, or none of it. In a long chapter what is on screen is its part:
+    /// Select All adds that part to whatever is already picked, and a second tap clears everything.
     private var selectAllButton: some View {
-        let allSelected = !allChapterHadiths.isEmpty && selectedHadithIDs.count >= allChapterHadiths.count
+        let shown = shownHadiths
+        let allSelected = isInParts
+            ? !shown.isEmpty && shown.allSatisfy { selectedHadithIDs.contains($0.idInBook) }
+            : !allChapterHadiths.isEmpty && selectedHadithIDs.count >= allChapterHadiths.count
 
         return Button {
             settings.hapticFeedback()
             withAnimation(.easeInOut) {
-                selectedHadithIDs = allSelected ? [] : Set(allChapterHadiths.map(\.idInBook))
+                selectedHadithIDs = allSelected ? [] : selectedHadithIDs.union(shown.map(\.idInBook))
             }
         } label: {
             Text(allSelected ? "Deselect All" : "Select All")
@@ -3164,13 +3367,27 @@ struct HadithChapterView: View {
     /// stays visible but dimmed, with "First Chapter" / "Last Chapter" where a name would be - so it
     /// reads as "there is nothing before this one", not as a mysteriously missing button (user rule:
     /// make it clear you can't go back/forward there).
+    ///
+    /// In a long chapter, laid out a part at a time, a slot steps to the part before or after the
+    /// one on screen, named by the hadith numbers it holds ("Hadiths 4037-4525"), and only at the
+    /// chapter's own first or last part does it name the neighbouring chapter.
     @ViewBuilder
     private func chapterNavButtonPair() -> some View {
         HStack(spacing: 10) {
-            chapterNavButton(title: String(localized: "Previous"), chapter: previousChapter, endNote: String(localized: "First Chapter"),
-                             systemImage: "chevron.backward", trailing: false)
-            chapterNavButton(title: String(localized: "Next"), chapter: nextChapter, endNote: String(localized: "Last Chapter"),
-                             systemImage: "chevron.forward", trailing: true)
+            if let earlier = earlierPartStart {
+                navButton(title: String(localized: "Previous"), subtitle: partLabel(startingAt: earlier), enabled: true,
+                          systemImage: "chevron.backward", trailing: false) { showPart(startingAt: earlier) }
+            } else {
+                chapterNavButton(title: String(localized: "Previous"), chapter: previousChapter, endNote: String(localized: "First Chapter"),
+                                 systemImage: "chevron.backward", trailing: false)
+            }
+            if let later = laterPartStart {
+                navButton(title: String(localized: "Next"), subtitle: partLabel(startingAt: later), enabled: true,
+                          systemImage: "chevron.forward", trailing: true) { showPart(startingAt: later) }
+            } else {
+                chapterNavButton(title: String(localized: "Next"), chapter: nextChapter, endNote: String(localized: "Last Chapter"),
+                                 systemImage: "chevron.forward", trailing: true)
+            }
         }
     }
 
@@ -3184,18 +3401,24 @@ struct HadithChapterView: View {
             }
             return "\(ordinal). \(chapter.english.isEmpty ? book.englishTitle : chapter.english)"
         } ?? endNote
-        return Button {
+        return navButton(title: title, subtitle: subtitle, enabled: target != nil, systemImage: systemImage, trailing: trailing) {
             if let target { navigateToChapter(target) }
-        } label: {
+        }
+    }
+
+    /// One slot of the pair: where it goes is the caller's (a chapter, or a part of this one).
+    private func navButton(title: String, subtitle: String, enabled: Bool, systemImage: String, trailing: Bool,
+                           action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             HStack(spacing: 10) {
                 if !trailing {
-                    chapterNavChevron(systemImage, enabled: target != nil)
+                    chapterNavChevron(systemImage, enabled: enabled)
                 }
 
                 VStack(alignment: trailing ? .trailing : .leading, spacing: 2) {
                     Text(title)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(target != nil ? .primary : .secondary)
+                        .foregroundColor(enabled ? .primary : .secondary)
 
                     Text(subtitle)
                         .font(.caption)
@@ -3206,15 +3429,15 @@ struct HadithChapterView: View {
                 .frame(maxWidth: .infinity, alignment: trailing ? .trailing : .leading)
 
                 if trailing {
-                    chapterNavChevron(systemImage, enabled: target != nil)
+                    chapterNavChevron(systemImage, enabled: enabled)
                 }
             }
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(target == nil)
-        .opacity(target == nil ? 0.55 : 1)
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.55)
     }
 
     /// The chevron in a soft accent disc - the surah reader's `surahNavigationChevron`, so the pair
@@ -3306,7 +3529,8 @@ struct HadithChapterPickerSheet: View {
                                 .padding(.vertical, 6)
                                 .conditionalGlassEffect(
                                     useColor: chapter.id == currentChapterID ? 0.3 : nil,
-                                    customTint: chapter.id == currentChapterID ? settings.accentColor.color : nil
+                                    customTint: chapter.id == currentChapterID ? settings.accentColor.color : nil,
+                                    inRow: true
                                 )
 
                             VStack(alignment: .leading, spacing: 2) {

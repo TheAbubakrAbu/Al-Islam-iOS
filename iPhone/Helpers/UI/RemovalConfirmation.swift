@@ -63,6 +63,16 @@ enum RemovalConfirmation {
     }
 }
 
+// MARK: - The review prompt
+
+/// Adding a bookmark or a favorite is a small win for the review prompt (AppReview.swift): the reader
+/// found something worth keeping. Only remembered, never asked about on the spot, because whoever just
+/// saved an ayah or a hadith is in the middle of reading it. Removing one is not a moment at all.
+@MainActor
+private func noteSavedForReview() {
+    AppReviewManager.shared.bank(.small)
+}
+
 // MARK: - Ayah bookmarks and surah favorites
 
 extension Settings {
@@ -73,6 +83,7 @@ extension Settings {
     func toggleBookmarkOrConfirm(surah: Int, ayah: Int) {
         guard isBookmarked(surah: surah, ayah: ayah) else {
             toggleBookmark(surah: surah, ayah: ayah)
+            noteSavedForReview()
             return
         }
 
@@ -94,6 +105,7 @@ extension Settings {
     func toggleSurahFavoriteOrConfirm(surah: Int) {
         guard isSurahFavorite(surah: surah) else {
             toggleSurahFavorite(surah: surah)
+            noteSavedForReview()
             return
         }
 
@@ -113,6 +125,7 @@ extension Settings {
     func toggleLetterFavoriteOrConfirm(letterData: LetterData) {
         guard isLetterFavorite(letterData: letterData) else {
             toggleLetterFavorite(letterData: letterData)
+            noteSavedForReview()
             return
         }
 
@@ -130,6 +143,7 @@ extension Settings {
     func toggleNameFavoriteOrConfirm(number: Int, transliteration: String) {
         guard isNameFavorite(number: number) else {
             toggleNameFavorite(number: number)
+            noteSavedForReview()
             return
         }
 
@@ -153,6 +167,7 @@ extension HadithUserData {
     func toggleBookmarkOrConfirm(book: HadithCatalogBook, hadith: HadithBookData.Hadith, reference: String? = nil) {
         guard isBookmarked(slug: book.slug, idInBook: hadith.idInBook) else {
             toggleBookmark(book: book, hadith: hadith)
+            noteSavedForReview()
             return
         }
 
@@ -175,6 +190,7 @@ extension HadithUserData {
     func toggleFavoriteOrConfirm(_ book: HadithCatalogBook) {
         guard isFavorite(book.slug) else {
             toggleFavorite(book.slug)
+            noteSavedForReview()
             return
         }
 
@@ -191,6 +207,7 @@ extension HadithUserData {
     func toggleChapterFavoriteOrConfirm(book: HadithCatalogBook, chapter: HadithBookData.Chapter) {
         guard isChapterFavorite(slug: book.slug, chapterId: chapter.id) else {
             toggleChapterFavorite(slug: book.slug, chapterId: chapter.id)
+            noteSavedForReview()
             return
         }
 

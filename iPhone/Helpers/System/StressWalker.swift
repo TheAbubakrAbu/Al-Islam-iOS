@@ -29,6 +29,7 @@ import UIKit
 enum StressWalker {
     static func runIfRequested() async {
         let args = ProcessInfo.processInfo.arguments
+        if await ScrollProbe.runIfRequested() { return }
         if args.contains("-stressRestore") {
             // The recovery pass: put the container back the way the last walk found it (a crashed walk
             // never reached its own restore), then leave.
@@ -253,9 +254,15 @@ enum StressWalker {
             case "dump": walk.dumpTree(); text += "dumped"
             case "window": text += walk.secondWindow()
             case "scroll":
-                if let scroller = walk.allViews(of: UIScrollView.self, in: walk.keyWindow()).first(where: { $0.contentSize.height > $0.bounds.height }) {
-                    let y = arg == "bottom" ? scroller.contentSize.height - scroller.bounds.height : 0
-                    scroller.setContentOffset(CGPoint(x: 0, y: y), animated: true)
+                // "scroll:bottom", "scroll:top", or "scroll:900" for that many points down. A number
+                // scrolls the TOPMOST tall list (a sheet's, over the page it covers); the words keep
+                // the first one, as they always have.
+                let scrollers = walk.allViews(of: UIScrollView.self, in: walk.keyWindow())
+                    .filter { $0.contentSize.height > $0.bounds.height }
+                if let scroller = Double(arg) == nil ? scrollers.first : scrollers.last(where: { $0.bounds.height > 300 }) {
+                    let bottom = scroller.contentSize.height - scroller.bounds.height
+                    let y = arg == "bottom" ? bottom : min(bottom, CGFloat(Double(arg) ?? 0))
+                    scroller.setContentOffset(CGPoint(x: 0, y: y), animated: Double(arg) == nil)
                     text += "scrolled \(arg)"
                 }
             default: text += "unknown step"
@@ -1222,6 +1229,222 @@ enum StressWalker {
         mutating func below(_ bound: Int) -> Int {
             Int(next() % UInt64(max(1, bound)))
         }
+    }
+}
+
+/// The scroll stopwatch (`-scrollProbe [seconds]`, DEBUG): scrolls the frontmost vertical scroller at a
+/// fixed speed for that long (default 6 s, turning round at either end) and writes one `SCROLLPROBE`
+/// line, to the log and to tmp/scrollprobe.txt in the app's container, so every list in the app can be
+/// ranked by the same numbers and a change to a row can be measured, not felt. `Scripts/qa/scroll.sh`
+/// runs it over `Scripts/qa/scroll-screens.txt`.
+///
+/// What the line says:
+/// - `sections` / `items`: what the List's collection view was asked to lay out. A List lays out at the
+///   SQUARE of its section count (2026-11-12: 921 one-row sections open at once, 2,924 freeze 6 s), so a
+///   four-digit `sections` is a finding by itself.
+/// - `relayout`: one full layout pass of that collection view, in ms (what an open, a rotation or a
+///   data change pays).
+/// - `openMain`: main-thread CPU seconds from process start until the screen went quiet, launch included.
+/// - `hitch`: ms of late frames per second scrolled (Apple's hitch time ratio; under 5 is smooth, over
+///   10 is felt), `worst` the longest frame, `over33` / `over100` the frames past two and six refreshes.
+/// - `main`: main-thread CPU ms per second scrolled. The number to compare two builds by: a Mac hides a
+///   12 ms frame that an old phone drops, and this still shows it.
+///
+/// `-scrollProbeAfter <s>` (default 5) is the least time after the reveal before the probe looks for
+/// quiet, `-scrollProbeSpeed <pt/s>` (default 2400, a brisk flick), `-scrollProbeScript '<script>'`
+/// walks there first with StressWalker's script steps ("tap:Narrators;wait:2"), `-scrollProbeLabel`
+/// names the line and `-scrollProbeExit` leaves when it is written.
+@MainActor
+enum ScrollProbe {
+    static func runIfRequested() async -> Bool {
+        let args = ProcessInfo.processInfo.arguments
+        guard let index = args.firstIndex(of: "-scrollProbe") else { return false }
+        func value(_ flag: String) -> String? {
+            guard let i = args.firstIndex(of: flag), args.indices.contains(i + 1) else { return nil }
+            return args[i + 1]
+        }
+        let seconds = args.indices.contains(index + 1) ? Double(args[index + 1]) ?? 6 : 6
+        let settle = value("-scrollProbeAfter").flatMap(Double.init) ?? 5
+        let speed = value("-scrollProbeSpeed").flatMap(Double.init) ?? 2400
+        let label = value("-scrollProbeLabel") ?? "screen"
+
+        await AppReveal.waitUntilRevealed()
+        let revealed = CACurrentMediaTime()
+        if let script = value("-scrollProbeScript") {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            _ = StressWalker.AccessibilityBridge.enable()
+            let walk = StressWalker.Walk(seed: 0, gap: 0.35, mix: .all, audio: false)
+            await StressWalker.performScript(script, on: walk, gap: 0.35, firstStep: 0)
+        }
+        try? await Task.sleep(nanoseconds: UInt64(settle * 1_000_000_000))
+        // Quiet is two half seconds in a row with the main thread under 8% busy; a screen that never
+        // goes quiet (a clock, a player) is measured after 45 s anyway.
+        var quiet = 0
+        var last = mainThreadCPU()
+        while quiet < 2, CACurrentMediaTime() - revealed < 45 {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let now = mainThreadCPU()
+            quiet = now - last < 0.04 ? quiet + 1 : 0
+            last = now
+        }
+        let idleAt = CACurrentMediaTime() - revealed
+        let openMain = mainThreadCPU()
+
+        var fields: [(String, String)] = [("label", label)]
+        guard let scroller = frontScroller() else {
+            fields.append(("view", "none"))
+            fields.append(("idleAt", String(format: "%.1f", idleAt)))
+            fields.append(("openMain", String(format: "%.2f", openMain)))
+            finish(fields, exit: args.contains("-scrollProbeExit"))
+            return true
+        }
+        fields.append(("view", String(String(describing: type(of: scroller)).prefix(28))))
+        if let collection = scroller as? UICollectionView {
+            let sections = collection.numberOfSections
+            var items = 0
+            for section in 0..<min(sections, 1_500) { items += collection.numberOfItems(inSection: section) }
+            fields.append(("sections", "\(sections)"))
+            fields.append(("items", sections > 1_500 ? "\(items)+" : "\(items)"))
+            let start = CACurrentMediaTime()
+            collection.collectionViewLayout.invalidateLayout()
+            collection.layoutIfNeeded()
+            fields.append(("relayout", String(format: "%.1f", (CACurrentMediaTime() - start) * 1000)))
+        }
+        fields.append(("idleAt", String(format: "%.1f", idleAt)))
+        fields.append(("openMain", String(format: "%.2f", openMain)))
+
+        let run = Run(scroller: scroller, speed: speed, seconds: seconds)
+        let mainBefore = mainThreadCPU(), processBefore = processCPU()
+        await run.go()
+        let mainSpent = mainThreadCPU() - mainBefore, processSpent = processCPU() - processBefore
+        let elapsed = max(run.elapsed, 0.001)
+        fields.append(("content", "\(Int(scroller.contentSize.height))"))
+        fields.append(("secs", String(format: "%.1f", elapsed)))
+        fields.append(("dist", "\(Int(run.distance))"))
+        fields.append(("frames", "\(run.gaps.count)"))
+        fields.append(("fps", String(format: "%.1f", Double(run.gaps.count) / elapsed)))
+        fields.append(("hitch", String(format: "%.1f", run.hitchSeconds * 1000 / elapsed)))
+        fields.append(("worst", String(format: "%.0f", (run.gaps.max() ?? 0) * 1000)))
+        fields.append(("over33", "\(run.gaps.filter { $0 > 0.034 }.count)"))
+        fields.append(("over100", "\(run.gaps.filter { $0 > 0.1 }.count)"))
+        fields.append(("main", String(format: "%.0f", mainSpent * 1000 / elapsed)))
+        fields.append(("cpu", String(format: "%.0f", processSpent * 1000 / elapsed)))
+        fields.append(("mem", String(format: "%.0f", MemoryFootprint.megabytes)))
+        finish(fields, exit: args.contains("-scrollProbeExit"))
+        return true
+    }
+
+    private static func finish(_ fields: [(String, String)], exit leave: Bool) {
+        let line = "SCROLLPROBE " + fields.map { "\($0.0)=\($0.1)" }.joined(separator: " ")
+        NSLog("%@", line)
+        let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("scrollprobe.txt")
+        try? (line + "\n").write(to: url, atomically: true, encoding: .utf8)
+        if leave { exit(0) }
+    }
+
+    /// The tallest vertical scroller on the frontmost screen (a presented sheet's before the screen
+    /// under it), wheel pickers and text fields left out.
+    private static func frontScroller() -> UIScrollView? {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let scene = scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+        guard let window = scene?.windows.first(where: \.isKeyWindow) ?? scene?.windows.first else { return nil }
+        var top = window.rootViewController
+        while let presented = top?.presentedViewController, !presented.isBeingDismissed { top = presented }
+        func scrollers(in root: UIView?) -> [UIScrollView] {
+            guard let root, !root.isHidden, root.alpha > 0.01 else { return [] }
+            var out: [UIScrollView] = []
+            if let scroller = root as? UIScrollView { out.append(scroller) }
+            for sub in root.subviews { out += scrollers(in: sub) }
+            return out
+        }
+        func usable(_ list: [UIScrollView]) -> UIScrollView? {
+            list.filter {
+                $0.window != nil && $0.isScrollEnabled && $0.bounds.height > 200 && $0.bounds.width > 200
+                    && $0.contentSize.height > $0.bounds.height + 40
+                    && !($0 is UITextView)
+                    && !String(describing: type(of: $0)).contains("Picker")
+            }.max { $0.bounds.height * $0.bounds.width < $1.bounds.height * $1.bounds.width }
+        }
+        return usable(scrollers(in: top?.view)) ?? usable(scrollers(in: window))
+    }
+
+    /// One scroll: a display link moves the offset by the real time since the last frame, so a late
+    /// frame costs distance exactly as it does under a finger, and every frame's lateness is kept.
+    @MainActor private final class Run: NSObject {
+        let scroller: UIScrollView
+        let speed: Double
+        let seconds: Double
+        private(set) var gaps: [Double] = []
+        private(set) var hitchSeconds = 0.0
+        private(set) var distance = 0.0
+        private(set) var elapsed = 0.0
+        private var link: CADisplayLink?
+        private var lastStamp = 0.0
+        private var direction = 1.0
+        private var done: CheckedContinuation<Void, Never>?
+
+        init(scroller: UIScrollView, speed: Double, seconds: Double) {
+            self.scroller = scroller
+            self.speed = speed
+            self.seconds = seconds
+        }
+
+        func go() async {
+            await withCheckedContinuation { continuation in
+                done = continuation
+                let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
+                link.add(to: .main, forMode: .common)
+                self.link = link
+            }
+        }
+
+        @objc private func tick(_ link: CADisplayLink) {
+            defer { lastStamp = link.timestamp }
+            guard lastStamp > 0 else { return }
+            let gap = link.timestamp - lastStamp
+            let frame = max(link.targetTimestamp - link.timestamp, 1.0 / 120)
+            gaps.append(gap)
+            if gap > frame * 1.5 { hitchSeconds += gap - frame }
+            elapsed += gap
+            guard elapsed < seconds, scroller.window != nil else {
+                link.invalidate()
+                self.link = nil
+                done?.resume()
+                done = nil
+                return
+            }
+            let top = -scroller.adjustedContentInset.top
+            let bottom = max(top, scroller.contentSize.height - scroller.bounds.height + scroller.adjustedContentInset.bottom)
+            var y = scroller.contentOffset.y + direction * speed * min(gap, 0.25)
+            if y >= bottom { y = bottom; direction = -1 }
+            if y <= top { y = top; direction = 1 }
+            distance += abs(y - scroller.contentOffset.y)
+            scroller.contentOffset = CGPoint(x: scroller.contentOffset.x, y: y)
+        }
+    }
+
+    /// CPU seconds the calling thread has used (call it on the main thread).
+    private static func mainThreadCPU() -> Double {
+        var info = thread_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<thread_basic_info>.size / MemoryLayout<integer_t>.size)
+        let thread = mach_thread_self()
+        defer { mach_port_deallocate(mach_task_self_, thread) }
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                thread_info(thread, thread_flavor_t(THREAD_BASIC_INFO), $0, &count)
+            }
+        }
+        guard result == KERN_SUCCESS else { return 0 }
+        return Double(info.user_time.seconds) + Double(info.user_time.microseconds) / 1_000_000
+            + Double(info.system_time.seconds) + Double(info.system_time.microseconds) / 1_000_000
+    }
+
+    /// CPU seconds the whole process has used, every thread.
+    private static func processCPU() -> Double {
+        var usage = rusage()
+        guard getrusage(RUSAGE_SELF, &usage) == 0 else { return 0 }
+        return Double(usage.ru_utime.tv_sec) + Double(usage.ru_utime.tv_usec) / 1_000_000
+            + Double(usage.ru_stime.tv_sec) + Double(usage.ru_stime.tv_usec) / 1_000_000
     }
 }
 #endif

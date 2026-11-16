@@ -1263,6 +1263,15 @@ struct ReadingSessionView: View {
                                   rightIDs: answeredRight.map { ($0.item.arabic, $0.tier.id) })
         }
         withAnimation(.easeInOut) { finished = true }
+        // The results are on screen: the review prompt hears how the round went (AppReview.swift). A
+        // strong score may ask, a weak one keeps it quiet, anything between is a natural break. The
+        // placement and the Speed Round are not scored that way.
+        switch mode {
+        case .placement, .speed:
+            AppReviewManager.shared.notePause()
+        default:
+            AppReviewManager.shared.noteFinishedRun(correct: right, attempts: questions.count)
+        }
     }
 
     /// A listening question says its word as it arrives.

@@ -77,6 +77,31 @@ final class HadithRankedSearchTests: XCTestCase {
         }
     }
 
+    /// A chapter that names a GROUP of narrators (the Musnad's books: "the Women", "the Ansar") is
+    /// not about its name. Before the rule "النساء" gave 194 of its first 200 places to rows of the
+    /// Women's musnad that never mention women; its rows are found by their own words now. A
+    /// Companion's own musnad keeps its worth, as it always had.
+    func testNarratorGroupChaptersAreNotAboutTheirNames() async throws {
+        let books = try await openedShelf()
+        let ahmed = try XCTUnwrap(books.first { $0.book.slug == "ahmed" })
+        // every book of the Musnad after the Ten is a group, and the musnads of the Ten are not
+        for chapter in ahmed.data.chapters {
+            let ownMusnad = (1...7).contains(chapter.id) || (108...111).contains(chapter.id)
+            XCTAssertEqual(HadithRankedSearch.namesNarratorGroup(chapterID: chapter.id, slug: "ahmed"), !ownMusnad,
+                           "\(chapter.id) \(chapter.english)")
+        }
+        XCTAssertFalse(HadithRankedSearch.namesNarratorGroup(chapterID: 31, slug: "bukhari"))
+
+        for query in ["النساء", "الأنصار", "الصحابة"] {
+            let found = try search(query, in: books, cap: 200)
+            XCTAssertEqual(found.rows.count, 200, query)
+            XCTAssertLessThan(found.rows.filter { $0.reference.hasPrefix("ahmed:") }.count, 20, query)
+        }
+        let umar = try search("umar", in: books)
+        XCTAssertFalse(umar.rows.isEmpty)
+        for row in umar.rows { XCTAssertTrue(row.reference.hasPrefix("ahmed:"), row.reference) }
+    }
+
     func testSeveralWordsAndTypos() async throws {
         let books = try await openedShelf()
         let anger = try search("controlling anger", in: books)

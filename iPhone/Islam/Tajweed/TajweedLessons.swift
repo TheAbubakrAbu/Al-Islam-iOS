@@ -723,6 +723,9 @@ struct TajweedLessonDetailView: View {
             Button {
                 Settings.shared.hapticFeedback()
                 progress.toggle(lesson.id)
+                // A lesson marked done is a small win for the review prompt (AppReview.swift), and
+                // with the lesson over, a moment it may ask at.
+                if progress.isDone(lesson.id) { AppReviewManager.shared.celebrate(.small) }
             } label: {
                 HStack {
                     Spacer()

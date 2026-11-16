@@ -8,10 +8,63 @@ import SwiftUI
 /// The UIKit color a share renderer draws with (ShareName.swift passes the accent this way).
 extension Color { var uiColor: UIColor { UIColor(self) } }
 
-/// Whether a share sheet sends the words or a drawn card.
+/// Whether a share sheet sends the words, a drawn card, or a link that opens the app on them
+/// (AppLink.swift). Only `text` and `image` are ever stored as the sheet's last mode: a link is a
+/// one-off, and the Copy shortcuts that read the stored mode know only those two.
 enum ActionMode: String {
     case text
     case image
+    case link
+
+    /// The mode a sheet reopens in: the stored one, never Link.
+    static func restored(_ raw: String) -> ActionMode {
+        let mode = ActionMode(rawValue: raw) ?? .image
+        return mode == .link ? .image : mode
+    }
+}
+
+/// The share sheets' Link preview: what the link opens, the address itself, and what happens for
+/// someone without the app. Drawn on the dark card the Text preview uses, so the three modes swap in
+/// one slot.
+struct ShareLinkPreview: View {
+    @Environment(\.appearance) private var appearance
+    let title: String
+    let link: AppLink
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "link")
+                .font(.title3.weight(.semibold))
+                .foregroundColor(appearance.accent)
+                .frame(width: 48, height: 48)
+                .background(Circle().fill(appearance.accent.opacity(0.22)))
+
+            Text(title)
+                .font(.headline)
+                .foregroundColor(.white)
+                .multilineTextAlignment(.center)
+
+            Text(verbatim: link.url.absoluteString)
+                .font(.footnote.monospaced())
+                .foregroundColor(.white.opacity(0.72))
+                .multilineTextAlignment(.center)
+                .textSelection(.enabled)
+                .environment(\.layoutDirection, .leftToRight)
+
+            Text("Opens this in \(AppIdentifiers.displayName). Without the app, it opens the App Store.")
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.55))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 24)
+        .frame(maxWidth: .infinity)
+        .background(Color.black)
+        .cornerRadius(24)
+        .padding(.horizontal, 16)
+        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+    }
 }
 
 enum ShareAyahRender {

@@ -10,13 +10,11 @@ import UIKit
 // shared as an image. Nothing is merged here: the pack shipped the tree; the page lays it out.
 // Since 2026-10-31 the tree sits on a canvas the reader pinches to zoom and drags in both directions
 // (Abu: "allow me to zoom in and out for tree of narrators"), the generations closer together, and
-// each name carries its English when the chain sheet's switch is on.
+// each name carries its English under it, always (Abu, 2026-11-15: "Don't have a button for chain of
+// narrators to be English just always have it"; it was a switch from 2026-10-31 until then).
 
 /// The door to the tree, the row the three pages share: drawn like the same-chain door.
 struct HadithIsnadTreeDoor: View {
-    /// The accent off the environment, so an accent change redraws this view (a bare `Settings` read
-    /// in a view that observes nothing kept the old colour).
-    @Environment(\.appearance) private var appearance
     private let settings = Settings.shared
 
     let summary: HadithIsnadTreesPack.Summary
@@ -27,25 +25,15 @@ struct HadithIsnadTreeDoor: View {
             settings.hapticFeedback()
             open()
         } label: {
-            HStack {
-                Label {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Tree of Narrators")
-                            .foregroundColor(.primary)
-                        Text(String(localized: "\(summary.narrations) narrations") + " · " + String(localized: "\(summary.books) books"))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                } icon: {
-                    Image(systemName: "arrow.triangle.branch")
-                        .foregroundColor(appearance.accent)
-                }
-                Spacer()
-                Image(systemName: "chevron.forward")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .contentShape(Rectangle())
+            // The app's door row (`SettingsRowLabel`): the accent chip, the title over its caption,
+            // the chevron. It drew its own bare glyph and chevron until 2026-11-15.
+            // A tree inside one book says only how many narrations it joins ("3 narrations", not
+            // "3 narrations · 1 books").
+            SettingsRowLabel(title: String(localized: "Tree of Narrators"), systemImage: "arrow.triangle.branch",
+                             subtitle: String(localized: "\(summary.narrations) narrations")
+                                + (summary.books == 1 ? "" : " · " + String(localized: "\(summary.books) books")),
+                             showsChevron: true)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -491,7 +479,6 @@ final class FittingScrollView: UIScrollView {
 /// similar wording.
 struct HadithIsnadTreeView: View {
     @Environment(\.appearance) private var appearance
-    @AppStorage(HadithChainSheet.englishKey) private var showsEnglish = true
     private let settings = Settings.shared
 
     let book: HadithCatalogBook
@@ -543,7 +530,7 @@ struct HadithIsnadTreeView: View {
             shown = tree.pruned { slug, idInBook in !similar.contains("\(slug):\(idInBook)") }
         }
         guard let shown else { return nil }
-        return (shown, HadithIsnadTreeLayout(tree: shown, source: (book.slug, hadith.idInBook), english: showsEnglish))
+        return (shown, HadithIsnadTreeLayout(tree: shown, source: (book.slug, hadith.idInBook), english: true))
     }
 
     var body: some View {
@@ -568,7 +555,10 @@ struct HadithIsnadTreeView: View {
         }
         .accentWashedBackground()
         .toolbar {
-            ToolbarItem(placement: .primaryAction) { optionsMenu }
+            // Only a tree with narrations of similar wording has a choice to offer.
+            if !similar.isEmpty {
+                ToolbarItem(placement: .primaryAction) { optionsMenu }
+            }
         }
         .pushDestination(item: $pushedNarrator) { narratorID in
             HadithNarratorView(narratorID: narratorID)
@@ -606,7 +596,7 @@ struct HadithIsnadTreeView: View {
                         let width = HadithIsnadTreeShareCard.width(for: drawn.layout)
                         IsnadShareButton(label: String(localized: "Share"),
                                          title: String(localized: "Tree of Narrators") + " · " + reference,
-                                         salt: scope.rawValue + (showsEnglish ? "en" : ""), width: width,
+                                         salt: scope.rawValue + "en", width: width,
                                          // A tree too wide for 2x is rendered smaller, never past 8,192 px a side.
                                          scale: min(2, 8192 / max(width, drawn.layout.height + 140)),
                                          debugArgument: "-shareIsnadTree") {
@@ -681,21 +671,17 @@ struct HadithIsnadTreeView: View {
         zoomRequest = HadithTreeZoomRequest(kind: kind, serial: zoomSerial)
     }
 
-    /// The scope and the English, in the slider menu every list of these pages carries.
+    /// The scope, in the slider menu every list of these pages carries. (The English names were a
+    /// switch here too until 2026-11-15; they are always drawn now.)
     private var optionsMenu: some View {
         Menu {
-            if !similar.isEmpty {
-                Section("Narrations") {
-                    Picker("Narrations", selection: Binding(get: { scope }, set: { scope = $0; settings.hapticFeedback() })) {
-                        ForEach(Scope.allCases) { choice in
-                            Text(choice.title).tag(choice)
-                        }
+            Section("Narrations") {
+                Picker("Narrations", selection: Binding(get: { scope }, set: { scope = $0; settings.hapticFeedback() })) {
+                    ForEach(Scope.allCases) { choice in
+                        Text(choice.title).tag(choice)
                     }
-                    .pickerStyle(.inline)
                 }
-            }
-            Toggle(isOn: Binding(get: { showsEnglish }, set: { showsEnglish = $0; settings.hapticFeedback() })) {
-                Label("English Names", systemImage: "character.book.closed")
+                .pickerStyle(.inline)
             }
         } label: {
             Image(systemName: "slider.horizontal.3")

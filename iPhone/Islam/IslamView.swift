@@ -37,6 +37,9 @@ struct IslamView: View {
     /// Where `scrollTarget` lands on screen: the top, unless a DEBUG scroll asked for the bottom.
     @State private var scrollAnchor: UnitPoint = .top
     @StateObject private var articleSearch = IslamArticleSearchModel()
+    /// A shared link's page (an article, a sunnah, a prophecy), pushed on the tab: the iPhone stack
+    /// pushes it over the list, the iPad over the resource it belongs to (`openLinkedPage`).
+    @State private var linkedPage: IslamLinkedPage?
 
     #if DEBUG
     /// `-islamOpenArticle <catalog id>` (with `-articleSection <HEADING>` alongside): what tapping an
@@ -575,15 +578,25 @@ struct IslamView: View {
         IslamDestination.available.filter { settings.isIslamResourceFavorite($0.rawValue) }
     }
 
+    @ViewBuilder
     private func favoriteToggleButton(_ item: IslamDestination) -> some View {
         let isFavorite = settings.isIslamResourceFavorite(item.rawValue)
-        return Button {
+        Button {
             settings.hapticFeedback()
             withAnimation(.easeInOut) {
                 settings.toggleIslamResourceFavorite(item.rawValue)
             }
         } label: {
             Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.fill" : "star")
+        }
+        // A link that opens this resource in the app (AppLink.swift). Not the journal: its pages
+        // are the reader's own, and a link to them would open someone else's empty one.
+        if item != .journal {
+            Button {
+                AppLinkShare.share(.resource(item.rawValue), title: item.displayTitle)
+            } label: {
+                Label("Share Link", systemImage: "link")
+            }
         }
     }
     #endif
@@ -623,6 +636,13 @@ struct IslamView: View {
                 case .names(let number):
                     NamesViewModel.shared.pendingNameNumber = number
                     destination = .namesOfAllah
+                case .resource(let raw):
+                    // A shared link's resource, if this build lists it; the tab itself if not.
+                    destination = IslamDestination.available.first { $0.rawValue.caseInsensitiveCompare(raw) == .orderedSame }
+                    if destination == nil { AppNavigation.shared.pendingIslam = nil }
+                case .page(let page):
+                    openLinkedPage(page)
+                    destination = nil
                 #if HAS_QURAN || HAS_HADITH
                 case .hadithTab: destination = nil
                 #endif
@@ -788,6 +808,9 @@ struct IslamView: View {
             .compactListSectionSpacing()
             .reminderCardDestination($reminderDoor)
             .navigationTitle("Al-Islam")
+            .pushDestination(item: $linkedPage) { page in
+                linkedPageView(page, overItsResource: false)
+            }
             #if DEBUG
             .debugPushDestination(isPresented: $debugOpenArticle) {
                 if let debug = Self.debugArticleRequest {
@@ -832,6 +855,13 @@ struct IslamView: View {
             // A real visit inflates the corpus ahead of the first keystroke; the under-cover tab walk
             // also lands here, and that inflate belongs to the root's post-reveal schedule instead.
             if AppReveal.revealed { IslamArticleSearchModel.prewarm() }
+            // Back on this tab's own list (a resource closed) is a natural break for the review
+            // prompt (AppReview.swift): the tasbih, the duas, the lesson or the article is over. Not
+            // under the launch cover's tab walk, and not when a reminder card's "Open" is about to
+            // push a resource here.
+            if AppReveal.revealed, AppNavigation.shared.pendingIslam == nil {
+                AppReviewManager.shared.notePause()
+            }
             #if DEBUG
             // `-islamScrollToApps`: bring the app tiles at the foot of the list into a screenshot.
             if ProcessInfo.processInfo.arguments.contains("-islamScrollToApps") {
@@ -1234,7 +1264,8 @@ struct IslamView: View {
             clear: !settings.isIslamResourceFavorite(item.rawValue),
             rectangle: true,
             useColor: settings.isIslamResourceFavorite(item.rawValue) ? 0.25 : nil,
-            customTint: settings.isIslamResourceFavorite(item.rawValue) ? settings.accentColor.color : nil
+            customTint: settings.isIslamResourceFavorite(item.rawValue) ? settings.accentColor.color : nil,
+            inRow: true
         )
     }
 
@@ -1262,7 +1293,8 @@ struct IslamView: View {
             clear: !settings.isIslamResourceFavorite(item.rawValue),
             rectangle: true,
             useColor: settings.isIslamResourceFavorite(item.rawValue) ? 0.25 : nil,
-            customTint: settings.isIslamResourceFavorite(item.rawValue) ? settings.accentColor.color : nil
+            customTint: settings.isIslamResourceFavorite(item.rawValue) ? settings.accentColor.color : nil,
+            inRow: true
         )
     }
 
@@ -1456,7 +1488,108 @@ struct IslamView: View {
         // sidebar selection changes. Without this the detail could get "stuck" on a previous item after the
         // view disappeared and came back on iPad/Mac.
         destinationView(for: selectedResource ?? .arabicAlphabet)
+            .pushDestination(item: $linkedPage) { page in
+                linkedPageView(page, overItsResource: true)
+            }
             .id(islamDetailIdentity)
+    }
+
+    /// A shared link's page lands (AppLink.swift). On the iPhone the stack goes back to the tab and
+    /// the page is pushed over it; in the iPad's columns the sidebar selects the resource the page
+    /// belongs to and the page is pushed over that resource in the detail column. Either push
+    /// waits for the stack under it to settle, like every programmatic push on this tab.
+    private func openLinkedPage(_ page: IslamLinkedPage) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            AppNavigation.shared.pendingIslam = nil
+            guard #available(iOS 16.0, *) else { return }
+            linkedPage = nil
+            var settles = false
+            if columnLayoutActive {
+                selectedResource = Self.resource(owning: page)
+                islamDetailRefreshToken += 1
+                settles = true
+            } else if !islamPath.isEmpty {
+                islamPath.removeAll()
+                settles = true
+            }
+            Task { @MainActor in
+                // The Miracles library parses on first use; off the main thread and BEFORE the push,
+                // so the page opens on its text and never on a spinner.
+                if case .miracle = page {
+                    _ = await Task.detached(priority: .userInitiated) { MiraclesStore.shared.library() }.value
+                }
+                if settles { try? await Task.sleep(nanoseconds: 450_000_000) }
+                linkedPage = page
+            }
+        }
+    }
+
+    private static func resource(owning page: IslamLinkedPage) -> IslamDestination {
+        switch page {
+        case .article(let id):
+            switch IslamArticleCatalog.byID[id]?.home {
+            case .guides: return .howToGuides
+            case .proving: return .provingIslam
+            case .pillars, .none: return .pillarsAndBasics
+            }
+        case .sunnah: return .sunnahsOfProphet
+        case .prophecy: return .propheciesOfProphet
+        case .prophetMiracle: return .miraclesOfProphets
+        case .miracle: return .miraclesOfQuran
+        }
+    }
+
+    /// The screen a linked page is. `overItsResource`: the iPad's detail column already shows the
+    /// page's index under the push, so a catalog article opens alone there; on the iPhone it stacks
+    /// on its index (Islam, Pillars & Beliefs, Shahadah), the way a search result opens it.
+    ///
+    /// An article page carries no Islam Settings gear of its own, as when it is opened from its
+    /// index; the gear goes on the screens that are a resource's root (the index under an article,
+    /// and the fallbacks below).
+    ///
+    /// A page this build does not carry (a later version's article) opens the library it would have
+    /// been in: the link still lands somewhere that makes sense. The router already sends such a
+    /// link to the library, so these are the fallbacks of a fallback.
+    @ViewBuilder
+    private func linkedPageView(_ page: IslamLinkedPage, overItsResource: Bool) -> some View {
+        switch page {
+        case .article(let id):
+            if let entry = IslamArticleCatalog.byID[id] {
+                if overItsResource {
+                    IslamArticleCatalog.destination(entry)
+                } else {
+                    IslamArticleCatalog.homeDestination(entry.home, opening: IslamArticleOpenRequest(id: entry.id))
+                        .islamSettingsToolbar()
+                }
+            } else {
+                PillarsView().islamSettingsToolbar()
+            }
+        case .sunnah(let id):
+            if let entry = SunnahView.entries.first(where: { $0.id == id }) {
+                SunnahArticleView(entry: entry)
+            } else {
+                SunnahView().openScreen(.sunnahLibrary).islamSettingsToolbar()
+            }
+        case .prophecy(let id):
+            if let entry = PropheciesView.entries.first(where: { $0.id == id }) {
+                ProphecyArticleView(entry: entry)
+            } else {
+                PropheciesView().openScreen(.propheciesLibrary).islamSettingsToolbar()
+            }
+        case .prophetMiracle(let id):
+            if let entry = ProphetMiraclesView.entries.first(where: { $0.id == id }) {
+                ProphetMiracleArticleView(entry: entry)
+            } else {
+                ProphetMiraclesView().openScreen(.prophetMiraclesLibrary).islamSettingsToolbar()
+            }
+        case .miracle(let slug):
+            // Parsed before the push (`openLinkedPage`), so this lookup is a dictionary read.
+            if let article = MiraclesStore.shared.article(slug: slug) {
+                MiracleArticleView(article: article)
+            } else {
+                MiraclesView().openScreen(.miraclesLibrary).islamSettingsToolbar()
+            }
+        }
     }
 
     /// Every resource carries the Islam Settings gear at its top right (Abu, 2026-09-20). Applied HERE,

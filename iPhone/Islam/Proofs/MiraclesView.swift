@@ -913,6 +913,11 @@ struct MiracleArticleView: View {
                     } label: {
                         Label("Share Article", systemImage: "square.and.arrow.up")
                     }
+                    Button {
+                        AppLinkShare.share(.miracle(article.slug), title: article.title)
+                    } label: {
+                        Label("Share Link", systemImage: "link")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }

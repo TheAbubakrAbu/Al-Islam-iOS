@@ -53,6 +53,15 @@ final class PrayerNotificationCategoryTests: XCTestCase {
         return try XCTUnwrap(list.first { $0.nameTransliteration == name }, "no \(name) on day \(dayOffset)")
     }
 
+    /// The midday prayer's name on the day the tests run: "Dhuhr", or "Jumuah" on a Friday. The two
+    /// tests that name it failed every Friday (2026-11-13: "no Dhuhr on day 0", and "30m until Asr"
+    /// asking about PRAYER_ASK:Jumuah), the trap `AdhanCatchUpOfferTests` already steps round.
+    private func middayName() throws -> String {
+        let list = try XCTUnwrap(Settings.shared.getPrayerTimes(for: Date(), fullPrayers: true))
+        return try XCTUnwrap(list.map(\.nameTransliteration).first { $0 == "Dhuhr" || $0 == "Jumuah" },
+                             "no midday prayer today")
+    }
+
     /// The category the scheduler gives a notification `minutesBefore` the named time, resolved the
     /// way `makePrayerNotificationRequest` resolves it.
     private func category(for name: String, minutesBefore: Int, dayOffset: Int = 0) throws -> String {
@@ -67,13 +76,14 @@ final class PrayerNotificationCategoryTests: XCTestCase {
 
     /// The adhan asks about the prayer that just began: one "yes", since nothing can be late yet.
     func testTheAdhanOffersOneYes() throws {
-        XCTAssertEqual(try category(for: "Dhuhr", minutesBefore: 0), "PRAYER_ASK:Dhuhr")
+        let midday = try middayName()
+        XCTAssertEqual(try category(for: midday, minutesBefore: 0), "PRAYER_ASK:\(midday)")
         XCTAssertEqual(try category(for: "Maghrib", minutesBefore: 0), "PRAYER_ASK:Maghrib")
     }
 
-    /// "30m until Asr" asks about Dhuhr, whose window is still open when it fires.
+    /// "30m until Asr" asks about Dhuhr (Jumuah on a Friday), whose window is still open when it fires.
     func testAReminderBeforeTheNextPrayerAsksAboutThePreviousOneWithoutLate() throws {
-        XCTAssertEqual(try category(for: "Asr", minutesBefore: 30), "PRAYER_ASK:Dhuhr")
+        XCTAssertEqual(try category(for: "Asr", minutesBefore: 30), "PRAYER_ASK:\(try middayName())")
         XCTAssertEqual(try category(for: "Isha", minutesBefore: 15), "PRAYER_ASK:Maghrib")
     }
 

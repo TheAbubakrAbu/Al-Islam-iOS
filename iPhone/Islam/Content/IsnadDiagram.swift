@@ -141,19 +141,29 @@ struct IsnadDiagram: View {
     private func layerTitle(_ title: String, subtitle: String? = nil, tracking: CGFloat) -> some View {
         if title.isEmpty {
             EmptyView()
-        } else if title.unicodeScalars.contains(where: { (0x0600...0x06FF).contains($0.value) }) {
-            VStack(spacing: 1) {
-                Text(verbatim: title)
-                    .font(appearance.islamArabicFont(base: hadith ? 18 : 15, relativeTo: .caption))
-                    .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
-                    .foregroundStyle(forImage ? Color.black.opacity(0.55) : Color.secondary)
-                    .lineLimit(1)
-                if let subtitle, !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.caption2)
-                        .foregroundStyle(forImage ? Color.black.opacity(0.5) : Color.secondary)
+        } else if Self.isArabic(title) {
+            let word = Text(verbatim: title)
+                .font(appearance.islamArabicFont(base: hadith ? 18 : 15, relativeTo: .caption))
+                .foregroundColor(forImage ? Color.black.opacity(hadith ? 0.7 : 0.55) : (hadith ? Color.primary.opacity(0.75) : Color.secondary))
+            let meaning = Text(subtitle ?? "")
+                .font(hadith ? .caption2.weight(.medium) : .caption2)
+                .foregroundColor(forImage ? Color.black.opacity(0.5) : Color.secondary)
+            if hadith {
+                // The word of transmission as the label of its link (Abu, 2026-11-15: "Make chain of
+                // narrators ... look prettier"): a capsule the line runs into and out of, the word and
+                // its meaning on one line where the column is wide enough, stacked where it is not
+                // (two or three roads side by side). It was loose grey text between two cards.
+                transmissionCapsule(word: word, meaning: (subtitle ?? "").isEmpty ? nil : meaning)
+            } else {
+                VStack(spacing: 1) {
+                    word
+                        .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                    if let subtitle, !subtitle.isEmpty {
+                        meaning
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
                 }
             }
         } else {
@@ -167,6 +177,64 @@ struct IsnadDiagram: View {
         }
     }
 
+    private static func isArabic(_ text: String) -> Bool {
+        text.unicodeScalars.contains(where: { (0x0600...0x06FF).contains($0.value) })
+    }
+
+    private func transmissionCapsule(word: Text, meaning: Text?) -> some View {
+        let arabic = word
+            .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+            .lineLimit(1)
+            .fixedSize()
+        return Group {
+            if let meaning {
+                if #available(iOS 16.0, *) {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .firstTextBaseline, spacing: 7) {
+                            arabic
+                            meaning.lineLimit(1).fixedSize()
+                        }
+                        VStack(spacing: 0) {
+                            arabic
+                            meaning.lineLimit(1).minimumScaleFactor(0.8)
+                        }
+                    }
+                } else {
+                    VStack(spacing: 0) {
+                        arabic
+                        meaning.lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                }
+            } else {
+                arabic
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 3)
+        .background(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(accent.opacity(0.07)))
+        .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).strokeBorder(accent.opacity(0.3), lineWidth: 1))
+    }
+
+    /// A generation: its title, then its people. A hadith chain's word of transmission sits on the
+    /// link itself, so a short stem runs on from its capsule to the narrator who received by it;
+    /// every other title stands `gap` above its people, as it always has.
+    private func generation<People: View>(_ layer: IsnadLayer, tracking: CGFloat, gap: CGFloat,
+                                          @ViewBuilder people: () -> People) -> some View {
+        VStack(spacing: 0) {
+            if !layer.title.isEmpty {
+                layerTitle(layer.title, subtitle: layer.subtitle, tracking: tracking)
+                if hadith, Self.isArabic(layer.title) {
+                    Rectangle()
+                        .fill(accent.opacity(0.45))
+                        .frame(width: 2, height: 8)
+                } else {
+                    Color.clear.frame(height: gap)
+                }
+            }
+            people()
+        }
+    }
+
     /// One road, top-down: a chevron from the split, then each layer stacked (a column is too narrow to
     /// set two people side by side).
     private func branchColumn(_ branch: IsnadBranch) -> some View {
@@ -177,11 +245,11 @@ struct IsnadDiagram: View {
                 .padding(.bottom, 4)
 
             ForEach(Array(branch.layers.enumerated()), id: \.offset) { index, layer in
-                VStack(spacing: 6) {
-                    layerTitle(layer.title, subtitle: layer.subtitle, tracking: 0.6)
-
-                    ForEach(layer.nodes) { node in
-                        nodeChip(node)
+                generation(layer, tracking: 0.6, gap: 6) {
+                    VStack(spacing: 6) {
+                        ForEach(layer.nodes) { node in
+                            nodeChip(node)
+                        }
                     }
                 }
                 if index < branch.layers.count - 1 {
@@ -209,9 +277,7 @@ struct IsnadDiagram: View {
     }
 
     private func layerBlock(_ layer: IsnadLayer) -> some View {
-        VStack(spacing: hadith ? 6 : 8) {
-            layerTitle(layer.title, subtitle: layer.subtitle, tracking: 0.8)
-
+        generation(layer, tracking: 0.8, gap: hadith ? 6 : 8) {
             if layer.nodes.count == 1, let node = layer.nodes.first {
                 nodeChip(node)
                     .frame(maxWidth: 300)
@@ -284,27 +350,33 @@ struct IsnadDiagram: View {
                     .multilineTextAlignment(.center)
             }
 
-            // The one sign a chip opens something: a small person glyph under the name.
+        }
+        // A chip that opens its narrator keeps room at its far side for the chevron that says so
+        // (it was a small card glyph under the name, a line of its own in every chip).
+        .padding(.horizontal, tappable ? 22 : 10)
+        .padding(.vertical, hadith ? 9 : 8)
+        .frame(maxWidth: .infinity)
+        .overlay(alignment: .trailing) {
             if tappable {
-                Image(systemName: "person.text.rectangle")
-                    .font(.caption2)
-                    .foregroundColor(filled ? Color.white.opacity(0.85) : accent.opacity(0.8))
-                    .padding(.top, 1)
+                Image(systemName: "chevron.forward")
+                    .font(.caption2.weight(.bold))
+                    .foregroundColor(filled ? Color.white.opacity(0.8) : accent.opacity(0.55))
+                    .padding(.trailing, 9)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity)
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(filled
                       ? AnyShapeStyle(LinearGradient(colors: [accent, accent.opacity(0.75)], startPoint: .topLeading, endPoint: .bottomTrailing))
                       : AnyShapeStyle(accent.opacity(node.role == .student ? 0.06 : 0.1)))
+                // The two ends of a hadith chain, the Prophet ﷺ and the collector, stand a little
+                // off the page.
+                .shadow(color: hadith && filled ? accent.opacity(0.28) : .clear, radius: 6, x: 0, y: 3)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(accent.opacity(outlined ? 0.55 : 0), lineWidth: 1.5)
+                .strokeBorder(accent.opacity(outlined ? 0.55 : (hadith && !filled ? 0.16 : 0)), lineWidth: outlined ? 1.5 : 1)
         )
     }
 }
@@ -472,14 +544,27 @@ struct IsnadShareButton<Card: View>: View {
         Button {
             share()
         } label: {
-            HStack {
-                Label(label, systemImage: "square.and.arrow.up")
-                    .font(.subheadline.weight(.medium))
-                Spacer()
-                if preparing { ProgressView() }
+            // One soft button the width of the chain it shares, the spinner in the glyph's place
+            // while the image is made (it was a line of accent text with the spinner at the far edge).
+            HStack(spacing: 8) {
+                if preparing {
+                    ProgressView()
+                } else {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                Text(label)
+                    .multilineTextAlignment(.center)
             }
+            // The label reads the interface's way. The direction this button SITS in is the
+            // diagram's (right to left for a hadith chain), which only the image should take.
+            .environment(\.layoutDirection, AppLanguage.isRightToLeft ? .rightToLeft : .leftToRight)
+            .font(.subheadline.weight(.semibold))
             .foregroundColor(appearance.accent)
-            .contentShape(Rectangle())
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 12)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(appearance.accent.opacity(0.1)))
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.borderless)
         .disabled(preparing)

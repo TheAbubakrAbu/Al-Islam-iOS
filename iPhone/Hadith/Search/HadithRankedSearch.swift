@@ -84,6 +84,24 @@ enum HadithRankedSearch {
         case bookAndChapters, chapters, none
     }
 
+    /// Whether a chapter's name is a GROUP of narrators: the books of the Musnad of Ahmad after the
+    /// Ten ("the Women", "the Ansar", "the Makkans", "the Companions who narrated most"). A chapter
+    /// name pays because it says what its narrations are ABOUT; these say who narrated them, and
+    /// they sit over thousands of rows each. Measured 2026-11-12, the day those books became the
+    /// Musnad's chapters: "النساء" filled 194 of the first 200 places with rows of the Women's
+    /// musnad that never mention women, above every narration in the other books that does, and
+    /// "الأنصار" 165 of 200. Their names earn a row nothing now, and the rows are found by their
+    /// own words like any other.
+    ///
+    /// The ids are the engine's (tools/musnad): a book's chapter is 1400 + its place among the
+    /// print's thirteen, and the book of those who narrated most is 31, the id the rows of Abu
+    /// Rimthah inside it always had. A Companion's own musnad (Umar, Ali, Sa'd: 1 to 7 and 108 to
+    /// 111) is not a group and keeps the worth it has always had: "umar" still leads with what
+    /// Umar narrated.
+    static func namesNarratorGroup(chapterID: Int, slug: String) -> Bool {
+        slug == "ahmed" && (chapterID == 31 || (1401...1413).contains(chapterID))
+    }
+
     struct BookOutcome {
         let hits: [Hit]
         let relaxed: Bool
@@ -288,7 +306,10 @@ enum HadithRankedSearch {
         }
         var buckets: [Int: Bucket] = [:]
         for chapter in data.chapters where titles != .none {
-            let fold = query.isArabic ? chapter.foldArabic : chapter.foldEnglish
+            // A chapter that names a GROUP of narrators says who narrated its rows, never what they
+            // are about (`namesNarratorGroup`): its name earns them nothing, the book's still does.
+            let fold = Self.namesNarratorGroup(chapterID: chapter.id, slug: book.slug) ? ""
+                : (query.isArabic ? chapter.foldArabic : chapter.foldEnglish)
             var primary = [Int](repeating: 0, count: tokenCount)
             var matched = Set<Int>()
             for (index, token) in query.tokens.enumerated() {

@@ -413,7 +413,9 @@ struct AdhanView: View {
                 .accessibilityLabel("Adhan Settings")
             }
         }
-        .sheet(item: $settingsSheet) { target in
+        // Closing a sheet opened from this tab is a natural break for the review prompt (AppReview.swift),
+        // here and on the glance sheets below. Not the Qibla sheet: whoever closes that is about to pray.
+        .sheet(item: $settingsSheet, onDismiss: { AppReviewManager.shared.notePause() }) { target in
             // Traveling Mode and Prayer Calculation open AS the sheet's page, already there as it slides
             // up. Pushed onto the settings root a beat after appear, the root showed first and the page
             // switched in mid-slide (Abu, 2026-10-31: "it opens glitchy").
@@ -448,15 +450,18 @@ struct AdhanView: View {
                         .environmentObject(settings)
                 }
                 .smallMediumSheetPresentation()
+                .onDisappear { AppReviewManager.shared.notePause() }
             case .homeLocation:
                 MapView(choosingPrayerTimes: false)
                     .environmentObject(settings)
                     .smallMediumSheetPresentation()
+                    .onDisappear { AppReviewManager.shared.notePause() }
             case let .qibla(bearing, distance):
                 QiblaSheet(bearing: bearing, distance: distance)
             case .weather:
                 #if HAS_WEATHER
                 WeatherDetailSheet()
+                    .onDisappear { AppReviewManager.shared.notePause() }
                 #else
                 EmptyView()
                 #endif
@@ -1180,6 +1185,8 @@ private struct CurrentLocationRow: View {
                     .environmentObject(settings)
             }
             .smallMediumSheetPresentation()
+            // Closing it is a natural break for the review prompt (AppReview.swift).
+            .onDisappear { AppReviewManager.shared.notePause() }
         }
         #endif
     }

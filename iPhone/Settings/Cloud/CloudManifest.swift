@@ -96,7 +96,7 @@ enum CloudManifest {
         "showDescription", "showDuha", "showEnglishMustafa", "showEnglishSaheeh", "showFavoriteLetters",
         "showFavoriteNames", "showFavorites", "showFullSurahRow", "showHadithArabic", "showHadithBookmarks",
         "showHadithEnglish", "showHadithFavoriteBooks", "showHadithOfTheDay", "showIslamFavorites", "showIslamicMidnight",
-        "showLastThird", "showMuqattaatHelper", "showOtherQiraatReciters", "showPageJuzDividers",
+        "showJumpRail", "showLastThird", "showMuqattaatHelper", "showOtherQiraatReciters", "showPageJuzDividers",
         "showPrayerInfo", "showSkyScene", "showSkyView", "showTajweedBareNuunMeem", "showTajweedColors",
         "showTajweedGeneralGhunnah", "showTajweedHamzatWaslSilent", "showTajweedIdghamBiGhunnahHeavy",
         "showTajweedIdghamBilaGhunnah", "showTajweedIkhfaa", "showTajweedIqlab", "showTajweedLamShamsiyah",

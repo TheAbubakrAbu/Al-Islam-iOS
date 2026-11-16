@@ -246,6 +246,7 @@
  "HadithSettings": {
   "fields": [
    "hadithArabicFontSize",
+   "hadithChainFirst",
    "hadithEnglishFontSize",
    "hadithOfTheDayHiddenDate",
    "highlightAllahNamesHadith",
@@ -255,6 +256,7 @@
   ],
   "keys": [
    "hadithArabicFontSize",
+   "hadithChainFirst",
    "hadithEnglishFontSize",
    "hadithOfTheDayHiddenDate",
    "hadithSearchHistoryData",
@@ -356,6 +358,7 @@
    "fontArabic",
    "fontArabicSize",
    "highlightAllahNames",
+   "highlightPlayingWords",
    "keepAyahSheetOpen",
    "keepAyahSheetOpenOnPlay",
    "khatmGroupByJuz",
@@ -439,6 +442,7 @@
    "englishFontSize",
    "fontArabicSize",
    "highlightAllahNames",
+   "highlightPlayingWords",
    "keepAyahSheetOpen",
    "keepAyahSheetOpenOnPlay",
    "khatmGroupByJuz",
@@ -525,11 +529,13 @@
    "keepScreenOnRaw",
    "launchTabChosen",
    "launchTabRaw",
+   "showJumpRail",
    "simpleMode",
    "startHereHidden",
    "startHereVisitedRaw",
    "tabSectionChoicesRaw",
-   "tabSectionsCollapsedRaw"
+   "tabSectionsCollapsedRaw",
+   "tutorialNudgesSeenRaw"
   ],
   "keys": [
    "THEfirstLaunch",
@@ -548,11 +554,13 @@
    "launchTab",
    "launchTabChosen",
    "quranGridMode",
+   "showJumpRail",
    "simpleMode",
    "startHereHidden",
    "startHereVisited",
    "tabSectionChoices",
-   "tabSectionsCollapsed"
+   "tabSectionsCollapsed",
+   "tutorialNudgesSeen"
   ]
  }
 }

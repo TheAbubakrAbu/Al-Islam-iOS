@@ -59,6 +59,11 @@ struct AppearanceEnvironment: Equatable {
     /// Not keyed on it, by design: the search field (system glass on every iOS 26, Classic Look or
     /// not, Abu's rule) and `adaptiveSafeArea` (a flip there recreated every List).
     var liquidGlass: Bool
+    /// `liquidGlass` for the glass that repeats down a scrolling list (a row's number pill, its
+    /// buttons, a grid tile): also false on a hot or 3 GB-class phone
+    /// (`PerformanceProfile.shouldPlainRowGlass`), where those shapes draw the Classic Look's fill and
+    /// everything else keeps its glass. `conditionalGlassEffect(inRow: true)` is what reads it.
+    var rowLiquidGlass: Bool
     /// The Islam tab's Arabic face (`Settings.nonQuranArabicFontName`) and whether it is a bundled face
     /// rather than "Basic". Carried here so the article pages (Pillars, Beliefs, How-to guides, and
     /// every `ScriptureQuote` in them) read their accent and faces from this one snapshot instead of
@@ -116,6 +121,7 @@ struct AppearanceEnvironment: Equatable {
 
     static func snapshot(_ settings: Settings, profile: PerformanceProfile) -> AppearanceEnvironment {
         let custom = settings.hasCustomThemeColors
+        let glass = liquidGlass(settings, profile: profile)
         return AppearanceEnvironment(
             accent: settings.accentColor.color,
             colorScheme: settings.colorScheme,
@@ -130,7 +136,8 @@ struct AppearanceEnvironment: Equatable {
             dropShadows: profile.shouldDropShadows,
             reduceAnimations: profile.shouldReduceAnimations,
             isReducedTier: profile.tier == .reduced,
-            liquidGlass: liquidGlass(settings, profile: profile),
+            liquidGlass: glass,
+            rowLiquidGlass: glass && !profile.shouldPlainRowGlass,
             islamArabicFontName: settings.nonQuranArabicFontName,
             islamUsesCustomArabicFace: settings.islamUsesCustomArabicFace,
             highlightAllahIslam: settings.highlightAllahNamesIslam,
@@ -337,6 +344,7 @@ struct AppearanceEnvironmentInjector: ViewModifier {
         environment.reduceAnimations = profile.shouldReduceAnimations
         environment.isReducedTier = profile.tier == .reduced
         environment.liquidGlass = AppearanceEnvironment.liquidGlass(Settings.shared, profile: profile)
+        environment.rowLiquidGlass = environment.liquidGlass && !profile.shouldPlainRowGlass
         #if DEBUG
         AppearanceChangeLog.note(environment)
         #endif
@@ -1643,6 +1651,7 @@ private struct SelectableArticleList: ViewModifier {
             styled(content, proxy: proxy)
                 .environment(\.articleScrollHandle, handle)
                 #if os(iOS)
+                .modifier(ArticleShareLink(articleID: article))
                 .modifier(ArticleAskAI(articleID: article, fallback: fallback))
                 #endif
                 .onAppear {
@@ -1682,6 +1691,35 @@ private struct SelectableArticleList: ViewModifier {
 }
 
 #if os(iOS)
+/// Every article page's link (Abu, 2026-11-15: "share links for specific thing in Al Islam like an
+/// article where it opens the article on their Al Islam app"): a share button in the navigation bar
+/// that hands the system share sheet the page's link (AppLink.swift). It opens this article in the
+/// app for anyone who has it, and the App Store for anyone who does not. Pages with no place of their
+/// own to open (the index pages, the tajweed and Arabic lessons) go without.
+private struct ArticleShareLink: ViewModifier {
+    let articleID: String?
+
+    func body(content: Content) -> some View {
+        if let articleID, let page = AppLink.articlePage(id: articleID) {
+            content.toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        AppLinkShare.share(page.link, title: page.title)
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.body.weight(.semibold))
+                    }
+                    .tint(Settings.shared.accentColor.color)
+                    .accessibilityLabel("Share Link")
+                    .accessibilityHint("Shares a link that opens this article")
+                }
+            }
+        } else {
+            content
+        }
+    }
+}
+
 /// Every article page's Ask AI (Abu, 2026-10-31: "Ask AI for each article and how to guide and
 /// prophecy and whatnot, literally every one"): a sparkles button in the navigation bar that opens the
 /// chat on the article, its questions about the article and every answer reading its sections first

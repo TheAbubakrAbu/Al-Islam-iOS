@@ -28,6 +28,28 @@ enum ModalPresence {
     }
 }
 
+/// Whether the software keyboard is up, which is to say someone is typing. The review prompt's
+/// readiness check reads it (AppDelegate.swift): a system dialog must never land on a half-typed
+/// search, note or question. Kept from the keyboard's own notifications, so a hardware keyboard,
+/// which posts none, is not seen: a floor, not a promise.
+@MainActor
+enum KeyboardPresence {
+    private(set) static var isUp = false
+    private static var installed = false
+
+    static func install() {
+        guard !installed else { return }
+        installed = true
+        let center = NotificationCenter.default
+        center.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { isUp = true }
+        }
+        center.addObserver(forName: UIResponder.keyboardDidHideNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { isUp = false }
+        }
+    }
+}
+
 /// The app's foreground/background orchestration, in one named place.
 ///
 /// This is deliberately NOT in `Settings`: a phase change touches several subsystems (playback

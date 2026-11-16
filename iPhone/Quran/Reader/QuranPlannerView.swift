@@ -110,8 +110,11 @@ extension Settings {
                 // shares the reminder; the planner refreshes its body on the next visit).
                 if quranRevisionPlan == nil { QuranPlannerReminder.cancel() }
                 // A finished khatm is the single best moment this app will ever have to ask for a
-                // rating. Every gate (cooldown, quota, engagement) re-checks inside the manager.
-                AppReviewManager.shared.requestAtMomentOfDelight()
+                // rating. Banked, not asked on the spot: this settle also runs when the last ayah is
+                // marked by scrolling past it, mid-reading. The asking waits for the next pause
+                // (leaving the reader, closing the planner), and every rule is checked again there
+                // (AppReview.swift).
+                AppReviewManager.shared.bank(.big)
             }
         } else if plan.completedDate != nil {
             // Khatm progress was reset (or marks removed) mid-plan - un-complete so the plan resumes.
@@ -527,7 +530,11 @@ struct QuranPlannerToolbarButton: View {
             }
         }
         .sheet(isPresented: $showingPlanner, onDismiss: {
-            guard let pending = pendingRead else { return }
+            guard let pending = pendingRead else {
+                // Closed without asking to read: a natural break for the review prompt (AppReview.swift).
+                AppReviewManager.shared.notePause()
+                return
+            }
             pendingRead = nil
             openReader(pending.surah, pending.ayah)
         }) {
@@ -1303,6 +1310,9 @@ struct QuranPlannerView: View {
                         withAnimation {
                             QuranRevisionMath.markNextUnrevisedAyahs(refs: progress.refs, settings: settings, count: progress.leftToday)
                         }
+                        // Today's revision is done: a small win for the review prompt, asked about
+                        // when the planner closes (AppReview.swift).
+                        AppReviewManager.shared.bank(.small)
                     }
                 }
                 .padding(.vertical, 2)
@@ -1503,6 +1513,9 @@ struct QuranPlannerView: View {
                         withAnimation {
                             QuranPlannerMath.markNextUnreadAyahs(quran: quranData.quran, settings: settings, count: leftToday)
                         }
+                        // Today's reading is done: a small win for the review prompt, asked about
+                        // when the planner closes (AppReview.swift).
+                        AppReviewManager.shared.bank(.small)
                     }
                 }
                 .padding(.vertical, 2)

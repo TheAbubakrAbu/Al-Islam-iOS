@@ -895,6 +895,10 @@ final class QuranPlayer: ObservableObject {
             self.offlineReciterSwitch = offlineSwitch
             self.showInternetAlert = true
             self.idleTimerSet(false)
+            #if os(iOS)
+            // A recitation that would not play: no review prompt on its heels (AppReview.swift).
+            AppReviewManager.shared.noteSetback(.major)
+            #endif
         }
     }
 
@@ -4345,6 +4349,10 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
             state.errorMessage = message
             self.statesByReciterID[reciterID] = state
             self.completeBackgroundEventsIfPossible()
+            #if os(iOS)
+            // A download that failed: no review prompt on its heels (AppReview.swift).
+            AppReviewManager.shared.noteSetback(.major)
+            #endif
         }
     }
 

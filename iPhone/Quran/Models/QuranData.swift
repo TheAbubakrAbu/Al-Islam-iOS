@@ -4428,7 +4428,9 @@ final class QuranData: ObservableObject {
         verseIndexWanted = true
         guard !isVerseSearchReady, !verseIndexBuildInFlight,
               let source = pendingVerseIndexSource else { return }
-        scheduleVerseSearchIndexBuild(qiraahKey: source.qiraahKey, surahs: source.surahs, priority: priority)
+        // For the riwayah on screen, not the one the load published: a riwayah switch reloads nothing,
+        // and a build for the load's riwayah was thrown away as stale when it landed (2026-11-11).
+        scheduleVerseSearchIndexBuild(qiraahKey: settings.displayQiraahForArabic ?? "", surahs: source.surahs, priority: priority)
         #endif
     }
 
@@ -4479,7 +4481,14 @@ final class QuranData: ObservableObject {
                 if self.verseIndexBuildGeneration == generation { self.verseIndexBuildInFlight = false }
                 guard let built, !Task.isCancelled else { return }
                 let currentQiraahKey = self.settings.displayQiraahForArabic ?? ""
-                guard currentQiraahKey == qiraahKey else { return }
+                guard currentQiraahKey == qiraahKey else {
+                    // The riwayah changed while this built. Nothing else asks again until a keystroke,
+                    // and the search sat on "Preparing ayah search…" until then (2026-11-11).
+                    if self.verseIndexBuildGeneration == generation {
+                        self.scheduleVerseSearchIndexBuild(qiraahKey: currentQiraahKey, surahs: self.quran, priority: priority)
+                    }
+                    return
+                }
                 self.verseIndex = built
                 self.allVerseIndices = Array(built.indices)
                 self.cachedVerseIndexQiraah = qiraahKey

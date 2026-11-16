@@ -31,6 +31,18 @@ struct FocusItem: Identifiable, Equatable {
     /// (Abu, 2026-09-23: "when I click on a name I want it to do the same thing that list mode does").
     /// Nil for every other kind of focus item, which has no such second half.
     let nameDetail: NameOfAllah?
+    /// The link that opens this item in the app (AppLink.swift), for the items that are a place:
+    /// a surah, a hadith book, a Name. Nil for a letter, a number, a picture. Set with `linked`.
+    var link: AppLink? = nil
+    /// What the share sheet calls that link.
+    var linkTitle: String? = nil
+
+    func linked(to link: AppLink, title: String) -> FocusItem {
+        var copy = self
+        copy.link = link
+        copy.linkTitle = title
+        return copy
+    }
 
     init(
         id: String,
@@ -482,6 +494,21 @@ struct FocusOverlayHost: View {
                     .contentShape(Rectangle())
                     .conditionalGlassEffect(useColor: 0.25)
             }
+
+            // A link that opens this surah, book or Name in the app (AppLink.swift): the glyph alone,
+            // so the two worded buttons keep their width.
+            if let link = item.link {
+                Button {
+                    AppLinkShare.share(link, title: item.linkTitle ?? item.title)
+                } label: {
+                    Image(systemName: "link")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(width: 48, height: 44)
+                        .contentShape(Rectangle())
+                        .conditionalGlassEffect()
+                }
+                .accessibilityLabel("Share Link")
+            }
         }
         .buttonStyle(.plain)
         .foregroundStyle(settings.accentColor.color)
@@ -654,10 +681,12 @@ struct ActivityView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIActivityViewController {
         let vc = UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
         vc.modalPresentationStyle = .formSheet
-        if let onComplete {
-            vc.completionWithItemsHandler = { _, completed, _, _ in
-                onComplete(completed)
-            }
+        // Always installed: a share that went through is a small win for the review prompt
+        // (AppReview.swift), whichever screen it was shared from. A cancelled one is nothing.
+        let onComplete = onComplete
+        vc.completionWithItemsHandler = { _, completed, _, _ in
+            if completed { AppReviewManager.shared.bank(.small) }
+            onComplete?(completed)
         }
         return vc
     }
@@ -677,6 +706,10 @@ func presentSystemShareSheet(items: [Any]) {
         x: top.view.bounds.midX, y: top.view.bounds.midY, width: 0, height: 0
     )
     controller.popoverPresentationController?.permittedArrowDirections = []
+    // The same small win for the review prompt as a share from `ActivityView` above.
+    controller.completionWithItemsHandler = { _, completed, _, _ in
+        if completed { AppReviewManager.shared.bank(.small) }
+    }
     top.present(controller, animated: true)
 }
 
@@ -754,6 +787,7 @@ extension FocusItem {
             shareText: "\(name.transliteration) - \(name.name.removeDiacriticsFromLastLetter())",
             nameDetail: withDetails ? name : nil
         )
+        .linked(to: .name(name.number), title: name.transliteration)
     }
 }
 

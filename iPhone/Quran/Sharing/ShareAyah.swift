@@ -117,6 +117,9 @@ struct ShareAyahSheet: View {
 
     private var surah: Surah? { quranData.surah(surahNumber) }
 
+    /// The Link mode's link (AppLink.swift): the first ayah, by the Hafs number every build opens.
+    private var shareLink: AppLink { .ayah(surah: surahNumber, ayah: ayahNumber) }
+
     /// Whether this sheet shares more than one ayah (the reader's Select Ayahs bar).
     private var isMultiple: Bool { refs.count > 1 }
     private var imageAllowed: Bool { refs.count <= Self.imageAyahLimit }
@@ -713,7 +716,10 @@ struct ShareAyahSheet: View {
                 Spacer()
 
                 ZStack {
-                    if actionMode == .image {
+                    if actionMode == .link {
+                        // The link opens the first ayah of a selection: a link names one place.
+                        ShareLinkPreview(title: ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber), link: shareLink)
+                    } else if actionMode == .image {
                         if let img = generatedImage {
                             // The PREVIOUS image stays on screen while a regeneration runs (it is never
                             // nilled mid-flight), dimmed slightly so the swap reads as an update, not a
@@ -753,7 +759,7 @@ struct ShareAyahSheet: View {
 
                 // Hafs's words standing in for the share riwayah's (`hafsFallbackNotice`), under the
                 // preview in both modes: the copied text carries the same Arabic as the card.
-                if let notice = hafsFallbackNotice {
+                if actionMode != .link, let notice = hafsFallbackNotice {
                     Text(notice)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -765,61 +771,65 @@ struct ShareAyahSheet: View {
 
                 Spacer()
 
-                ScrollView {
-                    VStack(spacing: 2) {
-                        if actionMode == .image {
-                            backdropRow
+                // The switches choose what goes on the card or in the text; a link carries neither.
+                if actionMode != .link {
+                    ScrollView {
+                        VStack(spacing: 2) {
+                            if actionMode == .image {
+                                backdropRow
+                            }
+                            toggle("Arabic", persistentCopyBinding(
+                                get: { storedCopyArabic },
+                                set: { storedCopyArabic = $0 },
+                                update: { updatedShareSettings(arabic: $0) }
+                            ),
+                                   disabled: !shareSettings.transliteration && !shareSettings.englishSaheeh && !shareSettings.englishMustafa)
+
+                            toggle("Transliteration", persistentCopyBinding(
+                                get: { storedCopyTransliteration },
+                                set: { storedCopyTransliteration = $0 },
+                                update: { updatedShareSettings(transliteration: $0) }
+                            ),
+                                   disabled: !shareSettings.arabic && !shareSettings.englishSaheeh && !shareSettings.englishMustafa)
+                            toggle("Translation - Saheeh International", persistentCopyBinding(
+                                get: { storedCopyEnglishSaheeh },
+                                set: { storedCopyEnglishSaheeh = $0 },
+                                update: { updatedShareSettings(englishSaheeh: $0) }
+                            ),
+                                   disabled: !shareSettings.arabic && !shareSettings.transliteration && !shareSettings.englishMustafa)
+                            toggle("Translation - Mustafa Khattab", persistentCopyBinding(
+                                get: { storedCopyEnglishMustafa },
+                                set: { storedCopyEnglishMustafa = $0 },
+                                update: { updatedShareSettings(englishMustafa: $0) }
+                            ),
+                                   disabled: !shareSettings.arabic && !shareSettings.transliteration && !shareSettings.englishSaheeh)
+
+                            if noteText != nil {
+                                Toggle("Include Note", isOn: $includeNote.animation(.easeInOut))
+                                    .tint(settings.accentColor.color)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 4)
+                            }
+
+                            // Everything that shapes the card rather than choosing what goes on it (the
+                            // face, tajweed, the cleanup switches, the information lines, the riwayah) is
+                            // in the toolbar menu: `optionsMenu`.
                         }
-                        toggle("Arabic", persistentCopyBinding(
-                            get: { storedCopyArabic },
-                            set: { storedCopyArabic = $0 },
-                            update: { updatedShareSettings(arabic: $0) }
-                        ),
-                               disabled: !shareSettings.transliteration && !shareSettings.englishSaheeh && !shareSettings.englishMustafa)
-
-                        toggle("Transliteration", persistentCopyBinding(
-                            get: { storedCopyTransliteration },
-                            set: { storedCopyTransliteration = $0 },
-                            update: { updatedShareSettings(transliteration: $0) }
-                        ),
-                               disabled: !shareSettings.arabic && !shareSettings.englishSaheeh && !shareSettings.englishMustafa)
-                        toggle("Translation - Saheeh International", persistentCopyBinding(
-                            get: { storedCopyEnglishSaheeh },
-                            set: { storedCopyEnglishSaheeh = $0 },
-                            update: { updatedShareSettings(englishSaheeh: $0) }
-                        ),
-                               disabled: !shareSettings.arabic && !shareSettings.transliteration && !shareSettings.englishMustafa)
-                        toggle("Translation - Mustafa Khattab", persistentCopyBinding(
-                            get: { storedCopyEnglishMustafa },
-                            set: { storedCopyEnglishMustafa = $0 },
-                            update: { updatedShareSettings(englishMustafa: $0) }
-                        ),
-                               disabled: !shareSettings.arabic && !shareSettings.transliteration && !shareSettings.englishSaheeh)
-
-                        if noteText != nil {
-                            Toggle("Include Note", isOn: $includeNote.animation(.easeInOut))
-                                .tint(settings.accentColor.color)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 4)
-                        }
-
-                        // Everything that shapes the card rather than choosing what goes on it (the
-                        // face, tajweed, the cleanup switches, the information lines, the riwayah) is
-                        // in the toolbar menu: `optionsMenu`.
                     }
+                    .frame(maxHeight: 200)
                 }
-                .frame(maxHeight: 200)
 
-                if imageAllowed {
-                    Picker("Action Mode", selection: $actionMode) {
-                        Text("Image").tag(ActionMode.image)
-                        Text("Text").tag(ActionMode.text)
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 4)
-                } else {
-                    // Past `imageAyahLimit` the sheet is text only, and says why instead of greying a segment.
+                Picker("Action Mode", selection: $actionMode) {
+                    if imageAllowed { Text("Image").tag(ActionMode.image) }
+                    Text("Text").tag(ActionMode.text)
+                    Text("Link").tag(ActionMode.link)
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .padding(.horizontal, 16)
+                .padding(.vertical, 4)
+
+                if !imageAllowed {
+                    // Past `imageAyahLimit` there is no card, and the sheet says why instead of greying a segment.
                     Text("Image cards are for up to \(Self.imageAyahLimit) ayahs; a longer selection shares as text.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -854,7 +864,9 @@ struct ShareAyahSheet: View {
             .navigationTitle(sheetTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .primaryAction) { optionsMenu }
+                ToolbarItem(placement: .primaryAction) {
+                    if actionMode != .link { optionsMenu }
+                }
             }
             // This sheet had no dismiss control at all - you could only swipe it away or complete a share.
             .sheetDismissToolbar()
@@ -884,7 +896,7 @@ struct ShareAyahSheet: View {
                     showTajweed: settings.showTajweedColors
                 )
 
-                actionMode = imageAllowed ? (ActionMode(rawValue: storedActionModeRaw) ?? .image) : .text
+                actionMode = imageAllowed ? ActionMode.restored(storedActionModeRaw) : .text
                 if imageAllowed { generatePreviewImage() }
             }
 
@@ -896,7 +908,8 @@ struct ShareAyahSheet: View {
         .onChange(of: actionMode) { newValue in
             if didFinishInitialSetup { settings.hapticFeedback() }
             // The forced text mode of a long selection is not a preference the user expressed.
-            if imageAllowed { storedActionModeRaw = newValue.rawValue }
+            // Nor is a link: it is a one-off, and Copy Ayah's "as image / as text" reads this key.
+            if imageAllowed, newValue != .link { storedActionModeRaw = newValue.rawValue }
             if newValue == .image && generatedImage == nil {
                 generatePreviewImage()
             }
@@ -1095,13 +1108,22 @@ struct ShareAyahSheet: View {
     /// The copy is made or the share went through: the sheet is done, and says so before it closes.
     private func closeAfterSharing() {
         onShared?()
+        // A finished action with the sheet on its way out: a natural break for the review prompt
+        // (AppReview.swift). The win itself is counted where it happened: a share by `ActivityView`,
+        // a copy in `performCopyOrGenerate`.
+        AppReviewManager.shared.notePause()
         presentationMode.wrappedValue.dismiss()
     }
 
     private func performCopyOrGenerate() {
         settings.hapticFeedback()
+        // Copying an ayah to take somewhere else is a small win for the review prompt.
+        AppReviewManager.shared.bank(.small)
 
         switch actionMode {
+        case .link:
+            UIPasteboard.general.string = shareLink.url.absoluteString
+            closeAfterSharing()
         case .text:
             UIPasteboard.general.string = shareText
             closeAfterSharing()
@@ -1122,6 +1144,8 @@ struct ShareAyahSheet: View {
 
     private func performShareOrGenerate() {
         switch actionMode {
+        case .link:
+            presentShareSheet(with: [AppLinkShareItem(link: shareLink, title: ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))])
         case .text:
             presentShareSheet(with: [shareText])
         case .image:
@@ -1271,7 +1295,7 @@ extension ShareAyahSheet {
         let includeNote = (noteText != nil)
         let actionMode: ActionMode = mode ?? {
             let raw = UserDefaults.standard.string(forKey: copyActionModeKey) ?? ActionMode.image.rawValue
-            return ActionMode(rawValue: raw) ?? .image
+            return ActionMode.restored(raw)
         }()
 
         // The Hafs ayah whose transliteration and translations the copy prints, for the text and the
@@ -1291,6 +1315,9 @@ extension ShareAyahSheet {
         }()
 
         switch actionMode {
+        case .link:
+            UIPasteboard.general.string = AppLink.ayah(surah: surah.id, ayah: ayah.id).url.absoluteString
+            CopyConfirmation.shared.show()
         case .text:
             let text = buildShareText(surah: surah, ayah: ayah, hafsAyah: hafsAyah, shareSettings: shareSettings, settings: settings, includeNote: includeNote, noteText: noteText)
             UIPasteboard.general.string = text

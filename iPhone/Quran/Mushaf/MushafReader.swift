@@ -689,6 +689,9 @@ private final class MushafPagerBandBox {
     /// The page the latest programmatic turn is headed for, with its generation, while it waits: the
     /// next arrow press steps on from there, not from the page it is about to leave.
     var turnTarget: (index: Int, generation: Int)?
+    /// The page the reader OPENED on, until it turns away from it: the one page whose render is made
+    /// before its first frame instead of behind a spinner (`MushafPageRenderCache.renderNow`).
+    var openingIndex: Int?
 }
 
 /// The chrome changes the pager takes in one step, each with its own learned twin geometry
@@ -1313,7 +1316,11 @@ struct SurahPageReader<Controls: View>: View {
                     onToggleSelection: onToggleSelection,
                     bottomBarsCollapsed: bottomBarsCollapsed,
                     // In a spread the ONE spine is the gutter between the pages (`spreadSpine`).
-                    showsSpine: !spreadActive
+                    showsSpine: !spreadActive,
+                    // The page the reader opened on, or with the book open either page of that spread.
+                    opensReader: pagerBand.openingIndex.map {
+                        spreadActive ? spreadLeading($0, in: pages) == spreadLeading(index, in: pages) : $0 == index
+                    } ?? false
                 )
             }
         }
@@ -1934,9 +1941,18 @@ struct SurahPageReader<Controls: View>: View {
                 suppressNextPageTurnClear = true
                 pendingLanding = landing
             }
+            // Before the seed: the pager builds the landing page's host from it.
+            pagerBand.openingIndex = target
             seedPageIndex(target)
             reportPosition(on: pageIndex, in: pages, landing: landing)
             MushafPageRenderCache.prewarm(pages: pages, around: pageIndex, includeCenter: true)
+            // The other surahs' opening pages, for the settings this reader has (a no-op once swept;
+            // a launch onto the Quran tab never reaches the launch prewarm's own call). After this
+            // reader's own ring has had the cores to itself.
+            Task {
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                await MushafPageRenderCache.prewarmLandingMetrics()
+            }
         }
         // The surah was swapped in place (surah picker, next-surah, a search hit). The reader used to be
         // torn down and recreated via `.id(surah.id)` for this - a full rebuild of the 604-page pager on
@@ -1965,6 +1981,9 @@ struct SurahPageReader<Controls: View>: View {
             // its own page, and the landing never outlives the change that follows it.
             let landing = pendingLanding
             if landing != nil { pendingLanding = nil }
+            // Off the page the reader opened on (the seed's own change lands ON it): from here every
+            // cold page is a turn's, and a turn never fits on the main thread.
+            if pagerBand.openingIndex != index { pagerBand.openingIndex = nil }
             // The page moved (a swipe, a seed, a turn's own write): a programmatic turn still waiting on
             // its render is overtaken and must not pull the reader somewhere else after it.
             pagerBand.turnGeneration &+= 1
@@ -3805,6 +3824,11 @@ private struct MushafPageContent: View {
     var bottomBarsCollapsed: Bool = false
     /// Off inside a two-page spread, where the reader draws one spine down the gutter instead.
     var showsSpine: Bool = true
+    /// This is the page the reader OPENED on and has not turned away from: with nothing composed for
+    /// it yet, its render is made before its first frame (`MushafPageRenderCache.renderNow`) instead of
+    /// behind the spinner (Abu, 2026-11-13: "When page first opens there's a progress view I don't
+    /// want that should be preprocessed before it opens").
+    var opensReader: Bool = false
 
     /// Padding around the ayah block; the composer measures fit against the same text width and height.
     /// No slack constants beyond these: the fit verifies against the real TextKit layout, so the text gets
@@ -3958,16 +3982,23 @@ private struct MushafPageContent: View {
             // the background queue, instead of freezing the swipe while ~30 compose/measure passes run on
             // the main thread. `renderTick` is the re-read signal the async render fires.
             let _ = renderTick
-            let exact = MushafPageRenderCache.renderedIfAvailable(page: page, width: width, height: textHeight)
-            // A band a page is actually shown at: its renders may stand in for a neighbouring band's
-            // later (`nearestRendered`, `shownGeometries`).
-            let _ = exact == nil ? () : MushafPageRenderCache.noteShown(width: width, height: textHeight)
+            let cached = MushafPageRenderCache.renderedIfAvailable(page: page, width: width, height: textHeight)
             // The height budget moved (a bar appeared/disappeared, the mini player mounted, a transition
             // is mid-flight): keep the render this page was showing on screen while the exact fit lands
             // in the background: content over a loading flash. Same width and settings, so the text
             // re-wraps identically; a render for a taller band is drawn scaled into this one, a shorter
             // one sits centred in it (`renderedPageBody`), so the page rides an animated band smoothly.
-            let shown = exact ?? MushafPageRenderCache.nearestRendered(page: page, width: width, height: textHeight)
+            let standIn = cached == nil ? MushafPageRenderCache.nearestRendered(page: page, width: width, height: textHeight) : nil
+            // The one exception to "cache-only": the page the reader opens on, with nothing at all to
+            // show. Its fit is already on a lane (the reader's seed queued it), and waiting for it to
+            // hop back to the main thread is what drew the spinner on every open. A page with a
+            // stand-in keeps the old path: its exact fit lands behind content, not behind a spinner.
+            let exact = cached ?? (opensReader && standIn == nil
+                ? MushafPageRenderCache.renderNow(page: page, width: width, height: textHeight) : nil)
+            // A band a page is actually shown at: its renders may stand in for a neighbouring band's
+            // later (`nearestRendered`, `shownGeometries`).
+            let _ = exact == nil ? () : MushafPageRenderCache.noteShown(width: width, height: textHeight)
+            let shown = exact ?? standIn
             ZStack {
                 if let shown {
                     // ONE text view for every render this page shows, the exact fit and the fallback
@@ -3977,7 +4008,8 @@ private struct MushafPageContent: View {
                     renderedPageBody(rendered: shown, width: width, visibleHeight: visibleHeight)
                 } else {
                     // Truly cold: nothing composed for this page at any nearby height. The spinner shows the
-                    // moment a page is cold (user rule: a load that is really happening is never hidden);
+                    // moment a page is cold (user rule: a load that is really happening is never hidden),
+                    // except on the page the reader OPENS on, which `renderNow` has drawn already above;
                     // the work of making this branch RARE is elsewhere - the ring's direction-first order
                     // and its deeper reach ahead of travel, the jumps that wait for their landing page's
                     // render (`turnPage`), and the settled-geometry fast path in the task below.
@@ -6842,16 +6874,32 @@ enum MushafPageRenderCache {
                 return
             }
             fitTraceLane("START \(traceLabel(page)) \(Int(width.rounded()))x\(Int(height.rounded())) lane=\(generation == nil ? "visible" : "prewarm")")
+            productsCondition.lock()
+            fitsUnderWay.insert(keyString)
+            productsCondition.unlock()
 
             let composer = MushafPageComposer(page: page, config: config)
             let metrics = fitMetricsUsingStore(composer: composer, width: width, height: height)
+            let fitted = Date()
             // The justification (segment layouts, break probes, margin top-ups) is the expensive half of
             // the final compose and depends on metrics only, never on colors - compute it HERE on the fit
             // lane so the main-thread tail is just the colored compose plus attribute transplants.
             let justification = composer.justification(size: metrics.size, extraLineSpacing: metrics.extraSpacing,
                                                        width: width, spaceTracking: metrics.spaceTracking)
+            let justified = Date()
+            // Everything but the main-thread tail, where the opening page can pick it up at once
+            // (`renderNow`) instead of waiting for the hop below.
+            productsCondition.lock()
+            products[keyString] = FitProduct(composer: composer, metrics: metrics, justification: justification)
+            fitsUnderWay.remove(keyString)
+            productsCondition.broadcast()
+            productsCondition.unlock()
             DispatchQueue.main.async {
                 let key = keyString as NSString
+                let onMain = Date()
+                productsCondition.lock()
+                products.removeValue(forKey: keyString)
+                productsCondition.unlock()
                 if cache.object(forKey: key) == nil {
                     let rendered = finalize(composer: composer, metrics: metrics, width: width,
                                             justification: justification)
@@ -6864,7 +6912,9 @@ enum MushafPageRenderCache {
                 settledGeometries.insert(geometryToken(width: width, height: height))
                 upgradedClaims.remove(key)
                 let waiters = pendingRenders.removeValue(forKey: key) ?? []
-                fitTrace("LAND \(traceLabel(page)) \(Int(width.rounded()))x\(Int(height.rounded())) lane=\(generation == nil ? "visible" : "prewarm") ms=\(Int(Date().timeIntervalSince(started) * 1000)) waiters=\(waiters.count)")
+                // The parts too: the size search (0 when its numbers were stored), the justification,
+                // the wait for the main thread, and the coloured compose on it.
+                fitTrace("LAND \(traceLabel(page)) \(Int(width.rounded()))x\(Int(height.rounded())) lane=\(generation == nil ? "visible" : "prewarm") ms=\(Int(Date().timeIntervalSince(started) * 1000)) fit=\(Int(fitted.timeIntervalSince(started) * 1000)) just=\(Int(justified.timeIntervalSince(fitted) * 1000)) hop=\(Int(onMain.timeIntervalSince(justified) * 1000)) main=\(Int(Date().timeIntervalSince(onMain) * 1000)) waiters=\(waiters.count)")
                 waiters.forEach { $0() }
             }
         }
@@ -7176,6 +7226,167 @@ enum MushafPageRenderCache {
     /// spread, sat on its spinner for good. The collapsed frames this guards against are a few points.
     private static func isDegenerate(width: CGFloat, height: CGFloat) -> Bool {
         width < 80 || height < 60
+    }
+
+    // MARK: The opening page, before its first frame
+
+    /// What a fit lane has made of a page before its main-thread tail (`finalize`): the page's
+    /// composer, its fit numbers and its justification.
+    private struct FitProduct {
+        let composer: MushafPageComposer
+        let metrics: FitMetrics
+        let justification: (tracking: [(range: NSRange, value: CGFloat)], height: CGFloat)
+    }
+
+    /// Guards `products` and `fitsUnderWay`, and wakes `renderNow` when a product lands.
+    nonisolated private static let productsCondition = NSCondition()
+    /// The products of fits whose main-thread tail has not run yet, keyed like the cache.
+    nonisolated(unsafe) private static var products: [String: FitProduct] = [:]
+    /// The keys a lane has STARTED and not finished: worth a short wait, where a fit still queued
+    /// behind others is not.
+    nonisolated(unsafe) private static var fitsUnderWay: Set<String> = []
+
+    /// Whether a text geometry is one the reader RESTS at, as far as is known: the band last settled
+    /// (the persisted one before any reader has opened), a learned chrome twin of it (the reader
+    /// opening under the mini player), or a band some fit has completed at. Never a height an
+    /// animated chrome change is passing through, which no page should be fitted to on the spot.
+    private static func isRestingGeometry(width: CGFloat, height: CGFloat) -> Bool {
+        let token = geometryToken(width: width, height: height)
+        if settledGeometries.contains(token) { return true }
+        guard let rest = lastGeometry ?? persistedGeometry else { return false }
+        if geometryToken(width: rest.width, height: rest.height) == token { return true }
+        return MushafChromeJump.allCases.contains { kind in
+            twin(kind, of: rest).map { geometryToken(width: $0.width, height: $0.height) == token } ?? false
+        }
+    }
+
+    /// The render for the page a reader OPENS on, made on the spot when none is cached, so the page
+    /// is drawn on its first frame and never as a spinner (Abu, 2026-11-13: "When page first opens
+    /// there's a progress view I don't want that should be preprocessed before it opens"). Called
+    /// from that one page's body (`MushafPageContent.opensReader`), on the main thread.
+    ///
+    /// The spinner on an open was not a slow fit. The reader's seed queues the landing page first
+    /// on the prewarm lane as it appears, and by the page's first body pass the lane is done or
+    /// nearly; what the page then waited on was the lane's hop back to a main thread busy building
+    /// the reader (measured on the 17 Pro simulator, Debug: fit 119 ms, justification 42, the hop
+    /// 73, the coloured compose 7). So this takes the lane's product where it stands and runs that
+    /// last compose itself: no hop, no second fit. A fit still under way is waited for, briefly; one
+    /// no lane has started is done here, numbers from the store when any launch has searched them
+    /// out before. Nil (the old path, spinner and all) only when the band is not one the reader
+    /// rests at, when the wait runs out, or on a weak or power-saving phone with no stored numbers,
+    /// where a whole size search on the main thread is a visible freeze.
+    static func renderNow(page: MushafPage, width: CGFloat, height: CGFloat) -> MushafRenderedPage? {
+        guard !isDegenerate(width: width, height: height),
+              !Settings.shared.resolvedMushafPageLanguage.isPDF,
+              page.paginationKey == displayedPaginationKey,
+              isRestingGeometry(width: width, height: height) else { return nil }
+        let signature = settingsSignature
+        let key = cacheKey(page: page, width: width, height: height, signature: signature)
+        if let hit = cache.object(forKey: key) { return hit }
+        let keyString = key as String
+        let started = Date()
+        let reduced = AppPerformance.shouldAvoidBroadPrewarm
+
+        productsCondition.lock()
+        if products[keyString] == nil, fitsUnderWay.contains(keyString) {
+            let deadline = Date().addingTimeInterval(reduced ? 0.1 : 0.25)
+            while products[keyString] == nil, fitsUnderWay.contains(keyString),
+                  productsCondition.wait(until: deadline) {}
+        }
+        var product = products[keyString]
+        let stillUnderWay = fitsUnderWay.contains(keyString)
+        productsCondition.unlock()
+        let joined = product != nil
+
+        if product == nil {
+            // The wait ran out: the lane is slow, and a second search beside it would only be slower.
+            guard !stillUnderWay else {
+                fitTrace("INLINE gave up \(traceLabel(page)) \(Int(width.rounded()))x\(Int(height.rounded()))")
+                return nil
+            }
+            let config = MushafComposeConfig.current()
+            let stored = persistedMetrics(for: metricsKey(page: page, width: width, height: height, config: config)) != nil
+            guard stored || !reduced else { return nil }
+            let composer = MushafPageComposer(page: page, config: config)
+            let metrics = fitMetricsUsingStore(composer: composer, width: width, height: height)
+            let justification = composer.justification(size: metrics.size, extraLineSpacing: metrics.extraSpacing,
+                                                       width: width, spaceTracking: metrics.spaceTracking)
+            product = FitProduct(composer: composer, metrics: metrics, justification: justification)
+        }
+        guard let product else { return nil }
+        let rendered = finalize(composer: product.composer, metrics: product.metrics, width: width,
+                                justification: product.justification)
+        cache.setObject(rendered, forKey: key)
+        noteLatest(page: page, width: width, budget: height, rendered: rendered, signature: signature)
+        settledGeometries.insert(geometryToken(width: width, height: height))
+        fitTrace("INLINE \(traceLabel(page)) \(Int(width.rounded()))x\(Int(height.rounded())) joined=\(joined ? 1 : 0) ms=\(Int(Date().timeIntervalSince(started) * 1000))")
+        return rendered
+    }
+
+    // MARK: Every surah's opening page, searched out ahead
+
+    /// The sweep last started, as pagination, geometry and settings: the same one never runs twice.
+    private static var landingSweepToken: String?
+    nonisolated private static let landingQueue = DispatchQueue(label: "mushaf.page.landings", qos: .utility)
+    nonisolated private static let landingLock = NSLock()
+    /// Bumped by every sweep (under `landingLock`): one a newer sweep has overtaken stops at its next page.
+    nonisolated(unsafe) private static var landingSweepGeneration = 0
+
+    /// A new sweep's generation (a plain function: a lock may not be taken in an async one).
+    nonisolated private static func nextLandingSweep() -> Int {
+        landingLock.lock()
+        defer { landingLock.unlock() }
+        landingSweepGeneration &+= 1
+        return landingSweepGeneration
+    }
+
+    /// Search out, before any tap, the fit numbers of the page each surah opens on, for the band the
+    /// reader rests at and the settings in force, and store them (`fitMetricsUsingStore`): the size
+    /// search is nine tenths of a cold page's fit, and with it done the page a tapped surah opens on
+    /// needs only its justification before `renderNow` can draw it. Nothing is composed or cached
+    /// and nothing touches the main thread: 114 searches on a utility queue, once per build,
+    /// geometry and settings (the store keeps them across launches), and 114 lookups after that.
+    /// Page mode only, never the printed facsimile, never on a weak or power-saving phone.
+    static func prewarmLandingMetrics() async {
+        let settings = Settings.shared
+        guard settings.quranPageMode, !settings.resolvedMushafPageLanguage.isPDF,
+              !AppPerformance.shouldAvoidBroadPrewarm,
+              let geometry = lastGeometry ?? persistedGeometry,
+              !isDegenerate(width: geometry.width, height: geometry.height) else { return }
+        let quranData = QuranData.shared
+        await quranData.waitUntilCoreLoaded()
+        let qiraah = settings.displayQiraahForArabic
+        await MushafPagination.buildInBackground(quran: quranData.quran, qiraah: qiraah)
+        let pages = MushafPagination.pages(quran: quranData.quran, qiraah: qiraah)
+        guard let first = pages.first, first.paginationKey == displayedPaginationKey else { return }
+        let token = "\(first.paginationKey)|\(geometryToken(width: geometry.width, height: geometry.height))|\(settingsSignature)"
+        guard landingSweepToken != token else { return }
+        landingSweepToken = token
+
+        var seen = Set<Int>()
+        let landings = quranData.quran
+            .compactMap { MushafPagination.pageIndex(surahID: $0.id, ayahID: nil, in: pages) }
+            .filter { seen.insert($0).inserted }
+            .map { pages[$0] }
+        let config = MushafComposeConfig.current()
+        let generation = nextLandingSweep()
+        fitTrace("LANDINGS \(landings.count) pages at \(Int(geometry.width.rounded()))x\(Int(geometry.height.rounded()))")
+        landingQueue.async {
+            let started = Date()
+            var searched = 0
+            for page in landings {
+                landingLock.lock()
+                let current = landingSweepGeneration
+                landingLock.unlock()
+                guard current == generation else { return }
+                let composer = MushafPageComposer(page: page, config: config)
+                let key = metricsKey(page: page, width: geometry.width, height: geometry.height, config: config)
+                guard persistedMetrics(for: key) == nil else { continue }
+                _ = fitMetricsUsingStore(composer: composer, width: geometry.width, height: geometry.height)
+                searched += 1
+            }
+            fitTraceLane("LANDINGS done searched=\(searched) ms=\(Int(Date().timeIntervalSince(started) * 1000))")
+        }
     }
 
     /// Run `completion` once `page` has a render at the current geometry: at once if it is cached (or no
@@ -8924,6 +9135,9 @@ enum QuranLaunchWarmup {
                 MushafPageRenderCache.prewarmAtLaunch(pages: pages, around: index)
             }
             await Task.yield()
+            // And the numbers of the page every other surah opens on, so a tapped surah's page is
+            // one cheap compose from drawn.
+            await MushafPageRenderCache.prewarmLandingMetrics()
         }
     }
 }

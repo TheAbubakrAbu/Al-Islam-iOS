@@ -168,6 +168,8 @@ final class HadithChainStore: @unchecked Sendable {
     func prewarm(slug: String) {
         DispatchQueue.global(qos: .utility).async {
             _ = self.pack?.contains(slug: slug, idInBook: 0)
+            // The narrators' names too: a row's English chain line reads them (`englishLine`).
+            _ = HadithNarratorStore.shared.profile(id: 1)
         }
     }
 
@@ -195,6 +197,29 @@ final class HadithChainStore: @unchecked Sendable {
         return HadithChainDecoder.matnStart(parsed, arabic: arabic)
     }
 
+    /// The chain as one line of English for the row to draw beside its English text, as the Arabic
+    /// chain is drawn beside the Arabic (Abu, 2026-11-15: "show the chain of narrators in English in
+    /// the Hadith itself like how it is for Arabic"): `HadithChainDecoder.englishLine`. Nil when the
+    /// row has no chain, the chain is its last narrator alone, or a name has no English. Remembered
+    /// per narration, since a row asks on every render and the answer walks the narrator index.
+    func englishLine(slug: String, idInBook: Int, arabic: String) -> String? {
+        let key = "\(slug):\(idInBook)" as NSString
+        if let cached = englishLines.object(forKey: key) { return cached.length == 0 ? nil : cached as String }
+        var line: String?
+        if let code = pack?.code(slug: slug, idInBook: idInBook), let parsed = HadithChainDecoder.parse(code) {
+            line = HadithChainDecoder.englishLine(parsed, arabic: arabic, english: HadithIsnadEnglish(slug: slug))
+        }
+        englishLines.setObject((line ?? "") as NSString, forKey: key)
+        return line
+    }
+
+    /// `englishLine`'s answers, "" for a narration that has none.
+    private let englishLines: NSCache<NSString, NSString> = {
+        let cache = NSCache<NSString, NSString>()
+        cache.countLimit = 2000
+        return cache
+    }()
+
     /// The group of chains this narration's is the same as (HadithNarrators.qpk), or nil when no other
     /// narration on the shelf is carried by exactly this chain. A binary search and a short parse.
     func chainGroup(slug: String, idInBook: Int) -> Int? {
@@ -209,6 +234,7 @@ final class HadithChainStore: @unchecked Sendable {
         let loaded = openedPack
         lock.unlock()
         loaded?.purge()
+        englishLines.removeAllObjects()
     }
 }
 
@@ -477,6 +503,96 @@ enum HadithChainDecoder {
                               nodes: [IsnadNode(name: english?.compiler ?? "", arabic: compilerArabic, detail: bookTitle, role: .narrator)])
         return IsnadChain(top: top, branches: branches, bottom: [collector])
     }
+
+    /// The chain as one English sentence, in the order the Arabic gives it, from the collector's
+    /// teacher up to the narrator below the last one: "Qutaibah narrated to us, Hammad narrated to
+    /// us, from Kathir, from Ata'". The last narrator is left out because the hadith itself opens
+    /// with him ("Narrated Jabir bin Abdullah:"), exactly where `matnStart` cuts the Arabic.
+    ///
+    /// More than one road reads road by road, as the text does: each road up to the narrator where
+    /// they meet, "; and" between them. When the text names that narrator once for all of them
+    /// ("كلهم عن هشام") the line does too: "...; all from Hisham ibn Urwah".
+    ///
+    /// Nil rather than a guess: when a name or a word of transmission has no English, when nothing
+    /// stands below the last narrator, and when the roads meet at two narrators the text names road
+    /// by road (ten chains), where the code does not say which road heard which of the two.
+    static func englishLine(_ parsed: Parsed, arabic: String, english: HadithIsnadEnglish) -> String? {
+        let words = tokens(arabic)
+        guard fits(parsed, count: words.count) else { return nil }
+
+        // "Hannad and Mahmud ibn Ghailan": one generation's narrators.
+        func names(_ layer: Layer) -> String? {
+            var names: [String] = []
+            for node in layer {
+                let found = english.narrator(arabic: name(node, words), id: node.narrator)
+                guard !found.isEmpty else { return nil }
+                names.append(found)
+            }
+            switch names.count {
+            case 1: return names[0]
+            case 2: return names[0] + " and " + names[1]
+            default: return names.dropLast().joined(separator: ", ") + " and " + names[names.count - 1]
+            }
+        }
+        // The English of the word at a token; "" when the chain gives no word there, nil when it
+        // gives one the table does not know.
+        func transmission(_ index: Int?) -> String? {
+            let written = verb(index, words)
+            return written.isEmpty ? "" : english.transmission(written)
+        }
+        func phrase(_ layer: Layer, received index: Int?) -> String? {
+            guard let who = names(layer), let word = transmission(index) else { return nil }
+            return HadithIsnadEnglish.phrase(who, transmission: word)
+        }
+
+        // The top generation opens the hadith itself.
+        let below = Array(parsed.shared.dropLast())
+        var parts: [String] = []
+        var rest = below[...]
+        if !parsed.branches.isEmpty {
+            var roads: [[String]] = []
+            for road in parsed.branches {
+                var phrases: [String] = []
+                for layer in road.layers {
+                    guard let text = phrase(layer, received: layer[0].verb) else { return nil }
+                    phrases.append(text)
+                }
+                roads.append(phrases)
+            }
+            if let meeting = below.first {
+                guard let who = names(meeting) else { return nil }
+                let tops = parsed.branches.map(\.topVerb)
+                if parsed.branches.count > 1, Set(tops).count == 1 {
+                    // Named once for every road: "كلاهما عن", "كلهم عن", "قالوا حدثنا".
+                    guard let word = transmission(tops[0]), !word.isEmpty else { return nil }
+                    let all = parsed.branches.count == 2 ? "both" : "all"
+                    let meets = HadithIsnadEnglish.phrase(who, transmission: word)
+                    parts.append(roads.map { $0.joined(separator: ", ") }.joined(separator: "; and ")
+                                 + "; " + (HadithIsnadEnglish.leads(word) ? "\(all) \(meets)" : "\(all) said: \(meets)"))
+                } else {
+                    // Named in each road, each by its own word.
+                    guard meeting.count == 1 || parsed.branches.count == 1 else { return nil }
+                    var lines: [String] = []
+                    for (road, top) in zip(roads, tops) {
+                        guard let word = transmission(top), !word.isEmpty else { return nil }
+                        lines.append((road + [HadithIsnadEnglish.phrase(who, transmission: word)]).joined(separator: ", "))
+                    }
+                    parts.append(lines.joined(separator: "; and "))
+                }
+                rest = below.dropFirst()
+            } else {
+                // The roads meet at the last narrator, who opens the hadith.
+                parts.append(roads.map { $0.joined(separator: ", ") }.joined(separator: "; and "))
+            }
+        }
+        for layer in rest {
+            guard let text = phrase(layer, received: layer[0].verb) else { return nil }
+            parts.append(text)
+        }
+        let line = parts.filter { !$0.isEmpty }.joined(separator: ", ")
+        guard let first = line.first else { return nil }
+        return first.uppercased() + line.dropFirst()
+    }
 }
 
 // MARK: - The chain in English
@@ -547,12 +663,22 @@ struct HadithIsnadEnglish {
             case 0x0623, 0x0625, 0x0622, 0x0671: out.append(UnicodeScalar(0x0627)!)
             case 0x0649: out.append(UnicodeScalar(0x064A)!)
             case 0x0629: out.append(UnicodeScalar(0x0647)!)
-            case 0x060C, 0x002C, 0x003A, 0x061B, 0x003B, 0x002E, 0x0022, 0x201C, 0x201D, 0x200F, 0x200E: continue
-            default: out.append(scalar)
+            default:
+                if !punctuation.contains(scalar.value) { out.append(scalar) }
             }
         }
         return String(out)
     }
+
+    /// The script's `PUNCT`, whole: the commas, stops and direction marks, and the quotes, brackets,
+    /// braces, dashes, tatweel and question marks a word of the shelf can carry. Until 2026-11-15
+    /// only the first group was dropped here, so a word the text sets in braces ("{عَنْ أَبِيهِ}",
+    /// al-Bukhari 2464) found no English.
+    private static let punctuation: Set<UInt32> = [
+        0x060C, 0x002C, 0x003A, 0x003B, 0x0022, 0x201C, 0x201D, 0x200F, 0x200E, 0x002E, 0x061B, 0x06D4,
+        0x0027, 0x2018, 0x2019, 0x0028, 0x0029, 0x005B, 0x005D, 0x007B, 0x007D, 0x00AB, 0x00BB,
+        0x2013, 0x2014, 0x002D, 0x0640, 0x0021, 0x003F, 0x061F,
+    ]
 
     /// The English of a word of transmission; nil when the word is not one the table knows (the
     /// Arabic then stands alone, as it did).
@@ -573,6 +699,40 @@ struct HadithIsnadEnglish {
         if let id, let profile = HadithNarratorStore.shared.profile(id: id), !profile.english.isEmpty {
             return profile.english
         }
-        return Self.relations[Self.fold(arabic)] ?? ""
+        let key = Self.fold(arabic)
+        // "حَدَّثَنَا أَبِي" (1,900 chains) and "عَنْ أُبَيٍّ" (twelve) fold to the same letters, and the
+        // script files both as a relation, so the vowels decide: a damma is Ubayy, any other mark
+        // is "my father", and a bare word is left unnamed.
+        if key == "ابي" {
+            let marks = arabic.unicodeScalars.filter { (0x064B...0x0652).contains($0.value) }
+            if marks.contains(where: { $0.value == 0x064F }) { return "Ubayy" }
+            return marks.isEmpty ? "" : "my father"
+        }
+        return Self.relations[key] ?? ""
+    }
+
+    // MARK: The chain as a sentence
+
+    /// Whether a word of transmission stands before the name in English ("from Nafi'", "I heard
+    /// Khilas") rather than after it ("Sufyan narrated to us").
+    static func leads(_ transmission: String) -> Bool {
+        transmission == "from" || transmission.hasPrefix("that") || transmission.contains("heard")
+            || transmission.contains("read")
+    }
+
+    /// One generation of the chain's English line (`HadithChainDecoder.englishLine`): the narrators
+    /// with the word they were received by, taken from `transmissions`. The table words a verb as it
+    /// stands alone under a diagram's chip ("she narrated to me", "that he"); beside the name the
+    /// pronoun is the name itself, so it is dropped: "Amrah narrated to me", "that Urwah".
+    static func phrase(_ who: String, transmission: String) -> String {
+        guard !transmission.isEmpty else { return who }
+        if transmission.hasPrefix("that") { return "that \(who)" }
+        if transmission == "heard" { return "he heard \(who)" }
+        if transmission == "I heard him" { return "I heard \(who)" }
+        if leads(transmission) { return "\(transmission) \(who)" }
+        for pronoun in ["she ", "the two ", "they "] where transmission.hasPrefix(pronoun) {
+            return "\(who) \(transmission.dropFirst(pronoun.count))"
+        }
+        return "\(who) \(transmission)"
     }
 }

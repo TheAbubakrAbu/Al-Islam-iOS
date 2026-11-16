@@ -676,7 +676,8 @@ struct JournalView: View {
             .fixedMenuOrder()
             .tint(accent)
         }
-        .sheet(item: $editing) { entry in
+        // The editor closing is a natural break for the review prompt (AppReview.swift).
+        .sheet(item: $editing, onDismiss: { AppReviewManager.shared.notePause() }) { entry in
             JournalEditorSheet(entry: entry)
         }
         .confirmationDialog("Delete this entry?", isPresented: Binding(get: { confirmDelete != nil }, set: { if !$0 { confirmDelete = nil } }), titleVisibility: .visible) {
@@ -1014,6 +1015,7 @@ struct JournalEntryView: View {
                             Settings.shared.hapticFeedback()
                             store.togglePin(id: entry.id)
                         } label: { Label(entry.pinned ? String(localized: "Unpin") : String(localized: "Pin"), systemImage: entry.pinned ? "pin.slash" : "pin") }
+                        Divider()
                         Button {
                             Settings.shared.hapticFeedback()
                             UIPasteboard.general.string = Self.shareText(entry)
@@ -1032,7 +1034,8 @@ struct JournalEntryView: View {
                 }
             }
         }
-        .sheet(item: $editing) { entry in
+        // The editor closing is a natural break for the review prompt (AppReview.swift).
+        .sheet(item: $editing, onDismiss: { AppReviewManager.shared.notePause() }) { entry in
             JournalEditorSheet(entry: entry)
         }
         .confirmationDialog("Delete this entry?", isPresented: $confirmDelete, titleVisibility: .visible) {
@@ -1321,10 +1324,15 @@ struct JournalEditorSheet: View {
             .sheetDismissToolbar(onConfirm: {
                 guard !textContainsProfanity(entry.text), !textContainsProfanity(entry.title) else {
                     showRespectAlert = true
+                    // An entry refused is no moment for the review prompt (AppReview.swift).
+                    AppReviewManager.shared.noteSetback(.minor)
                     return false
                 }
                 entry.tags = tagsText.split(whereSeparator: { $0.isWhitespace || $0 == "," }).map { journalNormalizeTag(String($0)) }.filter { !$0.isEmpty }
                 store.save(entry)
+                // An entry written and kept is a small win for the review prompt, asked about once
+                // this editor has closed. (Saving an empty one deletes it, which is not.)
+                if !entry.isEmpty { AppReviewManager.shared.bank(.small) }
                 return true
             })
             .accentWashedBackground()

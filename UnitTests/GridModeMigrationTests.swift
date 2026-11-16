@@ -5,6 +5,10 @@ import XCTest
 /// grid/list choice, and the update itself changes nothing on screen. Until then the Quran tab's switch
 /// was the fallback four other screens followed, and the Hadith chapters read the collections' key with
 /// the opposite default.
+///
+/// And the defaults themselves: every screen with the switch opens as a grid until chosen (Abu,
+/// 2026-11-15: "Use grid mode everywhere default"). The Quran tab was a list from 2026-11-13 until
+/// then, and the Hadith chapters a list from the start; neither default pulls on another screen.
 @MainActor
 final class GridModeMigrationTests: XCTestCase {
     private let keys = ["quranGridMode", "hadithGridMode", "hadithChapterGridMode", "gridModesPerScreenMigrated"]
@@ -55,6 +59,31 @@ final class GridModeMigrationTests: XCTestCase {
         XCTAssertTrue(settings.settingsGridMode)
     }
 
+    func testEveryScreenOpensAsAGrid() {
+        // Nothing stored, not even by the split: what a reset leaves behind.
+        let settings = Settings.shared
+        XCTAssertTrue(settings.gridMode, "the Quran tab is a grid until chosen")
+        XCTAssertTrue(settings.islamGridMode)
+        XCTAssertTrue(settings.arabicGridMode)
+        XCTAssertTrue(settings.namesGridMode)
+        XCTAssertTrue(settings.settingsGridMode)
+        // A list chosen there is kept, like any stored choice.
+        settings.gridMode = false
+        XCTAssertEqual(UserDefaults.standard.object(forKey: "quranGridMode") as? Bool, false)
+        XCTAssertFalse(settings.gridMode)
+    }
+
+    func testANewInstallIsGridsEverywhere() {
+        // A new install: nothing is stored, and the split writes a grid for the four followers and
+        // leaves the Quran tab to its own default, a grid too.
+        Settings.migrateGridModes()
+        for key in Settings.gridModeFollowerKeys {
+            XCTAssertEqual(UserDefaults.standard.object(forKey: key) as? Int, 1, key)
+        }
+        XCTAssertNil(UserDefaults.standard.object(forKey: "quranGridMode"))
+        XCTAssertTrue(Settings.shared.gridMode)
+    }
+
     func testAChoiceAlreadyMadeIsKept() {
         UserDefaults.standard.set(false, forKey: "quranGridMode")
         UserDefaults.standard.set(1, forKey: "gridModeIslamRaw")
@@ -69,7 +98,13 @@ final class GridModeMigrationTests: XCTestCase {
         XCTAssertEqual(UserDefaults.standard.object(forKey: "hadithChapterGridMode") as? Bool, true)
     }
 
-    func testChaptersStayAListWhenNothingWasChosen() {
+    func testChaptersAreAGridWhenNothingWasChosen() {
+        Settings.migrateGridModes()
+        XCTAssertEqual(UserDefaults.standard.object(forKey: "hadithChapterGridMode") as? Bool, true)
+    }
+
+    func testChaptersKeepAListChosenForTheCollections() {
+        UserDefaults.standard.set(false, forKey: "hadithGridMode")
         Settings.migrateGridModes()
         XCTAssertEqual(UserDefaults.standard.object(forKey: "hadithChapterGridMode") as? Bool, false)
     }

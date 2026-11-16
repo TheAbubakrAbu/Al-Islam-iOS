@@ -220,6 +220,18 @@ final class QuranTestMode: ObservableObject {
         if openReaders == 0, settings.quranTestModeEndsOnLeave {
             setOn(false)
         }
+        if openReaders == 0 { noteReaderLeftForReview() }
+    }
+
+    /// Leaving the reader for the surah list is the Quran's natural break for the review prompt
+    /// (AppReview.swift): the reading is over, and whatever was bookmarked, shared or finished in it is
+    /// still fresh. Checked again a moment later, because a deep link and the iPad's detail column
+    /// both close one reader only to open the next, and that is not leaving.
+    private func noteReaderLeftForReview() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            if self.openReaders == 0 { AppReviewManager.shared.notePause() }
+        }
     }
 
     private func clearShown() {

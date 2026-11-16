@@ -33,7 +33,7 @@ SLICES = {
         {'firstLaunch', 'aboutYouVersionSeen', 'cloudOfferVersionSeen', 'startHereHidden', 'startHereVisitedRaw',
          'helpDoorsHiddenRaw', 'helpDoorsCollapsedRaw', 'tabSectionChoicesRaw', 'tabSectionsCollapsedRaw', 'launchTabRaw', 'launchTabChosen', 'hapticOn', 'keepScreenOnRaw',
          'advancedSettings', 'simpleMode', 'gridMode', 'gridModeArabicRaw', 'gridModeNamesRaw', 'gridModeIslamRaw',
-         'gridModeSettingsRaw', 'dailyRolloverAtFajr'}),
+         'gridModeSettingsRaw', 'dailyRolloverAtFajr', 'showJumpRail', 'tutorialNudgesSeenRaw'}),
     'AdhanSettings': (
         'Prayer times, notifications, nagging, adhan sounds, travel, calculation, the sky and the '
         'permission alerts: the Adhan tab and its settings pages.',
@@ -61,7 +61,7 @@ SLICES = {
          'ayahSheetKeepsScreenOn', 'ayahPreviewCardScale',
          'cleanArabicText', 'removeArabicDots', 'showTransliteration', 'showEnglishSaheeh', 'showEnglishMustafa',
          'showPageJuzDividers', 'showFullSurahRow', 'englishFontSize', 'fontArabic', 'fontArabicSize', 'useFontArabic',
-         'arabicScriptStyleRaw', 'automaticKhatmCompletion'}),
+         'arabicScriptStyleRaw', 'automaticKhatmCompletion', 'highlightPlayingWords'}),
     'QuranContent': (
         'What reading and listening write: bookmarks, favorites, khatm and revision progress, plans, '
         'search history, the daily ayah, the Now Playing bar state, surah counts, the last listened ayah.',
@@ -72,7 +72,8 @@ SLICES = {
     'HadithSettings': (
         'The Hadith tab: languages, sizes, Allah highlight, the daily hadith, search history.',
         {'showHadithArabic', 'showHadithEnglish', 'highlightAllahNamesHadith', 'hadithArabicFontSize',
-         'hadithEnglishFontSize', 'showHadithOfTheDay', 'hadithOfTheDayHiddenDate', 'hadithSearchHistoryData'}),
+         'hadithEnglishFontSize', 'showHadithOfTheDay', 'hadithOfTheDayHiddenDate', 'hadithSearchHistoryData',
+         'hadithChainFirst'}),
     'IslamSettings': (
         'The Islam tab: text size and face, Allah highlight, resource grouping and favorites, the '
         'Arabic alphabet screens, the 99 Names.',

@@ -34,6 +34,8 @@ struct QiblaView: View {
     @State private var lastHapticTime: TimeInterval = 0
     @State private var impact = UIImpactFeedbackGenerator(style: .light)
     private let notify = UINotificationFeedbackGenerator()
+    /// The review prompt (AppReview.swift) is told once per compass that the Qibla was found.
+    @State private var notedAlignment = false
     #endif
 
     init(size: CGFloat = 50) {
@@ -488,6 +490,12 @@ struct QiblaView: View {
         if distance <= max(5, alignmentTolerance), isTrustworthy {
             notify.notificationOccurred(.success)
             notify.prepare()
+            if !notedAlignment {
+                // Finding the Qibla is a small win for the review prompt. Only remembered, never
+                // asked about here: whoever is turning the phone is about to pray.
+                notedAlignment = true
+                AppReviewManager.shared.bank(.small)
+            }
         } else {
             let intensity = CGFloat(distance <= 20 ? 0.25 : 0.15)
             impact.impactOccurred(intensity: intensity)

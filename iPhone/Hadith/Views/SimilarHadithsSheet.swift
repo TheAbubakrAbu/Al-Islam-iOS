@@ -125,9 +125,6 @@ struct SimilarHadithsSheet: View {
 /// The door to the narrations carried by the same chain, the one row the similar sheet and the chain
 /// sheet share: a button through a push door (`pushDestination`), drawn like a link.
 struct HadithSameChainDoor: View {
-    /// The accent off the environment, so an accent change redraws this view (a bare `Settings` read
-    /// in a view that observes nothing kept the old colour).
-    @Environment(\.appearance) private var appearance
     private let settings = Settings.shared
 
     let others: Int
@@ -138,25 +135,12 @@ struct HadithSameChainDoor: View {
             settings.hapticFeedback()
             open()
         } label: {
-            HStack {
-                Label {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Same Chain of Narrators")
-                            .foregroundColor(.primary)
-                        Text(String(localized: "\(others) other narrations"))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                } icon: {
-                    Image(systemName: "point.3.filled.connected.trianglepath.dotted")
-                        .foregroundColor(appearance.accent)
-                }
-                Spacer()
-                Image(systemName: "chevron.forward")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .contentShape(Rectangle())
+            // The app's door row (`SettingsRowLabel`), as the tree's door beside it.
+            SettingsRowLabel(title: String(localized: "Same Chain of Narrators"),
+                             systemImage: "point.3.filled.connected.trianglepath.dotted",
+                             subtitle: others == 1 ? String(localized: "1 other narration") : String(localized: "\(others) other narrations"),
+                             showsChevron: true)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

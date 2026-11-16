@@ -104,6 +104,14 @@ final class HadithBlockCache: @unchecked Sendable {
     /// so the all-books sweep stops re-inflating it on every settled query and every Load More.
     private let searchBudget = PerformanceProfile.isLowEndDevice ? 3 * 1024 * 1024 : 16 * 1024 * 1024
 
+    /// The text budget in bytes, for a prewarm to stay inside (`HadithPack.prefetchText(landings:)`):
+    /// past it, every block decoded evicts one decoded a moment before.
+    var textRoom: Int { textBudget }
+
+    /// What a block of `rawLength` bytes holding `rows` hadiths will cost (`textCost`, before the
+    /// block is decoded): its text, and a header for each of its four strings a hadith.
+    static func textCostEstimate(rawLength: Int, rows: Int) -> Int { rawLength + rows * 4 * 24 }
+
     private func textCost(_ block: TextBlock) -> Int {
         block.reduce(0) { $0 + $1.utf8.count + 24 }
     }
@@ -558,6 +566,34 @@ final class HadithPack: @unchecked Sendable {
             // Jump to the next block's first row instead of walking every row of this one.
             let next = index + 1 < blocks.count ? blocks[index + 1].firstRow : upper
             row = max(next, row + 1)
+        }
+    }
+
+    /// Decode the text blocks behind each of `landings` (the rows a chapter opens on), in the order
+    /// given, for as long as the blocks they touch fit `allowance` bytes of the cache: the blocks
+    /// already resident count, so a prewarm never decodes past what the cache keeps. The first
+    /// block is always decoded. Called from a detached task, AHEAD of the tap that opens one of them.
+    func prefetchText(landings: [Range<Int>], allowance: Int) {
+        guard !rows.isEmpty else { return }
+        var seen = Set<Int>()
+        var spent = 0
+        for range in landings {
+            var row = max(0, range.lowerBound)
+            let upper = min(rows.count, range.upperBound)
+            while row < upper {
+                let index = Int(rows[row].block)
+                guard index < blocks.count else { break }
+                let next = index + 1 < blocks.count ? blocks[index + 1].firstRow : rows.count
+                if !seen.contains(index) {
+                    let cost = HadithBlockCache.textCostEstimate(rawLength: blocks[index].textRawLength,
+                                                                 rows: next - blocks[index].firstRow)
+                    guard seen.isEmpty || spent + cost <= allowance else { return }
+                    seen.insert(index)
+                    spent += cost
+                    if !HadithBlockCache.shared.hasText(pack: self, block: index) { _ = textBlock(index) }
+                }
+                row = max(next, row + 1)
+            }
         }
     }
 

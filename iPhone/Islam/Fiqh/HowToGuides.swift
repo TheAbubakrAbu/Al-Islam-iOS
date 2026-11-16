@@ -1826,6 +1826,8 @@ struct RuqyahView: View {
                     ArticleParagraph(verbatim: "Prevent it with a blessing. When something of yours or someone else's pleases you, say “Barakallahu fih” (may Allah bless it), or “Ma sha' Allah, la quwwata illa billah”, as the believer told his companion in the garden:")
                     ScriptureQuote(quran: "18:39", words: 0...11)
                     ArticleParagraph(verbatim: "And do not accuse people. Suspicion without proof breaks ties that no ruqyah repairs; if you suspect someone, you may ask them kindly to wash, and say nothing more.")
+                    ArticleParagraph(verbatim: "Guarding against the eye, what to say when something pleases you, and the washing step by step have their own guide:")
+                    ArticleDoorRow(door: .article("EvilEyeGuideView"))
                 }
 
                 Section(header: ArticleHeader("MAGIC (SIHR)")) {
@@ -1870,7 +1872,7 @@ struct RuqyahView: View {
                 Section(header: ArticleHeader("WHAT TO AVOID")) {
                     ArticleBullet("• **Amulets and charms**, whatever is written in them. The Prophet said that whoever hangs an amulet has committed shirk (Musnad Ahmad 17422; graded sahih by al-Albani), and:")
                     ScriptureQuote(hadith: "abudawud:3883", cite: "Sunan Abi Dawud 3883; graded sahih by al-Albani", arabic: 42...46, english: 19...24)
-                    ArticleParagraph(verbatim: "The ruqyah meant there is the kind with shirk in it; the same narration ends with Ibn Mas'ud teaching his wife the Prophet's own ruqyah instead. Amulets of Quran are left too: the companions of Ibn Mas'ud disliked them all, and Ibn Baz and Ibn al-Uthaymin forbade them, because they open the door to the rest and the Quran was sent down to be recited, not hung.")
+                    ArticleParagraph(verbatim: "The ruqyah meant there is the kind with shirk in it; the same narration ends with Ibn Mas'ud teaching his wife the Prophet's own ruqyah instead. Amulets of Quran are left too. The Salaf differed over them: some allowed them, and Ibn Mas'ud and his companions disliked them all. Ibn Baz and the Standing Committee held that view correct, because the hadiths that forbid amulets are general and to close the door to the rest, and Ibn al-Uthaymin said they are not to be hung. The Quran was sent down to be recited.")
                     ArticleBullet("• **Fortune-tellers and “healers”** who ask for your mother's name, write numbers and squares, tell you who did it, read cups or palms, or ask for an animal slaughtered in a certain way. Going to them is a sin, and believing them is worse:")
                     ScriptureQuote(hadith: "muslim:2230", cite: "Sahih Muslim 2230", arabic: 36...47, english: 0...20)
                     ArticleBullet("• **Talking with the jinn**, taking their word, or accusing a relative because a jinn named them. The jinn lie, and the Sunnah never made them witnesses.")
@@ -1899,7 +1901,7 @@ struct RuqyahView: View {
                     ArticleTermCard("Nafth", arabic: "نَفْث", meaning: "Light blowing with a trace of moisture after reciting, over the person or into the hands: more than a breath, less than spitting.")
                     ArticleTermCard("Al-'ayn", arabic: "العَيْن", meaning: "The evil eye: harm that strikes, by Allah's leave, from a look of envy, or of admiration that does not remember Allah.")
                     ArticleTermCard("Sihr", arabic: "السِّحْر", meaning: "Magic: real, learned from the devils, and kufr to practise. It harms no one except by Allah's permission.")
-                    ArticleTermCard("Tamimah", arabic: "تَمِيمَة", meaning: "An amulet or charm hung or worn for protection. Shirk when it is relied on, and forbidden even when Quran is written in it, in the view the scholars of the Sunnah took.")
+                    ArticleTermCard("Tamimah", arabic: "تَمِيمَة", meaning: "An amulet or charm hung or worn for protection. Shirk when it is relied on. The Salaf differed over one made only of Quran; the sounder view is that it is not hung either.")
                     ArticleTermCard("Nushrah", arabic: "نُشْرَة", meaning: "Undoing magic. With ruqyah and lawful medicine it is allowed; with magic it is the work of the devil.")
                 }
 
@@ -1913,6 +1915,176 @@ struct RuqyahView: View {
         }
         .englishArticle().selectableArticleList(article: "RuqyahView")
         .navigationTitle("How to Do Ruqyah")
+    }
+}
+
+// MARK: - The evil eye
+
+/// What to do about the evil eye (Abu, 2026-11-14: "Add how to guides evil eye"): what to say so that
+/// you do not give it, the daily refuges for yourself and your children, what to do when struck, and
+/// the washing of the one it came from, step by step, with what the scholars of the Sunnah warned
+/// against (charms, smoke, fortune-tellers, accusation, dread). What the eye is and is not, with its
+/// proofs, is the Pillars & Beliefs page `EvilEyeView`, which this guide opens instead of repeating.
+struct EvilEyeGuideView: View {
+    var body: some View {
+        List {
+            Group {
+                Section(header: ArticleHeader("SUMMARY")) {
+                    ArticleLead(articleMarkdown: "In short: the **evil eye (العَين)** is real, and the Prophet (peace and blessings be upon him) taught everything it needs. So that you do not give it, ask Allah to bless whatever pleases you. To guard against it, keep the morning and evening words of refuge and say them over your children. If it strikes, recite ruqyah, and when the person it came from is known, ask them kindly to wash and pour the water over the one struck. Hang nothing, burn nothing, accuse no one, and trust Allah.")
+                }
+
+                Section(header: ArticleHeader("WHAT YOU ARE DEALING WITH")) {
+                    ArticleParagraph(verbatim: "The eye is harm that reaches a person, by Allah's leave, from a look or a word of envy, or of admiration that does not remember Allah. It can come from anyone, someone who loves you included, and it never outruns what Allah has decreed:")
+                    ScriptureQuote(hadith: "muslim:2188", cite: "Sahih Muslim 2188", arabic: 43...54, english: 0...45)
+                    ArticleParagraph(verbatim: "That one hadith holds the whole subject: the eye is real, the decree is above it, and its cure is a washing. What the eye is and what it is not, with the proofs, is in Pillars & Beliefs:")
+                    ArticleDoorRow(door: .article("EvilEyeView"))
+                }
+
+                Section(header: ArticleHeader("WHEN SOMETHING PLEASES YOU")) {
+                    ArticleParagraph(verbatim: "The eye most often leaves a person who admires something and says nothing to Allah. When 'Amir ibn Rabi'ah praised the skin of Sahl ibn Hunayf and Sahl collapsed on the spot, the Prophet (peace and blessings be upon him) said to him:")
+                    ScriptureQuote(hadith: "ibnmajah:3509", cite: "Sunan Ibn Majah 3509; graded sahih by al-Albani", arabic: 67...80, english: 63...85)
+                    ArticleStep("1. **Ask Allah to bless it, aloud**, whenever a person, a child, a home, a skill or anything else pleases you: “Allahumma barik 'alayh” (O Allah, send blessing upon him), “Allahumma barik 'alayha” (upon her), “Allahumma barik fih” (bless it), or to the person directly, “Barakallahu fik” (may Allah bless you). Ibn al-Qayyim explained the Prophet's words to 'Amir as exactly this: say “Allahumma barik 'alayh” (Zad al-Ma'ad 4/155-157).")
+                    ArticleStep("2. **Do the same for what is yours.** Your own child, your own home, your own reflection: Ibn al-Qayyim said that a man may give the eye to himself (Zad al-Ma'ad 4/154), and one narration of the story of Sahl names a person's own self and wealth beside his brother (Musnad Ahmad 15700; graded sahih by al-Albani, as-Silsilah as-Sahihah 2572).")
+                    ArticleStep("3. **Join “Ma sha' Allah, la quwwata illa billah” to it** (what Allah willed; there is no power except in Allah), as Ibn Baz and the Standing Committee advised. They are the words the believer told the owner of the garden he should have said on entering it:")
+                    ScriptureQuote(quran: "18:39", words: 5...11)
+                    ArticleStep("4. **Guard the heart behind the eye.** If you feel envy, do not speak from it or act on it. Ask Allah for the like of what you saw, and pray for its owner:")
+                    ScriptureQuote(hadith: "bukhari:13", cite: "Sahih al-Bukhari 13", arabic: 39...47, english: 4...21)
+                    ArticleStep("5. **If you know your eye is quick**, be stricter with yourself: ask blessing every time, without exception, and look away from what stirs it.")
+                }
+
+                Section(header: ArticleHeader("GUARD YOURSELF EVERY DAY")) {
+                    ArticleParagraph(verbatim: "The strongest protection is in place before anything happens. None of it is a charm: each is a request to Allah, renewed every day.")
+                    ArticleStep("1. **Recite al-Ikhlas, al-Falaq and an-Nas three times each, morning and evening.** Al-Falaq ends with the refuge from the envier, and the Prophet said of the two surahs of refuge that nothing like them had ever been seen (Sahih Muslim 814).")
+                    ScriptureQuote(hadith: "abudawud:5082", cite: "Sunan Abi Dawud 5082; graded hasan by al-Albani", arabic: 84...99, english: 72...93)
+                    ArticleStep("2. **Recite the three again when you lie down**, blow into your cupped hands, and wipe them over as much of your body as you can reach, three times (Sahih al-Bukhari 5017).")
+                    ArticleStep("3. **Recite Ayat al-Kursi when you lie down** (Sahih al-Bukhari 2311), and the last two ayat of al-Baqarah at night (Sahih al-Bukhari 5009).")
+                    ArticleStep("4. **Say these two refuges**, the first three times each morning and evening, the second whenever you stop somewhere:")
+                    GuideDuaRow(DuaItem(
+                        hadith: "abudawud:5088", cite: "Sunan Abi Dawud 5088; graded sahih by al-Albani", arabic: 34...49, english: 25...50,
+                        transliteration: "Bismillahil-ladhi la yadurru ma'a ismihi shay'un fil-ardi wa la fis-sama'i wa huwas-Sami'ul-'Alim",
+                        note: "Three times, morning and evening"
+                    ))
+                    GuideDuaRow(DuaItem(
+                        hadith: "muslim:2708a", cite: "Sahih Muslim 2708", arabic: 63...70, english: 16...32,
+                        transliteration: "A'udhu bikalimatillahit-tammati min sharri ma khalaq",
+                        note: "When stopping at a place; nothing will harm you until you move on"
+                    ))
+                    ArticleStep("5. **Keep the five prayers and stay away from sin.** The heart that remembers Allah is the best guarded, and whoever relies on Him has enough:")
+                    ScriptureQuote(quran: "65:3", words: 5...10)
+                    ArticleParagraph(verbatim: "In his commentary on Surah al-Falaq, Ibn al-Qayyim counted ten things by which the harm of the envier is turned away from the one envied (Bada'i' al-Fawa'id):")
+                    ArticleChecklist([
+                        "**Seeking refuge in Allah** from his evil.",
+                        "**Taqwa**: keeping to Allah's commands and prohibitions.",
+                        "**Patience** with the envier: not fighting him, not complaining of him, not planning to harm him.",
+                        "**Reliance on Allah.**",
+                        "**Emptying the heart** of thinking about him.",
+                        "**Turning to Allah** with sincerity.",
+                        "**Repenting** from the sins that gave an enemy power over you.",
+                        "**Charity and doing good**, as much as you can.",
+                        "**Doing good to the envier himself**, which puts out his fire.",
+                        "**Pure tawhid**: looking past the causes to the One who causes.",
+                    ], title: "Ten Things That Turn Away the Envier's Harm")
+                }
+
+                Section(header: ArticleHeader("GUARD YOUR CHILDREN")) {
+                    ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) sought refuge for his grandsons al-Hasan and al-Husayn with the words Ibrahim used for Isma'il and Ishaq (peace be upon them):")
+                    GuideDuaRow(DuaItem(
+                        hadith: "bukhari:3371", cite: "Sahih al-Bukhari 3371", arabic: 43...54, english: 33...55,
+                        transliteration: "A'udhu bi-kalimatillahit-tammah, min kulli shaytanin wa hammah, wa min kulli 'aynin lammah.",
+                        note: "Said over children, as he said it over al-Hasan and al-Husayn"
+                    ))
+                    ArticleParagraph(verbatim: "Over two children the wording in Abu Dawud's narration of the same hadith is “U'idhukuma” (I place you both in the refuge of) in place of “A'udhu” (Sunan Abi Dawud 4737; graded sahih by al-Albani). Over one boy that becomes “U'idhuka”, and over one girl “U'idhuki”.")
+                    ArticleBullet("• **At bedtime**, recite al-Ikhlas, al-Falaq and an-Nas, blow into your hands, and wipe them over the child.")
+                    ArticleBullet("• **Ask blessing when you praise them**, and say it yourself when a visitor praises them and forgets: “Allahumma barik 'alayh.” No one is embarrassed by a du'a.")
+                    ArticleBullet("• **Teach them the words** as soon as they can repeat them, so that their protection becomes their own.")
+                    ArticleBullet("• **Hang nothing on them.** No thread, bead, pin or pendant, and no mark made as a charm. A child is guarded by Allah through the words of refuge, and through nothing worn.")
+                    ArticleBullet("• **Plain precaution is allowed.** Dressing a child simply, or not showing off what draws eyes, is a different thing from a charm: Ibn al-Qayyim counted covering the beauty of one for whom the eye is feared among the precautions (Zad al-Ma'ad 4/159), and Ibn al-Uthaymin saw no harm in it, since it is leaving adornment and not doing anything (al-Qawl al-Mufid 1/180).")
+                }
+
+                Section(header: ArticleHeader("IF YOU THINK YOU HAVE BEEN STRUCK")) {
+                    ArticleStep("1. **Stay calm, and do not presume.** Tiredness, illness, low mood and a bad season in business have ordinary causes, and a doctor treats many of them. You do not need to know that it is the eye to do everything below, and all of it is good for you either way.")
+                    ArticleStep("2. **Turn to Allah first.** Ask Him directly for the cure, repent from what is between you and Him, and hold on to the prayers. He is the One who removes harm:")
+                    ScriptureQuote(quran: "10:107", words: 0...8)
+                    ArticleStep("3. **Recite ruqyah over yourself**: al-Fatihah, Ayat al-Kursi, the last two ayat of al-Baqarah, then al-Ikhlas, al-Falaq and an-Nas, blowing into your hands and wiping over your body. The Prophet commanded ruqyah for the eye by name:")
+                    ScriptureQuote(hadith: "bukhari:5739", cite: "Sahih al-Bukhari 5739, Sahih Muslim 2197", arabic: 55...59, english: 18...32)
+                    ArticleStep("4. **Use the two ruqyahs of Jibril**, both of which name the eye. They are the words of one person reciting over another, so say them over whoever is ill in your home, and let them be said over you. Asking someone to recite over you is permitted when there is need, and the Prophet commanded seeking ruqyah for the eye (Sahih al-Bukhari 5738); what you recite over yourself, and what is recited over you unasked, is better still:")
+                    GuideDuaRow(DuaItem(
+                        hadith: "muslim:2186", cite: "Sahih Muslim 2186", arabic: 38...56, english: 12...52,
+                        transliteration: "Bismillahi arqik, min kulli shay'in yu'dhik, min sharri kulli nafsin aw 'ayni hasid, Allahu yashfik, bismillahi arqik.",
+                        note: "Jibril's ruqyah over the Prophet"
+                    ))
+                    GuideDuaRow(DuaItem(
+                        hadith: "muslim:2185", cite: "Sahih Muslim 2185", arabic: 54...69, english: 11...45,
+                        transliteration: "Bismillahi yubrik, wa min kulli da'in yashfik, wa min sharri hasidin idha hasad, wa sharri kulli dhi 'ayn.",
+                        note: "Jibril's ruqyah whenever the Prophet fell ill"
+                    ))
+                    ArticleStep("5. **Put your hand where it hurts**, say “Bismillah” three times, then seven times “A'udhu billahi wa qudratihi min sharri ma ajidu wa uhadhir” (Sahih Muslim 2202).")
+                    ArticleStep("6. **If you know who it came from, ask them to wash**, as in the next section.")
+                    ArticleStep("7. **Repeat it for as long as the need lasts**, keep taking your medicine, and be patient. The cure comes when Allah wills it, and the waiting is rewarded.")
+                    ArticleParagraph(verbatim: "The full method of ruqyah, with its conditions and what to avoid, has its own guide:")
+                    ArticleDoorRow(door: .article("RuqyahView"))
+                }
+
+                Section(header: ArticleHeader("THE WASHING")) {
+                    ArticleParagraph(verbatim: "When the person the eye came from is known, the Prophet (peace and blessings be upon him) had him wash, and the water was poured over the one struck:")
+                    ScriptureQuote(hadith: "ahmed:15980", cite: "Musnad Ahmad 15980; graded sahih by Shu'ayb al-Arna'ut", arabic: 130...165, text: "“So he washed his face, his hands, his elbows, his knees, the ends of his feet and the inside of his lower garment in a vessel. Then that water was poured over him: a man poured it over his head and his back from behind him, tipping the vessel over behind him. That was done to him, and Sahl went on with the people with nothing wrong with him”")
+                    ScriptureQuote(hadith: "abudawud:3880", cite: "Sunan Abi Dawud 3880; its chain graded sahih by al-Albani", arabic: 19...26, english: 0...18)
+                    ArticleStep("1. **Ask kindly, and in private**, when you have a strong reason to think it came from this person. Ibn Baz gave the words: “May Allah reward you with good; wash for me.” It is a request for help, not an accusation: 'Amir was a Companion who had fought at Badr, and he meant no harm.")
+                    ArticleStep("2. **If you are the one asked, do it at once**, without offence and without argument. The Prophet commanded it in the hadith above: when you are asked to wash, wash (Sahih Muslim 2188). Al-Maziri held it an obligation, all the more when the one struck is in danger (an-Nawawi, Sharh Sahih Muslim 14/172). Ibn al-Uthaymin called refusing, or taking offence, a mistake: help your brother, for if the eye was from you, you are rid of it, and if it was not, the washing does you no harm.")
+                    ArticleStep("3. **Wash into a vessel**: the face, the hands, the elbows, the knees, the ends of the feet, and the inside of the lower garment, so that the water is caught in a bowl. That is how 'Amir washed, in the narration above and in Malik's in al-Muwatta; Ibn Majah's has “his hands to the elbows” (Sunan Ibn Majah 3509). The inside of the lower garment is the part of the waist-wrap that lies against the body, as al-Qadi 'Iyad explained it; al-Maziri described it as the hanging edge next to the right hip, and said most of the scholars held so (Sharh Sahih Muslim 14/172-173).")
+                    ArticleStep("4. **Pour the water over the one struck**, over the head and back, from behind, in one pour, tipping the vessel out behind him.")
+                    ArticleStep("5. **Wudhu water serves as well**: the person makes wudhu over a bowl and the one struck washes with that water, as Aisha described. Ibn al-Uthaymin gave it so: he is asked to make wudhu, what falls from his wudhu is collected, and it is poured over the head and back of the one struck (Majmu' Fatawa Ibn al-Uthaymin 2/119). Ibn Baz said that, in his experience, washing the face, rinsing the mouth and washing the hands is enough by Allah's permission.")
+                    ArticleParagraph(verbatim: "A fuller order is reported from az-Zuhri, who said he found the scholars describing it so, and an-Nawawi and the Standing Committee give it: the vessel is brought and is not set down on the ground; the person rinses his mouth into it and washes his face into it; then, dipping one hand and pouring over the other side each time, he washes his right palm and his left, his right elbow and his left, his right foot and his left, his right knee and his left, and then the inside of his lower garment; and it is poured over the head of the one struck, from behind, in a single pour (al-Bayhaqi, as-Sunan al-Kubra 9/351-352; Sharh Sahih Muslim 14/172). Whoever does what the hadith itself names has done what was commanded.")
+                    ArticleParagraph(verbatim: "Ibn al-Uthaymin said that taking the person's urine or stool has no basis; what is reported is the washing of his limbs and of the inside of his garment (Majmu' Fatawa Ibn al-Uthaymin 2/117-118).")
+                }
+
+                Section(header: ArticleHeader("IF YOU DO NOT KNOW WHO IT WAS")) {
+                    ArticleParagraph(verbatim: "Then you do not need to know. Ruqyah is a complete treatment, and the Prophet (peace and blessings be upon him) commanded it for the eye without making it depend on finding anyone (Sahih al-Bukhari 5738). Do not go through your guests in your mind, do not ask everyone who visited to wash, and never ask a fortune-teller, a “reader” or a jinn. The Standing Committee ruled that trying to picture the person during the recitation, or asking a jinn who it was, is the work of the devils and sows enmity between people.")
+                    ScriptureQuote(hadith: "muslim:2230", cite: "Sahih Muslim 2230", arabic: 36...47, english: 0...20)
+                }
+
+                Section(header: ArticleHeader("WHAT TO AVOID")) {
+                    ArticleBullet("• **Charms of every kind**: the blue bead and the glass “eye”, the open hand, a black thread or a pin on a baby, a horseshoe, shells, and pendants hung for protection. The Prophet said:")
+                    ScriptureQuote(hadith: "abudawud:36", cite: "Sunan Abi Dawud 36; graded sahih by al-Albani", arabic: 119...138, english: 125...157)
+                    ArticleBullet("• **Smoke and kitchen cures**: burning wild rue, incense, alum or salt, circling them over a person's head, passing an egg over the body, pouring molten lead. The Standing Committee ruled that fumigating with alum, herbs or leaves for the eye is not permitted, since these are not ordinary causes of its cure and the smoke may be meant to appease the devils (Fatawa al-Lajnah ad-Da'imah 1/275), and Ibn Baz said the pouring of lead has no basis and is the practice of soothsayers.")
+                    ArticleBullet("• **Charms of the tongue and hand**: knocking on wood, crossed fingers, “five in your eye”, spitting when someone is praised. Ibn Baz called knocking on wood for fear of the envier's eye a wrong and a false belief (Majmu' Fatawa Ibn Baz 8/424). The Sunnah put one thing in their place: asking Allah to bless.")
+                    ArticleBullet("• **Accusing people.** Baseless suspicion is a sin, and it cuts ties that no ruqyah mends. If you have a real reason, ask the person kindly to wash, and say nothing more to anyone.")
+                    ArticleBullet("• **Dread.** Hiding your children, refusing visitors, reading every headache as an attack: this is a harm of its own. Guarding against the eye is part of relying on Allah; being ruled by the fear of it is not. Ibn al-Uthaymin warned that delusions and whisperings have multiplied, so that people call every ordinary illness the jinn, the eye or magic. Say your words of refuge and live.")
+                    ArticleBullet("• **Invented programs**: a surah a fixed number of times at a fixed hour, “evil eye removal” schedules, water blown on by someone for his own blessing. What is fixed is fixed by revelation.")
+                    ArticleBullet("• **Leaving medicine.** Ruqyah and treatment go together, and the Prophet commanded both.")
+                }
+
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
+                    ArticleParagraph(articleMarkdown: "**“Ma sha' Allah” or “Barakallah”?** What the Prophet commanded for the eye is asking blessing, so that is the part never to leave out. Ibn Baz and the Standing Committee advised saying “Ma sha' Allah, la quwwata illa billah” together with it; Ibn al-Uthaymin kept that phrase for your own blessings and for another's said “Tabarak Allahu 'alayk”. Asked about “Ma sha' Allah, tabarak Allah”, Ibn Baz answered that nothing is reported for “Tabarak Allah”: what is reported is the du'a, “Allahumma barik fih” or “Barakallahu fih”, said with “Ma sha' Allah, la quwwata illa billah”. The hadith that “Ma sha' Allah, la quwwata illa billah” by itself stops the eye from harming is weak (al-Albani, Da'if al-Jami' 5588).")
+                    ArticleParagraph(articleMarkdown: "**What if the person refuses to wash, lives far away, or has died?** Then recite ruqyah, which is enough without it. The washing is one means of cure, not a condition of it.")
+                    ArticleParagraph(articleMarkdown: "**Should I ask everyone who visited to wash?** No. The Prophet asked whom they suspected because the cause was plain: one man, one remark, and Sahl collapsed. Asking a whole gathering to wash spreads suspicion over the innocent.")
+                    ArticleParagraph(articleMarkdown: "**May I keep good news to myself?** Yes. Ya'qub told Yusuf not to tell his dream to his brothers (Quran 12:5), and there is wisdom in not showing everything to everyone. Allah also told His Prophet to speak of his Lord's favor (Quran 93:11), so thank Him for the blessing and enjoy it openly among people you trust.")
+                    ArticleParagraph(articleMarkdown: "**Should I stop sharing photos of my children?** Whether photographs of living beings may be taken and kept at all is a separate question, on which Ibn Baz was strict. As far as the eye goes, nothing in the texts ties it to seeing someone in the flesh, so good sense about what you show, and to whom, is wise. No screen has a power the decree does not give it. Say their refuge over them and choose with a calm heart.")
+                    ArticleParagraph(articleMarkdown: "**Can I hang an ayah or “Ma sha' Allah” in the car or on the baby?** Hung or worn for protection it is an amulet. Where only Quran is written in it the Salaf differed, and the sounder view, which Ibn Baz and the Standing Committee held correct, is that it is not hung either. Protection is in saying the words, not in displaying them.")
+                    ArticleParagraph(articleMarkdown: "**May I recite into water and wash with it or drink it?** Ibn Baz and the Standing Committee permitted reciting the Quran into water for the sick. Reciting directly over the person is better, as the Sunnah shows.")
+                    ArticleParagraph(articleMarkdown: "**How will I know it has gone?** By feeling better. There is no sign in the Sunnah to look for, and no one who can “see” it leave. Keep to the remembrances either way.")
+                }
+
+                Section(header: ArticleHeader("KEY TERMS")) {
+                    ArticleTermCard("Al-'ayn", arabic: "العَيْن", meaning: "The evil eye: harm that strikes, by Allah's leave, from a look of envy, or of admiration that does not remember Allah.")
+                    ArticleTermCard("'A'in", arabic: "العَائِن", meaning: "The one the eye comes from, whether he meant it or not.")
+                    ArticleTermCard("Ma'in", arabic: "المَعِين", meaning: "The one struck by the eye.")
+                    ArticleTermCard("Tabrik", arabic: "التَّبْرِيك", meaning: "Asking Allah to bless: “Allahumma barik 'alayh”, “Barakallahu fik”. What the one who admires says.")
+                    ArticleTermCard("Isti'adhah", arabic: "الاسْتِعَاذَة", meaning: "Seeking refuge in Allah: the surahs and words of refuge said morning, evening and over children.")
+                    ArticleTermCard("Ruqyah", arabic: "الرُّقْيَة", meaning: "Reciting the Quran and the Prophet's supplications over the one afflicted, asking Allah alone for the cure.")
+                    ArticleTermCard("Tamimah", arabic: "التَّمِيمَة", meaning: "An amulet or charm hung or worn for protection. Forbidden, and shirk when the heart relies on it. One made only of Quran is not hung either, on the sounder view.")
+                }
+
+                Section(header: ArticleHeader("IN SUMMARY")) {
+                    ArticleClosing("When something pleases you, ask Allah to bless it. Morning and evening, say the surahs and words of refuge, and say them over your children. If the eye strikes, recite ruqyah, and if you know who it came from, ask them gently to wash and pour the water over the one struck. Hang nothing, burn nothing, accuse no one, and leave the outcome with Allah, without whose leave nothing harms.")
+                }
+
+                ArticleSourcesSection(article: "EvilEyeGuideView")
+            }
+            .themedListRowBackground()
+        }
+        .englishArticle().selectableArticleList(article: "EvilEyeGuideView")
+        .navigationTitle("How to Deal With the Evil Eye")
     }
 }
 

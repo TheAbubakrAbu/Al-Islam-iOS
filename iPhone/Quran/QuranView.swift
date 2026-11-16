@@ -1947,6 +1947,8 @@ struct QuranView: View {
                     juzRail(railItems, proxy: scrollProxy)
                 }
             }
+            // With the rail, how far down the list is: the bar under the navigation bar.
+            .scrollProgressBar(!railItems.isEmpty)
             #else
             .listSectionIndexVisibilityWhenAvailable(visible: isJuzSort && searchText.isEmpty)
             #endif
@@ -3344,7 +3346,8 @@ struct QuranView: View {
                         .conditionalGlassEffect(
                             useColor: 0.3,
                             customTint: settings.accentColor.color,
-                            interactive: false
+                            interactive: false,
+                            inRow: true
                         )
 
                     Image(systemName: "bookmark.fill")
@@ -3489,7 +3492,8 @@ struct QuranView: View {
                         .conditionalGlassEffect(
                             useColor: 0.3,
                             customTint: settings.accentColor.color,
-                            interactive: false
+                            interactive: false,
+                            inRow: true
                         )
 
                     Image(systemName: "star.fill")
@@ -4411,9 +4415,10 @@ struct QuranView: View {
     /// replaced both the JUMP TO JUZ card and juz sort's iOS 26 section index, so it works on every
     /// iOS and in grid mode too. Shown wherever the list reads in mushaf order, so juz n is one place
     /// in it; hidden while a search is typed, as the system index was. Simple Mode keeps it to the two
-    /// Juz sorts (Abu, 2026-10-27: "Hide the 1-30 in simple mode unless in juz mode").
+    /// Juz sorts (Abu, 2026-10-27: "Hide the 1-30 in simple mode unless in juz mode"). And only
+    /// while the rails are switched on at all (`Settings.showJumpRail`, on unless switched off).
     private var showsJuzRail: Bool {
-        guard searchText.isEmpty, !settings.hides(.juzRail, unless: isJuzSort) else { return false }
+        guard settings.showJumpRail, searchText.isEmpty, !settings.hides(.juzRail, unless: isJuzSort) else { return false }
         switch settings.quranSortMode {
         case .surah, .juz, .simpleJuz, .khatm, .pages:
             return true

@@ -803,6 +803,16 @@ struct HadithView: View {
                     }
                 }
             }
+            // A shared link to a book itself (AppLink.swift): its chapter list, replacing whatever
+            // the tab had open, after the same settle as the narration door above.
+            .onReceive(AppNavigation.shared.$pendingHadithBook) { slug in
+                guard let slug else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    AppNavigation.shared.pendingHadithBook = nil
+                    guard #available(iOS 16.0, *) else { return }
+                    bookPath = [.book(slug: slug, autoOpenHadithID: nil)]
+                }
+            }
             .onChange(of: pushedReference) { reference in
                 guard #available(iOS 16.0, *), let reference else { return }
                 pushedReference = nil
@@ -917,11 +927,12 @@ struct HadithView: View {
                 listForJump: $listForJump,
                 moreMenuItems: AnyView(moreMenuItems)
             ))
-            .sheet(isPresented: $showHadithSettings) {
+            // Closing either sheet is a natural break for the review prompt (AppReview.swift).
+            .sheet(isPresented: $showHadithSettings, onDismiss: { AppReviewManager.shared.notePause() }) {
                 SettingsHadithView()
                     .smallMediumSheetPresentation()
             }
-            .sheet(isPresented: $showAskAI) {
+            .sheet(isPresented: $showAskAI, onDismiss: { AppReviewManager.shared.notePause() }) {
                 if #available(iOS 16.0, *) {
                     AskAIChatSheet(initialQuestion: searchText)
                 }
@@ -1362,7 +1373,7 @@ struct HadithView: View {
             // all the slack as dead space under the English line.
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
             .contentShape(Rectangle())
     }
 
@@ -2710,7 +2721,8 @@ struct HadithView: View {
                 .frame(maxHeight: .infinity)
                 .conditionalGlassEffect(
                     useColor: favorite ? 0.3 : nil,
-                    customTint: favorite ? settings.accentColor.color : nil
+                    customTint: favorite ? settings.accentColor.color : nil,
+                    inRow: true
                 )
                 .onTapGesture {
                     settings.hapticFeedback()
@@ -2803,11 +2815,13 @@ struct HadithView: View {
     /// The book's number in Arabic-Indic digits beside its Arabic name, the surah row's ornament
     /// (the Arabic face draws the digits in the end-of-ayah ring, as the chapter tiles have it).
     private func bookArabicNumber(_ book: HadithCatalogBook, style: UIFont.TextStyle) -> some View {
-        Text(arabicNumberString(from: book.number))
-            .font(settings.useFontArabic
+        // The chapter rows' rule: a number past the face's medallions takes the system face.
+        let plainDigits = settings.useFontArabic && !ArabicNumberFace.draws(book.number, in: settings.nonQuranArabicFontName)
+        return Text(arabicNumberString(from: book.number))
+            .font(settings.useFontArabic && !plainDigits
                 ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: style).pointSize + 2)
                 : Font(UIFont.preferredFont(forTextStyle: style)).weight(.semibold))
-            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace && !plainDigits)
             .foregroundColor(settings.accentColor.color)
             .layoutPriority(1)
     }
@@ -2902,7 +2916,8 @@ struct HadithView: View {
             clear: !store.isFavorite(book.slug),
             rectangle: true,
             useColor: store.isFavorite(book.slug) ? 0.25 : nil,
-            customTint: store.isFavorite(book.slug) ? settings.accentColor.color : nil
+            customTint: store.isFavorite(book.slug) ? settings.accentColor.color : nil,
+            inRow: true
         )
         // OUTSIDE the menu's label, so the star's own tap target does not fight the long press that
         // opens it (see `GridTileMenu`).

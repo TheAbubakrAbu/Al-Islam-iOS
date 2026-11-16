@@ -1,0 +1,88 @@
+# name|launch arguments   (scroll.sh adds -scrollProbe and the two launch constants)
+# Every list whose length follows data, at its longest, plus one of each static kind.
+# Grid or list is seeded on every line that has the choice: a seed outlives the launch that wrote it.
+# The app reads only the FIRST -seedBool and the FIRST -seedInt, so each line has one of each at most.
+
+# Quran tab
+quran-root-grid|-launchTabQuran -quranRootList -noAutoOpenMushaf -quranSortMode surah -seedBool quranGridMode=1
+quran-root-list|-launchTabQuran -quranRootList -noAutoOpenMushaf -quranSortMode surah -seedBool quranGridMode=0
+quran-root-juz-grid|-launchTabQuran -quranRootList -noAutoOpenMushaf -quranSortMode juz -seedBool quranGridMode=1
+quran-root-juz-list|-launchTabQuran -quranRootList -noAutoOpenMushaf -quranSortMode juz -seedBool quranGridMode=0
+quran-root-pages-grid|-launchTabQuran -quranRootList -noAutoOpenMushaf -quranSortMode pages -seedBool quranGridMode=1
+quran-root-pages-list|-launchTabQuran -quranRootList -noAutoOpenMushaf -quranSortMode pages -seedBool quranGridMode=0
+quran-root-page-list|-launchTabQuran -quranRootList -noAutoOpenMushaf -quranSortMode page -seedBool quranGridMode=0
+quran-root-ayahs-list|-launchTabQuran -quranRootList -noAutoOpenMushaf -quranSortMode ayahs -seedBool quranGridMode=0
+quran-search-allah|-launchTabQuran -quranRootList -noAutoOpenMushaf -quranSortMode surah -seedBool quranGridMode=0 -quranSearch "الله"
+quran-search-the|-launchTabQuran -quranRootList -noAutoOpenMushaf -quranSortMode surah -seedBool quranGridMode=0 -quranSearch "the"
+quran-search-mercy-grid|-launchTabQuran -quranRootList -noAutoOpenMushaf -quranSortMode surah -seedBool quranGridMode=1 -quranSearch "mercy"
+quran-reader-baqarah|-launchTabQuran -quranListMode -lastRead 2:1 -quranSortMode surah -seedBool quranGridMode=1
+quran-reader-kahf|-launchTabQuran -quranListMode -lastRead 18:1
+quran-reader-nas|-launchTabQuran -quranListMode -lastRead 100:1
+quran-reader-search|-launchTabQuran -quranListMode -lastRead 2:1 -surahSearch "الله"
+quran-themes|-launchTabQuran -openThemes
+quran-history|-launchTabQuran -openQuranHistory
+quran-surah-picker|-launchTabQuran -quranPageMode -lastRead 1:1 -openSurahPicker
+quran-reciters|-launchTabQuran -launchQuranSettings -launchQuranSettingsReciters
+quran-surah-info|-launchTabQuran -quranListMode -lastRead 2:1 -openSurahInfo
+
+# Hadith tab
+hadith-root-grid|-launchTabHadith -seedBool hadithGridMode=1,hadithChapterGridMode=0
+hadith-root-list|-launchTabHadith -seedBool hadithGridMode=0,hadithChapterGridMode=0
+hadith-book-bukhari-list|-launchTabHadith -launchHadithBook bukhari -seedBool hadithGridMode=1,hadithChapterGridMode=0
+hadith-book-bukhari-grid|-launchTabHadith -launchHadithBook bukhari -seedBool hadithGridMode=1,hadithChapterGridMode=1
+hadith-book-ahmed-list|-launchTabHadith -launchHadithBook ahmed -seedBool hadithGridMode=1,hadithChapterGridMode=0
+hadith-chapter-7|-launchTabHadith -launchHadithOpen bukhari:1 -seedBool hadithGridMode=1,hadithChapterGridMode=0
+hadith-chapter-499|-launchTabHadith -launchHadithOpen bukhari:4273
+hadith-chapter-921|-launchTabHadith -launchHadithOpen mishkat_almasabih:522
+hadith-chapter-part|-launchTabHadith -launchHadithOpen ahmed:3479
+hadith-book-search|-launchTabHadith -launchHadithBook bukhari -hadithBookSearch "الله"
+hadith-book-search-en|-launchTabHadith -launchHadithBook ahmed -hadithBookSearch "prayer"
+hadith-chapter-search|-launchTabHadith -launchHadithOpen ahmed:3479 -hadithChapterSearch "قال"
+hadith-search|-launchTabHadith -hadithSearch "prophet" -hadithKeywordResults
+hadith-search-more|-launchTabHadith -hadithSearch "prophet" -hadithKeywordResults -hadithLoadMore
+hadith-narrators|-launchTabHadith -launchHadithNarrators
+hadith-topics|-launchTabHadith -launchHadithTopics
+hadith-enc|-launchTabHadith -launchHadithEncyclopedia
+hadith-history|-launchTabHadith -launchHadithHistory
+
+# Islam tab
+islam-root-grid|-launchTabIslam -seedInt gridModeIslamRaw=1,gridModeNamesRaw=1,gridModeArabicRaw=1
+islam-root-list|-launchTabIslam -seedInt gridModeIslamRaw=0,gridModeNamesRaw=0,gridModeArabicRaw=0
+islam-names-list|-launchTabIslam -islamDestination namesOfAllah -seedInt gridModeIslamRaw=0,gridModeNamesRaw=0,gridModeArabicRaw=0
+islam-names-grid|-launchTabIslam -islamDestination namesOfAllah -seedInt gridModeIslamRaw=1,gridModeNamesRaw=1,gridModeArabicRaw=1
+islam-arabic-grid|-launchTabIslam -islamDestination arabicAlphabet -seedInt gridModeIslamRaw=1,gridModeNamesRaw=1,gridModeArabicRaw=1
+islam-arabic-list|-launchTabIslam -islamDestination arabicAlphabet -seedInt gridModeIslamRaw=0,gridModeNamesRaw=0,gridModeArabicRaw=0
+islam-adhkar|-launchTabIslam -islamDestination commonAdhkar
+islam-duas|-launchTabIslam -islamDestination commonDuas
+islam-hisn|-launchTabIslam -islamDestination commonDuas -openHisnLibrary
+islam-tajweed-course|-launchTabIslam -islamDestination tajweedCourse
+islam-tajweed-foundations|-launchTabIslam -islamDestination tajweedFoundations
+islam-pillars|-launchTabIslam -islamDestination pillarsAndBasics
+islam-guides|-launchTabIslam -islamDestination howToGuides
+islam-miracles|-launchTabIslam -islamDestination miraclesOfQuran
+islam-prophecies|-launchTabIslam -islamDestination propheciesOfProphet
+islam-article-wudu|-launchTabIslam -islamOpenArticle WudhuView
+islam-article-aqeedah|-launchTabIslam -islamOpenArticle AqeedahMadhabView
+islam-journal|-launchTabIslam -islamDestination journal -journalSeed
+islam-wallpapers|-launchTabIslam -islamDestination islamicWallpapers
+islam-search|-launchTabIslam -islamSearch "prayer"
+
+# Adhan tab
+adhan-root|-launchTabAdhan
+adhan-prayer-calendar|-launchTabAdhan -glanceAction prayerCalendar
+adhan-hijri-calendar|-launchTabAdhan -glanceAction hijriCalendar
+adhan-tracker|-launchTabAdhan -openPrayerTracker
+
+# Settings tab
+settings-root-grid|-launchTabSettings -seedInt gridModeSettingsRaw=1
+settings-root-list|-launchTabSettings -seedInt gridModeSettingsRaw=0
+settings-quran|-launchTabSettings -settingsOpen quran
+settings-prayer|-launchTabSettings -settingsOpen prayer
+settings-notifications|-launchTabSettings -settingsOpen notifications
+settings-appearance|-launchTabSettings -settingsOpen appearance
+settings-tips|-launchTabSettings -settingsOpen tips
+settings-credits|-launchTabSettings -showCredits
+
+# Back to the shipped defaults, whatever they are: the choices are unset, not seeded
+# (today: grid everywhere, the Quran tab and the chapter list lists)
+reset-defaults|-launchTabAdhan -quranSortMode surah -seedClear quranGridMode,hadithGridMode,hadithChapterGridMode -seedInt gridModeIslamRaw=-1,gridModeNamesRaw=-1,gridModeArabicRaw=-1,gridModeSettingsRaw=-1

@@ -800,6 +800,14 @@ struct TajweedTestSessionView: View {
                                   rightIDs: answeredRight.map { ($0.sourceKey, $0.tier.id) })
         }
         withAnimation(.easeInOut) { finished = true }
+        // The results are on screen: the review prompt hears how the round went (AppReview.swift). A
+        // strong score may ask, a weak one keeps it quiet, anything between is a natural break. The
+        // placement is not scored that way (its `questions` are only the last pair).
+        if case .placement = mode {
+            AppReviewManager.shared.notePause()
+        } else {
+            AppReviewManager.shared.noteFinishedRun(correct: right, attempts: questions.count)
+        }
     }
 
     // MARK: Results

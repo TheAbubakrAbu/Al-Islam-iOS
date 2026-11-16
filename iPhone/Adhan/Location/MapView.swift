@@ -263,6 +263,9 @@ struct MapView: View {
             settings.fetchPrayerTimes {
                 if !settings.locationNeverAskAgain && settings.showLocationAlert {
                     showAlert = true
+                    // Asked for the current location and got "access denied": no review prompt on
+                    // its heels (AppReview.swift).
+                    AppReviewManager.shared.noteSetback(.minor)
                 }
             }
         } label: {

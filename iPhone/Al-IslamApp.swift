@@ -98,14 +98,16 @@ struct AlIslamApp: App {
                 // Accent, tint, preferred color scheme and the `AppearanceEnvironment` every shared
                 // chrome modifier reads - one live snapshot instead of ~400 per-view Settings subscribers.
                 .appearanceEnvironment()
+                // Starts the review prompt's tracking (AppReview.swift). When it may ask is decided
+                // by the moments the screens report and by `isInterfaceReady` (AppDelegate.swift).
                 .appReviewPrompt()
                 // A newer version on the App Store is offered when the app opens (AppUpdateCheck.swift);
                 // it waits for the reveal and for the screen to be free, like the review ask above.
                 .appUpdatePrompt()
-                // Set ABOVE (outside) `.appReviewPrompt()` too, or its `@Environment(\.appRevealed)`
-                // reads the key's default (true): the copy inside `rootContent` sits BELOW the review
-                // modifier in the tree, and environment only flows down - the launch-cover gate on the
-                // review sheet was silently inert without this.
+                // Set ABOVE (outside) the two modifiers above too: the copy inside `rootContent` sits
+                // BELOW them in the tree, and environment only flows down, so an
+                // `@Environment(\.appRevealed)` read up here would see the key's default (true). (The
+                // review ask reads the live `AppReveal` mirror now, not the environment.)
                 .environment(\.appRevealed, rootStage == .main)
                 // Watches the stores the badges are thresholds on. The banner itself is NOT hosted
                 // here - it lives in its own window above the app (see `AchievementBannerPresenter`)
@@ -263,11 +265,12 @@ private struct MainTabView: View {
     // (see `LaunchWarmup`) before it reveals - so the user only ever sees a fully-built opening tab, and the first
     // tap on Quran reuses the warm tab instantly. No visible tab flip, no first-tap stall.
     @State private var selectedTab: AppTab = .adhan
-    /// A deep link (an ayah widget's tap, a Sunnah reminder's) arrived before the under-cover warm
-    /// finished: the warm's last step must land on the Quran tab. `pendingQuran` itself cannot say
-    /// so by then, because the Quran tab clears it while the warm is still waiting on that tab's
-    /// layout, and a cold launch from a widget revealed on the launch tab with the ayah hidden.
-    @State private var landOnQuranAfterWarm = false
+    /// A deep link (an ayah widget's tap, a Sunnah reminder's, a shared link) arrived before the
+    /// under-cover warm finished: the warm's last step must land on that link's tab. The pending
+    /// target itself cannot say so by then, because its tab clears it while the warm is still
+    /// walking the others, and a cold launch from a widget revealed on the launch tab with the
+    /// ayah hidden.
+    @State private var landAfterWarm: AppTab?
     @State private var didWarm = false
     /// The opening Adhan tab's content waits for the launch cover's first frame, like the warm walk
     /// below: built in the same pass, it held that frame (and the cover's animation task) for about
@@ -302,21 +305,31 @@ private struct MainTabView: View {
             // tab; the tab's own `.onReceive` opens the reader from there.
             .onReceive(AppNavigation.shared.$pendingQuran) { target in
                 guard target != nil else { return }
-                selectedTab = .quran
-                if !LaunchWarmup.shared.isWarm { landOnQuranAfterWarm = true }
+                land(on: .quran)
             }
-            // A tap on an ayah widget (`QuranDeepLink`, alislam://ayah/2/255) opens that ayah: the
-            // same route a Sunnah reminder's tap takes, so page mode and list mode both land on it.
+            // A shared link (AppLink.swift): the web address that opens the app, the app's own
+            // scheme, and the ayah widgets' taps (alislam://ayah/2/255), which are the same grammar.
+            // Each lands through the route a Sunnah reminder's tap takes, so page mode and list mode
+            // both open on it. A universal link can arrive either way, so both doors lead to the
+            // router, which drops the second delivery of one URL.
             .onOpenURL { url in
-                guard let target = QuranDeepLink.parseAyah(url) else { return }
-                AppNavigation.shared.open(.ayah(target.surah, target.ayah))
+                AppLinkRouter.open(url)
+            }
+            .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+                if let url = activity.webpageURL { AppLinkRouter.open(url) }
+            }
+            // A link to a tab itself: nothing to push, so it is selected and cleared here.
+            .onReceive(AppNavigation.shared.$pendingTab) { raw in
+                guard let raw else { return }
+                AppNavigation.shared.pendingTab = nil
+                if let tab = AppTab(rawValue: raw) { land(on: tab) }
             }
             // A Control Center control lands on the Adhan tab; the glance card's own `.onReceive`
             // raises the Qibla sheet from there (it is what computes the bearing). `.tab` has nothing
             // to push, so it clears itself here.
             .onReceive(AppNavigation.shared.$pendingAdhan) { target in
                 guard let target else { return }
-                selectedTab = .adhan
+                land(on: .adhan)
                 if case .tab = target { AppNavigation.shared.pendingAdhan = nil }
             }
             // iPad: a Dynamic Type change inside the tab bar's selection animation is the UIKit hang
@@ -329,20 +342,25 @@ private struct MainTabView: View {
             .onReceive(AppNavigation.shared.$pendingIslam) { target in
                 guard let target else { return }
                 if case .hadithTab = target {
-                    selectedTab = .hadith
+                    land(on: .hadith)
                     AppNavigation.shared.pendingIslam = nil
                 } else if case .tab = target {
-                    selectedTab = .islam
+                    land(on: .islam)
                     AppNavigation.shared.pendingIslam = nil
                 } else {
-                    selectedTab = .islam
+                    land(on: .islam)
                 }
             }
             // A study sheet's "Open in Book" (HadithResolvedList.swift) lands on the Hadith tab; the
-            // tab's own `.onReceive` opens the narration in its book from there.
+            // tab's own `.onReceive` opens the narration in its book from there. A shared link to a
+            // book itself takes the same door.
             .onReceive(AppNavigation.shared.$pendingHadith) { target in
                 guard target != nil else { return }
-                selectedTab = .hadith
+                land(on: .hadith)
+            }
+            .onReceive(AppNavigation.shared.$pendingHadithBook) { slug in
+                guard slug != nil else { return }
+                land(on: .hadith)
             }
             // Launch warmups, one .task per app domain (like AppLifecycle's sections): when this
             // root is copied into a companion app, delete the domains it doesn't ship.
@@ -810,11 +828,18 @@ private struct MainTabView: View {
 
         // 3) Back on the landing tab; let it become the rendered tab again before the reveal. A
         // launch from a Sunnah reminder's tap lands on the Quran tab instead.
-        selectedTab = landOnQuranAfterWarm || AppNavigation.shared.pendingQuran != nil ? .quran : launchTab
-        landOnQuranAfterWarm = false
+        selectedTab = landAfterWarm ?? (AppNavigation.shared.pendingQuran != nil ? .quran : launchTab)
+        landAfterWarm = nil
         try? await Task.sleep(nanoseconds: 80_000_000)
 
         LaunchWarmup.shared.markWarm()
+    }
+
+    /// Selects the tab a pending target belongs to. While the under-cover warm is still walking the
+    /// tabs, the selection alone would be walked over, so the warm's last step is told to end here.
+    private func land(on tab: AppTab) {
+        selectedTab = tab
+        if !LaunchWarmup.shared.isWarm { landAfterWarm = tab }
     }
 
     /// The tab the app lands on after the under-cover warm: the reader's choice ("Open the App On",
@@ -863,10 +888,26 @@ private struct MainTabView: View {
         }
     }
 
+    /// The tab bar's own binding. Only a tap on the bar writes through it: the under-cover warm walk,
+    /// the deep links and the launch-tab settle all assign `selectedTab` directly. So this is where a
+    /// tab switch is known to be the reader's own, which is a natural break for the review prompt
+    /// (AppReview.swift): whatever they were doing on the tab they left, they are done with it.
+    private var tabBarSelection: Binding<AppTab> {
+        Binding(
+            get: { selectedTab },
+            set: { tab in
+                // A tap on the tab already open (pop to root, scroll to top) is not a switch.
+                guard tab != selectedTab else { return }
+                selectedTab = tab
+                AppReviewManager.shared.notePause()
+            }
+        )
+    }
+
     @ViewBuilder
     private var tabs: some View {
         if #available(iOS 18.0, *) {
-            TabView(selection: $selectedTab) {
+            TabView(selection: tabBarSelection) {
                 Tab("Adhan", systemImage: "mecca", value: AppTab.adhan) {
                     adhanTab
                 }
@@ -891,7 +932,7 @@ private struct MainTabView: View {
                 }
             }
         } else {
-            TabView(selection: $selectedTab) {
+            TabView(selection: tabBarSelection) {
                 adhanTab
                     .tabItem {
                         Image(systemName: "safari")

@@ -166,7 +166,7 @@ struct JuzHeader: View {
             .foregroundStyle(settings.accentColor.color)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .conditionalGlassEffect()
+            .conditionalGlassEffect(inRow: true)
             .accessibilityLabel("\(surahCount) surahs")
             .hiddenInSimple(.sectionCounts)
     }
@@ -178,7 +178,7 @@ struct JuzHeader: View {
         } label: {
             Image(systemName: "info.circle")
                 .padding(4)
-                .conditionalGlassEffect()
+                .conditionalGlassEffect(inRow: true)
         }
         .buttonStyle(.plain)
         .foregroundStyle(settings.accentColor.color)
@@ -218,7 +218,7 @@ struct JuzHeader: View {
         } label: {
             Image(systemName: "shuffle.circle")
                 .padding(4)
-                .conditionalGlassEffect()
+                .conditionalGlassEffect(inRow: true)
         }
         // VoiceOver read the symbol's own name, "Shuffle In A Circle".
         .accessibilityLabel("Random Surah")

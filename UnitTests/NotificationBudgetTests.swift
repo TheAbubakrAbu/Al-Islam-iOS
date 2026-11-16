@@ -68,6 +68,68 @@ final class NotificationBudgetTests: XCTestCase {
         XCTAssertEqual(Budget.enabledCount(in: defaults), 0)
     }
 
+    // MARK: A simulator stays quiet
+
+    /// A simulator's sound comes out of the Mac it runs on: one left booted rang two weeks of
+    /// scheduled adhans through it at its own location's times, San Francisco's, ten to twenty
+    /// minutes after Irvine's (Abu, 2026-11-16). So a request built in a simulator carries no sound
+    /// unless `simulatorAdhanSound` asks for it, and its text and identifier are untouched.
+    func testASimulatorSchedulesPrayerNotificationsWithoutSound() {
+        #if targetEnvironment(simulator)
+        let key = Settings.simulatorAdhanSoundKey
+        let saved = UserDefaults.standard.object(forKey: key)
+        defer { UserDefaults.standard.set(saved, forKey: key) }
+
+        let spec = Settings.PendingNotificationSpec(
+            identifier: "Isha-0-2026-11-16", body: "Time for Isha", soundFile: "minshawi-2-30.caf",
+            categoryIdentifier: nil, intendedFireDate: Date(timeIntervalSince1970: 1_794_880_800),
+            trigger: DateComponents(year: 2026, month: 11, day: 16, hour: 18, minute: 0)
+        )
+
+        UserDefaults.standard.removeObject(forKey: key)
+        XCTAssertTrue(Settings.mutesAdhanInSimulator, "quiet is the default in a simulator")
+        let quiet = Settings.buildNotificationRequest(from: spec)
+        XCTAssertNil(quiet.content.sound, "a simulator's adhan must not ring through the Mac")
+        XCTAssertEqual(quiet.content.body, "Time for Isha")
+        XCTAssertEqual(quiet.identifier, "Isha-0-2026-11-16")
+
+        UserDefaults.standard.set(true, forKey: key)
+        XCTAssertFalse(Settings.mutesAdhanInSimulator)
+        XCTAssertNotNil(Settings.buildNotificationRequest(from: spec).content.sound, "asked for, it sounds")
+        #else
+        XCTAssertFalse(Settings.mutesAdhanInSimulator, "a device is never muted")
+        #endif
+    }
+
+    /// A schedule built under the other answer is rebuilt once: without that, a simulator already
+    /// holding two weeks of adhans kept them (a plain launch reschedules nothing the same day).
+    func testASimulatorRebuildsAScheduleBuiltUnderTheOtherAnswer() {
+        #if targetEnvironment(simulator)
+        let soundKey = Settings.simulatorAdhanSoundKey
+        let builtKey = Settings.simulatorScheduleSoundKey
+        let savedSound = UserDefaults.standard.object(forKey: soundKey)
+        let savedBuilt = UserDefaults.standard.object(forKey: builtKey)
+        defer {
+            UserDefaults.standard.set(savedSound, forKey: soundKey)
+            UserDefaults.standard.set(savedBuilt, forKey: builtKey)
+        }
+
+        UserDefaults.standard.removeObject(forKey: soundKey)
+        UserDefaults.standard.removeObject(forKey: builtKey)
+        XCTAssertTrue(Settings.simulatorScheduleIsStale, "a schedule from before the rule is rebuilt")
+
+        Settings.noteSimulatorScheduleBuilt()
+        XCTAssertFalse(Settings.simulatorScheduleIsStale, "and only once")
+
+        UserDefaults.standard.set(true, forKey: soundKey)
+        XCTAssertTrue(Settings.simulatorScheduleIsStale, "asking for sound rebuilds it with sound")
+        Settings.noteSimulatorScheduleBuilt()
+        XCTAssertFalse(Settings.simulatorScheduleIsStale)
+        #else
+        XCTAssertFalse(Settings.simulatorScheduleIsStale, "a device never owes this rebuild")
+        #endif
+    }
+
     /// P2: the default nag cascade is 30, 15, 10, 5, and a cascade never spends two slots on one offset.
     func testNagCascadeIsDeduplicated() {
         XCTAssertEqual(Settings.naggingCascade(start: 30, interval: 15, lastCalls: .both), [30, 15, 10, 5])

@@ -148,12 +148,10 @@ struct HadithResolvedList<Header: View>: View {
                                 HadithListRow(entry: row)
                             }
                         } header: {
+                            // The app's section header: capitals and the count in its pill (it was
+                            // a bare number at the far edge of a mixed-case title).
                             if !section.title.isEmpty {
-                                HStack {
-                                    Text(section.title)
-                                    Spacer()
-                                    Text("\(section.rows.count)")
-                                }
+                                SectionPillHeader(title: section.title.localizedUppercase, count: section.rows.count)
                             }
                         } footer: {
                             if index == sections.count - 1 {
@@ -413,7 +411,7 @@ struct HadithListRow: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 25, height: 25)
                         .foregroundColor(accent)
-                        .conditionalGlassEffect()
+                        .conditionalGlassEffect(inRow: true)
                         .frame(width: 28, height: 28)
                         .contentShape(Rectangle())
                 }
@@ -455,7 +453,8 @@ struct HadithListRow: View {
         .conditionalGlassEffect(
             useColor: isBookmarked ? 0.3 : nil,
             customTint: isBookmarked ? accent : nil,
-            interactive: false
+            interactive: false,
+            inRow: true
         )
         .contentShape(Rectangle())
         .onTapGesture {
@@ -476,14 +475,37 @@ struct HadithListRow: View {
     @ViewBuilder
     private var badges: some View {
         if let badge = entry.badge {
-            Text(badge)
-                .font(.caption2.weight(.semibold))
-                .foregroundColor(accent)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(Capsule().fill(accent.opacity(0.14)))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+            // The match at a glance: a ring filled to the score for similar wording, a seal for the
+            // same text, then the words.
+            HStack(spacing: 4) {
+                if let tier = entry.tier {
+                    if tier == .similar, entry.score < 100 {
+                        ZStack {
+                            Circle()
+                                .stroke(accent.opacity(0.25), lineWidth: 2)
+                            Circle()
+                                .trim(from: 0, to: CGFloat(max(0, min(100, entry.score))) / 100)
+                                .stroke(accent, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                                .rotationEffect(.degrees(-90))
+                        }
+                        .frame(width: 11, height: 11)
+                        .accessibilityHidden(true)
+                    } else {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.caption2)
+                            .accessibilityHidden(true)
+                    }
+                }
+
+                Text(badge)
+                    .font(.caption2.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundColor(accent)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(accent.opacity(0.14)))
         }
 
         if let secondary = entry.secondaryBadge {
@@ -602,6 +624,11 @@ struct HadithListRow: View {
             } label: {
                 Label("Chain of Narrators", systemImage: "point.3.connected.trianglepath.dotted")
             }
+        }
+
+        // Where it opens, then the text out: the reader's menu groups.
+        if openInBook != nil || hasChain {
+            Divider()
         }
 
         Button {

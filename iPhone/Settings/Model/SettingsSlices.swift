@@ -129,8 +129,8 @@ final class SystemSettings: ObservableObject, SettingsSlice {
         "dailyRolloverAtFajr", "gridModeArabicRaw", "gridModeIslamRaw", "gridModeNamesRaw",
         "gridModeSettingsRaw", "hapticOn", "helpDoorsCollapsed", "helpDoorsHidden",
         "keepScreenOn", "launchTab", "launchTabChosen", "quranGridMode",
-        "simpleMode", "startHereHidden", "startHereVisited", "tabSectionChoices",
-        "tabSectionsCollapsed", "tutorialNudgesSeen",
+        "showJumpRail", "simpleMode", "startHereHidden", "startHereVisited",
+        "tabSectionChoices", "tabSectionsCollapsed", "tutorialNudgesSeen",
     ]
 
     private init() { ObjectPublishCounter.attach(self, label: Self.label) }
@@ -208,11 +208,6 @@ final class SystemSettings: ObservableObject, SettingsSlice {
         set { Settings.shared.helpDoorsHiddenRaw = newValue }
     }
 
-    var tutorialNudgesSeenRaw: String {
-        get { Settings.shared.tutorialNudgesSeenRaw }
-        set { Settings.shared.tutorialNudgesSeenRaw = newValue }
-    }
-
     var keepScreenOnRaw: String {
         get { Settings.shared.keepScreenOnRaw }
         set { Settings.shared.keepScreenOnRaw = newValue }
@@ -226,6 +221,11 @@ final class SystemSettings: ObservableObject, SettingsSlice {
     var launchTabRaw: String {
         get { Settings.shared.launchTabRaw }
         set { Settings.shared.launchTabRaw = newValue }
+    }
+
+    var showJumpRail: Bool {
+        get { Settings.shared.showJumpRail }
+        set { Settings.shared.showJumpRail = newValue }
     }
 
     var simpleMode: Bool {
@@ -251,6 +251,11 @@ final class SystemSettings: ObservableObject, SettingsSlice {
     var tabSectionsCollapsedRaw: String {
         get { Settings.shared.tabSectionsCollapsedRaw }
         set { Settings.shared.tabSectionsCollapsedRaw = newValue }
+    }
+
+    var tutorialNudgesSeenRaw: String {
+        get { Settings.shared.tutorialNudgesSeenRaw }
+        set { Settings.shared.tutorialNudgesSeenRaw = newValue }
     }
 }
 
@@ -1072,24 +1077,24 @@ final class QuranDisplay: ObservableObject, SettingsSlice {
         "THEfontArabic", "acceptedBetaQiraatNotice", "automaticKhatmCompletion", "ayahPreviewCardScale",
         "ayahSheetKeepsScreenOn", "beginnerMode", "betaQiraatEnabled", "cleanArabicText",
         "copyAyahArabic", "copyAyahEnglishMustafa", "copyAyahEnglishSaheeh", "copyAyahTransliteration",
-        "displayQiraah", "englishFontSize", "fontArabicSize", "highlightAllahNames", "highlightPlayingWords",
-        "keepAyahSheetOpen", "keepAyahSheetOpenOnPlay", "khatmGroupByJuz", "mushafFitPage",
-        "mushafHafsPDFEdition", "mushafPDFAppearance", "mushafPageLanguage", "mushafTwoPageSpread",
-        "qiraatComparisonMode", "quranArabicScriptStyle", "quranPageMode", "quranSortDirection",
-        "quranSortMode", "quranTestModeEndsOnLeave", "quranTestModeHides", "quranTestModeOn",
-        "quranTestModeReveals", "quranTestModeRevealsRecited", "quranWaslSign", "reciteType",
-        "reciter", "reciterId", "removeArabicDots", "riwayahTajweedHiddenRules",
-        "saveLastListenedAyah", "saveLastListenedSurah", "saveLastReadAyah", "searchForSurahs",
-        "shareShowAyahInformation", "shareShowSurahInformation", "showArabicText", "showAyahOfTheDay",
-        "showBookmarks", "showEnglishMustafa", "showEnglishSaheeh", "showFavorites",
-        "showFullSurahRow", "showMuqattaatHelper", "showOtherQiraatReciters", "showPageJuzDividers",
-        "showTajweedBareNuunMeem", "showTajweedColors", "showTajweedGeneralGhunnah", "showTajweedHamzatWaslSilent",
-        "showTajweedIdghamBiGhunnahHeavy", "showTajweedIdghamBilaGhunnah", "showTajweedIkhfaa", "showTajweedIqlab",
-        "showTajweedLamShamsiyah", "showTajweedMadd246", "showTajweedMaddConnected", "showTajweedMaddNatural2",
-        "showTajweedMaddNaturalMiniature", "showTajweedMaddNecessary6", "showTajweedMaddSeparated", "showTajweedQalqalah",
-        "showTajweedSukoonJazm", "showTajweedTafkhim", "showTransliteration", "showWordOfTheDay",
-        "tajweedCustomColors", "useFontArabic", "wordByWordInline", "wordByWordInlineTranslation",
-        "wordByWordInlineTransliteration", "wordByWordMeanings",
+        "displayQiraah", "englishFontSize", "fontArabicSize", "highlightAllahNames",
+        "highlightPlayingWords", "keepAyahSheetOpen", "keepAyahSheetOpenOnPlay", "khatmGroupByJuz",
+        "mushafFitPage", "mushafHafsPDFEdition", "mushafPDFAppearance", "mushafPageLanguage",
+        "mushafTwoPageSpread", "qiraatComparisonMode", "quranArabicScriptStyle", "quranPageMode",
+        "quranSortDirection", "quranSortMode", "quranTestModeEndsOnLeave", "quranTestModeHides",
+        "quranTestModeOn", "quranTestModeReveals", "quranTestModeRevealsRecited", "quranWaslSign",
+        "reciteType", "reciter", "reciterId", "removeArabicDots",
+        "riwayahTajweedHiddenRules", "saveLastListenedAyah", "saveLastListenedSurah", "saveLastReadAyah",
+        "searchForSurahs", "shareShowAyahInformation", "shareShowSurahInformation", "showArabicText",
+        "showAyahOfTheDay", "showBookmarks", "showEnglishMustafa", "showEnglishSaheeh",
+        "showFavorites", "showFullSurahRow", "showMuqattaatHelper", "showOtherQiraatReciters",
+        "showPageJuzDividers", "showTajweedBareNuunMeem", "showTajweedColors", "showTajweedGeneralGhunnah",
+        "showTajweedHamzatWaslSilent", "showTajweedIdghamBiGhunnahHeavy", "showTajweedIdghamBilaGhunnah", "showTajweedIkhfaa",
+        "showTajweedIqlab", "showTajweedLamShamsiyah", "showTajweedMadd246", "showTajweedMaddConnected",
+        "showTajweedMaddNatural2", "showTajweedMaddNaturalMiniature", "showTajweedMaddNecessary6", "showTajweedMaddSeparated",
+        "showTajweedQalqalah", "showTajweedSukoonJazm", "showTajweedTafkhim", "showTransliteration",
+        "showWordOfTheDay", "tajweedCustomColors", "useFontArabic", "wordByWordInline",
+        "wordByWordInlineTranslation", "wordByWordInlineTransliteration", "wordByWordMeanings",
     ]
 
     private init() { ObjectPublishCounter.attach(self, label: Self.label) }
@@ -1183,6 +1188,11 @@ final class QuranDisplay: ObservableObject, SettingsSlice {
         set { Settings.shared.highlightAllahNames = newValue }
     }
 
+    var highlightPlayingWords: Bool {
+        get { Settings.shared.highlightPlayingWords }
+        set { Settings.shared.highlightPlayingWords = newValue }
+    }
+
     var keepAyahSheetOpen: Bool {
         get { Settings.shared.keepAyahSheetOpen }
         set { Settings.shared.keepAyahSheetOpen = newValue }
@@ -1191,11 +1201,6 @@ final class QuranDisplay: ObservableObject, SettingsSlice {
     var keepAyahSheetOpenOnPlay: Bool {
         get { Settings.shared.keepAyahSheetOpenOnPlay }
         set { Settings.shared.keepAyahSheetOpenOnPlay = newValue }
-    }
-
-    var highlightPlayingWords: Bool {
-        get { Settings.shared.highlightPlayingWords }
-        set { Settings.shared.highlightPlayingWords = newValue }
     }
 
     var khatmGroupByJuz: Bool {
@@ -1580,8 +1585,9 @@ final class HadithSettings: ObservableObject, SettingsSlice {
     static let shared = HadithSettings()
     static let label = "HadithSettings"
     static let keys: Set<String> = [
-        "hadithArabicFontSize", "hadithChainFirst", "hadithEnglishFontSize", "hadithOfTheDayHiddenDate", "hadithSearchHistoryData",
-        "highlightAllahNamesHadith", "showHadithArabic", "showHadithEnglish", "showHadithOfTheDay",
+        "hadithArabicFontSize", "hadithChainFirst", "hadithEnglishFontSize", "hadithOfTheDayHiddenDate",
+        "hadithSearchHistoryData", "highlightAllahNamesHadith", "showHadithArabic", "showHadithEnglish",
+        "showHadithOfTheDay",
     ]
 
     private init() { ObjectPublishCounter.attach(self, label: Self.label) }
@@ -1593,6 +1599,11 @@ final class HadithSettings: ObservableObject, SettingsSlice {
     var hadithArabicFontSize: Double {
         get { Settings.shared.hadithArabicFontSize }
         set { Settings.shared.hadithArabicFontSize = newValue }
+    }
+
+    var hadithChainFirst: Bool {
+        get { Settings.shared.hadithChainFirst }
+        set { Settings.shared.hadithChainFirst = newValue }
     }
 
     var hadithEnglishFontSize: Double {
@@ -1618,11 +1629,6 @@ final class HadithSettings: ObservableObject, SettingsSlice {
     var showHadithEnglish: Bool {
         get { Settings.shared.showHadithEnglish }
         set { Settings.shared.showHadithEnglish = newValue }
-    }
-
-    var hadithChainFirst: Bool {
-        get { Settings.shared.hadithChainFirst }
-        set { Settings.shared.hadithChainFirst = newValue }
     }
 
     var showHadithOfTheDay: Bool {

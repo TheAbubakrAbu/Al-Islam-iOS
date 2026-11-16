@@ -1,0 +1,27 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["8HQMC4MQ59.com.Quran.Elmallah.Islamic-Pillars"],
+        "components": [
+          { "/": "/alislam", "comment": "Al-Islam shared links" },
+          { "/": "/alislam/*", "comment": "Al-Islam shared links" }
+        ]
+      },
+      {
+        "appIDs": ["8HQMC4MQ59.com.Quran.Elmallah.Beginner-Quran"],
+        "components": [
+          { "/": "/alquran", "comment": "Al-Quran shared links" },
+          { "/": "/alquran/*", "comment": "Al-Quran shared links" }
+        ]
+      },
+      {
+        "appIDs": ["8HQMC4MQ59.com.Quran.Elmallah.Prayer-Times"],
+        "components": [
+          { "/": "/aladhan", "comment": "Al-Adhan shared links" },
+          { "/": "/aladhan/*", "comment": "Al-Adhan shared links" }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,134 @@
+/* Shared by every page of the site: the three apps' links pages and the list at the root. */
+:root {
+  color-scheme: light dark;
+  --ground: #f3f1ea;
+  --card: #ffffff;
+  --ink: #17201a;
+  --quiet: #5c665f;
+  --accent: #1f7a3d;
+  --accent-ink: #ffffff;
+  --line: rgba(23, 32, 26, 0.10);
+}
+/* Al-Adhan is the amber app; Al-Islam and Al-Quran are green. */
+:root.aladhan {
+  --accent: #8f6400;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #0e1310;
+    --card: #171e19;
+    --ink: #eef3ee;
+    --quiet: #a3ada6;
+    --accent: #43b468;
+    --accent-ink: #08130c;
+    --line: rgba(238, 243, 238, 0.12);
+  }
+  :root.aladhan {
+    --accent: #f0b83a;
+    --accent-ink: #1b1300;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 17px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+}
+main {
+  width: 100%;
+  max-width: 400px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  padding: 32px 24px 24px;
+  text-align: center;
+}
+img.icon {
+  width: 84px;
+  height: 84px;
+  border-radius: 19px;
+  display: block;
+  margin: 0 auto 18px;
+  outline: 1px solid var(--line);
+  outline-offset: -1px;
+}
+.from {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+h1 {
+  margin: 0 0 8px;
+  font-size: 26px;
+  line-height: 1.2;
+  font-weight: 700;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+p.about {
+  margin: 0 0 24px;
+  color: var(--quiet);
+  font-size: 15px;
+  text-wrap: pretty;
+}
+a.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 12px 18px;
+  border-radius: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+a.button:active, a.app:active { transform: scale(0.97); opacity: 0.85; }
+a.primary { background: var(--accent); color: var(--accent-ink); }
+a.secondary { margin-top: 10px; color: var(--accent); border: 1px solid var(--line); }
+a.button:focus-visible, a.app:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+p.note {
+  margin: 16px 0 0;
+  color: var(--quiet);
+  font-size: 13px;
+}
+p.note:empty { display: none; }
+
+/* The root page: one row per app. */
+a.app {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 76px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+a.app img {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  outline: 1px solid var(--line);
+  outline-offset: -1px;
+}
+a.app b { display: block; font-weight: 600; }
+a.app small { display: block; color: var(--quiet); font-size: 14px; line-height: 1.35; }
+
+@media (prefers-reduced-motion: reduce) {
+  a.button, a.app { transition: none; }
+}

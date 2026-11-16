@@ -235,6 +235,20 @@ enum WordTokens {
         ranges.firstIndex { NSLocationInRange(utf16Offset, $0) }
     }
 
+    /// One word of a PAINTED copy of the ayah, found by its place among the painted text's own
+    /// tokens. Never by the raw text's offsets: the painter writes the reader's hamzat al-wasl
+    /// notation, and under Dot each ٱ is three characters where the raw text has one, so a raw range
+    /// sat two characters early for every wasl before the word. The word card's big word came out as
+    /// the tail of the word before it (58:5's مُّهِينٌ read "ذَابٌ مّ", Abu, 2026-11-16). A notation
+    /// never adds or removes a word, so the index holds; nil when the painted text counts its words
+    /// differently from `count` (the caller then shows the plain word).
+    static func styledToken(_ index: Int, in styled: AttributedString, expecting count: Int) -> AttributedString? {
+        let ns = NSAttributedString(styled)
+        let ranges = ranges(in: ns.string)
+        guard ranges.count == count, ranges.indices.contains(index) else { return nil }
+        return AttributedString(ns.attributedSubstring(from: ranges[index]))
+    }
+
     private static func isWhitespace(_ unit: unichar) -> Bool {
         // The separators that actually occur between Quranic words: space, tab, newline, NBSP, and the
         // narrow/thin spaces some sources use.
@@ -265,6 +279,74 @@ enum CrossLanguageWordHighlight {
         "indeed", "surely", "verily", "any", "all", "one"
     ]
 
+    /// Every word that is glue at MATCH time: `stopwords` plus the possessives and auxiliaries a gloss
+    /// carries beside its content word ("under Our eyes", "the Most Merciful", "you used to"). A glue
+    /// word never names a word pair and is never lit on its own (two lit words still join across it,
+    /// `bridgingGlueWords`). Kept apart from `stopwords` because that list is also a rule of the
+    /// SHIPPED lexicon's build (`makeLexicon`): these are applied where the table is read instead,
+    /// so the bundled file stays the one the build yields.
+    private static let glueWords: Set<String> = stopwords.union([
+        "our", "she", "may", "can", "been", "being", "would", "should", "could", "might",
+        "did", "does", "ones", "most"
+    ])
+
+    /// The endings one word may carry past another and still be the same word ("used" for "use").
+    private static let inflectionTails: Set<String> = ["s", "es", "d", "ed", "ing", "ings", "er", "ers", "ly", "est"]
+
+    /// The words the mushaf writes with a waw where every other Arabic text writes an alif
+    /// (ٱلصَّلَوٰة, ٱلزَّكَوٰة, ٱلۡحَيَوٰة ...), and the Rahman whose alif it writes small: folded modern
+    /// spelling to folded mushaf spelling. The lexicon's keys are the mushaf's letters, so a hadith's
+    /// الصلاة and a typed الزكاة are looked up under these too. A closed set (every waw-with-dagger-alif
+    /// stem of the Hafs text, checked 2026-11-14), which is why it is a table and not a rule.
+    private static let mushafSpellings: [String: String] = [
+        "صلاه": "صلواه", "زكاه": "زكواه", "حياه": "حيواه", "نجاه": "نجواه", "غداه": "غدواه",
+        "مشكاه": "مشكواه", "مناه": "منواه", "ربا": "ربواا", "رحمن": "رحمان",
+    ]
+
+    /// The folded forms that ARE the Name, once `lookupKeys` has peeled a و ف ب ل ك off the front.
+    private static let allahForms: Set<String> = ["الله", "لله", "اللهم", "تالله"]
+
+    /// Whether a folded Arabic word is the Name of Allah (وَٱللَّهُ, بِٱللَّهِ, لِلَّهِ, ٱللَّهُمَّ).
+    private static func namesAllah(_ folded: String) -> Bool {
+        lookupKeys(for: folded).contains { allahForms.contains($0) }
+    }
+
+    /// What one word's gloss names. The gloss pack repeats a phrase gloss on each of its words (يَتُوبُ
+    /// and ٱللَّهُ both read "Allah accepts repentance"), so "Allah" is kept for the word that is the
+    /// Name, which then names nothing else, and taken off every other word.
+    private static func namedWords(_ words: [String], foldedToken: @autoclosure () -> String) -> [String] {
+        let content = words.filter { !glueWords.contains($0) }
+        guard content.contains("allah") else { return content }
+        return namesAllah(foldedToken()) ? ["allah"] : content.filter { $0 != "allah" }
+    }
+
+    /// `normalizeForSearchText` for ONE word about to be compared or looked up, minus the invisible
+    /// direction and joiner marks. The hadith texts carry right-to-left marks glued to the word before
+    /// a punctuation sign (13% of Riyad as-Salihin's words, 2.7% of Bukhari's), the search fold keeps
+    /// them (they are format characters, not punctuation), and a word with one never met its key.
+    private static func lookupFold(_ text: String) -> String {
+        let folded = HighlightedSnippet.normalizeForSearchText(text, trimWhitespace: true)
+        guard folded.unicodeScalars.contains(where: isFormatMark) else { return folded }
+        return String(String.UnicodeScalarView(folded.unicodeScalars.filter { !isFormatMark($0) }))
+    }
+
+    private static func isFormatMark(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.value {
+        case 0x200B...0x200F, 0x202A...0x202E, 0x2060, 0x2066...0x2069, 0x061C, 0xFEFF: return true
+        default: return false
+        }
+    }
+
+    /// Every lexicon key a folded word is looked up under: its match variants, plus the mushaf's
+    /// spelling of any of them (`mushafSpellings`).
+    private static func lexiconKeys(of folded: String) -> [String] {
+        var keys = arabicMatchVariants(of: folded)
+        for key in keys {
+            if let mushaf = mushafSpellings[key], !keys.contains(mushaf) { keys.append(mushaf) }
+        }
+        return keys
+    }
+
     private final class SpansEntry: NSObject {
         let spans: [NSRange]
         init(_ spans: [NSRange]) { self.spans = spans }
@@ -289,33 +371,178 @@ enum CrossLanguageWordHighlight {
         return c
     }()
 
-    /// ARABIC query → the English gloss content-words of the Arabic tokens the query highlighted.
-    /// The caller runs these through `wordSpans(of:in:)` against each translation line.
+    private final class QuranSpansEntry: NSObject {
+        let arabic: [NSRange]
+        let saheeh: [NSRange]
+        let mustafa: [NSRange]
+        init(_ spans: (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange])) {
+            arabic = spans.arabic
+            saheeh = spans.saheeh
+            mustafa = spans.mustafa
+        }
+    }
+
+    /// One row's whole answer, by content (the query, the rule and the three strings): a row asks
+    /// again on every body pass, and the answer is three lanes deep.
+    nonisolated(unsafe) private static let quranSpansCache: NSCache<NSString, QuranSpansEntry> = {
+        let c = NSCache<NSString, QuranSpansEntry>()
+        c.countLimit = 2_000
+        return c
+    }()
+
+    /// What a Quran row lights for `query` beyond the base highlighter's own match: for an ARABIC
+    /// query, the same-family Arabic tokens the substring match misses plus the words of each
+    /// translation line that render the matched ones; for an ENGLISH query, the Arabic words under
+    /// what was matched. The one entry point of the search rows (`AyahSearchRow`) and the reader's
+    /// rows (`AyahRow`), which keep only their own guards (Hafs display, no beginner spacing, pack
+    /// bundled), so a hit and the row it opens light the same words.
     ///
-    /// Two lanes, unioned. Lane 1 is the display-text match (exact substrings, phrases, the loose
-    /// Arabic skeleton) → the tokens those spans touch. Lane 2 is the MORPHOLOGICAL sweep: every
-    /// token any query word matches through `arabicWordsMatch` - proclitics (و ف ب ل ك + ال),
-    /// enclitic pronouns (صلاتهم ↔ صلاة), the plural واو (قالوا ↔ قال), and the vowel-letter
-    /// skeleton (قلب ↔ قلوب). Lane 2 is what "maximize" means here, and it is SAFE in a way the
-    /// corpus lexicon can't be: the gloss always comes from the exact token that matched, so looser
-    /// matching can never import a neighbouring word's meaning.
-    static func englishTermsForArabicMatch(query: String, surah: Int, ayah: Int,
-                                           rawText: String, displayText: String,
-                                           wordRule: SearchWordRule = .anywhere) -> [String] {
-        let key = "a→e\(wordRule.rawValue)\u{0000}\(query)\u{0000}\(surah):\(ayah)\u{0000}\(displayText.hashValue)" as NSString
-        if let cached = termsCache.object(forKey: key) { return cached.terms }
+    /// Three sources, each asked only when the one before it had nothing for that line:
+    ///
+    /// 1. the ALIGNMENT PACK (`WordAlignmentStore`), built offline against these very translations:
+    ///    the answer is a lookup, in the translation's own wording ("Acquainted" for خَبِير, where the
+    ///    gloss says "All-Aware");
+    /// 2. the matched words' own GLOSSES, searched for in the line (what the pack has no pair for:
+    ///    the translator's bracketed insertions, a pack that does not line up with these strings);
+    /// 3. the corpus LEXICON, the word family's glosses from every ayah. For an Arabic query it is
+    ///    asked only about a line the pack cannot follow (a row found by meaning, with no word of
+    ///    the ayah typed, or a pack that does not line up): where the pack knows the line and has
+    ///    no word for the typed one, the translation paraphrased it away, and the lexicon's guess
+    ///    there read right 11 times in 40. An English query still falls through to it: what is
+    ///    left for it there is function words the pack never aligns ("perhaps" on لَعَلَّكُمۡ).
+    ///
+    /// Never the three together: read by hand on 2026-11-15 the pack's pairs that are not the
+    /// gloss's own were right 98 times in 100 for Saheeh and 95 for Khattab, and adding a looser
+    /// source to a line a surer one had already lit only added its mistakes.
+    static func quranSpans(query: String, surah: Int, ayah: Int, rawText: String, displayText: String,
+                           saheeh: String, mustafa: String, wordRule: SearchWordRule = .anywhere)
+    -> (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange]) {
+        let key = "q\(wordRule.rawValue)\u{0000}\(query)\u{0000}\(surah):\(ayah)\u{0000}\(displayText.hashValue)\u{0000}\(saheeh.hashValue)\u{0000}\(mustafa.hashValue)" as NSString
+        if let cached = quranSpansCache.object(forKey: key) {
+            return (cached.arabic, cached.saheeh, cached.mustafa)
+        }
+        let spans = computeQuranSpans(query: query, surah: surah, ayah: ayah, rawText: rawText,
+                                      displayText: displayText, saheeh: saheeh, mustafa: mustafa, wordRule: wordRule)
+        // The lexicon answers empty until it has loaded, and a row asked in that window must ask again.
+        if lexiconIsLoaded {
+            quranSpansCache.setObject(QuranSpansEntry(spans), forKey: key)
+        }
+        return spans
+    }
 
-        var terms: [String] = []
-        defer { termsCache.setObject(TermsEntry(terms), forKey: key) }
+    private static func computeQuranSpans(query: String, surah: Int, ayah: Int, rawText: String, displayText: String,
+                                          saheeh: String, mustafa: String, wordRule: SearchWordRule)
+    -> (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange]) {
+        func alignment(_ translation: WordAlignmentStore.Translation, _ english: String) -> [Int?]? {
+            guard !english.isEmpty else { return nil }
+            return WordAlignmentStore.shared.arabicTokens(
+                surah: surah, ayah: ayah, translation: translation, english: english,
+                rawArabic: rawText, displayArabic: displayText)
+        }
 
-        guard query.containsArabicLetters,
-              let glosses = WordByWordStore.shared.glosses(surah: surah, ayah: ayah,
-                                                           rawText: rawText, displayText: displayText)
-        else { return terms }
+        if query.containsArabicLetters {
+            let matched = Set(matchedArabicTokens(query: query, displayText: displayText, wordRule: wordRule))
+            var glossTerms: [String]?
+            func line(_ text: String, _ translation: WordAlignmentStore.Translation) -> [NSRange] {
+                guard !text.isEmpty else { return [] }
+                var packKnowsTheLine = false
+                if !matched.isEmpty, let alignment = alignment(translation, text) {
+                    packKnowsTheLine = true
+                    let spans = englishSpans(rendering: matched, alignment: alignment, in: text)
+                    if !spans.isEmpty { return spans }
+                }
+                let own = glossTerms ?? englishTermsForArabicMatch(
+                    query: query, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText,
+                    wordRule: wordRule)
+                glossTerms = own
+                let spans = wordSpans(of: own, in: text)
+                if !spans.isEmpty { return spans }
+                // A typed word of this ayah that the pack's line has no English word for, and whose
+                // own gloss finds none, was paraphrased away: "far superior in might and in
+                // punishment" has no word for بَأۡسٗا the pack may light ("might" is glue). The
+                // Quran-wide lexicon would still guess one (there, "punishment", which is تَنكِيلٗا),
+                // and on such lines its guess read right 11 times in 40. It keeps the rows the pack
+                // cannot follow: one found by meaning (no word of the ayah typed), and any line the
+                // pack does not line up with.
+                if packKnowsTheLine { return [] }
+                return wordSpans(of: englishTermsForUnalignedArabicQuery(query), in: text)
+            }
+            // The morphological Arabic spans are ADDITIVE: tokens of the same word family the plain
+            // highlighter misses (صلاتهم for a صلاة query) light up in the Arabic line too.
+            let arabicExtra = arabicSpansForArabicQuery(query: query, in: displayText, wordRule: wordRule)
+            return (arabicExtra, line(saheeh, .saheeh), line(mustafa, .mustafa))
+        } else {
+            // The Arabic follows what the base highlighter painted in EITHER translation line, so a
+            // phrase and a half-typed word work ("straight pa" is ٱلصِّرَٰط and ٱلۡمُسۡتَقِيم), where the
+            // gloss lane below can only compare whole typed words with gloss words.
+            var words = Set<Int>()
+            for (text, translation) in [(saheeh, WordAlignmentStore.Translation.saheeh), (mustafa, .mustafa)] {
+                guard let alignment = alignment(translation, text) else { continue }
+                words.formUnion(arabicTokens(under: query, in: text, alignment: alignment, wordRule: wordRule))
+            }
+            if !words.isEmpty {
+                let ranges = WordTokens.ranges(in: displayText)
+                return (words.sorted().filter { $0 < ranges.count }.map { ranges[$0] }, [], [])
+            }
+            let own = arabicSpansForEnglishMatch(
+                query: query, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText
+            )
+            return (own.isEmpty ? arabicSpansForEnglishQuery(query, arabicText: displayText) : own, [], [])
+        }
+    }
 
+    /// The English words of `english` that render one of the Arabic words in `arabic`, by the pack:
+    /// each trimmed of its punctuation, and joined across glue like every lit word ("the Day of
+    /// Resurrection" is one span).
+    private static func englishSpans(rendering arabic: Set<Int>, alignment: [Int?], in english: String) -> [NSRange] {
+        let ranges = WordAlignmentStore.englishTokenRanges(in: english)
+        guard ranges.count == alignment.count else { return [] }
+        let ns = english as NSString
+        var spans: [NSRange] = []
+        for (index, range) in ranges.enumerated() {
+            guard let word = alignment[index], arabic.contains(word) else { continue }
+            let span = trimmedWordSpan(range, in: ns)
+            if span.length > 0 { spans.append(span) }
+        }
+        return bridgingGlueWords(spans, in: ns)
+    }
+
+    /// The Arabic words under what an ENGLISH query matched in `english`, by the pack. A word counts
+    /// as matched when the match begins at or before its first letter: letters found only INSIDE a
+    /// word ("aight" in "straight") are painted where they are and are not that word. Under a word
+    /// rule the match is already a whole word, a word's start or its end, so any overlap counts.
+    private static func arabicTokens(under query: String, in english: String, alignment: [Int?],
+                                     wordRule: SearchWordRule) -> Set<Int> {
+        let matches = HighlightedSnippet.matchRanges(of: query, in: english, wordRule: wordRule)
+            .map { NSRange($0, in: english) }
+        guard !matches.isEmpty else { return [] }
+        let ranges = WordAlignmentStore.englishTokenRanges(in: english)
+        guard ranges.count == alignment.count else { return [] }
+        let ns = english as NSString
+        var words = Set<Int>()
+        for (index, range) in ranges.enumerated() {
+            guard let word = alignment[index] else { continue }
+            let letters = trimmedWordSpan(range, in: ns)
+            let asked = matches.contains { match in
+                NSIntersectionRange(match, letters).length > 0
+                    && (wordRule != .anywhere || match.location <= letters.location)
+            }
+            if asked { words.insert(word) }
+        }
+        return words
+    }
+
+    /// The tokens of `displayText` an ARABIC query names. Two lanes, unioned. Lane 1 is the
+    /// display-text match (exact substrings, phrases, the loose Arabic skeleton) → the tokens those
+    /// spans touch. Lane 2 is the MORPHOLOGICAL sweep: every token any query word matches through
+    /// `arabicWordsMatch`: proclitics (و ف ب ل ك + ال), enclitic pronouns (صلاتهم ↔ صلاة), the plural
+    /// واو (قالوا ↔ قال), and the vowel-letter skeleton (قلب ↔ قلوب). Lane 2 is SAFE in a way the
+    /// corpus lexicon can't be: whatever is lit for it comes from the exact token that matched, so
+    /// looser matching can never import a neighbouring word's meaning.
+    static func matchedArabicTokens(query: String, displayText: String,
+                                    wordRule: SearchWordRule = .anywhere) -> [Int] {
+        guard query.containsArabicLetters else { return [] }
         let tokenRanges = WordTokens.ranges(in: displayText)
-        guard tokenRanges.count == glosses.count else { return terms }
-
         var tokenIndices: [Int] = []
         var seenTokens = Set<Int>()
 
@@ -345,10 +572,35 @@ enum CrossLanguageWordHighlight {
                 }
             }
         }
+        return tokenIndices.sorted()
+    }
 
+    /// ARABIC query → the English gloss content-words of the Arabic tokens the query names
+    /// (`matchedArabicTokens`). The caller runs these through `wordSpans(of:in:)` against a
+    /// translation line the alignment pack had nothing for.
+    static func englishTermsForArabicMatch(query: String, surah: Int, ayah: Int,
+                                           rawText: String, displayText: String,
+                                           wordRule: SearchWordRule = .anywhere) -> [String] {
+        let key = "a→e\(wordRule.rawValue)\u{0000}\(query)\u{0000}\(surah):\(ayah)\u{0000}\(displayText.hashValue)" as NSString
+        if let cached = termsCache.object(forKey: key) { return cached.terms }
+
+        var terms: [String] = []
+        defer { termsCache.setObject(TermsEntry(terms), forKey: key) }
+
+        guard query.containsArabicLetters,
+              let glosses = WordByWordStore.shared.glosses(surah: surah, ayah: ayah,
+                                                           rawText: rawText, displayText: displayText)
+        else { return terms }
+
+        let tokenRanges = WordTokens.ranges(in: displayText)
+        guard tokenRanges.count == glosses.count else { return terms }
+
+        let ns = displayText as NSString
         var seenTerms = Set<String>()
-        for index in tokenIndices.sorted() {
-            for word in contentWords(of: glosses[index]) where seenTerms.insert(word).inserted {
+        for index in matchedArabicTokens(query: query, displayText: displayText, wordRule: wordRule) {
+            let named = namedWords(contentWords(of: glosses[index]),
+                                   foldedToken: lookupFold(ns.substring(with: tokenRanges[index])))
+            for word in named where seenTerms.insert(word).inserted {
                 terms.append(word)
             }
         }
@@ -414,16 +666,19 @@ enum CrossLanguageWordHighlight {
 
         let queryTokens = HighlightedSnippet.normalizeForSearchText(query, trimWhitespace: true)
             .split(separator: " ").map(String.init)
-            .filter { $0.count >= 3 && !stopwords.contains($0) }
+            .filter { $0.count >= 3 && !glueWords.contains($0) }
         guard !queryTokens.isEmpty else { return spans }
 
         let tokenRanges = WordTokens.ranges(in: displayText)
         guard tokenRanges.count == glosses.count else { return spans }
 
+        let ns = displayText as NSString
         for (index, gloss) in glosses.enumerated() {
-            let glossWords = gloss.lowercased()
-                .components(separatedBy: CharacterSet.alphanumerics.inverted)
-                .filter { $0.count >= 3 && !stopwords.contains($0) }
+            let glossWords = namedWords(
+                gloss.lowercased()
+                    .components(separatedBy: CharacterSet.alphanumerics.inverted)
+                    .filter { $0.count >= 3 },
+                foldedToken: lookupFold(ns.substring(with: tokenRanges[index])))
             guard !glossWords.isEmpty else { continue }
             if queryTokens.contains(where: { q in glossWords.contains { wordMatches(query: q, word: $0) } }) {
                 spans.append(tokenRanges[index])
@@ -444,16 +699,19 @@ enum CrossLanguageWordHighlight {
 
         var spans: [NSRange] = []
         let ns = text as NSString
+        // Glue is never a term (the shipped lexicon still lists "our" and "most" under some keys) and
+        // never lit on its own: "your" is not "yourselves", however many letters they share.
+        let contentTerms = terms.filter { !glueWords.contains($0) }
         for tokenRange in WordTokens.ranges(in: text) {
             let raw = ns.substring(with: tokenRange)
             let word = HighlightedSnippet.normalizeForSearchText(raw, trimWhitespace: true)
-            guard word.count >= 3 else { continue }
-            var matched = terms.contains { wordMatches(query: $0, word: word) }
+            guard word.count >= 3, !glueWords.contains(word) else { continue }
+            var matched = contentTerms.contains { wordMatches(query: $0, word: word) }
             if !matched, raw.contains(where: { !$0.isLetter && !$0.isNumber }) {
                 let parts = raw.lowercased()
                     .components(separatedBy: CharacterSet.alphanumerics.inverted)
-                    .filter { $0.count >= 3 }
-                matched = parts.contains { part in terms.contains { wordMatches(query: $0, word: part) } }
+                    .filter { $0.count >= 3 && !glueWords.contains($0) }
+                matched = parts.contains { part in contentTerms.contains { wordMatches(query: $0, word: part) } }
             }
             if matched {
                 spans.append(trimmedWordSpan(tokenRange, in: ns))
@@ -510,6 +768,13 @@ enum CrossLanguageWordHighlight {
     nonisolated(unsafe) private static var lexicon: [String: Set<String>]?
     private static let lexiconLock = NSLock()
     nonisolated(unsafe) private static var lexiconBuildStarted = false
+
+    /// Whether the lexicon is in memory. Its lookups answer empty, uncached, until it is.
+    private static var lexiconIsLoaded: Bool {
+        lexiconLock.lock()
+        defer { lexiconLock.unlock() }
+        return lexicon != nil
+    }
 
     /// The lexicon if built; otherwise kicks the build off (once) and returns nil. Callable from any
     /// thread; the build itself runs at utility QoS off-main (~77k token folds).
@@ -905,14 +1170,22 @@ enum CrossLanguageWordHighlight {
 
         var terms: [String] = []
         var seen = Set<String>()
-        let queryWords = HighlightedSnippet.normalizeForSearchText(query, trimWhitespace: true)
-            .split(separator: " ").map(String.init).filter { $0.count >= 2 }
+        let queryWords = lookupFold(query).split(separator: " ").map(String.init).filter { $0.count >= 2 }
         for word in queryWords {
+            // The Name is its own pair: its lexicon key is a particle by the noise cap's count (the
+            // pack's phrase glosses give it a hundred neighbours' words), and the glosses of بالله and
+            // والله carry their particle's ("while").
+            if namesAllah(word) {
+                if seen.insert("allah").inserted { terms.append("allah") }
+                continue
+            }
             // The enclitic-aware variants, not just the proclitic keys: a query typed as صلاتهم or
             // رحمته still reaches the noun's lexicon entry. Peeling happens on the QUERY side only -
             // the build stays unpeeled, so the possessor-noise problem this peel causes there can't occur.
-            for lookupKey in arabicMatchVariants(of: word) {
-                for gloss in lexicon[lookupKey] ?? [] where seen.insert(gloss).inserted {
+            for lookupKey in lexiconKeys(of: word) {
+                // Sorted: a Set's order changes from launch to launch, and the terms are a cache key.
+                for gloss in (lexicon[lookupKey] ?? []).sorted()
+                where gloss != "allah" && !glueWords.contains(gloss) && seen.insert(gloss).inserted {
                     terms.append(gloss)
                 }
             }
@@ -931,29 +1204,253 @@ enum CrossLanguageWordHighlight {
 
         let queryTokens = HighlightedSnippet.normalizeForSearchText(query, trimWhitespace: true)
             .split(separator: " ").map(String.init)
-            .filter { $0.count >= 3 && !stopwords.contains($0) }
+            .filter { $0.count >= 3 && !glueWords.contains($0) }
         guard !queryTokens.isEmpty else {
             spansCache.setObject(SpansEntry([]), forKey: key)
             return []
         }
+        // "Allah" lights the words that ARE the Name, and no other: the lexicon lists it under every
+        // word whose gloss the pack merged with His (شاء "Allah wills", رحمة "mercy of Allah").
+        let asksForAllah = queryTokens.contains { wordMatches(query: $0, word: "allah") }
 
         var spans: [NSRange] = []
         let ns = arabicText as NSString
         for tokenRange in WordTokens.ranges(in: arabicText) {
-            let folded = HighlightedSnippet.normalizeForSearchText(ns.substring(with: tokenRange), trimWhitespace: true)
+            let folded = lookupFold(ns.substring(with: tokenRange))
             guard folded.count >= 2 else { continue }
-            var glossWords = Set<String>()
-            // Enclitic-aware on the TEXT side too, so رحمته in a hadith reaches رحمة's entry.
-            for lookupKey in arabicMatchVariants(of: folded) {
-                glossWords.formUnion(lexicon[lookupKey] ?? [])
+            if namesAllah(folded) {
+                if asksForAllah { spans.append(trimmedWordSpan(tokenRange, in: ns)) }
+                continue
             }
-            guard !glossWords.isEmpty else { continue }
-            if queryTokens.contains(where: { q in glossWords.contains { wordMatches(query: q, word: $0) } }) {
-                spans.append(tokenRange)
+            if lexiconNames(queryTokens, for: folded, in: lexicon) {
+                // A hadith's word carries its punctuation and its direction marks ("بِالصَّلاَةِ،"):
+                // the word is lit, the comma is not.
+                spans.append(trimmedWordSpan(tokenRange, in: ns))
             }
         }
         spansCache.setObject(SpansEntry(spans), forKey: key)
         return spans
+    }
+
+    /// Whether the Quran-derived lexicon gives `folded` a gloss word one of `queryTokens` matches.
+    /// "Allah" and glue words are no word's gloss here (`namedWords` has why).
+    private static func lexiconNames(_ queryTokens: [String], for folded: String,
+                                     in lexicon: [String: Set<String>]) -> Bool {
+        var glossWords = Set<String>()
+        // Enclitic-aware on the TEXT side too, so رحمته in a hadith reaches رحمة's entry.
+        for lookupKey in lexiconKeys(of: folded) {
+            glossWords.formUnion(lexicon[lookupKey] ?? [])
+        }
+        glossWords.remove("allah")
+        glossWords.subtract(glueWords)
+        return queryTokens.contains { asked in glossWords.contains { wordMatches(query: asked, word: $0) } }
+    }
+
+    // MARK: The hadith dictionary (learned from the hadith shelf's own two languages)
+
+    private final class HadithSpansEntry: NSObject {
+        let arabic: [NSRange]
+        let narrator: [NSRange]
+        let text: [NSRange]
+        init(_ spans: (arabic: [NSRange], narrator: [NSRange], text: [NSRange])) {
+            arabic = spans.arabic
+            narrator = spans.narrator
+            text = spans.text
+        }
+    }
+
+    nonisolated(unsafe) private static let hadithSpansCache: NSCache<NSString, HadithSpansEntry> = {
+        let c = NSCache<NSString, HadithSpansEntry>()
+        c.countLimit = 2_000
+        return c
+    }()
+
+    /// What a hadith row lights for `query` beyond the base highlighter's own match: its English
+    /// words for an ARABIC query, its Arabic words for an ENGLISH one. The one entry point of
+    /// `HadithRow`, as `quranSpans` is the ayah rows'.
+    ///
+    /// A hadith has no word-by-word gloss. Each word is looked up in the HADITH DICTIONARY
+    /// (`HadithLexicon.bin`, built by `Scripts/build_hadith_lexicon.py` from the shelf's own Arabic
+    /// and English: الوضوء is "ablution, wudu", عائشة "aisha"), and a word it has no entry for in the
+    /// Quran-derived lexicon, which was the only source before and holds the Quran's vocabulary in
+    /// the Quran's spelling. Per word, never both: the dictionary's pairs read right 63 times in 70
+    /// by hand (2026-11-14), and the lexicon's words would only add their neighbours to them.
+    static func hadithSpans(query: String, arabic: String, narrator: String, text: String)
+    -> (arabic: [NSRange], narrator: [NSRange], text: [NSRange]) {
+        let key = "h\u{0000}\(query)\u{0000}\(arabic.hashValue)\u{0000}\(narrator.hashValue)\u{0000}\(text.hashValue)" as NSString
+        if let cached = hadithSpansCache.object(forKey: key) {
+            return (cached.arabic, cached.narrator, cached.text)
+        }
+        let spans: (arabic: [NSRange], narrator: [NSRange], text: [NSRange])
+        let askedLexicon: Bool
+        if query.containsArabicLetters {
+            let found = hadithTerms(forArabicQuery: query)
+            askedLexicon = found.askedLexicon
+            spans = found.terms.isEmpty
+                ? ([], [], [])
+                : ([], wordSpans(of: found.terms, in: narrator), wordSpans(of: found.terms, in: text))
+        } else {
+            let found = hadithArabicSpans(forEnglishQuery: query, in: arabic)
+            askedLexicon = found.askedLexicon
+            spans = (found.spans, [], [])
+        }
+        // The lexicon answers empty until it has loaded, and a row asked in that window must ask again.
+        if !askedLexicon || lexiconIsLoaded {
+            hadithSpansCache.setObject(HadithSpansEntry(spans), forKey: key)
+        }
+        return spans
+    }
+
+    /// The English words an ARABIC query names in a hadith, per typed word: the dictionary's entry,
+    /// else the Quran-derived lexicon's.
+    private static func hadithTerms(forArabicQuery query: String) -> (terms: [String], askedLexicon: Bool) {
+        var terms: [String] = []
+        var seen = Set<String>()
+        var askedLexicon = false
+        for word in lookupFold(query).split(separator: " ").map(String.init) where word.count >= 2 {
+            let found: [String]
+            if namesAllah(word) {
+                found = ["allah"]
+            } else if let entry = hadithWords(for: word) {
+                found = entry
+            } else {
+                askedLexicon = true
+                found = englishTermsForUnalignedArabicQuery(word)
+            }
+            for term in found where !glueWords.contains(term) && seen.insert(term).inserted {
+                terms.append(term)
+            }
+        }
+        return (terms, askedLexicon)
+    }
+
+    /// The Arabic words of a hadith an ENGLISH query names, per word of the text: by the dictionary's
+    /// entry for it, else by the Quran-derived lexicon's. "Allah" lights the words that are the Name.
+    private static func hadithArabicSpans(forEnglishQuery query: String, in arabic: String)
+    -> (spans: [NSRange], askedLexicon: Bool) {
+        guard !arabic.isEmpty else { return ([], false) }
+        let queryTokens = HighlightedSnippet.normalizeForSearchText(query, trimWhitespace: true)
+            .split(separator: " ").map(String.init)
+            .filter { $0.count >= 3 && !glueWords.contains($0) }
+        guard !queryTokens.isEmpty else { return ([], false) }
+        let asksForAllah = queryTokens.contains { wordMatches(query: $0, word: "allah") }
+
+        var spans: [NSRange] = []
+        var askedLexicon = false
+        var quranLexicon: [String: Set<String>]?
+        let ns = arabic as NSString
+        for tokenRange in WordTokens.ranges(in: arabic) {
+            let folded = lookupFold(ns.substring(with: tokenRange))
+            guard folded.count >= 2 else { continue }
+            let named: Bool
+            if namesAllah(folded) {
+                named = asksForAllah
+            } else if let words = hadithWords(for: folded) {
+                named = queryTokens.contains { asked in
+                    words.contains { $0 != "allah" && !glueWords.contains($0) && wordMatches(query: asked, word: $0) }
+                }
+            } else {
+                if !askedLexicon {
+                    askedLexicon = true
+                    quranLexicon = lexiconIfReady(quranSnapshot: QuranData.shared.quran)
+                }
+                named = quranLexicon.map { lexiconNames(queryTokens, for: folded, in: $0) } ?? false
+            }
+            // A hadith's word carries its punctuation and its direction marks ("بِالصَّلاَةِ،"):
+            // the word is lit, the comma is not.
+            if named { spans.append(trimmedWordSpan(tokenRange, in: ns)) }
+        }
+        return (spans, askedLexicon)
+    }
+
+    /// The dictionary's English words for a folded hadith word, most likely first, or nil when it
+    /// has no entry. The word is tried as written and then in each form `arabicMatchVariants` peels
+    /// (a و or ف off the front, a pronoun off the end), every one with its article off, and the
+    /// FIRST that is a key answers: كتاب is a key, so it is never read on as ك + تاب ("repented").
+    private static func hadithWords(for folded: String) -> [String]? {
+        guard let dictionary = hadithDictionary else { return nil }
+        var tried = Set<String>()
+        for variant in arabicMatchVariants(of: folded) {
+            let key = hadithKey(variant)
+            guard tried.insert(key).inserted else { continue }
+            if let words = dictionary[key] { return words }
+        }
+        return nil
+    }
+
+    /// A folded word minus the article and what is written onto it, three letters left at least:
+    /// the dictionary's key. `key_of` in `Scripts/build_hadith_lexicon.py` is this same rule.
+    static func hadithKey(_ folded: String) -> String {
+        for prefix in hadithArticlePrefixes where folded.hasPrefix(prefix) && folded.count - prefix.count >= 3 {
+            return String(folded.dropFirst(prefix.count))
+        }
+        return folded
+    }
+
+    private static let hadithArticlePrefixes = [
+        "وبال", "فبال", "وكال", "فكال", "وال", "فال", "بال", "كال", "ولل", "فلل", "لل", "ال",
+    ]
+
+    private static let hadithDictionaryMagic = 0x3158_4C48          // "HLX1"
+    /// A set, not an equality: a builder that bumps the format is answered here on purpose, and
+    /// until then the file is refused whole (`testTheHadithDictionaryIsInTheBundle` fails on that).
+    private static let hadithDictionaryFormats: Set<Int> = [1]
+
+    /// Decoded once, on first use, from whichever thread asks (a `static let` initialises once).
+    private static let hadithDictionary: [String: [String]]? = {
+        guard let url = Bundle.main.url(forResource: "HadithLexicon", withExtension: "bin", subdirectory: "Data/Hadith")
+                ?? Bundle.main.url(forResource: "HadithLexicon", withExtension: "bin", subdirectory: "Hadith")
+                ?? Bundle.main.url(forResource: "HadithLexicon", withExtension: "bin"),
+              let data = try? Data(contentsOf: url, options: .mappedIfSafe) else { return nil }
+        return decodeHadithDictionary(data)
+    }()
+
+    static var hasHadithDictionary: Bool { hadithDictionary != nil }
+
+    /// [magic u32][format u32][key count u32], then per key [u16 key bytes][key][u8 word count] and
+    /// per word [u8 word bytes][word]. Nil for anything else, a truncated file included.
+    static func decodeHadithDictionary(_ data: Data) -> [String: [String]]? {
+        data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> [String: [String]]? in
+            guard let base = raw.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return nil }
+            let count = raw.count
+            var cursor = 0
+            func u32() -> Int? {
+                guard cursor + 4 <= count else { return nil }
+                defer { cursor += 4 }
+                return Int(base[cursor]) | Int(base[cursor + 1]) << 8
+                    | Int(base[cursor + 2]) << 16 | Int(base[cursor + 3]) << 24
+            }
+            func string(_ length: Int) -> String? {
+                guard cursor + length <= count else { return nil }
+                defer { cursor += length }
+                return String(decoding: UnsafeBufferPointer(start: base + cursor, count: length), as: UTF8.self)
+            }
+            guard u32() == hadithDictionaryMagic, let format = u32(), hadithDictionaryFormats.contains(format),
+                  let keyCount = u32() else { return nil }
+            var table: [String: [String]] = [:]
+            // The count comes from the file: bounded by what the bytes can hold (a record is at
+            // least 4 bytes), so a damaged file cannot reserve gigabytes first.
+            table.reserveCapacity(min(keyCount, count / 4))
+            for _ in 0..<keyCount {
+                guard cursor + 2 <= count else { return nil }
+                let keyLength = Int(base[cursor]) | Int(base[cursor + 1]) << 8
+                cursor += 2
+                guard let key = string(keyLength), cursor < count else { return nil }
+                let wordCount = Int(base[cursor])
+                cursor += 1
+                var words: [String] = []
+                words.reserveCapacity(wordCount)
+                for _ in 0..<wordCount {
+                    guard cursor < count else { return nil }
+                    let wordLength = Int(base[cursor])
+                    cursor += 1
+                    guard let word = string(wordLength) else { return nil }
+                    words.append(word)
+                }
+                table[key] = words
+            }
+            return cursor == count ? table : nil
+        }
     }
 
     /// The gloss minus its "(...)" glue inserts, split to content words. "(is) the book" → ["book"].
@@ -992,11 +1489,13 @@ enum CrossLanguageWordHighlight {
             add(candidate)
             // The taa marbuta reappears as a plain taa before a suffix (صلاتهم = صلاة + هم), and the
             // feminine past verb ends in a plain taa (ضاقت = ضاق + ت) - keep the stripped form and
-            // the ة-restored twin so any of the three spellings meets the query.
+            // the ة-restored twin so any of the three spellings meets the query. The twin is spelled
+            // the way the search fold spells a taa marbuta, with a ه: every word here is folded, and
+            // a twin ending in a real ة could never equal one.
             if candidate.hasSuffix("ت"), candidate.count - 1 >= 3 {
                 let stripped = String(candidate.dropLast())
                 add(stripped)
-                add(stripped + "ة")
+                add(stripped + "ه")
             }
         }
         for base in lookupKeys(for: folded) {
@@ -1053,8 +1552,10 @@ enum CrossLanguageWordHighlight {
         return word
     }
 
-    /// Word-to-word tolerance: equal, one a prefix of the other (≥3), the same after one inflection
-    /// layer, or a shared stem long enough to be the same word family ("mercy" → "merciful").
+    /// Word-to-word tolerance: equal, the word running on past the query (≥3), the same after one
+    /// inflection layer, or a shared stem long enough to be the same word family ("mercy" →
+    /// "merciful"). `query` is what is looked for (a typed word, a gloss word), `word` what the text
+    /// or the gloss holds.
     private static func wordMatches(query: String, word: String) -> Bool {
         if pairMatches(query, word) { return true }
         let stemmedQuery = englishStem(query)
@@ -1065,13 +1566,19 @@ enum CrossLanguageWordHighlight {
         return false
     }
 
-    private static func pairMatches(_ a: String, _ b: String) -> Bool {
-        if a == b { return true }
-        if a.count >= 3, b.hasPrefix(a) { return true }
-        if b.count >= 3, a.hasPrefix(b) { return true }
-        guard a.count >= 4, b.count >= 4 else { return false }
-        let common = zip(a, b).prefix(while: { $0.0 == $0.1 }).count
-        return common >= max(4, min(a.count, b.count) - 2)
+    /// NOT symmetric. The word may run on past the term: a query typed halfway ("merc" in "mercy"),
+    /// a base under its derived form ("pray" in "prayer"). The other way round, a short word that
+    /// merely begins the term, counts only across an inflectional ending ("use" for "used"): read
+    /// both ways, as it was, "themselves" lit every "the" of a translation, "Allah" every "all" and
+    /// "forgiving" every "for" (5.4% of the lit Quran rows, 2026-11-14).
+    private static func pairMatches(_ term: String, _ word: String) -> Bool {
+        if term == word { return true }
+        if term.count >= 3, word.hasPrefix(term) { return true }
+        if word.count >= 3, term.hasPrefix(word),
+           inflectionTails.contains(String(term.dropFirst(word.count))) { return true }
+        guard term.count >= 4, word.count >= 4 else { return false }
+        let common = zip(term, word).prefix(while: { $0.0 == $0.1 }).count
+        return common >= max(4, min(term.count, word.count) - 2)
     }
 
     /// The token span minus leading/trailing punctuation, so a highlight on "ease," stops at the "e".
@@ -1131,6 +1638,8 @@ final class ArabicInkBleedHost: UIView {
 
     /// Keep the text container's height unbounded through frame changes (see `layoutSubviews`). The
     /// word-tappable runs ask for it; the mushaf page sizes its container to the page on purpose.
+    /// Those runs' own container (`OwnedTextContainer`) refuses the resync in the first place, so for
+    /// them this is the guard that would catch a text view handed in on a plain container.
     let keepsContainerOpen: Bool
 
     init(textView: UITextView, verticalBleed: CGFloat = 0, keepsContainerOpen: Bool = false) {
@@ -1176,6 +1685,46 @@ final class ArabicInkBleedHost: UIView {
 
 // MARK: - The reader's word-tappable Arabic
 
+/// A text container whose size only its owner sets.
+///
+/// A non-scrolling `UITextView` writes its own geometry into its container: its frame's height on
+/// every frame change, and whatever size it is being measured at. Each write that moves the size
+/// throws the whole typesetting away and runs it again on the spot, so a reader row typeset its ayah
+/// THREE times while it was being built: when the text was set, when SwiftUI measured the view (the
+/// container was sized to a view that had no frame yet), and when the frame landed and
+/// `ArabicInkBleedHost` reopened the height the resync had just closed. Measured 2026-11-13 over a
+/// scroll of al-Baqarah: 213 of the main thread's 1,948 busy profiler samples were that typesetting,
+/// 151 of them the two repeats, and all three ran in the one frame that built the row, which is the
+/// frame a long ayah dropped.
+///
+/// The run's column is `ownedSize`: the width the row measured, and no height limit. Nothing else
+/// moves it, so the text is typeset once and every later question (its height, a tap's word, the
+/// drawing) reads that one layout.
+final class OwnedTextContainer: NSTextContainer {
+    var ownedSize: CGSize {
+        didSet {
+            guard ownedSize != oldValue else { return }
+            isOwnerWrite = true
+            size = ownedSize
+            isOwnerWrite = false
+        }
+    }
+    private var isOwnerWrite = false
+
+    init(ownedSize: CGSize) {
+        self.ownedSize = ownedSize
+        super.init(size: ownedSize)
+    }
+
+    @available(*, unavailable)
+    required init(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    override var size: CGSize {
+        get { super.size }
+        set { if isOwnerWrite { super.size = newValue } }
+    }
+}
+
 /// The ayah's Arabic, rendered through TextKit so one word can be hit-tested and lit.
 ///
 /// A SwiftUI `Text` cannot do this: it has no way to ask "which word is under this point". The mushaf
@@ -1201,7 +1750,18 @@ struct WordByWordTextView: UIViewRepresentable {
     let onTapWord: (Int) -> Void
 
     func makeUIView(context: Context) -> ArabicInkBleedHost {
-        let view = UITextView()
+        // The run's own TextKit 1 stack, for the container nothing but this view resizes
+        // (`OwnedTextContainer`). The text view takes its storage and layout manager from the
+        // container it is given, as the mushaf page's does.
+        let storage = NSTextStorage()
+        let manager = NSLayoutManager()
+        let container = OwnedTextContainer(ownedSize: CGSize(width: width, height: .greatestFiniteMagnitude))
+        container.lineFragmentPadding = 0
+        manager.addTextContainer(container)
+        storage.addLayoutManager(manager)
+        // NSLayoutManager does not retain its NSTextStorage; the coordinator lives as long as the view.
+        context.coordinator.textStorage = storage
+        let view = UITextView(frame: .zero, textContainer: container)
         view.isEditable = false
         view.isSelectable = selectable
         view.isScrollEnabled = false
@@ -1211,15 +1771,9 @@ struct WordByWordTextView: UIViewRepresentable {
         // what `ArabicInkBleedHost` does - with the container insets that keep every line in place.
         view.clipsToBounds = false
         view.backgroundColor = .clear
-        view.textContainer.lineFragmentPadding = 0
         view.adjustsFontForContentSizeCategory = false
-        view.textContainer.widthTracksTextView = false
-        view.textContainer.size = CGSize(width: width, height: .greatestFiniteMagnitude)
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         view.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        // Touch the TextKit-1 layout manager: hit-testing goes through it, and iOS 16+ would otherwise
-        // default this view to TextKit 2, where `characterIndex(for:)` does not apply.
-        _ = view.layoutManager
 
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
         // TWO taps open a word, in list mode as in page mode (Abu, 2026-09-04: a single tap kept
@@ -1266,8 +1820,7 @@ struct WordByWordTextView: UIViewRepresentable {
         context.coordinator.lastAttributed = attributed
         context.coordinator.lastWidth = width
 
-        view.textContainer.widthTracksTextView = false
-        view.textContainer.size = CGSize(width: width, height: .greatestFiniteMagnitude)
+        (view.textContainer as? OwnedTextContainer)?.ownedSize = CGSize(width: width, height: .greatestFiniteMagnitude)
         view.attributedText = lit(attributed)
         view.invalidateIntrinsicContentSize()
     }
@@ -1290,12 +1843,27 @@ struct WordByWordTextView: UIViewRepresentable {
         guard width > 0 else { return nil }
         let offered = proposal.width.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
         let fitWidth = min(width, offered ?? width)
-        // The text view is the column plus its bleed on each side, and its answer subtracts the insets
-        // that make up that bleed - so it is asked the width it will actually have.
-        let fitting = host.textView.sizeThatFits(
-            CGSize(width: fitWidth + 2 * ArabicInkBleedHost.bleed, height: .greatestFiniteMagnitude)
-        )
-        return CGSize(width: fitWidth, height: ceil(fitting.height))
+        let view = host.textView
+        guard let container = view.textContainer as? OwnedTextContainer else {
+            // The text view is the column plus its bleed on each side, and its answer subtracts the
+            // insets that make up that bleed - so it is asked the width it will actually have.
+            let fitting = view.sizeThatFits(
+                CGSize(width: fitWidth + 2 * ArabicInkBleedHost.bleed, height: .greatestFiniteMagnitude)
+            )
+            return CGSize(width: fitWidth, height: ceil(fitting.height))
+        }
+        // The height of the layout the run already has, which is what the text view's own
+        // `sizeThatFits` answers (used rect plus insets) without resizing the container to ask. A
+        // narrower offer than the run's column (the rotation above) is measured in a column of that
+        // width and put back: `width` follows a pass later and typesets it for good.
+        let column = container.ownedSize
+        let narrowed = abs(column.width - fitWidth) > 0.01
+        if narrowed { container.ownedSize = CGSize(width: fitWidth, height: .greatestFiniteMagnitude) }
+        view.layoutManager.ensureLayout(for: container)
+        let used = view.layoutManager.usedRect(for: container)
+        if narrowed { container.ownedSize = column }
+        let insets = view.textContainerInset
+        return CGSize(width: fitWidth, height: ceil(used.maxY + insets.top + insets.bottom))
     }
 
     /// The selected word's accent wash, painted on top rather than composed in: a background attribute
@@ -1341,6 +1909,8 @@ struct WordByWordTextView: UIViewRepresentable {
 
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         weak var textView: UITextView?
+        /// The run's storage, kept alive here (see `makeUIView`).
+        var textStorage: NSTextStorage?
         var wordRanges: [NSRange] = []
         var onTapWord: ((Int) -> Void)?
         /// The last content actually assigned to the view, for the update guard above. The un-lit
@@ -2978,9 +3548,9 @@ struct WordMeaningSheet: View {
               let styled = TajweedStore.shared.attributedText(
                   surah: focus.surah.id, ayah: focus.ayah.id, text: focus.rawText
               ) else { return nil }
-        let ns = NSAttributedString(styled)
-        guard focus.range.location + focus.range.length <= ns.length else { return nil }
-        return AttributedString(ns.attributedSubstring(from: focus.range))
+        // By token, not by `focus.range`: that range is the RAW text's, and the painted text is the
+        // reader's (see `WordTokens.styledToken`).
+        return WordTokens.styledToken(focus.location.token, in: styled, expecting: focus.rawTokens.count)
     }
 
     /// The word with ONE part in the accent (the Grammar page's choice), the rest in the label color.

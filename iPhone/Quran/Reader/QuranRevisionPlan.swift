@@ -175,6 +175,9 @@ extension Settings {
             plan.cycleStartDate = Calendar.current.startOfDay(for: Date())
             resetRevisionProgress()
             changed = true
+            // A whole revision cycle closed: a big win for the review prompt, banked for the next
+            // pause for the same reason a finished khatm is (`settleQuranPlan`).
+            AppReviewManager.shared.bank(.big)
         }
 
         if changed { quranRevisionPlan = plan }

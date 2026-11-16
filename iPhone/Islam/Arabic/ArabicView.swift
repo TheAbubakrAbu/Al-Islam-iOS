@@ -1108,7 +1108,7 @@ struct ArabicView: View {
             .contentShape(Rectangle())
             // The same clear glass as the letter tiles under it: a flat accent wash made the shelf
             // read as foreign to the page (Abu, 2026-10-20: "why they look so different").
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
@@ -1150,7 +1150,7 @@ struct ArabicView: View {
             }
             .padding(.vertical, 8)
             .padding(.horizontal, 10)
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

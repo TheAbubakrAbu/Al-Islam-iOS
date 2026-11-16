@@ -345,8 +345,9 @@ struct HadithRow: View, Equatable {
         HadithExplanationStore.shared.hasExplanation(slug: book.slug, idInBook: hadith.idInBook)
     }
 
-    /// The Arabic the row reads aloud: the hadith as it shows it, the chain left out when it sits
-    /// beneath the text (`hadithChainFirst` off and the chain read), the whole narration otherwise.
+    /// The Arabic the row reads aloud, in the order it shows it: the whole narration when the chain
+    /// stands above the hadith (`hadithChainFirst`, the default), the hadith alone when the chain
+    /// sits beneath it.
     private func spokenArabic(_ arabic: String) -> String {
         guard !settings.hadithChainFirst,
               let cut = HadithChainStore.shared.matnStart(slug: book.slug, idInBook: hadith.idInBook, arabic: arabic),
@@ -358,6 +359,77 @@ struct HadithRow: View, Equatable {
         settings.hadithArabicWantsCustomFace
             ? Font.arabic(settings.nonQuranArabicFontName, size: arabicFontSize * 0.82)
             : .system(size: arabicFontSize * 0.82)
+    }
+
+    /// The chain line's look in a reading row: one soft accent card the width of the text, the chain
+    /// glyph on the first line at the chain's head and a chevron at its far side, the whole card a
+    /// button to the chain sheet (Abu, 2026-11-15: "Make the button for the chains look better looks
+    /// a little off": it was a small glyph hanging beside grey text, which began further in than the
+    /// hadith under it for no reason the eye could see). `leading` is the side the chain starts on:
+    /// the left for English, the right for Arabic, in every interface.
+    private func chainCard<Chain: View>(leading: Bool, @ViewBuilder chain: () -> Chain) -> some View {
+        let accent = settings.accentColor.color
+        let glyph = Image(systemName: "point.3.connected.trianglepath.dotted")
+            .font(.footnote.weight(.semibold))
+            .foregroundColor(accent)
+        let chevron = Image(systemName: leading ? "chevron.right" : "chevron.left")
+            .font(.caption2.weight(.bold))
+            .foregroundColor(accent.opacity(0.55))
+        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        return Button {
+            settings.hapticFeedback()
+            showChainSheet = true
+        } label: {
+            HStack(alignment: .center, spacing: 8) {
+                if !leading { chevron }
+                // The glyph sits on the first line's baseline, wherever the face puts it.
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    if leading { glyph }
+                    chain()
+                    if !leading { glyph }
+                }
+                if leading { chevron }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(shape.fill(accent.opacity(0.08)))
+            .overlay(shape.strokeBorder(accent.opacity(0.14), lineWidth: 1))
+            .contentShape(shape)
+            // Sides by name: the card is laid out left to right in every interface.
+            .environment(\.layoutDirection, .leftToRight)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(Text("Shows the chain of narrators"))
+    }
+
+    /// The Arabic chain of a row that draws it apart from the hadith: smaller and secondary, in the
+    /// chain card, its head at the right edge.
+    private func arabicChainLine(_ parts: HadithChainCut.Parts, usesCustomFace: Bool) -> some View {
+        chainCard(leading: false) {
+            arabicText(parts.chain, spans: parts.chainSpans, term: searchText,
+                       guarantee: false, font: chainFont,
+                       usesCustomFace: usesCustomFace, color: .secondary)
+        }
+        .accessibilityLabel(Text("Chain of Narrators"))
+    }
+
+    /// The same chain in English, beside the English text as the Arabic chain is beside the Arabic
+    /// (Abu, 2026-11-15: "show the chain of narrators in English in the Hadith itself like how it is
+    /// for Arabic (in secondary color)"): one sentence built from the chain the app read
+    /// (`HadithChainStore.englishLine`), smaller and secondary, in the same card, its head at the
+    /// left. It stops at the narrator below the last one, as the Arabic chain does, because the
+    /// English opens with the last one itself ("Narrated Abu Hurairah:").
+    private func englishChainLine(_ line: String) -> some View {
+        chainCard(leading: true) {
+            Text(verbatim: line)
+                .font(.system(size: englishFontSize * 0.82))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityLabel(Text("Chain of Narrators"))
+        .accessibilityValue(Text(verbatim: line))
     }
 
     /// The Arabic as the row draws it: the chunked renderer for the longest narrations (the KFGQPC
@@ -544,15 +616,8 @@ struct HadithRow: View, Equatable {
               HadithBookData.citationNumber(inQuery: trimmed) == nil,
               WordByWordStore.isBundled else { return ([], [], []) }
 
-        if trimmed.containsArabicLetters {
-            let terms = CrossLanguageWordHighlight.englishTermsForUnalignedArabicQuery(trimmed)
-            guard !terms.isEmpty else { return ([], [], []) }
-            return ([],
-                    CrossLanguageWordHighlight.wordSpans(of: terms, in: text.narrator),
-                    CrossLanguageWordHighlight.wordSpans(of: terms, in: text.text))
-        } else {
-            return (CrossLanguageWordHighlight.arabicSpansForEnglishQuery(trimmed, arabicText: text.arabic), [], [])
-        }
+        return CrossLanguageWordHighlight.hadithSpans(
+            query: trimmed, arabic: text.arabic, narrator: text.narrator, text: text.text)
         #else
         return ([], [], [])
         #endif
@@ -631,7 +696,8 @@ struct HadithRow: View, Equatable {
                 .conditionalGlassEffect(
                     useColor: isBookmarked ? 0.3 : nil,
                     customTint: isBookmarked ? settings.accentColor.color : nil,
-                    interactive: false
+                    interactive: false,
+                    inRow: true
                 )
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -677,7 +743,7 @@ struct HadithRow: View, Equatable {
                         .aspectRatio(contentMode: .fit)
                         .frame(width: compact ? 19 : 25, height: compact ? 19 : 25)
                         .foregroundColor(settings.accentColor.color)
-                        .conditionalGlassEffect()
+                        .conditionalGlassEffect(inRow: true)
                         .frame(width: compact ? 22 : 28, height: compact ? 22 : 28)
                         .contentShape(Rectangle())
                 }
@@ -716,39 +782,26 @@ struct HadithRow: View, Equatable {
             // rows' `showArabicLine` rule.
             if compact || settings.showHadithArabic || visibility.mArabic || visibility.guaranteeArabic
                 || !cross.arabic.isEmpty, !text.arabic.isEmpty {
-                // The chain beneath the hadith (Abu, 2026-11-02: "Put Hadith chain back at the bottom so
-                // it matches with English"; `hadithChainFirst` off): a reading row whose chain the app
-                // read opens at its final narrator, as the English line does, and draws the chain under
-                // it, smaller and secondary, a tap on it opening the chain sheet. A compact or windowed
+                // The chain apart from the hadith: a reading row whose chain the app read draws it
+                // smaller and secondary, a tap on it opening the chain sheet, and the hadith opens at
+                // its final narrator, as the English line does. Above the hadith by default (Abu,
+                // 2026-11-15: "For chain of narration put it at the top not the bottom"), beneath it
+                // with `hadithChainFirst` off, where it sat from 2026-11-02. A compact or windowed
                 // (searched) row keeps the text whole, as does a span that would straddle the cut.
-                let cut = (!compact && !settings.hadithChainFirst && arabicWindow == nil)
+                let cut = (!compact && arabicWindow == nil)
                     ? HadithChainStore.shared.matnStart(slug: book.slug, idInBook: hadith.idInBook, arabic: text.arabic)
                     : nil
                 if let cut, let parts = HadithChainCut.split(text.arabic, at: cut, spans: cross.arabic) {
                     VStack(alignment: .trailing, spacing: 8) {
+                        if settings.hadithChainFirst {
+                            arabicChainLine(parts, usesCustomFace: arabicUsesCustomFace)
+                        }
                         arabicText(parts.matn, spans: parts.matnSpans, term: searchText,
                                    guarantee: visibility.guaranteeArabic, font: arabicFont,
                                    usesCustomFace: arabicUsesCustomFace, color: .primary)
-                        Button {
-                            settings.hapticFeedback()
-                            showChainSheet = true
-                        } label: {
-                            HStack(alignment: .top, spacing: 6) {
-                                arabicText(parts.chain, spans: parts.chainSpans, term: searchText,
-                                           guarantee: false, font: chainFont,
-                                           usesCustomFace: arabicUsesCustomFace, color: .secondary)
-                                Image(systemName: "point.3.connected.trianglepath.dotted")
-                                    .font(.caption)
-                                    .foregroundColor(settings.accentColor.color)
-                                    .padding(.top, 5)
-                            }
-                            .contentShape(Rectangle())
-                            // The glyph at the chain's head, the right edge, in every interface.
-                            .environment(\.layoutDirection, .leftToRight)
+                        if !settings.hadithChainFirst {
+                            arabicChainLine(parts, usesCustomFace: arabicUsesCustomFace)
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(Text("Chain of Narrators"))
-                        .accessibilityHint(Text("Shows the chain of narrators"))
                     }
                     .fixedSize(horizontal: false, vertical: true)
                 } else {
@@ -800,6 +853,15 @@ struct HadithRow: View, Equatable {
             if compact || settings.showHadithEnglish || visibility.mNarrator || visibility.mText
                 || visibility.guaranteeNarrator || visibility.guaranteeText
                 || !cross.narrator.isEmpty || !cross.text.isEmpty {
+                // The chain in English, on the side of the English the Arabic chain is on of the
+                // Arabic: a reading row only, as there (a searched row shows its match, not its chain).
+                let englishChain = (!compact && englishWindow == nil && !(text.narrator.isEmpty && text.text.isEmpty))
+                    ? HadithChainStore.shared.englishLine(slug: book.slug, idInBook: hadith.idInBook, arabic: text.arabic)
+                    : nil
+                if let englishChain, settings.hadithChainFirst {
+                    englishChainLine(englishChain)
+                }
+
                 // The narrator is PART of the English text - it shows whenever English does (there is no
                 // separate toggle; a hadith without its isnad line reads incomplete).
                 if !text.narrator.isEmpty {
@@ -836,6 +898,10 @@ struct HadithRow: View, Equatable {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
                     .leftToRightContent()
+                }
+
+                if let englishChain, !settings.hadithChainFirst {
+                    englishChainLine(englishChain)
                 }
             }
 
@@ -975,8 +1041,8 @@ struct HadithRow: View, Equatable {
         Text(displayReference)
             .foregroundStyle(.secondary)
 
-        // The AyahRow menu's exact grammar: Bookmark, then the note actions, a divider, then Copy and
-        // Share (in that order) - so the two rows read as one system.
+        // The AyahRow menu's grammar: Bookmark, then the note actions, then the groups below, so the
+        // two rows read as one system.
         if isBookmarked {
             Button(role: .destructive) {
                 settings.hapticFeedback()
@@ -1018,56 +1084,10 @@ struct HadithRow: View, Equatable {
 
         Divider()
 
-        // The ayah rows' Select Text (2026-09-21): the narration lifted into a sheet where a drag
-        // selects text instead of fighting the list for the scroll.
-        Button {
-            settings.hapticFeedback()
-            showSelectTextSheet = true
-        } label: {
-            Label("Select Text", systemImage: "highlighter")
-        }
-
-        // Read aloud by the system voices (Abu, 2026-11-02; Tilawa's Listen button): the Arabic as the
-        // row shows it (the chain left out when it sits beneath the hadith), or the English with its
-        // narrator line. A hadith being read offers Stop instead; the voices gate each language.
-        let text = hadith.allText
-        let arabicToSpeak = spokenArabic(text.arabic)
-        let englishToSpeak = [text.narrator, text.text].filter { !$0.isEmpty }.joined(separator: "\n")
-        let speaking = ArabicSpeech.shared.currentText ?? ""
-        if !speaking.isEmpty, speaking == arabicToSpeak || speaking == englishToSpeak {
-            Button {
-                settings.hapticFeedback()
-                ArabicSpeech.shared.stop()
-            } label: {
-                Label("Stop Reading", systemImage: "stop.fill")
-            }
-        } else {
-            let canArabic = ArabicSpeech.shared.isAvailable && !arabicToSpeak.isEmpty
-            let canEnglish = ArabicSpeech.shared.isEnglishAvailable && !englishToSpeak.isEmpty
-            if canArabic || canEnglish {
-                Menu {
-                    if canArabic {
-                        Button {
-                            settings.hapticFeedback()
-                            ArabicSpeech.shared.speak(arabicToSpeak, rate: 0.42)
-                        } label: {
-                            Label("Arabic", systemImage: "speaker.wave.2")
-                        }
-                    }
-                    if canEnglish {
-                        Button {
-                            settings.hapticFeedback()
-                            ArabicSpeech.shared.speakEnglish(englishToSpeak)
-                        } label: {
-                            Label("English", systemImage: "speaker.wave.2")
-                        }
-                    }
-                } label: {
-                    Label("Play Hadith", systemImage: "speaker.wave.2")
-                }
-            }
-        }
-
+        // The groups of the ayah menus, in their order (Abu, 2026-11-15: "Split up menus with dividers
+        // so it's cleaner all over"): marking above, then study (chain, similar, explanation), then
+        // reading aloud, then the text out (select, copy, share). A group that is absent takes its
+        // divider with it.
         // The narration's isnad, drawn in Arabic and shareable (HadithChainSheet).
         if hasChain {
             Button {
@@ -1097,6 +1117,64 @@ struct HadithRow: View, Equatable {
             } label: {
                 Label("Explanation", systemImage: "text.book.closed")
             }
+        }
+
+        if hasChain || hasSimilar || hasExplanation {
+            Divider()
+        }
+
+        // Read aloud by the system voices (Abu, 2026-11-02; Tilawa's Listen button): the Arabic as the
+        // row shows it (the chain left out when it sits beneath the hadith), or the English with its
+        // narrator line. A hadith being read offers Stop instead; the voices gate each language.
+        let text = hadith.allText
+        let arabicToSpeak = spokenArabic(text.arabic)
+        let englishToSpeak = [text.narrator, text.text].filter { !$0.isEmpty }.joined(separator: "\n")
+        let speaking = ArabicSpeech.shared.currentText ?? ""
+        if !speaking.isEmpty, speaking == arabicToSpeak || speaking == englishToSpeak {
+            Button {
+                settings.hapticFeedback()
+                ArabicSpeech.shared.stop()
+            } label: {
+                Label("Stop Reading", systemImage: "stop.fill")
+            }
+
+            Divider()
+        } else {
+            let canArabic = ArabicSpeech.shared.isAvailable && !arabicToSpeak.isEmpty
+            let canEnglish = ArabicSpeech.shared.isEnglishAvailable && !englishToSpeak.isEmpty
+            if canArabic || canEnglish {
+                Menu {
+                    if canArabic {
+                        Button {
+                            settings.hapticFeedback()
+                            ArabicSpeech.shared.speak(arabicToSpeak, rate: 0.42)
+                        } label: {
+                            Label("Arabic", systemImage: "speaker.wave.2")
+                        }
+                    }
+                    if canEnglish {
+                        Button {
+                            settings.hapticFeedback()
+                            ArabicSpeech.shared.speakEnglish(englishToSpeak)
+                        } label: {
+                            Label("English", systemImage: "speaker.wave.2")
+                        }
+                    }
+                } label: {
+                    Label("Play Hadith", systemImage: "speaker.wave.2")
+                }
+
+                Divider()
+            }
+        }
+
+        // The ayah rows' Select Text (2026-09-21): the narration lifted into a sheet where a drag
+        // selects text instead of fighting the list for the scroll.
+        Button {
+            settings.hapticFeedback()
+            showSelectTextSheet = true
+        } label: {
+            Label("Select Text", systemImage: "highlighter")
         }
 
         // ONE share surface and ONE copy, both driven by the same composition options - the pile of
@@ -1823,7 +1901,8 @@ struct HadithBookmarkRow: View, Equatable {
                             .conditionalGlassEffect(
                                 useColor: 0.3,
                                 customTint: settings.accentColor.color,
-                                interactive: false
+                                interactive: false,
+                                inRow: true
                             )
                             .onTapGesture {
                                 settings.hapticFeedback()
@@ -2036,7 +2115,7 @@ struct HadithBookmarkGridTile: View, Equatable {
             // preview ran short.
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
             .overlay {
                 if ringsReading { HadithReadingRing(slug: bookmark.slug, hadithID: bookmark.idInBook) }
             }
@@ -2105,6 +2184,7 @@ extension FocusItem {
                 shareLabel: String(localized: "Share Book"),
                 shareText: "\(book.displayTitle)\n\(book.displayAuthor)\n\(book.eraDisplay)"
             )
+            .linked(to: .hadithBook(slug: book.slug), title: book.displayTitle)
         }
         return FocusItem(
             id: "hadith-book-\(book.slug)",
@@ -2117,6 +2197,7 @@ extension FocusItem {
             \(book.authorEnglish) - \(book.era)
             """
         )
+        .linked(to: .hadithBook(slug: book.slug), title: book.displayTitle)
     }
 
     static func hadithChapter(book: HadithCatalogBook, chapter: HadithBookData.Chapter, ordinal: Int, rangeText: String?) -> FocusItem {
@@ -2338,7 +2419,9 @@ struct HadithShareSheet: View {
                 Spacer()
 
                 ZStack {
-                    if actionMode == .image {
+                    if actionMode == .link {
+                        ShareLinkPreview(title: book.displayReference(hadith.displayNumber), link: shareLink)
+                    } else if actionMode == .image {
                         if let img = generatedImage {
                             // The PREVIOUS image stays on screen while a regeneration runs (it is never
                             // nilled mid-flight), dimmed slightly so the swap reads as an update, not a
@@ -2387,32 +2470,36 @@ struct HadithShareSheet: View {
 
                 Spacer()
 
-                ScrollView {
-                    VStack(spacing: 2) {
-                        toggle("Reference", $includeReference, disabled: includeReference && enabledPartCount == 1)
+                // The switches choose what goes on the card or in the text; a link carries neither.
+                if actionMode != .link {
+                    ScrollView {
+                        VStack(spacing: 2) {
+                            toggle("Reference", $includeReference, disabled: includeReference && enabledPartCount == 1)
 
-                        if !text.arabic.isEmpty {
-                            toggle("Arabic", $includeArabic, disabled: includeArabic && enabledPartCount == 1)
+                            if !text.arabic.isEmpty {
+                                toggle("Arabic", $includeArabic, disabled: includeArabic && enabledPartCount == 1)
+                            }
+
+                            // English carries its narrator line (no separate switch - see the include flags).
+                            if !text.text.isEmpty || !text.narrator.isEmpty {
+                                toggle("English", $includeEnglish, disabled: includeEnglish && enabledPartCount == 1)
+                            }
+
+                            if noteText != nil {
+                                toggle("Include Note", $includeNote, disabled: false)
+                            }
+
+                            // The face and the tashkeel switch shape the card rather than choosing what
+                            // goes on it: they are in the toolbar menu (`optionsMenu`).
                         }
-
-                        // English carries its narrator line (no separate switch - see the include flags).
-                        if !text.text.isEmpty || !text.narrator.isEmpty {
-                            toggle("English", $includeEnglish, disabled: includeEnglish && enabledPartCount == 1)
-                        }
-
-                        if noteText != nil {
-                            toggle("Include Note", $includeNote, disabled: false)
-                        }
-
-                        // The face and the tashkeel switch shape the card rather than choosing what
-                        // goes on it: they are in the toolbar menu (`optionsMenu`).
                     }
+                    .frame(maxHeight: 200)
                 }
-                .frame(maxHeight: 200)
 
                 Picker("Action Mode", selection: $actionMode) {
                     Text("Image").tag(ActionMode.image)
                     Text("Text").tag(ActionMode.text)
+                    Text("Link").tag(ActionMode.link)
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .padding(.horizontal, 16)
@@ -2443,8 +2530,8 @@ struct HadithShareSheet: View {
             .navigationTitle(book.displayReference(hadith.displayNumber))
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    // The options only shape the Arabic: nothing to offer without it.
-                    if includeArabic, !text.arabic.isEmpty {
+                    // The options only shape the Arabic: nothing to offer without it, or for a link.
+                    if includeArabic, !text.arabic.isEmpty, actionMode != .link {
                         optionsMenu
                     }
                 }
@@ -2461,7 +2548,7 @@ struct HadithShareSheet: View {
             didInit = true
 
             withAnimation {
-                actionMode = ActionMode(rawValue: storedActionModeRaw) ?? .image
+                actionMode = ActionMode.restored(storedActionModeRaw)
                 generatePreviewImage()
             }
 
@@ -2479,13 +2566,17 @@ struct HadithShareSheet: View {
         .onChange(of: shareFontFaceRaw) { _ in regenerate() }
         .onChange(of: actionMode) { newValue in
             if didFinishInitialSetup { settings.hapticFeedback() }
-            storedActionModeRaw = newValue.rawValue
+            // A link is a one-off, never the mode the sheet reopens in (`ActionMode.restored`).
+            if newValue != .link { storedActionModeRaw = newValue.rawValue }
             if newValue == .image && generatedImage == nil { generatePreviewImage() }
         }
         .onChange(of: showingActivityView) { open in
             // Close the whole sheet only after a COMPLETED share. On cancel, stay put with the
             // configured preview intact.
             if !open && didCompleteShare {
+                // A finished share with the sheet on its way out: a natural break for the review
+                // prompt (AppReview.swift). `ActivityView` has already counted the share itself.
+                AppReviewManager.shared.notePause()
                 presentationMode.wrappedValue.dismiss()
             }
         }
@@ -2603,7 +2694,13 @@ struct HadithShareSheet: View {
     }
 
     private func performCopyOrGenerate() {
+        // Copying a hadith to take somewhere else is a small win for the review prompt
+        // (AppReview.swift), and with this sheet about to close, a moment it may ask at.
+        AppReviewManager.shared.celebrate(.small)
         switch actionMode {
+        case .link:
+            UIPasteboard.general.string = shareLink.url.absoluteString
+            presentationMode.wrappedValue.dismiss()
         case .text:
             UIPasteboard.general.string = composed
             presentationMode.wrappedValue.dismiss()
@@ -2622,6 +2719,8 @@ struct HadithShareSheet: View {
 
     private func performShareOrGenerate() {
         switch actionMode {
+        case .link:
+            presentShareSheet(with: [AppLinkShareItem(link: shareLink, title: book.displayReference(hadith.displayNumber))])
         case .text:
             presentShareSheet(with: [composed])
         case .image:
@@ -2633,6 +2732,12 @@ struct HadithShareSheet: View {
                 }
             }
         }
+    }
+
+    /// The Link mode's link (AppLink.swift): the hadith by the number printed beside it, checked
+    /// against the book so the link leads back to this row and no other.
+    private var shareLink: AppLink {
+        AppLink.hadith(hadith, in: book, data: HadithStore.shared.book(book))
     }
 
     // MARK: Card rendering

@@ -115,7 +115,9 @@ struct DuaSessionStartButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .fullScreenCover(isPresented: $showingSession) {
+        // Closing the session is a natural break for the review prompt (AppReview.swift), and where a
+        // finished one (`advance`) gets asked about.
+        .fullScreenCover(isPresented: $showingSession, onDismiss: { AppReviewManager.shared.notePause() }) {
             DuaSessionView(collection: collection)
         }
     }
@@ -166,6 +168,9 @@ struct DuaSessionView: View {
             withAnimation(.easeInOut) { finished = true }
             // A completed pass starts clean next time rather than resuming at the last item.
             progress.clear(collection)
+            // Every dua of the collection said: a big win for the review prompt (AppReview.swift),
+            // remembered until the session is closed.
+            AppReviewManager.shared.bank(.big)
             return
         }
         settings.hapticFeedback()

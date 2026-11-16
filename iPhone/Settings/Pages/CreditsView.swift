@@ -697,7 +697,7 @@ struct AboutAppView: View {
     @ObservedObject private var systemSettings = SystemSettings.shared
 
     private static let website = "https://abubakrelmallah.com/"
-    private static let email = "ammelmallah@icloud.com"
+    private static let email = "contact@abubakrelmallah.com"
     private static var version: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
     }

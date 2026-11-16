@@ -57,7 +57,8 @@ struct IslamArticleEntry: Identifiable, Hashable {
     /// The index section the row sits in ("THE 5 PILLARS OF ISLAM").
     let group: String
     let home: IslamArticleHome
-    /// The `-pillarsArticle` / `-guidesArticle` DEBUG launch-argument key.
+    /// The `-pillarsArticle` / `-guidesArticle` DEBUG launch-argument key. It is also the second half
+    /// of the article's shared link (`linkKey`), so a key that has shipped is never renamed.
     let debugKey: String
     /// THE BASICS rows are set larger and in the accent, the way the index has always drawn them.
     var emphasized: Bool = false
@@ -66,6 +67,11 @@ struct IslamArticleEntry: Identifiable, Hashable {
 
     /// The row id in the index list, the target of "Scroll To Article".
     var listID: String { "article_\(id)" }
+
+    /// What a shared link calls this article (AppLink.swift): "pillars.shahadah", "guides.wudhu".
+    /// The home comes first because four keys ("god", "zakah", "hajj", "evil-eye") name a page in
+    /// two homes.
+    var linkKey: String { "\(home.rawValue).\(debugKey)" }
 }
 
 struct IslamArticleGroup: Identifiable {
@@ -270,6 +276,12 @@ enum IslamArticleCatalog {
             ("KufrView", "Kufr and What Breaks Islam", "kufr", ["disbelief", "apostasy", "nullifiers", "riddah", "takfir"]),
             ("BidahView", "Bid\u{2019}ah (Innovation)", "bidah", ["bidah", "innovation", "newly invented"]),
             ("MawlidView", "The Mawlid", "mawlid", ["birthday", "milad", "rabi al-awwal", "celebration"]),
+            // What it is and what it is not (Abu, 2026-11-14); the practical side is the How-to guide
+            // `EvilEyeGuideView`, and each page opens the other.
+            ("EvilEyeView", "The Evil Eye (Al-\u{2018}Ayn)", "evil-eye",
+             ["evil eye", "ayn", "al-ayn", "al ayn", "nazar", "hasad", "envy", "jealousy", "ain", "ma sha allah",
+              "mashallah", "barakallah", "amulet", "taweez", "tamimah", "blue bead", "nazar bead", "hamsa",
+              "hand of fatimah", "superstition", "charm"]),
         ]),
         group("ANSWERING OTHER PATHS", .pillars, [
             ("SufismAnswerView", "Answering Sufism", "sufism", ["sufi", "tasawwuf", "tariqah", "dervish"]),
@@ -332,6 +344,10 @@ enum IslamArticleCatalog {
             ("TawbahView", "How to Repent", "tawbah", ["tawba", "repentance", "forgiveness", "istighfar", "sin"]),
             ("MakeDuaView", "How to Make Dua", "dua", ["supplication", "prayer", "ask allah", "etiquette", "times of answer"]),
             ("RuqyahView", "How to Do Ruqyah", "ruqyah", ["ruqya", "ruqyah shariyyah", "raqi", "healing", "shifa", "cure", "evil eye", "ayn", "nazar", "hasad", "envy", "sihr", "magic", "black magic", "jinn", "possession", "muawwidhat", "amulet", "taweez"]),
+            ("EvilEyeGuideView", "How to Deal With the Evil Eye", "evil-eye",
+             ["evil eye", "ayn", "al-ayn", "al ayn", "nazar", "hasad", "envy", "jealousy", "ain", "ma sha allah",
+              "mashallah", "barakallah", "allahumma barik", "protection", "protect", "cure", "wash", "ghusl of the ain",
+              "children", "baby", "newborn", "amulet", "blue bead"]),
         ]),
     ]
 
@@ -396,6 +412,14 @@ enum IslamArticleCatalog {
     static let all: [IslamArticleEntry] = (pillarsGroups + guidesGroups + provingGroups).flatMap(\.entries)
 
     static let byID: [String: IslamArticleEntry] = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+
+    private static let byLinkKey: [String: IslamArticleEntry] = Dictionary(all.map { ($0.linkKey.lowercased(), $0) }, uniquingKeysWith: { a, _ in a })
+
+    /// The article a shared link names: its `linkKey`, or the catalog id itself ("ShahadahView"),
+    /// which a hand-written link may carry. Case is ignored: a link is retyped and autocorrected.
+    static func entry(linkKey: String) -> IslamArticleEntry? {
+        byLinkKey[linkKey.lowercased()] ?? byID[linkKey] ?? all.first { $0.id.caseInsensitiveCompare(linkKey) == .orderedSame }
+    }
 
     /// Index position per article id (result order) and the folded title+group+aliases haystack per
     /// id: both used to be rebuilt on every keystroke (Performance Guide, Phase 6 step 10).
@@ -2682,6 +2706,22 @@ enum ArticleSources {
             ArticleSource(title: "Celebrating Mawlid al-Nabi (Muhammad's Birthday): Allowed?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/249"),
             ArticleSource(title: "Ruling on celebrating the birthday of the Messenger (blessings and peace of Allah be upon him) without any singing or other haram things", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/148053"),
         ],
+        "EvilEyeView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafsir al-Quran al-'Azim", subtitle: "Ibn Kathir, on al-Qalam 68:51 and Yusuf 12:67"),
+            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, the Book of Medicine: ruqyah for the eye and “the eye is real”"),
+            ArticleSource(title: "Sharh Sahih Muslim", subtitle: "An-Nawawi, on the hadiths of the eye, the decree, and envy"),
+            ArticleSource(title: "Zad al-Ma'ad and Bada'i' al-Fawa'id", subtitle: "Ibn al-Qayyim, on the eye, the envier, and their cure"),
+            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, on envy and its kinds"),
+            ArticleSource(title: "Kitab at-Tawhid and al-Qawl al-Mufid", subtitle: "Muhammad ibn Abd al-Wahhab, the chapter on ruqyah and amulets, with Ibn al-Uthaymin's commentary on amulets, causes, and omens"),
+            ArticleSource(title: "Majmu' Fatawa Ibn Baz and Majmu' Fatawa Ibn al-Uthaymin", subtitle: "On amulets made of Quran, what to say on admiring, and precaution against the eye"),
+            ArticleSource(title: "Fatawa al-Lajnah ad-Da'imah", subtitle: "The Standing Committee, volume 1: the eye, amulets, and fumigation"),
+            ArticleSource(title: "Protection from the Evil Eye: How?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/20954"),
+            ArticleSource(title: "Can a man harm his beautiful wife with the “evil eye”?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/7190"),
+            ArticleSource(title: "Types of amulets and superstition that some Muslims fall into", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/126359"),
+            ArticleSource(title: "Meaning of Hasad", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/105471"),
+            ArticleSource(title: "Waswas (Satanic Whispers) About the Evil Eye", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/89604"),
+        ],
         "SufismAnswerView": [
             ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
             ArticleSource(title: "Al-Furqan bayna Awliya' ar-Rahman wa Awliya' ash-Shaytan", subtitle: "Ibn Taymiyyah"),
@@ -3014,6 +3054,21 @@ enum ArticleSources {
             ArticleSource(title: "“Recite your ruqyahs to me. There is nothing wrong with a ruqyah that does not involve shirk”", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/209745"),
             ArticleSource(title: "Taking payment for reciting Qur’aan over a sick person", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12627"),
             ArticleSource(title: "UnIslamic ruqyah may be a cause of harm", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/180492"),
+        ],
+        "EvilEyeGuideView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in treating the one struck by the eye"),
+            ArticleSource(title: "Fath al-Bari and Sharh Sahih Muslim", subtitle: "Ibn Hajar and an-Nawawi, on the washing of the one the eye came from"),
+            ArticleSource(title: "Al-Muwatta", subtitle: "Malik ibn Anas, the Book of the Eye: the washing of 'Amir ibn Rabi'ah"),
+            ArticleSource(title: "Bada'i' al-Fawa'id", subtitle: "Ibn al-Qayyim, on Surah al-Falaq: ten things that turn away the envier's harm"),
+            ArticleSource(title: "Majmu' Fatawa wa Rasa'il and al-Qawl al-Mufid", subtitle: "Ibn al-Uthaymin, on the eye, its treatment, and lawful precaution"),
+            ArticleSource(title: "Majmu' Fatawa Ibn Baz and Fatawa Nur 'ala ad-Darb", subtitle: "Ibn Baz, on treating the eye, what to say, and amulets"),
+            ArticleSource(title: "Fatawa al-Lajnah ad-Da'imah", subtitle: "The Standing Committee, volume 1: the eye, its washing, and fumigation"),
+            ArticleSource(title: "Protection from the Evil Eye: How?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/20954"),
+            ArticleSource(title: "How to Protect Yourself from the Evil Eye", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/11359"),
+            ArticleSource(title: "Barak Allahu Laka or ‘Alayk: Ward off the Evil Eye by It", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/130786"),
+            ArticleSource(title: "How can a person know who has envied him, and how should the one who has been envied be treated?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/45659"),
+            ArticleSource(title: "Wearing gold on which Aayat al-Kursiy is engraved or which is in the shape of an eye or hand", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/91370"),
         ],
     ]
 }

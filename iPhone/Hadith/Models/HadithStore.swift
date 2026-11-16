@@ -623,7 +623,19 @@ final class HadithStore: ObservableObject {
             // The whole shelf has been offered a chance to open - now the saved records' frozen
             // reference strings can be refreshed to the standard citations, once.
             self.refreshCitationReferences()
+            // The tab root's Last Read card opens straight into its chapter: have that text decoded.
+            self.prewarmLastReadText()
         }
+    }
+
+    /// Decode the text the Last Read card opens on (a block, two at a seam) off the main thread, so
+    /// its chapter opens with its rows. `HadithBookView` does the same for a book's chapters.
+    private func prewarmLastReadText() {
+        guard let lastRead, let data = books[lastRead.slug],
+              let hadith = data.hadiths.first(where: { $0.idInBook == lastRead.idInBook }),
+              let chapter = data.chapter(of: hadith) else { return }
+        let landing = data.landingRows(of: chapter, at: hadith)
+        Task.detached(priority: .utility) { data.prewarmLandingText([landing]) }
     }
 
     /// Delete the per-book AI corpora (`hadith-<slug>-*.vec3`, ~10 MB each, up to 17 of them) that

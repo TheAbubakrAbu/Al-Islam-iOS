@@ -12369,6 +12369,22 @@
         }
       }
     },
+    "1 other narration" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رواية أخرى واحدة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 دیگر روایت"
+          }
+        }
+      }
+    },
     "1 place" : {
       "localizations" : {
         "ar" : {
@@ -58483,7 +58499,8 @@
             "value" : "انگریزی نام"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "English Only" : {
       "localizations" : {
@@ -75900,7 +75917,8 @@
             "value" : "انگریزی چھپائیں"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Hide the noon behind a 2-count hum" : {
       "extractionState" : "manual",
@@ -95145,6 +95163,22 @@
         }
       }
     },
+    "Link" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رابط"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لنک"
+          }
+        }
+      }
+    },
     "Lip Movement" : {
       "localizations" : {
         "ar" : {
@@ -111038,6 +111072,39 @@
         }
       }
     },
+    "Numbers down the edge of long lists, such as the juz, a surah's ayahs, a chapter's hadiths and the 99 Names. Slide a finger along them to jump." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أرقام على حافة القوائم الطويلة، مثل الأجزاء وآيات السورة وأحاديث الباب وأسماء الله الحسنى. مرّر إصبعك عليها للانتقال."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لمبی فہرستوں کے کنارے پر نمبر، جیسے پارے، سورت کی آیات، باب کی احادیث اور اللہ کے ننانوے نام۔ کہیں جانے کے لیے ان پر انگلی پھیریں۔"
+          }
+        }
+      },
+      "extractionState" : "stale"
+    },
+    "Numbers down the edge of long lists, such as the juz, a surah's ayahs, a chapter's hadiths and the 99 Names. Slide a finger along them to jump. A thin bar under the title shows how far down the list you are." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أرقام على حافة القوائم الطويلة، مثل الأجزاء وآيات السورة وأحاديث الباب وأسماء الله الحسنى. مرّر إصبعك عليها للانتقال. ويُظهر شريط رفيع تحت العنوان موضعك من القائمة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لمبی فہرستوں کے کنارے پر نمبر، جیسے پارے، سورت کی آیات، باب کی احادیث اور اللہ کے ننانوے نام۔ کہیں جانے کے لیے ان پر انگلی پھیریں۔ عنوان کے نیچے ایک باریک پٹی بتاتی ہے کہ آپ فہرست میں کہاں تک پہنچے ہیں۔"
+          }
+        }
+      }
+    },
     "Nun Sakin & Tanween" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -112082,7 +112149,8 @@
             "value" : "بند ہونے پر حدیث آخری راوی سے شروع ہوتی ہے، جیسے انگریزی میں، اور اس کی سند نیچے چھوٹے حروف میں آتی ہے۔ آن ہونے پر عربی ویسے ہی پڑھی جاتی ہے جیسے مصنف نے لکھی، پہلے سند۔ صرف وہی روایت دوبارہ ترتیب دی جاتی ہے جس کی سند ایپ پڑھ سکے۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Off, the app sends nothing: no prayer alerts or adhan, no nagging, no Islamic dates, and no reminders of any kind. Every choice below is kept for when it comes back on." : {
       "localizations" : {
@@ -112536,6 +112604,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "پر • مجھ پر (2:5، 4:72): وہی تین حروف، پہلے الفِ مقصورہ پھر یاء"
+          }
+        }
+      }
+    },
+    "On, a hadith's chain of narrators stands above it in smaller text, in Arabic and in English, and the hadith opens at its final narrator. Off, the chain follows beneath it. Only a narration whose chain the app can read is set apart this way." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عند التشغيل يظهر سند الحديث فوقه بخط أصغر، بالعربية والإنجليزية، ويبدأ الحديث من آخر راوٍ. وعند الإيقاف يأتي السند تحته. ولا يُفصل السند هكذا إلا فيما استطاع التطبيق قراءة سنده."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آن ہونے پر حدیث کی سند اس کے اوپر چھوٹے حروف میں آتی ہے، عربی اور انگریزی دونوں میں، اور حدیث آخری راوی سے شروع ہوتی ہے۔ بند ہونے پر سند اس کے نیچے آتی ہے۔ صرف اسی روایت کی سند یوں الگ دکھائی جاتی ہے جس کی سند ایپ پڑھ سکے۔"
           }
         }
       }
@@ -116798,6 +116882,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "اس ایپ کی اطلاعات کی ترتیبات کھولتا ہے"
+          }
+        }
+      }
+    },
+    "Opens this in %@. Without the app, it opens the App Store." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يفتح هذا في تطبيق %@. ومن ليس لديه التطبيق يُفتح له App Store."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہ %@ ایپ میں کھلتا ہے۔ ایپ کے بغیر App Store کھلتا ہے۔"
           }
         }
       }
@@ -129551,7 +129651,8 @@
             "value" : "یہ اسی روایت کے اپنے عربی متن سے لیا گیا ہے: ہر راوی اسی نام سے جس سے روایت اسے ذکر کرتی ہے، اور اس کے اوپر وہ لفظ جس سے اس نے اپنے اوپر والے سے روایت لی (حدثنا، أخبرنا، عن، سمعت)۔ جہاں مصنف اسے ایک سے زیادہ طرق سے لاتا ہے، وہاں طرق اس راوی کے نیچے ساتھ ساتھ بنائے گئے ہیں جہاں وہ آ کر ملتے ہیں۔ کسی راوی پر ٹیپ کریں تاکہ ہر وہ روایت دیکھیں جس میں اس کا نام ہے۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Read full and heavy in every position, whatever vowel they carry." : {
       "localizations" : {
@@ -142555,6 +142656,22 @@
         }
       }
     },
+    "Share Link" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مشاركة الرابط"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لنک شیئر کریں"
+          }
+        }
+      }
+    },
     "Share Name" : {
       "localizations" : {
         "ar" : {
@@ -142714,6 +142831,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "مشترک الفاظ"
+          }
+        }
+      }
+    },
+    "Shares a link that opens this article" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يشارك رابطًا يفتح هذه المقالة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایسا لنک شیئر کرتا ہے جو یہ مضمون کھولتا ہے"
           }
         }
       }
@@ -144126,6 +144259,22 @@
         }
       }
     },
+    "Show Side Numbers" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إظهار الأرقام الجانبية"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کنارے کے نمبر دکھائیں"
+          }
+        }
+      }
+    },
     "Show Sky" : {
       "localizations" : {
         "ar" : {
@@ -144517,7 +144666,8 @@
             "value" : "انگریزی دکھائیں"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Show the Reading" : {
       "localizations" : {
@@ -210106,7 +210256,7 @@
         }
       }
     },
-    "ammelmallah@icloud.com" : {
+    "contact@abubakrelmallah.com" : {
       "shouldTranslate" : false
     },
     "an action, in a time" : {

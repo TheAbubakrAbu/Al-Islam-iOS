@@ -417,3 +417,62 @@ wiring 0 errors, 0 warnings. Al-Islam's build and unit tests after the gates are
 which is still there. This port brings 4.6.6's features (Arabic and Urdu, the Sunnah library, the grammar and
 letter pages, the welcome pages, Al-Quran's Tajweed Test and custom range sheet, Al-Adhan's clock change notice
 and Islamic date banner); the version bump and a 2.6.6 What's New are Abu's call.
+
+## 11. Shared links: what is ready for the siblings (2026-11-16, the feature is not ported)
+
+Abu asked for "the foundations for Al Adhan and Al Quran" and then said not to merge anything into the other
+apps: foundations only. Later the same day he asked for the wrong App Store numbers to be fixed and left the
+link name to me, so each sibling now has its own identity (the last part of this section). The feature itself
+is not in either sibling. This is what waits for the next port.
+
+**Already in place (Al-Islam's repository and the links site):**
+- The site (`Website/public`, published as the `theabubakrabu.github.io` repository) has a folder per app,
+  `/alislam/`, `/alquran/`, `/aladhan/`, each with its own page, icon and App Store id, and ONE association
+  file that gives each app's id its own folder. `UnitTests/AppLinkTests.swift` pins the three entries. Nothing
+  on the site has to change when a sibling gains the feature. See `Website/README.md`.
+- `AppIdentifiers.linkScheme` is derived from `appName` ("alquran", "aladhan") and `linkPath` from the scheme,
+  so the merge of Globals.swift cannot hand a sibling Al-Islam's address. `QuranDeepLink.scheme` (the ayah
+  widgets' taps) reads the same constant, so after a port Al-Quran's widgets and its link reader agree.
+- The 2026-11-16 dry runs: `iPhone/Helpers/System/AppLink.swift` arrives as NEW in both, and no LEAK names a
+  shared-link line (Al-Quran 0 leaks in all; Al-Adhan's 19 are RiwayatColorCode, SettingsControls and
+  JumpIndexRail). The router already falls back by flag (`#if HAS_QURAN`, `#if HAS_HADITH`: the Islam tab).
+  A zero from the checker is not a build: build each sibling before believing it (section 10's trap).
+
+**By hand at the port, per sibling (none of it merges by itself):**
+1. `AppNavigation` (`pendingTab`, `pendingHadithBook`, `IslamOpenTarget.resource/.page`, `IslamLinkedPage`)
+   lives in `iPhone/Islam/Daily/DailyReminders.swift` and, for apps with the Quran, in
+   `iPhone/Quran/Models/SunnahReminders.swift`. Both report CONFLICT in the dry runs: keep the link additions.
+2. `Resources/Info-Main.plist`: register the app's own scheme under `CFBundleURLSchemes`. Al-Quran
+   registers `alquran` since 2026-11-16 (done). Al-Adhan registers none: add `aladhan`.
+3. Entitlements (PER_APP): add `com.apple.developer.associated-domains` with
+   `applinks:theabubakrabu.github.io` to the main app's file (`Resources/Entitlements.entitlements` in
+   Al-Quran, `Resources/Entitlements-Main.entitlements` in Al-Adhan), and turn on Associated Domains for that
+   App ID before an Xcode Cloud build (the cloud cannot create what the portal lacks).
+4. The iPhone root (`iPhone/Al-<App>App.swift`, never merged): `.onOpenURL { AppLinkRouter.open($0) }`,
+   `.onContinueUserActivity(NSUserActivityTypeBrowsingWeb)`, the `$pendingTab` receiver and `land(on:)`
+   (Al-Islam's root, the block under "A shared link"). Al-Quran's current `.onOpenURL`
+   (`QuranDeepLink.parseAyah`) is replaced by the router, which reads the widget form too.
+5. Prove it: install on a simulator, wait about twenty seconds for the association file, then
+   `xcrun simctl openurl <udid> "https://theabubakrabu.github.io/alquran/?quran=2:255"`. An open that lands in
+   Safari on the first try and in the app on the second was the fetch still running.
+
+**Each sibling's own identity (fixed 2026-11-16, in the siblings too, uncommitted there):**
+- The App Store number. Both siblings carried Al-Islam's `6449729655`, so "Leave a Review" (Settings and
+  About), the copied review link and "Share <app>" opened Al-Islam. Two causes, both from merged files:
+  Globals.swift held one written-out `appStoreID`, and SettingsView.swift wrote the number into two review
+  links. Now `AppIdentifiers.appStoreIDs` lists the three numbers by bundle id (Al-Quran `6474894373`,
+  Al-Adhan `6475015493`), `appStoreID` picks the app's own, and every review link reads it. The lines are the
+  SAME text in the three apps on purpose: whichever copy a merge keeps is right.
+  `AppLinkTests.testTheStoreNumberIsThisAppsOwn` refuses a review link with a written-out number, and
+  `testEachAppOwnsItsFolderOfTheSite` holds each web page to the same three numbers. The update check was
+  never affected (it looks the listing up by bundle id).
+- The link name. Al-Quran registered `alislam` (it rode in with a merge), so with both apps on one phone
+  iOS could hand an `alislam://` link to either. It registers `alquran` now, its Globals.swift has the same
+  `linkScheme` / `linkHost` / `linkPath` lines as Al-Islam, and its `Widget/Quran/QuranWidgetSnapshot.swift`
+  is Al-Islam's byte for byte, so its ayah widgets tap through `alquran://ayah/2/255`. Al-Adhan was not
+  touched here: it registers no scheme and has no ayah widgets.
+- At the next port, the merge of Globals.swift REPEATS these identity lines (the number block in both
+  siblings, the link block too in Al-Quran): the sync base predates them, so git sees two separate
+  insertions and keeps both, and the build stops on a redeclaration. Delete the second copy; the two are
+  identical. The review links in SettingsView.swift and Al-Quran's plist and widget file come through as
+  they are (checked with `git merge-file` against the base on 2026-11-16).

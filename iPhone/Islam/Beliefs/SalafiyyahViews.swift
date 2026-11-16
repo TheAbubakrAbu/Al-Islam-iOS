@@ -1443,3 +1443,196 @@ struct MawlidView: View {
         .englishArticle().selectableArticleList(article: "MawlidView")
     }
 }
+
+// MARK: - The Evil Eye
+
+/// The evil eye as Ahl as-Sunnah hold it (Abu, 2026-11-14: "Add evil eye pillars Salafi Sunni what it is
+/// what it isn't"): real by the Quran and the Sunnah, a cause that harms only by Allah's decree, and
+/// neither a superstition nor something a bead, a hand, or a thread turns away. The practical side
+/// (what to say, the daily refuges, the washing) is the How-to guide `EvilEyeGuideView`, which this
+/// page opens instead of repeating.
+struct EvilEyeView: View {
+    var body: some View {
+        List {
+            Group {
+                ArticleSectionsView(sections: Self.sections)
+
+                ArticleSourcesSection(article: "EvilEyeView")
+            }
+            .themedListRowBackground()
+        }
+        .navigationTitle("The Evil Eye")
+        .englishArticle().selectableArticleList(article: "EvilEyeView")
+    }
+
+    static let sections: [ArticleSection] = [
+        ArticleSection("SUMMARY", [
+            .text("In short: the evil eye is real. The Prophet (peace be upon him) said so in those words, and Ahl as-Sunnah have always affirmed it. It is harm that reaches a person, by Allah’s permission and decree, from a look of envy, or of admiration in which Allah is not remembered. It is not a power of its own, not a reason to fear people or hide every blessing, and not something a bead, a hand, a thread, or smoke can turn away. What protects from it and cures it is what the Prophet taught: asking Allah to bless what you admire, the words of refuge, ruqyah, the washing of the one who gave it, and trust in Allah."),
+        ]),
+        ArticleSection("WHAT IS THE EVIL EYE?", [
+            .markdown("**Al-‘ayn (العَين)** is the Arabic word for the eye, and the name the Prophet (peace be upon him) gave to the harm that comes through it. The one it comes from is the **‘a’in (عَائِن)**; the one it strikes is the **ma‘in (مَعِين)**, also called the **ma‘yun (مَعيُون)**."),
+            .text("Ibn Hajar (may Allah have mercy on him) defined it in Fath al-Bari:"),
+            .quote(text: "“The eye is a look of admiration mixed with envy, from one of foul nature, by which harm comes to the one looked at” (Ibn Hajar, Fath al-Bari 10/200).", arabic: "وَالعَينُ نَظَرٌ بِاستِحسَانٍ مَشُوبٌ بِحَسَدٍ مِن خَبِيثِ الطَّبعِ يَحصُلُ لِلمَنظُورِ مِنهُ ضَرَرٌ", dimmed: true),
+            .text("That is its usual form. As the sections below show, it can also come from plain admiration with no envy in it, from a person who loves the one he looks at, and from a person upon himself. And it harms only when Allah permits it to."),
+        ]),
+        ArticleSection("IT IS REAL: THE QURAN", [
+            .text("Allah said of the disbelievers of Quraysh and His Prophet (peace be upon him):"),
+            .ayah("68:51", words: 0...5),
+            .text("Ibn Kathir (may Allah have mercy on him) reports from Ibn Abbas, Mujahid, and others that it means they would pierce him with their looks, that is, strike him with the eye, envying him out of their hatred, were it not for Allah’s protection of him. He then said:"),
+            .quote(text: "“In this ayah is evidence that the eye strikes and that its effect is real, by the command of Allah, as the hadiths narrated through many routes have stated” (Ibn Kathir, Tafsir al-Quran al-‘Azim 8/201, on 68:51).", arabic: "وَفِي هَذِهِ الآيَةِ دَلِيلٌ عَلَى أَنَّ العَينَ إِصَابَتُهَا وَتَأثِيرُهَا حَقٌّ، بِأَمرِ اللَّهِ عَزَّ وَجَلَّ، كَمَا وَرَدَت بِذَلِكَ الأَحَادِيثُ المَروِيَّةُ مِن طُرُقٍ مُتَعَدِّدَةٍ كَثِيرَةٍ", dimmed: true),
+            .text("Ya‘qub (peace be upon him) sent his sons back to Egypt with this instruction:"),
+            .ayah("12:67", words: 1...10),
+            .text("Ibn Abbas, Muhammad ibn Ka‘b, Mujahid, ad-Dahhak, Qatadah, and as-Suddi said that he feared the eye for them, because they were handsome and of fine appearance (Ibn Kathir, Tafsir al-Quran al-‘Azim 4/400). Notice what he said in the same breath: that he could not avail them against Allah at all, and that the decision is only for Allah. Ibn Kathir explained: this precaution does not turn back the decree of Allah. Ya‘qub took the means and placed his trust in Allah, and Allah praised him for it. The precaution changed nothing of what He had decreed; it answered a need in Ya‘qub’s soul, which the scholars of tafsir said was to ward the eye off his sons; and he was a man of knowledge because of what Allah had taught him:"),
+            .ayah("12:68", words: 6...24),
+            .text("And Allah commanded His Prophet, and every believer after him, to seek refuge in Him from the envier:"),
+            .ayah("113:1-5", words: 18...22),
+        ]),
+        ArticleSection("IT IS REAL: THE SUNNAH", [
+            .markdown("The Prophet (peace be upon him) stated it in two words, **al-‘aynu haqq**:"),
+            .hadith("bukhari:5740", cite: "Sahih al-Bukhari 5740, Sahih Muslim 2187", arabic: 28...29, english: [4...12]),
+            .hadith("muslim:2188", cite: "Sahih Muslim 2188", arabic: 43...54, english: [0...45]),
+            .text("He saw its mark on the face of a girl in the house of Umm Salamah (may Allah be pleased with her) and said:"),
+            .hadith("bukhari:5739", cite: "Sahih al-Bukhari 5739, Sahih Muslim 2197", arabic: 55...59, english: [18...32]),
+            .text("When he himself fell ill, Jibril (peace be upon him) recited over him and named the eye of the envier:"),
+            .hadith("muslim:2186", cite: "Sahih Muslim 2186", arabic: 38...56, english: [12...52]),
+            .text("And it happened in front of the Companions. Sahl ibn Hunayf (may Allah be pleased with him) was bathing when ‘Amir ibn Rabi‘ah, a Companion who had fought at Badr, saw him and said that he had never seen skin like it. Sahl fell to the ground on the spot. The Prophet (peace be upon him) was told, asked whom they suspected, and when ‘Amir was named, said:"),
+            .hadith("ibnmajah:3509", cite: "Sunan Ibn Majah 3509; graded sahih by al-Albani", arabic: 67...80, english: [63...85]),
+            .text("Then he had ‘Amir wash, the water was poured over Sahl, and Sahl went on his way with nothing wrong with him, as Malik narrates in al-Muwatta."),
+            .text("An-Nawawi opens his commentary on these hadiths with the words of al-Maziri:"),
+            .quote(text: "“The great body of the scholars took this hadith at its apparent meaning and said: the eye is real. Groups of the innovators denied it” (al-Maziri, in an-Nawawi’s Sharh Sahih Muslim 14/171).", arabic: "أَخَذَ جَمَاهِيرُ العُلَمَاءِ بِظَاهِرِ هَذَا الحَدِيثِ وَقَالُوا: العَينُ حَقٌّ، وَأَنكَرَهُ طَوَائِفُ مِنَ المُبتَدِعَةِ", dimmed: true),
+            .callout("Ibn al-Qayyim said of those who dismiss the eye as imagination that they have little share of revelation or of reason, and that the thinking people of every nation, whatever their religion, do not deny it, though they differ over how it works (Zad al-Ma‘ad 4/152). What the Prophet (peace be upon him) reported is believed, whether or not the mind can trace its workings.", title: "The Creed of Ahl as-Sunnah", icon: "checkmark.seal.fill"),
+        ]),
+        ArticleSection("WHAT IT IS", [
+            .checklist([
+                "**Real.** Affirmed by the Quran, by the Prophet’s own words, and by Ahl as-Sunnah in every generation.",
+                "**A cause, not a creator.** Allah made it a cause of harm, as He made fire a cause of burning, and it does nothing except by His permission.",
+                "**Born of envy or of admiration.** A look, or a word of praise, with no remembrance of Allah behind it.",
+                "**Possible from anyone.** An enemy or someone who loves you, a stranger or a relative, a righteous person, even you yourself.",
+                "**Preventable and curable.** By the means the Prophet (peace be upon him) taught, not by charms or rituals.",
+            ], title: "What the Evil Eye Is", icon: "checkmark.circle.fill"),
+            .markdown("**It comes with admiration, even without envy.** ‘Amir ibn Rabi‘ah did not hate Sahl or wish him harm. He admired what he saw and did not ask Allah to bless it. Ibn Hajar drew the rule from that story:"),
+            .quote(text: "“The eye can come with admiration even without envy, even from a man who loves, and from a righteous man; and whoever is pleased by a thing should hasten to pray for blessing for what pleased him, and that is a ruqyah from him” (Ibn Hajar, Fath al-Bari 10/205).", arabic: "وَأَنَّ العَينَ تَكُونُ مَعَ الإِعجَابِ وَلَو بِغَيرِ حَسَدٍ، وَلَو مِنَ الرَّجُلِ المُحِبِّ، وَمِنَ الرَّجُلِ الصَّالِحِ، وَأَنَّ الَّذِي يُعجِبُهُ الشَّيءُ يَنبَغِي أَن يُبَادِرَ إِلَى الدُّعَاءِ لِلَّذِي يُعجِبُهُ بِالبَرَكَةِ، وَيَكُونُ ذَلِكَ رُقيَةً مِنهُ", dimmed: true),
+            .markdown("**A person can strike himself, and what is his own.** Ibn al-Qayyim said that a man may give the eye to himself (Zad al-Ma‘ad 4/154). One narration of the story of Sahl ends with the Prophet (peace be upon him) saying that when one of you sees in his brother, in himself, or in his wealth something that pleases him, he should ask blessing for it, for the eye is real (Musnad Ahmad 15700; graded sahih by al-Albani, as-Silsilah as-Sahihah 2572)."),
+            .markdown("**It does not need a glance, or an intention.** Ibn al-Qayyim wrote:"),
+            .quote(text: "“The effect of the soul of the one who gives the eye does not depend on seeing. He may be blind, and a thing is described to him, and his soul affects it though he has not seen it” (Ibn al-Qayyim, Zad al-Ma‘ad 4/153).", arabic: "وَنَفسُ العَائِنِ لَا يَتَوَقَّفُ تَأثِيرُهَا عَلَى الرُّؤيَةِ، بَل قَد يَكُونُ أَعمَى، فَيُوصَفُ لَهُ الشَّيءُ فَتُؤَثِّرُ نَفسُهُ فِيهِ وَإِن لَم يَرَهُ", dimmed: true),
+            .text("He went on to say that a man may give it without meaning to, by his nature (Zad al-Ma‘ad 4/154)."),
+            .markdown("**It comes from the jinn as well as from people.** Ibn al-Qayyim said the eye is of two kinds, a human eye and a jinn eye, and he cited al-Baghawi’s explanation that “the look” on the girl in Umm Salamah’s house was a look from the jinn (Zad al-Ma‘ad 4/151). Ibn Hajar set that view beside the view that it was from people, and held that the wording takes in both (Fath al-Bari 10/202). Abu Sa‘id al-Khudri (may Allah be pleased with him) said that the Prophet (peace be upon him) used to seek refuge from the jinn and from the eye of man, until the two surahs of refuge came down and he held to them (Sunan al-Tirmidhi 2058; graded hasan by at-Tirmidhi and sahih by al-Albani). An-Nasa’i’s wording is “from the eye of the jinn and the eye of mankind” (Sunan an-Nasa’i 5494; graded sahih by al-Albani)."),
+            .markdown("**How it travels is unseen.** The texts tell us that it happens and what to do about it. They do not describe the mechanism, the believer does not need it, and no one may speak about it without knowledge."),
+        ]),
+        ArticleSection("WHAT IT IS NOT", [
+            .checklist([
+                "**Not a power beside Allah.** It cannot outrun, change, or add to what He has decreed.",
+                "**Not a superstition.** It rests on revelation, not folklore, and it is not denied because the mind cannot trace it.",
+                "**Not the same as envy.** Envy is a disease of the heart. The eye is a harm that may follow it, or come without it.",
+                "**Not turned away by charms.** No bead, glass eye, hand, thread, horseshoe, or smoke protects from it.",
+                "**Not an omen.** Reading bad luck into a day, a number, a bird, or a chance sight has no place in Islam.",
+                "**Not the cause of every hardship.** Illness, loss, and failure have ordinary causes, and all of them are tests from Allah.",
+                "**Not a licence to accuse.** Baseless suspicion is a sin of its own.",
+                "**Not a reason to live in fear.** The believer takes the Prophet’s means and trusts Allah.",
+            ], title: "What the Evil Eye Is Not", icon: "xmark.circle.fill"),
+            .text("The four sections that follow take these up with their proofs."),
+        ]),
+        ArticleSection("NOT A POWER BESIDE ALLAH’S DECREE", [
+            .markdown("The strongest thing the Prophet (peace be upon him) said about the eye is itself a statement about **al-qadar (القَدَر)**, the decree: “if anything would precede the destiny it would be the influence of an evil eye” (Sahih Muslim 2188, above). If anything would: so nothing does. Asma’ bint ‘Umays (may Allah be pleased with her) asked him whether she should seek ruqyah for the sons of Ja‘far, whom the eye struck quickly, and he answered in the same words:"),
+            .hadith("ibnmajah:3510", cite: "Sunan Ibn Majah 3510; graded sahih by al-Albani", arabic: 39...46, english: [25...40]),
+            .text("An-Nawawi said of these words:"),
+            .quote(text: "“It affirms the decree … Its meaning is that all things are by the decree of Allah, and occur only as Allah decreed them and as His knowledge of them preceded. So the harm of the eye does not occur, nor anything else of good or evil, except by the decree of Allah” (an-Nawawi, Sharh Sahih Muslim 14/174).", arabic: "فِيهِ إِثبَاتُ القَدَرِ … وَمَعنَاهُ أَنَّ الأَشيَاءَ كُلَّهَا بِقَدَرِ اللَّهِ تَعَالَى، وَلَا تَقَعُ إِلَّا عَلَى حَسَبِ مَا قَدَّرَهَا اللَّهُ تَعَالَى وَسَبَقَ بِهَا عِلمُهُ، فَلَا يَقَعُ ضَرَرُ العَينِ وَلَا غَيرُهُ مِنَ الخَيرِ وَالشَّرِّ إِلَّا بِقَدَرِ اللَّهِ تَعَالَى", dimmed: true),
+            .text("Ibn Hajar, following al-Qurtubi, put it more sharply: the wording stresses how real the eye is, not that anything could turn back the decree; had anything the strength to outrun it, it would be the eye, and the eye does not, so how could anything else? (Fath al-Bari 10/203-204). Allah said:"),
+            .ayah("9:51"),
+            .ayah("64:11", words: 0...6),
+            .text("He said the same of magic, the other unseen harm people fear:"),
+            .ayah("2:102", words: 42...50),
+            .text("And the Prophet (peace be upon him) taught the young Ibn Abbas (may Allah be pleased with them both):"),
+            .hadith("tirmidhi:2516", cite: "Sunan al-Tirmidhi 2516; graded sahih by al-Albani", arabic: 80...110, english: [51...103]),
+            .text("So the eye is guarded against as fire and illness are guarded against: as a cause that Allah may allow to take effect, and from which He alone protects. To believe that it acts by itself, apart from His will, is to give creation what belongs only to the Creator."),
+        ]),
+        ArticleSection("NOT THE SAME AS ENVY", [
+            .markdown("**Hasad (حَسَد)**, from ح-س-د, is envy: resenting a blessing Allah gave to another and wishing it gone. Ibn Taymiyyah defined it:"),
+            .quote(text: "“Envy is hatred and dislike of what one sees of the good state of the one envied” (Ibn Taymiyyah, Majmu‘ al-Fatawa 10/111).", arabic: "الحَسَدُ هُوَ البُغضُ وَالكَرَاهَةُ لِمَا يَرَاهُ مِن حُسنِ حَالِ المَحسُودِ", dimmed: true),
+            .text("It is a disease of the heart, and wishing a blessing gone from its owner is forbidden by consensus, whether or not any harm follows from it (an-Nawawi, Sharh Sahih Muslim 6/97):"),
+            .ayah("4:54", words: 0...8),
+            .hadith("bukhari:6065", cite: "Sahih al-Bukhari 6065", arabic: 27...36, english: [4...28]),
+            .markdown("The eye is the harm itself. In his commentary on Surah al-Falaq in Bada’i‘ al-Fawa’id, Ibn al-Qayyim wrote that the one who gives the eye and the envier share one thing and differ in another. They share that each one’s soul turns toward the one it would harm. They differ in that the eye can strike what its owner does not envy at all, a thing, an animal, a crop, or wealth, though it is seldom free of envy toward the owner; and it can strike its own owner. He counted the one who gives the eye a particular kind of envier, and the more harmful kind, which is why the surah names the envier, the wider of the two: seeking refuge from envy takes in the eye. Jibril’s ruqyah names both. Ibn Hajar, quoted above, worded it differently: the eye can come with admiration and no envy at all. The remedy is the same either way."),
+            .markdown("**Ghibtah (غِبطَة)** is neither. An-Nawawi relayed from the scholars that it is wishing for the like of a blessing another has, without its leaving its owner: permitted in worldly matters and recommended in acts of obedience, and it is what “no envy except in two” means (Sharh Sahih Muslim 6/97; Sahih al-Bukhari 73). Ibn Taymiyyah was more guarded. Where it carries a dislike of being surpassed, he held it forbidden except in what brings a person nearer to Allah, and he said that the heart which does not look at what others have at all is better (Majmu‘ al-Fatawa 10/113, 10/120-121)."),
+            .text("Ibn Taymiyyah called envy a disease of the soul from which only a few people are free, and relayed the saying that no body is empty of envy, but the base man shows it and the noble man hides it. Whoever finds it in himself, he said, must meet it with taqwa and patience and hate it in himself, and must still give the one he envies his due; whoever acts on it, by word or deed, is a wrongdoer who deserves punishment unless he repents (Majmu‘ al-Fatawa 10/121, 10/124-125). So he treats it by asking Allah for His bounty rather than resenting it in another, by praying for the one he envies, and by loving for him what he loves for himself:"),
+            .ayah("4:32", words: 17...20),
+            .hadith("bukhari:13", cite: "Sahih al-Bukhari 13", arabic: 39...47, english: [4...21]),
+        ]),
+        ArticleSection("NOT TURNED AWAY BY CHARMS", [
+            .text("People in every age have hung things to keep the eye away. The Arabs before Islam hung bowstrings and beads on their camels, their children, and themselves. The Prophet (peace be upon him) sent a man through the camp with this order:"),
+            .hadith("bukhari:3005", cite: "Sahih al-Bukhari 3005, Sahih Muslim 2115", arabic: 59...71, english: [40...63]),
+            .hadith("muslim:2115", cite: "Sahih Muslim 2115", arabic: 76...81, english: [32...67]),
+            .text("He said to Ruwayfi‘ ibn Thabit (may Allah be pleased with him):"),
+            .hadith("abudawud:36", cite: "Sunan Abi Dawud 36; graded sahih by al-Albani", arabic: 109...138, english: [109...157]),
+            .text("The Arabic says “wears a bowstring”. The translator’s “to ward off the evil eye” is the scholars’ explanation of it: al-Khattabi said they tied their charms and amulets with such strings, believing that they kept harm away, and the Prophet (peace be upon him) abolished it (Ma‘alim as-Sunan 1/26-27)."),
+            .markdown("An amulet is a **tamimah (تَمِيمَة)**, which Ibn al-Uthaymin defined as something hung on children, of beads or anything else, to guard them against the eye (al-Qawl al-Mufid 1/170). A group of men came to give the Prophet (peace be upon him) their pledge; he accepted it from nine and held back from one, because of an amulet the man was wearing. Once it was cut off he took his pledge, and said:"),
+            .hadith("ahmed:17422", cite: "Musnad Ahmad 17422; graded sahih by al-Albani, as-Silsilah as-Sahihah 492", arabic: 56...60, text: "“Whoever hangs an amulet has committed shirk”"),
+            .markdown("**The rule.** Ibn al-Uthaymin set it out in al-Qawl al-Mufid (1/164-165): whoever affirms a cause that Allah made a cause neither in His law nor in His decree has made himself a partner with Allah. If the wearer believes the thing acts by itself apart from Allah, that is major shirk, for he has believed in a creator beside Him. If he believes it is only a cause, that is minor shirk, for he has shared with Allah in ruling it a cause when Allah did not make it one. A real cause is known from revelation, or from experience when its effect is plain and direct, as with medicine."),
+            .text("So the blue bead and the glass “eye”, the open hand, the black thread on a newborn’s wrist, the horseshoe over the door, shells, and the rest are all forbidden, whatever the wearer intends. Ibn Baz said of beads, shells, and threads hung on children against the eye that they are amulets and minor shirk, and major shirk when the one who hangs them believes they repel harm by themselves."),
+            .text("Smoke and household rituals are no different. The Standing Committee was asked about fumigating with alum, herbs, or leaves for someone struck by the eye, and answered that it is not permitted: these are not ordinary causes of its cure, the fumigation may be meant to appease the devils among the jinn, and the eye is treated with the lawful ruqyah established in the authentic hadiths (Fatawa al-Lajnah ad-Da’imah 1/275). Ibn Baz said that pouring molten lead has no basis and is the practice of soothsayers. The same holds for burning wild rue or salt, passing an egg over the body, and whatever else has no basis in revelation or in plain, direct experience."),
+            .text("Hanging ayat or the words “Ma sha’ Allah” for protection is left as well. The Salaf differed over an amulet made only of Quran: some allowed it, and Ibn Mas‘ud and his companions disliked every amulet, as Muhammad ibn Abd al-Wahhab records in Kitab at-Tawhid. The Standing Committee called the prohibition the sounder of the two views, stronger in proof and safer for the creed (Fatawa al-Lajnah ad-Da’imah 1/300-302, 1/312). Ibn Baz held it correct for three reasons: the hadiths that forbid amulets are general, the door to shirk is to be closed, and what is hung may be carried into unclean places (Majmu‘ Fatawa Ibn Baz 1/51). Ibn al-Uthaymin said that it is not to be done, since it is not established from the Prophet (peace be upon him) as a means (Majmu‘ Fatawa Ibn al-Uthaymin 1/106-107). Ibn Baz and the Committee added that an amulet from other than the Quran is the graver of the two."),
+            .ayah("10:107", words: 0...8),
+            .markdown("The same holds for omens. **Tiyarah (طِيَرَة)**, from ط-ي-ر, the birds the Arabs read their luck from, is taking anything as a sign of misfortune. Calling a day, a month, a number, or a passing bird unlucky belongs to it, and it has nothing to do with the eye:"),
+            .hadith("abudawud:3910", cite: "Sunan Abi Dawud 3910; graded sahih by al-Albani", arabic: 32...35, english: [4...11]),
+        ]),
+        ArticleSection("NOT A REASON TO ACCUSE OR TO FEAR", [
+            .markdown("**Not every hardship is the eye.** People fall ill, lose money, fail, and quarrel for ordinary reasons, and every one of those is a test Allah wrote. Blaming the eye for all of it leaves the real cause untreated, and it teaches the heart to see an enemy in every guest. Take the illness to a doctor and the sin to repentance, and recite ruqyah alongside both. Ibn al-Uthaymin said that delusions and whisperings have multiplied among people, so that whenever something ordinary befalls them they say: this is the jinn, or the eye, or magic (Fatawa Nur ‘ala ad-Darb); and Ibn Baz said that not everything is the eye, for it may be an illness of the body."),
+            .ayah("57:22"),
+            .markdown("**Suspicion is not proof.** The Prophet (peace be upon him) asked “Whom do you suspect?” when the cause was plain: a man praised Sahl, and Sahl collapsed where he stood. Naming a relative or a neighbour because something went wrong weeks after her visit is a guess, and Allah said:"),
+            .ayah("49:12", words: 3...10),
+            .markdown("**No one learns who it was from a fortune-teller, a “reader”, or a jinn.** Asking them costs a person the acceptance of forty nights of prayer (Sahih Muslim 2230), and whoever believes what they say has nothing to do with what was sent down to Muhammad (peace be upon him) (Sunan Abi Dawud 3904; graded sahih by al-Albani). A woman struck by the eye went to such a man, and Ibn Baz answered her that he is a soothsayer, and that going to soothsayers, astrologers, and those who use the jinn is never permitted, for the eye or for anything else."),
+            .markdown("**Blessings are not hidden out of dread.** Allah said:"),
+            .ayah("93:11"),
+            .text("The believer uses what Allah gave him and thanks Him for it openly. There is wisdom in not parading every blessing before everyone, as Ya‘qub told Yusuf (peace be upon them both) to keep his dream from his brothers:"),
+            .ayah("12:5", words: 2...9),
+            .text("That is lawful precaution, as was Ya‘qub’s at the gates of Egypt, and Ibn al-Uthaymin said that guarding against the eye beforehand does not contradict reliance on Allah; it is reliance (Majmu‘ Fatawa Ibn al-Uthaymin 2/117-118). It is not a life spent hiding children from visitors, refusing invitations, and reading every headache as an attack. Whoever keeps the morning and evening remembrances and relies on Allah has taken the strongest means there is:"),
+            .ayah("65:3", words: 5...10),
+        ]),
+        ArticleSection("WHAT THE SUNNAH TEACHES INSTEAD", [
+            .text("The Prophet (peace be upon him) left a complete answer to the eye, and there is nothing in it but words addressed to Allah, and water:"),
+            .step("1. **Ask blessing for what you admire.** “Allahumma barik ‘alayh”: O Allah, send blessing upon him. The Prophet (peace be upon him) asked ‘Amir why he had not asked blessing, and Ibn al-Qayyim gave these as the words by which the one who fears his own eye turns its harm away (Zad al-Ma‘ad 4/155-157)."),
+            .step("2. **Seek refuge every day.** Al-Ikhlas, al-Falaq, and an-Nas, three times each morning and evening (Sunan Abi Dawud 5082; graded hasan by al-Albani), and the refuge he said over al-Hasan and al-Husayn:"),
+            .hadith("abudawud:4737", cite: "Sunan Abi Dawud 4737; graded sahih by al-Albani", arabic: 33...44, english: [18...44]),
+            .step("3. **Recite ruqyah when it strikes.** He commanded it for the eye by name:"),
+            .hadith("bukhari:5738", cite: "Sahih al-Bukhari 5738, Sahih Muslim 2195", arabic: 25...37, english: [0...18]),
+            .step("4. **Have the one it came from wash**, when he is known, and pour the water over the one struck, as he commanded in the hadith above: when you are asked to wash, wash (Sahih Muslim 2188)."),
+            .step("5. **Trust Allah.** The means are taken with the hands and the tongue, and the heart rests on Him alone."),
+            .text("Each step, with its words and how to do it, is in the How-To Guides:"),
+            .door(.article("EvilEyeGuideView")),
+        ]),
+        ArticleSection("COMMON QUESTIONS", [
+            .markdown("**Is it disbelief to deny the evil eye?**"),
+            .text("Whoever denies it has denied what the Prophet (peace be upon him) affirmed in the two Sahihs, and the scholars counted that denial among the positions of the innovators, as al-Maziri said above. A Muslim who doubts it because he has never been shown the texts is taught them. Ruling on a particular person belongs to the scholars."),
+            .markdown("**Do I say “Ma sha’ Allah” or “Barakallah”?**"),
+            .text("What the Prophet (peace be upon him) commanded for the eye is asking blessing: he asked ‘Amir why he had not asked blessing for Sahl, as Malik narrates in al-Muwatta, and said that whoever sees in his brother something that pleases him should pray for blessing for him (Sunan Ibn Majah 3509, above). So say “Allahumma barik ‘alayh” or “Barakallahu fik”. “Ma sha’ Allah, la quwwata illa billah” comes from the story of the two gardens, where the believer tells the owner what he should have said on entering his own garden:"),
+            .ayah("18:39", words: 5...11),
+            .text("The Standing Committee and Ibn Baz advised saying it together with the request for blessing; Ibn al-Uthaymin kept it for a person’s own blessings, as in the ayah, and for another’s said “Tabarak Allahu ‘alayk”. Asked about “Ma sha’ Allah, tabarak Allah”, Ibn Baz answered that nothing is reported for “Tabarak Allah”, and that what is reported is the du‘a for blessing, “Allahumma barik fih” or “Barakallahu fih”, said with “Ma sha’ Allah, la quwwata illa billah”. The du‘a for blessing is what they all agree on, so that is the part never to leave out. The hadith that whoever says “Ma sha’ Allah, la quwwata illa billah” will not be harmed by the eye is weak (al-Albani, Da‘if al-Jami‘ 5588)."),
+            .markdown("**Can someone who loves me give me the eye?**"),
+            .text("Yes. ‘Amir was Sahl’s brother in faith and a man of Badr, and a mother can strike her own child with a look of delight. This is why the remedy is a du‘a and not suspicion: asking blessing costs nothing and accuses no one."),
+            .markdown("**Is the one who gave it sinful?**"),
+            .text("Ibn Baz said that the eye can leave a person, by Allah’s permission, without his choosing or intending it, and then there is no sin on him for it, while the one who does it deliberately deserves to be punished. Even so, the one who admired and said nothing has left what he was commanded, which is why the Prophet (peace be upon him) rebuked ‘Amir. He must wash when asked. Whoever knows his eye is quick must guard it and ask blessing every time. As for a person known for harming people with it, Ibn Battal relayed from some of the scholars that the ruler keeps him from mixing with people, and provides for him if he is poor; an-Nawawi called that view correct, and Ibn al-Qayyim said the same (Fath al-Bari 10/205; Zad al-Ma‘ad 4/154)."),
+            .markdown("**Can it come through a photograph, a screen, or a description?**"),
+            .text("Nothing in the texts ties it to seeing a person in the flesh, and Ibn al-Qayyim said it can follow a description alone, as quoted above. So it is possible. That is a reason for good sense about what is shown and to whom, and for keeping the words of refuge. It is not a reason for dread, because the screen has no power the decree does not give it."),
+            .markdown("**Does it strike only people?**"),
+            .text("No. Ibn al-Qayyim noted that the eye can strike a thing, an animal, a crop, or wealth, and the charms the Prophet (peace be upon him) ordered cut were hanging on camels. Animals, crops, cars, and businesses are asked blessing for as people are."),
+            .markdown("**Can a non-Muslim give the eye, or be struck by it?**"),
+            .text("Yes to both. The ayah in Surah al-Qalam is about the eyes of disbelievers, and nothing in the texts ties the eye to the religion of the one it comes from or the one it strikes."),
+        ]),
+        ArticleSection("IN SUMMARY", [
+            .text("The evil eye is real because Allah and His Messenger said so, and it harms only by Allah’s decree. Take it seriously, and do not let the fear of it rule you. Ask Allah to bless whatever pleases you, guard yourself and your children with the words of refuge, treat it with ruqyah and the washing the Prophet taught, hang nothing, accuse no one, and place your trust in the One in whose hand all harm and all benefit lie."),
+        ]),
+        ArticleSection("KEY TERMS", [
+            .term("Al-‘ayn", arabic: "العَيْن", meaning: "The eye: harm that reaches a person, by Allah’s permission, from a look of envy or of admiration in which Allah is not remembered."),
+            .term("‘A’in", arabic: "العَائِن", meaning: "The one the eye comes from, whether he intends it or not."),
+            .term("Ma‘in", arabic: "المَعِين", meaning: "The one struck by the eye; also called the **ma‘yun**."),
+            .term("Hasad", arabic: "الحَسَد", meaning: "Envy: resenting a blessing given to another and wishing it gone. A disease of the heart, forbidden by consensus, and the usual root of the eye."),
+            .term("Ghibtah", arabic: "الغِبْطَة", meaning: "Wishing for the like of a blessing without wishing it removed from its owner. Permitted, and praised in matters of the religion."),
+            .term("Tabrik", arabic: "التَّبْرِيك", meaning: "Asking Allah to bless something, from ب-ر-ك: “Allahumma barik ‘alayh”, “Barakallahu fik”. The Prophet’s remedy for the one who admires."),
+            .term("Ruqyah", arabic: "الرُّقْيَة", meaning: "Reciting the Quran and the Prophet’s supplications over the one afflicted, asking Allah alone for the cure."),
+            .term("Tamimah", arabic: "التَّمِيمَة", meaning: "An amulet or charm hung or worn for protection. Major shirk when it is believed to protect by itself, minor shirk when it is taken as a means. The Salaf differed over one made only of Quran; the sounder view is that it is not hung either."),
+            .term("Tiyarah", arabic: "الطِّيَرَة", meaning: "Taking omens: seeing misfortune in a day, a number, a bird, or a chance sight. The Prophet called it shirk."),
+            .term("Qadar", arabic: "القَدَر", meaning: "The decree of Allah, which nothing precedes or escapes, the eye included."),
+            .term("Tawakkul", arabic: "التَّوَكُّل", meaning: "Relying on Allah with the heart while taking the lawful means with the limbs."),
+        ]),
+    ]
+}

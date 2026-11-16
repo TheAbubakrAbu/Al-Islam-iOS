@@ -101,4 +101,83 @@ final class HadithChainsTests: XCTestCase {
         let code = try XCTUnwrap(HadithChainSamples.all.first?.code)
         XCTAssertNil(HadithChainDecoder.chain(code: code, arabic: "حَدَّثَنَا فُلاَنٌ", compilerArabic: "", bookTitle: ""))
     }
+
+    // MARK: - The chain as one English line (the hadith row draws it beside its English)
+
+    private func englishLine(_ slug: String, _ idInBook: Int) throws -> String? {
+        let hadith = try XCTUnwrap(try book(slug).hadith(numbered: idInBook), "\(slug) \(idInBook)")
+        return HadithChainStore.shared.englishLine(slug: slug, idInBook: idInBook, arabic: hadith.arabic)
+    }
+
+    func testTheEnglishLineReadsInTheOrderOfTheArabic() throws {
+        // One road, from the collector's teacher up to the narrator below the last one: 'Umar opens
+        // the hadith itself ("Narrated 'Umar bin Al-Khattab:"), so the line stops at 'Alqamah.
+        XCTAssertEqual(try englishLine("bukhari", 1),
+                       "Al-Humaidi Abdullah ibn az-Zubair narrated to us, Sufyan narrated to us, Yahya ibn Sa'id al-Ansari narrated to us, Muhammad ibn Ibrahim at-Taimi informed me, he heard Alqamah ibn Waqqas al-Laithi")
+        XCTAssertEqual(try englishLine("bukhari", 6058), "Qutaibah narrated to us, Hammad narrated to us, from Kathir, from Ata'")
+        // "حَدَّثَنَا أَبِي": a relation, in the first person.
+        XCTAssertEqual(try englishLine("muslim", 5840),
+                       "Ubaidullah ibn Mu'adh narrated it to me, my father narrated to us, Shu'bah narrated to us, from Muhammad ibn Ziyad")
+    }
+
+    func testTheEnglishLineReadsRoadByRoad() throws {
+        // Two roads that each name the narrator where they meet, by their own word.
+        XCTAssertEqual(try englishLine("muslim", 4892),
+                       "Qutaibah ibn Sa'id narrated to us, al-Laith narrated to us; and Muhammad ibn Rumh narrated to me, al-Laith informed us, from Nafi'")
+        // Three roads that name him once: "كُلُّهُمْ عَنْ عُبَيْدِ اللَّهِ".
+        XCTAssertEqual(try englishLine("muslim", 1648),
+                       "Abu Bakr ibn Abi Shaibah narrated to us, Abu Usamah narrated to us; and Ibn Numair narrated to us, my father narrated to us; and Zuhair ibn Harb and Ibn al-Muthanna narrated to me, Yahya narrated to us; all from Ubaidullah, from Nafi'")
+        // Two: "كِلاَهُمَا عَنْ نَافِعٍ".
+        XCTAssertEqual(try englishLine("muslim", 4965)?.hasSuffix("ad-Dahhak informed us; both from Nafi'"), true)
+    }
+
+    func testNoEnglishLineWhereItWouldBeAGuess() throws {
+        // The roads meet at two narrators the text names road by road: which road heard which of
+        // the two is not in the code, so nothing is written.
+        XCTAssertNil(try englishLine("muslim", 6555))
+        // Other words than the chain was read from.
+        let code = try XCTUnwrap(HadithChainStore.shared.pack?.code(slug: "bukhari", idInBook: 1))
+        let parsed = try XCTUnwrap(HadithChainDecoder.parse(code))
+        XCTAssertNil(HadithChainDecoder.englishLine(parsed, arabic: "حَدَّثَنَا فُلاَنٌ", english: HadithIsnadEnglish(slug: "bukhari")))
+    }
+
+    func testEveryChainOfAlBukhariHasItsEnglishLine() throws {
+        // Every narration the row cuts at its last narrator has the line to go with the cut, and
+        // the line is English throughout: no name fell back to its Arabic, no generation is empty.
+        let bukhari = try book("bukhari")
+        let english = HadithIsnadEnglish(slug: "bukhari")
+        var cut = 0
+        for (id, code) in try pack().chains(slug: "bukhari") {
+            let hadith = try XCTUnwrap(bukhari.hadith(numbered: id))
+            let parsed = try XCTUnwrap(HadithChainDecoder.parse(code))
+            guard HadithChainDecoder.matnStart(parsed, arabic: hadith.arabic) != nil else { continue }
+            cut += 1
+            let line = try XCTUnwrap(HadithChainDecoder.englishLine(parsed, arabic: hadith.arabic, english: english), "bukhari \(id)")
+            XCTAssertFalse(line.unicodeScalars.contains { (0x0600...0x06FF).contains($0.value) }, "bukhari \(id): \(line)")
+            XCTAssertFalse(line.contains(", ,") || line.contains("  ") || line.hasSuffix(" "), "bukhari \(id): \(line)")
+        }
+        XCTAssertGreaterThan(cut, 5_000)
+    }
+
+    func testAWordOfTransmissionBesideAName() {
+        XCTAssertEqual(HadithIsnadEnglish.phrase("Sufyan", transmission: "narrated to us"), "Sufyan narrated to us")
+        XCTAssertEqual(HadithIsnadEnglish.phrase("Nafi'", transmission: "from"), "from Nafi'")
+        XCTAssertEqual(HadithIsnadEnglish.phrase("Khilas", transmission: "I heard"), "I heard Khilas")
+        XCTAssertEqual(HadithIsnadEnglish.phrase("Alqamah", transmission: "heard"), "he heard Alqamah")
+        // The table's pronoun is the name itself once the name stands beside the word.
+        XCTAssertEqual(HadithIsnadEnglish.phrase("Amrah", transmission: "she narrated to me"), "Amrah narrated to me")
+        XCTAssertEqual(HadithIsnadEnglish.phrase("Urwah", transmission: "that he"), "that Urwah")
+        XCTAssertEqual(HadithIsnadEnglish.phrase("Malik", transmission: ""), "Malik")
+    }
+
+    func testMyFatherAndUbayyAreToldApartByTheirVowels() {
+        let english = HadithIsnadEnglish(slug: "bukhari")
+        XCTAssertEqual(english.narrator(arabic: "أَبِي", id: nil), "my father")
+        XCTAssertEqual(english.narrator(arabic: "أُبَيٍّ", id: nil), "Ubayy")
+        XCTAssertEqual(english.narrator(arabic: "أبي", id: nil), "")
+        XCTAssertEqual(english.narrator(arabic: "أَبِيهِ", id: nil), "his father")
+        // Set in braces by the text (al-Bukhari 2464): the brace is punctuation, as in the script.
+        XCTAssertEqual(english.narrator(arabic: "أَبِيهِ\u{200F}}\u{200F}", id: nil), "his father")
+        XCTAssertEqual(english.transmission("\u{200F}{\u{200F}عَنْ"), "from")
+    }
 }

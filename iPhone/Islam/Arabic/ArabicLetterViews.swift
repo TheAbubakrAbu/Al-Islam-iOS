@@ -601,7 +601,7 @@ struct TashkeelLettersView: View {
         .padding(.vertical, 5)
         .contentShape(Rectangle())
         // Only the shaddah tiles are actionable (they open the three readings), so only they are filled.
-        .conditionalGlassEffect(clear: !isShaddah, rectangle: true)
+        .conditionalGlassEffect(clear: !isShaddah, rectangle: true, inRow: true)
         #if os(iOS)
         .onTapGesture {
             guard isShaddah else { return }
@@ -2370,7 +2370,7 @@ struct TashkeelRow: View {
                                     .foregroundColor(appearance.accent)
                                     .frame(width: 28, height: 28)
                                     .contentShape(Rectangle())
-                                    .conditionalGlassEffect(circle: true)
+                                    .conditionalGlassEffect(circle: true, inRow: true)
                             }
                             .buttonStyle(.plain)
                             .environment(\.layoutDirection, .leftToRight)
@@ -3302,7 +3302,8 @@ struct ArabicLetterRow: View, Equatable {
                     clear: !isFavorite,
                     rectangle: true,
                     useColor: isFavorite ? 0.25 : nil,
-                    customTint: isFavorite ? accentColor.color : nil
+                    customTint: isFavorite ? accentColor.color : nil,
+                    inRow: true
                 )
                 // Tapping the badge favorites the letter, the way tapping the Quran's glass number pill bookmarks
                 // an ayah. It has to outrank the row's own tap, or the NavigationLink swallows it and pushes the
@@ -3549,7 +3550,7 @@ struct ArabicNumberGridTile: View {
             .padding(.vertical, 4)
             .padding(.horizontal, 8)
             .contentShape(Rectangle())
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
         }
     }
 }
@@ -3978,7 +3979,8 @@ struct ArabicLetterGridTile: View, Equatable {
                 clear: !isFavorite,
                 rectangle: true,
                 useColor: isFavorite ? 0.25 : nil,
-                customTint: isFavorite ? accentColor.color : nil
+                customTint: isFavorite ? accentColor.color : nil,
+                inRow: true
             )
         }
     }

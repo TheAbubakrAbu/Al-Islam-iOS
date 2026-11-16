@@ -1383,7 +1383,7 @@ struct SettingsView: View {
 
             Button {
                 settings.hapticFeedback()
-                UIPasteboard.general.string = "itms-apps://itunes.apple.com/app/id6449729655?action=write-review"
+                UIPasteboard.general.string = "itms-apps://itunes.apple.com/app/id\(AppIdentifiers.appStoreID)?action=write-review"
             } label: {
                 HStack {
                     Image(systemName: "doc.on.doc")
@@ -1455,7 +1455,7 @@ struct SettingsView: View {
                 .frame(width: glyphWidth)
             #endif
 
-            Text("ammelmallah@icloud.com")
+            Text("contact@abubakrelmallah.com")
                 .font(.subheadline)
                 .foregroundColor(settings.accentColor.color)
                 .multilineTextAlignment(.leading)
@@ -1470,7 +1470,7 @@ struct SettingsView: View {
 
             Button {
                 settings.hapticFeedback()
-                UIPasteboard.general.string = "ammelmallah@icloud.com"
+                UIPasteboard.general.string = "contact@abubakrelmallah.com"
             } label: {
                 HStack {
                     Image(systemName: "doc.on.doc")
@@ -1488,7 +1488,7 @@ struct SettingsView: View {
         // No withAnimation: opening a URL animates nothing, and the empty transaction leaked a
         // .smooth() curve onto any incidental state change on the same runloop tick.
         do {
-            if let url = URL(string: "itms-apps://itunes.apple.com/app/id6449729655?action=write-review") {
+            if let url = URL(string: "itms-apps://itunes.apple.com/app/id\(AppIdentifiers.appStoreID)?action=write-review") {
                 UIApplication.shared.open(url)
             }
         }
@@ -1555,6 +1555,7 @@ extension SettingsSearchEntry {
         .init(title: "Open the App On", path: "Appearance → Look and Feel", keywords: "launch start first tab open adhan quran hadith islam default home landing", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Default List View", path: "Appearance → Look and Feel", keywords: "list style plain grouped inset layout", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Classic Look (No Liquid Glass)", path: "Appearance → Look and Feel", keywords: "liquid glass classic look performance faster battery low power mode ios 26 old design", destination: .appearancePage(.lookAndFeel)),
+        .init(title: "Show Side Numbers", path: "Appearance → Look and Feel", keywords: "side numbers right edge index rail jump scrub scrubber juz 1 30 ayah hadith chapter names list overwhelming busy hide", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Haptic Feedback", path: "Appearance → Look and Feel", keywords: "vibration taptic buzz feedback toggle", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Keep Screen On", path: "Appearance → Look and Feel", keywords: "screen display awake on sleep dim lock auto-lock autolock idle timer turn off stay always quran reading battery", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Simple Mode", path: "Settings", keywords: "simple simpler busy clutter cluttered overwhelming overwhelmed essentials less minimal declutter calm fewer buttons", destination: .simpleMode),
@@ -1819,6 +1820,11 @@ struct AppearancePageView: View {
                     }
                 }
             }
+
+            // Every right-edge index at once (`JumpIndexRail`), with the progress bar those lists
+            // draw under the navigation bar. On unless switched off (Abu, 2026-11-15: "I change my
+            // mind by default have it true"; off by default for the two days before).
+            SettingsToggle(String(localized: "Show Side Numbers"), caption: String(localized: "Numbers down the edge of long lists, such as the juz, a surah's ayahs, a chapter's hadiths and the 99 Names. Slide a finger along them to jump. A thin bar under the title shows how far down the list you are."), isOn: $systemSettings.showJumpRail)
         } header: {
             Text("HOW IT LOOKS")
         }

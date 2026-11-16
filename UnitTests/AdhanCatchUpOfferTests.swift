@@ -222,6 +222,35 @@ final class AdhanCatchUpOfferTests: XCTestCase {
         XCTAssertTrue(player.isPlaying, "the override starts the recording on a silenced phone")
     }
 
+    /// A simulator's sound comes out of the Mac it runs on, so the recording plays there at volume
+    /// zero unless `simulatorAdhanSound` asks to hear it: one left running sounded San Francisco's
+    /// adhans in Irvine (Abu, 2026-11-16). It still plays, so the card and the moment behave as on a
+    /// phone. Only the quiet half starts a recording; the loud half reads the figure it would use.
+    func testASimulatorPlaysTheAdhanMuted() async {
+        #if targetEnvironment(simulator)
+        let key = Settings.simulatorAdhanSoundKey
+        let saved = UserDefaults.standard.object(forKey: key)
+        defer { UserDefaults.standard.set(saved, forKey: key) }
+
+        UserDefaults.standard.set(true, forKey: key)
+        XCTAssertEqual(ForegroundAdhanPlayer.startingVolume, 1, "asked for, a simulator sounds the adhan")
+
+        UserDefaults.standard.removeObject(forKey: key)
+        XCTAssertEqual(ForegroundAdhanPlayer.startingVolume, 0, "quiet is the default in a simulator")
+
+        Settings.shared.adhanOverridesSilentMode = true
+        _ = injectMissedDhuhr()
+        let player = ForegroundAdhanPlayer.shared
+        player.playMissedAdhan()
+        await settle { player.isPlaying }
+
+        XCTAssertTrue(player.isPlaying, "the recording still plays, so the card and the moment follow")
+        XCTAssertEqual(player.playbackVolumeForTesting, 0, "and nothing comes out of the Mac")
+        #else
+        XCTAssertEqual(ForegroundAdhanPlayer.startingVolume, 1, "a device is never muted")
+        #endif
+    }
+
     /// A tap on the offer sounds the adhan through Silent Mode, and only then is the moment spent.
     func testTappingTheOfferPlaysAndSpendsTheMoment() async {
         SilentSwitch.debugOverride = .muted

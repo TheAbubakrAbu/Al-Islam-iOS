@@ -1465,7 +1465,8 @@ private struct NameRow: View, Equatable {
                 .frame(maxHeight: .infinity)
                 .conditionalGlassEffect(
                     useColor: isFavorite ? 0.3 : nil,
-                    customTint: isFavorite ? accentColor.color : nil
+                    customTint: isFavorite ? accentColor.color : nil,
+                    inRow: true
                 )
 
             if isFavorite {
@@ -1555,7 +1556,7 @@ private struct NameRowDetails: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                         .contentShape(Rectangle())
-                        .conditionalGlassEffect(useColor: 0.2)
+                        .conditionalGlassEffect(useColor: 0.2, inRow: true)
                         .padding(.top, 6)
                         .background(
                             NavigationLink("", destination: LazyDestination { ayahsDestination(for: target) })
@@ -1751,7 +1752,8 @@ private struct NameGridTile: View, Equatable {
             clear: !isFavorite,
             rectangle: true,
             useColor: isFavorite ? 0.25 : nil,
-            customTint: isFavorite ? accentColor.color : nil
+            customTint: isFavorite ? accentColor.color : nil,
+            inRow: true
         )
     }
 }

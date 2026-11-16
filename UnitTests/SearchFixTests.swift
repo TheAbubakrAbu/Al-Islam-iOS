@@ -91,6 +91,60 @@ final class SearchFixTests: XCTestCase {
         XCTAssertTrue(refs(ranked.hits).contains("2:3"))
     }
 
+    /// Q9: the index for a riwayah chosen after the Quran loaded. A build that landed for a riwayah no
+    /// longer on screen was dropped and nothing was started for the one that is, and the field's own
+    /// build was for the riwayah the LOAD published, dropped the same way, so the search sat on
+    /// "Preparing ayah search…" for good under any other riwayah (2026-11-11). Two switches in a row,
+    /// the second before the first one's index lands, and no keystroke after.
+    @MainActor
+    func testIndexArrivesForTheRiwayahOnScreenAfterASwitch() async throws {
+        let data = QuranData.shared
+        let settings = Settings.shared
+        let saved = settings.displayQiraah
+        addTeardownBlock { @MainActor in
+            settings.displayQiraah = saved
+            _ = await Self.keystrokeSnapshot(timeout: 180)
+        }
+        await data.waitUntilLoaded()
+        let fatihah3 = try XCTUnwrap(data.ayah(surah: 1, ayah: 3))
+        guard fatihah3.rawArabicText(surahId: 1, qiraahOverride: Settings.Riwayah.qaloon).contains("مَلِكِ") else {
+            throw XCTSkip("Qalun's text is not loaded in this simulator (showOtherQiraatReciters is off)")
+        }
+        let others = [Settings.Riwayah.warsh, Settings.Riwayah.qaloon, ""]
+            .filter { $0 != (settings.displayQiraahForArabic ?? "") }
+        let launchSnapshot = await Self.keystrokeSnapshot(timeout: 180)
+        XCTAssertNotNil(launchSnapshot, "no index for the launch riwayah")
+
+        settings.displayQiraah = others[0]
+        XCTAssertNil(data.verseSearchSnapshot(), "an index built for another riwayah was served")
+        settings.displayQiraah = others[1]
+        let expected = settings.displayQiraahForArabic ?? ""
+
+        let deadline = Date().addingTimeInterval(180)
+        while !data.isVerseSearchReady, Date() < deadline {
+            try await Task.sleep(nanoseconds: 250_000_000)
+        }
+        XCTAssertTrue(data.isVerseSearchReady, "still preparing 180 s after the switch")
+        XCTAssertEqual(data.verseSearchSnapshot()?.qiraahKey, expected)
+    }
+
+    /// What a keystroke does (`QuranView.handleAyahSearchChange`): ask for the index, read it when it is
+    /// there. Nil when no index for the riwayah on screen arrives in time.
+    @MainActor
+    private static func keystrokeSnapshot(timeout: TimeInterval) async -> QuranData.VerseSearchSnapshot? {
+        let data = QuranData.shared
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            data.ensureVerseSearchIndex()
+            if data.isVerseSearchReady, let snapshot = data.verseSearchSnapshot(),
+               snapshot.qiraahKey == (Settings.shared.displayQiraahForArabic ?? "") {
+                return snapshot
+            }
+            try? await Task.sleep(nanoseconds: 250_000_000)
+        }
+        return nil
+    }
+
     /// Q8: an en or em dash is a word break, so words it joins neither glue nor match across it.
     func testDashIsAWordBreak() {
         XCTAssertEqual(Settings.shared.cleanSearch("forefathers\u{2014}Abraham", whitespace: true), "forefathers abraham")

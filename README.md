@@ -138,7 +138,7 @@ Special thanks to all contributors and the Muslim community for their support an
 ## Contact
 
 For feedback, feature requests, or questions, feel free to reach out:
-- **Email**: ammelmallah@icloud.com
+- **Email**: contact@abubakrelmallah.com
 - **Website**: [abubakrelmallah.com](https://abubakrelmallah.wordpress.com/)
 - **LinkedIn**: [linkedin.com/abubakr](https://www.linkedin.com/in/abubakr-elmallah-416a0b273/)
 

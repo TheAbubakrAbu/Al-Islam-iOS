@@ -665,6 +665,8 @@ struct PrayerTimesMapView: View {
                 settings.favoriteLocations.removeAll { $0.city == location.city }
             } else {
                 settings.favoriteLocations.append(location)
+                // A city worth keeping is a small win for the review prompt (AppReview.swift).
+                AppReviewManager.shared.bank(.small)
             }
         }
     }

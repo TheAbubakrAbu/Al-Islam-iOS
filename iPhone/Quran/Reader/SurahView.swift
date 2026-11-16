@@ -1482,7 +1482,7 @@ struct SurahView: View {
                     .foregroundColor(settings.accentColor.color)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .conditionalGlassEffect()
+                    .conditionalGlassEffect(inRow: true)
 
                 Text(settings.showEnglishMustafa && !settings.showEnglishSaheeh ? ayah.textEnglishMustafa : ayah.textEnglishSaheeh)
                     .font(.footnote)
@@ -2950,7 +2950,7 @@ struct SurahView: View {
             // the other side reads edge to edge.
             .readerLandscapeWidth(isCompactHeight)
             #if os(iOS)
-            .jumpIndexRail(railItems, accessibilityName: String(localized: "Ayah index"), proxy: proxy) { item in
+            .jumpIndexRail(railItems, accessibilityName: String(localized: "Ayah index"), proxy: proxy, showsProgress: false) { item in
                 ayahsForQiraah.indices.contains(item.id) ? ayahsForQiraah[item.id].id : nil
             }
             #endif
@@ -4309,6 +4309,9 @@ struct SurahView: View {
             // The printed mushaf is an image of the print: nothing on it can be selected (Abu, 2026-10-20).
             .disabled(settings.quranPageMode && settings.resolvedMushafPageLanguage.isPDF)
 
+            Divider()
+
+            // How the surah is read, as a group of its own under the select action.
             // Playback lives on the play control in the footer, not up here.
             Button {
                 toggleReadingMode()

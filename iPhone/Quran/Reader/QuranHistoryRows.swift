@@ -529,7 +529,7 @@ struct SummaryAyahTile: View {
             .frame(height: rowHeight)
             // Clear conditional glass (never accent-tinted) - these summary tiles have no favorite state, so
             // they stay a plain glass card like the rest of the app's clear tiles.
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -794,7 +794,7 @@ struct SummarySurahTile: View {
             .frame(height: rowHeight)
             // Clear conditional glass (never accent-tinted) - these summary tiles have no favorite state, so
             // they stay a plain glass card like the rest of the app's clear tiles.
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

@@ -1677,6 +1677,8 @@ struct LetterQuizView: View {
         chosen = nil
         if index + 1 >= questions.count {
             finished = true
+            // The round's results are up: the review prompt hears how it went (AppReview.swift).
+            AppReviewManager.shared.noteFinishedRun(correct: correct, attempts: questions.count)
         } else {
             index += 1
             speakCurrent()

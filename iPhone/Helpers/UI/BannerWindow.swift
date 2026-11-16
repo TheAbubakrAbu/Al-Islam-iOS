@@ -96,6 +96,9 @@ final class CopyConfirmation {
     func show() {
         dismissal?.cancel()
         banner.present()
+        // Something was worth copying: a small win for the review prompt (AppReview.swift). Only
+        // remembered, because whoever copied it is about to paste it somewhere else.
+        AppReviewManager.shared.bank(.small)
         UIAccessibility.post(notification: .announcement, argument: String(localized: "Copied"))
         dismissal = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 1_600_000_000)

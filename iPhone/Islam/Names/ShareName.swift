@@ -159,31 +159,35 @@ struct NameShareSheet: View {
 
                 Spacer()
 
-                ScrollView {
-                    VStack(spacing: 2) {
-                        toggle("Arabic", $includeArabic, disabled: includeArabic && enabledPartCount == 1)
-                        toggle("Transliteration", $includeTransliteration, disabled: includeTransliteration && enabledPartCount == 1)
-                        toggle("Translation", $includeTranslation, disabled: includeTranslation && enabledPartCount == 1)
+                // The switches choose what goes on the card or in the text; a link carries neither.
+                if actionMode != .link {
+                    ScrollView {
+                        VStack(spacing: 2) {
+                            toggle("Arabic", $includeArabic, disabled: includeArabic && enabledPartCount == 1)
+                            toggle("Transliteration", $includeTransliteration, disabled: includeTransliteration && enabledPartCount == 1)
+                            toggle("Translation", $includeTranslation, disabled: includeTranslation && enabledPartCount == 1)
 
-                        if !name.otherNames.isEmpty {
-                            toggle("Other Names", $includeOtherNames, disabled: includeOtherNames && enabledPartCount == 1)
+                            if !name.otherNames.isEmpty {
+                                toggle("Other Names", $includeOtherNames, disabled: includeOtherNames && enabledPartCount == 1)
+                            }
+
+                            #if HAS_QURAN
+                            toggle("First Found", $includeFirstFound, disabled: includeFirstFound && enabledPartCount == 1)
+                            #endif
+
+                            toggle("Description", $includeDescription, disabled: includeDescription && enabledPartCount == 1)
+
+                            // The face shapes the card rather than choosing what goes on it: it is in the
+                            // toolbar menu (`optionsMenu`).
                         }
-
-                        #if HAS_QURAN
-                        toggle("First Found", $includeFirstFound, disabled: includeFirstFound && enabledPartCount == 1)
-                        #endif
-
-                        toggle("Description", $includeDescription, disabled: includeDescription && enabledPartCount == 1)
-
-                        // The face shapes the card rather than choosing what goes on it: it is in the
-                        // toolbar menu (`optionsMenu`).
                     }
+                    .frame(maxHeight: 200)
                 }
-                .frame(maxHeight: 200)
 
                 Picker("Action Mode", selection: $actionMode) {
                     Text("Image").tag(ActionMode.image)
                     Text("Text").tag(ActionMode.text)
+                    Text("Link").tag(ActionMode.link)
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .padding(.horizontal, 16)
@@ -224,7 +228,7 @@ struct NameShareSheet: View {
             didInit = true
 
             withAnimation {
-                actionMode = ActionMode(rawValue: storedActionModeRaw) ?? .image
+                actionMode = ActionMode.restored(storedActionModeRaw)
                 generatePreviewImage()
             }
 
@@ -241,13 +245,17 @@ struct NameShareSheet: View {
         .onChange(of: shareFontFaceRaw) { _ in regenerate() }
         .onChange(of: actionMode) { newValue in
             if didFinishInitialSetup { settings.hapticFeedback() }
-            storedActionModeRaw = newValue.rawValue
+            // A link is a one-off, never the mode the sheet reopens in (`ActionMode.restored`).
+            if newValue != .link { storedActionModeRaw = newValue.rawValue }
             if newValue == .image && generatedImage == nil { generatePreviewImage() }
         }
         .onChange(of: showingActivityView) { open in
             // Close the whole sheet only after a COMPLETED share. On cancel, stay put with the
             // configured preview intact.
             if !open && didCompleteShare {
+                // A finished share with the sheet on its way out: a natural break for the review
+                // prompt (AppReview.swift). `ActivityView` has already counted the share itself.
+                AppReviewManager.shared.notePause()
                 presentationMode.wrappedValue.dismiss()
             }
         }
@@ -256,7 +264,9 @@ struct NameShareSheet: View {
     @ViewBuilder
     private var preview: some View {
         ZStack {
-            if actionMode == .image {
+            if actionMode == .link {
+                ShareLinkPreview(title: name.transliteration, link: .name(name.number))
+            } else if actionMode == .image {
                 if let img = generatedImage {
                     // The PREVIOUS image stays on screen while a regeneration runs, dimmed slightly
                     // so the swap reads as an update, not a teardown - the ayah sheet's fix for the
@@ -386,7 +396,13 @@ struct NameShareSheet: View {
     }
 
     private func performCopyOrGenerate() {
+        // Copying a Name to take somewhere else is a small win for the review prompt
+        // (AppReview.swift), and with this sheet about to close, a moment it may ask at.
+        AppReviewManager.shared.celebrate(.small)
         switch actionMode {
+        case .link:
+            UIPasteboard.general.string = AppLink.name(name.number).url.absoluteString
+            presentationMode.wrappedValue.dismiss()
         case .text:
             UIPasteboard.general.string = composed
             presentationMode.wrappedValue.dismiss()
@@ -405,6 +421,8 @@ struct NameShareSheet: View {
 
     private func performShareOrGenerate() {
         switch actionMode {
+        case .link:
+            presentShareSheet(with: [AppLinkShareItem(link: .name(name.number), title: name.transliteration)])
         case .text:
             presentShareSheet(with: [composed])
         case .image:
