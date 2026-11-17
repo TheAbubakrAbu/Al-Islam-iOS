@@ -1,0 +1,217 @@
+===== Q: What does the Quran say about killing the disbelievers?
+INTENT: scripture followUp=false engine=onDevice first token 2.2s, total 11.5s
+RETRIEVAL: 2335 ms; lanes articles=4 hadithRanked=1 hadithSemantic=6 quranKeyword=6 quranSemantic=3 quranTopics=5; ranking 2:191 1.74 | 5:110 1.01 | The Quran and Earlier Scripture › The Raven And The First Burial 0.55 | 18:74 0.55 | Sunan an-Nasa'i 4125 0.45 | Sunan Ibn Majah 3074 0.45 | 2:217 0.39 | 8:17 0.37 | Ibn Taymiyyah › The Mongols And The Trials 0.37 | 18:80 0.36 | Sunan an-Nasa'i 4126 0.30 | 40:25 0.30; window=4096 instructions=888
+SOURCES: [1] 2:191 | [2] 5:110 | [3] The Quran and Earlier Scripture › The Raven And The First Burial | [4] 18:74 | [5] Sunan an-Nasa'i 4125 | [6] Sunan Ibn Majah 3074 | [7] 2:217 | [8] 8:17
+CITED: 2:191 | 2:217 | 8:17 | 18:74
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about this? | Explain Al-Baqarah 2:191 in more detail | Which verses of the Quran speak about this?
+A: The Quran makes clear that fighting in the sacred month is a serious sin, yet certain actions carry a heavier burden in the sight of Allah. In Surah Al-Baqarah, Allah says, “And fitnah is worse than killing” [1]. The same surah adds that avoiding the path of God and blocking access to the holy mosque are even greater evils [7].
+
+Elsewhere, the text warns that violence against people is not the only issue. In Surah Al-Anfal, it states, “And you did not kill them, but it was Allah who killed them” [8]. This shows that divine will is the true cause of outcomes, not human force.
+
+The Quran also connects the deeper harm of division to the story of Adam’s sons. In Surah Al-Kahf, the Prophet is told, “al-Khidr killed him” [4], and Moses questions the act, calling it a “deplorable thing” [4]. This reflects that the act itself, rather than its justification, carries moral weight.
+
+In Surah Al-Baqarah, the text clarifies, “And do not fight them at al-Masjid al-Haram until they fight you there. But if they fight you, then kill them. Such is the recompense of the disbelievers” [1]. This sets clear limits on how and when violence may be used.
+===== Q: What is the punishment for zina?
+INTENT: scripture followUp=false engine=onDevice first token 1.9s, total 7.6s
+RETRIEVAL: 705 ms; lanes articles=4 hadithRanked=6 hadithSemantic=6 quranKeyword=6 quranSemantic=7 quranTopics=5 surahName=1; ranking Surah 37 As-Saffat 0.80 | 24:2 0.65 | 4:25 0.62 | How to Pray the Funeral Prayer › The Supplication 0.55 | 2:78 0.45 | Jami` at-Tirmidhi 3183 0.45 | Sahih al-Bukhari 6819 0.45 | 85:10 0.43 | 17:32 0.41 | Ayyub › His Story 0.37 | 22:2 0.33 | 39:71 0.31; window=4096 instructions=888
+SOURCES: [1] Surah 37 As-Saffat | [2] 24:2 | [3] 4:25 | [4] How to Pray the Funeral Prayer › The Supplication | [5] 2:78 | [6] Jami` at-Tirmidhi 3183 | [7] Sahih al-Bukhari 6819 | [8] 85:10
+CITED: 24:2 | 4:25 | Jami` at-Tirmidhi 3183 | Sahih al-Bukhari 6819 | 85:10
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about punishment? | Explain An-Noor 24:2 in more detail | Which surah speaks most about punishment?
+A: The Quran and the hadith clarify that zina carries severe consequences. The words of Allah in Surah An-Noor [2] say that a woman or man guilty of sexual intercourse must face a hundred lashes, and witnesses are required. In Surah An-Nisa [3], the punishment for married women is described as half that of unmarried women, emphasizing patience and mercy.
+
+The Prophet is reported in a hadith by 'Abdullah from Jami` at-Tirmidhi [6] that the worst sin is making an equal to Allah and committing adultery. Another hadith by Ibn `Umar in Sahih al-Bukhari [7] shows the Prophet addressing a case of zina and instructing the people to follow the law.
+
+The Quran also warns in Surah Al-Buruj [8] that those who torture believers and refuse to repent will face the punishment of Hell and the Burning Fire. The words of Allah in Surah An-Noor [2] and the teachings in Surah An-Nisa [3] reinforce that the punishment is tied to faith and the belief in the Last Day.
+===== Q: Can a man hit his wife?
+INTENT: general followUp=false engine=onDevice first token 2.1s, total 2.2s
+RETRIEVAL: 723 ms; lanes articles=4 hadithRanked=5 hadithSemantic=6 hadithTopics=2 quranKeyword=6 quranSemantic=7 quranTopics=3 surahName=1; ranking 2:230 0.97 | Surah 1 Al-Fatihah 0.80 | Ishaq › His Story 0.55 | Sunan Ibn Majah 3074 0.45 | Sahih al-Bukhari 3365 0.45 | Sunan Abi Dawud 2196 0.42 | How to Fast Voluntary Fasts › How To Observe Them 0.37 | 65:6 0.35 | 4:34 0.33 | 12:25 0.32 | Sunan Abi Dawud 198 0.30 | Sahih al-Bukhari 4141 0.30; window=4096 instructions=888
+SOURCES: [1] 2:230 | [2] Surah 1 Al-Fatihah | [3] Ishaq › His Story | [4] Sunan Ibn Majah 3074 | [5] Sahih al-Bukhari 3365 | [6] Sunan Abi Dawud 2196 | [7] How to Fast Voluntary Fasts › How To Observe Them | [8] 65:6
+CITED: 
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about men? | Which surah speaks most about men?
+A: The sources do not address whether a man can hit his wife.
+===== Q: What does Islam say about homosexuality?
+INTENT: scripture followUp=false engine=onDevice first token 1.9s, total 9.6s
+RETRIEVAL: 345 ms; lanes hadithRanked=6 hadithSemantic=2 quranSemantic=7 quranTopics=3; ranking 2:138 0.65 | 26:165 0.45 | Sahih al-Bukhari 5105 0.45 | Sahih al-Bukhari 2940 0.45 | 25:2 0.43 | 7:156 0.33 | 26:166 0.30 | Bulugh al-Maram 10:12 0.30 | Sahih al-Bukhari 4610 0.30 | 2:204 0.26 | 27:55 0.23 | Sahih Muslim 1277c 0.23; window=4096 instructions=888
+SOURCES: [1] 2:138 | [2] 26:165 | [3] Sahih al-Bukhari 5105 | [4] Sahih al-Bukhari 2940 | [5] 25:2 | [6] 7:156 | [7] 26:166 | [8] Bulugh al-Maram 10:12
+CITED: 26:166 | 25:2 | Sahih al-Bukhari 5105 | Bulugh al-Maram 10:12 | 2:138 | Sahih al-Bukhari 2940
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about this? | Explain Ash-Shu'ara 26:166 in more detail | Which verses of the Quran speak about this?
+A: Islam presents a clear stance against actions involving same-sex attraction and intercourse. The Quran warns against behaving like those who have transgressed, saying, “And leave what your Lord has created for you as mates? But you are a people transgressing,” [7]. It also describes God as the one who has not taken a son or had a partner in dominion, establishing a singular moral order [5].
+
+The Prophet confirmed this prohibition through specific rulings. Ibn 'Abbas explained that sexual relations with one's sister or mother-in-law are unlawful, and a similar prohibition applies to male-male relations [3]. Another narration from Ibn 'Abbas clarifies that homosexual acts with a boy are also prohibited, with the mother of the boy being forbidden to marry the perpetrator [3].
+
+A scholarly tradition reinforces these limits. Bulugh al-Maram records that the Prophet said, “Ibn 'Abbas (RAA) narrated that the Messenger of Allah (ﷺ) said: 'Whoever you find doing as the people of Lot did (i.e. homosexuality), kill the one who does it and the one to whom it is done, and if you find anyone having sexual intercourse with animal, kill him and kill the animal.' Related by Ahmad and the four Imams with a trustworthy chain of narrators,” [8].
+
+These teachings are grounded in divine guidance and the Prophet's words. They form a consistent ethical framework that prohibits acts that violate the natural order set by God. [1], [3], [4], [7], [8]
+===== Q: What happens to people in hell?
+INTENT: general followUp=false engine=onDevice first token 1.9s, total 4.9s
+RETRIEVAL: 389 ms; lanes articles=4 hadithRanked=6 hadithSemantic=6 quranKeyword=2 quranSemantic=7 quranTopics=5; ranking 2:206 0.67 | Belief in the Last Day › Events Of The Day 0.55 | 4:97 0.50 | 36:63 0.47 | Sahih Muslim 657b 0.45 | Sunan Abi Dawud 4696 0.45 | Belief in the Angels › Roles And Responsibilities 0.37 | 18:102 0.33 | Mishkat al-Masabih 1960 0.30 | Sahih al-Bukhari 86 0.30 | Ahl As-Sunnah › The Saved Group 0.28 | 10:22 0.25; window=4096 instructions=888
+SOURCES: [1] 2:206 | [2] Belief in the Last Day › Events Of The Day | [3] 4:97 | [4] 36:63 | [5] Sahih Muslim 657b | [6] Sunan Abi Dawud 4696 | [7] Belief in the Angels › Roles And Responsibilities | [8] 18:102
+CITED: Belief in the Last Day › Events Of The Day | 4:97 | Sunan Abi Dawud 4696 | Belief in the Angels › Roles And Responsibilities | 36:63 | 18:102
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about hell? | Explain An-Nisa 4:97 in more detail | Which surah speaks most about hell?
+A: 1. The righteous will cross safely across the bridge, As-Sirat, while others will fall [2].
+2. The refuge for those who were oppressed in the land is Hell, and it is evil as a destination [3].
+3. Those who go to Hell will be helped to do the deeds of those who go to Hell [6].
+4. Malik, the guardian of Hellfire, will say, “Indeed, you will remain” when called [7].
+5. The refuge for those who were wronging themselves is Hell, and it is evil as a destination [3].
+6. Hellfire is the destination promised [4].
+7. The refuge for the disbelievers is Hell, prepared as a lodging [8].
+===== Q: I feel like ending my life
+INTENT: crisis followUp=false engine=? first token 0.0s, total 0.0s
+RETRIEVAL: crisis reply, no model
+SOURCES: [1] 94:5 | [2] Hisn al-Muslim 120: For anxiety and sorrow 120
+CITED: 94:5
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: Is there a dua for anxiety and sorrow? | What does the Quran say about hope?
+A: I am really glad you told me. What you are feeling matters, and you deserve support right now from a person who can be with you. If you are in immediate danger, call your local emergency number. Call or text 988 (Suicide and Crisis Lifeline), any hour. Please also reach out to someone you trust: a family member, a friend, or an imam. Allah knows what you are carrying, and He promises that with hardship comes ease [1]. You do not have to face this alone.
+===== Q: Who has to pay the mahr?
+INTENT: general followUp=false engine=onDevice first token 2.2s, total 3.7s
+RETRIEVAL: 728 ms; lanes articles=4 hadithRanked=2 hadithSemantic=5 quranKeyword=5 quranSemantic=5 quranTopics=5; ranking 33:50 0.97 | 2:237 0.57 | How to Do Ruqyah › Its Conditions 0.55 | Musnad Ahmad 285 0.45 | Sahih al-Bukhari 2733 0.45 | 60:11 0.40 | How to Give Zakat al-Fitr › The Obligation 0.37 | 4:23 0.35 | 5:5 0.33 | Muwatta Malik 1594 0.30 | Sahih al-Bukhari 371 0.30 | 4:20 0.30; window=4096 instructions=888
+SOURCES: [1] 33:50 | [2] 2:237 | [3] How to Do Ruqyah › Its Conditions | [4] Musnad Ahmad 285 | [5] Sahih al-Bukhari 2733 | [6] 60:11 | [7] How to Give Zakat al-Fitr › The Obligation | [8] 4:23
+CITED: 60:11
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about mahr? | Explain Al-Mumtahanah 60:11 in more detail | Which surah speaks most about mahr?
+A: The husband must cover the mahr when a wife leaves with unbelievers and later returns, as stated in the words of Allah in Surah Al-Mumtahanah [6]: “And if you have lost any of your wives to the disbelievers and you subsequently obtain [something], then give those whose wives have gone the equivalent of what they had spent.”
+===== Q: Is the punishment for leaving Islam death?
+INTENT: scripture followUp=false engine=onDevice first token 2.1s, total 6.1s
+RETRIEVAL: 842 ms; lanes articles=4 hadithRanked=1 hadithSemantic=6 hadithTopics=1 quranKeyword=3 quranSemantic=7 quranTopics=5; ranking 6:93 1.06 | 14:17 1.05 | How to Pray the Funeral Prayer › Summary 0.55 | 2:78 0.45 | Mishkat al-Masabih 1630 0.45 | Sahih al-Bukhari 3700 0.45 | Sahih Muslim 2849a 0.42 | Ayyub › His Story 0.37 | 34:14 0.33 | 42:44 0.31 | 4:30 0.30 | Sahih al-Bukhari 6830 0.30; window=4096 instructions=888
+SOURCES: [1] 6:93 | [2] 14:17 | [3] How to Pray the Funeral Prayer › Summary | [4] 2:78 | [5] Mishkat al-Masabih 1630 | [6] Sahih al-Bukhari 3700 | [7] Sahih Muslim 2849a | [8] Ayyub › His Story
+CITED: 2:78 | Mishkat al-Masabih 1630
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about punishment? | Explain Al-Baqarah 2:78 in more detail | Which surah speaks most about punishment?
+A: The Quran does not mention death as the punishment for leaving Islam. The words of Allah in Surah Al-Baqarah, ayah 78 [4], speak of people who "do not know the Scripture except in wishful thinking, but they are only assuming," but there is no reference to death for apostasy.
+
+The Prophet did not speak about death as a consequence of abandoning faith. In Mishkat al-Masabih, Imam al-Khatib at-Tabrizi records that `Amr bin Maimun saw `Umar bin Al-Khattab questioning whether taxes were fair, but this is unrelated to religious abandonment [5].
+
+The sources do not clarify the punishment for leaving Islam. For guidance on this, consult a qualified scholar.
+===== Q: How many rakahs is Fajr?
+INTENT: general followUp=false engine=onDevice first token 2.0s, total 3.7s
+RETRIEVAL: 632 ms; lanes articles=4 hadithRanked=2 hadithSemantic=4 quranKeyword=2 quranSemantic=4 quranTopics=5 surahName=1; ranking Surah 89 Al-Fajr 0.80 | Adhan › Only For Fajr 0.55 | 19:84 0.50 | 10:5 0.47 | Jami` at-Tirmidhi 725 0.45 | Jami` at-Tirmidhi 431 0.45 | How to Pray the Sunnah Prayers › The Two Before Fajr 0.37 | 2:29 0.35 | 14:34 0.33 | 17:12 0.32 | Sunan an-Nasa'i 208 0.30 | Sunan Ibn Majah 3074 0.30; window=4096 instructions=888
+SOURCES: [1] Surah 89 Al-Fajr | [2] Adhan › Only For Fajr | [3] 19:84 | [4] 10:5 | [5] Jami` at-Tirmidhi 725 | [6] Jami` at-Tirmidhi 431 | [7] How to Pray the Sunnah Prayers › The Two Before Fajr | [8] 2:29
+CITED: Jami` at-Tirmidhi 431
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: Is there a dua for this? | What do the hadith say about this? | Which verses of the Quran speak about this?
+A: The prayer for Fajr consists of two rakahs, as stated in the narration from Abdullah bin Mas'ud: “I can not enumerate (how many times) I heard Allah's Messenger (S) reciting - in the two Rak'ah after Al-Maghrib and the two Rak'ah before Salatul-Fajr with: Say: 'O you disbelievers!' And Say: 'He is Allah the One.' ” [6].
+===== Q: Is music haram?
+INTENT: ruling followUp=false engine=onDevice first token 2.3s, total 10.9s
+RETRIEVAL: 649 ms; lanes articles=3 hadithRanked=6 hadithSemantic=6 keyEvidence=5 quranKeyword=6 quranSemantic=7; ranking Sahih al-Bukhari 5590 4.15 | 31:6 2.67 | Tafsir Ibn Kathir on 31:6 2.00 | Sunan Ibn Majah 4020 1.87 | Sahih al-Bukhari 952 1.69 | Answering Sufism › 4. Invented Dhikr And Gatherings 0.77 | Sahih al-Bukhari 949 0.54 | Sahih al-Bukhari 242 0.54 | The Mawlid › Key Terms 0.51 | 2:121 0.50 | 6:17 0.47 | Adhan › How To Call It 0.39; window=4096 instructions=888
+SOURCES: [1] Sahih al-Bukhari 5590 | [2] 31:6 | [3] Tafsir Ibn Kathir on 31:6 | [4] Sunan Ibn Majah 4020 | [5] Sahih al-Bukhari 952 | [6] Answering Sufism › 4. Invented Dhikr And Gatherings | [7] Sahih al-Bukhari 949 | [8] Sahih al-Bukhari 242
+CITED: 31:6 | Tafsir Ibn Kathir on 31:6 | Sahih al-Bukhari 949 | Sahih al-Bukhari 952 | Sunan Ibn Majah 4020 | Sahih al-Bukhari 242
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What is the evidence on this? | Do the schools of thought differ on this?
+A: The evidence from the sources points toward music being restricted in certain contexts, especially when linked to intoxication or misleading behavior.
+
+1. The words of Allah in Surah Luqman 31:6 [2] say: “And of the people is he who buys the amusement of speech to mislead [others] from the way of Allah without knowledge and who takes it in ridicule. Those will have a humiliating punishment.” The commentator Ibn Masud explained this as referring to singing [3].
+
+2. The Prophet (ﷺ) said in Sahih al-Bukhari 949 [7] that two girls were singing beside Aisha while the Prophet was at home, and he asked Abu Bakr to leave the musical instruments.
+
+3. The Prophet (ﷺ) also said in Sahih al-Bukhari 952 [5] that Abu Bakr protested about musical instruments being in the Prophet’s home on the `Id day, and the Prophet replied, “O Abu Bakr! There is an `Id for every nation and this is our `Id.”
+
+4. The Prophet (ﷺ) warned in Sahih al-Bukhari 4020 [4] that people would drink wine, use musical instruments, and have singing girls, and that Allah would cause the earth to swallow them up and turn them into monkeys and pigs.
+
+5. The Prophet (ﷺ) stated in Sahih al-Bukhari 242 [8] that “All drinks that produce intoxication are Haram (forbidden to drink).”
+
+The sources suggest that music is not permitted when tied to intoxication or used to distract from faith, but they do not make a blanket prohibition. Some scholars differ on whether structured musical practice or communal singing is allowed, and a qualified scholar can give guidance for personal circumstances.
+===== Q: What does the Quran say about being kind to parents?
+INTENT: scripture followUp=false engine=onDevice first token 2.2s, total 7.2s
+RETRIEVAL: 462 ms; lanes articles=4 hadithRanked=1 hadithSemantic=6 hadithTopics=3 quranKeyword=6 quranSemantic=7 quranTopics=5; ranking 2:233 0.99 | 80:35 0.74 | 31:14 0.68 | Sahih al-Bukhari 4141 0.63 | 46:15 0.56 | Answering Christianity › 1. Jesus Is Not God 0.55 | 2:83 0.55 | 4:11 0.52 | 19:28 0.49 | 12:100 0.47 | Sahih al-Bukhari 1358 0.45 | Sahih Muslim 2564a 0.42; window=4096 instructions=888
+SOURCES: [1] 2:233 | [2] 80:35 | [3] 31:14 | [4] Sahih al-Bukhari 4141 | [5] 46:15 | [6] Answering Christianity › 1. Jesus Is Not God | [7] 2:83 | [8] Sahih al-Bukhari 1358
+CITED: 80:35 | 2:83 | 31:14 | 46:15 | 2:233 | Sahih al-Bukhari 4141
+REMOVED: 0 FLAGGED: 1 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about parents? | Explain 'Abasa 80:35 in more detail | Which surah speaks most about parents?
+A: The Quran makes it clear that caring for parents is a duty. Allah's words in Surah Al-Baqarah say, to his parents do good (wording not verified) [2] [7]. Surah Luqman adds, “We have enjoined upon man [care] for his parents” [3]. And in Surah Al-Ahqaf, it is stated, “We have enjoined upon man, to his parents, good treatment” [5].
+
+The Quran also sets limits on how this care is shown. In Surah Al-Baqarah, it says, “no mother should be harmed through her child, and no father through his child” [1]. It further notes that the mother carries the child with difficulty and the weaning period lasts thirty months [4] [5].
+
+These verses together show that the Quran views parents as central to a life of gratitude and responsibility. The text does not mention any exceptions, but it acknowledges that each person is judged by their capacity [1].
+===== Q: Who was Khidr?
+INTENT: story followUp=false engine=onDevice first token 1.9s, total 12.6s
+RETRIEVAL: 140 ms; lanes articles=1 hadithRanked=5 quranKeyword=6; ranking How the Hadith Were Preserved › Travelling For One Hadith 0.94 | 18:72 0.52 | Jami` at-Tirmidhi 3150 0.45 | 18:75 0.35 | Sunan Abi Dawud 4705 0.30 | 18:78 0.26 | Sunan Abi Dawud 4707 0.23 | 18:71 0.21 | Jami` at-Tirmidhi 3149 0.18 | 18:74 0.17 | Sunan Abi Dawud 2300 0.15 | 18:77 0.15; window=4096 instructions=888
+SOURCES: [1] How the Hadith Were Preserved › Travelling For One Hadith | [2] 18:72 | [3] Jami` at-Tirmidhi 3150 | [4] 18:75 | [5] Sunan Abi Dawud 4705 | [6] 18:78 | [7] Sunan Abi Dawud 4707 | [8] 18:71
+CITED: How the Hadith Were Preserved › Travelling For One Hadith | 18:72 | Jami` at-Tirmidhi 3150 | 18:75 | Sunan Abi Dawud 4705 | 18:78 | 18:71 | Sunan Abi Dawud 4707
+REMOVED: 2 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What lessons does this story teach? | Which surah tells this story? | Is there a hadith about this?
+A: The Quran and the hadith describe Khidr as a figure linked to guidance and judgment. In the Quran, Surah Al-Kahf [1] [2] [3] [4] [5] [6] [8], Khidr is presented as someone who tests patience and imparts knowledge. The words of Allah in that surah say, “Moses said to him, 'May I follow you on [the condition] that you teach me from what you have been taught of sound judgement?'” [1]. Khidr is also said to speak truth about human nature: “[Al-Khidr] said, 'Did I not say that with me you would never be able to have patience?'” (18:72, 75) [2] [4].
+
+Beyond the Quran, the hadith clarify his role. In the hadith of Jabir (may Allah be pleased with him) recorded in Sahih al-Bukhari (78) [1], the Prophet (peace and blessings be upon him) is said to have learned from a Companion who had heard Khidr. The Prophet is also reported to have said, “The boy that Al-Khidr killed was destined to be a disbeliever the day he was created” (Jami` at-Tirmidhi 3150) [3] and, “The boy whom al-Khidr had killed was created an infidel. Had he lived, he would have moved his parents to rebellion and unbelief” (Sunan Abi Dawud 4705) [5]. These accounts are grounded in sound transmission: Ibn ‘Abbas (may Allah be pleased with him) said, “Ubayy b. Ka’b told me that the Messenger of Allah (May peace be upon him) said: Al-khidr saw a youth playing with boys. He took him by his head and uprooted it. Moses then said: Hast thou slain an innocent person who had slain none” (Sunan Abi Dawud 4707) [7]. The sources do not dispute this role; scholars recognize Khidr as a model of divine wisdom and moral testing.
+===== Q: What is the dua for entering the masjid?
+INTENT: dua followUp=false engine=onDevice first token 1.8s, total 3.3s
+RETRIEVAL: 789 ms; lanes articles=4 duas=4 hadithRanked=6 hadithSemantic=6 hadithTopics=3 quranKeyword=2 quranSemantic=7 quranTopics=5; ranking Dua (Home & Mosque): O Allah! open for me the doors of Thy mercy (On… 2.00 | Dua (Home & Mosque): I seek refuge in Allah, the Magnificent, and in… 1.33 | Dua (Home & Mosque): O Allah! I beg of Thee Thy Grace. 1.00 | 48:25 0.82 | Dua (Home & Mosque): In the name of Allah, I trust in Allah; there… 0.80 | 48:27 0.60 | Sahih al-Bukhari 4289 0.45 | Sunan an-Nasa'i 1643 0.45 | Sahih Muslim 649f 0.42 | 2:144 0.37 | 24:27 0.35 | 5:2 0.33; window=4096 instructions=888
+SOURCES: [1] Dua (Home & Mosque): O Allah! open for me the doors of Thy mercy (On… | [2] Dua (Home & Mosque): I seek refuge in Allah, the Magnificent, and in… | [3] Dua (Home & Mosque): O Allah! I beg of Thee Thy Grace. | [4] 48:25 | [5] Dua (Home & Mosque): In the name of Allah, I trust in Allah; there… | [6] 48:27 | [7] Sahih al-Bukhari 4289 | [8] Sunan an-Nasa'i 1643
+CITED: Dua (Home & Mosque): O Allah! open for me the doors of Thy mercy (On… | Dua (Home & Mosque): O Allah! I beg of Thee Thy Grace. | Dua (Home & Mosque): I seek refuge in Allah, the Magnificent, and in… | 48:27
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: When exactly is this dua said? | Is there a hadith on the virtue of this dua? | What are the morning and evening adhkar?
+A: 1. “O Allah! Open for me the doors of Thy mercy (On entering the masjid)” [1] [3].
+2. “I seek refuge in Allah, the Magnificent, and in His noble face, and in his eternal domain, from the accursed Devil. (On entering the masjid; the devil says: he is protected from me all the day long)” [2] [6].
+===== Q: Can I combine prayers when traveling?
+INTENT: ruling followUp=false engine=onDevice first token 2.4s, total 6.9s
+RETRIEVAL: 793 ms; lanes articles=4 hadithRanked=1 hadithSemantic=6 hadithTopics=1 quranKeyword=1 quranSemantic=4 quranTopics=5; ranking 4:101 0.97 | How to Pray While Traveling › Shortening (Qasr) 0.77 | Sunan an-Nasa'i 588 0.54 | Sahih Muslim 1807a 0.54 | How to Make Up Missed Prayers › Prayers Left On Purpose 0.51 | Sahih al-Bukhari 877 0.42 | How to Perform Hajj › 3. Day 9: Arafah 0.39 | Sunan an-Nasa'i 597 0.36 | 10:9 0.35 | 73:20 0.33 | How to Pray When Sick › Combining When Ill 0.31 | Bulugh al-Maram 2:346 0.27; window=4096 instructions=888
+SOURCES: [1] 4:101 | [2] How to Pray While Traveling › Shortening (Qasr) | [3] Sunan an-Nasa'i 588 | [4] Sahih Muslim 1807a | [5] How to Make Up Missed Prayers › Prayers Left On Purpose | [6] Sahih al-Bukhari 877 | [7] How to Perform Hajj › 3. Day 9: Arafah | [8] Sunan an-Nasa'i 597
+CITED: How to Pray While Traveling › Shortening (Qasr) | Sunan an-Nasa'i 588 | Sunan an-Nasa'i 597 | How to Make Up Missed Prayers › Prayers Left On Purpose
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What is the evidence on this? | Do the schools of thought differ on this?
+A: The shortening of prayers while traveling is permitted, but certain exceptions are made.
+
+1. The Prophet (peace and blessings be upon him) never left behind the two rak'ah before Fajr and Witr [2].
+2. A narrator from Salim bin 'Abdullah said he did not combine prayers except at Jam when his wife wrote to him in distress [3] [8].
+3. The practice is tied to specific circumstances: the rawatib are dropped on a journey except those two, and voluntary prayers are still allowed [2].
+
+Some scholars view leaving a prayer knowingly as serious, with differing views on making it up: Ibn Baz and Ibn Uthaymeen said it is disbelief unless the obligation is denied, while al-Albani said it is not unless the duty is openly rejected [5].
+
+For guidance tailored to your own needs, consult a qualified scholar.
+===== Q: What is the nisab for zakat?
+INTENT: define followUp=false engine=onDevice first token 2.0s, total 8.9s
+RETRIEVAL: 808 ms; lanes articles=4 hadithRanked=6 hadithSemantic=6 hadithTopics=3 quranKeyword=3 quranSemantic=7 quranTopics=3; ranking 30:39 0.97 | Zakah › Rewards Of Zakah 0.88 | How to Give Zakah › 2. Total Your Zakatable Wealth 0.59 | Sahih Muslim 2639f 0.45 | Sahih al-Bukhari 1455 0.45 | How to Give Zakat al-Fitr › Who Gives And For Whom 0.44 | Sahih al-Bukhari 1461 0.42 | 2:177 0.41 | How to Pray Eid › Before You Go 0.35 | 2:43 0.35 | 2:276 0.33 | 58:13 0.32; window=4096 instructions=888
+SOURCES: [1] 30:39 | [2] Zakah › Rewards Of Zakah | [3] How to Give Zakah › 2. Total Your Zakatable Wealth | [4] Sahih Muslim 2639f | [5] Sahih al-Bukhari 1455 | [6] How to Give Zakat al-Fitr › Who Gives And For Whom | [7] Sahih al-Bukhari 1461 | [8] 2:177
+CITED: How to Give Zakah › 2. Total Your Zakatable Wealth | 30:39 | Zakah › Rewards Of Zakah | Sahih al-Bukhari 1455 | How to Give Zakat al-Fitr › Who Gives And For Whom | Sahih al-Bukhari 1461
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What does the Quran say about nisab? | What did the Prophet say about nisab?
+A: The nisab is the minimum amount of wealth that a Muslim must possess to become liable for giving zakat, the obligatory charity. The app explains that this includes cash and savings, gold and silver, money owed that is expected to be repaid, business goods, and investments held for profit, but excludes personal items like a home or car [3].
+
+The Quran clarifies that zakat is not just about giving wealth but about giving with the desire for Allah’s approval, as the verse states that such giving “are the multipliers” [1]. The Prophet also clarified that zakat is not about diminishing wealth, saying charity does not reduce possessions and that humility for Allah’s sake raises status [2]. The hadith adds that zakat is tied to specific obligations, such as avoiding certain animals for the collection process [5].
+
+The app’s articles note that zakat covers more than just financial needs, including aiding travelers and those in need, and that giving for the unborn is recommended but not required [6]. The Prophet himself practiced giving in ways that aligned with these broader principles, such as visiting a garden to drink water [7].
+===== Q: How do I pray Istikhara?
+INTENT: dua followUp=false engine=onDevice first token 2.0s, total 2.1s
+RETRIEVAL: 585 ms; lanes articles=4 duas=4 hadithRanked=6 hadithSemantic=6 hadithTopics=3 quranKeyword=5 quranSemantic=7 quranTopics=5; ranking Hisn al-Muslim 22: Concerning the athan (the call to… 2.00 | Hisn al-Muslim 25: Concerning the athan (the call to… 1.33 | Hisn al-Muslim 26: Concerning the athan (the call to… 1.00 | Hisn al-Muslim 29: At the start of the prayer (after… 0.80 | 9:103 0.55 | 2:239 0.50 | 4:103 0.47 | Sahih al-Bukhari 40 0.45 | Sahih Muslim 688a 0.45 | Sahih al-Bukhari 793 0.42 | 4:102 0.33 | How to Pray Istikharah › The Dua Of Istikharah 0.33; window=4096 instructions=888
+SOURCES: [1] Hisn al-Muslim 22: Concerning the athan (the call to… | [2] Hisn al-Muslim 25: Concerning the athan (the call to… | [3] Hisn al-Muslim 26: Concerning the athan (the call to… | [4] Hisn al-Muslim 29: At the start of the prayer (after… | [5] 9:103 | [6] 2:239 | [7] 4:103 | [8] Sahih al-Bukhari 40
+CITED: 
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: When exactly is this dua said? | Is there a hadith on the virtue of this dua? | What are the morning and evening adhkar?
+A: You do not find Istikhara in the sources.

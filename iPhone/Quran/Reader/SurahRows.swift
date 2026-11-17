@@ -1515,13 +1515,14 @@ struct AyahSearchRow: View, Equatable {
     /// The per-ayah pass finds nothing for a query whose wording isn't literally in this ayah (a
     /// semantic hit, a different inflection), so both directions fall back to the corpus-wide
     /// Quran lexicon - the same path the hadith rows use.
-    private func crossLanguageSpans() -> (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange]) {
+    private func crossLanguageSpans()
+    -> (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange], transliteration: [NSRange]) {
         #if os(iOS)
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty,
               settings.isHafsDisplay,
               !settings.beginnerMode,
-              WordByWordStore.isBundled else { return ([], [], []) }
+              WordByWordStore.isBundled else { return ([], [], [], []) }
 
         let displayText = arabicDisplayText()
         // The gloss pack's token order is defined against the RAW (unstripped) text; with "Hide
@@ -1530,12 +1531,16 @@ struct AyahSearchRow: View, Equatable {
             ? (QuranData.shared.ayah(surah: surah, ayah: ayah)?.displayArabicText(surahId: surah, clean: false) ?? displayText)
             : arabic
 
+        // An Arabic query never matches the transliteration line, so it is on screen only when the
+        // setting shows it; a row without it has no word there to light, and skips the line's walk.
+        let line = settings.showTransliteration || !trimmed.containsArabicLetters ? transliteration : ""
         return CrossLanguageWordHighlight.quranSpans(
             query: trimmed, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText,
-            saheeh: englishSaheeh, mustafa: englishMustafa, wordRule: wordRule
+            saheeh: englishSaheeh, mustafa: englishMustafa, transliteration: line,
+            wordRule: wordRule
         )
         #else
-        return ([], [], [])
+        return ([], [], [], [])
         #endif
     }
 
@@ -1585,7 +1590,8 @@ struct AyahSearchRow: View, Equatable {
                     term: visibility.mTr ? query : "",
                     font: .footnote,
                     accent: settings.accentColor.color,
-                    fg: .secondary
+                    fg: .secondary,
+                    extraHighlightRanges: cross.transliteration
                 )
                 // English content: left to right with the left edge in the Arabic interface too
                 // (here and on the translation lines of both row layouts).
@@ -1669,7 +1675,8 @@ struct AyahSearchRow: View, Equatable {
                     term: visibility.mTr ? query : "",
                     font: .footnote,
                     accent: settings.accentColor.color,
-                    fg: .secondary
+                    fg: .secondary,
+                    extraHighlightRanges: cross.transliteration
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .leftToRightContent()

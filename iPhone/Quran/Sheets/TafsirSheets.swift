@@ -313,16 +313,6 @@ struct AyahTafsirSheet: View {
                     // scrolling back to the top (Abu, 2026-09-28). Same build as the comparison sheets'
                     // pinned strips (a material band under the bar, a divider at its foot).
                     .safeAreaInset(edge: .top, spacing: 0) { editionPickers }
-                    .safeAreaInset(edge: .bottom) {
-                        if hasActiveSearch {
-                            TafsirFindBar(
-                                current: currentMatchIndex,
-                                total: matchCount,
-                                onPrevious: { goToMatch(-1) },
-                                onNext: { goToMatch(1) }
-                            )
-                        }
-                    }
                     .onChange(of: searchText) { _ in recomputeMatches() }
                     .onChange(of: selectedTafsirText) { _ in recomputeMatches() }
                     #if DEBUG
@@ -347,10 +337,23 @@ struct AyahTafsirSheet: View {
             // `spacing: 0`: the find bar stacked above carries its own cushion; pre-26 `safeAreaInset`
             // added a default 8pt on top of it that iOS 26's `safeAreaBar` does not.
             .adaptiveSafeArea(edge: .bottom, spacing: 0) {
-                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search tafsir"))
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, BottomBarCushion.standard)
-                    .background(Color.white.opacity(0.00001))
+                // The find bar rides in the search bar's own inset, right above the field, so a sheet's
+                // Now Playing bar (drawn at the top of this inset, see `SheetBottomBarPlayer`) sits over
+                // both instead of between them.
+                VStack(spacing: 2) {
+                    if hasActiveSearch {
+                        TafsirFindBar(
+                            current: currentMatchIndex,
+                            total: matchCount,
+                            onPrevious: { goToMatch(-1) },
+                            onNext: { goToMatch(1) }
+                        )
+                    }
+                    SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search tafsir"))
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, BottomBarCushion.standard)
+                }
+                .background(Color.white.opacity(0.00001))
             }
             .dismissKeyboardOnScroll()
             .sheetDismissToolbar()
@@ -851,16 +854,6 @@ struct SurahInfoSheet: View {
                                 .overlay(Divider(), alignment: .bottom)
                         }
                     }
-                    .safeAreaInset(edge: .bottom) {
-                        if hasActiveSearch {
-                            TafsirFindBar(
-                                current: currentMatchIndex,
-                                total: matchCount,
-                                onPrevious: { goToMatch(-1) },
-                                onNext: { goToMatch(1) }
-                            )
-                        }
-                    }
                     .onChange(of: searchText) { _ in recomputeMatches() }
                     .onChange(of: selectedSourceName) { _ in recomputeMatches() }
                     }
@@ -870,10 +863,23 @@ struct SurahInfoSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             // The app's own bottom search bar, not `.searchable` - see the tafsir sheet above.
             .adaptiveSafeArea(edge: .bottom, spacing: 0) {
-                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search info"))
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, BottomBarCushion.standard)
-                    .background(Color.white.opacity(0.00001))
+                // The find bar rides in the search bar's own inset, right above the field, so a sheet's
+                // Now Playing bar (drawn at the top of this inset, see `SheetBottomBarPlayer`) sits over
+                // both instead of between them.
+                VStack(spacing: 2) {
+                    if hasActiveSearch {
+                        TafsirFindBar(
+                            current: currentMatchIndex,
+                            total: matchCount,
+                            onPrevious: { goToMatch(-1) },
+                            onNext: { goToMatch(1) }
+                        )
+                    }
+                    SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search info"))
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, BottomBarCushion.standard)
+                }
+                .background(Color.white.opacity(0.00001))
             }
             .dismissKeyboardOnScroll()
             .accentWashedBackground()

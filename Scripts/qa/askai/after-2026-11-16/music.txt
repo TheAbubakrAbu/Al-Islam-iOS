@@ -1,0 +1,67 @@
+===== Q: musical instruments
+INTENT: scripture followUp=false engine=onDevice first token 2.2s, total 5.7s
+RETRIEVAL: 2827 ms; lanes articles=3 hadithRanked=6 hadithSemantic=6 keyEvidence=5 quranKeyword=6 quranSemantic=7; ranking Sahih al-Bukhari 5590 4.31 | 31:6 2.67 | Sunan Ibn Majah 4020 2.05 | Tafsir Ibn Kathir on 31:6 2.00 | Sahih al-Bukhari 952 1.93 | 2:121 0.65 | 6:17 0.62 | Sahih al-Bukhari 949 0.60 | Answering Sufism › 4. Invented Dhikr And Gatherings 0.55 | Riyad as-Salihin 1691 0.45 | 6:73 0.43 | 35:2 0.41; window=4096 instructions=888
+SOURCES: [1] Sahih al-Bukhari 5590 | [2] 31:6 | [3] Sunan Ibn Majah 4020 | [4] Tafsir Ibn Kathir on 31:6 | [5] Sahih al-Bukhari 952 | [6] 2:121 | [7] 6:17 | [8] Sahih al-Bukhari 949
+CITED: 31:6 | Sunan Ibn Majah 4020 | Sahih al-Bukhari 952 | 2:121 | Sahih al-Bukhari 5590 | Sahih al-Bukhari 949
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about music? | Explain Luqman 31:6 in more detail | Which surah speaks most about music?
+A: The Quran warns that some people misuse speech to stray from the path of God without understanding, and this misuse includes musical instruments [2]. The Prophet spoke of people who would drink wine, use instruments, and entertain with singing girls, warning that God would turn them into animals [3].
+
+In another account, the Prophet rejected the idea that musical instruments belong to Satan, stating that every nation has its own celebration, and this was their own celebration [5]. The Quran also affirms that those who follow the scripture read it rightly, while those who reject it face loss [6].
+
+The Prophet warned that instruments are used to mislead and that their use is not permitted in the presence of the Prophet [1] [8].
+===== Q: Is music haram?
+INTENT: ruling followUp=false engine=onDevice first token 2.3s, total 8.7s
+RETRIEVAL: 573 ms; lanes articles=3 hadithRanked=6 hadithSemantic=6 keyEvidence=5 quranKeyword=6 quranSemantic=7; ranking Sahih al-Bukhari 5590 4.15 | 31:6 2.67 | Tafsir Ibn Kathir on 31:6 2.00 | Sunan Ibn Majah 4020 1.87 | Sahih al-Bukhari 952 1.69 | Answering Sufism › 4. Invented Dhikr And Gatherings 0.77 | Sahih al-Bukhari 949 0.54 | Sahih al-Bukhari 242 0.54 | The Mawlid › Key Terms 0.51 | 2:121 0.50 | 6:17 0.47 | Adhan › How To Call It 0.39; window=4096 instructions=888
+SOURCES: [1] Sahih al-Bukhari 5590 | [2] 31:6 | [3] Tafsir Ibn Kathir on 31:6 | [4] Sunan Ibn Majah 4020 | [5] Sahih al-Bukhari 952 | [6] Answering Sufism › 4. Invented Dhikr And Gatherings | [7] Sahih al-Bukhari 949 | [8] Sahih al-Bukhari 242
+CITED: Sahih al-Bukhari 242 | Sunan Ibn Majah 4020 | Sahih al-Bukhari 952 | Sahih al-Bukhari 949 | Tafsir Ibn Kathir on 31:6 | Answering Sufism › 4. Invented Dhikr And Gatherings | 31:6
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What is the evidence on this? | Do the schools of thought differ on this?
+A: The evidence suggests music is not outright forbidden, but its use carries certain warnings.
+
+1. The Prophet said, "All drinks that produce intoxication are Haram (forbidden to drink)" [8].
+2. It was narrated that people among the Prophet's nation would drink wine, hear music, and singing girls, and Allah would cause the earth to swallow them up, turning them into monkeys and pigs [4].
+3. Aisha reported that the Prophet said, "Musical instruments of Satan in the house of Allah's Messenger (ﷺ)" [5] and later said, "Leave them" [7].
+4. The Companion Ibn Masud commented that the verse refers to singing [3].
+5. The Prophet taught dhikr, but set formulas, counted litanies, swaying circles, music, and dancing are not from him [6].
+
+Some sources warn against music when linked to intoxication or mockery of faith [2] [4]. A collection also notes that Companions questioned whether music was harmful, but the Prophet did not outright ban it [6]. Scholars differ on whether music is inherently forbidden: some see it permissible when not linked to intoxication, while others restrict it in certain contexts [6].
+
+For a personal ruling, consult a qualified scholar.
+===== Q: Is listening to music allowed in Islam?
+INTENT: ruling followUp=false engine=onDevice first token 2.3s, total 9.5s
+RETRIEVAL: 771 ms; lanes articles=4 hadithRanked=6 hadithSemantic=6 keyEvidence=5 quranKeyword=6 quranSemantic=7; ranking Sahih al-Bukhari 5590 4.15 | 31:6 2.67 | Sunan Ibn Majah 4020 2.14 | Tafsir Ibn Kathir on 31:6 2.00 | Sahih al-Bukhari 952 1.60 | Answering Sufism › 4. Invented Dhikr And Gatherings 0.77 | Sahih Muslim 2769a 0.54 | The Mawlid › Key Terms 0.51 | 5:41 0.50 | 6:17 0.47 | How to Do Ruqyah › Common Questions 0.39 | Sahih al-Bukhari 949 0.36; window=4096 instructions=888
+SOURCES: [1] Sahih al-Bukhari 5590 | [2] 31:6 | [3] Sunan Ibn Majah 4020 | [4] Tafsir Ibn Kathir on 31:6 | [5] Sahih al-Bukhari 952 | [6] Answering Sufism › 4. Invented Dhikr And Gatherings | [7] Sahih Muslim 2769a | [8] The Mawlid › Key Terms
+CITED: Sunan Ibn Majah 4020 | 31:6 | Tafsir Ibn Kathir on 31:6 | Sahih al-Bukhari 952 | Answering Sufism › 4. Invented Dhikr And Gatherings | Sahih Muslim 2769a | The Mawlid › Key Terms
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What is the evidence on this? | Do the schools of thought differ on this?
+A: The evidence suggests that listening to music is not outright forbidden, but it is viewed with caution and can become problematic under certain conditions.
+
+1. The Prophet said that some people will drink wine, play musical instruments, and sing, and that Allah will cause the earth to swallow them up and turn them into animals [3].
+2. The Quran mentions people who buy amusement and ridicule the path of Allah, and that amusement includes listening to music [2] [4].
+3. Aisha reported that Abu Bakr protested against musical instruments in the Prophet’s house, saying they belonged to Satan, but the Prophet clarified that the gathering was for an `Id, not for music [5].
+4. A commentary on Surah Luqman notes that the verse refers to singing [4].
+5. A source on Sufism states that the Prophet did not teach the use of music, swaying circles, or singing as part of his practice [6].
+6. Historical criticism of gatherings in the Prophet’s time pointed out that mixing men and women with musical instruments was seen as harmful [7] [8].
+
+Scholars differ on the exact status: some view music as permissible when not linked to intoxication or immorality, while others see it as harmful when associated with worldly distractions. For a personal ruling, consult a qualified scholar familiar with your context.
+===== Q: What does Islam say about singing?
+INTENT: scripture followUp=false engine=onDevice first token 2.2s, total 8.1s
+RETRIEVAL: 655 ms; lanes articles=3 hadithRanked=6 hadithSemantic=6 keyEvidence=5 quranKeyword=6 quranSemantic=7; ranking Sahih al-Bukhari 5590 4.13 | 31:6 2.67 | Tafsir Ibn Kathir on 31:6 2.00 | Sunan Ibn Majah 4020 1.83 | Sahih al-Bukhari 952 1.63 | 2:121 0.65 | 6:17 0.62 | Answering Sufism › 4. Invented Dhikr And Gatherings 0.55 | Sahih al-Bukhari 949 0.45 | Sahih al-Bukhari 2940 0.45 | 6:73 0.43 | 35:2 0.41; window=4096 instructions=888
+SOURCES: [1] Sahih al-Bukhari 5590 | [2] 31:6 | [3] Tafsir Ibn Kathir on 31:6 | [4] Sunan Ibn Majah 4020 | [5] Sahih al-Bukhari 952 | [6] 2:121 | [7] 6:17 | [8] Answering Sufism › 4. Invented Dhikr And Gatherings
+CITED: 31:6 | Tafsir Ibn Kathir on 31:6 | Sunan Ibn Majah 4020 | Sahih al-Bukhari 952 | 2:121 | 6:17
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about music? | Explain Luqman 31:6 in more detail | Which surah speaks most about music?
+A: The Quran and the Prophet’s words both set clear limits on singing. In Surah Al-Luqman, Allah says that some people buy amusement to lead others away from the path of God without understanding, and those people face a harsh punishment [2]. The Prophet also warned that musical instruments and singing can be used to mislead, pointing out that this warning specifically refers to singing [3].
+
+In another account, the Prophet spoke about people who drink wine, use music, and have singing girls, warning that God will cause the earth to swallow them and turn them into animals [4]. Aisha recounted a moment when Abu Bakr protested that musical instruments in the Prophet’s home were linked to Satan, and the Prophet replied that this applies to every nation’s celebration [5].
+
+These teachings show that certain forms of music and singing can be harmful if they distract from faith, but the texts do not forbid all music entirely. The Quran emphasizes that those who follow its guidance are the ones who truly believe [6]. The Prophet’s words suggest that music should not overshadow spiritual focus, especially during sacred times [7].

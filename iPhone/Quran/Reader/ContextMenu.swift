@@ -1025,9 +1025,11 @@ struct AyahContextMenuModifier: ViewModifier {
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 19, height: 19)
                             .foregroundColor(settings.accentColor.color)
-                            .conditionalGlassEffect(inRow: true)
-                            .frame(width: 22, height: 22)
+                            // The glass fills the 28pt slot, the reference pill's height (2026-11-16:
+                            // hugging the 19pt glyph, the button sat 9pt shorter than the pill beside
+                            // it). The glyph keeps the size Abu picked on 2026-11-01.
                             .frame(width: 28, height: 28)
+                            .conditionalGlassEffect(inRow: true)
                             .contentShape(Rectangle())
                     }
                     // Lands in the 28pt slot the compact search row reserves at its header's

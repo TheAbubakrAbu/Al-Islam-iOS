@@ -1,0 +1,71 @@
+===== Q: musical instruments
+INTENT: scripture followUp=false engine=onDevice first token 2.9s, total 7.3s
+RETRIEVAL: 2984 ms; lanes articles=3 hadithRanked=6 hadithSemantic=6 quranKeyword=6 quranSemantic=7; ranking 2:121 0.65 | 6:17 0.62 | Sahih al-Bukhari 949 0.60 | Sahih al-Bukhari 952 0.60 | Answering Sufism › 4. Invented Dhikr And Gatherings 0.55 | Sunan Ibn Majah 4020 0.45 | Riyad as-Salihin 1691 0.45 | 6:73 0.43 | 35:2 0.41 | The Mawlid › Key Terms 0.37 | 18:99 0.33 | 35:41 0.31; window=4096 instructions=888
+SOURCES: [1] 2:121 | [2] 6:17 | [3] Sahih al-Bukhari 949 | [4] Sahih al-Bukhari 952 | [5] Answering Sufism › 4. Invented Dhikr And Gatherings | [6] Sunan Ibn Majah 4020 | [7] Riyad as-Salihin 1691 | [8] 6:73
+CITED: 2:121 | 6:17 | Sahih al-Bukhari 949 | Sahih al-Bukhari 952 | Sunan Ibn Majah 4020 | Riyad as-Salihin 1691
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about music? | Explain Al-Baqarah 2:121 in more detail | Which surah speaks most about music?
+A: The Quran warns that those who hold the sacred text follow it faithfully, while disbelief in it leads to loss [1]. It also states that adversity and prosperity rest in Allah’s hands, without human intervention [2].
+
+The Prophet forbade musical instruments during a gathering, telling someone to leave the songs of a past conflict [3]. Later, he clarified that every people have their own celebration, rejecting the label of instruments as Satan’s [4].
+
+A hadith warns that people will drink wine and hear music, with the earth consuming them and turning them into animals [6]. Another account identifies the bell as one of Satan’s instruments [7].
+
+These texts show that the Prophet discouraged musical instruments in his presence, though the Quran itself does not explicitly forbid them [1] [3] [6] [7].
+===== Q: Is music haram?
+INTENT: ruling followUp=false engine=onDevice first token 2.1s, total 11.4s
+RETRIEVAL: 557 ms; lanes articles=3 hadithRanked=6 hadithSemantic=6 quranKeyword=6 quranSemantic=7; ranking Answering Sufism › 4. Invented Dhikr And Gatherings 0.77 | Sahih al-Bukhari 949 0.54 | Sahih al-Bukhari 242 0.54 | The Mawlid › Key Terms 0.51 | 2:121 0.50 | 6:17 0.47 | Adhan › How To Call It 0.39 | Sahih al-Bukhari 952 0.36 | Sahih al-Bukhari 4092 0.36 | 6:73 0.33 | 35:2 0.32 | Sunan Ibn Majah 4020 0.27; window=4096 instructions=888
+SOURCES: [1] Answering Sufism › 4. Invented Dhikr And Gatherings | [2] Sahih al-Bukhari 949 | [3] Sahih al-Bukhari 242 | [4] The Mawlid › Key Terms | [5] 2:121 | [6] 6:17 | [7] Adhan › How To Call It | [8] Sahih al-Bukhari 952
+CITED: Sahih al-Bukhari 949 | Sahih al-Bukhari 952 | Sahih al-Bukhari 242 | Answering Sufism › 4. Invented Dhikr And Gatherings | The Mawlid › Key Terms | 2:121 | 6:17 | Adhan › How To Call It
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What is the evidence on this? | Do the schools of thought differ on this?
+A: Music is not outright forbidden, but its use carries clear warnings rooted in the Prophet’s teachings and early Islamic practice.
+
+1. The Prophet (peace be upon him) rejected music when it was linked to falsehood: Aisha reported that he told Abu Bakr, “Musical instruments of Satan near the Prophet (p.b.u.h)?” And said, “Leave them” [2] [8].
+2. The same concern surfaced when two girls sang stories of war beside him during a holy day, and he replied, “O Abu Bakr! There is an `Id for every nation and this is our `Id” [8].
+3. He also emphasized the seriousness of intoxication: Aisha narrated that he said, “All drinks that produce intoxication are Haram (forbidden to drink)” [3].
+4. Scholars have criticized gatherings that mix men and women with music, calling such practices innovations [1] [4].
+5. The Quran warns that belief requires truthful recitation: “Those to whom We have given the Book recite it with its true recital. They [are the ones who] believe in it. And whoever disbelieves in it - it is they who are the losers” [5].
+6. The call to prayer is meant to be clear and unadorned: the scholars disliked melodies that distort the words, and the Prophet’s voice was set apart for the prayer [6] [7].
+
+Views differ on the permissibility of music in worship. Some see it as permissible when pure and not tied to falsehood, while others view it as harmful when used in gatherings that deviate from the Prophet’s guidance. For personal clarity, consult a qualified scholar familiar with local customs and legal tradition.
+===== Q: Is listening to music allowed in Islam?
+INTENT: ruling followUp=false engine=onDevice first token 2.3s, total 8.4s
+RETRIEVAL: 721 ms; lanes articles=4 hadithRanked=6 hadithSemantic=6 quranKeyword=6 quranSemantic=7; ranking Answering Sufism › 4. Invented Dhikr And Gatherings 0.77 | Sunan Ibn Majah 4020 0.54 | Sahih Muslim 2769a 0.54 | The Mawlid › Key Terms 0.51 | 5:41 0.50 | 6:17 0.47 | How to Do Ruqyah › Common Questions 0.39 | Sahih al-Bukhari 949 0.36 | Sahih al-Bukhari 1392 0.36 | 67:10 0.33 | 35:2 0.32 | Adhan › How To Call It 0.31; window=4096 instructions=888
+SOURCES: [1] Answering Sufism › 4. Invented Dhikr And Gatherings | [2] Sunan Ibn Majah 4020 | [3] Sahih Muslim 2769a | [4] The Mawlid › Key Terms | [5] 5:41 | [6] 6:17 | [7] How to Do Ruqyah › Common Questions | [8] Sahih al-Bukhari 949
+CITED: Sunan Ibn Majah 4020 | Sahih al-Bukhari 949 | Answering Sufism › 4. Invented Dhikr And Gatherings | The Mawlid › Key Terms | 5:41 | 6:17 | Sahih Muslim 2769a
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What is the evidence on this? | Do the schools of thought differ on this?
+A: Listening to music is not outright forbidden in Islam, but its permissibility depends on the context and intent behind it.
+
+1. The Prophet (peace be upon him) warned against people among his nation who would drink wine and use musical instruments, saying that Allah would cause the earth to swallow them up and turn them into animals [2].
+2. He also forbade musical instruments being played near him, even when girls were singing songs of old battles [8].
+3. The Prophet taught that dhikr, spiritual remembrance, comes from the heart and is not tied to counted litanies, circles, or dancing [1].
+4. Scholars have criticized mixing music with gatherings, calling it an innovation that harms the spirit [4].
+5. The Quran mentions that adversity and good come from Allah alone, leaving no room for assuming music itself is harmful [5] [6].
+
+Opinions differ: some view music as permissible only when used in worship or for lawful purposes, while others see it as discouraged unless it supports sincere remembrance [3] [4].
+
+For guidance tailored to your circumstances, consult a qualified scholar.
+===== Q: What does Islam say about singing?
+INTENT: scripture followUp=false engine=onDevice first token 2.0s, total 11.3s
+RETRIEVAL: 581 ms; lanes articles=3 hadithRanked=6 hadithSemantic=6 quranKeyword=6 quranSemantic=7; ranking 2:121 0.65 | 6:17 0.62 | Answering Sufism › 4. Invented Dhikr And Gatherings 0.55 | Sahih al-Bukhari 949 0.45 | Sahih al-Bukhari 2940 0.45 | 6:73 0.43 | 35:2 0.41 | The Mawlid › Key Terms 0.37 | 18:99 0.33 | 35:41 0.31 | Sahih al-Bukhari 952 0.30 | Sahih al-Bukhari 4610 0.30; window=4096 instructions=888
+SOURCES: [1] 2:121 | [2] 6:17 | [3] Answering Sufism › 4. Invented Dhikr And Gatherings | [4] Sahih al-Bukhari 949 | [5] Sahih al-Bukhari 2940 | [6] 6:73 | [7] 35:2 | [8] The Mawlid › Key Terms
+CITED: 6:73 | 6:17 | Sahih al-Bukhari 949 | Sahih al-Bukhari 2940 | Answering Sufism › 4. Invented Dhikr And Gatherings
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about music? | Explain Al-An'am 6:73 in more detail | Which surah speaks most about music?
+A: The Quran and the Prophet’s words point clearly to the limits of music. In Surah Al-An'am, Allah's words in verse 6:73 [6] declare that the Creator is the one who gives life and control over all things, and that His word is truth. The same chapter, in verse 6:17 [2], says that hardship and ease belong only to Him. These verses suggest that music, when linked to worldly matters, does not belong to the path.
+
+Ahmad ibn Hanbal, a scholar from the early Islamic tradition, wrote in his book that music is not permitted unless it is tied to worship [4]. In a hadith by Aisha, recorded in Sahih al-Bukhari 949 [4], the Prophet turned away when women sang songs of war near him, and he asked that the instruments be left. This shows that music used for anything other than praise is discouraged.
+
+The Prophet also wrote to Caesar, inviting him to Islam, and a companion was sent to deliver the message [5]. These actions show that the Prophet valued clear communication and the avoidance of distractions that could cloud the message. The early community, including companions like Ibn Mas‘ud, spoke against practices that did not align with the teachings of the Prophet [3].
+
+In summary, Islam teaches that music must serve worship and remain humble. Music that is used for gatherings, dancing, or mixing in ways that do not honor the Divine is not supported. The Quran and the Prophet’s words together emphasize that the focus must stay on submission and remembrance.

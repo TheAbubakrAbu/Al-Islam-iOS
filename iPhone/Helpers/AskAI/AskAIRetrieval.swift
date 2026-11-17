@@ -22,6 +22,8 @@ import Foundation
 enum AskAIRetriever {
     enum Lane: String, CaseIterable {
         case subject, surahName, carried, prayer, tips, settings, articles
+        /// The evidence the question's topic is settled on (`keyEvidence`), above every search hit.
+        case keyEvidence
         /// The article the chat was opened from (its page's Ask AI button): `retrieve(focus:)`.
         case focus
         case quranSemantic, quranKeyword, quranTopics
@@ -53,7 +55,7 @@ enum AskAIRetriever {
     static func weights(for question: AskAIQuestion) -> [Lane: Double] {
         var w: [Lane: Double] = [
             .subject: 24, .surahName: 1.6, .carried: 0.6, .prayer: 12, .tips: 0.15, .settings: 0.15, .articles: 1.1,
-            .focus: 3.2,
+            .focus: 3.2, .keyEvidence: 8,
             .quranSemantic: 1.0, .quranKeyword: 0.95, .quranTopics: 0.7,
             .hadithSemantic: 0.9, .hadithRanked: 0.9, .hadithTopics: 0.85,
             .names: 0.8, .duas: 0.8,
@@ -63,7 +65,7 @@ enum AskAIRetriever {
         case .appHelp:
             w[.tips] = 30
             w[.settings] = 34
-            scale([.articles, .focus, .quranSemantic, .quranKeyword, .quranTopics, .hadithSemantic, .hadithRanked, .hadithTopics, .names, .duas, .surahName], 0.05)
+            scale([.articles, .focus, .quranSemantic, .quranKeyword, .quranTopics, .hadithSemantic, .hadithRanked, .hadithTopics, .names, .duas, .surahName, .keyEvidence], 0.05)
         case .scripture:
             scale([.quranSemantic, .quranKeyword, .quranTopics], 1.3)
         case .hadith:
@@ -129,6 +131,10 @@ enum AskAIRetriever {
         let nameOnly = named.subjects.contains(where: { if case .name = $0.kind { return true } else { return false } })
             && question.contentWords.count <= 2
         for (rank, source) in named.support.enumerated() { pool.add(source, lane: .surahName, rank: rank) }
+        // Lane: the evidence the question's topic is settled on, ranked above every search hit.
+        for (rank, source) in (await keyEvidenceSources(for: question, budget: budget)).enumerated() {
+            pool.add(source, lane: .keyEvidence, rank: rank)
+        }
         if question.isFollowUp {
             // The previous turn's sources stay in the pool ("why?" is about THOSE), stripped of
             // their subject mark: a subject belongs to the question that named it.
@@ -714,6 +720,81 @@ enum AskAIRetriever {
             if score > 0 { scored.append((section, score, headingHint)) }
         }
         return scored.sorted { $0.1 > $1.1 }.prefix(limit).map { (section: $0.0, headingAnswersShape: $0.2) }
+    }
+
+    // MARK: - Lane: key evidence
+
+    /// One piece of the evidence a topic is settled on.
+    enum KeyEvidence: Equatable {
+        /// A verse. `tafsir` adds Ibn Kathir's commentary on it, for a verse whose bearing on the
+        /// topic is in the commentary (31:6 says "the amusement of speech"; in Ibn Kathir, Ibn
+        /// Mas'ud swears by Allah that it means singing).
+        case ayah(surah: Int, ayah: Int, tafsir: Bool)
+        /// A hadith by its collection's slug and its printed number (sunnah.com's).
+        case hadith(slug: String, number: Int)
+    }
+
+    /// The evidence a topic is settled on, ranked above every search result: the smallest version of
+    /// the 2026-11-05 review's recommendation 10 (a topic index). Keyed by the lexicon's canonical
+    /// topic, so every word in the topic's lexicon row reaches it ("music", "singing", "instruments").
+    ///
+    /// Searching cannot find these on its own. No verse says "music", so the Quran lanes handed the
+    /// model 2:121 and 6:17, and Bukhari 5590 (the ma'azif hadith) lost to the Eid hadiths on all four
+    /// music questions of the 2026-11-16 replay: "Is music haram?" was answered "Music is not outright
+    /// forbidden", with Abu Bakr's "musical instruments of Satan" put in the Prophet's mouth. A topic
+    /// goes in only with the sources a scholar opens first, each checked in this app's own text.
+    ///
+    /// A topic's list is also long enough to fill most of the turn's sources: with two entries, the
+    /// rest of the slots still went to the meaning search's guesses (6:17, the letter to Caesar), and
+    /// Bukhari 949 came in clipped at "Leave them.", which the model read as the Prophet forbidding
+    /// the girls' singing. Bukhari 952 is the same Eid report in words that cannot be misread ("There
+    /// is an Id for every nation and this is our Id"), and it is the exception every ruling on music
+    /// discusses, so it belongs in the list on its own merits.
+    static let keyEvidence: [String: [KeyEvidence]] = [
+        "music": [
+            .hadith(slug: "bukhari", number: 5590),     // people who will make musical instruments lawful
+            .ayah(surah: 31, ayah: 6, tafsir: true),    // "the amusement of speech"; Ibn Mas'ud: singing
+            .hadith(slug: "ibnmajah", number: 4020),    // instruments and singing girls, the earth swallows them
+            .hadith(slug: "bukhari", number: 952),      // the girls on Eid: "this is our Id"
+        ],
+    ]
+
+    /// The key evidence for the question's topic, as sources, in the table's order.
+    private static func keyEvidenceSources(for question: AskAIQuestion, budget: Budget) async -> [AskAISource] {
+        guard let topic = AskAILexicon.canonicalTopic(in: question.contentWords),
+              let evidence = keyEvidence[topic] else { return [] }
+        var out: [AskAISource] = []
+        for item in evidence {
+            switch item {
+            case .ayah(let surah, let ayah, let tafsir):
+                #if HAS_QURAN
+                let quranData = QuranData.shared
+                if let source = AskAISourceFactory.ayah(surah: surah, ayah: ayah, quranData: quranData,
+                                                        maxCharacters: budget.sourceCharacters) {
+                    out.append(source)
+                }
+                if tafsir, let source = AskAISourceFactory.tafsir(surah: surah, ayah: ayah, quranData: quranData,
+                                                                  maxCharacters: budget.sourceCharacters + 200) {
+                    out.append(source)
+                }
+                #else
+                _ = (surah, ayah, tafsir)
+                #endif
+            case .hadith(let slug, let number):
+                #if HAS_HADITH
+                guard let book = HadithCatalogBook.bySlug[slug], let data = HadithStore.shared.book(book),
+                      let hadith = data.hadith(referenced: number) else { continue }
+                await prewarmHadithText([(data, hadith.row)])
+                if let source = AskAISourceFactory.hadith(book: book, data: data, hadith: hadith,
+                                                          maxCharacters: budget.sourceCharacters + 100) {
+                    out.append(source)
+                }
+                #else
+                _ = (slug, number)
+                #endif
+            }
+        }
+        return out
     }
 
     // MARK: - Lane: hadith, ranked over the major collections

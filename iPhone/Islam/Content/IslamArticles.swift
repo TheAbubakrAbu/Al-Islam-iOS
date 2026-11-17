@@ -49,6 +49,7 @@ enum IslamArticles {
         case "NamesOfAllahPillarView": return AnyView(NamesOfAllahPillarView())
         case "QuranPillarView": return AnyView(QuranPillarView())
         case "MuqattaatPillarView": return AnyView(MuqattaatPillarView())
+        case "QuranWordsPillarView": return AnyView(QuranWordsPillarView())
         case "ProphetPillarView": return AnyView(ProphetPillarView())
         case "SunnahPillarView": return AnyView(SunnahPillarView())
         case "HadithPillarView": return AnyView(HadithPillarView())

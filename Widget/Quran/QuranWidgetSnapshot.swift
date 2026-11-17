@@ -87,6 +87,10 @@ struct QuranWidgetSnapshot: Codable {
     /// The reader's Arabic face when the snapshot was written, for an ayah the widget has to typeset
     /// itself (one chosen while the app was not running, before the app pre-renders it).
     var arabicFontName: String?
+    /// The Chosen Ayah widget's Random Ayah pool (2026-11-17): the Ayah of the Day's short, gentle
+    /// ayahs as `surah * 1000 + ayah`, in mushaf order. Refs only: the widget takes its text from the
+    /// app's pre-rendered cards, else the pack.
+    var randomRefs: [Int]?
 
     init(
         lastRead: AyahCard? = nil,

@@ -371,15 +371,12 @@ enum CrossLanguageWordHighlight {
         return c
     }()
 
+    /// What one Quran row lights beyond the base highlighter's own match, a list of UTF-16 spans per line.
+    typealias QuranSpans = (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange], transliteration: [NSRange])
+
     private final class QuranSpansEntry: NSObject {
-        let arabic: [NSRange]
-        let saheeh: [NSRange]
-        let mustafa: [NSRange]
-        init(_ spans: (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange])) {
-            arabic = spans.arabic
-            saheeh = spans.saheeh
-            mustafa = spans.mustafa
-        }
+        let spans: QuranSpans
+        init(_ spans: QuranSpans) { self.spans = spans }
     }
 
     /// One row's whole answer, by content (the query, the rule and the three strings): a row asks
@@ -414,15 +411,21 @@ enum CrossLanguageWordHighlight {
     /// Never the three together: read by hand on 2026-11-15 the pack's pairs that are not the
     /// gloss's own were right 98 times in 100 for Saheeh and 95 for Khattab, and adding a looser
     /// source to a line a surer one had already lit only added its mistakes.
+    ///
+    /// `transliteration` is the row's own transliteration LINE ("Marfoo'atim mutah-hara"), both ways
+    /// (2026-11-16). A Latin query the base highlighter found there lights the Arabic word it spells,
+    /// and that word's English, the way an Arabic query does ("mutah" lit "mutah" and nothing else):
+    /// see `transliterationTokens`. And the Arabic words a query names, typed in Arabic or reached
+    /// through a translation line, light the words of the line that spell them: see
+    /// `transliterationSpans`. A row that does not show the line passes "" and pays for neither.
     static func quranSpans(query: String, surah: Int, ayah: Int, rawText: String, displayText: String,
-                           saheeh: String, mustafa: String, wordRule: SearchWordRule = .anywhere)
-    -> (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange]) {
-        let key = "q\(wordRule.rawValue)\u{0000}\(query)\u{0000}\(surah):\(ayah)\u{0000}\(displayText.hashValue)\u{0000}\(saheeh.hashValue)\u{0000}\(mustafa.hashValue)" as NSString
-        if let cached = quranSpansCache.object(forKey: key) {
-            return (cached.arabic, cached.saheeh, cached.mustafa)
-        }
+                           saheeh: String, mustafa: String, transliteration: String = "",
+                           wordRule: SearchWordRule = .anywhere) -> QuranSpans {
+        let key = "q\(wordRule.rawValue)\u{0000}\(query)\u{0000}\(surah):\(ayah)\u{0000}\(displayText.hashValue)\u{0000}\(saheeh.hashValue)\u{0000}\(mustafa.hashValue)\u{0000}\(transliteration.hashValue)" as NSString
+        if let cached = quranSpansCache.object(forKey: key) { return cached.spans }
         let spans = computeQuranSpans(query: query, surah: surah, ayah: ayah, rawText: rawText,
-                                      displayText: displayText, saheeh: saheeh, mustafa: mustafa, wordRule: wordRule)
+                                      displayText: displayText, saheeh: saheeh, mustafa: mustafa,
+                                      transliteration: transliteration, wordRule: wordRule)
         // The lexicon answers empty until it has loaded, and a row asked in that window must ask again.
         if lexiconIsLoaded {
             quranSpansCache.setObject(QuranSpansEntry(spans), forKey: key)
@@ -431,8 +434,13 @@ enum CrossLanguageWordHighlight {
     }
 
     private static func computeQuranSpans(query: String, surah: Int, ayah: Int, rawText: String, displayText: String,
-                                          saheeh: String, mustafa: String, wordRule: SearchWordRule)
-    -> (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange]) {
+                                          saheeh: String, mustafa: String, transliteration: String,
+                                          wordRule: SearchWordRule) -> QuranSpans {
+        // The words of the transliteration line that spell these Arabic words.
+        func spelled(_ tokens: Set<Int>) -> [NSRange] {
+            transliterationSpans(of: tokens, transliteration: transliteration, surah: surah, ayah: ayah,
+                                 rawText: rawText, displayText: displayText)
+        }
         func alignment(_ translation: WordAlignmentStore.Translation, _ english: String) -> [Int?]? {
             guard !english.isEmpty else { return nil }
             return WordAlignmentStore.shared.arabicTokens(
@@ -470,25 +478,389 @@ enum CrossLanguageWordHighlight {
             // The morphological Arabic spans are ADDITIVE: tokens of the same word family the plain
             // highlighter misses (صلاتهم for a صلاة query) light up in the Arabic line too.
             let arabicExtra = arabicSpansForArabicQuery(query: query, in: displayText, wordRule: wordRule)
-            return (arabicExtra, line(saheeh, .saheeh), line(mustafa, .mustafa))
+            return (arabicExtra, line(saheeh, .saheeh), line(mustafa, .mustafa), spelled(matched))
         } else {
             // The Arabic follows what the base highlighter painted in EITHER translation line, so a
             // phrase and a half-typed word work ("straight pa" is ٱلصِّرَٰط and ٱلۡمُسۡتَقِيم), where the
             // gloss lane below can only compare whole typed words with gloss words.
             var words = Set<Int>()
-            for (text, translation) in [(saheeh, WordAlignmentStore.Translation.saheeh), (mustafa, .mustafa)] {
-                guard let alignment = alignment(translation, text) else { continue }
-                words.formUnion(arabicTokens(under: query, in: text, alignment: alignment, wordRule: wordRule))
+            let saheehAlignment = alignment(.saheeh, saheeh)
+            let mustafaAlignment = alignment(.mustafa, mustafa)
+            for (text, lineAlignment) in [(saheeh, saheehAlignment), (mustafa, mustafaAlignment)] {
+                guard let lineAlignment else { continue }
+                words.formUnion(arabicTokens(under: query, in: text, alignment: lineAlignment, wordRule: wordRule))
             }
+            // What the query found in the TRANSLITERATION line is the Arabic word it spells: lit in the
+            // Arabic, and its English lit by the pack, as for an Arabic query. The English line's own
+            // match is the base highlighter's to paint, so only these words add English spans.
+            let spoken = transliterationTokens(query: query, transliteration: transliteration, surah: surah,
+                                               ayah: ayah, rawText: rawText, displayText: displayText,
+                                               wordRule: wordRule)
+            // The other way round, a word a TRANSLATION line named lights the line's word for it. A
+            // word found in the line itself is left alone there: the base highlighter has painted the
+            // typed letters, and a match is never grown to its word.
+            let meant = words.subtracting(spoken)
+            words.formUnion(spoken)
+            let ranges = WordTokens.ranges(in: displayText)
             if !words.isEmpty {
-                let ranges = WordTokens.ranges(in: displayText)
-                return (words.sorted().filter { $0 < ranges.count }.map { ranges[$0] }, [], [])
+                func english(_ text: String, _ lineAlignment: [Int?]?) -> [NSRange] {
+                    guard !spoken.isEmpty, let lineAlignment else { return [] }
+                    return englishSpans(rendering: spoken, alignment: lineAlignment, in: text)
+                }
+                return (words.sorted().filter { $0 < ranges.count }.map { ranges[$0] },
+                        english(saheeh, saheehAlignment), english(mustafa, mustafaAlignment), spelled(meant))
             }
             let own = arabicSpansForEnglishMatch(
                 query: query, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText
             )
-            return (own.isEmpty ? arabicSpansForEnglishQuery(query, arabicText: displayText) : own, [], [])
+            let arabic = own.isEmpty ? arabicSpansForEnglishQuery(query, arabicText: displayText) : own
+            // These two lanes answer in spans: the words they lit are the tokens the spans touch.
+            let lit = Set(ranges.indices.filter { index in
+                arabic.contains { NSIntersectionRange($0, ranges[index]).length > 0 }
+            })
+            return (arabic, [], [], spelled(lit))
         }
+    }
+
+    // MARK: Transliteration line → Arabic words
+
+    /// The Arabic tokens (indices into `WordTokens.ranges(in: displayText)`) under what a Latin `query`
+    /// matched in the row's transliteration LINE.
+    ///
+    /// The line ("Laa yamassuhooo illal mutahharoon") is a reading transliteration whose words do not
+    /// follow the Arabic's: "illal" is إِلَّا plus the next word's article, "mutah-hara" one word written
+    /// in two pieces. The gloss pack's per-word transliteration (`lā yamassuhu illā l-muṭaharūna`) does
+    /// follow it, token for token. So both are folded to bare letters and lined up letter by letter
+    /// (an edit-distance walk where a vowel for a vowel is cheap: "oo" against "ū"), and each matched
+    /// letter votes for the token its partner belongs to. A token needs two votes and a third of the
+    /// match's letters, so the article "l" that "illal" carries does not light ٱلۡمُطَهَّرُونَ.
+    ///
+    /// Any overlap counts, not only a match at a word's start as on the English lines: a
+    /// transliteration word glues its particles on ("bissabri" is بِٱلصَّبۡرِ), and "sabr" typed inside
+    /// it is that word. Under three letters nothing is lit (a two-letter query matches half the line).
+    static func transliterationTokens(query: String, transliteration: String, surah: Int, ayah: Int,
+                                      rawText: String, displayText: String,
+                                      wordRule: SearchWordRule = .anywhere) -> Set<Int> {
+        guard !transliteration.isEmpty, !query.containsArabicLetters,
+              foldedTransliterationLetters(query).count >= 3 else { return [] }
+        let matches = HighlightedSnippet.matchRanges(of: query, in: transliteration, wordRule: wordRule)
+            .map { NSRange($0, in: transliteration) }
+        guard !matches.isEmpty,
+              let map = transliterationAlignment(surah: surah, ayah: ayah, transliteration: transliteration,
+                                                 rawText: rawText, displayText: displayText) else { return [] }
+        var tokens = Set<Int>()
+        for match in matches {
+            var votes: [Int: Int] = [:]
+            var letters = 0
+            for (index, offset) in map.lineOffsets.enumerated()
+            where offset >= match.location && offset < match.location + match.length {
+                letters += 1
+                if let token = map.tokenForLetter[index] { votes[token, default: 0] += 1 }
+            }
+            let needed = max(2, (letters + 2) / 3)
+            for (token, count) in votes where count >= needed { tokens.insert(token) }
+        }
+        return tokens
+    }
+
+    // MARK: Arabic words → transliteration line
+
+    /// The words of the transliteration LINE that spell the Arabic `tokens` (indices into
+    /// `WordTokens.ranges(in: displayText)`): `transliterationTokens` the other way round, over the
+    /// same letter-by-letter walk.
+    ///
+    /// The line is read in PIECES, cut at spaces and hyphens ("Ihdinas-Siraatal-Mustaqeem" is three),
+    /// and a piece is lit WHOLE when all its letters but one are the words asked for. That one is
+    /// the next word's article, which the line writes onto the word before it: إِلَّا lights "illal"
+    /// whole, and ٱلۡمُطَهَّرُونَ, with a single letter there, lights only "mutahharoon".
+    ///
+    /// A piece the line wrote two Arabic words into ("fiddunyaa", "'alaakulli": some 150 in the
+    /// Quran) is lit by its letters instead, each word its own run of two letters or more: فِي is
+    /// "fi" and ٱلدُّنۡيَا "ddunyaa". Lit neighbours join into one span, so "mutah-hara", one word in
+    /// two pieces, is painted through its hyphen.
+    ///
+    /// Measured over the whole Quran on 2026-11-16, one word asked at a time: of 77,430 words, 7
+    /// light nothing (the gloss pack has no spelling of their own for them: the مَا of "baʿdamā"),
+    /// 430 light part of a written word, and 3 of the line's 91,048 pieces are lit by no word.
+    static func transliterationSpans(of tokens: Set<Int>, transliteration: String, surah: Int, ayah: Int,
+                                     rawText: String, displayText: String) -> [NSRange] {
+        guard !tokens.isEmpty, !transliteration.isEmpty,
+              let map = transliterationAlignment(surah: surah, ayah: ayah, transliteration: transliteration,
+                                                 rawText: rawText, displayText: displayText) else { return [] }
+        var spans: [NSRange] = []
+        // Whether the piece before this one was lit through its last letter: this one, lit from its
+        // first, is then the same span.
+        var joins = false
+        func light(from start: Int, to end: Int, joining: Bool) {
+            if joining, let last = spans.last {
+                spans[spans.count - 1] = NSRange(location: last.location, length: end - last.location)
+            } else {
+                spans.append(NSRange(location: start, length: end - start))
+            }
+        }
+
+        // The piece being read: its ink, and each letter's ink and whether it is one of the words'.
+        var inkStart = -1, inkEnd = 0, openBrackets = 0, markStart = -1
+        var starts: [Int] = [], ends: [Int] = [], mine: [Bool] = []
+
+        func closePiece() {
+            defer {
+                inkStart = -1; openBrackets = 0; markStart = -1
+                starts.removeAll(keepingCapacity: true)
+                ends.removeAll(keepingCapacity: true)
+                mine.removeAll(keepingCapacity: true)
+            }
+            let owned = mine.lazy.filter { $0 }.count
+            guard owned > 0 else { joins = false; return }
+            if mine.count - owned <= 1 {
+                light(from: inkStart, to: inkEnd, joining: joins)
+                joins = true
+                return
+            }
+            var reachedTheEnd = false
+            var index = 0
+            while index < mine.count {
+                guard mine[index] else { index += 1; continue }
+                var stop = index
+                while stop + 1 < mine.count, mine[stop + 1] { stop += 1 }
+                if stop > index {
+                    let isLast = stop == mine.count - 1
+                    light(from: index == 0 ? inkStart : starts[index], to: isLast ? inkEnd : ends[stop],
+                          joining: index == 0 && joins)
+                    reachedTheEnd = isLast
+                }
+                index = stop + 1
+            }
+            joins = reachedTheEnd
+        }
+
+        var letter = 0
+        var offset = 0
+        for character in transliteration {
+            let length = character.utf16.count
+            defer { offset += length }
+            if isTransliterationSeparator(character) {
+                closePiece()
+                continue
+            }
+            var isLetter = false
+            while letter < map.lineOffsets.count, map.lineOffsets[letter] == offset {
+                isLetter = true
+                // A mark before a letter is that letter's: the ' of "maa'aqaloohu" opens the second word.
+                starts.append(markStart >= 0 ? markStart : offset)
+                ends.append(offset + length)
+                mine.append(map.tokenForLetter[letter].map { tokens.contains($0) } ?? false)
+                letter += 1
+            }
+            // The ink is the letters and the marks that stand for one (the ' of 'aalameen). A comma
+            // or a caret at a piece's edge is left out, and a bracket the piece opened is closed:
+            // "barq(unwi)" is the word with its ending, bracket and all.
+            if isLetter || transliterationLetterMarks.contains(character) {
+                if inkStart < 0 { inkStart = offset }
+                inkEnd = offset + length
+                markStart = isLetter ? -1 : (markStart >= 0 ? markStart : offset)
+            } else {
+                markStart = -1
+                if character == "(", inkStart >= 0 {
+                    openBrackets += 1
+                } else if character == ")", openBrackets > 0 {
+                    openBrackets -= 1
+                    inkEnd = offset + length
+                }
+            }
+        }
+        closePiece()
+        return spans
+    }
+
+    /// The marks a transliteration writes a letter with: the hamza and the ʿayn.
+    private static let transliterationLetterMarks: Set<Character> = ["'", "\u{2019}", "\u{2018}", "`", "\u{02BF}", "\u{02BE}", "\u{02BC}", "\u{02BB}"]
+
+    /// What cuts the line into pieces: a space, or the hyphen of "Ihdinas-Siraatal-Mustaqeem".
+    private static func isTransliterationSeparator(_ character: Character) -> Bool {
+        character == "-" || character.isWhitespace
+    }
+
+    /// The transliteration line lined up with the pack's per-word transliteration, letter by letter.
+    final class TransliterationAlignment: NSObject {
+        /// UTF-16 offset in the line of each folded letter.
+        let lineOffsets: [Int]
+        /// The display token each folded letter belongs to, nil in a piece of the line no word reached.
+        let tokenForLetter: [Int?]
+        init(lineOffsets: [Int], tokenForLetter: [Int?]) {
+            self.lineOffsets = lineOffsets
+            self.tokenForLetter = tokenForLetter
+        }
+    }
+
+    nonisolated(unsafe) private static let transliterationAlignmentCache: NSCache<NSString, TransliterationAlignment> = {
+        let c = NSCache<NSString, TransliterationAlignment>()
+        c.countLimit = 500
+        return c
+    }()
+
+    static func transliterationAlignment(surah: Int, ayah: Int, transliteration: String,
+                                         rawText: String, displayText: String) -> TransliterationAlignment? {
+        let key = "\(surah):\(ayah)\u{0000}\(transliteration.hashValue)\u{0000}\(displayText.hashValue)" as NSString
+        if let cached = transliterationAlignmentCache.object(forKey: key) { return cached }
+        guard let words = WordByWordStore.shared.transliterations(surah: surah, ayah: ayah, rawText: rawText,
+                                                                 displayText: displayText) else { return nil }
+
+        func isVowel(_ c: UInt8) -> Bool { c == 97 || c == 101 || c == 105 || c == 111 || c == 117 || c == 121 }
+
+        // The line's letters with where each came from, the piece of the line it is in, whether it
+        // only LENGTHENS the letter before it (a vowel written again straight after itself, the
+        // second and third "a" of "maaa"), and whether it OPENS a word of the line (the first letter
+        // after a space).
+        var lineLetters: [UInt8] = []
+        var lineOffsets: [Int] = []
+        var linePieces: [Int] = []
+        var lengthens: [Bool] = []
+        var opensWord: [Bool] = []
+        var offset = 0, piece = 0, previousEnd = -1, afterSpace = true
+        for character in transliteration {
+            let length = character.utf16.count
+            if isTransliterationSeparator(character) { piece += 1 }
+            if character.isWhitespace { afterSpace = true }
+            for letter in foldedTransliterationLetters(String(character)) {
+                lengthens.append(offset == previousEnd && lineLetters.last == letter && letter != 121
+                                 && isVowel(letter))
+                opensWord.append(afterSpace)
+                afterSpace = false
+                lineLetters.append(letter)
+                lineOffsets.append(offset)
+                linePieces.append(piece)
+                previousEnd = offset + length
+            }
+            offset += length
+        }
+        // The pack's letters with the token each belongs to, and what each costs to leave without a
+        // partner: a consonant 8 and a vowel 4, but a vowel that OPENS its word 2 and one that ENDS
+        // it 3. Those two are what reading drops. The opening one goes in connected reading ("inna
+        // alladhīna" is read, and written here, "Innal lazeena"), so of two like vowels meeting at a
+        // word boundary the line's one letter is the first word's: "Innal" stays إِنَّ with one
+        // letter of the next, not "Inn" and two. The ending one goes at a pause ("'alaih;" for
+        // "ʿalayhi").
+        //
+        // `packLate` marks a letter in the second half of a word of four letters or more. A letter
+        // that opens a word of the LINE is not one of those (see the walk): after "'alaih; innal"
+        // the "i" is إِنَّ's, not the ending the pause took from the word before. Shorter words are
+        // left out: "qeelad 'oo" is قِيلَ ٱدۡعُواْ, and the "oo" that opens a word there is the last
+        // letter of a three-letter one.
+        var packLetters: [UInt8] = []
+        var packTokens: [Int] = []
+        var packAlone: [Int32] = []
+        var packLate: [Bool] = []
+        for (token, word) in words.enumerated() {
+            // The pack writes ذ and ث with two letters, the line with one ("dhālika" is "zaalika",
+            // "thumma" is "summa"). Where a d or a t only meets an h the pack parts them ("d'h").
+            let spelled = word.lowercased().replacingOccurrences(of: "dh", with: "z")
+                .replacingOccurrences(of: "th", with: "s")
+            let letters = foldedTransliterationLetters(spelled)
+            for (index, letter) in letters.enumerated() {
+                packLetters.append(letter)
+                packTokens.append(token)
+                packAlone.append(!isVowel(letter) ? 8 : (index == 0 ? 2 : (index == letters.count - 1 ? 3 : 4)))
+                packLate.append(letters.count >= 4 && index * 2 >= letters.count)
+            }
+        }
+        let n = lineLetters.count, m = packLetters.count
+        // 2:282, the longest ayah, is about 700 by 700; past a few million cells something is off.
+        guard n > 0, m > 0, n * m <= 4_000_000 else { return nil }
+
+        // A lengthening letter is the cheapest to leave without a partner. That is what keeps a
+        // word's letters in the word: "maaa aatainaakum" against "mā ātaynākum" has five a's for two,
+        // and the two must be the FIRST of each word, not the last two of the run (which left "maaa"
+        // with its m alone and no Arabic word to light it).
+        func gap(_ c: UInt8) -> Int32 { isVowel(c) ? 4 : 8 }
+        // One vowel for another of its own kind is a spelling ("ee" for "ī", "oo" for "ū", "au" for
+        // "aw"). Of another kind it is dearer than leaving both alone, so an ending the line drops at
+        // a pause ("bih;" for "bihi") does not take the first vowel of the word after it.
+        func kind(_ c: UInt8) -> UInt8 {
+            switch c {
+            case 97: return 1                   // a
+            case 101, 105, 121: return 2        // e i y
+            case 111, 117, 119: return 3        // o u w
+            default: return 0
+            }
+        }
+        func substitution(_ a: UInt8, _ b: UInt8) -> Int32 {
+            if a == b { return 0 }
+            let first = kind(a), second = kind(b)
+            guard first != 0, second != 0 else { return 12 }
+            return first == second ? 4 : 10
+        }
+
+        // Edit distance with a move per cell: 0 diagonal, 1 up (a line letter with no partner), 2 left.
+        let width = m + 1
+        var cost = [Int32](repeating: 0, count: (n + 1) * width)
+        var move = [UInt8](repeating: 0, count: (n + 1) * width)
+        for j in 1...m { cost[j] = cost[j - 1] + packAlone[j - 1]; move[j] = 2 }
+        for i in 1...n {
+            let row = i * width, above = (i - 1) * width
+            let a = lineLetters[i - 1]
+            let alone: Int32 = lengthens[i - 1] ? 2 : gap(a)
+            let opens = opensWord[i - 1]
+            // A lengthening letter is rarely anyone's partner. Left free to be, the third "a" of
+            // "abnaaa'al lazeena" took the ending of أَبۡنَآءَ and pushed the fourth onto ٱلَّذِينَ.
+            let lengthening: Int32 = lengthens[i - 1] ? 5 : 0
+            cost[row] = cost[above] + alone
+            move[row] = 1
+            for j in 1...m {
+                let b = packLetters[j - 1]
+                var best = cost[above + j - 1] + substitution(a, b) + lengthening
+                    + (opens && packLate[j - 1] ? 4 : 0)
+                var step: UInt8 = 0
+                let up = cost[above + j] + alone
+                if up < best { best = up; step = 1 }
+                let left = cost[row + j - 1] + packAlone[j - 1]
+                if left < best { best = left; step = 2 }
+                cost[row + j] = best
+                move[row + j] = step
+            }
+        }
+        var tokenForLetter = [Int?](repeating: nil, count: n)
+        var i = n, j = m
+        while i > 0 || j > 0 {
+            let step = i == 0 ? 2 : (j == 0 ? 1 : move[i * width + j])
+            switch step {
+            case 0:
+                tokenForLetter[i - 1] = packTokens[j - 1]
+                i -= 1; j -= 1
+            case 1:
+                i -= 1
+            default:
+                j -= 1
+            }
+        }
+        // A letter left without a partner is its neighbour's: the lengthening of the letter before
+        // it ("Laa", "yamassuhooo"), or, at the head of its piece, the wasl of the word that follows
+        // (the "A" of "Ar-Rahmaan"). Within the piece only, and a piece no word reached stays nobody's.
+        var head = 0
+        while head < n {
+            var tail = head
+            while tail + 1 < n, linePieces[tail + 1] == linePieces[head] { tail += 1 }
+            if var owner = (head...tail).lazy.compactMap({ tokenForLetter[$0] }).first {
+                for index in head...tail {
+                    if let own = tokenForLetter[index] { owner = own } else { tokenForLetter[index] = owner }
+                }
+            }
+            head = tail + 1
+        }
+        let result = TransliterationAlignment(lineOffsets: lineOffsets, tokenForLetter: tokenForLetter)
+        transliterationAlignmentCache.setObject(result, forKey: key)
+        return result
+    }
+
+    /// Lowercase a to z only: marks and macrons dropped (ṭ is t, ū is u), the ʿ and ' and - gone.
+    static func foldedTransliterationLetters(_ text: String) -> [UInt8] {
+        var letters: [UInt8] = []
+        for scalar in text.decomposedStringWithCanonicalMapping.unicodeScalars where scalar.isASCII {
+            var value = UInt8(scalar.value)
+            if value >= 65, value <= 90 { value += 32 }
+            if value >= 97, value <= 122 { letters.append(value) }
+        }
+        return letters
     }
 
     /// The English words of `english` that render one of the Arabic words in `arabic`, by the pack:
@@ -3446,10 +3818,14 @@ struct WordMeaningSheet: View {
     let meaning: String
     let position: Int
     let total: Int
+    /// The page the card opens on: Quran Words opens a word on its Root page, every ayah it is in.
+    var startTab: WordStudyTab = .meaning
 
     /// Where the card is now; nil = the word that was tapped.
     @State private var current: WordLocation?
     @State private var tab: WordStudyTab = .meaning
+    /// `startTab` is applied once, so coming back from a nested sheet keeps the page the reader chose.
+    @State private var startTabApplied = false
     /// The Grammar page's lit part (nil = the stem).
     @State private var selectedSegment: Int?
 
@@ -3618,6 +3994,10 @@ struct WordMeaningSheet: View {
         .smallMediumSheetPresentation()
         .onAppear {
             WordCardTrace.stamp("appear")
+            if !startTabApplied {
+                startTabApplied = true
+                if startTab != .meaning { tab = startTab }
+            }
             #if DEBUG
             // "-wordStudyTab grammar|root|themes|tajweed|qiraat": the card opens on that page.
             let args = ProcessInfo.processInfo.arguments

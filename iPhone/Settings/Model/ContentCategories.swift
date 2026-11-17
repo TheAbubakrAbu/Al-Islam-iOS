@@ -113,11 +113,12 @@ struct ContentCategory: Identifiable {
             id: "learning", title: String(localized: "Learning Progress"), systemImage: "graduationcap.fill",
             keys: ["readingTestProgress", "readingTestPlacement", "readingTestMissed", "readingTestSpeedBest",
                    "tajweedTestProgress", "tajweedTestPlacement", "tajweedTestMissed", "tajweedTestSpeedBest",
+                   "quranWordsProgress", "quranWordsPlacement", "quranWordsMissed", "quranWordsSpeedBest", "quranWordsKnown",
                    "tajweedLessonsDone", "letterQuizBestStreak", "duaSessionProgressData"],
             files: [], summaryRank: 8,
             measure: { snapshot in
                 let lessons = snapshot.counted("tajweedLessonsDone")
-                let tiers = ["readingTestProgress", "tajweedTestProgress"].reduce(0) { sum, key in
+                let tiers = ["readingTestProgress", "tajweedTestProgress", "quranWordsProgress"].reduce(0) { sum, key in
                     sum + (CloudJSON.dictionary(snapshot.defaults[key])?.values
                         .filter { (($0 as? [String: Any])?["mastered"] as? Bool) == true }.count ?? 0)
                 }

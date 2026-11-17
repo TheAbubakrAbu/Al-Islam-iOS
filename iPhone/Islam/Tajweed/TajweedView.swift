@@ -127,6 +127,10 @@ struct TajweedCourseView: View {
                         }
                     }
 
+                    #if HAS_QURAN
+                    if shows("words") { understandSection }
+                    #endif
+
                     if shows("learnmore") { learnMoreSection }
 
                     Section(footer:
@@ -176,7 +180,7 @@ struct TajweedCourseView: View {
             SheetNavigationContainer {
                 TajweedLegendView()
             }
-            .smallMediumSheetPresentation()
+            .smallMediumSheetPresentation(startLarge: true)
         }
         #if DEBUG
         // The hook sits on the List itself: a hook on a lesson row only fires once that lazy row
@@ -467,6 +471,31 @@ struct TajweedCourseView: View {
         .accessibilityElement(children: .combine)
         .accessibilityValue(done ? String(localized: "Done") : "")
     }
+
+    // MARK: Understanding
+
+    #if HAS_QURAN
+    /// After the chapters: what to learn beside the rules (Abu, 2026-11-16). Quran Words, the most
+    /// common words of the Quran, and the rules counted the same way, both guarded against a
+    /// corridor (each links to the other).
+    private var understandSection: some View {
+        Section(header: Text("UNDERSTAND WHAT YOU RECITE")) {
+            OpenScreenLink(screen: .quranWords) {
+                QuranWordsView()
+            } label: {
+                TajweedLinkLabel(systemImage: "character.book.closed.fill", title: String(localized: "Quran Words"),
+                                 caption: String(localized: "The 500 most common words make up four in five of the words you recite"))
+            }
+
+            OpenScreenLink(screen: .tajweedRuleFrequency) {
+                TajweedRuleFrequencyView()
+            } label: {
+                TajweedLinkLabel(systemImage: "chart.bar.fill", title: String(localized: "How Often Each Rule Comes"),
+                                 caption: String(localized: "Five rules are most of the colors on every page"))
+            }
+        }
+    }
+    #endif
 
     // MARK: Learn more
 

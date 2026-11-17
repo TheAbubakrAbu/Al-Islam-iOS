@@ -896,6 +896,10 @@ struct ArabicView: View {
 
             grammarSection
 
+            #if os(iOS) && HAS_QURAN
+            quranWordsSection
+            #endif
+
             // Tashkeel, Default Tashkeel and Basic Grammar used to be link rows here too. They are
             // Explore tiles at the top now (Abu, 2026-09-22), so everything there is to STUDY is in
             // one place; the two shape pages stayed behind, next to the letters they are made of.
@@ -980,6 +984,19 @@ struct ArabicView: View {
             Text("GRAMMAR")
         }
     }
+
+    #if os(iOS) && HAS_QURAN
+    /// The Quran's most common words, after the grammar (Abu, 2026-11-16, after a reel on how few
+    /// words carry the Quran: "do something about this in tajweed and arabic"). A section of its
+    /// own, not an Explore tile: the shelf stays two rows of three.
+    private var quranWordsSection: some View {
+        Section {
+            ForEach(ArabicTopicCatalog.quranWordsTopics) { topicRow($0) }
+        } header: {
+            Text("QURAN WORDS")
+        }
+    }
+    #endif
 
     /// One study tool on the Explore shelf.
     private struct ExploreTile: Identifiable {

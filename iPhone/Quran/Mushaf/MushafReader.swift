@@ -4313,7 +4313,9 @@ private struct MushafPageContent: View {
                     highlightColor: settings.accentColor.color,
                     playingWord: playingWord.map { (surahID: $0.surah, ayahID: $0.ayah, index: $0.index, count: $0.count) },
                     playingSurahID: nowPlaying.currentSurahNumber,
-                    mark: markedAyah ?? sheetAyahTint,
+                    // Select mode shows the selection's tint and nothing else, as the list rows do
+                    // (`AyahRow.wash`): a grey mark beside the checked ayahs reads as one more of them.
+                    mark: isSelecting ? nil : (markedAyah ?? sheetAyahTint),
                     termHighlight: arrivalHighlight.map { (surahID: $0.ref.surahID, ayahID: $0.ref.ayahID, term: $0.term) },
                     searchHighlight: searchHighlight.map { highlight in
                         (matches: highlight.matches.map { (surahID: $0.surahID, ayahID: $0.ayahID) }, term: highlight.term,

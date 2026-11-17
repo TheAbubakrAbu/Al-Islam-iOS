@@ -377,25 +377,314 @@ extension QuranWidgetSnapshot.BookmarkCard {
     }
 }
 
-/// The widget's configuration: which ayah, and whether the translation rides along.
+// MARK: - What the widget shows, and how often it changes (2026-11-17)
+
+/// The widget's feed (Abu, 2026-11-17: "custom ayahs on the lock and home screen or random ayaat or
+/// random bookmarked ayaat or specific ones that we can choose"). Placed widgets from before this
+/// existed decode as `oneAyah`, the parameter's default, so they keep their ayah.
+@available(iOS 17.0, *)
+enum ChosenAyahSource: String, AppEnum {
+    case oneAyah
+    case myAyahs
+    case bookmarks
+    case anyAyah
+
+    static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Show")
+
+    static var caseDisplayRepresentations: [ChosenAyahSource: DisplayRepresentation] = [
+        .oneAyah: DisplayRepresentation(title: "One Ayah", subtitle: "The ayah you pick, or your newest bookmark"),
+        .myAyahs: DisplayRepresentation(title: "Ayahs You Pick", subtitle: "Takes turns through your list"),
+        .bookmarks: DisplayRepresentation(title: "Random Bookmark", subtitle: "A different bookmark each time"),
+        .anyAyah: DisplayRepresentation(title: "Random Ayah", subtitle: "A short ayah from anywhere in the Quran")
+    ]
+
+    var planSource: ChosenAyahPlan.Source {
+        switch self {
+        case .oneAyah: return .oneAyah
+        case .myAyahs: return .myAyahs
+        case .bookmarks: return .bookmarks
+        case .anyAyah: return .anyAyah
+        }
+    }
+}
+
+/// How often a rotating widget turns to its next ayah.
+@available(iOS 17.0, *)
+enum ChosenAyahRotation: String, AppEnum {
+    case quarterHour
+    case hour
+    case day
+
+    static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Changes")
+
+    static var caseDisplayRepresentations: [ChosenAyahRotation: DisplayRepresentation] = [
+        .quarterHour: "Every 15 Minutes",
+        .hour: "Every Hour",
+        .day: "Every Day"
+    ]
+
+    var step: ChosenAyahSchedule.Step {
+        switch self {
+        case .quarterHour: return .quarterHour
+        case .hour: return .hour
+        case .day: return .day
+        }
+    }
+}
+
+/// The widget's configuration: what it shows, how often it changes, and whether the translation
+/// rides along.
 @available(iOS 17.0, *)
 struct ChosenAyahConfigurationIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "Chosen Ayah"
-    static var description = IntentDescription("Pick one of your bookmarks, or type a reference such as 2:255 or Yaseen 9.")
+    static var description = IntentDescription("One ayah, a list that takes turns, a random bookmark or a random ayah. Pick from your bookmarks, or type a reference such as 2:255 or Yaseen 9.")
+
+    @Parameter(title: "Show", default: .oneAyah)
+    var source: ChosenAyahSource
 
     @Parameter(title: "Ayah")
     var ayah: ChosenAyahEntity?
 
+    @Parameter(title: "Ayahs")
+    var ayahs: [ChosenAyahEntity]?
+
+    @Parameter(title: "Changes", default: .hour)
+    var rotation: ChosenAyahRotation
+
     @Parameter(title: "Show Translation", default: true)
     var showTranslation: Bool
 
-    /// The surah and ayah this configuration resolves to: the choice, else the newest bookmark, else
+    /// Edit Widget lists only what the chosen feed uses: the ayah for One Ayah, the list for Ayahs
+    /// You Pick, and how often it changes for everything that takes turns.
+    static var parameterSummary: some ParameterSummary {
+        Switch(\.$source) {
+            Case(.oneAyah) {
+                Summary {
+                    \.$source
+                    \.$ayah
+                    \.$showTranslation
+                }
+            }
+            Case(.myAyahs) {
+                Summary {
+                    \.$source
+                    \.$ayahs
+                    \.$rotation
+                    \.$showTranslation
+                }
+            }
+            DefaultCase {
+                Summary {
+                    \.$source
+                    \.$rotation
+                    \.$showTranslation
+                }
+            }
+        }
+    }
+
+    /// The configuration as plain values, the form both processes schedule from.
+    var plan: ChosenAyahPlan {
+        let chosen = ayah.flatMap { ChosenAyahCatalog.isValid(surah: $0.surah, ayah: $0.ayah) ? ChosenAyahRef(surah: $0.surah, ayah: $0.ayah) : nil }
+        let list = (ayahs ?? []).compactMap { entity -> ChosenAyahRef? in
+            ChosenAyahCatalog.isValid(surah: entity.surah, ayah: entity.ayah) ? ChosenAyahRef(surah: entity.surah, ayah: entity.ayah) : nil
+        }
+        return ChosenAyahPlan(source: source.planSource, step: rotation.step, chosen: chosen, list: list)
+    }
+
+    /// The surah and ayah of a One Ayah configuration: the choice, else the newest bookmark, else
     /// Ayat al-Kursi (`ChosenAyahDefault`).
     func resolvedAyah(bookmarks: [QuranWidgetSnapshot.BookmarkCard]?) -> (surah: Int, ayah: Int) {
         if let ayah, ChosenAyahCatalog.isValid(surah: ayah.surah, ayah: ayah.ayah) {
             return (ayah.surah, ayah.ayah)
         }
         return ChosenAyahDefault.resolve(bookmarks: bookmarks)
+    }
+}
+
+/// One ayah, as a plain hashable value.
+struct ChosenAyahRef: Hashable {
+    let surah: Int
+    let ayah: Int
+}
+
+/// A placed widget's settings as plain values (no App Intents types), so the app can keep them,
+/// compare them and schedule from them exactly as the extension does.
+struct ChosenAyahPlan: Hashable {
+    enum Source: String {
+        case oneAyah, myAyahs, bookmarks, anyAyah
+    }
+
+    let source: Source
+    let step: ChosenAyahSchedule.Step
+    /// One Ayah's pick; nil = the default (the newest bookmark, else Ayat al-Kursi).
+    let chosen: ChosenAyahRef?
+    /// Ayahs You Pick, in the order they were added.
+    let list: [ChosenAyahRef]
+
+    /// Everything but One Ayah takes turns.
+    var rotates: Bool { source != .oneAyah }
+
+    /// The ayah of each slot from `date` on: the slot `date` is in first (dated `date`), then the
+    /// next `count - 1`, each dated where it begins. One Ayah is a single entry.
+    func schedule(from date: Date, count: Int, snapshot: QuranWidgetSnapshot?) -> [(date: Date, ref: ChosenAyahRef)] {
+        let fallback: ChosenAyahRef = {
+            if let chosen { return chosen }
+            let newest = ChosenAyahDefault.resolve(bookmarks: snapshot?.bookmarks)
+            return ChosenAyahRef(surah: newest.surah, ayah: newest.ayah)
+        }()
+        guard rotates else { return [(date, fallback)] }
+
+        let pool: [ChosenAyahRef]
+        var shuffled = true
+        switch source {
+        case .oneAyah:
+            pool = []
+        case .myAyahs:
+            // The list in the order it was made: "takes turns" is what was asked for.
+            pool = list
+            shuffled = false
+        case .bookmarks:
+            // No bookmarks yet: a random ayah rather than an empty widget.
+            let marks = (snapshot?.bookmarks ?? []).map { ChosenAyahRef(surah: $0.surah, ayah: $0.ayah) }
+            pool = marks.isEmpty ? (snapshot?.randomAyahPool ?? []) : marks
+        case .anyAyah:
+            pool = snapshot?.randomAyahPool ?? []
+        }
+        guard !pool.isEmpty else { return [(date, fallback)] }
+
+        let seed = ChosenAyahSchedule.seed("\(source.rawValue)|\(step.rawValue)")
+        let slots = ChosenAyahSchedule.slots(from: date, count: max(1, count), step: step, fajrByDay: snapshot?.fajrByDay)
+        let picks = ChosenAyahSchedule.picks(from: pool, slots: slots.map(\.index), shuffled: shuffled, seed: seed)
+        return zip(slots, picks).map { ($0.start, $1) }
+    }
+}
+
+/// When a rotating widget turns and what it turns to. The extension builds its timeline from this and
+/// the app pre-renders the same picks with the reader's styling, so the two must agree: everything
+/// here is a pure function of the pool, the step, the clock and the settings. No process-seeded
+/// `Hasher`, no `random()`.
+enum ChosenAyahSchedule {
+    enum Step: String {
+        case quarterHour, hour, day
+
+        /// How many entries one timeline carries: about four hours of quarters, half a day of hours,
+        /// today and tomorrow. WidgetKit asks again after the last.
+        var timelineLength: Int {
+            switch self {
+            case .quarterHour: return 16
+            case .hour: return 12
+            case .day: return 2
+            }
+        }
+
+        /// How many upcoming picks the app pre-renders (with tajweed and the reader's font) each time
+        /// it runs; a pick past these falls back to the pack's plain text until the next launch.
+        var prerenderLength: Int {
+            switch self {
+            case .quarterHour: return 16
+            case .hour: return 24
+            case .day: return 7
+            }
+        }
+    }
+
+    struct Slot {
+        /// Unique and increasing per slot.
+        let index: Int
+        /// Where the slot's entry is dated: `date` itself for the first slot, the boundary for the rest.
+        let start: Date
+        let end: Date
+    }
+
+    static func slots(from date: Date, count: Int, step: Step, fajrByDay: [String: TimeInterval]?) -> [Slot] {
+        var result: [Slot] = []
+        var cursor = date
+        for position in 0..<count {
+            let slot = slot(containing: cursor, step: step, fajrByDay: fajrByDay)
+            result.append(Slot(index: slot.index, start: position == 0 ? date : cursor, end: slot.end))
+            guard slot.end > cursor else { break }
+            cursor = slot.end
+        }
+        return result
+    }
+
+    private static func slot(containing date: Date, step: Step, fajrByDay: [String: TimeInterval]?) -> (index: Int, end: Date) {
+        switch step {
+        case .quarterHour:
+            // Every real UTC offset is a whole number of quarter hours, so UTC quarters are local ones.
+            let quarter = (date.timeIntervalSince1970 / 900).rounded(.down)
+            return (Int(quarter), Date(timeIntervalSince1970: (quarter + 1) * 900))
+        case .hour:
+            // Local hours, through the calendar: a half-hour time zone's hours start at :30 UTC.
+            let calendar = Calendar.current
+            let start = calendar.dateInterval(of: .hour, for: date)?.start ?? date
+            let end = calendar.date(byAdding: .hour, value: 1, to: start) ?? start.addingTimeInterval(3600)
+            return (Int((start.timeIntervalSince1970 / 3600).rounded(.down)), end)
+        case .day:
+            // The app's day: it turns at Fajr when the daily cards do (DailyRollover).
+            return (DailyRollover.dayIndex(for: date, fajrByDay: fajrByDay),
+                    DailyRollover.nextRollover(after: date, fajrByDay: fajrByDay))
+        }
+    }
+
+    /// The pool's pick for each slot. Shuffled: a fresh shuffle of the whole pool each time round, so
+    /// every ayah comes up once before any comes back. Otherwise the pool's own order.
+    static func picks<T>(from pool: [T], slots: [Int], shuffled: Bool, seed: UInt64) -> [T] {
+        let count = pool.count
+        guard count > 0 else { return [] }
+        var orders: [Int: [Int]] = [:]
+        return slots.map { slot in
+            let position = ((slot % count) + count) % count
+            guard shuffled, count > 1 else { return pool[position] }
+            let round = (slot - position) / count
+            let order = orders[round] ?? {
+                var generator = SplitMix64(state: seed ^ UInt64(bitPattern: Int64(round)) &* 0x9E37_79B9_7F4A_7C15)
+                var order = Array(0..<count)
+                for i in stride(from: count - 1, to: 0, by: -1) {
+                    order.swapAt(i, Int(generator.next() % UInt64(i + 1)))
+                }
+                orders[round] = order
+                return order
+            }()
+            return pool[order[position]]
+        }
+    }
+
+    /// FNV-1a: the same number in every process and on every launch, unlike `Hasher`.
+    static func seed(_ text: String) -> UInt64 {
+        var hash: UInt64 = 0xCBF2_9CE4_8422_2325
+        for byte in text.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x0000_0100_0000_01B3
+        }
+        return hash
+    }
+
+    private struct SplitMix64 {
+        var state: UInt64
+
+        mutating func next() -> UInt64 {
+            state &+= 0x9E37_79B9_7F4A_7C15
+            var z = state
+            z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+            z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+            return z ^ (z >> 31)
+        }
+    }
+}
+
+extension QuranWidgetSnapshot {
+    /// The Random Ayah pool: the short, gentle ayahs the app mirrored (`randomRefs`, the Ayah of the
+    /// Day's own pool), else the refs of the pre-rendered fallback cards.
+    var randomAyahPool: [ChosenAyahRef] {
+        if let refs = randomRefs, !refs.isEmpty {
+            return refs.map { ChosenAyahRef(surah: $0 / 1000, ayah: $0 % 1000) }
+        }
+        return randomPool.compactMap { card in
+            guard let surah = card.surah, let ayah = card.ayah else { return nil }
+            return ChosenAyahRef(surah: surah, ayah: ayah)
+        }
     }
 }
 

@@ -47,6 +47,7 @@ struct MaqsurahOrYaaView: View {
                 bareSection
                 daggerSection
                 maddSection
+                whySection
                 yaaSection
                 rulesSection
                 sideBySideSection
@@ -223,9 +224,10 @@ struct MaqsurahOrYaaView: View {
             quranRow("\u{0639}\u{064E}\u{0644}\u{064E}\u{0649} \u{0671}\u{0644}\u{06E1}\u{0645}\u{064E}\u{0644}\u{064E}\u{0670}\u{0653}\u{0626}\u{0650}\u{0643}\u{064E}\u{0629}\u{0650}",
                      reading: "'alal-malaaa'ikati",
                      note: String(localized: "To the angels (2:31): hamzatul waSl next, so you read straight into the laam"))
-            quranRow("\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649} \u{0671}\u{0644}\u{06E1}\u{0643}\u{0650}\u{062A}\u{064E}\u{0670}\u{0628}\u{064E}",
-                     reading: "Musal-kitaaba",
-                     note: String(localized: "Musa the Scripture (2:53): the same rule on a name"))
+            // Not Musa (2:53): WHY THE SMALL ALIF GOES sets that one beside 2:54.
+            quranRow("\u{0639}\u{0650}\u{064A}\u{0633}\u{064E}\u{0649} \u{0671}\u{0628}\u{06E1}\u{0646}\u{064E} \u{0645}\u{064E}\u{0631}\u{06E1}\u{064A}\u{064E}\u{0645}\u{064E}",
+                     reading: "'Eesabna maryama",
+                     note: String(localized: "'Isa son of Maryam (2:87): the same rule on a name, before a noun that opens with hamzatul waSl"))
         } header: {
             Text("ON ITS OWN: \u{0649}")
         } footer: {
@@ -272,6 +274,28 @@ struct MaqsurahOrYaaView: View {
             Text("WITH ALIF SAGHEERAH AND MADD: \u{0649}\u{0670}\u{0653}")
         } footer: {
             Text("The madd sign over the small alif appears only when the next word opens with a hamza. That is madd munfasil, the separated madd: the \u{201C}aa\u{201D} is held 4 or 5 counts in Hafs.")
+        }
+    }
+
+    // MARK: Why the small alif goes
+
+    /// Why the bare spelling exists at all (Abu, 2026-11-16, after a reel on مُوسَى ٱلۡكِتَٰبَ: "the
+    /// alif maqsuurah has an alif sagheera IF the next word doesn't have hamzatul wasl"). Re-checked
+    /// over every word of the Hafs text that day: a bare ى comes before hamzatul waSl 578 times and
+    /// after a tanween 93 times, and nowhere else, ayah ends included (87:1 into 87:2). The one ىٰ
+    /// before hamzatul waSl ends Taha (20:135), where the next word starts another surah.
+    private var whySection: some View {
+        Section {
+            quranRow("\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649} \u{0671}\u{0644}\u{06E1}\u{0643}\u{0650}\u{062A}\u{064E}\u{0670}\u{0628}\u{064E} \u{00B7} \u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649}\u{0670} \u{0644}\u{0650}\u{0642}\u{064E}\u{0648}\u{06E1}\u{0645}\u{0650}\u{0647}\u{0650}\u{06E6}",
+                     reading: "Musal-kitaaba \u{00B7} Musaa liqawmihee",
+                     note: String(localized: "Musa the Scripture \u{00B7} Musa to his people (2:53, 2:54): one name, one ayah apart, spelled two ways"))
+
+            Text("The letter after hamzatul waSl always has a sukoon or a shaddah, and Arabic never says a long vowel straight into one. So when you read on, the \u{201C}aa\u{201D} of alif maqSoorah is not said, and the small alif, the mark that shows that \u{201C}aa\u{201D}, is left off with it. A full letter stays written either way: \u{0641}\u{0650}\u{064A} \u{0671}\u{0644}\u{06E1}\u{0623}\u{064E}\u{0631}\u{06E1}\u{0636}\u{0650} still prints the yaa of \u{0641}\u{0650}\u{064A}, though you say \u{201C}fil-arDi\u{201D} (2:11).")
+                .font(.body)
+        } header: {
+            Text("WHY THE SMALL ALIF GOES")
+        } footer: {
+            Text("The mushaf spells for reading on, even across the end of an ayah: \u{0671}\u{0644}\u{06E1}\u{0623}\u{064E}\u{0639}\u{06E1}\u{0644}\u{064E}\u{0649} closes 87:1 with no small alif, because 87:2 opens with \u{0671}\u{0644}\u{0651}\u{064E}\u{0630}\u{0650}\u{064A}. Over the whole Hafs text, a bare \u{0649} comes only before hamzatul waSl (578 times) or after a tanween (93).")
         }
     }
 

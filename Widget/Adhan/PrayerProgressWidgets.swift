@@ -849,6 +849,194 @@ struct NextPrayerProgressWidget: Widget {
     }
 }
 
+// MARK: - Prayer Ring (lock screen and home screen)
+
+/// The countdown ring the Prayer Ring widgets wear: the capacity gauge's look (a dim track, the bright arc
+/// running clockwise from twelve) holding what is LEFT of the current prayer's window, so it empties as
+/// the next prayer comes, with the current prayer's symbol in the middle. Abu, 2026-11-16, from a lock
+/// screen photo: "add a widget like that as a lock screen and maybe home screen too".
+///
+/// In a widget a circular `ProgressView(timerInterval:)` IS that gauge and WidgetKit runs it live between
+/// timeline entries. Outside a widget the same view is the indeterminate spinner, so the in-app gallery
+/// (`previewWidgetFamily` set) draws the gauge itself from the entry's own moment.
+@available(iOS 16.0, *)
+struct PrayerCountdownRing: View {
+    let current: Prayer
+    let next: Prayer
+    /// The entry's date, for the gallery's still gauge (never `Date()`, see `PrayerIntervalProgressBar`).
+    let entryDate: Date
+    /// nil on the lock screen, where the system's vibrant rendering colours it.
+    var tint: Color? = nil
+    var symbolFont: Font = .system(size: 17, weight: .semibold)
+
+    @Environment(\.previewWidgetFamily) private var previewWidgetFamily
+
+    private var remainingFraction: Double {
+        let total = next.time.timeIntervalSince(current.time)
+        guard total > 0 else { return 0 }
+        return min(max(next.time.timeIntervalSince(entryDate) / total, 0), 1)
+    }
+
+    var body: some View {
+        ZStack {
+            Group {
+                if previewWidgetFamily != nil {
+                    Gauge(value: remainingFraction) { EmptyView() }
+                        .gaugeStyle(.accessoryCircularCapacity)
+                } else {
+                    ProgressView(timerInterval: current.time...next.time, countsDown: true,
+                                 label: { EmptyView() }, currentValueLabel: { EmptyView() })
+                        .progressViewStyle(.circular)
+                }
+            }
+            .tint(tint)
+
+            Image(systemName: current.image)
+                .font(symbolFont)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// Lock screen, rectangular: the ring, then the NEXT prayer's name, the live countdown to it and the
+/// city, three lines in the weather widget's grammar (name and countdown bold, the place regular).
+@available(iOS 16.0, *)
+struct PrayerRingLockView: View {
+    var entry: PrayersProvider.Entry
+
+    var body: some View {
+        if let current = entry.currentPrayer, let next = entry.nextPrayer, current.time < next.time {
+            HStack(spacing: 10) {
+                PrayerCountdownRing(current: current, next: next, entryDate: entry.date)
+                    .frame(width: 58, height: 58)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(next.displayName.localizedDisplay)
+                        .font(.headline.bold())
+
+                    PrayerRingTimer(entry: entry, next: next)
+                        .font(.headline.bold().monospacedDigit())
+
+                    if !entry.currentCity.isEmpty {
+                        Text(entry.currentCity)
+                            .font(.subheadline)
+                    }
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+        } else {
+            Text("Open app to get prayer times")
+                .font(.caption)
+        }
+    }
+}
+
+/// The time left until the next prayer, ticking down live and stopping at zero (a `.timer` style
+/// counts back UP once its date passes, until the timeline's next entry lands).
+@available(iOS 16.0, *)
+struct PrayerRingTimer: View {
+    let entry: PrayersProvider.Entry
+    let next: Prayer
+
+    var body: some View {
+        Text(timerInterval: min(entry.date, next.time)...next.time, countsDown: true)
+    }
+}
+
+@available(iOS 16.0, *)
+struct PrayerRingLockWidget: Widget {
+    let kind: String = AdhanWidgetKind.PrayerRingLockWidget.rawValue
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
+            PrayerRingLockView(entry: entry)
+                .widgetContainerBackground(accessory: true)
+        }
+        .supportedFamilies([.accessoryRectangular])
+        .configurationDisplayName("Prayer Ring")
+        .description("A ring that empties as the next prayer comes, with its countdown and your city")
+    }
+}
+
+/// Home screen, small: the same ring and lines, stacked. The ring sits top-leading in the accent, the
+/// next prayer and its countdown hold the bottom, and the city (with the weather when it is on) closes.
+@available(iOS 16.0, *)
+struct PrayerRingSmallView: View {
+    var entry: PrayersProvider.Entry
+    /// true = rendered inside the sky-gradient twin: everything recolors to white.
+    var skyStyle: Bool = false
+
+    var body: some View {
+        if let current = entry.currentPrayer, let next = entry.nextPrayer, current.time < next.time {
+            VStack(alignment: .leading, spacing: 0) {
+                PrayerCountdownRing(current: current, next: next, entryDate: entry.date,
+                                    tint: skyStyle ? .white : entry.accentColor.color,
+                                    symbolFont: .system(size: 18, weight: .semibold))
+                    .foregroundColor(skyStyle ? .white : entry.accentColor.color)
+                    .frame(width: 56, height: 56)
+
+                Spacer(minLength: 4)
+
+                Text(next.displayName.localizedDisplay)
+                    .font(.headline.bold())
+                    .foregroundColor(skyStyle ? .white : entry.accentColor.color)
+
+                PrayerRingTimer(entry: entry, next: next)
+                    .font(.title.bold().monospacedDigit())
+                    .foregroundColor(skyStyle ? .white : .primary)
+
+                WidgetCityWeatherLine(city: entry.currentCity, weather: entry.weather)
+                    .font(.caption)
+                    .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
+                    .padding(.top, 1)
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+        } else {
+            PrayerWidgetEmptyState(tint: entry.accentColor.color, skyStyle: skyStyle)
+        }
+    }
+}
+
+@available(iOS 16.0, *)
+struct PrayerRingWidget: Widget {
+    let kind: String = AdhanWidgetKind.PrayerRingWidget.rawValue
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
+            PrayerRingSmallView(entry: entry)
+                .widgetContainerBackground(legacyPadding: true)
+        }
+        .supportedFamilies([.systemSmall])
+        .configurationDisplayName("Prayer Ring")
+        .description("A ring that empties as the next prayer comes, with its countdown and your city")
+    }
+}
+
+/// The Prayer Ring widget, unchanged, over the current prayer's sky gradient.
+@available(iOS 16.0, *)
+struct PrayerRingSkyWidget: Widget {
+    let kind: String = AdhanWidgetKind.PrayerRingSkyWidget.rawValue
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
+            PrayerRingSmallView(entry: entry, skyStyle: true)
+                .modifier(PrayerSkyChrome(entry: entry))
+        }
+        .supportedFamilies([.systemSmall])
+        .configurationDisplayName("Prayer Ring Sky")
+        .description("The Prayer Ring over the current prayer's sky gradient")
+    }
+}
+
 // MARK: - Home screen: small prayer list
 
 /// Every prayer of the day as compact rows in a small widget - the whole schedule at a glance where

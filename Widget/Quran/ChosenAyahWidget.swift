@@ -30,13 +30,30 @@ struct ChosenAyahProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> QuranWidgetEntry { Self.sample }
 
     func snapshot(for configuration: Intent, in context: Context) async -> QuranWidgetEntry {
-        context.isPreview ? Self.sample : Self.entry(for: configuration)
+        guard !context.isPreview else { return Self.sample }
+        let snapshot = QuranWidgetStore.load()
+        let first = configuration.plan.schedule(from: Date(), count: 1, snapshot: snapshot).first
+        return Self.entry(for: configuration, ref: first?.ref, date: Date(), snapshot: snapshot, pack: nil)
     }
 
     func timeline(for configuration: Intent, in context: Context) async -> Timeline<QuranWidgetEntry> {
-        // Only the app (a re-rendered card, a changed bookmark) or a configuration change moves this
-        // widget, and both reload the timeline; nothing here changes with the clock.
-        Timeline(entries: [Self.entry(for: configuration)], policy: .never)
+        let snapshot = QuranWidgetStore.load()
+        let plan = configuration.plan
+        // One Ayah changes only when the app moves it (a re-rendered card, a changed bookmark) or the
+        // configuration changes, and both reload the timeline. The rest take turns on the clock: one
+        // entry per slot, and WidgetKit asks again after the last.
+        let picks = plan.schedule(from: Date(), count: plan.rotates ? plan.step.timelineLength : 1, snapshot: snapshot)
+        // One pack open for the whole timeline, and only if some pick has no card from the app.
+        var pack: QuranPack?
+        var packOpened = false
+        let entries = picks.map { pick -> QuranWidgetEntry in
+            if !packOpened, snapshot?.chosenCard(surah: pick.ref.surah, ayah: pick.ref.ayah) == nil {
+                pack = ChosenAyahText.openPack()
+                packOpened = true
+            }
+            return Self.entry(for: configuration, ref: pick.ref, date: pick.date, snapshot: snapshot, pack: pack)
+        }
+        return Timeline(entries: entries, policy: plan.rotates ? .atEnd : .never)
     }
 
     /// The gallery preview and the loading placeholder: representative, never blank.
@@ -53,14 +70,15 @@ struct ChosenAyahProvider: AppIntentTimelineProvider {
         )
     }
 
-    static func entry(for configuration: Intent) -> QuranWidgetEntry {
-        let snapshot = QuranWidgetStore.load()
-        let target = configuration.resolvedAyah(bookmarks: snapshot?.bookmarks)
+    /// The entry for one ayah (`ref`; nil = the configuration's own single ayah).
+    static func entry(for configuration: Intent, ref: ChosenAyahRef?, date: Date,
+                      snapshot: QuranWidgetSnapshot?, pack: QuranPack?) -> QuranWidgetEntry {
+        let target = ref.map { (surah: $0.surah, ayah: $0.ayah) } ?? configuration.resolvedAyah(bookmarks: snapshot?.bookmarks)
         let bookmark = snapshot?.bookmarks?.first { $0.surah == target.surah && $0.ayah == target.ayah }
         let reference = ChosenAyahCatalog.displayReference(surah: target.surah, ayah: target.ayah)
 
         let card = snapshot?.chosenCard(surah: target.surah, ayah: target.ayah)
-            ?? ChosenAyahText.card(surah: target.surah, ayah: target.ayah, fontName: snapshot?.arabicFontName)
+            ?? ChosenAyahText.card(surah: target.surah, ayah: target.ayah, fontName: snapshot?.arabicFontName, pack: pack)
         let arabic = (card?.arabic ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let english = (card?.english ?? bookmark?.english ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let note = bookmark?.note?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -74,11 +92,19 @@ struct ChosenAyahProvider: AppIntentTimelineProvider {
             return snippet(english)
         }()
 
+        // The header's symbol says where the ayah came from: a bookmark, the shuffle, or a quote.
+        let icon: String
+        switch configuration.source {
+        case .anyAyah: icon = "shuffle"
+        case .bookmarks: icon = "bookmark.fill"
+        case .oneAyah, .myAyahs: icon = bookmark != nil ? "bookmark.fill" : "text.quote"
+        }
+
         return QuranWidgetEntry(
-            date: Date(),
+            date: date,
             kind: .chosenAyah,
             title: reference,
-            icon: bookmark != nil ? "bookmark.fill" : "text.quote",
+            icon: icon,
             primaryText: primary,
             secondaryText: (note?.isEmpty == false) ? note : nil,
             tertiaryText: translation,
@@ -100,8 +126,13 @@ struct ChosenAyahProvider: AppIntentTimelineProvider {
 /// it is opened per read and released after it (a pack kept for the process held ~3 MB of the
 /// widget's ~30 MB for good).
 enum ChosenAyahText {
-    static func card(surah: Int, ayah: Int, fontName: String?) -> QuranWidgetSnapshot.AyahCard? {
-        guard let pack = QuranPackLoader.url("quran", allowContainingApp: true).flatMap({ QuranPack(url: $0) }),
+    static func openPack() -> QuranPack? {
+        QuranPackLoader.url("quran", allowContainingApp: true).flatMap { QuranPack(url: $0) }
+    }
+
+    /// `pack`: one the caller opened for several reads (a rotating widget's timeline); nil opens one.
+    static func card(surah: Int, ayah: Int, fontName: String?, pack: QuranPack? = nil) -> QuranWidgetSnapshot.AyahCard? {
+        guard let pack = pack ?? openPack(),
               let meta = pack.surahs.first(where: { $0.id == surah }),
               (1...meta.numberOfAyahs).contains(ayah),
               let text = pack.text(row: meta.firstRow + ayah - 1) else { return nil }
@@ -129,7 +160,7 @@ struct ChosenAyahWidget: Widget {
         }
         .supportedFamilies(chosenAyahWidgetFamilies())
         .configurationDisplayName("Chosen Ayah")
-        .description("An ayah you choose: one of your bookmarks, or any reference you type. Hold the widget and choose Edit Widget to pick it.")
+        .description("An ayah you choose, a list that takes turns, a random bookmark or a random ayah. Hold the widget and choose Edit Widget.")
         .disfavoredInCarPlay()
     }
 }

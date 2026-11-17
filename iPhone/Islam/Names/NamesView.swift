@@ -1417,7 +1417,8 @@ private struct NameRow: View, Equatable {
                             guaranteeMatch: fieldMatches.arabic
                         )
                             .arabicFontDesign(custom: useFontArabic && fontArabic != Settings.systemArabicFontName)
-                            .lineLimit(2)
+                            // One word a line (`displayArabicName`): Dhul-Jalaali-Wal-Ikram needs three.
+                            .lineLimit(3)
                             // A two-word name's lines align on the right, as Arabic does: in a
                             // right-to-left interface that is the leading edge.
                             .multilineTextAlignment(layoutDirection == .rightToLeft ? .leading : .trailing)
@@ -1730,7 +1731,9 @@ private struct NameGridTile: View, Equatable {
                 .arabicFontDesign(custom: useFontArabic && fontArabic != Settings.systemArabicFontName)
                 .foregroundColor(accentColor.color)
                 .multilineTextAlignment(.center)
-                .lineLimit(2)
+                // `displayArabicName` puts each word on its own line, and Dhul-Jalaali-Wal-Ikram has
+                // three: a two-line cap cut it to "ذُو / الجَلَالِ..." (Abu, 2026-11-16).
+                .lineLimit(3)
                 .minimumScaleFactor(0.7)
 
             Text(name.transliteration)

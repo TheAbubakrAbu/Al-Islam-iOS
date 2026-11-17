@@ -5099,14 +5099,11 @@ struct QuranView: View {
                 }
             }
         } label: {
+            // The label leads and the Arabic ends the row, flush with the trailing edge the way the
+            // Names list and the word grammar rows set theirs. It used to lead inside a 70 pt box
+            // aligned to the box's far side, so a short word (عَنِيد) floated in from the edge with
+            // a gap the row never explained (Abu, 2026-11-16: "weird padding or alignment").
             HStack(spacing: 12) {
-                Text(arabic)
-                    .font(.custom(settings.quranArabicFontName(for: nil), size: 22))
-                    .arabicFontDesign(custom: true)
-                    .foregroundColor(settings.accentColor.color)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .frame(minWidth: 70, alignment: .trailing)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(kind)
                         .font(.subheadline.weight(.semibold))
@@ -5115,6 +5112,13 @@ struct QuranView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
+                Text(arabic)
+                    .font(.custom(settings.quranArabicFontName(for: nil), size: 22))
+                    .arabicFontDesign(custom: true)
+                    .foregroundColor(settings.accentColor.color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .layoutPriority(1)
             }
             .padding(.vertical, 2)
         }

@@ -226,11 +226,14 @@ struct WidgetGalleryView: View {
                 Item("Prayer Glance Sky", .systemSmall, sky: true) { PrayerGradientEntryView(entry: entry) },
                 Item("Prayer Countdown", .systemSmall) { CountdownEntryView(entry: entry) },
                 Item("Simple Countdown", .systemSmall) { SimpleEntryView(entry: entry) },
+                Item("Prayer Ring", .systemSmall) { PrayerRingSmallView(entry: entry) },
+                Item("Prayer Ring Sky", .systemSmall, sky: true) { PrayerRingSmallView(entry: entry, skyStyle: true) },
                 Item("Prayer List", .systemSmall) { PrayerListSmallView(entry: entry) },
                 Item("Moon Phase", .systemSmall) { MoonEntryView(entry: entry) },
             ]
         case "lock":
             return [
+                Item("Prayer Ring", .accessoryRectangular) { PrayerRingLockView(entry: entry) },
                 Item("Current & Next Prayer", .accessoryRectangular) { LockScreen2EntryView(entry: entry) },
                 Item("Current Prayer Progress", .accessoryRectangular) { NextPrayerProgressView(entry: entry) },
                 Item("Prayer Wave", .accessoryRectangular) { PrayerWaveView(entry: entry) },

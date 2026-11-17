@@ -1,0 +1,503 @@
+# The Quran Words list: key (the corpus headword, see Scripts/build_quran_vocabulary.py),
+# its Arabic as shown (Uthmani marks), and its meaning. Reviewed by hand, 2026-11-16.
+# Verbs are given as the past he-form the Arabic shows (قَالَ he said).
+مِن	مِن	from; of
+اللَّه	ٱللَّه	Allah
+ما	مَا	what; not
+لا	لَا	no; not; do not
+فِي	فِي	in
+إِنّ	إِنَّ	indeed, truly
+قالَ	قَالَ	he said
+الَّذِي	ٱلَّذِي	who, which (the one who)
+عَلَى	عَلَىٰ	on, upon; against
+كانَ	كَانَ	he was
+PRON:3MS	هُوَ	he, it; him, his
+رَبّ	رَبّ	Lord
+PRON:3MP	هُمۡ	they; them, their
+مَن	مَن	who; whoever
+إِلَى	إِلَىٰ	to, toward
+إِن	إِن	if; not
+إِلّا	إِلَّا	except, but
+أَن	أَن	that; to (before a verb)
+آمَنَ	ءَامَنَ	he believed
+PRON:2MP	أَنتُمۡ	you (plural); your
+QUL:ذَٰلِك	ذَٰلِكَ	that
+عَن	عَن	from; about
+أَرْض	أَرۡض	earth, land
+إِذا	إِذَا	when
+قَد	قَدۡ	indeed, already (before a past verb)
+QUL:يَوْم	يَوۡم	day
+قَوْم	قَوۡم	people, nation
+آيَة	ءَايَة	sign; ayah (verse)
+عَلِمَ	عَلِمَ	he knew
+أَنّ	أَنَّ	that
+كُلّ	كُلّ	every, all
+لَم	لَمۡ	did not
+جَعَلَ	جَعَلَ	he made
+ثُمّ	ثُمَّ	then
+رَسُول	رَسُول	messenger
+عَذاب	عَذَاب	punishment
+QUL:هَٰذَا	هَٰذَا	this
+سَماء	سَمَآء	sky, heaven
+إِذ	إِذۡ	when (in the past)
+نَفْس	نَفۡس	soul, self
+كَفَرَ	كَفَرَ	he disbelieved
+شَىْء	شَيۡء	thing
+أَو	أَوۡ	or
+جاءَ	جَآءَ	he came
+عَمِلَ	عَمِلَ	he did, he worked
+آتَى	ءَاتَىٰ	he gave
+رَأَى	رَءَا	he saw
+بَيْن	بَيۡنَ	between
+أَتَى	أَتَىٰ	he came; he brought (with bi)
+كِتاب	كِتَٰب	book, scripture
+حَقّ	حَقّ	truth; right
+قَبْل	قَبۡل	before
+ناس	نَاس	people, mankind
+شاءَ	شَآءَ	he willed
+QUL:أُولَٰٓئِك	أُوْلَٰٓئِكَ	those
+مُؤْمِن	مُؤۡمِن	believer
+لَو	لَوۡ	if (only), had
+بَعْد	بَعۡد	after
+عِند	عِندَ	with, near (in the presence of)
+PRON:3FS	هِيَ	she, it; her
+خَلَقَ	خَلَقَ	he created
+أَنزَلَ	أَنزَلَ	he sent down
+خَيْر	خَيۡر	good; better
+سَبِيل	سَبِيل	way, path
+كَذَّبَ	كَذَّبَ	he denied, called it a lie
+PRON:1P	نَحۡنُ	we; us, our
+دَعا	دَعَا	he called, he prayed
+أَمْر	أَمۡر	command; matter, affair
+اتَّقَى	ٱتَّقَىٰ	he feared (Allah), was mindful of Him
+لَمّا	لَمَّا	when; not yet
+مَع	مَعَ	with
+عَلِيم	عَلِيم	All-Knowing
+PRON:2MS	أَنتَ	you (one man); your
+بَعْض	بَعۡض	some, part
+ذُو	ذُو	possessor of, having
+كافِر	كَٰفِر	disbeliever
+آخِر	ءَاخِر	last; the Hereafter (al-akhirah)
+QUL:أَيُّهَا	أَيُّهَا	O (you): as in ya ayyuha
+إِلٰه	إِلَٰه	god, deity
+جَنَّة	جَنَّة	garden; Paradise
+غَيْر	غَيۡر	other than; not
+PRON:1S	أَنَا۠	I; me, my
+نار	نَار	fire
+دُون	دُون	besides, other than
+هَدَى	هَدَىٰ	he guided
+حَتَّى	حَتَّىٰ	until
+أَرادَ	أَرَادَ	he wanted, he intended
+أَم	أَمۡ	or (in questions)
+اتَّبَعَ	ٱتَّبَعَ	he followed
+مُوسَى	مُوسَىٰ	Musa (Moses)
+قَلْب	قَلۡب	heart
+عَبْد	عَبۡد	slave, servant (of Allah)
+أَرْسَلَ	أَرۡسَلَ	he sent
+ظالِم	ظَالِم	wrongdoer
+لَعَلّ	لَعَلَّ	perhaps; so that
+أَخَذَ	أَخَذَ	he took, he seized
+أَهْل	أَهۡل	people, family (of)
+بَل	بَلۡ	rather, nay
+اتَّخَذَ	ٱتَّخَذَ	he took (as)
+عَبَدَ	عَبَدَ	he worshipped
+يَد	يَد	hand
+مُبِين	مُبِين	clear
+رَحِيم	رَحِيم	Most Merciful
+دُنْيا	دُنۡيَا	this world (the nearer life)
+رَحْمَة	رَحۡمَة	mercy
+ظَلَمَ	ظَلَمَ	he wronged
+عَظِيم	عَظِيم	great, tremendous
+سَأَلَ	سَأَلَ	he asked
+وَجَدَ	وَجَدَ	he found
+لَن	لَنۡ	will never
+أَجْر	أَجۡر	reward
+عِلْم	عِلۡم	knowledge
+عَزِيز	عَزِيز	All-Mighty
+أَخْرَجَ	أَخۡرَجَ	he brought out
+حَكِيم	حَكِيم	All-Wise
+أَكَلَ	أَكَلَ	he ate
+هَل	هَلۡ	is? do? (asks a question)
+دِين	دِين	religion; judgment (yawm ad-din)
+قَوْل	قَوۡل	saying, word
+غَفُور	غَفُور	Oft-Forgiving
+لَيْسَ	لَيۡسَ	is not
+شَيْطان	شَيۡطَٰن	Shaytan, devil
+فَعَلَ	فَعَلَ	he did
+مَثَل	مَثَل	example, parable
+مَلَك	مَلَك	angel
+نَظَرَ	نَظَرَ	he looked
+مال	مَال	wealth
+وَلِيّ	وَلِيّ	protector, ally
+هُدًى	هُدًى	guidance
+ذَكَرَ	ذَكَرَ	he remembered, he mentioned
+فَضْل	فَضۡل	bounty, favor
+لَيْل	لَيۡل	night
+خافَ	خَافَ	he feared
+صَلاة	صَلَوٰة	prayer
+قَتَلَ	قَتَلَ	he killed
+كَيْف	كَيۡفَ	how
+أَوَّل	أَوَّل	first
+أَكْثَر	أَكۡثَر	most; more
+بُنَىّ	بَنُونَ	sons, children (Bani Isra'il)
+رَجَعَ	رَجَعَ	he returned
+أَصْحاب	أَصۡحَٰب	companions, people (of)
+تَوَلَّى	تَوَلَّىٰ	he turned away
+سَمِعَ	سَمِعَ	he heard
+أَمَرَ	أَمَرَ	he commanded
+جَهَنَّم	جَهَنَّم	Hell
+حَياة	حَيَوٰة	life
+دَخَلَ	دَخَلَ	he entered
+ذِكْر	ذِكۡر	remembrance; reminder
+زَوْج	زَوۡج	spouse; pair, kind
+أَخ	أَخ	brother
+لَوْلا	لَوۡلَآ	if not for; why not
+مِثْل	مِثۡل	like, the like of
+نَبِيّ	نَبِيّ	prophet
+أَحَد	أَحَد	one, anyone
+خالِد	خَٰلِد	abiding forever
+صالِح	صَٰلِح	righteous
+فِرْعَوْن	فِرۡعَوۡن	Fir'awn (Pharaoh)
+جَزَى	جَزَىٰ	he repaid, he rewarded
+عالَم	عَٰلَم	world (al-alamin: the worlds)
+أَطاعَ	أَطَاعَ	he obeyed
+أَلِيم	أَلِيم	painful
+أَوْحَى	أَوۡحَىٰ	he revealed, he inspired
+وَجْه	وَجۡه	face
+أَشْرَكَ	أَشۡرَكَ	he associated partners (with Allah)
+أَلْقَى	أَلۡقَىٰ	he threw, he cast
+إِنسان	إِنسَٰن	human being
+بَيِّنَة	بَيِّنَة	clear proof
+عَمَل	عَمَل	deed, work
+QUL:يَوْمَئِذ	يَوۡمَئِذٍ	on that day
+آخَر	ءَاخَر	other, another
+قَلِيل	قَلِيل	little, few
+قُرْءان	قُرۡءَان	Quran, recitation
+قِيامَة	قِيَٰمَة	Resurrection (yawm al-qiyamah)
+وَعَدَ	وَعَدَ	he promised
+إِبْراهِيم	إِبۡرَٰهِيم	Ibrahim (Abraham)
+أَنفَقَ	أَنفَقَ	he spent
+بَيْت	بَيۡت	house
+غَفَرَ	غَفَرَ	he forgave
+لٰكِن	لَٰكِنۡ	but
+لٰكِنّ	لَٰكِنَّ	but (indeed)
+يَمِين	يَمِين	right hand; oath
+آباء	ءَابَآء	fathers, forefathers
+أَحْبَبْ	أَحَبَّ	he loved
+أَصابَ	أَصَابَ	he struck; it befell
+أَضَلَّ	أَضَلَّ	he led astray
+أُمَّة	أُمَّة	nation, community
+ابْن	ٱبۡن	son
+تابَ	تَابَ	he repented; (Allah) accepted repentance
+كَثِير	كَثِير	many, much
+ماء	مَآء	water
+صالِحَة	صَٰلِحَٰت	righteous deeds
+كَسَبَ	كَسَبَ	he earned
+نَزَّلَ	نَزَّلَ	he sent down (in stages)
+تَلَى	تَلَىٰ	he recited
+رَزَقَ	رَزَقَ	he provided
+QUL:أَىّ	أَيّ	which; any
+صادِق	صَادِق	truthful
+قَضَى	قَضَىٰ	he decreed, he judged
+نَصَرَ	نَصَرَ	he helped
+نِساء	نِسَآء	women
+سَيِّئَة	سَيِّئَة	evil deed
+صَبَرَ	صَبَرَ	he was patient
+نَذِير	نَذِير	warner
+جَرَيْ	جَرَىٰ	it flowed, it ran
+رَحْمٰن	رَحۡمَٰن	Most Gracious
+عَيْن	عَيۡن	eye; spring
+قَرْيَة	قَرۡيَة	town
+نَهار	نَهَار	daytime
+شَدِيد	شَدِيد	severe, strong
+شَهِيد	شَهِيد	witness
+مَسَّ	مَسَّ	he touched
+وَلَد	وَلَد	child, son
+أَمّا	أَمَّا	as for
+رِزْق	رِزۡق	provision
+ضَرَبَ	ضَرَبَ	he struck; he set forth (an example)
+أَقامَ	أَقَامَ	he established
+قاتَلَ	قَٰتَلَ	he fought
+نَهَر	نَهَر	river
+جَمِيع	جَمِيع	all, together
+خَرَجَ	خَرَجَ	he went out
+ضَلَّ	ضَلَّ	he went astray
+أَجَل	أَجَل	term, appointed time
+بَعَثَ	بَعَثَ	he sent; he raised (the dead)
+خَلْق	خَلۡق	creation
+مُجْرِم	مُجۡرِم	criminal
+أَحْيا	أَحۡيَا	he gave life
+أَهْلَكَ	أَهۡلَكَ	he destroyed
+بَصِير	بَصِير	All-Seeing
+تَحْت	تَحۡت	under, beneath
+تَذَكَّرَ	تَذَكَّرَ	he took heed, he remembered
+افْتَرَى	ٱفۡتَرَىٰ	he invented (a lie)
+سُوء	سُوٓء	evil, harm
+عَدُوّ	عَدُوّ	enemy
+مَوْت	مَوۡت	death
+نِعْمَة	نِعۡمَة	favor, blessing
+أَعْلَم	أَعۡلَم	knows best, most knowing
+زادَ	زَادَ	he increased
+عَقَلُ	عَقَلَ	he understood, he reasoned
+غَيْب	غَيۡب	the unseen
+كَتَبَ	كَتَبَ	he wrote; he prescribed
+مُتَّقي	مُتَّقِينَ	the God-fearing
+وَعْد	وَعۡد	promise
+بَصَر	بَصَر	sight, eyes
+دار	دَار	home, abode
+ساعَة	سَاعَة	hour; the Hour
+مُلْك	مُلۡك	dominion, kingdom
+سَمِيع	سَمِيع	All-Hearing
+ظَنَّ	ظَنَّ	he thought, he assumed
+أَب	أَب	father
+شَكَرَ	شَكَرَ	he thanked, he was grateful
+نَبَّأَ	نَبَّأَ	he informed
+إِيمان	إِيمَٰن	faith
+حَكَمَ	حَكَمَ	he judged
+خَبِير	خَبِير	All-Aware
+صِراط	صِرَٰط	path
+قَدِير	قَدِير	All-Powerful
+يَذَرَ	يَذَرُ	he leaves (alone)
+أَنذَرَ	أَنذَرَ	he warned
+حَسِبَ	حَسِبَ	he thought, he supposed
+شَهِدَ	شَهِدَ	he witnessed, he testified
+صَدْر	صَدۡر	chest, breast
+مَلَكَتْ	مَلَكَ	he owned, he possessed
+مُشْرِك	مُشۡرِك	polytheist
+نادَى	نَادَىٰ	he called out
+إِسْرائِيل	إِسۡرَٰٓءِيل	Isra'il (Ya'qub)
+حَمْد	حَمۡد	praise
+نُوح	نُوح	Nuh (Noah)
+نُور	نُور	light
+أُدْخِلَ	أَدۡخَلَ	he admitted, he made (someone) enter
+اسْتَطاعَ	ٱسۡتَطَاعَ	he was able
+جَزاء	جَزَآء	recompense, reward
+سَبَّحَ	سَبَّحَ	he glorified
+سَلام	سَلَٰم	peace
+سَوْف	سَوۡفَ	will (later)
+كَلِمَة	كَلِمَة	word
+بَحْر	بَحۡر	sea
+حَمَلَ	حَمَلَ	he carried
+سُبْحان	سُبۡحَٰن	glory be (to)
+عَذَّبَ	عَذَّبَ	he punished
+عَلَّمَ	عَلَّمَ	he taught
+فَوْق	فَوۡق	above, over
+أَرَيْ	أَرَىٰ	he showed
+اسْتَغْفَرَ	ٱسۡتَغۡفَرَ	he asked forgiveness
+اسْتَكْبَرَ	ٱسۡتَكۡبَرَ	he was arrogant
+اهْتَدَى	ٱهۡتَدَىٰ	he was guided
+بَلَغَ	بَلَغَ	he reached
+بِئْسَ	بِئۡسَ	how evil, wretched is
+تَرَكَ	تَرَكَ	he left
+تَوَكَّلْ	تَوَكَّلَ	he relied, he put his trust
+خَشِيَ	خَشِيَ	he feared
+شَرِيك	شَرِيك	partner
+كَبِير	كَبِير	big, great
+وَيْل	وَيۡل	woe
+أَلا	أَلَآ	unquestionably; is it not
+إِذْن	إِذۡن	permission
+اسْم	ٱسۡم	name
+جَبَل	جَبَل	mountain
+حَرَّمَ	حَرَّمَ	he forbade, made unlawful
+حِساب	حِسَاب	account, reckoning
+ماتَ	مَاتَ	he died
+مُسْلِم	مُسۡلِم	Muslim, one who submits
+بُشِّرَ	بَشَّرَ	he gave good news
+رَضِيَ	رَضِيَ	he was pleased
+ضَلال	ضَلَٰل	error, straying
+مَعْرُوف	مَعۡرُوف	what is right, kindness
+مَيِّت	مَيِّت	dead
+مُحْسِن	مُحۡسِن	doer of good
+بَشَر	بَشَر	human, mankind
+حَشَرَ	حَشَرَ	he gathered
+ذَنب	ذَنۡب	sin
+سُلْطان	سُلۡطَٰن	authority, proof
+صَدَّ	صَدَّ	he turned away; he hindered
+فاسِق	فَاسِق	defiantly disobedient
+كُفْر	كُفۡر	disbelief
+مُسْتَقِيم	مُسۡتَقِيم	straight
+نَجَّى	نَجَّىٰ	he saved
+يَحْزُن	حَزِنَ	he grieved
+أَحْسَن	أَحۡسَن	best, better
+ذاقُ	ذَاقَ	he tasted
+رَدَّ	رَدَّ	he returned, he turned back
+إِثْم	إِثۡم	sin
+اخْتَلَفَ	ٱخۡتَلَفَ	he differed
+اسْتَوَى	ٱسۡتَوَىٰ	he rose over; he was equal
+بَيَّنُ	بَيَّنَ	he made clear
+حِين	حِين	time, while
+ذَهَبَ	ذَهَبَ	he went
+سَجَدَ	سَجَدَ	he prostrated
+مَتاع	مَتَٰع	enjoyment, provision
+مُرْسَل	مُرۡسَل	one sent, messenger
+نَسِيَ	نَسِيَ	he forgot
+نَصِير	نَصِير	helper
+أُمّ	أُمّ	mother
+آلاء	ءَالَآء	favors, blessings
+ابْتَغَى	ٱبۡتَغَىٰ	he sought
+فِتْنَة	فِتۡنَة	trial, temptation
+مَرْيَم	مَرۡيَم	Maryam (Mary)
+حَرام	حَرَام	sacred; forbidden
+شَمْس	شَمۡس	sun
+فَرِيق	فَرِيق	group, party
+قامَ	قَامَ	he stood
+كَذِب	كَذِب	lie
+كَلّا	كَلَّا	no indeed, by no means
+نَعَم#R	أَنۡعَٰم	cattle, livestock
+أَعْرَضَ	أَعۡرَضَ	he turned away
+خاسِر	خَٰسِر	loser
+ذُرِّيَّة	ذُرِّيَّة	offspring, descendants
+زَكاة	زَكَوٰة	zakah; purity
+عاقِبَة	عَٰقِبَة	end, outcome
+كاذِب	كَٰذِب	liar
+كَفَى	كَفَىٰ	he sufficed
+نَهَى	نَهَىٰ	he forbade
+أَشَدّ	أَشَدّ	stronger, more severe
+إِذًا	إِذًا	then, in that case
+حَسَنَة	حَسَنَة	good deed
+حَيْث	حَيۡثُ	where, wherever
+نَفَعَ	نَفَعَ	it benefited
+واحِدَة	وَٰحِدَة	one (feminine)
+كَأَنّ	كَأَنَّ	as if
+حُكْم	حُكۡم	judgment; wisdom
+ساءَ	سَآءَ	evil is (it was evil)
+شَرّ	شَرّ	evil; worse
+طَيِّبَة	طَيِّبَٰت	good things, pure things
+عاد	عَاد	'Aad (a people)
+عَسَى	عَسَىٰ	perhaps, it may be
+قُوَّة	قُوَّة	strength, power
+كَرِيم	كَرِيم	noble, generous
+لَبِثَ	لَبِثَ	he stayed, he remained
+مَلَأ	مَلَأ	chiefs, assembly
+واحِد	وَٰحِد	one
+وَلَّى	وَلَّىٰ	he turned (away); he made (someone) an ally
+أَبْصَرَ	أَبۡصَرَ	he saw
+جُند	جُند	soldiers, army
+رَجُل	رَجُل	man
+رِيح	رِيح	wind
+عَرْش	عَرۡش	throne
+عَهْد	عَهۡد	covenant
+نَبَأ	نَبَأ	news
+أَبَدًا	أَبَدًا	ever, forever
+أَصْبَحَ	أَصۡبَحَ	he became (by morning)
+أَصْلَحَ	أَصۡلَحَ	he set right, made peace
+أَغْنَتْ	أَغۡنَىٰ	it availed; he made rich
+أَنَّى	أَنَّىٰ	how; from where
+اسْتَجابَ	ٱسۡتَجَابَ	he responded, he answered
+حَدِيث	حَدِيث	speech, story
+رَحِمَ	رَحِمَ	he had mercy
+رِجال	رِجَال	men
+سِحْر	سِحۡر	magic
+مَسْجِد	مَسۡجِد	masjid, place of prostration
+مَصِير	مَصِير	destination
+مَغْفِرَة	مَغۡفِرَة	forgiveness
+مُؤْمِنَة	مُؤۡمِنَة	believing woman
+PRON:3FP	هُنَّ	they (women); them
+أَفْلَحَ	أَفۡلَحَ	he succeeded
+باب	بَاب	door, gate
+جاهَدَ	جَٰهَدَ	he strove, he fought
+سَواء	سَوَآء	equal, the same
+عَصا#V	عَصَىٰ	he disobeyed
+عَفا	عَفَا	he pardoned
+غافِل	غَٰفِل	heedless, unaware
+قَدَّمَ	قَدَّمَ	he sent ahead
+قَمَر	قَمَر	moon
+لُوط	لُوط	Lut (Lot)
+مَكان	مَكَان	place
+مُنافِق	مُنَٰفِق	hypocrite
+يُوسُف	يُوسُف	Yusuf (Joseph)
+آل	ءَال	family, people (of)
+أَجْمَع	أَجۡمَعِين	all together
+امْرَأَت	ٱمۡرَأَة	woman, wife
+باطِل	بَٰطِل	falsehood; in vain
+ثَمُود	ثَمُود	Thamud (a people)
+جَحِيم	جَحِيم	Hellfire
+خَوْف	خَوۡف	fear
+زَيَّنَ	زَيَّنَ	he made fair-seeming
+شَهادَة	شَهَٰدَة	testimony; the witnessed (what is seen)
+قَرِيب	قَرِيب	near
+كَيْد	كَيۡد	plot, plan
+ماذا	مَاذَا	what
+آدَم	ءَادَم	Adam
+بَأْس	بَأۡس	might; harm
+بَعِيد	بَعِيد	far
+بَغَى	بَغَىٰ	he transgressed; he sought
+جادَلُ	جَٰدَلَ	he argued, he disputed
+جُناح	جُنَاح	blame, sin
+خَلا	خَلَا	he passed (away)
+عِيسَى	عِيسَىٰ	'Isa (Jesus)
+قَدَرَ	قَدَرَ	he had power; he measured
+لِسان	لِسَان	tongue, language
+مِيثاق	مِيثَٰق	covenant, pledge
+يَشْعُرُ	يَشۡعُرُ	he perceives
+أَكْبَر	أَكۡبَر	greater, greatest
+أُنثَى	أُنثَىٰ	female
+إِيّا	إِيَّا	(it is) you alone, him alone
+تَوَفَّى	تَوَفَّىٰ	he took (the soul) in death
+حَيّ	حَيّ	living, alive
+طائِفَة	طَآئِفَة	group, party
+طَعام	طَعَام	food
+غَنِيّ	غَنِيّ	rich, free of need
+كادَ	كَادَ	he almost (did)
+لِقاء	لِقَآء	meeting
+وَراء	وَرَآء	behind, beyond
+وَكِيل	وَكِيل	guardian, trustee
+أَذِنَ	أَذِنَ	he permitted
+أَنجَى	أَنجَىٰ	he saved
+إِمّا	إِمَّا	either; whether
+بَدَّلَ	بَدَّلَ	he changed
+ذِكْرَى	ذِكۡرَىٰ	reminder
+ساجِد	سَاجِد	one who prostrates
+سَبْع	سَبۡع	seven
+ظُلُمَة	ظُلُمَٰت	darkness(es)
+فَتَنُ	فَتَنَ	he tried, he tempted
+فُلْك	فُلۡك	ship
+قَرْن	قَرۡن	generation
+لَعَنَ	لَعَنَ	he cursed
+مِسْكِين	مِسۡكِين	poor person, needy
+يَتِيم	يَتِيم	orphan
+أَذاقَ	أَذَاقَ	he made (someone) taste
+أَسْلَمَ	أَسۡلَمَ	he submitted
+بَرّ	بَرّ	land (as in land and sea); righteous
+بَلَى	بَلَىٰ	yes indeed (after a negative)
+جَمَعَ	جَمَعَ	he gathered
+جِنّ	جِنّ	jinn
+خَلْف	خَلۡف	behind; successors
+دُعاء	دُعَآء	supplication, call
+رَفَعَ	رَفَعَ	he raised
+ساحِر	سَٰحِر	magician
+سَخَّرَ	سَخَّرَ	he subjected
+سَمْع	سَمۡع	hearing
+لَدَى	لَدَى	with, at
+مَأْوَى	مَأۡوَىٰ	refuge, abode
+مَكَرَ	مَكَرَ	he plotted
+نَصْر	نَصۡر	help, victory
+وَهَبَ	وَهَبَ	he granted
+يَرْجُوا۟	يَرۡجُو	he hopes, he expects
+أَحْسَنَ	أَحۡسَنَ	he did good
+أَعْمَى	أَعۡمَىٰ	blind
+أَماتَ	أَمَاتَ	he caused to die
+اسْتُهْزِئَ	ٱسۡتَهۡزَأَ	he mocked
+اشْتَرَى	ٱشۡتَرَىٰ	he bought, he exchanged
+حَسَن	حَسَن	good, beautiful
+رُوح	رُوح	spirit, soul
+شاهِد	شَاهِد	witness
+شَهْر	شَهۡر	month
+ظَنّ	ظَنّ	assumption
+كَتَمَ	كَتَمَ	he concealed
+كَم	كَمۡ	how many
+مَشَ	مَشَىٰ	he walked
+مُسَمًّى	مُسَمًّى	appointed, specified
+مُفْسِد	مُفۡسِد	corrupter
+مُكَذِّب	مُكَذِّب	denier
+نَصِيب	نَصِيب	share, portion
+وَضَعَ	وَضَعَ	he placed; she gave birth
+أَحَلَّ	أَحَلَّ	he made lawful
+أَعَدَّ	أَعَدَّ	he prepared
+أَقْسَمُ	أَقۡسَمَ	he swore
+أَمِنَ	أَمِنَ	he felt safe; he trusted
+أَنشَأَ	أَنشَأَ	he produced, brought into being
+بَلَوْ	بَلَا	he tested, he tried
+حَقَّ	حَقَّ	it came true, it was due
+حَمِيم	حَمِيم	boiling water; close friend
+حِزْب	حِزۡب	party, faction

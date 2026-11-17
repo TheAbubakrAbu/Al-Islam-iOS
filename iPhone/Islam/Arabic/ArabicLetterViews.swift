@@ -1645,6 +1645,13 @@ struct ArabicLetterPage: View {
                 transliteration: "Musaa",
                 note: String(localized: "Musa (Moses): names ending in the \"aa\" sound use it too")
             )
+            // Right under مُوسَىٰ on purpose: the same name without its dagger alif (Abu, 2026-11-16).
+            // Byte-exact from 2:53.
+            ArabicExampleRow(
+                arabic: "\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649} \u{0671}\u{0644}\u{06E1}\u{0643}\u{0650}\u{062A}\u{064E}\u{0670}\u{0628}\u{064E}",
+                transliteration: "Musal-kitaaba",
+                note: String(localized: "Musa the Scripture (2:53): no dagger alif, because the next word opens with hamzatul waSl and the \"aa\" is not said when you read on")
+            )
             ArabicExampleRow(
                 arabic: "هُدٗى",
                 transliteration: "hudan",
@@ -1653,7 +1660,7 @@ struct ArabicLetterPage: View {
         } header: {
             Text("WITH THE DAGGER ALIF")
         } footer: {
-            Text("In the Quran the alif maqSoorah very often carries a small dagger alif (ىٰ). That tiny mark IS the alif: it writes the 2-count \"aa\" the letter stands for.")
+            Text("In the Quran the alif maqSoorah very often carries a small dagger alif (ىٰ). That tiny mark IS the alif: it writes the 2-count \"aa\" the letter stands for. So it is left off exactly where the \"aa\" is not said: before a word that opens with hamzatul waSl, where the long vowel would run into a sukoon, and after a tanween (هُدٗى).")
         }
 
         Section {

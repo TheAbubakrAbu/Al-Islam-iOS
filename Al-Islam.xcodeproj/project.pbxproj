@@ -142,6 +142,7 @@
 		7249B78C30770CAF007F1D04 /* AyahReferenceParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B76B30770CAF007F1D04 /* AyahReferenceParsingTests.swift */; };
 		6559829AF60B4FE489F63B5F /* AppLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03F9DE499C174D3EABFAD5BB /* AppLinkTests.swift */; };
 		7249B78D30770CAF007F1D04 /* AyahRowIdentityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B76C30770CAF007F1D04 /* AyahRowIdentityTests.swift */; };
+		AD85F042574D41308E5DB4FC /* QuranVocabularyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61351517E79D496DBB5A1F12 /* QuranVocabularyTests.swift */; };
 		3BE478783432497FA439BEE6 /* TajweedTestFactoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 349CCF116C2F4D9FBCC014B1 /* TajweedTestFactoryTests.swift */; };
 		230EF20B298849D08127B18E /* ReadingTestFactoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ACDA60283BB4F3591479915 /* ReadingTestFactoryTests.swift */; };
 		7ADBEE61035B4476B90286B7 /* QuranPlayerBackTapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFF40CF740A446EEA7BA5BFC /* QuranPlayerBackTapTests.swift */; };
@@ -600,6 +601,7 @@
 		7BFF2156D3A44C0F858F6FBA /* HadithRankedSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC3C65F72BE24555A8EDC5B5 /* HadithRankedSearch.swift */; };
 		7C00000000000000000000B1 /* TajweedLessons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C00000000000000000000A1 /* TajweedLessons.swift */; };
 		9A66E53687D14EE297FABAB9 /* TajweedTestViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9DE1483BE844E90A6599AC7 /* TajweedTestViews.swift */; };
+		CBC0761A10134C15A841C88F /* TajweedRuleFrequency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1736F8DD69224D338C660B20 /* TajweedRuleFrequency.swift */; };
 		9366ED4AC1504FC98B13BA54 /* TajweedTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66486E13F31841409210C01D /* TajweedTest.swift */; };
 		06FA94DA9ED84F5CA7D094E2 /* StudyKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD28C98DE6E64AA680D5F750 /* StudyKit.swift */; };
 		7C00000000000000000000C1 /* TajweedLessons.json.xz in Resources */ = {isa = PBXBuildFile; fileRef = 7C00000000000000000000A2 /* TajweedLessons.json.xz */; };
@@ -688,6 +690,7 @@
 		A99E7E570000000000A0C002 /* AppReviewStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A99E7E570000000000A0C001 /* AppReviewStorageTests.swift */; };
 		873E10AA0AD141518B45472B /* HadithSciencesViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4938E7F42114F01A7D95CD2 /* HadithSciencesViews.swift */; };
 		875C84F116514A69BE262CD6 /* ArabicReadingTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D38725FD7A484A88620E63 /* ArabicReadingTest.swift */; };
+		A0C998CDEB544A59BBD4CCCF /* QuranWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D91A378E1464EE08764DAE6 /* QuranWords.swift */; };
 		CD1558EDFB0B40308ABAB4FB /* VowelLettersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 390162124BFC46DCB6C4AB25 /* VowelLettersView.swift */; };
 		876D938BCA0644CC95F4E88D /* AskAIConversation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8B41B88CE3342DC813FE9E1 /* AskAIConversation.swift */; };
 		87733494F8996B15A9FB1C2A /* CloudBackupDebug.swift in Sources */ = {isa = PBXBuildFile; fileRef = B398E27B40476DE88FB609A7 /* CloudBackupDebug.swift */; };
@@ -724,6 +727,7 @@
 		A11CE5A19F0B4C0E9D7A3301 /* ShareName.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11CE5A19F0B4C0E9D7A3302 /* ShareName.swift */; };
 		A18FB45C956DF11731DBCE38 /* CloudBackupStoreProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC4457E355E38A8378D06FD /* CloudBackupStoreProbe.swift */; };
 		A2E8BDFDDE4E4B1C942F898A /* ArabicReadingTestViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B686779ED3A4879B81B5F75 /* ArabicReadingTestViews.swift */; };
+		BD1F711A2A604FB7B514327F /* QuranWordsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF1FB8A3DBC54B409B498CAC /* QuranWordsViews.swift */; };
 		A53A70FEED7045E1A77A6994 /* NamesDetails.json.xz in Resources */ = {isa = PBXBuildFile; fileRef = 6B1ADF47224844378FD6E352 /* NamesDetails.json.xz */; };
 		A63D033BEECC4E58BB82DF14 /* AboutYouView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C6C14446A74E4EA01ECB5D /* AboutYouView.swift */; };
 		A68AF22C72CF44A6BE037096 /* PermissionsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7A68B6E324F44C18274FB5F /* PermissionsSheet.swift */; };
@@ -764,6 +768,7 @@
 		D6F5093397E8408BB549CF30 /* QuranTestModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AAE39F203894EA69D662185 /* QuranTestModeTests.swift */; };
 		D7034105D821417DAF0E77C0 /* ShareBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89B11306F701443DBD85C04C /* ShareBackdrop.swift */; };
 		D70EDA1E03B24560BFA2F390 /* WordOfDay.json.xz in Resources */ = {isa = PBXBuildFile; fileRef = 37D2750D8A8E45A386C4358A /* WordOfDay.json.xz */; };
+		194FAF6DA1D5462990AFDE8A /* QuranVocabulary.json.xz in Resources */ = {isa = PBXBuildFile; fileRef = 1AF03A8E10BE456EB45715D3 /* QuranVocabulary.json.xz */; };
 		D96204CE77C942D0B57C3278 /* SimpleModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273FF012EF8C455B8E1068DF /* SimpleModeTests.swift */; };
 		DF95F1193E9B48038727A9B0 /* PrayerTrackerPauseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16D6239014D84E0DB0BA11F5 /* PrayerTrackerPauseTests.swift */; };
 		DB72293AD15A08D6ABD92E81 /* CloudSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1203E77F2715D717C97AB1E3 /* CloudSnapshot.swift */; };
@@ -928,6 +933,7 @@
 		250BBFB38A56465F90F4CA89 /* GridModeMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GridModeMigrationTests.swift; sourceTree = "<group>"; };
 		A99E7E570000000000A0C001 /* AppReviewStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppReviewStorageTests.swift; sourceTree = "<group>"; };
 		26D38725FD7A484A88620E63 /* ArabicReadingTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArabicReadingTest.swift; sourceTree = "<group>"; };
+		0D91A378E1464EE08764DAE6 /* QuranWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranWords.swift; sourceTree = "<group>"; };
 		390162124BFC46DCB6C4AB25 /* VowelLettersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VowelLettersView.swift; sourceTree = "<group>"; };
 		273FF012EF8C455B8E1068DF /* SimpleModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleModeTests.swift; sourceTree = "<group>"; };
 		16D6239014D84E0DB0BA11F5 /* PrayerTrackerPauseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerTrackerPauseTests.swift; sourceTree = "<group>"; };
@@ -941,6 +947,7 @@
 		6887E2B91F394D2BBCC7CA6F /* IsnadDiagram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsnadDiagram.swift; sourceTree = "<group>"; };
 		36B141BD14955EFB97632A08 /* ThemeHighlightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeHighlightsView.swift; sourceTree = "<group>"; };
 		37D2750D8A8E45A386C4358A /* WordOfDay.json.xz */ = {isa = PBXFileReference; lastKnownFileType = file; path = WordOfDay.json.xz; sourceTree = "<group>"; };
+		1AF03A8E10BE456EB45715D3 /* QuranVocabulary.json.xz */ = {isa = PBXFileReference; lastKnownFileType = file; path = QuranVocabulary.json.xz; sourceTree = "<group>"; };
 		3917AEB80011418DBE4E2FAF /* SkyWeatherStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyWeatherStore.swift; sourceTree = "<group>"; };
 		39C2673AC52B4AB0B46B6150 /* AskAIText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskAIText.swift; sourceTree = "<group>"; };
 		3B68399E9EDD4C32B5CD0AD5 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -1005,6 +1012,7 @@
 		7249B76B30770CAF007F1D04 /* AyahReferenceParsingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyahReferenceParsingTests.swift; sourceTree = "<group>"; };
 		03F9DE499C174D3EABFAD5BB /* AppLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLinkTests.swift; sourceTree = "<group>"; };
 		7249B76C30770CAF007F1D04 /* AyahRowIdentityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyahRowIdentityTests.swift; sourceTree = "<group>"; };
+		61351517E79D496DBB5A1F12 /* QuranVocabularyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranVocabularyTests.swift; sourceTree = "<group>"; };
 		349CCF116C2F4D9FBCC014B1 /* TajweedTestFactoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TajweedTestFactoryTests.swift; sourceTree = "<group>"; };
 		9ACDA60283BB4F3591479915 /* ReadingTestFactoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingTestFactoryTests.swift; sourceTree = "<group>"; };
 		BFF40CF740A446EEA7BA5BFC /* QuranPlayerBackTapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranPlayerBackTapTests.swift; sourceTree = "<group>"; };
@@ -1277,6 +1285,7 @@
 		7ADD9A1000000000AA0018 /* ProphetViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProphetViews.swift; sourceTree = "<group>"; };
 		7ADD9B0100000000AA0018 /* QiraatTextAnalysis.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QiraatTextAnalysis.swift; sourceTree = "<group>"; };
 		7B686779ED3A4879B81B5F75 /* ArabicReadingTestViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArabicReadingTestViews.swift; sourceTree = "<group>"; };
+		DF1FB8A3DBC54B409B498CAC /* QuranWordsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranWordsViews.swift; sourceTree = "<group>"; };
 		7BB98D9F7BEE4733AE7B652A /* WordGrammar.json.xz */ = {isa = PBXFileReference; lastKnownFileType = file; path = WordGrammar.json.xz; sourceTree = "<group>"; };
 		7BD0000000000000000000A1 /* WordByWord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordByWord.swift; sourceTree = "<group>"; };
 		D312005294C4425A8E2EED32 /* WordAlignment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordAlignment.swift; sourceTree = "<group>"; };
@@ -1288,6 +1297,7 @@
 		7BF0000000000000000000A3 /* SurahSections.json.xz */ = {isa = PBXFileReference; lastKnownFileType = file; path = SurahSections.json.xz; sourceTree = "<group>"; };
 		7C00000000000000000000A1 /* TajweedLessons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TajweedLessons.swift; sourceTree = "<group>"; };
 		C9DE1483BE844E90A6599AC7 /* TajweedTestViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TajweedTestViews.swift; sourceTree = "<group>"; };
+		1736F8DD69224D338C660B20 /* TajweedRuleFrequency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TajweedRuleFrequency.swift; sourceTree = "<group>"; };
 		66486E13F31841409210C01D /* TajweedTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TajweedTest.swift; sourceTree = "<group>"; };
 		AD28C98DE6E64AA680D5F750 /* StudyKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyKit.swift; sourceTree = "<group>"; };
 		7C00000000000000000000A2 /* TajweedLessons.json.xz */ = {isa = PBXFileReference; lastKnownFileType = file; path = TajweedLessons.json.xz; sourceTree = "<group>"; };
@@ -1751,6 +1761,7 @@
 				7249B76B30770CAF007F1D04 /* AyahReferenceParsingTests.swift */,
 				03F9DE499C174D3EABFAD5BB /* AppLinkTests.swift */,
 				7249B76C30770CAF007F1D04 /* AyahRowIdentityTests.swift */,
+				61351517E79D496DBB5A1F12 /* QuranVocabularyTests.swift */,
 				349CCF116C2F4D9FBCC014B1 /* TajweedTestFactoryTests.swift */,
 				9ACDA60283BB4F3591479915 /* ReadingTestFactoryTests.swift */,
 				BFF40CF740A446EEA7BA5BFC /* QuranPlayerBackTapTests.swift */,
@@ -2108,6 +2119,7 @@
 				B32B50C814F74F4684AE1710 /* TajweedFoundations.swift */,
 				7C00000000000000000000A1 /* TajweedLessons.swift */,
 				C9DE1483BE844E90A6599AC7 /* TajweedTestViews.swift */,
+				1736F8DD69224D338C660B20 /* TajweedRuleFrequency.swift */,
 				66486E13F31841409210C01D /* TajweedTest.swift */,
 				CFCF88CDA07C456B8406EB15 /* TajweedTopics.swift */,
 				72E832A22F6F52BA0013428B /* TajweedView.swift */,
@@ -2162,6 +2174,7 @@
 				7C100000000000000000A016 /* QiraatVariants.json.xz */,
 				D66570982283447EA7997752 /* QiraatVariantAudio.json.xz */,
 				37D2750D8A8E45A386C4358A /* WordOfDay.json.xz */,
+				1AF03A8E10BE456EB45715D3 /* QuranVocabulary.json.xz */,
 				4E6562FB132641D39BE3CE05 /* QiraatPlaces.json.xz */,
 				7BF0000000000000000000A2 /* ThematicTopics.json.xz */,
 				7C00000000000000000000A2 /* TajweedLessons.json.xz */,
@@ -2265,8 +2278,10 @@
 				7ADD181C00000000AA0018 /* ArabicLetterViews.swift */,
 				8E5FE07F835D4EB682B586A4 /* ArabicReadingBank.swift */,
 				26D38725FD7A484A88620E63 /* ArabicReadingTest.swift */,
+				0D91A378E1464EE08764DAE6 /* QuranWords.swift */,
 				390162124BFC46DCB6C4AB25 /* VowelLettersView.swift */,
 				7B686779ED3A4879B81B5F75 /* ArabicReadingTestViews.swift */,
+				DF1FB8A3DBC54B409B498CAC /* QuranWordsViews.swift */,
 				72E832C02F6F53760013428B /* ArabicView.swift */,
 				AE6CCE088E524921A5AB4002 /* ArabicTopics.swift */,
 			);
@@ -2864,6 +2879,7 @@
 				7C100000000000000000B016 /* QiraatVariants.json.xz in Resources */,
 				B6CC927052CB40D785D54BFF /* QiraatVariantAudio.json.xz in Resources */,
 				D70EDA1E03B24560BFA2F390 /* WordOfDay.json.xz in Resources */,
+				194FAF6DA1D5462990AFDE8A /* QuranVocabulary.json.xz in Resources */,
 				632C7231706147D8BF9591BA /* QiraatPlaces.json.xz in Resources */,
 				7BF0000000000000000000C1 /* ThematicTopics.json.xz in Resources */,
 				7C00000000000000000000C1 /* TajweedLessons.json.xz in Resources */,
@@ -3354,10 +3370,13 @@
 				7BF0000000000000000000B1 /* QuranThemes.swift in Sources */,
 				7C00000000000000000000B1 /* TajweedLessons.swift in Sources */,
 				9A66E53687D14EE297FABAB9 /* TajweedTestViews.swift in Sources */,
+				CBC0761A10134C15A841C88F /* TajweedRuleFrequency.swift in Sources */,
 				9366ED4AC1504FC98B13BA54 /* TajweedTest.swift in Sources */,
 				06FA94DA9ED84F5CA7D094E2 /* StudyKit.swift in Sources */,
 				A2E8BDFDDE4E4B1C942F898A /* ArabicReadingTestViews.swift in Sources */,
+				BD1F711A2A604FB7B514327F /* QuranWordsViews.swift in Sources */,
 				875C84F116514A69BE262CD6 /* ArabicReadingTest.swift in Sources */,
+				A0C998CDEB544A59BBD4CCCF /* QuranWords.swift in Sources */,
 				CD1558EDFB0B40308ABAB4FB /* VowelLettersView.swift in Sources */,
 				BC1FFEE9A0C44CC09727F2B4 /* ArabicReadingBank.swift in Sources */,
 				72BE7A012F90000000AAFF13 /* QiraahTajweed.swift in Sources */,
@@ -3587,6 +3606,7 @@
 				7249B78C30770CAF007F1D04 /* AyahReferenceParsingTests.swift in Sources */,
 				6559829AF60B4FE489F63B5F /* AppLinkTests.swift in Sources */,
 				7249B78D30770CAF007F1D04 /* AyahRowIdentityTests.swift in Sources */,
+				AD85F042574D41308E5DB4FC /* QuranVocabularyTests.swift in Sources */,
 				3BE478783432497FA439BEE6 /* TajweedTestFactoryTests.swift in Sources */,
 				230EF20B298849D08127B18E /* ReadingTestFactoryTests.swift in Sources */,
 				7ADBEE61035B4476B90286B7 /* QuranPlayerBackTapTests.swift in Sources */,

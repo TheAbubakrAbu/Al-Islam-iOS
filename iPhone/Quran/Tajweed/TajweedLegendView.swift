@@ -20,12 +20,14 @@ struct TajweedLegendView: View {
     @AppStorage("tajweedCompareGrouping") private var compareByRule = false
     /// The by-rule index, built once (off-main) the first time By Rule is opened.
     @State private var ruleSections: [CompareRuleSection]?
-    /// The full page (quick-guide grid, detail cards, colors, signs, riwayat) instead of the basic list.
-    /// Every open starts basic (Abu, 2026-10-28: "a basic tajweed view in legend by default ... look at
-    /// how small and easy it is to see, especially for simple mode").
+    /// The detailed page (quick-guide grid, detail cards, colors, signs, riwayat) instead of the compact
+    /// one. Every open starts compact (Abu, 2026-10-28: "a basic tajweed view in legend by default ...
+    /// look at how small and easy it is to see, especially for simple mode"); the toolbar button
+    /// switches (Abu, 2026-11-17: "one screen no scrolling ... a toolbar button that allows us to
+    /// change between detailed and compact").
     @State private var showsFullLegend = false
-    /// The basic list's open rows, by rule id.
-    @State private var expandedRules: Set<String> = []
+    /// The compact tile whose card is up (its popover), by rule id.
+    @State private var inspectedRule: String?
 
     /// `opensFullLegend`: a door that leads to something only the full page has (Customize Tajweed
     /// Colors: the color pickers sit on the full page's rule cards) opens there instead of on the basic list.
@@ -907,45 +909,17 @@ struct TajweedLegendView: View {
     private static let legendTopAnchorID = "tajweedLegendTop"
 
     var body: some View {
-        ScrollViewReader { scroll in
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Tajweed Legend")
-                        .font(.title3.weight(.semibold))
-
-                    Text(compareOnlyMode
-                         ? "Every riwayah's printed color code, side by side."
-                         : showsFullLegend
-                         ? "Use the colors as a quick guide, then read the longer notes below for what each rule is doing in recitation."
-                         : "Each color marks a tajweed rule. Tap a rule to see what it means.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .id(Self.legendTopAnchorID)
-
-                if compareOnlyMode {
-                    // ONLY the comparison (plus the card holding the way back): clicking Compare All
-                    // Riwayat brings the riwayat to the top instead of burying them under the legend.
-                    riwayahPreviewCard
-
-                    compareAllSection(scroll: scroll)
-                } else if showsFullLegend {
-                    legendModeButton(scroll: scroll)
-                    fullLegendContent(scroll: scroll)
-                } else {
-                    basicLegendContent(scroll: scroll)
-                }
+        Group {
+            if showsFullLegend {
+                detailedLegend
+            } else {
+                compactLegend
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-            .padding(.bottom, 28)
-        }
         }
         // Pushed inside the Quran settings sheet as well as presented as one: its own bar either way.
         .sheetNowPlayingBar()
         .accentWashedBackground()
-        // The examples of the legend on screen, painted ahead of the first row that opens.
+        // The examples of the legend on screen, painted ahead of the first card that opens.
         .task(id: effectiveLegendTag) { TajweedLegendExamples.prewarm(tag: effectiveLegendTag) }
         .navigationTitle("Legend")
         .navigationBarTitleDisplayMode(.inline)
@@ -961,6 +935,44 @@ struct TajweedLegendView: View {
                     }
                     .tint(settings.accentColor.color)
                 }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                legendModeButton
+            }
+        }
+    }
+
+    /// The detailed page: the quick-guide cards, the long notes, custom colors, the mushaf signs and,
+    /// with qiraah details on, the riwayat comparison.
+    private var detailedLegend: some View {
+        ScrollViewReader { scroll in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Tajweed Legend")
+                            .font(.title3.weight(.semibold))
+
+                        Text(compareOnlyMode
+                             ? "Every riwayah's printed color code, side by side."
+                             : "Use the colors as a quick guide, then read the longer notes below for what each rule is doing in recitation.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .id(Self.legendTopAnchorID)
+
+                    if compareOnlyMode {
+                        // ONLY the comparison (plus the card holding the way back): clicking Compare All
+                        // Riwayat brings the riwayat to the top instead of burying them under the legend.
+                        riwayahPreviewCard
+
+                        compareAllSection(scroll: scroll)
+                    } else {
+                        fullLegendContent(scroll: scroll)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 28)
             }
         }
     }
@@ -1000,20 +1012,22 @@ struct TajweedLegendView: View {
         .conditionalGlassEffect(rectangle: true)
     }
 
-    // MARK: Basic legend
+    // MARK: Compact legend
 
-    /// One row of the basic list, for a Hafs category and a riwayah rule alike.
+    /// One rule of the compact grid, for a Hafs category and a riwayah rule alike.
     private struct BasicRule: Identifiable {
         let id: String
         let color: Color
         let title: String
         let subtitle: String
+        /// The rule's Arabic name for its card (a riwayah rule's subtitle already is one).
+        let arabic: String?
         let count: String?
         let detail: String
         let letters: String?
         let visible: Bool
         let setVisible: (Bool) -> Void
-        /// The rule's example block, built only when the row is open (the paint is not free).
+        /// The rule's example block, built only when its card opens (the paint is not free).
         let example: () -> TajweedRuleExample?
     }
 
@@ -1021,6 +1035,7 @@ struct TajweedLegendView: View {
         BasicRule(
             id: item.id, color: item.color,
             title: item.transliteration, subtitle: item.exactEnglishTranslation,
+            arabic: item.arabicTitle,
             count: item.countLabel?.localizedDigits, detail: item.shortDescription,
             letters: item.applicableLettersDetail,
             visible: settings.isTajweedCategoryVisible(item),
@@ -1033,6 +1048,7 @@ struct TajweedLegendView: View {
         BasicRule(
             id: entry.id, color: entry.color,
             title: entry.english.localizedDisplay, subtitle: entry.arabic,
+            arabic: nil,
             count: TajweedLegendExamples.countLabel(QiraahTajweedStore.shared.ruleWordCounts(for: tag)[entry.key]),
             detail: entry.shortDescription, letters: nil,
             visible: settings.isRiwayahTajweedRuleVisible(entry.key),
@@ -1041,180 +1057,277 @@ struct TajweedLegendView: View {
         )
     }
 
-    /// The default page: the switch, then every rule as one short row (a color, its name, what the
-    /// name means), grouped by section, each opening in place to its one-line note and its show/hide.
-    /// Everything else (the quick-guide cards, the long notes, custom colors, the mushaf signs, the
-    /// riwayat comparison) is one tap away behind Full Legend.
-    @ViewBuilder
-    private func basicLegendContent(scroll: ScrollViewProxy) -> some View {
-        masterToggleCard
+    private struct CompactSection: Identifiable {
+        let id: String
+        let title: String?
+        let rules: [BasicRule]
+    }
 
-        if let riwayahTag = effectiveLegendTag {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("The colors follow \(optionLabel(forTag: riwayahTag))'s printed mushaf: each word or letter is colored exactly where that print colors it.")
+    /// The Hafs rules under their four section names, or a riwayah's printed rules as one group.
+    private var compactSections: [CompactSection] {
+        if let tag = effectiveLegendTag {
+            let rules = QiraahTajweedStore.shared.legend(for: tag).map { basicRule($0, tag: tag) }
+            return [CompactSection(id: tag, title: nil, rules: rules)]
+        }
+        return sections.map { CompactSection(id: $0.id, title: $0.section.title, rules: $0.items.map(basicRule)) }
+    }
+
+    /// The default page: the switch, then every rule as a tile washed in its color, grouped by section,
+    /// all of it on one screen (Abu, 2026-11-17: the expanding list "looks so chopped ... make it just
+    /// be one screen no scrolling"). A tile opens a card with the rule's note, its letters, an example
+    /// and show/hide; the long notes, custom colors, signs and riwayat are behind the toolbar's
+    /// Detailed button. A screen too short for the grid (the medium detent, a large text size) scrolls
+    /// rather than clips.
+    private var compactLegend: some View {
+        ViewThatFits(in: .vertical) {
+            compactLegendContent
+            ScrollView { compactLegendContent }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        #if DEBUG
+        // "-legendInspect <rule id>" opens that tile's card; "-legendDetailed" starts on the detailed
+        // page. Headless screenshots only.
+        .onAppear {
+            let args = ProcessInfo.processInfo.arguments
+            if args.contains("-legendDetailed") { showsFullLegend = true }
+            if let index = args.firstIndex(of: "-legendInspect"), args.indices.contains(index + 1) {
+                let id = args[index + 1]
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { inspectedRule = id }
+            }
+        }
+        #endif
+    }
+
+    private var compactLegendContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SettingsToggle(String(localized: "Show Tajweed colors"),
+                           caption: String(localized: "Tap a color to see what it means"),
+                           isOn: tajweedColorsBinding)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .conditionalGlassEffect(rectangle: true)
+
+            if let tag = effectiveLegendTag {
+                Text("The colors follow \(optionLabel(forTag: tag))'s printed mushaf: each word or letter is colored exactly where that print colors it.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-
-                basicRuleList(QiraahTajweedStore.shared.legend(for: riwayahTag).map { basicRule($0, tag: riwayahTag) })
             }
-        } else {
-            ForEach(sections) { section in
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(section.section.title)
+
+            ForEach(compactSections) { section in
+                VStack(alignment: .leading, spacing: 6) {
+                    if let title = section.title {
+                        Text(title)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+                            .padding(.leading, 4)
+                            .accessibilityAddTraits(.isHeader)
+                    }
+                    compactGrid(section.rules)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 12)
+    }
+
+    /// The master switch, mirrored onto every category so the tiles visibly go grey with it.
+    /// `SettingsToggle` brings the haptic and the animation.
+    private var tajweedColorsBinding: Binding<Bool> {
+        Binding(
+            get: { settings.showTajweedColors },
+            set: { newValue in
+                settings.showTajweedColors = newValue
+                TajweedLegendCategory.allCases.forEach {
+                    settings.setTajweedCategory($0, visible: newValue)
+                }
+            }
+        )
+    }
+
+    /// Two tiles a row; a section with an odd count gives its last tile the whole row, so no row
+    /// ends in a hole.
+    private func compactGrid(_ rules: [BasicRule]) -> some View {
+        let rows = stride(from: 0, to: rules.count, by: 2).map { Array(rules[$0 ..< min($0 + 2, rules.count)]) }
+        return VStack(spacing: 8) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                HStack(spacing: 8) {
+                    ForEach(row) { compactTile($0) }
+                }
+                // Both tiles of a row as tall as the taller one.
+                .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private static let compactTileShape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+
+    private func compactTile(_ rule: BasicRule) -> some View {
+        let shape = Self.compactTileShape
+        return Button {
+            settings.hapticFeedback()
+            inspectedRule = rule.id
+        } label: {
+            HStack(spacing: 8) {
+                Group {
+                    if rule.visible {
+                        Circle().fill(rule.color)
+                    } else {
+                        Circle().strokeBorder(Color.secondary, lineWidth: 1.5)
+                    }
+                }
+                .frame(width: 10, height: 10)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(rule.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(rule.visible ? Color.primary : Color.secondary)
+                    Text(rule.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(Color.secondaryOnGlass)
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+
+                Spacer(minLength: 0)
+
+                if !rule.visible {
+                    Image(systemName: "eye.slash")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                        .padding(.leading, 4)
-
-                    basicRuleList(section.items.map(basicRule))
                 }
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .background(shape.fill(rule.visible ? rule.color.opacity(0.14) : Color.primary.opacity(0.04)))
+            .overlay(shape.strokeBorder(rule.visible ? rule.color.opacity(0.35) : Color.primary.opacity(0.1), lineWidth: 1))
+            .contentShape(shape)
         }
-
-        legendModeButton(scroll: scroll)
-    }
-
-    /// The rows in one bordered block, hairlines between them.
-    private func basicRuleList(_ rules: [BasicRule]) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
-        return VStack(spacing: 0) {
-            ForEach(Array(rules.enumerated()), id: \.element.id) { index, rule in
-                if index > 0 {
-                    Divider()
-                }
-                basicRuleRow(rule)
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(rule.visible ? "" : String(localized: "Hidden"))
+        .accessibilityHint("Shows what the rule means")
+        .popover(isPresented: inspectedBinding(rule.id)) {
+            if #available(iOS 16.4, *) {
+                compactRuleCard(rule)
+                    .presentationCompactAdaptation(.popover)
+            } else {
+                // Pre-16.4 a popover adapts to a sheet on iPhone anyway: give it a sensible height.
+                compactRuleCard(rule)
+                    .smallMediumSheetPresentation()
             }
         }
-        .background(shape.fill(Color.primary.opacity(0.04)))
-        .clipShape(shape)
-        .overlay(shape.stroke(Color.primary.opacity(0.12), lineWidth: 1))
     }
 
-    private static let basicSwatchWidth: CGFloat = 48
+    private func inspectedBinding(_ id: String) -> Binding<Bool> {
+        Binding(
+            get: { inspectedRule == id },
+            set: { isPresented in
+                if !isPresented, inspectedRule == id { inspectedRule = nil }
+            }
+        )
+    }
 
-    private func basicRuleRow(_ rule: BasicRule) -> some View {
-        let expanded = expandedRules.contains(rule.id)
-        return VStack(alignment: .leading, spacing: 0) {
-            Button {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    if expanded { expandedRules.remove(rule.id) } else { expandedRules.insert(rule.id) }
-                }
-            } label: {
-                HStack(spacing: 12) {
-                    Circle()
-                        .fill(rule.visible ? rule.color : Color.secondary.opacity(0.55))
-                        .frame(width: 14, height: 14)
-                        .frame(width: Self.basicSwatchWidth)
+    /// A tile's card: the rule's names, its count, what it does, the letters it takes, an example
+    /// painted with only this rule, and its show/hide.
+    private func compactRuleCard(_ rule: BasicRule) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Circle()
+                    .fill(rule.visible ? rule.color : Color.secondary.opacity(0.55))
+                    .frame(width: 12, height: 12)
+                    .padding(.top, 5)
 
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(rule.title)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        Text(rule.subtitle)
-                            .font(.caption)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(rule.title)
+                        .font(.headline)
+                    Text(rule.subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    if let arabic = rule.arabic {
+                        Text(arabic)
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 9)
-
-                    Spacer(minLength: 6)
-
+                    // The count under the names, never beside them: beside, it squeezed the
+                    // translation onto a second line.
                     if let count = rule.count {
                         Text(count)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(rule.visible ? rule.color : .secondary)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(rule.color)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Capsule().fill(rule.color.opacity(0.12)))
                             .lineLimit(1)
+                            .fixedSize()
+                            .padding(.top, 4)
                     }
-
-                    Image(systemName: "chevron.down")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(expanded ? 180 : 0))
-                        .padding(.trailing, 14)
                 }
                 .fixedSize(horizontal: false, vertical: true)
-                .contentShape(Rectangle())
+
+                Spacer(minLength: 0)
+            }
+
+            if !rule.detail.isEmpty {
+                Text(rule.detail)
+                    .font(.subheadline)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let letters = rule.letters {
+                Text(letters)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let example = rule.example() {
+                example
+            }
+
+            Button {
+                settings.hapticFeedback()
+                withAnimation { rule.setVisible(!rule.visible) }
+            } label: {
+                Label(rule.visible ? "Hide This Color" : "Show This Color",
+                      systemImage: rule.visible ? "eye.slash" : "eye")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityElement(children: .combine)
-            .accessibilityHint(expanded ? "Hides the rule's note" : "Shows the rule's note")
-            .accessibilityValue(rule.visible ? "" : String(localized: "Hidden"))
-
-            if expanded {
-                VStack(alignment: .leading, spacing: 8) {
-                    if !rule.detail.isEmpty {
-                        Text(rule.detail)
-                            .font(.caption)
-                            .foregroundStyle(.primary)
-                    }
-
-                    if let letters = rule.letters {
-                        Text(letters)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    if let example = rule.example() {
-                        example
-                            .padding(.top, 2)
-                    }
-
-                    Button {
-                        settings.hapticFeedback()
-                        withAnimation { rule.setVisible(!rule.visible) }
-                    } label: {
-                        Label(rule.visible ? "Hide" : "Show",
-                              systemImage: rule.visible ? "eye.slash" : "eye")
-                            .font(.caption.weight(.semibold))
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(settings.accentColor.color)
-                }
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, Self.basicSwatchWidth + 12)
-                .padding(.trailing, 14)
-                .padding(.bottom, 12)
-                .transition(.opacity)
-            }
+            .foregroundStyle(settings.accentColor.color)
+            .conditionalGlassEffect(rectangle: true)
         }
-        // The rule's color as a column down the whole row, an open row's note included.
-        .background(alignment: .leading) {
-            rule.color.opacity(rule.visible ? 0.14 : 0.05)
-                .frame(width: Self.basicSwatchWidth)
-        }
-        .opacity(rule.visible ? 1 : 0.6)
+        .padding(16)
+        .frame(width: 330, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// Full Legend under the basic list, Basic Legend above the full page.
-    private func legendModeButton(scroll: ScrollViewProxy) -> some View {
+    /// The toolbar's mode switch: the grid's icon on the detailed page, the book's on the compact one.
+    private var legendModeButton: some View {
         Button {
             settings.hapticFeedback()
+            inspectedRule = nil
             withAnimation(.easeInOut(duration: 0.2)) {
                 showsFullLegend.toggle()
                 if !showsFullLegend {
-                    // The basic list explains what is being read, never a previewed riwayah.
+                    // The compact page explains what is being read, never a previewed riwayah.
                     previewTag = nil
                     compareAll = false
                 }
-                // The other page starts at its top, not wherever this one was scrolled to.
-                scroll.scrollTo(Self.legendTopAnchorID, anchor: .top)
             }
         } label: {
-            Label(showsFullLegend ? "Basic Legend" : "Full Legend",
-                  systemImage: showsFullLegend ? "list.bullet" : "text.book.closed")
-                .font(.subheadline.weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .contentShape(Rectangle())
+            Image(systemName: showsFullLegend ? "square.grid.2x2" : "text.book.closed")
+                .font(.body.weight(.semibold))
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(settings.accentColor.color)
-        .conditionalGlassEffect(rectangle: true)
+        .tint(settings.accentColor.color)
+        .accessibilityLabel(showsFullLegend ? "Compact Legend" : "Detailed Legend")
     }
 
     /// The ordinary legend page: master toggle, preview card, the applicable legend, signs and

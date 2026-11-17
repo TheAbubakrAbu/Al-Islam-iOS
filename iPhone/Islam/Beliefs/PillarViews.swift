@@ -1808,3 +1808,122 @@ struct QadarView: View {
 }
 
 import SwiftUI
+
+/// "The Words of the Quran" (QURAN & TAFSIR, 2026-11-16): how many words the Quran has, how few
+/// dictionary words carry most of it, and why understanding them matters. Its figures come from
+/// Resources/Data/Quran/QuranVocabulary.json.xz (Scripts/build_quran_vocabulary.py); its door opens
+/// the Quran Words study page in Arabic Alphabet.
+struct QuranWordsPillarView: View {
+    var body: some View {
+        List {
+            Group {
+                Section(header: ArticleHeader("SUMMARY")) {
+                    ArticleLead("In short: the Quran has 77,430 words, but they are built from only about 4,800 dictionary words, and a few hundred of those carry most of the text. Understanding what you recite is closer than it looks, and your recitation is rewarded the whole time you are learning.")
+                }
+
+                Section(header: ArticleHeader("THE NUMBERS")) {
+                    ArticleParagraph(articleMarkdown: "Count every word of the Quran in the Hafs mushaf and you reach 77,430. Most of them are the same words coming back in different forms. Take each one back to the form you would look up in a dictionary, its **lemma**, and the whole Quran comes down to about 4,800 dictionary words, which grow out of 1,642 **roots (جُذُور)**.")
+
+                    ArticleStatGrid([
+                        ArticleStat("77,430", "words in the Hafs mushaf"),
+                        ArticleStat("About 4,800", "dictionary words (lemmas)"),
+                        ArticleStat("1,642", "roots"),
+                        ArticleStat("About 1,950", "dictionary words that occur only once"),
+                    ])
+
+                    ArticleParagraph(verbatim: "A dictionary word is not the same as a spelling. قَالَ (he said), قَالُوٓاْ (they said) and يَقُولُ (he says) are three written forms of one dictionary word. Counted by spelling, the Quran has about 19,500 different written forms with their vowel marks, or about 14,900 without them. That is why different lists give such different totals: they are counting different things.")
+                }
+
+                Section(header: ArticleHeader("A FEW WORDS CARRY MOST OF IT")) {
+                    ArticleParagraph(verbatim: "The words of the Quran are not spread evenly. A small set comes back on almost every page, while the rest come and go. رَبّ (Lord) occurs 975 times in all its forms, and قَالَ (to say) 1,618 times. Counting the small pronoun words as words too, such as هُمۡ (they) and لَهُمۡ (for them), this is how much of the Quran the most common words make up:")
+
+                    ArticleStatGrid([
+                        ArticleStat("About 25%", "of all the words are the 10 most common"),
+                        ArticleStat("About 58%", "are the 100 most common"),
+                        ArticleStat("About 74%", "are the 300 most common"),
+                        ArticleStat("About 81%", "are the 500 most common"),
+                    ])
+
+                    ArticleParagraph(verbatim: "Put plainly: know the 100 most common words well and more than half of every page you recite is already familiar. Know 500 and it is about four words in every five. At the other end, about 1,950 dictionary words occur only once in the whole Quran. They matter as much as any other word of Allah, but they are not where a learner begins.")
+
+                    ArticleCallout("Knowing the words is the first step, not the last. Grammar ties them together, and the explanation of the scholars of tafsir tells you what an ayah means and how the Prophet (peace and blessings be upon him) and his Companions understood it. A word list never replaces a trusted tafsir; it turns the tafsir into an explanation of words you already recognise.", title: "Words, then meaning", systemImage: "text.book.closed")
+                }
+
+                Section(header: ArticleHeader("WHY UNDERSTANDING MATTERS")) {
+                    ArticleParagraph(verbatim: "Allah tells us why He sent the Quran down in Arabic:")
+                    ScriptureQuote(quran: "12:2")
+
+                    ArticleParagraph(verbatim: "He says the same in Surah az-Zukhruf (Quran 43:3), and that the trustworthy Spirit brought it down “In a clear Arabic language” (Quran 26:195). He sent it to be reflected upon, not only recited:")
+                    ScriptureQuote(quran: "38:29")
+
+                    ArticleParagraph(verbatim: "And He asks, of those who turn away from that reflection:")
+                    ScriptureQuote(quran: "47:24")
+
+                    ArticleParagraph(verbatim: "Four times in Surah al-Qamar the same ayah returns (Quran 54:17, 22, 32 and 40), a promise that the way in is open to everyone who tries:")
+                    ScriptureQuote(quran: "54:17")
+
+                    ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) made learning the Quran and passing it on the mark of the best of this Ummah:")
+                    ScriptureQuote(hadith: "bukhari:5027", cite: "Sahih al-Bukhari 5027", arabic: 36...40, english: 4...17)
+                }
+
+                Section(header: ArticleHeader("WHAT THE SCHOLARS SAID")) {
+                    ArticleParagraph(articleMarkdown: "**Shaykh al-Islam Ibn Taymiyyah** (d. 728 AH) explained why learning Arabic is part of the religion itself, in a passage of Iqtida’ as-Sirat al-Mustaqim:")
+                    ScriptureQuote(text: "“The Arabic language itself is part of the religion, and knowing it is an obligation, because understanding the Book and the Sunnah is an obligation, and they cannot be understood except by understanding the Arabic language; and whatever an obligation cannot be fulfilled without is itself an obligation. Then some of it is obligatory on every individual, and some of it is obligatory on the community” (Ibn Taymiyyah, Iqtida’ as-Sirat al-Mustaqim 1/527).", arabic: "فَإِنَّ نَفسَ اللُّغَةِ العَرَبِيَّةِ مِنَ الدِّينِ، وَمَعرِفَتَهَا فَرضٌ وَاجِبٌ، فَإِنَّ فَهمَ الكِتَابِ وَالسُّنَّةِ فَرضٌ، وَلَا يُفهَمُ إِلَّا بِفَهمِ اللُّغَةِ العَرَبِيَّةِ، وَمَا لَا يَتِمُّ الوَاجِبُ إِلَّا بِهِ فَهُوَ وَاجِبٌ. ثُمَّ مِنهَا مَا هُوَ وَاجِبٌ عَلَى الأَعيَانِ، وَمِنهَا مَا هُوَ وَاجِبٌ عَلَى الكِفَايَةِ", dimmed: true)
+
+                    ArticleParagraph(articleMarkdown: "Notice the last sentence. The duty is real, but it is measured. Some of it falls on **every individual (fard ‘ayn)**: what your own worship needs, such as reciting al-Fatihah in the prayer. The Quran in the prayer is recited only in Arabic; Ibn Taymiyyah called that the view of the majority and the correct one beyond doubt (Iqtida’ as-Sirat al-Mustaqim 1/518–519). The rest is a **communal obligation (fard kifayah)**: the Ummah must always have people who know the language deeply enough to explain the Book and the Sunnah. Everything between the two is a virtue each Muslim takes as far as he can.")
+                }
+
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
+                    ArticleParagraph(articleMarkdown: "**Is my recitation rewarded if I do not understand it?** Yes. The Prophet (peace and blessings be upon him) promised the reward for every letter recited, and did not make it depend on understanding:")
+                    ScriptureQuote(hadith: "tirmidhi:2910", cite: "Sunan al-Tirmidhi 2910; graded sahih by al-Albani", arabic: 40...62, english: 12...59)
+
+                    ArticleParagraph(verbatim: "And the one for whom the recitation itself is hard is not left behind. He has a reward for reciting and a reward for the struggle:")
+                    ScriptureQuote(hadith: "muslim:798a", cite: "Sahih Muslim 798, Sahih al-Bukhari 4937", arabic: 42...57, english: 0...30)
+
+                    ArticleParagraph(verbatim: "So never stop reciting while you learn. Reciting is worship from the first day; understanding adds reflection, and reflection is what the Quran was sent down for. The two grow together.")
+
+                    ArticleParagraph(articleMarkdown: "**Do I have to learn Arabic to be a Muslim?** No. A person enters Islam by the testimony of faith, believed in the heart and said with the tongue, and most Muslims today are not Arabs. What every Muslim does need is the Arabic his worship depends on, above all al-Fatihah for the prayer. Beyond that, a trustworthy translation of the meanings and a tafsir in your own language teach you what the Quran says while your Arabic grows.")
+
+                    ArticleParagraph(articleMarkdown: "**Where do I start?** With the words you already say every day: al-Fatihah, the short surahs you pray with, and the words of the prayer. Then the most common words of the Quran, in order, a few at a time. The steps below set it out.")
+
+                    ArticleParagraph(articleMarkdown: "**Why do some lists say 77,429 words?** The Quranic Arabic Corpus counts that way because it joins or splits a handful of words differently from the mushaf: it writes بَعۡدَ مَا as one word in three places and joins إِلۡ يَاسِينَ at 37:130, while it splits لَّوۡمَا and مَالِيَ into two. The words of the Quran are the same; only the counting differs.")
+                }
+
+                Section(header: ArticleHeader("HOW TO START")) {
+                    ArticleStep("1. **Start with what you already recite.** Learn the meaning of al-Fatihah word by word, then the short surahs you pray with. Every prayer becomes a revision lesson.")
+                    ArticleStep("2. **Learn the most common words first**, a handful each day, and listen for them when you recite and when the imam recites aloud.")
+                    ArticleStep("3. **Notice the roots.** قَالَ, قَالُوٓاْ and يَقُولُ share one root; once you know it, dozens of forms open at once.")
+                    ArticleStep("4. **Read a trusted translation and tafsir beside the Arabic**, such as Tafsir as-Sa‘di or Tafsir Ibn Kathir. The words tell you what is said; tafsir tells you what it means.")
+                    ArticleStep("5. **Keep reciting every day**, whatever you understand so far. The reward does not wait for your vocabulary.")
+
+                    // The study page links back here, so the pair is a corridor; the row greys out when
+                    // the page is already open. The page is the phone's.
+                    #if os(iOS) && HAS_QURAN
+                    OpenScreenLink(screen: .quranWords) {
+                        QuranWordsView()
+                    } label: {
+                        TajweedLinkLabel(systemImage: "character.book.closed.fill", title: "Quran Words",
+                                         caption: "The 500 most common words, a hundred at a time, with a test for each hundred")
+                    }
+                    #endif
+                }
+
+                Section(header: ArticleHeader("IN SUMMARY")) {
+                    ArticleClosing("Allah sent the Quran down in clear Arabic so that it would be understood and reflected upon, and He made it easy to remember. Its 77,430 words rest on about 4,800 dictionary words, and the 500 most common of them make up about four words in five. Begin with the words you already pray with, keep reciting every day, and every word you learn brings the meaning a little closer.")
+                }
+
+                Section(header: ArticleHeader("KEY TERMS")) {
+                    ArticleTermCard("Kalimah", arabic: "كَلِمَة", meaning: "A word. In counting the Quran, each word as it is written in the mushaf, with its attached letters and pronouns: لَهُمۡ is one kalimah.")
+                    ArticleTermCard("Lemma (dictionary word)", arabic: "المَدْخَل المُعْجَمِيّ", meaning: "The form of a word you look up in a dictionary. قَالَ, قَالُوٓاْ and يَقُولُ are three kalimat of one lemma. The Quran has about 4,800.")
+                    ArticleTermCard("Jidhr (root)", arabic: "جِذْر", meaning: "The core letters, usually three, that a family of words is built on, such as ق و ل for saying. The Quran's words grow out of 1,642 roots.")
+                    ArticleTermCard("Tadabbur", arabic: "تَدَبُّر", meaning: "Reflecting on the ayat to understand them and act on them, the purpose Allah names in Quran 38:29 and 47:24.")
+                }
+
+                ArticleSourcesSection(article: "QuranWordsPillarView")
+            }
+            .themedListRowBackground()
+        }
+        .englishArticle().selectableArticleList(article: "QuranWordsPillarView")
+        .navigationTitle("The Words of the Quran")
+    }
+}

@@ -275,7 +275,7 @@ final class CrossLanguageHighlightTests: XCTestCase {
 
     @MainActor
     private func spans(_ query: String, _ surah: Int, _ ayah: Int, wordRule: SearchWordRule = .anywhere) throws
-    -> (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange]) {
+    -> CrossLanguageWordHighlight.QuranSpans {
         let text = try ayahText(surah, ayah)
         return CrossLanguageWordHighlight.quranSpans(
             query: query, surah: surah, ayah: ayah, rawText: text.arabic, displayText: text.arabic,
@@ -399,5 +399,136 @@ final class CrossLanguageHighlightTests: XCTestCase {
             query: "straight", surah: 1, ayah: 6, rawText: text.arabic, displayText: text.arabic,
             saheeh: text.saheeh, mustafa: text.mustafa)
         XCTAssertEqual(tokenIndices(spans.arabic, in: text.arabic), [2])
+    }
+
+    // MARK: - The transliteration line
+
+    @MainActor
+    private func transliterationSpans(_ query: String, _ surah: Int, _ ayah: Int) throws
+    -> CrossLanguageWordHighlight.QuranSpans {
+        let text = try ayahText(surah, ayah)
+        let line = try XCTUnwrap(QuranData.shared.ayah(surah: surah, ayah: ayah)).textTransliteration
+        return CrossLanguageWordHighlight.quranSpans(
+            query: query, surah: surah, ayah: ayah, rawText: text.arabic, displayText: text.arabic,
+            saheeh: text.saheeh, mustafa: text.mustafa, transliteration: line)
+    }
+
+    /// 80:14 "Marfoo'atim mutah-hara": "mutah" is half of the line's second word, which spells
+    /// مُّطَهَّرَةِۭ. That word lights, and so does its English (Abu, 2026-11-16: only "mutah" was lit).
+    @MainActor
+    func testATransliterationMatchLightsTheArabicWordItSpells() async throws {
+        try await ready()
+        let text = try ayahText(80, 14)
+        let spans = try transliterationSpans("mutah", 80, 14)
+        XCTAssertEqual(tokenIndices(spans.arabic, in: text.arabic), [1])
+        XCTAssertEqual(lit(spans.saheeh, in: text.saheeh), ["purified"])
+    }
+
+    /// 56:79 "Laa yamassuhooo illal mutahharoon": "illal" carries the next word's article, and that
+    /// one letter is not enough to light ٱلۡمُطَهَّرُونَ; the word after it is its own.
+    @MainActor
+    func testATransliterationWordLightsOnlyTheWordsItReallyCovers() async throws {
+        try await ready()
+        let text = try ayahText(56, 79)
+        XCTAssertEqual(tokenIndices(try transliterationSpans("illal", 56, 79).arabic, in: text.arabic), [2])
+        XCTAssertEqual(tokenIndices(try transliterationSpans("mutahharoon", 56, 79).arabic, in: text.arabic), [3])
+    }
+
+    /// Two letters light nothing through the line: they match half of it.
+    @MainActor
+    func testAShortQueryLightsNothingThroughTheTransliteration() async throws {
+        try await ready()
+        let text = try ayahText(56, 79)
+        let line = try XCTUnwrap(QuranData.shared.ayah(surah: 56, ayah: 79)).textTransliteration
+        XCTAssertTrue(CrossLanguageWordHighlight.transliterationTokens(
+            query: "la", transliteration: line, surah: 56, ayah: 79,
+            rawText: text.arabic, displayText: text.arabic).isEmpty)
+    }
+
+    // MARK: - The transliteration line, the other way
+
+    /// What the transliteration line lights for `query`, as the pieces of the line.
+    @MainActor
+    private func litTransliteration(_ query: String, _ surah: Int, _ ayah: Int) throws -> [String] {
+        let line = try XCTUnwrap(QuranData.shared.ayah(surah: surah, ayah: ayah)).textTransliteration
+        return try transliterationSpans(query, surah, ayah).transliteration
+            .map { (line as NSString).substring(with: $0) }
+    }
+
+    /// 80:14 the other way: typing مطهرة lights "mutah-hara", one word written in two pieces, through
+    /// its hyphen, and the word before it stays dark (Abu, 2026-11-16).
+    @MainActor
+    func testAnArabicQueryLightsTheTransliterationWordThatSpellsIt() async throws {
+        try await ready()
+        XCTAssertEqual(try litTransliteration("مطهرة", 80, 14), ["mutah-hara"])
+        XCTAssertEqual(try litTransliteration("مرفوعة", 80, 14), ["Marfoo'atim"])
+    }
+
+    /// 56:79 "Laa yamassuhooo illal mutahharoon": إلا is "illal" though that word ends in the next
+    /// one's article, and المطهرون is its own word, not the "l" before it.
+    @MainActor
+    func testATransliterationWordIsLitByTheArabicWordThatOwnsMostOfIt() async throws {
+        try await ready()
+        XCTAssertEqual(try litTransliteration("إلا", 56, 79), ["illal"])
+        XCTAssertEqual(try litTransliteration("المطهرون", 56, 79), ["mutahharoon"])
+    }
+
+    /// 1:6 "Ihdinas-Siraatal-Mustaqeem" is three Arabic words in one written word: the hyphens cut it.
+    @MainActor
+    func testAHyphenatedTransliterationIsReadInPieces() async throws {
+        try await ready()
+        XCTAssertEqual(try litTransliteration("الصراط", 1, 6), ["Siraatal"])
+        XCTAssertEqual(try litTransliteration("المستقيم", 1, 6), ["Mustaqeem"])
+    }
+
+    /// A word reached through a TRANSLATION line lights its transliteration too ("purified" is
+    /// مُّطَهَّرَةِۭ, "mutah-hara"). One found in the line itself does not: the typed letters are already
+    /// painted there, and a match is never grown to its word.
+    @MainActor
+    func testAnEnglishQueryLightsTheTransliterationOfTheWordItMeans() async throws {
+        try await ready()
+        XCTAssertEqual(try litTransliteration("purified", 80, 14), ["mutah-hara"])
+        XCTAssertEqual(try litTransliteration("mutah", 80, 14), [])
+    }
+
+    /// 5:39 ends "'alaih; innal laaha Ghafoorur Raheem". The pause took the last vowel of عَلَيۡهِ, and
+    /// the "i" after it is إِنَّ's own: each word lights its whole word of the line.
+    @MainActor
+    func testAPauseDoesNotMoveALetterToTheWordBeforeIt() async throws {
+        try await ready()
+        let text = try ayahText(5, 39)
+        let line = try XCTUnwrap(QuranData.shared.ayah(surah: 5, ayah: 39)).textTransliteration
+        func lit(_ token: Int) -> [String] {
+            CrossLanguageWordHighlight.transliterationSpans(
+                of: [token], transliteration: line, surah: 5, ayah: 39,
+                rawText: text.arabic, displayText: text.arabic
+            ).map { (line as NSString).substring(with: $0) }
+        }
+        XCTAssertEqual(lit(9), ["'alaih"])
+        XCTAssertEqual(lit(10), ["innal"])
+        XCTAssertEqual(lit(11), ["laaha"])
+    }
+
+    /// 22:6 writes عَلَىٰ كُلِّ as one word, "'alaakulli". Each Arabic word lights its own letters of it.
+    @MainActor
+    func testTwoArabicWordsWrittenAsOneAreLitByTheirLetters() async throws {
+        try await ready()
+        XCTAssertEqual(try litTransliteration("كل", 22, 6), ["kulli"])
+        XCTAssertEqual(try litTransliteration("على", 22, 6), ["'alaa"])
+    }
+
+    /// 2:19 "wa-barq(unwi)": the ending the line keeps in brackets is part of the word, and the
+    /// bracket that opens inside it is closed.
+    @MainActor
+    func testAnEndingInBracketsIsLitWithItsWord() async throws {
+        try await ready()
+        XCTAssertEqual(try litTransliteration("برق", 2, 19), ["wa-barq(unwi)"])
+    }
+
+    /// A row that does not show the line passes none, and nothing is asked of it.
+    @MainActor
+    func testNoTransliterationLineLightsNothing() async throws {
+        try await ready()
+        XCTAssertTrue(try spans("مطهرة", 80, 14).transliteration.isEmpty)
     }
 }

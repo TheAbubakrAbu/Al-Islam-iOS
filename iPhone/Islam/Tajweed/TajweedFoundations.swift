@@ -212,6 +212,7 @@ struct TajweedFoundationsView: View {
     #if DEBUG
     /// `-tajweedTopic <rawValue>`: that page pushed as the index appears, for screenshots.
     @State private var debugOpenTopic = false
+    @State private var debugOpenFrequency = false
     private static var debugTopic: TajweedTopic? {
         let arguments = ProcessInfo.processInfo.arguments
         guard let idx = arguments.firstIndex(of: "-tajweedTopic"), arguments.indices.contains(idx + 1) else { return nil }
@@ -302,7 +303,7 @@ struct TajweedFoundationsView: View {
             SheetNavigationContainer {
                 TajweedLegendView()
             }
-            .smallMediumSheetPresentation()
+            .smallMediumSheetPresentation(startLarge: true)
         }
         #endif
         #endif
@@ -310,9 +311,16 @@ struct TajweedFoundationsView: View {
         .debugPushDestination(isPresented: $debugOpenTopic) {
             if let topic = Self.debugTopic { topic.destination }
         }
+        #if os(iOS) && HAS_QURAN
+        // `-tajweedRuleFrequency`: the rule counts pushed as the index appears, for screenshots.
+        .debugPushDestination(isPresented: $debugOpenFrequency) { TajweedRuleFrequencyView() }
+        #endif
         .onAppear {
             if Self.debugTopic != nil {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { debugOpenTopic = true }
+            }
+            if ProcessInfo.processInfo.arguments.contains("-tajweedRuleFrequency") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { debugOpenFrequency = true }
             }
         }
         #endif
@@ -349,6 +357,16 @@ struct TajweedFoundationsView: View {
                 TajweedLinkLabel(systemImage: "ear", title: String(localized: "Sound-Alike Letters"),
                                  caption: String(localized: "The pairs people mix up, side by side, with what separates them"))
             }
+
+            // Every colored stretch in Hafs counted by rule (2026-11-16): which rules to learn first.
+            #if os(iOS) && HAS_QURAN
+            OpenScreenLink(screen: .tajweedRuleFrequency) {
+                TajweedRuleFrequencyView()
+            } label: {
+                TajweedLinkLabel(systemImage: "chart.bar.fill", title: String(localized: "How Often Each Rule Comes"),
+                                 caption: String(localized: "Five rules are most of the colors on every page"))
+            }
+            #endif
         }
     }
 

@@ -389,8 +389,16 @@ struct RevisionSurahPicker: View {
             }
             .themedListRowBackground()
         }
+        // The app's own bottom search bar, not `.searchable` (whose iOS 26 field sat under a sheet's Now
+        // Playing bar), applied AFTER the list style: bottom insets stack outward, so the player the
+        // list or the sheet draws lands above the field.
         .applyConditionalListStyle()
-        .searchable(text: $searchText, prompt: "Surah name or number")
+        .adaptiveSafeArea(edge: .bottom) {
+            SearchBar(text: $searchText, placeholder: String(localized: "Surah name or number"))
+                .padding(.horizontal, 24)
+                .padding(.bottom, BottomBarCushion.standard)
+                .background(Color.white.opacity(0.00001))
+        }
         .navigationTitle("Choose Surahs")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

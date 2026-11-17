@@ -64,6 +64,8 @@ PLURAL_FORMS = {"ar": ("zero", "one", "two", "few", "many", "other"), "ur": ("ze
 REQUIRED_PLURALS = {"ar": ("one", "two", "few", "many", "other"), "ur": ("one", "other")}
 # The forms that may say the number as a word (one ayah, two ayahs) instead of printing it.
 WORD_FORMS = {"ar": ("zero", "one", "two"), "ur": ("zero", "one")}
+# A Latin name joined by hyphens, dots or slashes: a URL, a domain, a repository (`problems`).
+IDENTIFIER = re.compile("[A-Za-z0-9]+(?:[-\u2011./][A-Za-z0-9]+)+")
 # Latin words allowed to stay in a translated value.
 LATIN_OK = {"al-islam", "al-adhan", "al-quran", "apple", "icloud", "carplay", "siri", "watch", "ios",
             "ipados", "macos", "watchos", "intelligence", "id", "gps", "pdf", "ai", "faceid", "touch",
@@ -324,7 +326,13 @@ def problems(key, value, may_drop_count=False, english=None, arabic=None):
         out.append("${...} parameter tokens differ from the key")
     quoted = set(quoted_latin(value))
     key_words = {w.lower() for w in re.findall(r"[A-Za-z]+", reference)}
-    for word in re.findall(r"[A-Za-z][A-Za-z.\-]*", PARAM_TOKEN.sub(" ", SPEC.sub(" ", value))):
+    scanned = PARAM_TOKEN.sub(" ", SPEC.sub(" ", value))
+    # A URL or a repository name (opendatacommons.org/licenses/odbl, Hadith-JSON-Engine) is a name, not a
+    # word to translate: it may stay when the key spells it the same way. A non-breaking hyphen (U+2011),
+    # which keeps such a name on one line inside right-to-left text, counts as a hyphen.
+    names = {n.replace("\u2011", "-") for n in IDENTIFIER.findall(reference)}
+    scanned = IDENTIFIER.sub(lambda m: " " if m.group(0).replace("\u2011", "-") in names else m.group(0), scanned)
+    for word in re.findall(r"[A-Za-z][A-Za-z.\-]*", scanned):
         w = word.lower().strip(".-")
         if not w or w in LATIN_OK:
             continue

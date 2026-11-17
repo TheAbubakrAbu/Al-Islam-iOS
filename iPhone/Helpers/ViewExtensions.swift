@@ -767,23 +767,33 @@ extension View {
 /// and that copy floated over the pushed screen's rows with no way to scroll them out (Abu, with the
 /// Legend's Waqf lesson open under a recitation: "it gets cut off, it's not a safe area inset"). Inside
 /// this container those two stand down (`nowPlayingBarByContainer`); outside one they draw as before.
+///
+/// Since 2026-11-16 a screen with its own bottom bar (a search field, a composer) takes the player back:
+/// drawn under the whole stack, the player sat BELOW the screen's search bar (Abu, with the tafsir and
+/// About this Surah sheets open under a recitation: "always have searchbar at the bottom and now playing
+/// view at the top"). The bottom bar (`adaptiveSafeArea(edge: .bottom)`) draws the player at its own
+/// top and claims it in `SheetNowPlayingClaims`; while any screen on screen holds a claim, the
+/// container draws none.
 struct SheetNavigationContainer<Content: View>: View {
     @ViewBuilder let content: () -> Content
     @Environment(\.nowPlayingInSheet) private var inSheet
     @ObservedObject private var playback = PlaybackVisibility.shared
+    @StateObject private var claims = SheetNowPlayingClaims()
 
     var body: some View {
         VStack(spacing: 0) {
             stack
                 // Only in a sheet: outside one the screens and lists inside keep drawing their own.
                 .environment(\.nowPlayingBarByContainer, inSheet)
+                .environment(\.sheetNowPlayingClaims, inSheet ? claims : nil)
 
-            if inSheet, playback.showsNowPlaying, let bar = playback.barContent {
+            if inSheet, claims.isEmpty, playback.showsNowPlaying, let bar = playback.barContent {
                 NowPlayingBarStack(bar: bar, shown: playback.showsNowPlaying)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.easeInOut, value: playback.showsNowPlaying)
+        .animation(.easeInOut, value: claims.isEmpty)
         // This container manages the bar: the sheet host around it draws none.
         .preference(key: NowPlayingBarProvidedKey.self, value: inSheet)
     }
@@ -837,6 +847,105 @@ private struct SheetNowPlayingBar: ViewModifier {
             .preference(key: NowPlayingBarProvidedKey.self, value: inSheet)
     }
 }
+
+/// The screens of a `SheetNavigationContainer` whose own bottom bar is drawing the Now Playing bar right
+/// now (see `SheetBottomBarPlayer`). Each bar claims on appear and lets go on disappear, so a screen
+/// pushed over one without a bar of its own gets the container's copy back.
+final class SheetNowPlayingClaims: ObservableObject {
+    @Published private var claimed: Set<UUID> = []
+
+    var isEmpty: Bool { claimed.isEmpty }
+
+    func contains(_ id: UUID) -> Bool { claimed.contains(id) }
+
+    func claim(_ id: UUID) {
+        guard !claimed.contains(id) else { return }
+        claimed.insert(id)
+    }
+
+    func release(_ id: UUID) {
+        guard claimed.contains(id) else { return }
+        claimed.remove(id)
+    }
+}
+
+private struct SheetNowPlayingClaimsKey: EnvironmentKey {
+    static let defaultValue: SheetNowPlayingClaims? = nil
+}
+
+extension EnvironmentValues {
+    /// The claims of the `SheetNavigationContainer` around this view, in a sheet only.
+    var sheetNowPlayingClaims: SheetNowPlayingClaims? {
+        get { self[SheetNowPlayingClaimsKey.self] }
+        set { self[SheetNowPlayingClaimsKey.self] = newValue }
+    }
+}
+
+/// Set by a bottom bar that hosts the sheet's Now Playing bar, so a bottom bar applied OUTSIDE it on the
+/// same screen (lower on screen: bottom insets stack outward) stands down. The player rides the top of
+/// the screen's bottom stack, never between two of its bars.
+struct SheetBottomBarHostsPlayerKey: PreferenceKey {
+    static var defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
+}
+
+/// A screen's bottom bar in a sheet: the Now Playing bar on top, then the bar itself, so the search
+/// field (or composer) sits at the very bottom and the player above it, as on the tabs. Inert outside a
+/// `SheetNavigationContainer` in a sheet: there the lists and screens keep drawing the player themselves.
+struct SheetBottomBarPlayer<Bar: View>: View {
+    /// A bottom bar further in (higher on screen) already hosts it.
+    let standsDown: Bool
+    let bar: Bar
+
+    @Environment(\.sheetNowPlayingClaims) private var claims
+
+    var body: some View {
+        if let claims {
+            ClaimingStack(claims: claims, standsDown: standsDown, bar: bar)
+        } else {
+            bar
+        }
+    }
+
+    private struct ClaimingStack: View {
+        @ObservedObject var claims: SheetNowPlayingClaims
+        let standsDown: Bool
+        let bar: Bar
+
+        @ObservedObject private var playback = PlaybackVisibility.shared
+        @State private var id = UUID()
+        @State private var isVisible = false
+
+        var body: some View {
+            VStack(spacing: 0) {
+                // Drawn once the claim has landed, so the container's copy and this one never show together.
+                if claims.contains(id), playback.showsNowPlaying, let content = playback.barContent {
+                    NowPlayingBarStack(bar: content, shown: playback.showsNowPlaying)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                bar
+            }
+            .animation(.easeInOut, value: playback.showsNowPlaying)
+            .onAppear {
+                isVisible = true
+                update()
+            }
+            .onDisappear {
+                isVisible = false
+                claims.release(id)
+            }
+            .onChange(of: standsDown) { _ in update() }
+        }
+
+        private func update() {
+            if isVisible, !standsDown {
+                claims.claim(id)
+            } else {
+                claims.release(id)
+            }
+        }
+    }
+}
 #endif
 
 /// `safeAreaBar` (the scroll-edge effect under a floating bar) on iOS 26, a plain `safeAreaInset`
@@ -854,23 +963,61 @@ private struct SheetNowPlayingBar: ViewModifier {
 /// default there is 8pt, while `safeAreaBar` adds none, so a screen that stacks a second bar above
 /// this one (the surah reader's legend row, the Quran tab's mini player) read 16pt between the two
 /// on iOS 18 against 8pt on iOS 26. Those screens pass 0; a lone bar keeps the default clearance.
+///
+/// A BOTTOM bar in a sheet also carries the Now Playing bar above itself (`SheetBottomBarPlayer`), so a
+/// sheet's search field sits under the player, never over it (2026-11-16). `edge` is a constant per call
+/// site, so the branch never swaps under a mounted screen.
 struct AdaptiveSafeArea<InsetContent: View>: ViewModifier {
     let edge: VerticalEdge
     var spacing: CGFloat? = nil
     let inset: InsetContent
 
+    #if os(iOS)
+    /// A bottom bar applied further in on this screen already hosts the sheet's player.
+    @State private var innerBarHostsPlayer = false
+    /// Set only under a `SheetNavigationContainer` in a sheet; constant for a mounted screen.
+    @Environment(\.sheetNowPlayingClaims) private var sheetClaims
+    #endif
+
     @ViewBuilder
     func body(content: Content) -> some View {
         #if os(iOS)
-        if #available(iOS 26.0, *) {
-            content.safeAreaBar(edge: edge) { inset }
+        if edge == .bottom {
+            let base = content.onPreferenceChange(SheetBottomBarHostsPlayerKey.self) { innerBarHostsPlayer = $0 }
+            let bar = SheetBottomBarPlayer(standsDown: innerBarHostsPlayer, bar: inset)
+            Group {
+                if sheetClaims != nil {
+                    // In a sheet the screen ENDS above its bars, as it did above the player the
+                    // container drew under the stack. A bar the rows scroll under shows them in full
+                    // ink there, between the player and the field and under both: iOS 26's
+                    // scroll-edge fade never draws inside a sheet (2026-11-01, measured again 11-16).
+                    VStack(spacing: 0) {
+                        base
+                        bar
+                    }
+                } else {
+                    placed(base, bar)
+                }
+            }
+            .preference(key: SheetBottomBarHostsPlayerKey.self, value: true)
         } else {
-            content.safeAreaInset(edge: edge, spacing: spacing) { inset }
+            placed(content, inset)
         }
         #else
         content.safeAreaInset(edge: edge, spacing: spacing) { inset }
         #endif
     }
+
+    #if os(iOS)
+    @ViewBuilder
+    private func placed<Base: View, Bar: View>(_ base: Base, _ bar: Bar) -> some View {
+        if #available(iOS 26.0, *) {
+            base.safeAreaBar(edge: edge) { bar }
+        } else {
+            base.safeAreaInset(edge: edge, spacing: spacing) { bar }
+        }
+    }
+    #endif
 }
 
 #if os(iOS)

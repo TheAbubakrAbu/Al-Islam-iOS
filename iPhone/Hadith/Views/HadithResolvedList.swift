@@ -411,8 +411,9 @@ struct HadithListRow: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 25, height: 25)
                         .foregroundColor(accent)
-                        .conditionalGlassEffect(inRow: true)
+                        // The glass at the pill's 28pt height, as every row's (2026-11-16).
                         .frame(width: 28, height: 28)
+                        .conditionalGlassEffect(inRow: true)
                         .contentShape(Rectangle())
                 }
                 .accessibilityLabel("Hadith Actions")

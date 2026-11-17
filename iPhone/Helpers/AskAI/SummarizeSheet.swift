@@ -113,7 +113,9 @@ struct SummarizeSheet: View {
                         .onChange(of: turns.last?.answer) { _ in
                             withAnimation { proxy.scrollTo("summarize-bottom", anchor: .bottom) }
                         }
-                        .safeAreaInset(edge: .bottom) {
+                        // `adaptiveSafeArea`, as the Ask AI chat's composer: in a sheet it carries the
+                        // Now Playing bar above the field, never under it.
+                        .adaptiveSafeArea(edge: .bottom) {
                             inputBar
                         }
                     }

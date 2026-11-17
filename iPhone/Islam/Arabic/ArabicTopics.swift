@@ -11,7 +11,7 @@ import SwiftUI
 struct ArabicTopic: Identifiable, Equatable {
     /// Where the topic sits on the screen: the result row's eyebrow, and a search word in itself.
     enum Section: Equatable {
-        case explore, shapes, vowelLetters, wasl, grammar, numbers, signs, readingTest
+        case explore, shapes, vowelLetters, wasl, grammar, quranWords, numbers, signs, readingTest
 
         var title: String {
             switch self {
@@ -20,6 +20,7 @@ struct ArabicTopic: Identifiable, Equatable {
             case .vowelLetters: return String(localized: "Vowel Letters")
             case .wasl: return String(localized: "Hamzatul WaSl")
             case .grammar: return String(localized: "Grammar")
+            case .quranWords: return String(localized: "Quran Words")
             case .numbers: return String(localized: "Arabic Numbers")
             case .signs: return String(localized: "Quran Signs")
             case .readingTest: return String(localized: "Reading Test")
@@ -284,6 +285,23 @@ enum ArabicTopicCatalog {
 
     static let grammar: [ArabicTopic] = [pronouns, noun, verb, harf]
 
+    /// The Quran's most common words (2026-11-16), after the grammar pages: the phone's, and only
+    /// where the Quran ships (its rows open the Word Study card).
+    #if os(iOS) && HAS_QURAN
+    static let quranWords = ArabicTopic(
+        id: "quranWords", section: .quranWords,
+        title: String(localized: "Quran Words"),
+        caption: String(localized: "The 500 most common words, four in five of what you recite"),
+        specimen: "قَالَ", face: .uthmani,
+        aliases: ["Quran Vocabulary", "Common Words", "مفردات القرآن", "كلمات القرآن"],
+        keywords: ["vocabulary", "words", "most common", "frequency", "lemma", "root", "roots",
+                   "meaning", "understand", "learn words", "flashcards", "quiz", "test"])
+
+    static let quranWordsTopics: [ArabicTopic] = [quranWords]
+    #else
+    static let quranWordsTopics: [ArabicTopic] = []
+    #endif
+
     /// Every topic, in the order the screen shows them: a tie in the ranking keeps this order.
     static let all: [ArabicTopic] = {
         var topics = explore
@@ -292,6 +310,7 @@ enum ArabicTopicCatalog {
         topics += [wasl]
         topics += waslDrills
         topics += grammar
+        topics += quranWordsTopics
         topics += [numbers, signs]
         #if os(iOS)
         topics += [quiz]
@@ -371,6 +390,9 @@ struct ArabicTopicDestination: View {
         case "waslReadOn": HamzatulWaslPracticeView(mode: .readOn)
         case "vowelLetters": VowelLettersView()
         case "vowelPractice": VowelOrConsonantPracticeView(letter: nil)
+        #if HAS_QURAN
+        case "quranWords": QuranWordsView()
+        #endif
         case let tier where tier.hasPrefix("tier:"):
             if let tier = ReadingTier.all.first(where: { $0.id == String(tier.dropFirst("tier:".count)) }) {
                 ReadingTierView(tier: tier)

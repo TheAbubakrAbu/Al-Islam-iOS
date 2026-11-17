@@ -2407,6 +2407,38 @@
         }
       }
     },
+    "%@ marks" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ علامة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ نشان"
+          }
+        }
+      }
+    },
+    "%@ means “%@”. It is in %lld words of the Quran." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معنى %1$@: «%2$@». عدد كلمات القرآن التي ترد فيها: %3$lld."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ کا مطلب ہے «%2$@»۔ یہ قرآن کے %3$lld الفاظ میں آتا ہے۔"
+          }
+        }
+      }
+    },
     "%@ mi (%@ km)" : {
       "localizations" : {
         "ar" : {
@@ -2532,6 +2564,22 @@
     },
     "%@ of a word" : {
       "extractionState" : "stale"
+    },
+    "%@ of the Quran · %lld of %lld known" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ من القرآن • %2$lld من %3$lld معروفة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن کا %1$@ • %3$lld میں سے %2$lld معلوم"
+          }
+        }
+      }
     },
     "%@ on %@" : {
       "localizations" : {
@@ -3242,6 +3290,22 @@
         }
       }
     },
+    "%@, %@, %lld times" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@، %2$@، %3$lld مرة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@، %2$@، %3$lld بار"
+          }
+        }
+      }
+    },
     "%@, %@, selected" : {
       "localizations" : {
         "ar" : {
@@ -3509,6 +3573,7 @@
     "%@. %@%@" : {
       "extractionState" : "stale"
     },
+    "%@. %@. %@" : {},
     "%@. %@. Opened" : {
       "localizations" : {
         "ar" : {
@@ -9333,7 +9398,8 @@
             "value" : "%lld منتخب"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "%lld settings changed from the default" : {
       "localizations" : {
@@ -10356,6 +10422,70 @@
         }
       }
     },
+    "%lld words marked known" : {
+      "localizations" : {
+        "ar" : {
+          "variations" : {
+            "plural" : {
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "لم تُعلَّم أي كلمة بأنها معروفة"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "عُلِّمت كلمة واحدة بأنها معروفة"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "عُلِّمت كلمتان بأنهما معروفتان"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "عُلِّمت %lld كلمات بأنها معروفة"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "عُلِّمت %lld كلمة بأنها معروفة"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "عُلِّمت %lld كلمة بأنها معروفة"
+                }
+              }
+            }
+          }
+        },
+        "ur" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld لفظ معلوم نشان زد ہوا"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld الفاظ معلوم نشان زد ہوئے"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld words read differently" : {
       "localizations" : {
         "ar" : {
@@ -10713,7 +10843,9 @@
         }
       }
     },
-    "%lld:" : {},
+    "%lld:" : {
+      "extractionState" : "stale"
+    },
     "%lld:%lld" : {},
     "%lldd" : {
       "localizations" : {
@@ -10880,6 +11012,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "عیسیٰ (3:52): درمیان میں یاء لمبی «ای» کے طور پر، آخر میں الفِ مقصورہ"
+          }
+        }
+      }
+    },
+    "'Isa son of Maryam (2:87): the same rule on a name, before a noun that opens with hamzatul waSl" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "﴿عيسى ابن مريم﴾ (٢:٨٧): القاعدة نفسها في اسم علم، قبل اسم يبدأ بهمزة وصل"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عیسیٰ ابنِ مریم (2:87): ایک نام پر بھی وہی قاعدہ، ہمزۂ وصل سے شروع ہونے والے اسم سے پہلے"
           }
         }
       }
@@ -11437,6 +11585,39 @@
             "value" : "- **تینوں:** دو پیش کی تنوین ـٌ، دو زبر کی ـً اور دو زیر کی ـٍ بالترتیب ـُنِ، ـَنِ اور ـِنِ بن جاتی ہیں۔"
           }
         }
+      },
+      "extractionState" : "stale"
+    },
+    "- **All three:** -un, -an and -in become -uni, -ani and -ini: نُوحٌ ٱبۡنَهُۥ is نُوحُنِبۡنَهُۥ, خَيۡرًا ٱلۡوَصِيَّةُ is خَيۡرَنِلۡوَصِيَّةُ, بِغُلَٰمٍ ٱسۡمُهُۥ is بِغُلَٰمِنِسۡمُهُۥ." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "- **الأنواع الثلاثة:** تنوين الضم والفتح والكسر يصير كلٌّ منها حركته ثم نونًا مكسورة (ـُنِ، ـَنِ، ـِنِ): نُوحٌ ٱبۡنَهُۥ تُنطق نُوحُنِبۡنَهُۥ، وخَيۡرًا ٱلۡوَصِيَّةُ تُنطق خَيۡرَنِلۡوَصِيَّةُ، وبِغُلَٰمٍ ٱسۡمُهُۥ تُنطق بِغُلَٰمِنِسۡمُهُۥ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "- **تینوں:** تنوینِ ضمہ، فتحہ اور کسرہ اپنی حرکت کے بعد زیر والا نون بن جاتی ہیں (ـُنِ، ـَنِ، ـِنِ): نُوحٌ ٱبۡنَهُۥ کو نُوحُنِبۡنَهُۥ، خَيۡرًا ٱلۡوَصِيَّةُ کو خَيۡرَنِلۡوَصِيَّةُ، اور بِغُلَٰمٍ ٱسۡمُهُۥ کو بِغُلَٰمِنِسۡمُهُۥ پڑھا جاتا ہے۔"
+          }
+        }
+      }
+    },
+    "- **Compare a plain damma:** نُوحُ ٱبۡنَهُۥ would be said نُوحُبۡنَهُۥ, the damma running straight into the baa. With the tanween you hear نُوحُنِبۡنَهُۥ: the extra نِ is the hidden noon." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "- **قارن بضمة مجردة:** لو كانت نُوحُ ٱبۡنَهُۥ لنُطقت نُوحُبۡنَهُۥ، تتصل فيها الضمة بالباء مباشرة. ومع التنوين تسمع نُوحُنِبۡنَهُۥ: و«نِ» الزائدة هي النون الخفية."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "- **سادہ پیش سے موازنہ کریں:** نُوحُ ٱبۡنَهُۥ ہوتا تو نُوحُبۡنَهُۥ پڑھا جاتا، پیش سیدھا باء سے جا ملتا۔ تنوین کے ساتھ آپ نُوحُنِبۡنَهُۥ سنتے ہیں: زائد «نِ» ہی پوشیدہ نون ہے۔"
+          }
+        }
       }
     },
     "- **Does it carry a fatha, kasra, damma, tanween or shaddah?** A consonant: a letter with a vowel of its own is a consonant." : {
@@ -11483,6 +11664,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "- **حفص اس فعل سے پہلے بھی زیر پڑھتے ہیں جسے آپ پیش سے شروع کرتے:** خَبِيثَةٍ ٱجۡتُثَّتۡ کو «خَبِيثَتِنِجْتُثَّتْ» پڑھا جاتا ہے (14:26)۔"
+          }
+        }
+      },
+      "extractionState" : "stale"
+    },
+    "- **Hafs says the kasra even before a verb you would start on a damma:** خَبِيثَةٍ ٱجۡتُثَّتۡ is خَبِيثَتِنِجۡتُثَّتۡ, khabeethatinij-tuththat (14:26)." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "- **حفص يكسر النون حتى قبل فعل تبدأ به بالضم:** خَبِيثَةٍ ٱجۡتُثَّتۡ تُقرأ خَبِيثَتِنِجۡتُثَّتۡ (١٤:٢٦)."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "- **حفص اس فعل سے پہلے بھی زیر پڑھتے ہیں جسے آپ پیش سے شروع کرتے:** خَبِيثَةٍ ٱجۡتُثَّتۡ کو خَبِيثَتِنِجۡتُثَّتۡ پڑھا جاتا ہے (14:26)۔"
           }
         }
       }
@@ -11533,6 +11731,23 @@
             "value" : "- **اس کے بجائے وقف کریں تو:** تنوین والے لفظ پر ویسے ہی وقف کریں جیسے ہر وقف ہوتا ہے (خَيۡرًا، «خَيْرَا»)، پھر اگلا لفظ اس کے ہمزے سے شروع کریں («أَلْوَصِيَّةُ»)۔"
           }
         }
+      },
+      "extractionState" : "stale"
+    },
+    "- **Stopping instead:** stop on the tanween word the way any stop goes (خَيۡرًا, khayraa), then start the next on its hamza (أَلۡوَصِيَّةُ, al-waSiyyatu)." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "- **إن وقفت بدل ذلك:** فقف على الكلمة المنوّنة كما يكون أي وقف (خَيۡرًا، «خَيْرَا»)، ثم ابدأ الكلمة التالية بهمزتها (أَلۡوَصِيَّةُ)."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "- **اس کے بجائے وقف کریں تو:** تنوین والے لفظ پر ویسے ہی وقف کریں جیسے ہر وقف ہوتا ہے (خَيۡرًا، «خَيْرَا»)، پھر اگلا لفظ اس کے ہمزے سے شروع کریں (أَلۡوَصِيَّةُ)۔"
+          }
+        }
       }
     },
     "- **Waw (و)**: As a **vowel** it is the long \"uu\" (also written \"oo\", and shortened to \"u\"), used after a letter with a damma, like in رَسُول (rasool, messenger). As a **consonant** it makes the \"w\" sound, like in وَقَفَ (waqafa, stood)." : {
@@ -11551,6 +11766,22 @@
         }
       }
     },
+    "- **Why the kasra:** with the alif silent, the tanween’s noon meets the sukoon of the letter after it. Two sukoons cannot be said together, so the noon takes a vowel like any other sukoon does: a kasra." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "- **لماذا الكسرة:** إذا سقطت الألف في النطق التقت نون التنوين بسكون الحرف الذي بعدها. ولا يُنطق ساكنان معًا، فتتحرك النون كما يتحرك أي ساكن آخر: بالكسر."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "- **زیر کیوں:** الف نہ پڑھے جانے سے تنوین کا نون اپنے بعد والے حرف کے سکون سے جا ملتا ہے۔ دو ساکن ایک ساتھ نہیں پڑھے جا سکتے، اس لیے ہر دوسرے ساکن کی طرح نون کو بھی حرکت دی جاتی ہے: زیر۔"
+          }
+        }
+      }
+    },
     "- **Why:** a tanween is a noon with a sukoon at the end of the word. With the alif silent, it meets the sukoon after the alif, so it takes a vowel like any other sukoon: a kasra." : {
       "localizations" : {
         "ar" : {
@@ -11565,7 +11796,8 @@
             "value" : "- **وجہ:** تنوین لفظ کے آخر میں ساکن نون ہے۔ الف نہ پڑھے جانے سے یہ نون الف کے بعد والے ساکن حرف سے جا ملتا ہے، اس لیے ہر دوسرے ساکن کی طرح اسے بھی حرکت دی جاتی ہے: زیر۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "- **Yaa (ي)**: As a **vowel** it is the long \"ee\" (also written \"ii\", and shortened to \"i\"), used after a letter with a kasra, like in كِتَابِي (kitaabi, my book). As a **consonant** it makes the \"y\" sound, like in يَد (yad, hand)." : {
       "localizations" : {
@@ -12646,6 +12878,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "قرآن میں ایک لفظ"
+          }
+        }
+      }
+    },
+    "1 word marked known" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عُلِّمت كلمة واحدة بأنها معروفة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 لفظ معلوم نشان زد ہوا"
           }
         }
       }
@@ -14566,6 +14814,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "نوٹس والی 200 آیات"
+          }
+        }
+      }
+    },
+    "21 tiers · letter quiz" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "٢١ مستوى • اختبار الحروف"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "21 درجے • حروف کا کوئز"
           }
         }
       }
@@ -21609,6 +21873,22 @@
         }
       }
     },
+    "A ring that empties as the next prayer comes, with its countdown and your city" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حلقة تفرغ مع اقتراب الصلاة التالية، مع العد التنازلي لها ومدينتك"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایک دائرہ جو اگلی نماز کے قریب آنے کے ساتھ خالی ہوتا جاتا ہے، اس کی الٹی گنتی اور آپ کے شہر کے ساتھ"
+          }
+        }
+      }
+    },
     "A ring that fills as the current prayer time passes" : {
       "localizations" : {
         "ar" : {
@@ -23447,7 +23727,8 @@
             "value" : "ہمزۂ وصل سے پہلے تنوین ہی وہ صورت ہے جسے مصحف لکھ کر نہیں دکھاتا۔ اس کے نون کو زیر کے ساتھ پڑھیں اور ملا دیں: نُوحٌ ٱبۡنَهُۥ کو «نُوحُنِبْنَهُ» پڑھا جاتا ہے۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "A tanween is a doubled vowel sign standing in for a nun sakinah that is pronounced but not written. That is the whole reason the four nun rules apply to it: there is a nun in the sound even though there is no nun on the page. What the Uthmani script adds is a way of telling you, from the shape of the two strokes alone, whether that hidden nun is going to be said plainly or not." : {
       "extractionState" : "manual",
@@ -23462,6 +23743,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "تنوین ایک دوہری حرکت ہے جو اُس نون ساکنہ کے قائم مقام ہے جو بولی تو جاتی ہے مگر لکھی نہیں جاتی۔ نون کے چاروں احکام کے اس پر لاگو ہونے کی پوری وجہ یہی ہے: آواز میں نون موجود ہے، خواہ صفحے پر نون نہ ہو۔ رسمِ عثمانی اس پر یہ اضافہ کرتا ہے کہ صرف دو لکیروں کی شکل سے آپ کو بتا دے کہ وہ چھپی ہوئی نون صاف بولی جائے گی یا نہیں۔"
+          }
+        }
+      }
+    },
+    "A tanween is a hidden noon. كِتَابٌ is really said كِتَابُنۡ: the damma, then a noon with a sukoon that is never written. Before hamzatul waSl that noon is what joins: نُوحٌ ٱبۡنَهُۥ is read نُوحُنِبۡنَهُۥ (nooHunibnahu)." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التنوين نون خفية. فكلمة كِتَابٌ تُنطق في الحقيقة كِتَابُنۡ: الضمة، ثم نون ساكنة لا تُكتب أبدًا. وقبل همزة الوصل تكون هذه النون هي التي تصل: نُوحٌ ٱبۡنَهُۥ تُقرأ نُوحُنِبۡنَهُۥ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تنوین ایک پوشیدہ نون ہے۔ كِتَابٌ دراصل كِتَابُنۡ پڑھا جاتا ہے: پیش، پھر نون ساکن جو کبھی لکھا نہیں جاتا۔ ہمزۂ وصل سے پہلے یہی نون ملاتا ہے: نُوحٌ ٱبۡنَهُۥ کو نُوحُنِبۡنَهُۥ پڑھا جاتا ہے۔"
+          }
+        }
+      }
+    },
+    "A tanween is a short vowel followed by a noon with sukoon: said, never written. The \"an\" tanween's alif is only a seat for the mark, sounded only when you stop on the word. Before hamzatul waSl that hidden noon is what joins the words: see the Hamzatul WaSl page." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التنوين حركة قصيرة تتبعها نون ساكنة تُنطق ولا تُكتب. وألف تنوين الفتح ليست إلا مقعدًا للعلامة، ولا تُنطق إلا إذا وقفت على الكلمة. وقبل همزة الوصل تكون هذه النون الخفية هي التي تصل الكلمتين: انظر صفحة «همزة الوصل»."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تنوین ایک چھوٹی حرکت ہے جس کے بعد نون ساکن آتا ہے جو پڑھا جاتا ہے مگر لکھا نہیں جاتا۔ تنوینِ فتح کا الف صرف علامت کی نشست ہے، اور صرف لفظ پر وقف کرنے پر پڑھا جاتا ہے۔ ہمزۂ وصل سے پہلے یہی پوشیدہ نون دونوں لفظوں کو ملاتا ہے: «ہمزۂ وصل» کا صفحہ دیکھیں۔"
           }
         }
       }
@@ -33963,6 +34276,22 @@
     "Arabic Font Size: %lld" : {
       "extractionState" : "stale"
     },
+    "Arabic Numbers" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الأرقام العربية"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عربی اعداد"
+          }
+        }
+      }
+    },
     "Arabic Only" : {
       "localizations" : {
         "ar" : {
@@ -34836,6 +35165,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "جتنا قاری کا سانس اجازت دے"
+          }
+        }
+      }
+    },
+    "As the mushaf writes it." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كما يكتبها المصحف."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جیسے مصحف میں لکھا ہے۔"
           }
         }
       }
@@ -37561,6 +37906,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "قراءت کے لحاظ سے"
+          }
+        }
+      }
+    },
+    "BY RULE" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حسب القاعدة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قاعدے کے لحاظ سے"
           }
         }
       }
@@ -45614,6 +45975,22 @@
       },
       "extractionState" : "stale"
     },
+    "Clear the Known Marks" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إزالة علامات المعرفة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معلوم کے نشان ہٹائیں"
+          }
+        }
+      }
+    },
     "Clear the queue?" : {
       "localizations" : {
         "ar" : {
@@ -49362,6 +49739,22 @@
         }
       }
     },
+    "Counted from the colors this app paints on the Hafs text. One mark is one colored stretch: a lengthened letter, a heavy letter, a merged noon. Tap a rule for its page in Tajweed Foundations." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عُدّت من الألوان التي يرسمها التطبيق على نص حفص. العلامة الواحدة مقطع ملوّن واحد: حرف ممدود، أو حرف مفخّم، أو نون مُدغمة. اضغط قاعدة لتفتح صفحتها في أساسيات التجويد."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہ گنتی ان رنگوں سے ہے جو ایپ حفص کے متن پر لگاتی ہے۔ ایک نشان ایک رنگین حصہ ہے: ایک کھینچا ہوا حرف، ایک پُر حرف، ایک مدغم نون۔ کسی قاعدے پر ٹیپ کریں تاکہ «تجوید کی بنیادیں» میں اس کا صفحہ کھلے۔"
+          }
+        }
+      }
+    },
     "Counted in the app’s texts; the twelve beta texts are machine-read, so their counts are close rather than exact." : {},
     "Counted on the tasbih" : {
       "localizations" : {
@@ -49391,6 +49784,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "آج گنا گیا"
+          }
+        }
+      }
+    },
+    "Counted with the Quranic Arabic Corpus, which lists every word of the Quran with its dictionary form and root. It counts %@ words to this mushaf's %@: it joins and splits a few words differently." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عُدَّت بمدوّنة القرآن العربية، التي تسرد كل كلمة في القرآن مع صيغتها المعجمية وجذرها. وهي تعدّ %1$@ كلمة مقابل %2$@ في هذا المصحف، لأنها تصل بعض الكلمات وتفصل بعضها على غير ما في المصحف."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہ گنتی «قرآنی عربی کارپس» سے کی گئی ہے، جو قرآن کے ہر لفظ کو اس کے لغوی صیغے اور مادے کے ساتھ درج کرتا ہے۔ وہ %1$@ الفاظ گنتا ہے جبکہ اس مصحف میں %2$@ ہیں، کیونکہ وہ چند الفاظ کو مختلف طرح جوڑتا اور الگ کرتا ہے۔"
           }
         }
       }
@@ -61168,6 +61577,22 @@
         }
       }
     },
+    "Every tier goes back to not passed, every word loses its known mark, and the words kept for review are forgotten. This cannot be undone." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تعود كل المستويات غير مجتازة، وتُزال علامة المعرفة عن كل كلمة، وتُنسى الكلمات المحفوظة للمراجعة. لا يمكن التراجع عن ذلك."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر درجہ دوبارہ غیر کامیاب ہو جائے گا، ہر لفظ سے معلوم کا نشان ہٹ جائے گا، اور دہرائی کے لیے رکھے گئے الفاظ بھلا دیے جائیں گے۔ یہ واپس نہیں ہو سکتا۔"
+          }
+        }
+      }
+    },
     "Every tier goes back to not passed. This cannot be undone." : {
       "localizations" : {
         "ar" : {
@@ -65813,6 +66238,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "عام مخارج پانچ ہیں: جوف، حلق، لسان، شفتین، خیشوم۔"
+          }
+        }
+      }
+    },
+    "Five rules are %@ of all the tajweed colors" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خمس قواعد تشكّل %@ من كل ألوان التجويد"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پانچ قواعد تجوید کے تمام رنگوں کا %@ ہیں"
+          }
+        }
+      }
+    },
+    "Five rules are most of the colors on every page" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خمس قواعد هي معظم الألوان في كل صفحة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پانچ قواعد ہر صفحے کے بیشتر رنگ ہیں"
           }
         }
       }
@@ -78501,6 +78958,38 @@
         }
       }
     },
+    "How Often Each Rule Comes" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كم مرة ترد كل قاعدة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر قاعدہ کتنی بار آتا ہے"
+          }
+        }
+      }
+    },
+    "How Often Each Tajweed Rule Comes" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كم مرة ترد كل قاعدة تجويد"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تجوید کا ہر قاعدہ کتنی بار آتا ہے"
+          }
+        }
+      }
+    },
     "How They Work" : {
       "localizations" : {
         "ar" : {
@@ -79171,6 +79660,7 @@
       }
     },
     "How to Become a Muslim" : {},
+    "How to Deal With the Evil Eye" : {},
     "How to Do Ruqyah" : {},
     "How to Fast" : {},
     "How to Fast Voluntary Fasts" : {},
@@ -83176,6 +83666,23 @@
             "value" : "مصحف میں الفِ مقصورہ پر اکثر کھڑا زبر (ىٰ) ہوتا ہے۔ یہی چھوٹی سی علامت الف ہے: یہ وہی 2 حرکات کا «آ» لکھتی ہے جسے یہ حرف ظاہر کرتا ہے۔"
           }
         }
+      },
+      "extractionState" : "stale"
+    },
+    "In the Quran the alif maqSoorah very often carries a small dagger alif (ىٰ). That tiny mark IS the alif: it writes the 2-count \"aa\" the letter stands for. So it is left off exactly where the \"aa\" is not said: before a word that opens with hamzatul waSl, where the long vowel would run into a sukoon, and after a tanween (هُدٗى)." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وفي المصحف تحمل الألف المقصورة كثيرًا ألفًا خنجرية صغيرة (ىٰ). وتلك العلامة الصغيرة هي الألف نفسها: تكتب المد بمقدار حركتين الذي يدل عليه الحرف. ولذلك تُترك حيث لا يُنطق هذا المد: قبل كلمة تبدأ بهمزة وصل، إذ يلتقي المد بساكن، وبعد التنوين (هُدٗى)."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مصحف میں الفِ مقصورہ پر اکثر کھڑا زبر (ىٰ) ہوتا ہے۔ یہی چھوٹی سی علامت الف ہے: یہ وہی 2 حرکات کا «آ» لکھتی ہے جسے یہ حرف ظاہر کرتا ہے۔ اسی لیے یہ ٹھیک وہیں چھوڑ دی جاتی ہے جہاں «آ» نہیں پڑھی جاتی: ہمزۂ وصل سے شروع ہونے والے لفظ سے پہلے، جہاں لمبی آواز ساکن سے جا ٹکراتی، اور تنوین کے بعد (هُدٗى)۔"
+          }
+        }
       }
     },
     "In the Quran, there are seven nouns that start with hamzatul waSl. These nouns always begin with a kasra when pronounced in isolation." : {
@@ -86676,6 +87183,22 @@
         }
       }
     },
+    "It happens 46 times inside an ayah in the Hafs text. Tap a row to hear it as it is said, and to see it taken apart step by step." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يقع ذلك ٤٦ مرة داخل الآية الواحدة في رواية حفص. اضغط على سطر لتسمعه كما يُنطق، ولترى تحليله خطوة خطوة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "روایتِ حفص کے متن میں یہ کسی ایک آیت کے اندر 46 بار آتا ہے۔ کسی سطر پر ٹیپ کریں تاکہ اسے ویسے ہی سنیں جیسے پڑھا جاتا ہے، اور قدم بہ قدم کھول کر دیکھیں۔"
+          }
+        }
+      }
+    },
     "It happens 46 times inside an ayah in the Hafs text. Tap a row to hear it as it is said." : {
       "localizations" : {
         "ar" : {
@@ -86690,7 +87213,8 @@
             "value" : "روایتِ حفص کے متن میں یہ کسی ایک آیت کے اندر 46 بار آتا ہے۔ کسی سطر پر ٹیپ کریں اور اسے ویسے ہی سنیں جیسے پڑھا جاتا ہے۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "It has a full two-count ghunnah" : {
       "extractionState" : "manual",
@@ -90749,6 +91273,22 @@
         }
       }
     },
+    "Known" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معروفة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معلوم"
+          }
+        }
+      }
+    },
     "Known for the longest madd and for his pauses on the hamzah." : {
       "localizations" : {
         "ar" : {
@@ -93411,6 +93951,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "حروف کے احکام"
+          }
+        }
+      }
+    },
+    "Letter Shapes" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أشكال الحروف"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حروف کی شکلیں"
           }
         }
       }
@@ -99381,6 +99937,22 @@
         }
       }
     },
+    "Mark All Known" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تعليم الكل بأنها معروفة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سب کو معلوم نشان زد کریں"
+          }
+        }
+      }
+    },
     "Mark Ayah Viewed" : {
       "localizations" : {
         "ar" : {
@@ -99663,6 +100235,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "وہ نشانات جو کہتے ہیں: بند، کچھ کرنا نہیں"
+          }
+        }
+      }
+    },
+    "Marks the word known" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يُعلِّم الكلمة بأنها معروفة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لفظ کو معلوم نشان زد کرتا ہے"
           }
         }
       }
@@ -102078,6 +102666,22 @@
         }
       }
     },
+    "Most common first. A tier's share counts each word of the Quran it stands for once: قَالَ stands for قَالُوا, يَقُولُ and قُلۡ too." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الأكثر شيوعًا أولًا. تحسب نسبة كل مستوى كل كلمة من القرآن يمثّلها مرة واحدة: فكلمة قَالَ تمثّل أيضًا قَالُوا و يَقُولُ و قُلۡ."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سب سے عام پہلے۔ ہر درجے کا حصہ قرآن کے ہر اس لفظ کو ایک بار گنتا ہے جس کی وہ نمائندگی کرتا ہے: قَالَ کے تحت قَالُوا، يَقُولُ اور قُلۡ بھی آتے ہیں۔"
+          }
+        }
+      }
+    },
     "Most contemporary councils do not give a device the ruling of a mushaf" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -102716,6 +103320,22 @@
         }
       }
     },
+    "Musa the Scripture (2:53): no dagger alif, because the next word opens with hamzatul waSl and the \"aa\" is not said when you read on" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "﴿موسى الكتاب﴾ (٢:٥٣): بلا ألف خنجرية، لأن الكلمة التالية تبدأ بهمزة وصل، فلا يُنطق المد عند الوصل"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "موسیٰ کو کتاب (2:53): کھڑا زبر نہیں، کیونکہ اگلا لفظ ہمزۂ وصل سے شروع ہوتا ہے اور ملا کر پڑھتے وقت «آ» نہیں پڑھی جاتی"
+          }
+        }
+      }
+    },
     "Musa the Scripture (2:53): the same rule on a name" : {
       "localizations" : {
         "ar" : {
@@ -102728,6 +103348,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "موسیٰ کو کتاب (2:53): ایک نام پر بھی وہی قاعدہ"
+          }
+        }
+      },
+      "extractionState" : "stale"
+    },
+    "Musa the Scripture · Musa to his people (2:53, 2:54): one name, one ayah apart, spelled two ways" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "﴿موسى الكتاب﴾ • ﴿موسى لقومه﴾ (٢:٥٣، ٢:٥٤): اسم واحد في آيتين متتاليتين، يُكتب بصورتين"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "موسیٰ کو کتاب • موسیٰ نے اپنی قوم سے (2:53، 2:54): ایک ہی نام، ساتھ ساتھ کی دو آیتوں میں، دو طرح لکھا گیا"
           }
         }
       }
@@ -109205,6 +109842,22 @@
     "Not marked" : {
       "extractionState" : "stale"
     },
+    "Not marked known" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "غير معلَّمة بأنها معروفة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معلوم نشان زد نہیں"
+          }
+        }
+      }
+    },
     "Not passed yet" : {
       "localizations" : {
         "ar" : {
@@ -109877,6 +110530,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "«الدرۃ» کے طریق سے ان دونوں راویوں کے درمیان کوئی اختلاف منقول نہیں، اس لیے دونوں کا متن ایک ہے۔ تفصیل کے لیے کسی کو بھی کھولیں۔"
+          }
+        }
+      }
+    },
+    "Nothing is waiting for review." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا شيء ينتظر المراجعة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دہرائی کے لیے کچھ باقی نہیں۔"
           }
         }
       }
@@ -116870,6 +117539,22 @@
         }
       }
     },
+    "Opens the word in the Quran" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يفتح الكلمة في القرآن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لفظ کو قرآن میں کھولتا ہے"
+          }
+        }
+      }
+    },
     "Opens this app's notification settings" : {
       "localizations" : {
         "ar" : {
@@ -118887,6 +119572,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "کامیاب، بہترین %lld فیصد"
+          }
+        }
+      }
+    },
+    "Passing the test (%lld questions, eight in ten right) marks every word you answered right as known." : {
+      "localizations" : {
+        "ar" : {
+          "variations" : {
+            "plural" : {
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "اجتياز الاختبار (%lld سؤال، ثمانية من كل عشرة صحيحة) يُعلِّم كل كلمة أجبت عنها صحيحًا بأنها معروفة."
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "اجتياز الاختبار (سؤال واحد، ثمانية من كل عشرة صحيحة) يُعلِّم كل كلمة أجبت عنها صحيحًا بأنها معروفة."
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "اجتياز الاختبار (سؤالان، ثمانية من كل عشرة صحيحة) يُعلِّم كل كلمة أجبت عنها صحيحًا بأنها معروفة."
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "اجتياز الاختبار (%lld أسئلة، ثمانية من كل عشرة صحيحة) يُعلِّم كل كلمة أجبت عنها صحيحًا بأنها معروفة."
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "اجتياز الاختبار (%lld سؤالًا، ثمانية من كل عشرة صحيحة) يُعلِّم كل كلمة أجبت عنها صحيحًا بأنها معروفة."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "اجتياز الاختبار (%lld سؤال، ثمانية من كل عشرة صحيحة) يُعلِّم كل كلمة أجبت عنها صحيحًا بأنها معروفة."
+                }
+              }
+            }
+          }
+        },
+        "ur" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "ٹیسٹ میں کامیابی (%lld سوال، دس میں سے آٹھ درست) ہر اس لفظ کو معلوم نشان زد کر دیتی ہے جس کا آپ نے درست جواب دیا۔"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "ٹیسٹ میں کامیابی (%lld سوالات، دس میں سے آٹھ درست) ہر اس لفظ کو معلوم نشان زد کر دیتی ہے جس کا آپ نے درست جواب دیا۔"
+                }
+              }
+            }
           }
         }
       }
@@ -122383,6 +123132,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "نماز کی یاد دہانیاں اور پیشگی اطلاعات"
+          }
+        }
+      }
+    },
+    "Prayer Ring" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حلقة الصلاة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نماز کا دائرہ"
+          }
+        }
+      }
+    },
+    "Prayer Ring Sky" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حلقة الصلاة بلون السماء"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نماز کا دائرہ (آسمانی رنگ)"
           }
         }
       }
@@ -125934,6 +126715,22 @@
         }
       }
     },
+    "QURAN WORDS" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كلمات القرآن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن کے الفاظ"
+          }
+        }
+      }
+    },
     "Qaaf meets the soft palate, as far back as the tongue reaches. Kaaf is the same movement one small step forward, where the hard palate begins. The pair are called the lahawiyyah letters (اللَّهَوِيَّة), after the uvula beside them." : {
       "localizations" : {
         "ar" : {
@@ -127096,6 +127893,22 @@
         }
       }
     },
+    "Quran Signs" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رموز المصحف"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآنی علامات"
+          }
+        }
+      }
+    },
     "Quran Sort" : {
       "localizations" : {
         "ar" : {
@@ -127172,6 +127985,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "قرآن کا ٹیوٹوریل"
+          }
+        }
+      }
+    },
+    "Quran Words" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كلمات القرآن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن کے الفاظ"
           }
         }
       }
@@ -133432,6 +134261,22 @@
         }
       }
     },
+    "Removes the known mark" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يزيل علامة المعرفة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معلوم کا نشان ہٹاتا ہے"
+          }
+        }
+      }
+    },
     "Removes the tashkeel (fatha, damma, kasra and the rest) and the small signs: madd marks, hamzat al-wasl, tiny vowel letters, stop signs and markers. The vowel letters stay. Not recommended." : {
       "localizations" : {
         "ar" : {
@@ -134445,6 +135290,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "کچھ کھوئے بغیر ری سیٹ کریں"
+          }
+        }
+      }
+    },
+    "Reset your Quran Words progress?" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إعادة تعيين تقدّمك في كلمات القرآن؟"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن کے الفاظ میں اپنی پیش رفت ری سیٹ کریں؟"
           }
         }
       }
@@ -137321,6 +138182,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "فجر کے بعد، دن کے پہلے کام سے پہلے کہی جاتی ہے۔ کوئی اس دن کی منصوبہ بندی کرے، اس سے پہلے صبح اپنے مالک کو لوٹا دی جاتی ہے۔"
+          }
+        }
+      }
+    },
+    "Said in one breath." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تُنطق في نفَس واحد."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایک ہی سانس میں پڑھا جاتا ہے۔"
           }
         }
       }
@@ -140633,6 +141510,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "تمام ہجری مواقع دیکھیں"
+          }
+        }
+      }
+    },
+    "See It in the Quran" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شاهدها في القرآن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اسے قرآن میں دیکھیں"
           }
         }
       }
@@ -147596,6 +148489,22 @@
         }
       }
     },
+    "So كِتَابٌ is really said كِتَابُنْ (kitaabun), كِتَابًا is كِتَابَنْ (kitaaban), and كِتَابٍ is كِتَابِنْ (kitaabin): the vowel, then a noon with a sukoon." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فكلمة كِتَابٌ تُنطق في الحقيقة كِتَابُنْ، وكِتَابًا تُنطق كِتَابَنْ، وكِتَابٍ تُنطق كِتَابِنْ: الحركة، ثم نون ساكنة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تو كِتَابٌ دراصل كِتَابُنْ پڑھا جاتا ہے، كِتَابًا کو كِتَابَنْ، اور كِتَابٍ کو كِتَابِنْ: پہلے حرکت، پھر نون ساکن۔"
+          }
+        }
+      }
+    },
     "Soft Letters" : {
       "localizations" : {
         "ar" : {
@@ -149533,6 +150442,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "سیڑھی پھر سے بالکل شروع سے شروع کریں"
+          }
+        }
+      }
+    },
+    "Start the list again from nothing" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ابدأ القائمة من جديد"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فہرست دوبارہ شروع سے کریں"
           }
         }
       }
@@ -154109,6 +155034,22 @@
         }
       }
     },
+    "TAJWEED IN NUMBERS" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التجويد بالأرقام"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تجوید اعداد میں"
+          }
+        }
+      }
+    },
     "TAJWEED IN THE MUSHAF" : {
       "localizations" : {
         "ar" : {
@@ -154223,6 +155164,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "قرآن میں تنوین پھر وصل"
+          }
+        }
+      }
+    },
+    "TANWEEN WRITTEN OUT" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التنوين مكتوبًا كما يُنطق"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تنوین، جیسے پڑھی جاتی ہے"
           }
         }
       }
@@ -154711,6 +155668,22 @@
         }
       }
     },
+    "THE NUMBERS" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الأرقام"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اعداد"
+          }
+        }
+      }
+    },
     "THE PAST: ENDINGS SAY WHO" : {
       "localizations" : {
         "ar" : {
@@ -154874,6 +155847,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "احکام"
+          }
+        }
+      }
+    },
+    "THE SAME IN WORDS" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وكذلك في الكلمات"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الفاظ میں بھی یہی"
           }
         }
       }
@@ -155129,6 +156118,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "لفظ"
+          }
+        }
+      }
+    },
+    "THE WORDS" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الكلمات"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الفاظ"
           }
         }
       }
@@ -157356,6 +158361,22 @@
         }
       }
     },
+    "Tap a word to see it where it first comes in the Quran, with its root and every ayah it is in. The count is how many words of the Quran it appears in." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اضغط كلمة لتراها في أول موضع ترد فيه في القرآن، مع جذرها وكل آية ترد فيها. والعدد هو عدد كلمات القرآن التي ترد فيها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کسی لفظ پر ٹیپ کریں تاکہ اسے قرآن میں اس کے پہلے مقام پر دیکھیں، اس کے مادے اور ہر اس آیت کے ساتھ جس میں وہ آتا ہے۔ گنتی بتاتی ہے کہ وہ قرآن کے کتنے الفاظ میں آتا ہے۔"
+          }
+        }
+      }
+    },
     "Tap a word twice" : {
       "localizations" : {
         "ar" : {
@@ -158706,6 +159727,38 @@
         }
       }
     },
+    "Test This Tier" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختبر هذا المستوى"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس درجے کا ٹیسٹ دیں"
+          }
+        }
+      }
+    },
+    "Test This Tier Again" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختبر هذا المستوى مرة أخرى"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس درجے کا ٹیسٹ دوبارہ دیں"
+          }
+        }
+      }
+    },
     "Text" : {
       "localizations" : {
         "ar" : {
@@ -159284,6 +160337,70 @@
         }
       }
     },
+    "The %lld most common" : {
+      "localizations" : {
+        "ar" : {
+          "variations" : {
+            "plural" : {
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الـ%lld الأكثر شيوعًا"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الـ%lld الأكثر شيوعًا"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الـ%lld الأكثر شيوعًا"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الـ%lld الأكثر شيوعًا"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الـ%lld الأكثر شيوعًا"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الـ%lld الأكثر شيوعًا"
+                }
+              }
+            }
+          }
+        },
+        "ur" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "سب سے عام %lld"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "سب سے عام %lld"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "The %lld worth knowing first, one at a time" : {
       "localizations" : {
         "ar" : {
@@ -159451,6 +160568,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "قرآن میں سکون کی علامتوں کی چار اقسام"
+          }
+        }
+      }
+    },
+    "The 500 most common words make up four in five of the words you recite" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أكثر ٥٠٠ كلمة شيوعًا تشكّل أربع كلمات من كل خمس مما تتلوه"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سب سے عام 500 الفاظ آپ کی تلاوت کے ہر پانچ میں سے چار الفاظ ہیں"
+          }
+        }
+      }
+    },
+    "The 500 most common words, four in five of what you recite" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أكثر ٥٠٠ كلمة شيوعًا، أربع من كل خمس مما تتلوه"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سب سے عام 500 الفاظ، آپ کی تلاوت کے ہر پانچ میں سے چار"
           }
         }
       }
@@ -159973,6 +161122,7 @@
       }
     },
     "The Errors It Did Not Make" : {},
+    "The Evil Eye" : {},
     "The Five Opposing Pairs" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -160885,6 +162035,22 @@
         }
       }
     },
+    "The Prayer Ring over the current prayer's sky gradient" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حلقة الصلاة على تدرّج سماء الصلاة الحالية"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نماز کا دائرہ، موجودہ نماز کے آسمانی رنگوں کے پس منظر پر"
+          }
+        }
+      }
+    },
     "The Prophet Muhammad ﷺ quote card" : {
       "localizations" : {
         "ar" : {
@@ -161355,6 +162521,22 @@
         }
       }
     },
+    "The Quran is still loading. Try again in a moment." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا يزال القرآن قيد التحميل. حاول بعد لحظة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن ابھی لوڈ ہو رہا ہے۔ ایک لمحے بعد دوبارہ کوشش کریں۔"
+          }
+        }
+      }
+    },
     "The Quran keeps its own fonts, in Quran Settings." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -161485,6 +162667,22 @@
         }
       },
       "extractionState" : "stale"
+    },
+    "The Quran's %@ words come from about %@ dictionary words, and a few hundred of them carry most of it. The 100 most common make up %@ of everything you recite; the %lld here make up %@. Learn them a hundred at a time." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ترجع كلمات القرآن البالغة %1$@ إلى نحو %2$@ صيغة معجمية، وبضع مئات منها تحمل معظمه. أكثر ١٠٠ كلمة شيوعًا تشكّل %3$@ مما تتلوه، والـ%4$lld هنا تشكّل %5$@. تعلّمها مئةً بعد مئة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن کے %1$@ الفاظ تقریباً %2$@ لغوی صیغوں سے بنتے ہیں، اور ان میں سے چند سو اس کا بیشتر حصہ ہیں۔ سب سے عام 100 الفاظ آپ کی ہر تلاوت کا %3$@ ہیں؛ یہاں کے %4$lld الفاظ %5$@ ہیں۔ انہیں سو سو کر کے سیکھیں۔"
+          }
+        }
+      }
     },
     "The Ra, Case by Case" : {
       "localizations" : {
@@ -162191,6 +163389,7 @@
         }
       }
     },
+    "The Words of the Quran" : {},
     "The Zakah Calculator works on a lunar year at 2.5% or a solar year at 2.577%. The small information buttons beside its fields open the scholarly detail behind each rule, and a touch and hold on the result copies it." : {
       "localizations" : {
         "ar" : {
@@ -162401,6 +163600,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "الف صفحے پر اسی لیے لکھی گئی ہے تاکہ آپ دیکھ سکیں کہ وقف تنوین کو کس چیز میں بدل دیتا ہے۔"
+          }
+        }
+      }
+    },
+    "The alif is silent, and the long vowel before it is said short: a sukoon or a shaddah comes next, and Arabic never holds a long vowel into one." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الألف لا تُنطق، وحرف المد الذي قبلها يُنطق قصيرًا: فبعده سكون أو شدة، ولا تجمع العربية بين حرف مد وساكن بعده."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الف نہیں پڑھا جاتا، اور اس سے پہلے کی لمبی آواز چھوٹی پڑھی جاتی ہے: آگے سکون یا تشدید ہے، اور عربی کبھی لمبی آواز کو ساکن تک نہیں کھینچتی۔"
+          }
+        }
+      }
+    },
+    "The alif is silent, so that noon meets the sukoon of the letter after it. Two sukoons cannot be said together: the noon takes a kasra." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الألف لا تُنطق، فتلتقي تلك النون بسكون الحرف الذي بعدها. ولا يُنطق ساكنان معًا: فتُكسر النون."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الف نہیں پڑھا جاتا، اس لیے وہ نون اپنے بعد والے حرف کے سکون سے جا ملتا ہے۔ دو ساکن ایک ساتھ نہیں پڑھے جا سکتے: نون زیر لے لیتا ہے۔"
+          }
+        }
+      }
+    },
+    "The alif is silent. The sukoon that ended the word before already carries the vowel the mushaf printed for it, so the two words meet on that vowel." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الألف لا تُنطق. والساكن الذي خُتمت به الكلمة السابقة يحمل أصلًا الحركة التي طبعها المصحف عليه، فتلتقي الكلمتان على تلك الحركة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الف نہیں پڑھا جاتا۔ پچھلا لفظ جس ساکن پر ختم ہوتا تھا، اس پر مصحف نے پہلے ہی حرکت لکھ دی ہے، اس لیے دونوں لفظ اسی حرکت پر ملتے ہیں۔"
+          }
+        }
+      }
+    },
+    "The alif is silent: the vowel at the end of the word before runs straight into the letter after it." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الألف لا تُنطق: فحركة آخر الكلمة السابقة تتصل مباشرة بالحرف الذي بعدها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الف نہیں پڑھا جاتا: پچھلے لفظ کے آخر کی حرکت سیدھی الف کے بعد والے حرف سے جا ملتی ہے۔"
           }
         }
       }
@@ -164678,6 +165941,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ابو جعفر کے دونوں راویوں کے درمیان اختلافات نسبتاً کم ہیں۔"
+          }
+        }
+      }
+    },
+    "The digits 0 to 9 and 10" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الأرقام من ٠ إلى ٩، والعدد ١٠"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "0 سے 9 تک کے ہندسے، اور 10"
           }
         }
       }
@@ -168248,6 +169527,22 @@
         }
       }
     },
+    "The letter after hamzatul waSl always has a sukoon or a shaddah, and Arabic never says a long vowel straight into one. So when you read on, the “aa” of alif maqSoorah is not said, and the small alif, the mark that shows that “aa”, is left off with it. A full letter stays written either way: فِي ٱلۡأَرۡضِ still prints the yaa of فِي, though you say “fil-arDi” (2:11)." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الحرف الذي بعد همزة الوصل ساكن أو مشدد دائمًا، والعربية لا تصل حرف المد بساكن بعده مباشرة. فإذا وصلت لم يُنطق مد الألف المقصورة، وتُترك معه الألف الصغيرة، وهي العلامة التي تدل على ذلك المد. أما الحرف الكامل فيبقى مكتوبًا في الحالين: في فِي ٱلۡأَرۡضِ تبقى ياء فِي مكتوبة، مع أنك تقرأ «فِلۡأَرۡضِ» (٢:١١)."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہمزۂ وصل کے بعد والا حرف ہمیشہ ساکن یا مشدد ہوتا ہے، اور عربی حرفِ مد کو سیدھا ساکن سے نہیں ملاتی۔ اس لیے ملا کر پڑھتے وقت الفِ مقصورہ کی «آ» نہیں پڑھی جاتی، اور الفِ صغیرہ، یعنی وہ علامت جو اس «آ» کو دکھاتی ہے، بھی ساتھ ہی چھوڑ دیا جاتا ہے۔ پورا حرف ہر حال میں لکھا رہتا ہے: فِي ٱلۡأَرۡضِ میں فِي کی یاء اب بھی لکھی ہے، حالانکہ آپ «فِلۡأَرۡضِ» پڑھتے ہیں (2:11)۔"
+          }
+        }
+      }
+    },
     "The letter after the alif has a sukoon or a shaddah, and Arabic never says a long vowel straight into one. So the long vowel is written but said short: fee becomes fi." : {
       "localizations" : {
         "ar" : {
@@ -169701,6 +170996,22 @@
         }
       }
     },
+    "The most common words, and how much of the Quran they make up" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الكلمات الأكثر شيوعًا، وكم تشكّل من القرآن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سب سے عام الفاظ، اور وہ قرآن کا کتنا حصہ ہیں"
+          }
+        }
+      }
+    },
     "The most virtuous nights of the year, holding Laylatul Qadr. The Prophet ﷺ strove in worship in them more than at any other time, kept his nights alive, woke his family and observed i'tikaf. Seek the Night especially on the odd nights." : {
       "localizations" : {
         "ar" : {
@@ -170036,6 +171347,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "مصحف خود یہ بات دکھا دیتا ہے: یہ کلمات صرف حرکت کے ساتھ چھپے ہیں، اوپر کوئی چھوٹا حرف نہیں۔"
+          }
+        }
+      }
+    },
+    "The mushaf spells for reading on, even across the end of an ayah: ٱلۡأَعۡلَى closes 87:1 with no small alif, because 87:2 opens with ٱلَّذِي. Over the whole Hafs text, a bare ى comes only before hamzatul waSl (578 times) or after a tanween (93)." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يُكتب المصحف على الوصل، حتى عبر نهاية الآية: كلمة ٱلۡأَعۡلَى تختم الآية ٨٧:١ بلا ألف صغيرة، لأن الآية ٨٧:٢ تبدأ بـ ٱلَّذِي. وفي نص حفص كله لا تأتي ى مجرّدة إلا قبل همزة الوصل (٥٧٨ مرة) أو بعد التنوين (٩٣ مرة)."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مصحف ملا کر پڑھنے کے حساب سے لکھا گیا ہے، آیت کے اختتام کے پار بھی: ٱلۡأَعۡلَى آیت 87:1 کو الفِ صغیرہ کے بغیر ختم کرتا ہے، کیونکہ آیت 87:2 ٱلَّذِي سے شروع ہوتی ہے۔ حفص کے پورے متن میں سادہ ى صرف ہمزۂ وصل سے پہلے (578 بار) یا تنوین کے بعد (93 بار) آتا ہے۔"
           }
         }
       }
@@ -173089,6 +174416,22 @@
         }
       }
     },
+    "The reader colors %@ stretches of letters across the Quran in Hafs. Most of them are a handful of rules you meet on every line, so learning those first pays back on every page you recite." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يلوّن التطبيق %@ مقطعًا من الحروف في القرآن كله برواية حفص. ومعظمها قواعد قليلة تلقاها في كل سطر، فتعلّمها أولًا يؤتي ثمره في كل صفحة تتلوها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایپ حفص میں پورے قرآن پر حروف کے %@ حصوں کو رنگ دیتی ہے۔ ان میں سے زیادہ تر چند قواعد ہیں جو آپ کو ہر سطر میں ملتے ہیں، اس لیے انہیں پہلے سیکھنا ہر اس صفحے پر فائدہ دیتا ہے جس کی آپ تلاوت کرتے ہیں۔"
+          }
+        }
+      }
+    },
     "The reader may substitute any of three lengths" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -174235,6 +175578,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "وہی نون، پہلے تنہا اور پھر کسی حرف کے ساتھ۔ پڑوسی صرف دوسری مثال میں ہے، اور بدلاؤ بھی صرف دوسری مثال میں آتا ہے۔"
+          }
+        }
+      }
+    },
+    "The same pattern in tajweed: a few rules on every line" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "النمط نفسه في التجويد: قواعد قليلة في كل سطر"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تجوید میں بھی یہی انداز: ہر سطر میں چند قواعد"
           }
         }
       }
@@ -176551,6 +177910,22 @@
         }
       }
     },
+    "The stop and pause marks of the mushaf" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "علامات الوقف والسكت في المصحف"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مصحف میں وقف اور سکتے کی علامات"
+          }
+        }
+      }
+    },
     "The stop changes nothing. Six counts either way." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -177042,6 +178417,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "الضحیٰ سے قرآن کے آخر تک سورتوں کے درمیان تکبیر انہی کے طریق سے منقول ہے۔"
+          }
+        }
+      }
+    },
+    "The tanween is a hidden noon with a sukoon. Written out, it shows." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التنوين نون ساكنة خفية. فإذا كُتبت ظهرت."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تنوین ایک پوشیدہ نون ساکن ہے۔ لکھ کر دکھایا جائے تو نظر آ جاتا ہے۔"
           }
         }
       }
@@ -179649,6 +181040,22 @@
         }
       }
     },
+    "The words you missed in tier tests, until you get them right" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الكلمات التي أخطأت فيها في اختبارات المستويات، حتى تجيب عنها صحيحًا"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "درجوں کے ٹیسٹ میں جن الفاظ میں غلطی ہوئی، جب تک آپ ان کا درست جواب نہ دیں"
+          }
+        }
+      }
+    },
     "The written ya was dropped. At a stop both weights are read, with light preferred out of regard for it." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -180865,6 +182272,22 @@
         }
       }
     },
+    "These %lld words, with every form of each, make up this share of everything you recite. You know %lld of them." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هذه الكلمات الـ%1$lld، بكل صيغها، تشكّل هذه النسبة مما تتلوه. أنت تعرف %2$lld منها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہ %1$lld الفاظ، اپنی ہر شکل کے ساتھ، آپ کی ہر تلاوت کا اتنا حصہ ہیں۔ آپ ان میں سے %2$lld جانتے ہیں۔"
+          }
+        }
+      }
+    },
     "These are kept when you reset your settings, unless you choose to erase everything." : {
       "localizations" : {
         "ar" : {
@@ -181344,6 +182767,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "یہ الفاظ سیڑھی پر «غلطی والے الفاظ کی مشق کریں» کے تحت رکھے جاتے ہیں، جب تک آپ انہیں درست نہ پڑھ لیں۔"
+          }
+        }
+      }
+    },
+    "These words are kept under Practice Missed Words until you answer them right." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تُحفظ هذه الكلمات تحت «تدرّب على الكلمات التي أخطأت فيها» حتى تجيب عنها صحيحًا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہ الفاظ «غلطی والے الفاظ کی مشق کریں» میں رکھے جاتے ہیں جب تک آپ ان کا درست جواب نہ دیں۔"
           }
         }
       }
@@ -191812,6 +193251,22 @@
         }
       }
     },
+    "UNDERSTAND WHAT YOU RECITE" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "افهم ما تتلوه"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جو تلاوت کرتے ہیں اسے سمجھیں"
+          }
+        }
+      }
+    },
     "UNKNOTTING INTO AN OPEN TAA" : {
       "localizations" : {
         "ar" : {
@@ -192117,6 +193572,22 @@
         }
       }
     },
+    "Under each phrase, “said as” writes out what you hear in one breath: the tanween turned into a noon with a kasra, and the alif gone. It is not how the mushaf spells it. Select a row for the steps in between, and for how it would sound with a plain vowel instead." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحت كل عبارة يكتب سطر «تُنطق» ما تسمعه في نفَس واحد: التنوين وقد صار نونًا مكسورة، والألف وقد سقطت. وليس هذا رسم المصحف. اختر سطرًا لترى الخطوات من الرسم إلى النطق، وكيف كانت ستُنطق بحركة مجردة بدل التنوين."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر عبارت کے نیچے «یوں پڑھا جاتا ہے» وہ لکھتا ہے جو آپ ایک ہی سانس میں سنتے ہیں: تنوین زیر والا نون بن جاتی ہے، اور الف غائب ہو جاتا ہے۔ یہ مصحف کا املا نہیں ہے۔ کوئی سطر منتخب کریں تاکہ املا سے تلفظ تک کے درمیانی مراحل دیکھیں، اور یہ بھی کہ تنوین کی جگہ سادہ حرکت ہوتی تو کیسے پڑھا جاتا۔"
+          }
+        }
+      }
+    },
     "Under each phrase, “said as” writes out what you hear: the tanween turned into a noon with a kasra, and the alif gone. It is not how the mushaf spells it." : {
       "localizations" : {
         "ar" : {
@@ -192131,7 +193602,8 @@
             "value" : "ہر عبارت کے نیچے «یوں پڑھا جاتا ہے» وہ لکھتا ہے جو آپ سنتے ہیں: تنوین زیر والا نون بن جاتی ہے، اور الف غائب ہو جاتا ہے۔ یہ مصحف کا املا نہیں ہے۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Under the Custom method, the Fajr and Isha angles can each be set from 8 to 25 degrees, for a mosque that publishes its own." : {
       "localizations" : {
@@ -195636,6 +197108,22 @@
         }
       }
     },
+    "WHY THE SMALL ALIF GOES" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لماذا تسقط الألف الصغيرة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الفِ صغیرہ کیوں چھوٹ جاتا ہے"
+          }
+        }
+      }
+    },
     "WHY WAQF MATTERS" : {
       "localizations" : {
         "ar" : {
@@ -197929,6 +199417,22 @@
         }
       }
     },
+    "What does this pronoun mean?" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ما معنى هذا الضمير؟"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس ضمیر کا مطلب کیا ہے؟"
+          }
+        }
+      }
+    },
     "What does this term mean, word for word?" : {
       "localizations" : {
         "ar" : {
@@ -197941,6 +199445,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "اس اصطلاح کا لفظی مطلب کیا ہے؟"
+          }
+        }
+      }
+    },
+    "What does this word mean?" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ما معنى هذه الكلمة؟"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس لفظ کا مطلب کیا ہے؟"
           }
         }
       }
@@ -203595,6 +205115,22 @@
         }
       }
     },
+    "With a plain vowel instead of the tanween, there would be no noon to hear." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ولو كانت حركة مجردة بدل التنوين لما سُمعت نون."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تنوین کی جگہ سادہ حرکت ہوتی تو کوئی نون سنائی نہ دیتا۔"
+          }
+        }
+      }
+    },
     "With a short damma: yarahu" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -204423,6 +205959,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "الفاظ"
+          }
+        }
+      }
+    },
+    "Words %lld to %lld" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الكلمات %1$lld إلى %2$lld"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الفاظ %1$lld تا %2$lld"
           }
         }
       }
@@ -206914,6 +208466,22 @@
         }
       }
     },
+    "You came here from Quran Words" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جئت إلى هنا من كلمات القرآن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آپ یہاں قرآن کے الفاظ سے آئے ہیں"
+          }
+        }
+      }
+    },
     "You came here from Sunnahs of the Prophet" : {
       "localizations" : {
         "ar" : {
@@ -206926,6 +208494,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "آپ یہاں «نبی کریم ﷺ کی سنتیں» سے آئے ہیں"
+          }
+        }
+      }
+    },
+    "You came here from the rule counts" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جئت إلى هنا من إحصاء القواعد"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آپ یہاں قواعد کی گنتی سے آئے ہیں"
           }
         }
       }
@@ -207174,6 +208758,22 @@
         }
       }
     },
+    "You do not need all %@ words" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لست بحاجة إلى الكلمات الـ%@ كلها"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آپ کو سب %@ الفاظ کی ضرورت نہیں"
+          }
+        }
+      }
+    },
     "You have favored them: -hum becomes -him the same way" : {
       "localizations" : {
         "ar" : {
@@ -207219,6 +208819,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "آپ کو نون کی پوری اور صاف آواز سنائی دیتی ہے۔"
+          }
+        }
+      }
+    },
+    "You know %@ of the Quran's words" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تعرف %@ من كلمات القرآن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آپ قرآن کے %@ الفاظ جانتے ہیں"
           }
         }
       }
@@ -210256,9 +211872,6 @@
         }
       }
     },
-    "contact@abubakrelmallah.com" : {
-      "shouldTranslate" : false
-    },
     "an action, in a time" : {
       "localizations" : {
         "ar" : {
@@ -211778,6 +213391,22 @@
         }
       }
     },
+    "colored stretches" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مقطعًا ملوّنًا"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رنگین حصے"
+          }
+        }
+      }
+    },
     "come" : {
       "localizations" : {
         "ar" : {
@@ -211826,6 +213455,9 @@
           }
         }
       }
+    },
+    "contact@abubakrelmallah.com" : {
+      "shouldTranslate" : false
     },
     "count.basri" : {
       "localizations" : {
@@ -213512,6 +215144,38 @@
         }
       }
     },
+    "dictionary words" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صيغة معجمية"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لغوی صیغے"
+          }
+        }
+      }
+    },
+    "dictionary words used only once" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صيغة معجمية وردت مرة واحدة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لغوی صیغے جو صرف ایک بار آئے"
+          }
+        }
+      }
+    },
     "died" : {
       "localizations" : {
         "ar" : {
@@ -214449,6 +216113,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ %lld سے"
+          }
+        }
+      }
+    },
+    "from the top five" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "من القواعد الخمس الأولى"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پہلے پانچ قواعد سے"
           }
         }
       }
@@ -218149,6 +219829,70 @@
         }
       }
     },
+    "of %lld tiers passed" : {
+      "localizations" : {
+        "ar" : {
+          "variations" : {
+            "plural" : {
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "مُجتاز من %lld مستوى"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "مُجتاز من مستوى واحد"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "مُجتاز من مستويين"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "مُجتاز من %lld مستويات"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "مُجتاز من %lld مستوى"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "مُجتاز من %lld مستوى"
+                }
+              }
+            }
+          }
+        },
+        "ur" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld درجے میں سے کامیاب"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld درجوں میں سے کامیاب"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "of a boy whose name" : {
       "localizations" : {
         "ar" : {
@@ -218161,6 +219905,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ایک لڑکے کی، جس کا نام"
+          }
+        }
+      }
+    },
+    "of the Quran's words" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "من كلمات القرآن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن کے الفاظ کا"
           }
         }
       }
@@ -219234,6 +220994,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "رۡكَبُوا"
+          }
+        }
+      }
+    },
+    "roots" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جذرًا"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مادے"
+          }
+        }
+      }
+    },
+    "rules colored" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قاعدة ملوّنة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رنگین قواعد"
           }
         }
       }
@@ -223973,6 +225765,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "کے ساتھ، سے، میں"
+          }
+        }
+      }
+    },
+    "words in the Quran" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كلمة في القرآن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن میں الفاظ"
+          }
+        }
+      }
+    },
+    "words known" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كلمة معروفة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معلوم الفاظ"
           }
         }
       }

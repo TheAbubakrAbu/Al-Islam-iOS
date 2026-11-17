@@ -917,8 +917,11 @@ struct AyahRow: View, Equatable {
             .aspectRatio(contentMode: .fit)
             .frame(width: 25, height: 25)
             .foregroundColor(settings.accentColor.color)
-            .conditionalGlassEffect(inRow: true)
+            // The glass is the 28pt slot, the S:A pill's own height, not the glyph's 25: hugging the
+            // glyph, the button read 3pt shorter than the pill beside it (Abu, 2026-11-16: "make sure
+            // the ellipses button height" matches, in every ayah and hadith row).
             .frame(width: 28, height: 28)
+            .conditionalGlassEffect(inRow: true)
             .padding(slop)
             .contentShape(Rectangle())
     }
@@ -1005,9 +1008,11 @@ struct AyahRow: View, Equatable {
         // ENGLISH words, and an English term lights the Arabic tokens whose gloss carries it.
         #if os(iOS)
         let cross = hasSearch ? crossLanguageSpans(query: activeTerm)
-                              : (arabic: [NSRange](), saheeh: [NSRange](), mustafa: [NSRange]())
+                              : (arabic: [NSRange](), saheeh: [NSRange](), mustafa: [NSRange](),
+                                 transliteration: [NSRange]())
         #else
-        let cross: (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange]) = ([], [], [])
+        let cross: (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange], transliteration: [NSRange])
+            = ([], [], [], [])
         #endif
 
         // Cross spans FORCE the opposite-language line visible (the search rows' rule): an Arabic hit
@@ -1220,6 +1225,7 @@ struct AyahRow: View, Equatable {
                     matchedSaheeh: mSaheeh,
                     matchedMustafa: mMustafa,
                     crossArabic: cross.arabic,
+                    crossTranslit: cross.transliteration,
                     crossSaheeh: cross.saheeh,
                     crossMustafa: cross.mustafa
                 )
@@ -1372,13 +1378,14 @@ struct AyahRow: View, Equatable {
     /// English query → the Arabic tokens whose gloss carries it. Per-ayah exact alignment first, then the
     /// corpus lexicon fallback, exactly like the search results - so tapping a hit and landing here shows
     /// the same words lit that the result row showed.
-    private func crossLanguageSpans(query: String) -> (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange]) {
+    private func crossLanguageSpans(query: String)
+    -> (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange], transliteration: [NSRange]) {
         let trimmed = queryForInlineHighlight(query)
         guard !trimmed.isEmpty,
               settings.isHafsDisplay,
               comparisonQiraahOverride == nil,
               !displayChoices.beginner,
-              WordByWordStore.isBundled else { return ([], [], []) }
+              WordByWordStore.isBundled else { return ([], [], [], []) }
 
         let displayText = arabicDisplayText()
         // The gloss pack's token order is defined against the RAW (unstripped) text; with "Hide
@@ -1387,9 +1394,14 @@ struct AyahRow: View, Equatable {
             ? ayah.rawArabicText(surahId: surah.id, qiraahOverride: nil)
             : displayText
 
+        // An Arabic term never matches the transliteration line, so the line is on screen only by the
+        // setting (or a latch an earlier term left); without it there is no word to light there.
+        let showsLine = settings.showTransliteration || latchedForcedLines[0]
         return CrossLanguageWordHighlight.quranSpans(
             query: trimmed, surah: surah.id, ayah: ayah.id, rawText: rawText, displayText: displayText,
-            saheeh: ayah.textEnglishSaheeh, mustafa: ayah.textEnglishMustafa, wordRule: wordRule
+            saheeh: ayah.textEnglishSaheeh, mustafa: ayah.textEnglishMustafa,
+            transliteration: showsLine || !trimmed.containsArabicLetters ? ayah.textTransliteration : "",
+            wordRule: wordRule
         )
     }
     #endif
@@ -1414,6 +1426,7 @@ struct AyahRow: View, Equatable {
         matchedSaheeh: Bool = false,
         matchedMustafa: Bool = false,
         crossArabic: [NSRange] = [],
+        crossTranslit: [NSRange] = [],
         crossSaheeh: [NSRange] = [],
         crossMustafa: [NSRange] = []
     ) -> some View {
@@ -1675,7 +1688,8 @@ struct AyahRow: View, Equatable {
             .quranTestVeiledIfAvailable(testHidesRecitation)
 
             if showTranslit {
-                let txt = prefixOnTranslit ? "\(ayah.id). \(ayah.textTransliteration)" : ayah.textTransliteration
+                let prefix = prefixOnTranslit ? "\(ayah.id). " : ""
+                let txt = prefix + ayah.textTransliteration
                 HighlightedSnippet(
                     source: txt,
                     term: highlightQuery,
@@ -1683,7 +1697,8 @@ struct AyahRow: View, Equatable {
                     accent: settings.accentColor.color,
                     fg: .primary,
                     highlightAllahNames: choices.highlightAllah,
-                    guaranteeMatch: matchedTranslit
+                    guaranteeMatch: matchedTranslit,
+                    extraHighlightRanges: Self.offsetSpans(crossTranslit, by: (prefix as NSString).length)
                 )
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)

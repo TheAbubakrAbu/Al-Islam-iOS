@@ -64,6 +64,19 @@ final class AskAIIntentTests: XCTestCase {
         }
     }
 
+    /// Every way of asking about music reaches the key evidence (`AskAIRetriever.keyEvidence`), the
+    /// ma'azif hadith first: on 2026-11-16 the search alone never found Bukhari 5590 for any of these.
+    @MainActor func testMusicQuestionsReachTheKeyEvidence() {
+        for text in ["musical instruments", "Is music haram?", "Is listening to music allowed in Islam?",
+                     "What does Islam say about singing?"] {
+            let topic = AskAILexicon.canonicalTopic(in: q(text, topic: nil, history: false).contentWords)
+            XCTAssertEqual(topic, "music", text)
+        }
+        XCTAssertEqual(AskAIRetriever.keyEvidence["music"]?.first, .hadith(slug: "bukhari", number: 5590))
+        XCTAssertNil(AskAILexicon.canonicalTopic(in: q("What does the Quran say about patience?", topic: nil, history: false).contentWords)
+            .flatMap { AskAIRetriever.keyEvidence[$0] })
+    }
+
     func testScheduleQuestionsArePrayerTimes() {
         #if HAS_ADHAN
         for text in ["When is Fajr?", "What time is Isha tonight?", "How long until Maghrib?", "Is it Asr yet?",

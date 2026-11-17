@@ -2196,11 +2196,10 @@ struct SurahView: View {
                         withAnimation(.easeInOut) {
                             if isSelectingAyahs {
                                 isSelectingAyahs = false
+                                selectedAyahs = []
                             } else {
-                                rebuildQiraahCaches()
-                                isSelectingAyahs = true
+                                beginSelectingAyahs()
                             }
-                            selectedAyahs = []
                         }
                     }
                 }
@@ -3475,6 +3474,20 @@ struct SurahView: View {
 
     // MARK: - Multi-select bulk actions
 
+    /// Turns select mode on with nothing in it: no checked ayah, and no ayah left lit from before. The
+    /// reading mark (a tapped ayah, or the one a bookmark or search opened at) is a tint, and inside select
+    /// mode a tint reads as "selected" although the bar's actions never touch it (Abu, 2026-11-16: "if an
+    /// ayah was selected before unselect all ayahs so its not confusing"). A search arrival's accent
+    /// snippet goes with it. Callers wrap this in their own animation.
+    private func beginSelectingAyahs() {
+        rebuildQiraahCaches()
+        highlightedAyah = nil
+        arrivalTerm = nil
+        arrivalAyahID = nil
+        selectedAyahs = []
+        isSelectingAyahs = true
+    }
+
     /// Toggle one ayah's membership in the selection. The single funnel for both readers, so a page-mode tap
     /// and a list-mode tap build exactly the same set.
     private func toggleSelection(surahID: Int, ayahID: Int) {
@@ -4299,9 +4312,7 @@ struct SurahView: View {
             Button {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) {
-                    rebuildQiraahCaches()
-                    isSelectingAyahs = true
-                    selectedAyahs = []
+                    beginSelectingAyahs()
                 }
             } label: {
                 Label("Select Ayahs", systemImage: "checkmark.circle")
@@ -5531,9 +5542,19 @@ private struct ReaderLegendMenu: View {
                     .smallMediumSheetPresentation()
             }
         }
+        #if DEBUG
+        // "-openReaderLegend": the legend sheet a beat after the reader appears, so the compact
+        // tajweed page can be screenshotted headlessly (taps are not scriptable on the simulator).
+        .onAppear {
+            guard ProcessInfo.processInfo.arguments.contains("-openReaderLegend") else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showingSheet = true }
+        }
+        #endif
         .sheet(isPresented: $showingSheet) {
+            // The tajweed page is one screen of tiles (2026-11-17): it opens at full height so the
+            // whole grid is up at once, where the medium detent would cut it in half.
             ReaderLegendSheet(initialPage: openingPage)
-                .smallMediumSheetPresentation()
+                .smallMediumSheetPresentation(startLarge: openingPage == .tajweed)
         }
     }
 }

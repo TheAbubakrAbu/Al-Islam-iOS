@@ -112,7 +112,7 @@ struct TajweedLessonDetailView: View {
             SheetNavigationContainer {
                 TajweedLegendView()
             }
-            .smallMediumSheetPresentation()
+            .smallMediumSheetPresentation(startLarge: true)
         }
     }
 

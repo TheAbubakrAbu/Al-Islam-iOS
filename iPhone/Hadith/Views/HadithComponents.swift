@@ -743,8 +743,10 @@ struct HadithRow: View, Equatable {
                         .aspectRatio(contentMode: .fit)
                         .frame(width: compact ? 19 : 25, height: compact ? 19 : 25)
                         .foregroundColor(settings.accentColor.color)
-                        .conditionalGlassEffect(inRow: true)
+                        // The glass is the pill's height (22 / 28), not the glyph's: see AyahRow's
+                        // `headerControlIcon` (2026-11-16).
                         .frame(width: compact ? 22 : 28, height: compact ? 22 : 28)
+                        .conditionalGlassEffect(inRow: true)
                         .contentShape(Rectangle())
                 }
                 .accessibilityLabel("Hadith Actions")

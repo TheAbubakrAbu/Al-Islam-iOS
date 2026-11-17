@@ -195,6 +195,7 @@ enum AdhanWidgetKind: String, CaseIterable {
     case PrayerDaySkyWidget
     case CountdownSkyWidget
     case SimpleSkyWidget
+    case PrayerRingSkyWidget
     case PrayerListSmallSkyWidget
     case PrayersSkyWidget
     case PrayerTilesSkyWidget
@@ -208,6 +209,7 @@ enum AdhanWidgetKind: String, CaseIterable {
     case PrayerDayWidget
     case CountdownWidget
     case SimpleWidget
+    case PrayerRingWidget
     case PrayerListSmallWidget
     case PrayersWidget
     case PrayerTilesWidget
@@ -216,6 +218,7 @@ enum AdhanWidgetKind: String, CaseIterable {
     case PrayerProgressRingWidget
     case PrayerCountdownCircularWidget
     case LockScreen1Widget
+    case PrayerRingLockWidget
     case PrayerWaveWidget
     case LockScreen2Widget
     case NextPrayerProgressWidget
@@ -1301,6 +1304,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         // quiz's best streak are the same kind of thing.
         "readingTestProgress", "readingTestPlacement", "readingTestMissed", "readingTestSpeedBest",
         "tajweedTestProgress", "tajweedTestPlacement", "tajweedTestMissed", "tajweedTestSpeedBest",
+        "quranWordsProgress", "quranWordsPlacement", "quranWordsMissed", "quranWordsSpeedBest", "quranWordsKnown",
         "tajweedLessonsDone", "letterQuizBestStreak",
         // Where each dua collection was left, the Islam tab's favorites, and the reminders the user
         // wrote (the Sunnah presets' switches are preferences; a custom reminder is authored).
@@ -1391,6 +1395,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         "hijriDate", "ayahOfTheDayHiddenDate", "ayahOfTheDayOverride", "hadithOfTheDayHiddenDate", "hadithOfTheDayOverride", "hadithOfTheDayResolved",
         // DEBUG screenshot overrides read back from the launch arguments (`-fakeHeading`, QiblaView).
         "fakeHeading",
+        // Whether a simulator plays the adhan aloud, and the answer its pending schedule was built
+        // under (`Settings.mutesAdhanInSimulator`): a simulator's switch, never set on a device.
+        "simulatorAdhanSound", "simulatorScheduleBuiltWithSound",
     ]
 
     /// Whole families that are device-only: the watch sync's bookkeeping, and the backup's own

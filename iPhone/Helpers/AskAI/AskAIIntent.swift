@@ -104,7 +104,11 @@ enum AskAIIntent: String, Codable, CaseIterable {
         case .howTo:
             return "Give clear practical guidance as numbered steps written in your own words, drawn from the sources (the app's how-to article when there is one, the hadith that establish the practice), then the conditions or common mistakes worth knowing. Say where each point comes from and cite by number. Never copy the numbered source lines themselves into the answer."
         case .ruling:
-            return "This asks whether something is allowed. Do not issue a verdict. Explain the considerations, what the evidence says and where scholars differ, citing the sources by number and saying where each comes from, and close by pointing the reader to a qualified scholar for their own situation."
+            // "Where scholars differ" used to be part of this task, and with no source saying so the
+            // model invented the difference: "Music is not outright forbidden" over Bukhari 5590, and
+            // "the exact meaning of this warning is debated" (2026-11-16). Rule 3 of the instructions
+            // already forbids a view no source states; the task now agrees with it.
+            return "This asks whether something is allowed. Do not issue a verdict of your own. Explain what the evidence in the sources says, plainly and in the direction it points, and mention a difference among scholars only when a source states one. Cite the sources by number, say where each comes from, and close by pointing the reader to a qualified scholar for their own situation."
         case .story:
             return "Tell it the way the Quran and the hadith tell it, in order, as flowing paragraphs in your own words, naming where each part comes from (the surah; the collection and narrator) and citing by number. Keep to what the sources and sound knowledge support, and say when something is a scholarly view rather than the text."
         case .dua:

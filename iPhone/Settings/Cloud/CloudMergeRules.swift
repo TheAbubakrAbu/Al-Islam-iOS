@@ -109,6 +109,12 @@ enum CloudMergeRules {
         "tajweedTestPlacement": .fillIfMissing,
         "tajweedTestMissed": .unionObjects(identity: ["id", "tier"], stamp: "last", newestFirst: true, cap: 60),
         "tajweedTestSpeedBest": .maxNumber,
+        // Quran Words (Arabic Alphabet): the same ladder, and the words marked known.
+        "quranWordsProgress": .readingLadder,
+        "quranWordsPlacement": .fillIfMissing,
+        "quranWordsMissed": .unionObjects(identity: ["id", "tier"], stamp: "last", newestFirst: true, cap: 60),
+        "quranWordsSpeedBest": .maxNumber,
+        "quranWordsKnown": .unionScalars(cap: nil),
         "tajweedLessonsDone": .unionScalars(cap: nil),
         "letterQuizBestStreak": .maxNumber,
         "duaSessionProgressData": .maxPerKey,

@@ -1811,6 +1811,11 @@ extension Settings {
         let ayah: Int
     }
     private static var chosenAyahRequests: [ChosenAyahRequest] = []
+    #if os(iOS)
+    /// The placed widgets that take turns (Ayahs You Pick, Random Bookmark, Random Ayah, 2026-11-17):
+    /// their upcoming picks are pre-rendered like a chosen ayah (`ChosenAyahPlan.schedule`).
+    private static var chosenAyahPlans: [ChosenAyahPlan] = []
+    #endif
     private static var chosenAyahWantsDefault = false
     private static var chosenAyahRequestsKnown = false
     private static var bookmarkWidgetRefreshWork: DispatchWorkItem?
@@ -1828,6 +1833,9 @@ extension Settings {
             hasher.combine(bookmark.createdAt)
         }
         hasher.combine(Self.chosenAyahRequests)
+        #if os(iOS)
+        hasher.combine(Self.chosenAyahPlans)
+        #endif
         hasher.combine(Self.chosenAyahWantsDefault)
         hasher.combine(Self.chosenAyahRequestsKnown)
         hasher.combine(fontArabic)
@@ -1922,10 +1930,19 @@ extension Settings {
         if rebuildsCards || reason == .bookmarks {
             snapshot.bookmarks = quranWidgetBookmarkCards(from: data)
         }
+        // The Random Ayah feed's pool: the Ayah of the Day's own (short, gentle), as refs.
+        if snapshot.randomRefs == nil || reason == .all {
+            let refs = Self.gentleAyahRefs(data).map { $0.surahID * 1000 + $0.ayahID }
+            if !refs.isEmpty { snapshot.randomRefs = refs }
+        }
         #if os(iOS)
         if rebuildsCards || reason == .bookmarks || reason == .chosenAyahs {
-            snapshot.chosenAyahs = quranWidgetChosenCards(from: data, bookmarks: snapshot.bookmarks,
-                                                          previous: snapshot.chosenAyahs)
+            // Only which ayahs are wanted moved (the placed widgets, the clock, a bookmark): the
+            // cards already rendered are still in the reader's styling, since a styling change comes
+            // through `.all` or a backgrounding rebuild, so they are kept rather than re-typeset.
+            snapshot.chosenAyahs = quranWidgetChosenCards(from: data, snapshot: snapshot,
+                                                          previous: snapshot.chosenAyahs,
+                                                          reusePrevious: reason == .chosenAyahs || reason == .bookmarks)
             kinds.append(Self.chosenAyahWidgetKind)
             Self.lastWidgetCardsSignature = cardsSignature
         }
@@ -1967,7 +1984,7 @@ extension Settings {
             refreshQuranWidgets(.all)
             return
         }
-        if Self.randomPoolIsStale(snapshot.randomPool) || snapshot.bookmarks == nil {
+        if Self.randomPoolIsStale(snapshot.randomPool) || snapshot.bookmarks == nil || snapshot.randomRefs == nil {
             refreshQuranWidgets(.all)
         } else if showAyahOfTheDay, snapshot.ayahOfTheDayDay != dailyDayIndex() {
             refreshQuranWidgets(.ayahOfTheDay)
@@ -2001,9 +2018,11 @@ extension Settings {
     #if os(iOS)
     /// The cards of the ayahs the placed Chosen Ayah widgets show: every explicit choice WidgetKit
     /// reported, plus the newest bookmark whenever a copy has no choice (or nothing has been reported
-    /// yet). Capped: a card is a typeset ayah with its tajweed runs, and no home screen holds more.
-    private func quranWidgetChosenCards(from data: QuranData, bookmarks: [QuranWidgetSnapshot.BookmarkCard]?,
-                                        previous: [QuranWidgetSnapshot.ChosenCard]?) -> [QuranWidgetSnapshot.ChosenCard] {
+    /// yet), plus the upcoming picks of the widgets that take turns. Capped: a card is a typeset ayah
+    /// with its tajweed runs.
+    private func quranWidgetChosenCards(from data: QuranData, snapshot: QuranWidgetSnapshot,
+                                        previous: [QuranWidgetSnapshot.ChosenCard]?,
+                                        reusePrevious: Bool) -> [QuranWidgetSnapshot.ChosenCard] {
         var requests = Self.chosenAyahRequests
         // Until WidgetKit has said which ayahs are placed (it answers a beat after launch, and not
         // at all when the query fails), the ayahs already carded are the best answer there is: a
@@ -2013,17 +2032,43 @@ extension Settings {
             requests += (previous ?? []).map { ChosenAyahRequest(surah: $0.surah, ayah: $0.ayah) }
         }
         if Self.chosenAyahWantsDefault || !Self.chosenAyahRequestsKnown {
-            let fallback = ChosenAyahDefault.resolve(bookmarks: bookmarks)
+            let fallback = ChosenAyahDefault.resolve(bookmarks: snapshot.bookmarks)
             requests.append(ChosenAyahRequest(surah: fallback.surah, ayah: fallback.ayah))
         }
         var seen = Set<ChosenAyahRequest>()
-        return requests.filter { seen.insert($0).inserted }.prefix(12).compactMap { request in
+        // No home screen holds more than a dozen single ayahs.
+        var ordered = Array(requests.filter { seen.insert($0).inserted }.prefix(12))
+        // The rotating widgets' next picks, the soonest first across all of them, so the cap cuts
+        // the far end of every widget's run rather than all of one widget's.
+        let now = Date()
+        let runs = Self.chosenAyahPlans.map { plan in
+            plan.schedule(from: now, count: plan.step.prerenderLength, snapshot: snapshot).map(\.ref)
+        }
+        let longest = runs.map(\.count).max() ?? 0
+        for position in 0..<longest {
+            for run in runs where position < run.count {
+                let request = ChosenAyahRequest(surah: run[position].surah, ayah: run[position].ayah)
+                if seen.insert(request).inserted { ordered.append(request) }
+            }
+        }
+        let reusable: [ChosenAyahRequest: QuranWidgetSnapshot.AyahCard] = reusePrevious
+            ? Dictionary((previous ?? []).map { (ChosenAyahRequest(surah: $0.surah, ayah: $0.ayah), $0.card) },
+                         uniquingKeysWith: { first, _ in first })
+            : [:]
+        return ordered.prefix(Self.chosenAyahCardLimit).compactMap { request in
+            if let card = reusable[request] {
+                return QuranWidgetSnapshot.ChosenCard(surah: request.surah, ayah: request.ayah, card: card)
+            }
             guard let surah = data.surah(request.surah),
                   let ayah = surah.ayahs.first(where: { $0.id == request.ayah }) else { return nil }
             return QuranWidgetSnapshot.ChosenCard(surah: request.surah, ayah: request.ayah,
                                                   card: quranWidgetAyahCard(surah: surah, ayah: ayah))
         }
     }
+
+    /// The most cards the snapshot carries: a dozen chosen ayahs and two rotating widgets' runs. The
+    /// widget decodes the whole snapshot on every timeline, so this stays a few dozen KB.
+    private static let chosenAyahCardLimit = 60
     #endif
 
     private static func quranWidgetSnippet(_ text: String, maxLength: Int = 90) -> String {
@@ -2044,13 +2089,17 @@ extension Settings {
         WidgetCenter.shared.getCurrentConfigurations { [weak self] result in
             guard let self, case .success(let infos) = result else { return }
             var requests: [ChosenAyahRequest] = []
+            var plans: [ChosenAyahPlan] = []
             var wantsDefault = false
             for info in infos where info.kind == Self.chosenAyahWidgetKind {
                 guard let intent = info.widgetConfigurationIntent(of: ChosenAyahConfigurationIntent.self) else {
                     wantsDefault = true
                     continue
                 }
-                if let chosen = intent.ayah, ChosenAyahCatalog.isValid(surah: chosen.surah, ayah: chosen.ayah) {
+                let plan = intent.plan
+                if plan.rotates {
+                    if !plans.contains(plan) { plans.append(plan) }
+                } else if let chosen = plan.chosen {
                     requests.append(ChosenAyahRequest(surah: chosen.surah, ayah: chosen.ayah))
                 } else {
                     wantsDefault = true
@@ -2059,13 +2108,23 @@ extension Settings {
             DispatchQueue.main.async {
                 let changed = !Self.chosenAyahRequestsKnown
                     || requests != Self.chosenAyahRequests
+                    || plans != Self.chosenAyahPlans
                     || wantsDefault != Self.chosenAyahWantsDefault
                 Self.chosenAyahRequests = requests
+                Self.chosenAyahPlans = plans
                 Self.chosenAyahWantsDefault = wantsDefault
                 Self.chosenAyahRequestsKnown = true
                 let snapshot = QuranWidgetStore.load()
+                // A rotating widget is short of cards once the first half of its pre-rendered run
+                // is not all there: the clock has moved on since the last write. Half, so a launch
+                // every few minutes does not re-render (and reload the widget) on every slot.
+                let now = Date()
+                let upcoming = plans.flatMap { plan in
+                    plan.schedule(from: now, count: max(1, plan.step.prerenderLength / 2), snapshot: snapshot).map(\.ref)
+                }
                 let missing = snapshot?.chosenAyahs == nil
                     || requests.contains { snapshot?.chosenCard(surah: $0.surah, ayah: $0.ayah) == nil }
+                    || upcoming.contains { snapshot?.chosenCard(surah: $0.surah, ayah: $0.ayah) == nil }
                 if changed || missing {
                     self.refreshQuranWidgets(.chosenAyahs)
                 }
