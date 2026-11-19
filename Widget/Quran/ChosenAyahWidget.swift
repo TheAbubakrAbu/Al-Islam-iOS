@@ -4,8 +4,10 @@ import AppIntents
 
 // The configurable Quran widget (Abu, 2026-09-28): one ayah the person picks, from the bookmarks or
 // by typing a reference, on the home screen (small, medium) and the lock screen (rectangular, and
-// the inline line above the clock). The configuration lives in ChosenAyahIntent.swift, shared with
-// the app; the look is the shared `QuranWidgetEntryView`, so it matches the other ayah widgets.
+// the inline line above the clock). Since 2026-11-17 it can also take turns: through a list the
+// person picks, a random bookmark, or a random short ayah, every 15 minutes, hour or day
+// (`ChosenAyahPlan`). The configuration lives in ChosenAyahIntent.swift, shared with the app; the
+// look is the shared `QuranWidgetEntryView`, so it matches the other ayah widgets.
 //
 // Where the text comes from, in order:
 //   1. the card the APP pre-rendered for this ayah (`QuranWidgetSnapshot.chosenAyahs`): the reader's

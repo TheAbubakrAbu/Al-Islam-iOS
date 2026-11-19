@@ -569,7 +569,6 @@ struct WordOfDayDetailView: View {
         .padding(.vertical, 2)
     }
 
-    @ViewBuilder
     private func occurrenceRow(_ row: Row, isAnchor: Bool) -> some View {
         let caption: String? = {
             if isAnchor { return String(localized: "First appearance") }
@@ -577,16 +576,19 @@ struct WordOfDayDetailView: View {
             return nil
         }()
         let content = WordOccurrenceRow(surah: row.surah, ayah: row.ayah, tokens: row.tokens, caption: caption).equatable()
-        if let onOpenAyah {
-            Button {
-                settings.hapticFeedback()
-                onOpenAyah(row.surah.id, row.ayah.id)
-            } label: {
-                content.contentShape(Rectangle())
+        // One view by its type, as a List row must be (see `OneRow`).
+        return OneRow {
+            if let onOpenAyah {
+                Button {
+                    settings.hapticFeedback()
+                    onOpenAyah(row.surah.id, row.ayah.id)
+                } label: {
+                    content.contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            } else {
+                content
             }
-            .buttonStyle(.plain)
-        } else {
-            content
         }
     }
 }

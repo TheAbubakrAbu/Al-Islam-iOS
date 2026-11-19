@@ -1271,12 +1271,14 @@ struct FavoritesView: View {
                 if settings.favoriteSurahs.isEmpty {
                     Text("No favorite surahs here, long tap a surah to favorite it.")
                 } else {
-                    ForEach(settings.favoriteSurahs.sorted(), id: \.self) { surahId in
-                        if let surah = quranData.surah(surahId) {
-                            SurahRow(surah: surah, isFavorite: true).equatable()
-                        }
+                    // Each favourite's surah is looked up before the ForEach, so a row is one view by
+                    // its type and never an `if let` (see `OneRow`). A swipe's offsets index THESE
+                    // rows, so the delete reads its ids from them.
+                    let rows = settings.favoriteSurahs.sorted().paired { quranData.surah($0) }
+                    ForEach(rows, id: \.item) { row in
+                        SurahRow(surah: row.found, isFavorite: true).equatable()
                     }
-                    .onDelete(perform: removeSurahs)
+                    .onDelete { offsets in removeSurahs(offsets.map { rows[$0].item }) }
                 }
             case .ayah:
                 if settings.bookmarkedAyahs.isEmpty {
@@ -1284,14 +1286,18 @@ struct FavoritesView: View {
                 } else {
                     // Memoized order + indexed lookups: this list re-sorted itself and then walked
                     // all 114 surahs (and the surah's ayahs) for EVERY row on every body pass.
-                    ForEach(settings.bookmarkedAyahsInMushafOrder, id: \.id) { bookmarkedAyah in
-                        if let surah = quranData.surah(bookmarkedAyah.surah),
-                           let ayah = quranData.ayah(surah: bookmarkedAyah.surah, ayah: bookmarkedAyah.ayah) {
-                            SurahAyahRow(surah: surah, ayah: ayah)
-                                .equatable()
+                    // Looked up before the ForEach, as the favourites above are, and the delete
+                    // reads its ids from the rows on screen.
+                    let rows = settings.bookmarkedAyahsInMushafOrder.paired { bookmark in
+                        quranData.surah(bookmark.surah).flatMap { surah in
+                            quranData.ayah(surah: bookmark.surah, ayah: bookmark.ayah).map { (surah: surah, ayah: $0) }
                         }
                     }
-                    .onDelete(perform: removeAyahs)
+                    ForEach(rows, id: \.item.id) { row in
+                        SurahAyahRow(surah: row.found.surah, ayah: row.found.ayah)
+                            .equatable()
+                    }
+                    .onDelete { offsets in removeAyahs(Set(offsets.map { rows[$0].item.id })) }
                 }
             case .letter:
                 if settings.favoriteLetters.isEmpty {
@@ -1360,17 +1366,11 @@ struct FavoritesView: View {
         }
     }
 
-    private func removeSurahs(at offsets: IndexSet) {
-        let sorted = settings.favoriteSurahs.sorted()
-        let idsToRemove = offsets.map { sorted[$0] }
+    private func removeSurahs(_ idsToRemove: [Int]) {
         settings.favoriteSurahs.removeAll { idsToRemove.contains($0) }
     }
 
-    private func removeAyahs(at offsets: IndexSet) {
-        let sorted = settings.bookmarkedAyahs.sorted {
-            $0.surah == $1.surah ? ($0.ayah < $1.ayah) : ($0.surah < $1.surah)
-        }
-        let idsToRemove = Set(offsets.map { sorted[$0].id })
+    private func removeAyahs(_ idsToRemove: Set<String>) {
         settings.bookmarkedAyahs.removeAll { idsToRemove.contains($0.id) }
     }
 

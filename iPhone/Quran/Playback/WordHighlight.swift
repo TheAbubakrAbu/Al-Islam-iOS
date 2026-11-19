@@ -730,6 +730,26 @@ final class WordHighlightTracker {
 
 // MARK: - Word by word, from the clips
 
+/// The Play Word by Word row of an ayah menu, reading Stop while that ayah's words are playing, as
+/// the actions sheet's tile does (the menus said Play throughout a run until 2026-11-18). A view of
+/// its own because a menu's rows are built when its HOST renders, not when the menu opens (see
+/// `ReciterCaptionedMenuLabel`): read once, the row would still say Play on a menu opened mid-run.
+/// The player publishes on start and stop only.
+struct WordByWordMenuLabel: View {
+    @ObservedObject private var player = WordClipPlayer.shared
+
+    let surah: Int
+    let ayah: Int
+
+    var body: some View {
+        if player.isPlaying(surah: surah, ayah: ayah) {
+            Label("Stop Word by Word", systemImage: "stop.circle")
+        } else {
+            Label("Play Word by Word", systemImage: "text.word.spacing")
+        }
+    }
+}
+
 /// "Play Word by Word": quran.com's per-word clips, one after the other, each word lit as it sounds.
 /// Its own queue player, yielding to and from the Quran player like the riwayah clips.
 @MainActor
@@ -880,7 +900,10 @@ final class WordClipPlayer: ObservableObject {
         }
         if let last = items.last {
             endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: last, queue: .main) { [weak self] _ in
-                Task { @MainActor [weak self] in self?.stop() }
+                Task { @MainActor [weak self, weak player] in
+                    guard let self, let player, self.queue === player else { return }
+                    self.stop()
+                }
             }
         }
         player.play()

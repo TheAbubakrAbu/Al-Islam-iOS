@@ -36,22 +36,21 @@ struct WelcomeActionBar: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            // The system's prominent button on the accent, the call to action every notice in the app
-            // ends with (`BetaTextConsentCard`); it was a tinted glass slab of its own until 2026-10-26.
+            // The call to action every notice in the app ends with (`BetaTextConsentCard`, the Adhan
+            // tab's location ask): glass with the accent in it and on its label
+            // (`GlassActionButtonStyle`). From 2026-10-26 to 2026-11-18 it was the system's prominent
+            // button, a solid accent slab under a white label.
             Button {
                 Settings.shared.hapticFeedback()
                 primaryAction()
             } label: {
                 HStack(spacing: 8) {
-                    if primaryBusy { ProgressView().tint(.white) }
+                    if primaryBusy { ProgressView().tint(appearance.accent) }
                     Text(primaryTitle)
                         .font(.headline)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(appearance.accent)
+            .buttonStyle(.glassAction)
             .disabled(!primaryEnabled || primaryBusy)
             .modifier(OptionalIdentifier(identifier: primaryIdentifier))
 

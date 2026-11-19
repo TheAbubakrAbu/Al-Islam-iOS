@@ -39,6 +39,10 @@ struct Widgets: WidgetBundle {
         PrayerTilesWidget()
         Prayers2Widget()
         FastingCountdownWidget()
+        #if os(iOS)
+        // The Prayer Tracker: the day ring, and on iOS 17 a tap that marks a prayer.
+        PrayerTrackerWidget()
+        #endif
         #endif
 
         #if os(iOS)
@@ -61,6 +65,7 @@ struct Widgets: WidgetBundle {
             DualCalendarLockWidget()
             HijriDateLockWidget()
             HijriDateArabicLockWidget()
+            PrayerTrackerLockWidget()
         }
         // Gated at 16.2 rather than 16.1, where Live Activities first appeared: `ActivityContent` - which the
         // app uses to start and update this one - only exists from 16.2. Suhoor and iftar countdowns; only

@@ -766,7 +766,12 @@ final class QuranPlayer: ObservableObject {
         }
         #else
         AudioSessionLane.queue.async {
-            DispatchQueue.main.async(execute: start)
+            DispatchQueue.main.async {
+                // Normal recitation (including an ayah double tap) owns the audio now.
+                // Word clips have a separate player and otherwise keep sounding over it.
+                MainActor.assumeIsolated { AuxiliaryAudio.stopAll() }
+                start()
+            }
         }
         #endif
     }

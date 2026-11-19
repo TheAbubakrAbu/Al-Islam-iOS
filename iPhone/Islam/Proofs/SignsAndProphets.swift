@@ -323,21 +323,24 @@ struct SignArticleSections: View {
         ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
             Section(header: ArticleHeader(section.heading)) {
                 ForEach(Array(Self.rows(section.blocks, style: Style(heading: section.heading)).enumerated()), id: \.offset) { _, row in
-                    switch row {
-                    case let .text(text, style, first, last):
-                        if case .timeline = style {
-                            SignTimelineParagraph(text: text, first: first, last: last)
-                        } else {
+                    // One view by its type, as a List row must be (see `OneRow`).
+                    OneRow {
+                        switch row {
+                        case let .text(text, style, first, last):
+                            if case .timeline = style {
+                                SignTimelineParagraph(text: text, first: first, last: last)
+                            } else {
+                                ArticleParagraph(verbatim: text)
+                            }
+                        case let .note(paragraphs, systemImage):
+                            SignNoteCard(paragraphs: paragraphs, systemImage: systemImage)
+                        case .block(.quran(let reference)):
+                            ScriptureQuote(quran: reference)
+                        case let .block(.hadith(link, cite, arabic, english)):
+                            ScriptureQuote(hadith: link, cite: cite, arabic: arabic, english: english)
+                        case .block(.text(let text)):
                             ArticleParagraph(verbatim: text)
                         }
-                    case let .note(paragraphs, systemImage):
-                        SignNoteCard(paragraphs: paragraphs, systemImage: systemImage)
-                    case .block(.quran(let reference)):
-                        ScriptureQuote(quran: reference)
-                    case let .block(.hadith(link, cite, arabic, english)):
-                        ScriptureQuote(hadith: link, cite: cite, arabic: arabic, english: english)
-                    case .block(.text(let text)):
-                        ArticleParagraph(verbatim: text)
                     }
                 }
             }

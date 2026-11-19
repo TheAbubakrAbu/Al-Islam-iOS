@@ -1327,8 +1327,23 @@ struct IslamView: View {
             let steps = StartHere.steps(for: background)
             let visited = StartHere.visited(settings)
             Section(header: startHereHeader(done: steps.filter { visited.contains($0.id) }.count, of: steps.count)) {
-                ForEach(steps) { step in
-                    startHereRow(step, done: visited.contains(step.id), split: split)
+                if split {
+                    // The sidebar's rows carry a tag and the selection's cell, which must sit on
+                    // the row itself, and the one step that leaves the tab carries neither. So
+                    // that each row is still one view by its type (see `OneRow`), the steps go in
+                    // as three runs: the resource steps before that step, the step, the ones after.
+                    let cut = steps.firstIndex { destination(of: $0) == nil } ?? steps.endIndex
+                    startHereSidebarRows(steps[..<cut], visited: visited)
+                    if cut < steps.endIndex {
+                        startHereLeavingRow(steps[cut], done: visited.contains(steps[cut].id))
+                        startHereSidebarRows(steps[(cut + 1)...], visited: visited)
+                    }
+                } else {
+                    // The iPhone's stack: a link or a button with nothing for the cell, so the
+                    // branch can sit in one view, as a List row should be (see `OneRow`).
+                    ForEach(steps) { step in
+                        OneRow { startHereRow(step, done: visited.contains(step.id)) }
+                    }
                 }
             }
         }
@@ -1365,48 +1380,61 @@ struct IslamView: View {
         }
     }
 
+    /// The resource a step opens, or nil for the one step that leaves the tab.
+    private func destination(of step: StartHereStep) -> IslamDestination? {
+        step.resource.flatMap(IslamDestination.init(rawValue:))
+    }
+
+    /// The sidebar's rows for a run of resource steps. Tagged AND highlighted (2026-10-05):
+    /// untagged, a row cleared the sidebar's selection on every tap, so opening a Start Here step
+    /// wiped the highlight off the resource row it had just selected further down the list.
     @available(iOS 16.0, *)
-    @ViewBuilder
-    private func startHereRow(_ step: StartHereStep, done: Bool, split: Bool) -> some View {
-        let label = startHereLabel(step, done: done)
-        if let resource = step.resource.flatMap(IslamDestination.init(rawValue:)) {
-            if split {
-                // Tagged AND highlighted (2026-10-05). Untagged, this row cleared the sidebar's
-                // selection on every tap - so opening a Start Here step wiped the highlight off the
-                // resource row it had just selected further down the list.
-                Button {
-                    selectSplitResource(resource)
-                } label: {
-                    label
-                }
-                .buttonStyle(.plain)
-                .contentShape(Rectangle())
-                .tag(resource)
-                .rowSelectionHighlight(selectedResource == resource)
-            } else {
-                NavigationLink(value: resource) { label }
-            }
-        } else {
-            // The one step that leaves the tab: the Quran. `AppNavigation` switches tabs. (Only an app
-            // with the Quran lists that step: `StartHere.steps` drops it elsewhere.)
-            #if HAS_QURAN
+    private func startHereSidebarRows(_ steps: ArraySlice<StartHereStep>, visited: Set<String>) -> some View {
+        ForEach(steps.paired { destination(of: $0) }, id: \.item.id) { entry in
             Button {
-                settings.hapticFeedback()
-                StartHere.markVisited(resource: nil)
-                AppNavigation.shared.open(.tab)
+                selectSplitResource(entry.found)
             } label: {
-                HStack {
-                    label
-                    Spacer(minLength: 8)
-                    Image(systemName: "arrow.up.forward")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                }
-                .contentShape(Rectangle())
+                startHereLabel(entry.item, done: visited.contains(entry.item.id))
             }
             .buttonStyle(.plain)
-            #endif
+            .contentShape(Rectangle())
+            .tag(entry.found)
+            .rowSelectionHighlight(selectedResource == entry.found)
         }
+    }
+
+    /// The iPhone's row for a step: a link to its resource, or the step that leaves the tab.
+    @available(iOS 16.0, *)
+    @ViewBuilder
+    private func startHereRow(_ step: StartHereStep, done: Bool) -> some View {
+        if let resource = destination(of: step) {
+            NavigationLink(value: resource) { startHereLabel(step, done: done) }
+        } else {
+            startHereLeavingRow(step, done: done)
+        }
+    }
+
+    /// The one step that leaves the tab: the Quran. `AppNavigation` switches tabs. (Only an app
+    /// with the Quran lists that step: `StartHere.steps` drops it elsewhere.)
+    @ViewBuilder
+    private func startHereLeavingRow(_ step: StartHereStep, done: Bool) -> some View {
+        #if HAS_QURAN
+        Button {
+            settings.hapticFeedback()
+            StartHere.markVisited(resource: nil)
+            AppNavigation.shared.open(.tab)
+        } label: {
+            HStack {
+                startHereLabel(step, done: done)
+                Spacer(minLength: 8)
+                Image(systemName: "arrow.up.forward")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        #endif
     }
 
     private func startHereLabel(_ step: StartHereStep, done: Bool) -> some View {

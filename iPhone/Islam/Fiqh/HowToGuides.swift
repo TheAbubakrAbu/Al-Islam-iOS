@@ -101,32 +101,34 @@ struct GuideSourcesSection: View {
 
     var body: some View {
         Section {
-            ForEach(sources, id: \.url) { source in
-                if let url = URL(string: source.url) {
-                    Link(destination: url) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "book.closed")
-                                .font(.footnote)
-                                .foregroundColor(appearance.accent)
+            // A source whose link does not parse has no row, and is left out before the ForEach: a
+            // row that may be nothing is one the List has to build to count (see `OneRow`).
+            ForEach(sources.paired { URL(string: $0.url) }, id: \.item.url) { pair in
+                let source = pair.item
+                let url = pair.found
+                Link(destination: url) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "book.closed")
+                            .font(.footnote)
+                            .foregroundColor(appearance.accent)
 
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(source.title)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundColor(.primary)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(source.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.primary)
 
-                                Text(source.subtitle)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-
-                            Spacer(minLength: 4)
-
-                            Image(systemName: "arrow.up.right")
-                                .font(.caption2)
+                            Text(source.subtitle)
+                                .font(.caption)
                                 .foregroundColor(.secondary)
                         }
-                        .padding(.vertical, 2)
+
+                        Spacer(minLength: 4)
+
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
                     }
+                    .padding(.vertical, 2)
                 }
             }
         } header: {
@@ -2112,10 +2114,13 @@ struct ArticleSourcesSection: View {
         if let sources = ArticleSources.table[article], !sources.isEmpty {
             Section {
                 ForEach(sources, id: \.self) { source in
-                    if let raw = source.url, let url = URL(string: raw) {
-                        Link(destination: url) { row(source, linked: true) }
-                    } else {
-                        row(source, linked: false)
+                    // One view by its type, as a List row must be (see `OneRow`).
+                    OneRow {
+                        if let raw = source.url, let url = URL(string: raw) {
+                            Link(destination: url) { row(source, linked: true) }
+                        } else {
+                            row(source, linked: false)
+                        }
                     }
                 }
             } header: {

@@ -467,19 +467,39 @@ enum TipCatalog {
 
         AppTip(id: "adhan.trackerhold", area: .adhan, group: InterfaceText("THE PRAYER TRACKER"), systemImage: "checkmark.circle.fill",
                title: InterfaceText("Tap for on time, hold for more"),
-               detail: InterfaceText("Tap a prayer's circle to mark it prayed on time, and tap again to clear it. Touch and hold for Late and Missed."),
+               detail: InterfaceText("Tap a prayer's circle to mark it prayed on time, and tap again to clear it. Touch and hold for Late and Missed. Once a prayer's time has ended, a tap asks whether it was on time or late."),
                place: InterfaceText("Adhan tab, Prayer Tracker"), tour: true),
+        AppTip(id: "adhan.trackerweek", area: .adhan, group: InterfaceText("THE PRAYER TRACKER"), systemImage: "calendar",
+               title: InterfaceText("The past week, on the card"),
+               detail: InterfaceText("The ring is a day: five arcs from Fajr round to Isha, green for on time, orange for late, red for missed. The seven rings under the card are the past week, and tapping one puts that day on the card to answer there."),
+               place: InterfaceText("Adhan tab, Prayer Tracker")),
         AppTip(id: "adhan.history", area: .adhan, group: InterfaceText("THE PRAYER TRACKER"), systemImage: "chart.bar.fill",
                title: InterfaceText("History & Insights"),
-               detail: InterfaceText("Under the tracker, History & Insights shows your days, weeks, months, and years, with streaks. Tap a day in the month, or a month in the year, to open it."),
+               detail: InterfaceText("Under the tracker, History & Insights shows how often each of the five is prayed on time, how the last 7 days, 30 days or year compare with the span before, and your days, weeks, months, and years. Tap a day in the month, or a month in the year, to open it."),
                place: InterfaceText("Adhan tab, Prayer Tracker"), destination: .prayerTracker),
+        AppTip(id: "adhan.trackerwholeday", area: .adhan, group: InterfaceText("THE PRAYER TRACKER"), systemImage: "checklist",
+               title: InterfaceText("Fill in a whole day"),
+               detail: InterfaceText("In the Day view, Mark the Whole Day answers every prayer still open at once and leaves the answers already given. Touch and hold a day of the month for the same choices."),
+               place: InterfaceText("Prayer Tracker, History & Insights"), destination: .prayerTracker),
+        AppTip(id: "adhan.trackermakeup", area: .adhan, group: InterfaceText("THE PRAYER TRACKER"), systemImage: "clock.arrow.circlepath",
+               title: InterfaceText("A list of what to make up"),
+               detail: InterfaceText("Prayers marked missed are gathered under To Make Up. Prayed It Later records one as prayed late and takes it off the list."),
+               place: InterfaceText("Prayer Tracker, History & Insights"), destination: .prayerTracker),
+        AppTip(id: "adhan.trackerextras", area: .adhan, group: InterfaceText("THE PRAYER TRACKER"), systemImage: "sparkles",
+               title: InterfaceText("Congregation and Sunnah prayers"),
+               detail: InterfaceText("Also Track adds an In Congregation choice to a prayed prayer, and a row for the twelve regular rak'at, Witr, Duha and the night prayer. Both are off until you turn them on, and a Sunnah prayer left is never counted as missed."),
+               place: InterfaceText("Prayer Tracker, History & Insights"), destination: .prayerTracker),
+        AppTip(id: "adhan.trackerwidget", area: .adhan, group: InterfaceText("THE PRAYER TRACKER"), systemImage: "apps.iphone",
+               title: InterfaceText("The tracker as a widget"),
+               detail: InterfaceText("The Prayer Tracker widget shows the day's ring on the Home Screen or the Lock Screen. On iOS 17 and later, tapping a prayer on the Home Screen widget marks it prayed, and a second tap marks it late."),
+               place: InterfaceText("Home Screen and Lock Screen widgets")),
         AppTip(id: "adhan.menses", area: .adhan, group: InterfaceText("THE PRAYER TRACKER"), systemImage: "pause.circle.fill",
                title: InterfaceText("Pause for menstruation and postpartum"),
                detail: InterfaceText("Pause tracking, on the history page, exempts those days. They never break your streak, they stay out of every statistic, and the \u{201C}Did you pray?\u{201D} reminders stay silent while prayer-time notifications continue. Any single past day can be marked exempt too."),
                place: InterfaceText("Prayer Tracker, History & Insights"), destination: .prayerTracker, card: (InterfaceText("Tracker Pause"), InterfaceText("Menstruation and postpartum days that never break a streak."))),
         AppTip(id: "adhan.markgate", area: .adhan, group: InterfaceText("THE PRAYER TRACKER"), systemImage: "lock.fill",
                title: InterfaceText("Marks wait for the adhan"),
-               detail: InterfaceText("A prayer can be marked only once its time has come in, so today's row shows what is still left to pray. Past days can always be filled in from History & Insights."),
+               detail: InterfaceText("A prayer can be marked only once its time has come in, so today's row shows what is still left to pray. Past days can always be filled in, from the seven days under the card or from History & Insights."),
                place: InterfaceText("Prayer Tracker, History & Insights"), destination: .prayerTracker),
         AppTip(id: "adhan.jumuah", area: .adhan, group: InterfaceText("THE PRAYER TRACKER"), systemImage: "person.3.fill",
                title: InterfaceText("Jumuah counts as Dhuhr"),
@@ -694,7 +714,7 @@ enum TipCatalog {
                place: InterfaceText("Quran reader, ayah actions")),
         AppTip(id: "quran.select", area: .quran, group: InterfaceText("AYAHS AND WORDS"), systemImage: "checklist",
                title: InterfaceText("Select several ayahs"),
-               detail: InterfaceText("Select Ayahs, in the title's menu, lets you tap as many ayahs as you like and then copy, share, bookmark, highlight, or annotate them together."),
+               detail: InterfaceText("Select Ayahs, in the title's menu or an ayah's actions, lets you tap as many ayahs as you like and then copy, share, bookmark, highlight, or annotate them together. Hold an ayah to add every ayah from the last one you picked through it."),
                place: InterfaceText("Quran reader, title menu")),
         AppTip(id: "quran.notes", area: .quran, group: InterfaceText("AYAHS AND WORDS"), systemImage: "note.text",
                title: InterfaceText("Notes and colors"),
@@ -830,7 +850,7 @@ enum TipCatalog {
                place: InterfaceText("Home Screen and Lock Screen")),
         AppTip(id: "quran.chosenWidget", area: .quran, group: InterfaceText("THE QURAN TAB"), systemImage: "bookmark.fill",
                title: InterfaceText("Choose the ayah on your widget"),
-               detail: InterfaceText("Add the Chosen Ayah widget to your Home Screen or Lock Screen, then hold it and choose Edit Widget. Pick one of your bookmarks, or type a reference such as 2:255 or Yaseen 9. Until you choose, it shows your newest bookmark."),
+               detail: InterfaceText("Add the Chosen Ayah widget to your Home Screen or Lock Screen, then hold it and choose Edit Widget. Show one ayah, a list of ayahs that take turns, a random bookmark or a random ayah, changing every 15 minutes, every hour or every day. Pick from your bookmarks, or type a reference such as 2:255 or Yaseen 9."),
                place: InterfaceText("Home Screen and Lock Screen, Edit Widget"), isAvailable: { hasChosenAyahWidget }),
         AppTip(id: "quran.controls", area: .quran, group: InterfaceText("THE QURAN TAB"), systemImage: "switch.2",
                title: InterfaceText("Resume from Control Center"),
@@ -886,7 +906,7 @@ enum TipCatalog {
 
         AppTip(id: "hadith.titlemenu", area: .hadith, group: InterfaceText("READING"), systemImage: "list.bullet.indent",
                title: InterfaceText("The chapter title is a menu"),
-               detail: InterfaceText("In a chapter, tap the title for Choose Chapter and for Select Hadiths, which copies, shares, or bookmarks several at once."),
+               detail: InterfaceText("In a chapter, tap the title for Choose Chapter and for Select Hadiths, which copies, shares, or bookmarks several at once. While selecting, hold a hadith to add every hadith from the last one you picked through it."),
                place: InterfaceText("Hadith reader"), tour: true),
         AppTip(id: "hadith.grades", area: .hadith, group: InterfaceText("READING"), systemImage: "rosette",
                title: InterfaceText("Grades, with who gave them"),
@@ -1326,8 +1346,10 @@ struct FeatureListView: View {
             Group {
                 ForEach(groups, id: \.area.id) { group in
                     Section(header: Text(group.area.title.uppercased())) {
-                        ForEach(group.tips) { tip in
-                            row(for: tip)
+                        // A tip with nowhere to go has no row, and is left out HERE: a row that may
+                        // be nothing is one the List has to build to count (see `OneRow`).
+                        ForEach(group.tips.paired { $0.destination }, id: \.item.id) { pair in
+                            row(for: pair.item, destination: pair.found)
                         }
                     }
                 }
@@ -1342,24 +1364,22 @@ struct FeatureListView: View {
     /// The card's short title where the tip has one (the tip's own is written for a list row with room
     /// to wrap), the place it is done as the caption, exactly the root's fallback rows.
     @ViewBuilder
-    private func row(for tip: AppTip) -> some View {
-        if let destination = tip.destination {
-            NavigationLink(destination: LazyDestination {
-                Group {
-                    if let own = resolve(destination) {
-                        own
-                    } else {
-                        AnyView(SettingsSearchDestinationView.view(for: destination))
-                    }
+    private func row(for tip: AppTip, destination: SettingsSearchEntry.Destination) -> some View {
+        NavigationLink(destination: LazyDestination {
+            Group {
+                if let own = resolve(destination) {
+                    own
+                } else {
+                    AnyView(SettingsSearchDestinationView.view(for: destination))
                 }
-                .revealsAdvancedSettings(tip.advanced)
-            }) {
-                SettingsRowLabel(title: tip.card?.title ?? tip.title, systemImage: tip.systemImage,
-                                 subtitle: tip.place,
-                                 tint: tip.area.tint, secondaryTint: tip.area.secondaryTint)
             }
-            .tint(settings.accentColor.color)
+            .revealsAdvancedSettings(tip.advanced)
+        }) {
+            SettingsRowLabel(title: tip.card?.title ?? tip.title, systemImage: tip.systemImage,
+                             subtitle: tip.place,
+                             tint: tip.area.tint, secondaryTint: tip.area.secondaryTint)
         }
+        .tint(settings.accentColor.color)
     }
 }
 
@@ -1470,22 +1490,25 @@ struct TipsView: View {
     /// the row itself (two links in one List row both fire on any tap).
     @ViewBuilder
     private func row(for tip: AppTip) -> some View {
-        if let destination = tip.destination {
-            NavigationLink(destination: LazyDestination {
-                Group {
-                    if let own = resolve(destination) {
-                        own
-                    } else {
-                        AnyView(SettingsSearchDestinationView.view(for: destination))
+        // One view by its type, as a List row must be (see `OneRow`).
+        OneRow {
+            if let destination = tip.destination {
+                NavigationLink(destination: LazyDestination {
+                    Group {
+                        if let own = resolve(destination) {
+                            own
+                        } else {
+                            AnyView(SettingsSearchDestinationView.view(for: destination))
+                        }
                     }
+                    .revealsAdvancedSettings(tip.advanced)
+                }) {
+                    TipRow(tip: tip)
                 }
-                .revealsAdvancedSettings(tip.advanced)
-            }) {
+                .tint(settings.accentColor.color)
+            } else {
                 TipRow(tip: tip)
             }
-            .tint(settings.accentColor.color)
-        } else {
-            TipRow(tip: tip)
         }
     }
 }
@@ -1830,21 +1853,22 @@ struct SettingsSpotlightSection: View {
             if settings.hides(.spotlightCards) {
                 EmptyView()
             } else if rows {
-                ForEach(tips) { tip in
-                    if let destination = tip.destination {
-                        NavigationLink(destination: LazyDestination {
-                            SettingsSearchDestinationView.view(for: destination)
-                                .revealsAdvancedSettings(tip.advanced)
-                        }) {
-                            // The card's short title: the tip's own is written for a list row with
-                            // room to wrap, and truncated in these rows when the iPad sidebar still
-                            // used them ("Traveling mode turns its...").
-                            SettingsRowLabel(title: tip.card?.title ?? tip.title, systemImage: tip.systemImage,
-                                             subtitle: tip.place,
-                                             tint: tip.area.tint, secondaryTint: tip.area.secondaryTint)
-                        }
-                        .tint(settings.accentColor.color)
+                // A tip with nowhere to go is left out before the ForEach (see `OneRow`).
+                ForEach(tips.paired { $0.destination }, id: \.item.id) { pair in
+                    let tip = pair.item
+                    let destination = pair.found
+                    NavigationLink(destination: LazyDestination {
+                        SettingsSearchDestinationView.view(for: destination)
+                            .revealsAdvancedSettings(tip.advanced)
+                    }) {
+                        // The card's short title: the tip's own is written for a list row with
+                        // room to wrap, and truncated in these rows when the iPad sidebar still
+                        // used them ("Traveling mode turns its...").
+                        SettingsRowLabel(title: tip.card?.title ?? tip.title, systemImage: tip.systemImage,
+                                         subtitle: tip.place,
+                                         tint: tip.area.tint, secondaryTint: tip.area.secondaryTint)
                     }
+                    .tint(settings.accentColor.color)
                 }
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {

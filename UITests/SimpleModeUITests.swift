@@ -723,7 +723,7 @@ final class SimpleModeUITests: XCTestCase {
         play.tap()
         XCTAssertTrue(app.buttons["Play This Ayah"].waitForExistence(timeout: 5), "tap did not open the playback menu")
         XCTAssertTrue(app.buttons["Play Custom Range"].exists)
-        // Choose Reciter leads the menu, as in the Quran tab's Play Ayah submenu (2026-10-25).
+        // Choose Reciter is on the menu, under the two play rows, as the Quran tab's hold menu has it.
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Choose Reciter")).firstMatch.exists,
                       "the playback menu has no Choose Reciter")
         XCTAssertFalse(app.buttons["Stop playing"].exists, "tap also started playback")
@@ -851,6 +851,57 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertTrue(listOpened, "the reciter row did not open the reciter list")
         app.navigationBars["Select Reciter"].buttons["Close"].tap()
         XCTAssertTrue(actionsSheetSwitch(app).waitForExistence(timeout: 5), "closing the reciter list also closed the actions sheet")
+    }
+
+    /// The actions sheet's tiles fill their rows (Abu, 2026-11-18: "long hold ayah has copy ayah on
+    /// its own row which is ugly"), in the Quran tab hold menu's order ("context menu for quran isnt
+    /// the same as long hold ayah"): Play This Ayah, Play Word by Word and the reciter on one row,
+    /// Repeat Ayah, Play Custom Range and Play From Ayah on the next, Select Text, Copy Ayah and Select
+    /// Ayahs (the reader's select mode, 2026-11-18) across the whole width, and Share Ayah ONCE, the
+    /// full-width button under them.
+    func testActionsSheetTilesFillTheirRowsInTheMenuOrder() {
+        let app = launchActionsSheet(keepOpenOnPlay: false)
+        XCTAssertTrue(app.buttons["Play This Ayah"].waitForExistence(timeout: 10), "the actions sheet has no Play This Ayah tile")
+        let reciter = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Reciter:")).firstMatch
+        XCTAssertTrue(reciter.exists, "the actions sheet has no Choose Reciter tile")
+
+        func frame(_ title: String) -> CGRect {
+            let tile = app.buttons[title]
+            XCTAssertTrue(tile.exists, "the actions sheet has no \(title) tile")
+            return tile.frame
+        }
+        /// The tiles sit on one row, left to right in the order given.
+        func assertOneRow(_ frames: [CGRect], _ what: String) {
+            for (a, b) in zip(frames, frames.dropFirst()) {
+                XCTAssertEqual(a.minY, b.minY, accuracy: 1.5, "\(what) are not on one row")
+                XCTAssertLessThan(a.maxX, b.minX + 0.5, "\(what) are out of order")
+                XCTAssertEqual(a.width, b.width, accuracy: 1.5, "\(what) are not equal widths")
+            }
+        }
+
+        let playRow = [frame("Play This Ayah"), frame("Play Word by Word"), reciter.frame]
+        let rangeRow = [frame("Repeat Ayah"), frame("Play Custom Range"), frame("Play From Ayah")]
+        let textRow = [frame("Select Text"), frame("Copy Ayah"), frame("Select Ayahs")]
+        assertOneRow(playRow, "Play This Ayah, Play Word by Word and Choose Reciter")
+        assertOneRow(rangeRow, "Repeat Ayah, Play Custom Range and Play From Ayah")
+        assertOneRow(textRow, "Select Text, Copy Ayah and Select Ayahs")
+        XCTAssertLessThan(playRow[0].maxY, rangeRow[0].minY, "the Repeat row is not under the Play row")
+        XCTAssertLessThan(rangeRow[0].maxY, textRow[0].minY, "Select Text, Copy Ayah and Select Ayahs are not under the play tiles")
+
+        // Every row runs edge to edge: a short row stretches instead of leaving cells empty.
+        let leading = playRow[0].minX, trailing = playRow[2].maxX
+        for (row, what) in [(rangeRow, "the Repeat row"), (textRow, "the Select Text row")] {
+            XCTAssertEqual(row.first!.minX, leading, accuracy: 1.5, "\(what) does not start at the grid's edge")
+            XCTAssertEqual(row.last!.maxX, trailing, accuracy: 1.5, "\(what) does not reach the grid's edge")
+        }
+
+        let shares = app.buttons.matching(identifier: "Share Ayah")
+        XCTAssertEqual(shares.count, 1, "Share Ayah is on the sheet \(shares.count) times")
+        let share = shares.firstMatch.frame
+        XCTAssertGreaterThan(share.minY, textRow[0].maxY, "Share Ayah is not under the Select Text row")
+        XCTAssertEqual(share.minX, leading, accuracy: 1.5, "Share Ayah does not start at the grid's edge")
+        XCTAssertEqual(share.maxX, trailing, accuracy: 1.5, "Share Ayah does not reach the grid's edge")
+        attachScreenshot("Actions sheet tiles")
     }
 
     private func launchActionsSheet(keepSheetOpen: Bool) -> XCUIApplication {
@@ -1055,6 +1106,203 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertTrue(opened, "holding the text did not open the ayah actions sheet")
     }
 
+    /// Select Ayahs in the list reader (Abu, 2026-11-18: "it's just so annoying"; 2026-11-19: "make
+    /// sure select is perfect"). Entering it moves nothing: the circle stands where the ▶ and ⋯ were,
+    /// so the NEXT ayah's reference stays exactly where it was (the old leading circle slid every row
+    /// 32 pt right, 2:30 rewrapped a line longer and the list jumped). The row's own controls step
+    /// aside, the reference pill selects instead of bookmarking, a hold is a slow tap (it selects once
+    /// and opens no sheet), and Done puts everything back where it was.
+    func testSelectAyahsLeavesTheListStill() {
+        // Select mode starts 14 s after the reader appears: after `launch`'s own 8 s wait, so the
+        // "before" frame below is read in the plain reading state.
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "2:30", "-selectAyahsAt", "14",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
+        func eventually(_ condition: () -> Bool) -> Bool {
+            for _ in 0..<20 {
+                if condition() { return true }
+                Thread.sleep(forTimeInterval: 0.15)
+            }
+            return condition()
+        }
+
+        let menu = app.buttons["ayahActionsMenu"].firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 15), "the reader never showed an ayah")
+        let next = app.staticTexts["2:31"]
+        XCTAssertTrue(next.waitForExistence(timeout: 5), "2:31's reference is not in the list")
+        let before = next.frame
+
+        let mark = app.buttons["Select 2:30"]
+        XCTAssertTrue(mark.waitForExistence(timeout: 30), "select mode never started")
+        Thread.sleep(forTimeInterval: 0.6)
+        XCTAssertEqual(next.frame.minY, before.minY, accuracy: 0.5, "entering select mode moved the next ayah")
+        XCTAssertFalse(app.buttons["ayahActionsMenu"].exists, "the ⋯ menu is still on the rows in select mode")
+        XCTAssertFalse(app.buttons["ayahPlayButton"].exists, "the play menu is still on the rows in select mode")
+        XCTAssertFalse(mark.isSelected, "select mode started with an ayah checked")
+
+        // The reference pill is part of the row here: it selects, where it used to bookmark.
+        app.staticTexts["2:30"].tap()
+        let pillSelected = eventually { mark.isSelected }
+        if !pillSelected { attachScreenshot("Select mode pill tap") }
+        XCTAssertTrue(pillSelected, "the reference pill did not select the ayah")
+
+        // A hold on the text is a slow tap: one toggle, and no actions sheet over the selection.
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: app.frame.midX, dy: mark.frame.maxY + 60))
+            .press(forDuration: 1.0)
+        let holdDeselected = eventually { !mark.isSelected }
+        if !holdDeselected { attachScreenshot("Select mode hold") }
+        XCTAssertTrue(holdDeselected, "a hold did not toggle the ayah once")
+        XCTAssertFalse(app.switches.matching(NSPredicate(format: "label BEGINSWITH %@", "Keep Sheet Open")).firstMatch.exists,
+                       "a hold opened the actions sheet in select mode")
+
+        app.buttons["Done"].tap()
+        XCTAssertTrue(menu.waitForExistence(timeout: 5), "Done did not bring the rows' controls back")
+        Thread.sleep(forTimeInterval: 0.6)
+        XCTAssertEqual(next.frame.minY, before.minY, accuracy: 0.5, "leaving select mode moved the next ayah")
+    }
+
+    /// A hold in select mode selects the run from the ayah checked last through the held one
+    /// (2026-11-19): 112:1 checked, a hold on 112:3 checks 112:2 with it, an ayah nothing touched.
+    /// A hold on the ayah the run ended at is a slow tap again and unchecks that ayah alone.
+    func testSelectHoldSelectsTheRunOfAyahs() {
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "112:1", "-selectAyahsAt", "2",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
+        func eventually(_ condition: () -> Bool) -> Bool {
+            for _ in 0..<20 {
+                if condition() { return true }
+                Thread.sleep(forTimeInterval: 0.15)
+            }
+            return condition()
+        }
+
+        let first = app.buttons["Select 112:1"]
+        let second = app.buttons["Select 112:2"]
+        let third = app.buttons["Select 112:3"]
+        XCTAssertTrue(first.waitForExistence(timeout: 30), "select mode never started")
+        XCTAssertTrue(second.exists && third.exists, "112:2 and 112:3 are not on screen with 112:1")
+        Thread.sleep(forTimeInterval: 0.6)
+
+        app.staticTexts["112:1"].tap()
+        XCTAssertTrue(eventually { first.isSelected }, "the reference pill did not select 112:1")
+
+        // 112:3's text, below its reference and its circle.
+        let thirdText = app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: app.frame.midX, dy: third.frame.maxY + 40))
+        thirdText.press(forDuration: 1.0)
+        let ranThrough = eventually { second.isSelected && third.isSelected }
+        if !ranThrough { attachScreenshot("Select mode run") }
+        XCTAssertTrue(ranThrough, "a hold on 112:3 did not select 112:2 and 112:3 with 112:1")
+        XCTAssertTrue(first.isSelected, "the run unchecked the ayah it started from")
+
+        thirdText.press(forDuration: 1.0)
+        let endToggled = eventually { !third.isSelected }
+        if !endToggled { attachScreenshot("Select mode run end") }
+        XCTAssertTrue(endToggled, "a hold on the run's last ayah did not uncheck it")
+        XCTAssertTrue(first.isSelected && second.isSelected, "that hold unchecked more than its own ayah")
+        XCTAssertFalse(app.switches.matching(NSPredicate(format: "label BEGINSWITH %@", "Keep Sheet Open")).firstMatch.exists,
+                       "a hold opened the actions sheet in select mode")
+    }
+
+    /// Select Hadiths, the ayah list's select mode for a chapter (2026-11-19). A circle stands where
+    /// each ⋯ was, so the menus cannot open mid-selection; a tap on the narration toggles the
+    /// hadith; a hold on a later hadith checks the hadiths between, ones nothing touched, and opens
+    /// no long-press menu; Done brings the ⋯ menus back.
+    func testSelectHadithsTakesOverTheRows() {
+        let app = launch(["-launchTabHadith", "-launchHadithOpen", "bukhari:20",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
+        func eventually(_ condition: () -> Bool) -> Bool {
+            for _ in 0..<20 {
+                if condition() { return true }
+                Thread.sleep(forTimeInterval: 0.15)
+            }
+            return condition()
+        }
+        // Circles clear of the pinned chapter header and of the bottom bars.
+        func visibleMarks() -> [XCUIElement] {
+            app.buttons.matching(identifier: "hadithSelectionMark").allElementsBoundByIndex
+                .filter { $0.isHittable && $0.frame.minY > 190 && $0.frame.maxY < app.frame.maxY - 260 }
+                .sorted { $0.frame.minY < $1.frame.minY }
+        }
+
+        XCTAssertTrue(app.buttons["hadithActionsMenu"].firstMatch.waitForExistence(timeout: 15))
+        // The chapter title, in the middle of the navigation bar, is the menu that starts select mode.
+        let bar = app.navigationBars.firstMatch
+        let titleY = bar.exists ? bar.frame.midY : 84
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: app.frame.midX, dy: titleY)).tap()
+        let select = app.buttons["Select Hadiths"]
+        XCTAssertTrue(select.waitForExistence(timeout: 5), "the title menu has no Select Hadiths")
+        select.tap()
+
+        let anyMark = app.buttons.matching(identifier: "hadithSelectionMark").firstMatch
+        XCTAssertTrue(anyMark.waitForExistence(timeout: 5), "select mode never started")
+        Thread.sleep(forTimeInterval: 0.8)
+        XCTAssertFalse(app.buttons["hadithActionsMenu"].exists, "the ⋯ menu is still on the rows in select mode")
+        guard let started = visibleMarks().first else {
+            attachScreenshot("Select Hadiths start")
+            return XCTFail("no hadith's circle is on screen")
+        }
+        let startedLabel = started.label
+        XCTAssertFalse(started.isSelected, "select mode started with a hadith checked")
+
+        // A tap on the narration toggles the hadith.
+        let startedText = app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: app.frame.midX, dy: started.frame.maxY + 60))
+        startedText.tap()
+        let checked = eventually { app.buttons[startedLabel].isSelected }
+        if !checked { attachScreenshot("Select Hadiths tap") }
+        XCTAssertTrue(checked, "a tap on the text did not check the hadith")
+
+        // A hadith is taller than the screen, so its neighbours' circles come by one at a time:
+        // scroll to the next hadith's circle and leave it alone, scroll to the one after and hold
+        // its text, then come back up. The one left alone is part of the run. Circles are looked up
+        // again by their label after each scroll: an element found by its place in a query names
+        // whatever sits at that place once the list has loaded or dropped a row.
+        func scrollToMark(skipping seen: Set<String> = [], up: Bool = true, wanted: String? = nil) -> String? {
+            for _ in 0..<12 {
+                let match = visibleMarks().map(\.label).first { label in
+                    if let wanted { return label == wanted }
+                    return !seen.contains(label)
+                }
+                if let match { return match }
+                if up { app.swipeUp(velocity: .slow) } else { app.swipeDown(velocity: .slow) }
+                Thread.sleep(forTimeInterval: 1.2)
+            }
+            return nil
+        }
+        guard let betweenLabel = scrollToMark(skipping: [startedLabel]) else {
+            attachScreenshot("Select Hadiths scroll")
+            return XCTFail("the next hadith's circle never came on screen")
+        }
+        XCTAssertFalse(app.buttons[betweenLabel].isSelected, "a hadith nothing touched is already checked")
+        guard let heldLabel = scrollToMark(skipping: [startedLabel, betweenLabel]) else {
+            attachScreenshot("Select Hadiths scroll")
+            return XCTFail("the hadith after it never came on screen")
+        }
+        Thread.sleep(forTimeInterval: 0.8)
+        let held = app.buttons[heldLabel]
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: app.frame.midX, dy: held.frame.maxY + 40))
+            .press(forDuration: 1.0)
+        let heldChecked = eventually { held.isSelected }
+        if !heldChecked { attachScreenshot("Select Hadiths hold") }
+        XCTAssertTrue(heldChecked, "a hold did not check the held hadith")
+        XCTAssertFalse(app.buttons["Share Hadith"].exists, "the hold opened the hadith's menu in select mode")
+        guard scrollToMark(up: false, wanted: betweenLabel) != nil else {
+            attachScreenshot("Select Hadiths run")
+            return XCTFail("could not scroll back to the hadith between")
+        }
+        let ran = app.buttons[betweenLabel].isSelected
+        if !ran {
+            attachScreenshot("Select Hadiths run")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(ran, "a hold did not select the hadith between the last pick and the held one")
+
+        app.buttons["Done"].tap()
+        XCTAssertTrue(app.buttons["hadithActionsMenu"].firstMatch.waitForExistence(timeout: 5),
+                      "Done did not bring the rows' menus back")
+    }
+
     /// The grid switch is the ⋯ menu's HOLD since 2026-10-26 (a double tap made every plain tap wait
     /// out the double-tap interval, which read as lag; see `ShortcutMenu`).
     func testMoreMenuHoldChangesLayout() {
@@ -1081,7 +1329,7 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertTrue(menu.waitForExistence(timeout: 15), "no ayah menu in the list reader")
         menu.tap()
         for item in ["Bookmark Ayah", "Highlight", "Add Note", "See Tafsir", "Study Ayah", "Apply Settings",
-                     "Play Ayah", "Select Text", "Copy Ayah", "Share Ayah"] {
+                     "Play Ayah", "Select Text", "Copy Ayah", "Select Ayahs", "Share Ayah"] {
             XCTAssertTrue(app.buttons[item].waitForExistence(timeout: 5), "the ayah menu has no \(item)")
         }
         attachScreenshot("Ayah menu grouped")
@@ -1145,7 +1393,20 @@ final class SimpleModeUITests: XCTestCase {
         // reaches the system's home gesture instead).
         let query = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Narrated"))
         let floor = app.frame.maxY - 220
-        guard let line = query.allElementsBoundByIndex.first(where: { $0.isHittable && $0.frame.maxY < floor && $0.frame.minY > 150 }) else {
+        func clearLine() -> XCUIElement? {
+            query.allElementsBoundByIndex.first(where: { $0.isHittable && $0.frame.maxY < floor && $0.frame.minY > 150 })
+        }
+        // The chain card sits above the narration since 2026-11-15, which put hadith 20's English
+        // under the bottom bars on arrival: scroll until a narration line is clear of them.
+        var found = clearLine()
+        for _ in 0..<4 where found == nil {
+            app.swipeUp(velocity: .slow)
+            // Until the list has settled: an element found by its place in the query names another
+            // line once a row is loaded or dropped.
+            Thread.sleep(forTimeInterval: 1.5)
+            found = clearLine()
+        }
+        guard let line = found else {
             attachScreenshot("Hadith pinch target")
             return XCTFail("no narration line clear of the bars to pinch")
         }
@@ -1159,8 +1420,12 @@ final class SimpleModeUITests: XCTestCase {
             print(app.debugDescription)
         }
         XCTAssertGreaterThan(after, before * 1.3, "the pinch did not grow the hadith (\(before) -> \(after))")
-        XCTAssertTrue(app.buttons.matching(identifier: "hadithActionsMenu").allElementsBoundByIndex.contains { $0.isHittable },
-                      "the pinch covered the list with a sheet")
+        // The tab bar, which any sheet or menu would cover: a hadith grown this much can push every
+        // row's ⋯ off the screen, which is what this used to look for.
+        let tabReachable = app.tabBars.buttons["Hadith"].firstMatch.isHittable
+        if !tabReachable { attachScreenshot("Hadith pinch cover") }
+        XCTAssertTrue(tabReachable, "the pinch covered the list with a sheet")
+        XCTAssertFalse(app.buttons["Share Hadith"].exists, "the pinch opened the hadith's menu")
     }
 
     /// The Legend's third page, Signs: the mushaf's stop signs, each row opening to what it asks.

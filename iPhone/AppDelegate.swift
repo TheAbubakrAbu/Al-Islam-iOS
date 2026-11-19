@@ -49,6 +49,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             AppReveal.revealed && !ModalPresence.isPresenting && !KeyboardPresence.isUp
         }
         #if HAS_ADHAN
+        // The tracker widgets draw from a mirror of the tracker in the App Group; from here on every
+        // tracker write refreshes it, and whatever a widget marked while the app was away is taken in.
+        TrackerWidgetBridge.install()
         registerBackgroundRefreshTask()
         // The two `BGTaskScheduler.submit`s are synchronous XPC round trips: off the first-paint path.
         // Every backgrounding re-arms them (below); the first arm waits for the launch cover to lift.

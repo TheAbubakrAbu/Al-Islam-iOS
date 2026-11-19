@@ -297,13 +297,23 @@
    "mensesPauseActive",
    "mensesPauseStartStamp",
    "prayerTrackerData",
-   "trackerExemptDaysData"
+   "trackerCongregationData",
+   "trackerCongregationEnabled",
+   "trackerExemptDaysData",
+   "trackerResumeDaysData",
+   "trackerSunnahData",
+   "trackerSunnahEnabled"
   ],
   "keys": [
    "mensesPauseActive",
    "mensesPauseStartStamp",
+   "prayerTrackerCongregationData",
    "prayerTrackerData",
-   "prayerTrackerExemptDaysData"
+   "prayerTrackerExemptDaysData",
+   "prayerTrackerResumeDaysData",
+   "prayerTrackerSunnahData",
+   "trackerCongregationEnabled",
+   "trackerSunnahEnabled"
   ]
  },
  "QuranContent": {

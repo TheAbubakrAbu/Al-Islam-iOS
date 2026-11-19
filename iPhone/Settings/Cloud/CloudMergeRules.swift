@@ -19,6 +19,9 @@ enum CloudMergeRules {
     enum Rule {
         /// An array of strings or numbers, as a set. Local order first, then what is new.
         case unionScalars(cap: Int?)
+        /// A dictionary of such arrays (`[day: [name]]`): per key, the union, sorted so the bytes
+        /// do not depend on which side came first.
+        case unionScalarsPerKey
         /// An array of objects, matched on `identity` (dotted paths reach into nested objects). On a
         /// match the side with the later `stamp` wins and takes any field it lacks from the other
         /// (a note, a highlight); with no stamp to compare, the local one wins. `newestFirst`
@@ -79,6 +82,12 @@ enum CloudMergeRules {
         // make sense together; `merged(local:incoming:)` moves each as one.
         "prayerTrackerData": .prayerMarks,
         "prayerTrackerExemptDaysData": .unionScalars(cap: nil),
+        // The days a pause ended on: a day either side resumed on is one.
+        "prayerTrackerResumeDaysData": .unionScalars(cap: nil),
+        // `[day: [name]]`, both of them: a prayer either side prayed in congregation was, and a
+        // Sunnah prayer either side ticked was prayed.
+        "prayerTrackerCongregationData": .unionScalarsPerKey,
+        "prayerTrackerSunnahData": .unionScalarsPerKey,
         // Hadith
         "hadithFavoriteBooks": .unionScalars(cap: nil),
         "hadithFavoriteChapters": .unionScalars(cap: nil),
@@ -221,6 +230,18 @@ enum CloudMergeRules {
                 out.append(element)
             }
             return cap.map { Array(out.prefix($0)) } ?? out
+
+        case .unionScalarsPerKey:
+            guard let ours = ours as? [String: Any], let theirs = theirs as? [String: Any] else { return nil }
+            var out = ours
+            for (key, value) in theirs {
+                guard let incoming = value as? [String] else { continue }
+                let mine = out[key] as? [String] ?? []
+                let union = Set(mine).union(incoming)
+                // Unchanged days keep their stored order, so an identical merge rewrites nothing.
+                if union.count != Set(mine).count { out[key] = union.sorted() }
+            }
+            return out
 
         case .unionObjects(let identity, let stamp, let newestFirst, let cap):
             guard let ours = ours as? [[String: Any]], let theirs = theirs as? [[String: Any]] else { return nil }

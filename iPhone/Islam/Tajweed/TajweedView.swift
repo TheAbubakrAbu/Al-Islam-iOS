@@ -279,6 +279,16 @@ struct TajweedCourseView: View {
                 )
                 .padding(.vertical, 2)
             }
+
+            // The makharij at speed (2026-11-17): the Arabic Alphabet's page, a door from here too.
+            NavigationLink(destination: LazyDestination { TongueTwistersView() }) {
+                SettingsRowLabel(
+                    title: String(localized: "Tongue Twisters"),
+                    systemImage: "mouth.fill",
+                    subtitle: String(localized: "The letters people mix up, said fast, and four hard Quran phrases")
+                )
+                .padding(.vertical, 2)
+            }
         }
     }
 

@@ -553,10 +553,26 @@ struct PrayerList: View {
         }
     }
 
+    /// One row of the prayer list: a prayer, or the detail open under the prayer that was tapped.
+    private struct ListEntry: Identifiable {
+        let prayer: Prayer
+        let isDetail: Bool
+
+        var id: String { isDetail ? "detail:" + prayer.stableDisplayID : prayer.stableDisplayID }
+    }
+
     @ViewBuilder
     private func listContent(prayers: [Prayer], isComparisonBaseline: Bool = false, highlightsCurrent: Bool = true) -> some View {
-        ForEach(prayers, id: \.stableDisplayID) { prayer in
-            listRow(for: prayer, in: prayers, isComparisonBaseline: isComparisonBaseline, highlightsCurrent: highlightsCurrent)
+        // The open prayer's detail is a row of the DATA, after its prayer. It used to be an `if`
+        // beside the prayer's row inside one ForEach element, so an element was one row or two and
+        // the List could only count the rows by building them (see `OneRow`). Opening a prayer now
+        // inserts an entry, which the List animates as it did the second row.
+        let entries = prayers.flatMap { prayer -> [ListEntry] in
+            let row = ListEntry(prayer: prayer, isDetail: false)
+            return expandedPrayerKey == expansionKey(for: prayer) ? [row, ListEntry(prayer: prayer, isDetail: true)] : [row]
+        }
+        ForEach(entries) { entry in
+            listRow(for: entry, in: prayers, isComparisonBaseline: isComparisonBaseline, highlightsCurrent: highlightsCurrent)
         }
         .onChange(of: settings.travelingMode) { _ in
             withAnimation {
@@ -565,39 +581,43 @@ struct PrayerList: View {
         }
     }
 
-    private func listRow(for prayer: Prayer, in prayers: [Prayer], isComparisonBaseline: Bool = false, highlightsCurrent: Bool = true) -> some View {
-        let prayerKey = expansionKey(for: prayer)
-        let isExpanded = expandedPrayerKey == prayerKey
+    private func listRow(for entry: ListEntry, in prayers: [Prayer], isComparisonBaseline: Bool = false, highlightsCurrent: Bool = true) -> some View {
+        let prayer = entry.prayer
         let isCurrent = highlightsCurrent && !isComparisonBaseline && isCurrentPrayer(prayer)
         let listIconColor = prayer.nameTransliteration == "Shurooq" ? Color.primary : settings.accentColor.accent2
+        let highlight = settings.accentColor.accent2.opacity(0.25)
 
-        return Group {
-            PrayerListRowCard(
-                prayer: prayer,
-                displayName: listDisplayName(for: prayer),
-                isCurrent: isCurrent,
-                iconColor: listIconColor,
-                highlight: settings.accentColor.accent2.opacity(0.25),
-                trackerMark: isComparisonBaseline ? nil : trackerMark(for: prayer),
-                trailingContent: {
-                    #if os(iOS)
-                    prayerBell(for: prayer, rowColor: .primary)
-                    #endif
-                }
-            )
-            .modifier(prayerAccessibility(
-                for: prayer,
-                name: listDisplayName(for: prayer),
-                isCurrent: isCurrent,
-                mark: isComparisonBaseline ? nil : trackerMark(for: prayer),
-                showsBell: Self.drawsBells
-            ))
-
-            if isExpanded {
+        return OneRow {
+            if entry.isDetail {
                 expandedPrayerDetailContent(for: prayer, in: prayers)
                     .contentShape(Rectangle())
+            } else {
+                PrayerListRowCard(
+                    prayer: prayer,
+                    displayName: listDisplayName(for: prayer),
+                    isCurrent: isCurrent,
+                    iconColor: listIconColor,
+                    highlight: highlight,
+                    trackerMark: isComparisonBaseline ? nil : trackerMark(for: prayer),
+                    trailingContent: {
+                        #if os(iOS)
+                        prayerBell(for: prayer, rowColor: .primary)
+                        #endif
+                    }
+                )
+                .modifier(prayerAccessibility(
+                    for: prayer,
+                    name: listDisplayName(for: prayer),
+                    isCurrent: isCurrent,
+                    mark: isComparisonBaseline ? nil : trackerMark(for: prayer),
+                    showsBell: Self.drawsBells
+                ))
             }
         }
+        // The current prayer fills its whole row. Restated here, on the row the List holds: from
+        // inside `OneRow` the card's own `rowWash` never reaches the cell. The detail's row is never
+        // washed, and comes out as the plain cell.
+        .rowWash(!entry.isDetail && isCurrent ? highlight : nil)
         .onTapGesture {
             togglePrayerExpansion(for: prayer)
         }

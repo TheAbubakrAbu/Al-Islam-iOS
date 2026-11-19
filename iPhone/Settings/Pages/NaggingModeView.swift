@@ -348,18 +348,23 @@ struct NaggingModeView: View {
             // The cascade before a time is about the obligatory prayer whose window that time
             // CLOSES. The scheduler (`Settings.prayerQuestion(for:)`) has always worked this way;
             // the old labels ("Nagging before Dhuhr") just never said so.
-            ForEach(NaggingDeadline.all) { deadline in
-                SettingsToggle(String(localized: "Did you pray \(deadline.asks.localizedDisplay)?"), caption: deadline.caption, isOn: Binding(
-                    get: { settings[keyPath: deadline.key] },
-                    set: { newValue in
-                        settings[keyPath: deadline.key] = newValue
-                        turnOffNaggingModeIfAllOff()
-                        fitIntervalToLeads()
-                    }
-                ))
-
-                if settings.naggingPerDeadlineStart, settings[keyPath: deadline.key] {
-                    if settings.advanced(.naggingMode) {
+            //
+            // A deadline's switch and the start line under it are two ENTRIES of one flat list, and
+            // each row is one view by its type (see `OneRow`): an element that was a row or two
+            // made the List build and re-insert these rows.
+            ForEach(deadlineRows) { row in
+                let deadline = row.deadline
+                OneRow {
+                    if !row.isStart {
+                        SettingsToggle(String(localized: "Did you pray \(deadline.asks.localizedDisplay)?"), caption: deadline.caption, isOn: Binding(
+                            get: { settings[keyPath: deadline.key] },
+                            set: { newValue in
+                                settings[keyPath: deadline.key] = newValue
+                                turnOffNaggingModeIfAllOff()
+                                fitIntervalToLeads()
+                            }
+                        ))
+                    } else if settings.advanced(.naggingMode) {
                         Picker("Start", selection: Binding(
                             get: { settings.naggingStart(forDeadline: deadline.id) },
                             set: { newValue in
@@ -382,6 +387,23 @@ struct NaggingModeView: View {
                     }
                 }
             }
+        }
+    }
+
+    /// One row of WHICH PRAYERS: a deadline's switch, or the start line that sits under it.
+    private struct DeadlineRow: Identifiable {
+        let deadline: NaggingDeadline
+        let isStart: Bool
+        var id: String { isStart ? "\(deadline.id).start" : deadline.id }
+    }
+
+    /// Every deadline's switch, each followed by its start line while the deadline is on and the
+    /// deadlines keep their own starts.
+    private var deadlineRows: [DeadlineRow] {
+        NaggingDeadline.all.flatMap { deadline -> [DeadlineRow] in
+            let toggle = DeadlineRow(deadline: deadline, isStart: false)
+            guard settings.naggingPerDeadlineStart, settings[keyPath: deadline.key] else { return [toggle] }
+            return [toggle, DeadlineRow(deadline: deadline, isStart: true)]
         }
     }
 

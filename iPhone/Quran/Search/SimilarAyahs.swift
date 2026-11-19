@@ -249,8 +249,14 @@ struct SimilarAyahsSheet: View {
                                         .font(.subheadline)
                                         .foregroundStyle(.secondary)
                                 }
-                                ForEach(shown) { match in
-                                    matchRow(match)
+                                // The surah and ayah are found before the ForEach, so a row is
+                                // never an `if let` (see `OneRow`).
+                                ForEach(shown.paired { match in
+                                    quranData.surah(match.surah).flatMap { surah in
+                                        surah.ayahs.first(where: { $0.id == match.ayah }).map { (surah: surah, ayah: $0) }
+                                    }
+                                }, id: \.item.id) { pair in
+                                    matchRow(pair.item, surah: pair.found.surah, ayah: pair.found.ayah)
                                 }
                             }
                         }
@@ -395,83 +401,80 @@ struct SimilarAyahsSheet: View {
     }
 
     @ViewBuilder
-    private func matchRow(_ match: SimilarAyahMatch) -> some View {
-        if let surah = quranData.surah(match.surah),
-           let ayah = surah.ayahs.first(where: { $0.id == match.ayah }) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    Text("\(surah.displayName) \(match.surah):\(match.ayah)")
-                        .font(.subheadline)
+    private func matchRow(_ match: SimilarAyahMatch, surah: Surah, ayah: Ayah) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text("\(surah.displayName) \(match.surah):\(match.ayah)")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(settings.accentColor.color)
+
+                if match.verified {
+                    Text("Verified")
+                        .font(.caption2)
                         .fontWeight(.semibold)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(settings.accentColor.color.opacity(0.15)))
                         .foregroundColor(settings.accentColor.color)
-
-                    if match.verified {
-                        Text("Verified")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(settings.accentColor.color.opacity(0.15)))
-                            .foregroundColor(settings.accentColor.color)
-                    }
-
-                    Spacer()
-
-                    // The one action a row needs: hear this ayah where it lives.
-                    Button {
-                        settings.hapticFeedback()
-                        QuranPlayer.shared.playAyah(surahNumber: match.surah, ayahNumber: match.ayah)
-                    } label: {
-                        Image(systemName: "play.circle")
-                            .font(.body)
-                            .foregroundColor(settings.accentColor.color)
-                    }
-                    .buttonStyle(.plain)
                 }
 
-                if !match.labels.isEmpty {
-                    reasonChips(match.labels)
-                }
+                Spacer()
 
-                // The shared words tinted, from the pack's spans into this ayah's own tokens (QUL's
-                // placement where it lists the pair, else the corpus's phrase located at build time).
-                let display = ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: "")
-                let spans = displayRanges(for: match, surah: surah, ayah: ayah, display: display)
-                HighlightedSnippet(
-                    source: display,
-                    term: "",
-                    font: .custom(settings.quranArabicFontName(for: nil), size: CGFloat(settings.fontArabicSize) - 4),
-                    accent: settings.accentColor.color,
-                    fg: .primary,
-                    extraHighlightRanges: spans
-                )
-                    .arabicFontDesign(custom: true)
-                    .multilineTextAlignment(.trailing)
-                    // Same fix as the theme topic rows: without an explicit "take the height you need",
-                    // a long ayah in the bundled Uthmani face stops at two lines and ellipsizes mid-word.
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
-                    .environment(\.layoutDirection, .leftToRight)
-
-                if settings.showEnglishSaheeh || !settings.showEnglishMustafa {
-                    Text(ayah.textEnglishSaheeh)
-                        .font(.system(size: CGFloat(settings.englishFontSize)))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .leftToRightContent()
-                } else {
-                    Text(ayah.textEnglishMustafa)
-                        .font(.system(size: CGFloat(settings.englishFontSize)))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .leftToRightContent()
+                // The one action a row needs: hear this ayah where it lives.
+                Button {
+                    settings.hapticFeedback()
+                    QuranPlayer.shared.playAyah(surahNumber: match.surah, ayahNumber: match.ayah)
+                } label: {
+                    Image(systemName: "play.circle")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.vertical, 6)
-            // Brings these rows in line with `AyahRow`, which has had selection all along - the same
-            // ayah shouldn't be copyable in the reader and inert in the similar-ayahs list.
-            .textSelection(.enabled)
+
+            if !match.labels.isEmpty {
+                reasonChips(match.labels)
+            }
+
+            // The shared words tinted, from the pack's spans into this ayah's own tokens (QUL's
+            // placement where it lists the pair, else the corpus's phrase located at build time).
+            let display = ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: "")
+            let spans = displayRanges(for: match, surah: surah, ayah: ayah, display: display)
+            HighlightedSnippet(
+                source: display,
+                term: "",
+                font: .custom(settings.quranArabicFontName(for: nil), size: CGFloat(settings.fontArabicSize) - 4),
+                accent: settings.accentColor.color,
+                fg: .primary,
+                extraHighlightRanges: spans
+            )
+                .arabicFontDesign(custom: true)
+                .multilineTextAlignment(.trailing)
+                // Same fix as the theme topic rows: without an explicit "take the height you need",
+                // a long ayah in the bundled Uthmani face stops at two lines and ellipsizes mid-word.
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                .environment(\.layoutDirection, .leftToRight)
+
+            if settings.showEnglishSaheeh || !settings.showEnglishMustafa {
+                Text(ayah.textEnglishSaheeh)
+                    .font(.system(size: CGFloat(settings.englishFontSize)))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
+            } else {
+                Text(ayah.textEnglishMustafa)
+                    .font(.system(size: CGFloat(settings.englishFontSize)))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
+            }
         }
+        .padding(.vertical, 6)
+        // Brings these rows in line with `AyahRow`, which has had selection all along - the same
+        // ayah shouldn't be copyable in the reader and inert in the similar-ayahs list.
+        .textSelection(.enabled)
     }
 }
 #endif

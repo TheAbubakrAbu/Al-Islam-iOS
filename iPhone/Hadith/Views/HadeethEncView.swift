@@ -1036,15 +1036,19 @@ struct HadeethEncHadithView: View {
                                 .foregroundStyle(appearance.accent)
                                 if showArabicExplanation {
                                     ForEach(Array(paragraphs(hadith.arabic.explanation).enumerated()), id: \.offset) { _, paragraph in
-                                        Text(paragraph)
-                                            .font(arabicCaptionFont)
-                                            .arabicFontDesign(custom: appearance.hadithArabicWantsCustomFace)
-                                            .multilineTextAlignment(.trailing)
-                                            .frame(maxWidth: .infinity, alignment: .trailing)
-                                            .lineLimit(nil)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                            // The right edge in the Arabic interface too.
-                                            .environment(\.layoutDirection, .leftToRight)
+                                        // `arabicFontDesign` is an availability branch: as a row
+                                        // of its own the text goes in `OneRow`.
+                                        OneRow {
+                                            Text(paragraph)
+                                                .font(arabicCaptionFont)
+                                                .arabicFontDesign(custom: appearance.hadithArabicWantsCustomFace)
+                                                .multilineTextAlignment(.trailing)
+                                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                                .lineLimit(nil)
+                                                .fixedSize(horizontal: false, vertical: true)
+                                                // The right edge in the Arabic interface too.
+                                                .environment(\.layoutDirection, .leftToRight)
+                                        }
                                     }
                                 }
                             }
@@ -1089,16 +1093,20 @@ struct HadeethEncHadithView: View {
                     if !hadith.arabic.reference.isEmpty {
                         Section(header: Text("SOURCES")) {
                             ForEach(Array(paragraphs(hadith.arabic.reference, separator: "\n").enumerated()), id: \.offset) { _, line in
-                                Text(line)
-                                    .font(arabicCaptionFont)
-                                    .arabicFontDesign(custom: appearance.hadithArabicWantsCustomFace)
-                                    .foregroundStyle(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                                    .frame(maxWidth: .infinity, alignment: .trailing)
-                                    .lineLimit(nil)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    // The right edge in the Arabic interface too.
-                                    .environment(\.layoutDirection, .leftToRight)
+                                // `arabicFontDesign` is an availability branch: as a row of its
+                                // own the text goes in `OneRow`.
+                                OneRow {
+                                    Text(line)
+                                        .font(arabicCaptionFont)
+                                        .arabicFontDesign(custom: appearance.hadithArabicWantsCustomFace)
+                                        .foregroundStyle(.secondary)
+                                        .multilineTextAlignment(.trailing)
+                                        .frame(maxWidth: .infinity, alignment: .trailing)
+                                        .lineLimit(nil)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        // The right edge in the Arabic interface too.
+                                        .environment(\.layoutDirection, .leftToRight)
+                                }
                             }
                         }
                     }

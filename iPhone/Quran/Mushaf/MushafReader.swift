@@ -803,6 +803,9 @@ struct SurahPageReader<Controls: View>: View {
     var isSelecting: Bool = false
     var selectedAyahs: Set<HighlightedAyahRef> = []
     var onToggleSelection: ((Int, Int) -> Void)? = nil
+    /// A hold in select mode: the run from the ayah checked last through the held one, whatever
+    /// pages lie between (`SurahView.extendSelection`).
+    var onExtendSelection: ((Int, Int) -> Void)? = nil
     /// Fires on a real page turn (not the initial seed) - the parent clears its selections and snippet.
     var onPageTurned: (() -> Void)? = nil
     /// Ask the HOST (`SurahView`) to present a sheet for an ayah on the page. A page NEVER presents a
@@ -1314,6 +1317,7 @@ struct SurahPageReader<Controls: View>: View {
                     isSelecting: isSelecting,
                     selectedAyahs: selectedAyahs,
                     onToggleSelection: onToggleSelection,
+                    onExtendSelection: onExtendSelection,
                     bottomBarsCollapsed: bottomBarsCollapsed,
                     // In a spread the ONE spine is the gutter between the pages (`spreadSpine`).
                     showsSpine: !spreadActive,
@@ -2039,8 +2043,13 @@ struct SurahPageReader<Controls: View>: View {
         // No hold while a sheet is up (this used to consult the shared sheet-presence counter): the host
         // presents every page-mode sheet now, so a turn under one no longer dismisses it, and the reader
         // keeps following the recitation behind an open tafsir the way the feature promises.
+        //
+        // It does hold while ayahs are being selected (2026-11-19): the page turning itself between two
+        // taps took the ayahs being picked away. The selection is kept either way; the reader follows
+        // again from the next boundary after Done.
         .onChange(of: nowPlaying.currentAyahNumber) { ayahID in
             guard didSetInitialPage,
+                  !isSelecting,
                   let ayahID,
                   let surahID = nowPlaying.currentSurahNumber,
                   pages.indices.contains(pageIndex) else { return }
@@ -2070,6 +2079,7 @@ struct SurahPageReader<Controls: View>: View {
         // far-away surah from the mini player never yanks the reader across the book.
         .onChange(of: nowPlaying.currentSurahNumber) { surahID in
             guard didSetInitialPage,
+                  !isSelecting,
                   let surahID,
                   nowPlaying.isPlayingSurah,
                   pages.indices.contains(pageIndex) else { return }
@@ -3818,6 +3828,7 @@ private struct MushafPageContent: View {
     var isSelecting: Bool = false
     var selectedAyahs: Set<HighlightedAyahRef> = []
     var onToggleSelection: ((Int, Int) -> Void)? = nil
+    var onExtendSelection: ((Int, Int) -> Void)? = nil
     /// Whether the reader's chrome is folded away - the fitted page's centering nudge applies only
     /// then (collapsed, the visible band's top edge hides navigation-bar dead space; uncollapsed,
     /// both edges are real chrome and plain centering is already visually even).
@@ -4309,7 +4320,10 @@ private struct MushafPageContent: View {
                     ranges: rendered.ranges,
                     width: width,
                     height: rendered.height,
-                    highlight: recitingAyah,
+                    // Not while selecting: the reciting ayah's accent IS the selected ayah's tint, and
+                    // the page has no circle to tell the two apart (2026-11-19). The recited word keeps
+                    // its own, stronger tint, and the playing surah's name stays lit.
+                    highlight: isSelecting ? nil : recitingAyah,
                     highlightColor: settings.accentColor.color,
                     playingWord: playingWord.map { (surahID: $0.surah, ayahID: $0.ayah, index: $0.index, count: $0.count) },
                     playingSurahID: nowPlaying.currentSurahNumber,
@@ -4357,6 +4371,17 @@ private struct MushafPageContent: View {
                 } onLongPressAyah: { surahID, ayahID in
                     guard let ref = ayahRef(surahID: surahID, ayahID: ayahID) else { return }
                     settings.hapticFeedback()
+                    // Select mode: a hold (or a right click) selects, the run from the ayah checked
+                    // last through this one, or this ayah alone when there is none. It never opens
+                    // the actions sheet over the selection: that sheet acted on its one ayah while
+                    // the bar under it acted on the picked ones, and the list reader's hold has
+                    // never opened it mid-selection (2026-11-19).
+                    if isSelecting {
+                        withAnimation(.easeInOut(duration: 0.1)) {
+                            (onExtendSelection ?? onToggleSelection)?(surahID, ayahID)
+                        }
+                        return
+                    }
                     // A long press on a DIFFERENT ayah while one is selected moves the selection
                     // there. The tint precedence is `markedAyah ?? sheetAyahTint`, so without this
                     // the old mark stayed lit behind the new ayah's actions sheet - the "long-press

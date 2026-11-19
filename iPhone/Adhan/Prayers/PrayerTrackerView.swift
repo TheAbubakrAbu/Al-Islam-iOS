@@ -55,13 +55,30 @@ struct PrayerTrackerStats: Equatable {
     }()
 
     static func compute(for settings: Settings) -> PrayerTrackerStats {
-        var stats = PrayerTrackerStats()
-        guard let earliestKey = settings.trackerEarliestDayKey(),
-              let firstDay = dayKeyFormatter.date(from: earliestKey) else { return stats }
-
         let snapshot = settings.trackerSnapshot()
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        return compute(marks: snapshot.marks, exemptDays: snapshot.exemptDays,
+                       activePauseStartKey: snapshot.activePauseStartKey, resumeDays: snapshot.resumeDays,
+                       earliestKey: settings.trackerEarliestDayKey(), today: Date(), calendar: .current)
+    }
+
+    /// The walk itself, on plain values so it is tested without the stores
+    /// (UnitTests/PrayerTrackerPauseTests.swift).
+    /// - Parameter resumeDays: the days a pause ended on. Tracked like any other day, except that
+    ///   one left incomplete does not end the run (`Settings.isTrackerResumeDay`).
+    static func compute(
+        marks: [String: [String: PrayerMark]],
+        exemptDays: Set<String>,
+        activePauseStartKey: String?,
+        resumeDays: Set<String> = [],
+        earliestKey: String?,
+        today: Date,
+        calendar: Calendar
+    ) -> PrayerTrackerStats {
+        var stats = PrayerTrackerStats()
+        guard let earliestKey, let firstDay = dayKeyFormatter.date(from: earliestKey) else { return stats }
+
+        let snapshot = (marks: marks, exemptDays: exemptDays, activePauseStartKey: activePauseStartKey)
+        let today = calendar.startOfDay(for: today)
         let all = Settings.canonicalObligatoryPrayers.count
         stats.trackingSince = firstDay
 
@@ -93,11 +110,12 @@ struct PrayerTrackerStats: Equatable {
                     stats.completeDays += 1
                     run += 1
                     stats.bestStreak = max(stats.bestStreak, run)
-                } else if day < today {
+                } else if day < today, !resumeDays.contains(key) {
                     run = 0
                 }
                 // An incomplete TODAY falls through without resetting: the streak survives until
-                // midnight actually passes without the day being completed.
+                // midnight actually passes without the day being completed. So does the day a
+                // pause ended on, for good: its earlier prayers fell inside the period.
             }
 
             guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
@@ -156,28 +174,6 @@ extension Settings {
         return stats
     }
 
-    /// The trackable prayers of `date` as the list shows them - traveling-aware (combined rows) and
-    /// Friday-aware (Jumuah) - i.e. exactly the slots a person actually prays that day.
-    func trackableSlots(for date: Date) -> [Prayer] {
-        let list: [Prayer]
-        if Calendar.current.isDate(date, inSameDayAs: Date()), let prayers = prayers {
-            list = prayers.prayers
-        } else {
-            list = getPrayerTimes(for: date) ?? []
-        }
-        return list
-            .filter { Settings.trackablePrayerNames.contains($0.nameTransliteration) }
-            .sorted { $0.time < $1.time }
-    }
-
-    /// Records the mark and tells the review prompt what it meant (`noteReviewMoment`). Main-actor,
-    /// like the review manager it calls; every caller is a view action.
-    @MainActor
-    fileprivate func recordTrackerMark(_ mark: PrayerMark?, for prayerName: String, on date: Date) {
-        setPrayerMark(prayerName, on: date, mark: mark)
-        if let mark { noteReviewMoment(for: mark, on: date) }
-    }
-
     /// What a prayer just marked means to the review prompt (AppReview.swift). A prayed mark that
     /// completes today's last open slot is the app's clearest moment of delight, and asks. Any other
     /// prayed mark is a small win, remembered for the next pause. A prayer just recorded as missed is
@@ -201,487 +197,12 @@ extension Settings {
     }
 }
 
-// MARK: - Shared bits
-
-private func canonicalLabel(_ name: String, settings: Settings) -> String {
-    settings.customPrayerName(for: name) ?? name.localizedDisplay
-}
-
-/// How each mark presents: its words, its symbol, and its color. Each mark keeps ONE fixed color whatever
-/// accent is chosen: on time green, late orange, missed red (Abu, 2026-09-27: "for prayed on time always
-/// make it green", it wore the accent until then), so a blue or orange accent can never make one answer
-/// look like another.
-private extension PrayerMark {
-    var title: String {
-        switch self {
-        case .onTime: return String(localized: "Prayed On Time")
-        case .late: return String(localized: "Prayed Late")
-        case .missed: return String(localized: "Missed")
-        }
-    }
-
-    var shortTitle: String {
-        switch self {
-        case .onTime: return String(localized: "On time")
-        case .late: return String(localized: "Late")
-        case .missed: return String(localized: "Missed")
-        }
-    }
-
-    var spokenTitle: String {
-        switch self {
-        case .onTime: return String(localized: "prayed on time")
-        case .late: return String(localized: "prayed late")
-        case .missed: return String(localized: "missed")
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .onTime: return "checkmark"
-        case .late: return "clock"
-        case .missed: return "xmark"
-        }
-    }
-
-    /// The app's readable shades of the three (`AccentColor.color`): the system colors in dark mode, and
-    /// in light mode deep enough to read as text and behind a white glyph (the plain light green, orange
-    /// and red measure 2.2, 2.2 and 3.6:1 on white).
-    var tint: Color {
-        switch self {
-        case .onTime: return AccentColor.green.color
-        case .late: return AccentColor.orange.color
-        case .missed: return AccentColor.red.color
-        }
-    }
-}
-
-/// One answer as a capsule: filled when chosen, tinted outline when not. The Day view's rows and a
-/// prayer's expanded detail on the Adhan tab both use it, so the two can never drift apart.
-private struct TrackerMarkChip: View {
-    let mark: PrayerMark
-    let selected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        let tint = mark.tint
-
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: mark.symbol)
-                    .font(.system(size: 10, weight: .bold))
-
-                Text(mark.shortTitle)
-                    .font(.caption2.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            }
-            .foregroundColor(selected ? .white : tint)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .frame(maxWidth: .infinity)
-            .background(Capsule().fill(selected ? tint : tint.opacity(0.12)))
-            .overlay(Capsule().strokeBorder(tint.opacity(selected ? 0 : 0.35), lineWidth: 1))
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(mark.title)
-        .accessibilityAddTraits(selected ? .isSelected : [])
-    }
-}
-
-/// The tracker inside a prayer's expanded detail on the Adhan tab (Abu, 2026-09-25: "when i touch a
-/// prayer to open it ... support the different option for prayer tracker"): the Day view's three
-/// answers for that one prayer, on the day the list is showing. Re-tapping the chosen answer clears
-/// it. Before the prayer begins it says so instead, and on an exempt day it says tracking is paused.
-struct PrayerMarkChooser: View {
-    private let settings = Settings.shared
-    @ObservedObject private var adhanSettings = AdhanSettings.shared
-    @ObservedObject private var prayerTracker = PrayerTracker.shared
-    @ObservedObject private var systemSettings = SystemSettings.shared
-    let prayer: Prayer
-    /// The day of the list the prayer is on. Not `prayer.time`'s day: an Isha after midnight is
-    /// still the Isha of the day before, and marked under its own time it was filed a day late.
-    let day: Date
-
-    var body: some View {
-        let name = prayer.nameTransliteration
-        let mark = settings.prayerMark(for: name, on: day)
-
-        VStack(alignment: .leading, spacing: 6) {
-            Text("PRAYER TRACKER")
-                .font(.caption2.weight(.bold))
-                .tracking(0.6)
-                .foregroundColor(.secondary)
-
-            if settings.isTrackerExempt(on: day) {
-                Text("Tracking is paused for this day.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            } else if settings.canMarkPrayer(startingAt: prayer.time, on: day) {
-                HStack(spacing: 6) {
-                    ForEach(PrayerMark.allCases, id: \.self) { option in
-                        TrackerMarkChip(mark: option, selected: mark == option) {
-                            settings.hapticFeedback()
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                settings.recordTrackerMark(mark == option ? nil : option, for: name, on: day)
-                            }
-                        }
-                    }
-                }
-            } else {
-                Text("Can be marked once \(prayer.displayName) begins.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(.top, 4)
-        .accessibilityElement(children: .contain)
-    }
-}
-
-/// The tracker's answer for one prayer as a small dot beside its name in the prayer list, in the
-/// answer's own colour (on time green, late orange, missed red). Nothing at all while the
-/// prayer is unmarked (Abu, 2026-09-25: "leave it blank if not touched").
-struct PrayerMarkDot: View {
-    let mark: PrayerMark?
-
-    var body: some View {
-        if let mark {
-            Circle()
-                .fill(mark.tint)
-                .frame(width: 7, height: 7)
-                .overlay(Circle().strokeBorder(Color.white.opacity(0.7), lineWidth: 0.75))
-                .accessibilityLabel(mark.title)
-        }
-    }
-}
-
-/// The chooser inside every press-and-hold menu: a checkmarked picker of the three marks plus
-/// "Not Marked" to clear. A Picker rather than plain buttons, so the current answer shows its
-/// checkmark in the menu.
-private struct TrackerMarkPicker: View {
-    private let settings = Settings.shared
-    @ObservedObject private var adhanSettings = AdhanSettings.shared
-    @ObservedObject private var prayerTracker = PrayerTracker.shared
-    @ObservedObject private var systemSettings = SystemSettings.shared
-    let prayerName: String
-    let date: Date
-
-    var body: some View {
-        Picker("Status", selection: Binding<PrayerMark?>(
-            get: { settings.prayerMark(for: prayerName, on: date) },
-            set: { newValue in
-                settings.hapticFeedback()
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    settings.recordTrackerMark(newValue, for: prayerName, on: date)
-                }
-            }
-        )) {
-            ForEach(PrayerMark.allCases, id: \.self) { mark in
-                Label(mark.title, systemImage: mark.symbol).tag(Optional(mark))
-            }
-            Label("Not Marked", systemImage: "circle").tag(PrayerMark?.none)
-        }
-    }
-}
-
-/// The ring that anchors the tracker section: progress around a fraction label.
-private struct TrackerProgressRing: View {
-    private let settings = Settings.shared
-    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
-    let prayed: Int
-    let total: Int
-    var size: CGFloat = 46
-
-    private var fraction: CGFloat {
-        total > 0 ? CGFloat(prayed) / CGFloat(total) : 0
-    }
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(settings.accentColor.accent2.opacity(0.18), lineWidth: 5)
-
-            Circle()
-                .trim(from: 0, to: fraction)
-                .stroke(
-                    AngularGradient(
-                        colors: [settings.accentColor.accent2.opacity(0.55), settings.accentColor.accent2],
-                        center: .center,
-                        startAngle: .degrees(0),
-                        endAngle: .degrees(360 * fraction)
-                    ),
-                    style: StrokeStyle(lineWidth: 5, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
-                .animation(.easeInOut(duration: 0.3), value: fraction)
-
-            if prayed == total && total > 0 {
-                Image(systemName: "checkmark")
-                    .font(.system(size: size * 0.32, weight: .bold))
-                    .foregroundColor(settings.accentColor.accent2)
-            } else {
-                Text("\(prayed)/\(total)")
-                    .font(.system(size: size * 0.3, weight: .semibold).monospacedDigit())
-                    .foregroundColor(.primary)
-                    .minimumScaleFactor(0.6)
-            }
-        }
-        .frame(width: size, height: size)
-    }
-}
-
-/// One prayer slot on the Adhan tab: icon in a circle that fills with the mark's color, name underneath.
-/// Tap marks it prayed on time (tap again to clear); press and hold opens the full chooser - on time,
-/// late, missed, or not marked.
-private struct TrackerPrayerToggle: View {
-    private let settings = Settings.shared
-    @ObservedObject private var adhanSettings = AdhanSettings.shared
-    @ObservedObject private var prayerTracker = PrayerTracker.shared
-    @ObservedObject private var systemSettings = SystemSettings.shared
-    /// Observed for the time gate only: `LiveState` republishes when a prayer window rolls over, which
-    /// is exactly the moment a slot becomes markable (`canMarkPrayer`). Without it the circle would
-    /// stay inert until something else happened to redraw it.
-    @ObservedObject private var live = LiveState.shared
-
-    let prayer: Prayer
-    let date: Date
-
-    var body: some View {
-        let mark = settings.prayerMark(for: prayer.nameTransliteration, on: date)
-        let tint = mark?.tint ?? .secondary
-        let canMark = settings.canMarkPrayer(startingAt: prayer.time, on: date)
-
-        // `GridTileMenu`, for its fast hold (this slot is where that pattern was first proved).
-        GridTileMenu {
-            settings.hapticFeedback()
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                settings.recordTrackerMark(mark == nil ? .onTime : nil, for: prayer.nameTransliteration, on: date)
-            }
-        } menu: {
-            TrackerMarkPicker(prayerName: prayer.nameTransliteration, date: date)
-        } label: {
-            VStack(spacing: 6) {
-                ZStack {
-                    if let mark = mark {
-                        // The accent chip gradient, in circle form - marking a prayer should feel
-                        // like a win, not a change of outline. Late and missed take their own colors.
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [tint.opacity(0.95), tint.opacity(0.65)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .softShadow(color: tint.opacity(0.4), radius: 6, x: 0, y: 2)
-
-                        Image(systemName: mark.symbol)
-                            .font(.subheadline.weight(.bold))
-                            .foregroundColor(.white)
-                    } else {
-                        Circle()
-                            .fill(Color.secondary.opacity(0.08))
-
-                        Circle()
-                            .strokeBorder(Color.secondary.opacity(0.35), lineWidth: 1.5)
-
-                        Image(systemName: prayer.image)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .frame(width: 40, height: 40)
-
-                Text(prayer.displayName)
-                    .font(.caption2.weight(mark != nil ? .semibold : .regular))
-                    .foregroundColor(mark != nil ? tint : .secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.55)
-            }
-            .contentShape(Rectangle())
-        }
-        // Dimmed rather than hidden: the five slots keep their places, so the row still reads as the
-        // whole day with the rest of it still to come.
-        .disabled(!canMark)
-        .opacity(canMark ? 1 : 0.4)
-        .accessibilityLabel("\(prayer.displayName): \(canMark ? (mark?.spokenTitle ?? String(localized: "not marked")) : String(localized: "not yet"))")
-        .accessibilityHint(canMark
-            ? "Tap to mark prayed on time. Press and hold for late or missed."
-            : "Can be marked once \(prayer.displayName) begins.")
-    }
-}
-
-// MARK: - The tracker section (Adhan tab, underneath Prayer Times)
-
-/// The prayer tracker as its own section: today's ring + streak, the five tap-to-mark slots, and the
-/// doorway into the full history. Standalone struct on purpose - a new Adhan-tab section must never be
-/// an inline closure of an already-deep view tree.
-struct PrayerTrackerSection: View {
-    private let settings = Settings.shared
-    @ObservedObject private var adhanSettings = AdhanSettings.shared
-    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
-    @ObservedObject private var prayerTracker = PrayerTracker.shared
-    /// The folded state lives with the other tab-section keys (TabSections.swift).
-    @ObservedObject private var systemSettings = SystemSettings.shared
-    /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
-    @ObservedObject private var live = LiveState.shared
-
-    /// The prayer day the card tracks: YESTERDAY until today's Fajr begins. At 00:30 the card showed
-    /// the new day, so tapping Isha marked tonight's, last night's stayed unmarked and the streak
-    /// reset; where Isha itself starts after midnight it could never be marked at all. The countdown,
-    /// the scrubber and the "Did you pray X?" question already file a prayer by its own day (P4).
-    private var trackerDay: Date {
-        let now = Date()
-        let calendar = Calendar.current
-        let fajr: Date? = {
-            if let today = live.prayers, calendar.isDate(today.day, inSameDayAs: now) {
-                return today.prayers.first { $0.nameTransliteration == "Fajr" }?.time
-            }
-            return settings.getPrayerTimes(for: calendar.startOfDay(for: now))?
-                .first { $0.nameTransliteration == "Fajr" }?.time
-        }()
-        if let fajr, now < fajr, let yesterday = calendar.date(byAdding: .day, value: -1, to: now) {
-            return yesterday
-        }
-        return now
-    }
-
-    var body: some View {
-        let _ = RenderCounter.hit("PrayerTrackerSection")
-        if live.prayers != nil {
-            let day = trackerDay
-            Section(header: header) {
-                // Folded from the header's arrow, the rows are not in the List at all: the header and
-                // its streak stay, and Prayer Settings' Prayer Tracker row still opens the history.
-                if settings.tabSectionExpanded(.adhanTracker) {
-                    if settings.isTrackerExempt(on: day) {
-                        exemptCard(day: day)
-                    } else {
-                        trackerCard(day: day)
-                    }
-
-                    NavigationLink {
-                        LazyDestination {
-                            PrayerTrackerView()
-                        }
-                    } label: {
-                        HStack(spacing: 12) {
-                            AccentIconChip(systemImage: "chart.bar.xaxis", tint: settings.accentColor.accent2, size: 26)
-
-                            Text("History & Insights")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(.primary)
-                        }
-                        .padding(.vertical, 2)
-                    }
-                }
-            }
-        }
-    }
-
-    /// The tab-section header (TabSections.swift): the fold arrow, the trash while folded, and the
-    /// streak as the section's read-out, which stays in sight while the rows are folded away.
-    private var header: some View {
-        TabSectionHeader(.adhanTracker) {
-            let streak = settings.trackerStats.currentStreak
-            if streak > 0 {
-                HStack(spacing: 3) {
-                    Image(systemName: "flame.fill")
-                    Text(streak == 1 ? String(localized: "\(streak) day") : String(localized: "\(streak) days"))
-                        .monospacedDigit()
-                }
-                .font(.caption2.weight(.semibold))
-                .foregroundColor(settings.accentColor.accent2)
-            }
-        }
-    }
-
-    private func trackerCard(day: Date) -> some View {
-        let slots = settings.trackableSlots(for: day)
-        let names = slots.map(\.nameTransliteration)
-        let prayed = settings.trackedPrayerCount(names, on: day)
-        let complete = !slots.isEmpty && prayed == slots.count
-        let allOnTime = complete && names.allSatisfy { settings.prayerMark(for: $0, on: day) == .onTime }
-        let isToday = Calendar.current.isDateInToday(day)
-
-        return VStack(spacing: 14) {
-            HStack(spacing: 14) {
-                TrackerProgressRing(prayed: prayed, total: slots.count)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(complete ? "All prayers completed" : (isToday ? "Today" : "Yesterday, until Fajr"))
-                        .font(.subheadline.weight(.semibold))
-
-                    Text(complete
-                         ? (allOnTime ? "Alhamdulillah, every prayer prayed on time." : "Alhamdulillah, every prayer prayed.")
-                         : "\(prayed) of \(slots.count) prayed. Tap to mark on time, hold for late or missed.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
-                }
-
-                Spacer(minLength: 0)
-            }
-
-            // Spacers BETWEEN the slots only, so the first circle starts at the row's left edge and
-            // the last ends at its right - the equal-columns layout left both floating inset.
-            HStack(spacing: 0) {
-                ForEach(Array(slots.enumerated()), id: \.element.nameTransliteration) { index, prayer in
-                    if index > 0 { Spacer(minLength: 6) }
-                    TrackerPrayerToggle(prayer: prayer, date: day)
-                }
-            }
-        }
-        .padding(.vertical, 8)
-    }
-
-    /// The card while the day is exempt. With the pause on it says so and where to end it. With the
-    /// pause off the day was recorded exempt (the last day of a longer pause, or by hand in the Day
-    /// view), and Track Today undoes that here: until 2026-10-28 this card read "Tracking paused" with
-    /// the switch already off and offered no way back (a reader's 4.6.5 report).
-    private func exemptCard(day: Date) -> some View {
-        let paused = settings.mensesPauseActive
-        let isToday = Calendar.current.isDateInToday(day)
-        return HStack(spacing: 14) {
-            Image(systemName: "moon.zzz.fill")
-                .font(.title2)
-                .foregroundColor(settings.accentColor.accent2)
-                .frame(width: 46, height: 46)
-                .background(Circle().fill(settings.accentColor.accent2.opacity(0.15)))
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(paused ? "Tracking paused" : (isToday ? "Today is exempt" : "Yesterday is exempt"))
-                    .font(.subheadline.weight(.semibold))
-
-                Text(paused
-                     ? "Exempt days never count against your streaks. Resume any time in History & Insights."
-                     : "It won't count against your streaks.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 0)
-
-            if !paused, settings.canEditExemption(on: day) {
-                Button(isToday ? "Track Today" : "Track Yesterday") {
-                    settings.hapticFeedback()
-                    // Plain write, as the Day view's exempt switch: the card swaps for the tracker,
-                    // and that structural change must not animate.
-                    settings.setTrackerExempt(false, on: day)
-                }
-                .buttonStyle(.accentChip(tint: settings.accentColor.accent2))
-            }
-        }
-        .padding(.vertical, 8)
-    }
-}
-
 // MARK: - Full history page
 
+/// History & Insights. Top to bottom: today's ring and the streak, the INSIGHTS for a chosen span,
+/// the HISTORY by day, week, month and year, the missed prayers still to make up, the two opt-in
+/// extras, the menses pause, and how it all works (PrayerTrackerPages.swift holds the sections that
+/// are not the history itself).
 struct PrayerTrackerView: View {
     private let settings = Settings.shared
     @ObservedObject private var adhanSettings = AdhanSettings.shared
@@ -696,19 +217,40 @@ struct PrayerTrackerView: View {
     @State private var scope: Scope = Self.launchScope
     /// The date the shown period is anchored on - navigation moves it by one day/week/month/year.
     @State private var anchor = Date()
+    /// The span the Insights section reports on.
+    @State private var range: TrackerRange = Self.launchRange
+    /// A week-grid tap on a prayer whose time has ended (`tapTrackerSlot`).
+    @State private var asking: TrackerAsk?
+    /// Counts the pause switch's flips, so the page can keep the switch in sight (see `body`).
+    @State private var pauseFlips = 0
 
     /// DEBUG launch argument `-trackerScope day|week|month|year`: the scope the page opens on, so each
     /// history view can be screenshotted headlessly (pair with `-openPrayerTracker`).
     private static var launchScope: Scope {
         #if DEBUG
-        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-trackerScope"),
-           ProcessInfo.processInfo.arguments.indices.contains(idx + 1),
-           let scope = Scope.allCases.first(where: { $0.rawValue.lowercased() == ProcessInfo.processInfo.arguments[idx + 1].lowercased() }) {
+        if let value = launchValue("-trackerScope"),
+           let scope = Scope.allCases.first(where: { $0.rawValue.lowercased() == value }) {
             return scope
         }
         #endif
         return .day
     }
+
+    /// DEBUG launch argument `-trackerRange week|month|year|all`: the span Insights opens on.
+    private static var launchRange: TrackerRange {
+        #if DEBUG
+        if let value = launchValue("-trackerRange"), let range = TrackerRange(rawValue: value) { return range }
+        #endif
+        return .month
+    }
+
+    #if DEBUG
+    private static func launchValue(_ flag: String) -> String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: flag), arguments.indices.contains(index + 1) else { return nil }
+        return arguments[index + 1].lowercased()
+    }
+    #endif
 
     /// Gregorian with the user's region intact (week start, timezone, localized names): the tracker's
     /// storage keys, pruning, and menses ranges are all Gregorian "yyyy-MM-dd", so the GRID must count
@@ -725,61 +267,154 @@ struct PrayerTrackerView: View {
     /// UICollectionView update-assertion crash the search results once hit (see the SearchBar note in
     /// QuranView). Cells animate their own appearance; the row set never animates.
     var body: some View {
-        List {
-            statsSection
-            historySection
-            mensesSection
-            guidanceSection
+        ScrollViewReader { proxy in
+            List {
+                heroSection
+                TrackerInsightsSection(range: $range)
+                historySection
+                TrackerMissedSection()
+                TrackerAlsoTrackSection()
+                mensesSection
+                TrackerHelpSection()
+            }
+            .environment(\.defaultMinListRowHeight, 1)
+            .applyConditionalListStyle()
+            // The Day view sits above the pause switch and trades five prayer rows for one note
+            // when it flips, which threw the switch off the screen under the finger that had just
+            // touched it. Brought back once the rows have changed, and not animated.
+            .onChange(of: pauseFlips) { _ in
+                DispatchQueue.main.async { proxy.scrollTo("pause", anchor: .center) }
+            }
+            .navigationTitle("Prayer Tracker")
+            .navigationBarTitleDisplayMode(.inline)
+            #if DEBUG
+            // `-trackerScrollTo insights|history|missed|more|help`: brings a section to the top for
+            // a headless screenshot (the page is three screens tall).
+            .onAppear {
+                guard let target = Self.launchValue("-trackerScrollTo") else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                    proxy.scrollTo(target, anchor: .top)
+                }
+            }
+            #endif
         }
-        .environment(\.defaultMinListRowHeight, 1)
-        .applyConditionalListStyle()
-        .navigationTitle("Prayer Tracker")
-        .navigationBarTitleDisplayMode(.inline)
     }
 
-    // MARK: Stats header
+    // MARK: Hero: today and the streak
 
-    private var statsSection: some View {
+    private var heroSection: some View {
         let stats = settings.trackerStats
+        let today = settings.currentTrackerDay()
+        let exempt = settings.isTrackerExempt(on: today)
+        let canonical = settings.canonicalMarks(forDayKey: settings.trackerDayKey(for: today))
+        let prayed = canonical.values.filter(\.isPrayed).count
+        let total = Settings.canonicalObligatoryPrayers.count
+        let onTimePercent = PrayerTrackerInsights.percent(stats.onTimeFraction)
 
         return Section {
-            // Plain stacks, not a lazy grid: four tiles inside one List row have nothing to be lazy
-            // about, and a lazy container's own diffing is one more moving part inside a row.
-            VStack(spacing: 10) {
-                // Each pair sized by its taller tile (the tiles fill the row's height).
-                HStack(spacing: 10) {
-                    statTile(count: stats.currentStreak, unit: Self.daysPhrase(stats.currentStreak),
-                             label: String(localized: "Current Streak"), symbol: "flame.fill")
-                    statTile(count: stats.bestStreak, unit: Self.daysPhrase(stats.bestStreak),
-                             label: String(localized: "Best Streak"), symbol: "trophy.fill")
+            VStack(spacing: 14) {
+                HStack(spacing: 16) {
+                    TrackerRingBadge(marks: exempt ? PrayerDayRing.empty : PrayerDayRing.marks(from: canonical),
+                                     exempt: exempt, size: 86)
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(Calendar.current.isDateInToday(today) ? "TODAY" : "YESTERDAY, UNTIL FAJR")
+                            .font(.caption2.weight(.bold))
+                            .tracking(0.6)
+                            .foregroundColor(.secondary)
+
+                        Text(exempt ? String(localized: "Exempt day")
+                                    : (prayed == total ? String(localized: "All prayers completed")
+                                                       : String(localized: "\(prayed) of \(total) prayed")))
+                            .font(.title3.weight(.bold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+
+                        streakProgress(stats.currentStreak)
+                    }
+
+                    Spacer(minLength: 0)
                 }
-                .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: 10) {
-                    statTile(count: stats.perfectDays, unit: Self.daysPhrase(stats.perfectDays),
-                             label: String(localized: "Perfect Days"), symbol: "star.fill")
-                    statTile(count: stats.totalPrayed,
-                             unit: CountPhrase(AttributedString(localized: "**\(stats.totalPrayed)** prayers",
-                                                                comment: "Prayer Tracker stat tile: the count, drawn large (keep it inside the ** marks), and its unit")),
-                             label: String(localized: "Prayers Logged"), symbol: "checkmark.seal.fill")
+
+                // Plain stacks, not a lazy grid: four tiles inside one List row have nothing to be lazy
+                // about, and a lazy container's own diffing is one more moving part inside a row.
+                VStack(spacing: 10) {
+                    // Each pair sized by its taller tile (the tiles fill the row's height).
+                    HStack(spacing: 10) {
+                        statTile(number: stats.bestStreak.formatted(.number.grouping(.never)),
+                                 unit: Self.daysPhrase(stats.bestStreak),
+                                 label: String(localized: "Best Streak"), symbol: "trophy.fill")
+                        statTile(number: stats.perfectDays.formatted(.number.grouping(.never)),
+                                 unit: Self.daysPhrase(stats.perfectDays),
+                                 label: String(localized: "Perfect Days"), symbol: "star.fill")
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 10) {
+                        statTile(number: stats.totalPrayed.formatted(.number.grouping(.never)),
+                                 unit: CountPhrase(AttributedString(localized: "**\(stats.totalPrayed)** prayers",
+                                                                    comment: "Prayer Tracker stat tile: the count, drawn large (keep it inside the ** marks), and its unit")),
+                                 label: String(localized: "Prayers Logged"), symbol: "checkmark.seal.fill")
+                        statTile(number: stats.totalPrayed > 0 ? trackerPercentText(onTimePercent) : "–",
+                                 unit: nil,
+                                 label: String(localized: "Prayed On Time"), symbol: "clock.badge.checkmark.fill")
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
                 }
-                .fixedSize(horizontal: false, vertical: true)
-                if stats.onTimeCount + stats.lateCount + stats.missedCount > 0 {
-                    markBreakdown(stats)
+
+                if let since = stats.trackingSince {
+                    Text(String(localized: "Tracking since \(Self.longDateFormatter.string(from: since))")
+                         + (stats.exemptDayCount > 0 ? JoinSeparator.dot + (stats.exemptDayCount == 1 ? String(localized: "\(stats.exemptDayCount) exempt day") : String(localized: "\(stats.exemptDayCount) exempt days")) : ""))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
             .padding(.vertical, 6)
             .listRowSeparator(.hidden)
-
-            if let since = stats.trackingSince {
-                Text(String(localized: "Tracking since \(Self.longDateFormatter.string(from: since))")
-                     + (stats.exemptDayCount > 0 ? JoinSeparator.dot + (stats.exemptDayCount == 1 ? String(localized: "\(stats.exemptDayCount) exempt day") : String(localized: "\(stats.exemptDayCount) exempt days")) : ""))
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .listRowSeparator(.hidden)
-            }
         }
         .themedListRowBackground()
+    }
+
+    /// The streak as a count and as progress to the next length the achievements mark: "14-day
+    /// streak", a bar from 14 toward 30, "16 days to a 30-day streak".
+    private func streakProgress(_ streak: Int) -> some View {
+        let accent = settings.accentColor.accent2
+        let milestone = PrayerTrackerStats.streakMilestone(after: streak)
+        let span = max(milestone.to - milestone.from, 1)
+        let fraction = CGFloat(streak - milestone.from) / CGFloat(span)
+        let left = milestone.to - streak
+
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 4) {
+                Image(systemName: "flame.fill")
+                Text(streak > 0 ? String(localized: "\(streak)-day streak") : String(localized: "No streak yet"))
+                    .monospacedDigit()
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(streak > 0 ? accent : .secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(accent.opacity(0.16))
+
+                    Capsule()
+                        .fill(accent)
+                        .frame(width: max(streak > 0 ? 5 : 0, geo.size.width * min(max(fraction, 0), 1)))
+                }
+            }
+            .frame(height: 5)
+            .accessibilityHidden(true)
+
+            Text((left == 1 ? String(localized: "\(left) day to a \(milestone.to)-day streak")
+                            : String(localized: "\(left) days to a \(milestone.to)-day streak")).localizedDigits)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
     }
 
     /// "**1** day" / "**12** days": the unit is read from a phrase on the count (`CountPhrase`), so Arabic can
@@ -792,7 +427,7 @@ struct PrayerTrackerView: View {
                                comment: "Prayer Tracker stat tile: the count, drawn large (keep it inside the ** marks), and its unit"))
     }
 
-    private func statTile(count: Int, unit: CountPhrase, label: String, symbol: String) -> some View {
+    private func statTile(number: String, unit: CountPhrase?, label: String, symbol: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 AccentIconChip(systemImage: symbol, tint: settings.accentColor.accent2, size: 20)
@@ -808,15 +443,21 @@ struct PrayerTrackerView: View {
             }
 
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                if !unit.before.isEmpty {
+                if let unit, !unit.before.isEmpty {
                     unitText(unit.before)
                 }
 
-                Text(count.formatted(.number.grouping(.never)))
+                // One line whatever the text size: at the accessibility sizes "443 prayers" wrapped
+                // INSIDE the number ("44", then "3" beneath it). The number keeps its room and the
+                // unit gives way.
+                Text(number.localizedDigits)
                     .font(.title2.weight(.bold).monospacedDigit())
                     .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .layoutPriority(1)
 
-                if !unit.after.isEmpty {
+                if let unit, !unit.after.isEmpty {
                     unitText(unit.after)
                 }
             }
@@ -831,74 +472,8 @@ struct PrayerTrackerView: View {
         Text(text)
             .font(.caption)
             .foregroundColor(.secondary)
-    }
-
-    /// The marks in proportion: one bar split into on time / late / missed, with the counts beneath -
-    /// the "accurate picture" the three-way marks exist for, in one glance.
-    private func markBreakdown(_ stats: PrayerTrackerStats) -> some View {
-        let accent = settings.accentColor.accent2
-        let parts: [(mark: PrayerMark, count: Int)] = [
-            (.onTime, stats.onTimeCount), (.late, stats.lateCount), (.missed, stats.missedCount)
-        ].filter { $0.count > 0 }
-        let total = parts.reduce(0) { $0 + $1.count }
-        let onTimePercent = Int((stats.onTimeFraction * 100).rounded())
-
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                AccentIconChip(systemImage: "chart.bar.fill", tint: accent, size: 20)
-
-                Text("ON TIME · LATE · MISSED")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-
-                Spacer(minLength: 4)
-
-                if stats.totalPrayed > 0 {
-                    // The on-time share wears the on-time mark's own green, not the accent.
-                    Text("\(onTimePercent)% on time")
-                        .font(.caption2.weight(.semibold).monospacedDigit())
-                        .foregroundColor(PrayerMark.onTime.tint)
-                        .lineLimit(1)
-                }
-            }
-
-            GeometryReader { geo in
-                let gaps = CGFloat(max(parts.count - 1, 0)) * 2
-                let available = max(geo.size.width - gaps, 0)
-                HStack(spacing: 2) {
-                    ForEach(parts, id: \.mark) { part in
-                        Capsule()
-                            .fill(part.mark.tint)
-                            .frame(width: max(4, available * CGFloat(part.count) / CGFloat(max(total, 1))))
-                    }
-                }
-            }
-            .frame(height: 8)
-
-            HStack(spacing: 12) {
-                ForEach(parts, id: \.mark) { part in
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(part.mark.tint)
-                            .frame(width: 7, height: 7)
-
-                        // Led right to left in Arabic: the key is two arguments and a space, so nothing
-                        // outside their isolates set the line's direction, and the count drew after the word.
-                        Text(SymbolNumber.rightToLeftLine(String(localized: "\(part.count) \(part.mark.shortTitle.lowercased())")))
-                    }
-                }
-
-                Spacer(minLength: 0)
-            }
-            .font(.caption2.monospacedDigit())
-            .foregroundColor(.secondary)
             .lineLimit(1)
-            .minimumScaleFactor(0.8)
-        }
-        .padding(12)
-        .conditionalGlassEffect(rectangle: true)
+            .minimumScaleFactor(0.6)
     }
 
     // MARK: History section
@@ -915,6 +490,7 @@ struct PrayerTrackerView: View {
             .pickerStyle(.segmented)
             .listRowSeparator(.hidden)
             .onChange(of: scope) { _ in settings.hapticFeedback() }
+            .id("history")
 
             periodNavigator
                 .listRowSeparator(.hidden)
@@ -1056,6 +632,12 @@ struct PrayerTrackerView: View {
                 }
 
                 daySummary(slots: slots, on: day)
+
+                wholeDayRow(day: day)
+
+                if settings.trackerSunnahEnabled {
+                    TrackerSunnahDayBlock(day: day)
+                }
             }
         }
 
@@ -1078,7 +660,8 @@ struct PrayerTrackerView: View {
     }
 
     /// One prayer of the day: its name and time, and the three answers as chips underneath. Tapping the
-    /// chosen chip again clears the mark.
+    /// chosen chip again clears the mark. With congregation tracked, that choice has a line of its
+    /// own under the three, always there, so the row is the same height whatever is chosen.
     private func dayRow(for prayer: Prayer, on day: Date) -> some View {
         let name = prayer.nameTransliteration
         let mark = settings.prayerMark(for: name, on: day)
@@ -1106,7 +689,7 @@ struct PrayerTrackerView: View {
             if canMark {
                 HStack(spacing: 6) {
                     ForEach(PrayerMark.allCases, id: \.self) { option in
-                        markChip(option, selected: mark == option) {
+                        TrackerMarkChip(mark: option, selected: mark == option) {
                             settings.hapticFeedback()
                             withAnimation(.easeInOut(duration: 0.15)) {
                                 settings.recordTrackerMark(mark == option ? nil : option, for: name, on: day)
@@ -1115,6 +698,11 @@ struct PrayerTrackerView: View {
                     }
                 }
                 .padding(.leading, 36)
+
+                if settings.trackerCongregationEnabled {
+                    TrackerCongregationChip(prayerName: name, day: day)
+                        .padding(.leading, 36)
+                }
             } else {
                 // The chips are replaced rather than dimmed here: the Day view has the room to say why,
                 // and a row of three greyed answers invites tapping at them.
@@ -1127,10 +715,6 @@ struct PrayerTrackerView: View {
         .padding(.vertical, 4)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(prayer.displayName): \(canMark ? (mark?.spokenTitle ?? String(localized: "not marked")) : String(localized: "not yet"))")
-    }
-
-    private func markChip(_ mark: PrayerMark, selected: Bool, action: @escaping () -> Void) -> some View {
-        TrackerMarkChip(mark: mark, selected: selected, action: action)
     }
 
     private func daySummary(slots: [Prayer], on day: Date) -> some View {
@@ -1158,6 +742,34 @@ struct PrayerTrackerView: View {
             .listRowSeparator(.hidden)
     }
 
+    /// The whole day in one visit: a past day that was simply never filled in takes one menu, not
+    /// five answers. A fill never overwrites an answer already given (`Settings.setWholeDay`).
+    private func wholeDayRow(day: Date) -> some View {
+        Menu {
+            TrackerWholeDayMenuItems(day: day)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "checklist")
+                    .font(.subheadline)
+                    .foregroundColor(settings.accentColor.accent2)
+                    .frame(width: 24)
+
+                Text("Mark the Whole Day")
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+
+                Spacer()
+
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.vertical, 2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: Per-period day index
 
     /// One day of the shown period, resolved once per render. The week/month/year builders used to call
@@ -1178,6 +790,8 @@ struct PrayerTrackerView: View {
         let tally: PrayerDayTally
         let exempt: Bool
         let isFuture: Bool
+        /// A pause ended on this day (`Settings.isTrackerResumeDay`): only its answered prayers count.
+        var resumed = false
 
         /// Counts toward the period's denominators: a real past-or-present day that isn't exempt.
         var counts: Bool { !isFuture && !exempt }
@@ -1209,7 +823,8 @@ struct PrayerTrackerView: View {
                 || (snapshot.activePauseStartKey.map { key >= $0 } ?? false)
             let marks = Settings.canonicalMarks(of: snapshot.marks[key] ?? [:])
             records.append(DayRecord(key: key, date: day, marks: marks, tally: PrayerDayTally(marks: marks),
-                                     exempt: exempt, isFuture: day > today))
+                                     exempt: exempt, isFuture: day > today,
+                                     resumed: snapshot.resumeDays.contains(key)))
             guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
             // Re-anchor EVERY step: across a DST transition `byAdding` can leave the running date
             // at 01:00, which then mis-flags today as future and feeds the grids drifting dates.
@@ -1240,7 +855,8 @@ struct PrayerTrackerView: View {
                     continue
                 }
                 prayed += record.tally.prayed
-                possible += Settings.canonicalObligatoryPrayers.count
+                possible += record.resumed ? record.tally.prayed + record.tally.missed
+                                           : Settings.canonicalObligatoryPrayers.count
                 late += record.tally.late
                 missed += record.tally.missed
                 if record.tally.isPerfect { perfect += 1 }
@@ -1281,13 +897,15 @@ struct PrayerTrackerView: View {
                 }
 
                 ForEach(Settings.canonicalObligatoryPrayers, id: \.self) { name in
-                    weekRow(leading: canonicalLabel(name, settings: settings), records: records) { record in
+                    weekRow(leading: trackerPrayerLabel(name, settings: settings), records: records) { record in
                         weekCell(prayerName: name, record: record)
                     }
                 }
             }
             .padding(.vertical, 6)
             .listRowSeparator(.hidden)
+            // On the grid, the one view of the week: a tap on a prayer whose time has ended asks.
+            .trackerAskDialog($asking)
 
             summaryLine(PeriodTotals(records: records, since: settings.trackerEarliestDayKey()))
         }
@@ -1311,7 +929,8 @@ struct PrayerTrackerView: View {
     }
 
     /// One prayer on one day of the week: a filled circle in the mark's color (check, clock, or cross),
-    /// an outline while unmarked. Tap marks on time or clears; press and hold opens the chooser.
+    /// an outline while unmarked. Tap marks or clears (and asks once the prayer's time has ended);
+    /// press and hold opens the chooser.
     @ViewBuilder
     private func weekCell(prayerName: String, record: DayRecord) -> some View {
         let mark = record.marks[prayerName]
@@ -1347,7 +966,8 @@ struct PrayerTrackerView: View {
             GridTileMenu {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut(duration: 0.15)) {
-                    settings.recordTrackerMark(mark == nil ? .onTime : nil, for: prayerName, on: record.date)
+                    settings.tapTrackerSlot(prayerName, displayName: trackerPrayerLabel(prayerName, settings: settings),
+                                            on: record.date) { asking = $0 }
                 }
             } menu: {
                 TrackerMarkPicker(prayerName: prayerName, date: record.date)
@@ -1355,7 +975,7 @@ struct PrayerTrackerView: View {
                 face
             }
             .accessibilityLabel("\(prayerName.localizedDisplay), \(dateLabel): \(mark?.spokenTitle ?? String(localized: "not marked"))")
-            .accessibilityHint("Tap to mark prayed on time. Press and hold for late or missed.")
+            .accessibilityHint("Tap to mark prayed. Press and hold for late or missed.")
         } else {
             face
                 .opacity(record.counts && !hasBegun ? 0.4 : 1)
@@ -1396,14 +1016,13 @@ struct PrayerTrackerView: View {
         if let interval = calendar.dateInterval(of: .month, for: anchor) {
             let dayCount = calendar.range(of: .day, in: .month, for: anchor)?.count ?? 30
             let records = dayRecords(from: interval.start, count: dayCount)
-            let firstWeekday = calendar.component(.weekday, from: interval.start)
-            let leadingBlanks = (firstWeekday - calendar.firstWeekday + 7) % 7
-            let weeks = monthWeeks(records: records, leadingBlanks: max(leadingBlanks, 0))
+            let weeks = monthWeeks(records: records, leadingBlanks: leadingBlanks(for: interval.start))
+            let earliestKey = settings.trackerEarliestDayKey()
 
             // Rows of seven, laid out by hand: a lazy grid inside a List row buys nothing for at most
             // 42 cells, and its diffing was the one moving part in the crash reports the owner could
             // not reproduce. A plain stack of rows has no diff to get wrong.
-            VStack(spacing: 6) {
+            VStack(spacing: 8) {
                 HStack(spacing: 6) {
                     ForEach(0..<7, id: \.self) { index in
                         Text(Self.weekdaySymbol(at: (calendar.firstWeekday - 1 + index) % 7))
@@ -1418,9 +1037,10 @@ struct PrayerTrackerView: View {
                         ForEach(week) { slot in
                             Group {
                                 if let record = slot.record {
-                                    monthCell(record: record, dayNumber: slot.dayNumber)
+                                    monthCell(record: record, dayNumber: slot.dayNumber,
+                                              tracked: earliestKey.map { record.key >= $0 } ?? false)
                                 } else {
-                                    Color.clear.frame(height: 34)
+                                    Color.clear.frame(height: Self.monthRingSize)
                                 }
                             }
                             .frame(maxWidth: .infinity)
@@ -1428,13 +1048,18 @@ struct PrayerTrackerView: View {
                     }
                 }
 
-                monthLegend
+                markLegend
             }
             .padding(.vertical, 6)
             .listRowSeparator(.hidden)
 
-            summaryLine(PeriodTotals(records: records, since: settings.trackerEarliestDayKey()))
+            summaryLine(PeriodTotals(records: records, since: earliestKey))
         }
+    }
+
+    private func leadingBlanks(for monthStart: Date) -> Int {
+        let firstWeekday = calendar.component(.weekday, from: monthStart)
+        return max((firstWeekday - calendar.firstWeekday + 7) % 7, 0)
     }
 
     /// The month's cells in rows of exactly seven: leading padding for the first week, the days, and
@@ -1454,158 +1079,147 @@ struct PrayerTrackerView: View {
         return stride(from: 0, to: slots.count, by: 7).map { Array(slots[$0..<min($0 + 7, slots.count)]) }
     }
 
-    private func monthCell(record: DayRecord, dayNumber: Int) -> some View {
-        let day = record.date
-        let isFuture = record.isFuture
-        let exempt = record.exempt
-        let covered = record.tally.prayed
-        let total = Settings.canonicalObligatoryPrayers.count
-        let isToday = calendar.isDateInToday(day)
-        let textColor = monthCellText(covered: covered, total: total, exempt: exempt, isFuture: isFuture)
+    private static let monthRingSize: CGFloat = 36
 
-        return Button {
-            guard !isFuture else { return }
+    /// One day of the month: its day ring with the date inside. The heat cells this replaces said how
+    /// many of the five were prayed and carried one dot; the ring says which, and how. A tap opens
+    /// the day; press and hold fills it, clears it, or marks it exempt without leaving the month.
+    private func monthCell(record: DayRecord, dayNumber: Int, tracked: Bool) -> some View {
+        let day = record.date
+        let isToday = calendar.isDateInToday(day)
+        // A day still to come, and a day before tracking began, have nothing to say yet.
+        let quiet = record.isFuture || !tracked
+        let ringMarks = (quiet || record.exempt) ? PrayerDayRing.empty : PrayerDayRing.marks(from: record.marks)
+        let track = Color.secondary.opacity(quiet ? 0.1 : (record.exempt ? 0.12 : 0.24))
+
+        return GridTileMenu {
+            guard !record.isFuture else { return }
             settings.hapticFeedback()
             // Plain writes: month → day swaps the section's row set structurally - see the note on
             // `body`.
             anchor = day
             scope = .day
+        } menu: {
+            monthDayMenu(record: record)
         } label: {
             ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(monthCellFill(covered: covered, total: total, exempt: exempt, isFuture: isFuture))
+                PrayerDayRing(marks: ringMarks, lineWidth: 3.5, track: track)
 
-                if isToday {
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(settings.accentColor.accent2, lineWidth: 1.5)
-                }
-
-                VStack(spacing: 1) {
-                    Text("\(dayNumber)")
-                        .font(.caption2.monospacedDigit().weight(isToday ? .bold : .regular))
-                        .foregroundColor(textColor)
-
-                    if exempt {
-                        Image(systemName: "moon.zzz")
-                            .font(.system(size: 7))
-                            .foregroundColor(.secondary)
-                    } else if !isFuture && (covered > 0 || record.tally.missed > 0) {
-                        HStack(spacing: 2) {
-                            Text("\(covered)")
-                                .font(.system(size: 8, weight: .semibold).monospacedDigit())
-                                .foregroundColor(textColor.opacity(0.85))
-
-                            // A missed prayer outranks a late one for the single dot there is room for.
-                            if record.tally.missed > 0 {
-                                markDot(.missed)
-                            } else if record.tally.late > 0 {
-                                markDot(.late)
-                            }
-                        }
-                    }
+                if record.exempt {
+                    Image(systemName: "moon.zzz.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary.opacity(0.75))
+                } else {
+                    Text("\(dayNumber)".localizedDigits)
+                        .font(.system(size: 12, weight: isToday ? .bold : .regular).monospacedDigit())
+                        .foregroundColor(isToday ? settings.accentColor.accent2 : (quiet ? .secondary.opacity(0.55) : .primary))
+                        .minimumScaleFactor(0.7)
                 }
             }
-            .frame(height: 34)
+            .frame(width: Self.monthRingSize, height: Self.monthRingSize)
+            .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .disabled(isFuture)
-        .accessibilityLabel(monthCellAccessibilityLabel(record: record, day: day, covered: covered, total: total))
+        .disabled(record.isFuture)
+        .accessibilityLabel(monthCellAccessibilityLabel(record: record, day: day))
     }
 
-    private func monthCellAccessibilityLabel(record: DayRecord, day: Date, covered: Int, total: Int) -> String {
+    @ViewBuilder
+    private func monthDayMenu(record: DayRecord) -> some View {
+        let day = record.date
+
+        Button {
+            settings.hapticFeedback()
+            anchor = day
+            scope = .day
+        } label: {
+            Label("Open Day", systemImage: "calendar")
+        }
+
+        if !record.exempt {
+            TrackerWholeDayMenuItems(day: day)
+        }
+
+        if settings.canEditExemption(on: day) {
+            Section {
+                // `.automatic`, or the app's padded switch style draws a double-height menu row.
+                Toggle(isOn: Binding(
+                    get: { settings.isTrackerExempt(on: day) },
+                    set: { newValue in
+                        settings.hapticFeedback()
+                        settings.setTrackerExempt(newValue, on: day)
+                    }
+                )) {
+                    Label("Exempt Day", systemImage: "moon.zzz")
+                }
+                .toggleStyle(.automatic)
+            }
+        }
+    }
+
+    private func monthCellAccessibilityLabel(record: DayRecord, day: Date) -> String {
         let date = Self.longDateFormatter.string(from: day)
         if record.exempt { return String(localized: "\(date): exempt") }
-        var parts = [String(localized: "\(covered) of \(total) prayed")]
+        let total = Settings.canonicalObligatoryPrayers.count
+        var parts = [String(localized: "\(record.tally.prayed) of \(total) prayed")]
         if record.tally.late > 0 { parts.append(String(localized: "\(record.tally.late) late")) }
         if record.tally.missed > 0 { parts.append(String(localized: "\(record.tally.missed) missed")) }
         return "\(date): \(parts.joined(separator: ", "))"
     }
 
-    /// The tiny late/missed marker: its own color with a hairline of white, so it stays visible on a
-    /// deep accent cell whatever the accent happens to be.
-    private func markDot(_ mark: PrayerMark) -> some View {
-        Circle()
-            .fill(mark.tint)
-            .frame(width: 5, height: 5)
-            .overlay(Circle().strokeBorder(Color.white.opacity(0.85), lineWidth: 0.5))
-    }
-
-    private func monthCellFill(covered: Int, total: Int, exempt: Bool, isFuture: Bool) -> Color {
-        if isFuture { return Color.secondary.opacity(0.05) }
-        if exempt { return Color.secondary.opacity(0.12) }
-        guard covered > 0 else { return Color.secondary.opacity(0.1) }
-        // 1...5 prayed maps to a deepening accent - the heat in the heatmap.
-        let intensity = 0.15 + 0.75 * Double(covered) / Double(max(total, 1))
-        return settings.accentColor.accent2.opacity(intensity)
-    }
-
-    private func monthCellText(covered: Int, total: Int, exempt: Bool, isFuture: Bool) -> Color {
-        if isFuture { return .secondary.opacity(0.5) }
-        if exempt { return .secondary }
-        return covered >= 4 ? Color.white : .primary
-    }
-
-    private var monthLegend: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 4) {
-                Text("0".localizedDigits)
-                    .font(.system(size: 9).monospacedDigit())
-                    .foregroundColor(.secondary)
-
-                HStack(spacing: 2) {
-                    ForEach(0...5, id: \.self) { count in
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(count == 0 ? Color.secondary.opacity(0.1)
-                                             : settings.accentColor.accent2.opacity(0.15 + 0.75 * Double(count) / 5))
-                            .frame(width: 12, height: 12)
-                    }
+    /// What the ring's colours mean, under the month.
+    private var markLegend: some View {
+        HStack(spacing: 12) {
+            ForEach(PrayerMark.allCases, id: \.self) { mark in
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(mark.tint)
+                        .frame(width: 7, height: 7)
+                    Text(mark.shortTitle)
                 }
-
-                Text(String(localized: "5 prayed").localizedDigits)
-                    .font(.system(size: 9))
-                    .foregroundColor(.secondary)
             }
 
-            HStack(spacing: 3) {
-                markDot(.late)
-                Text("late")
-                    .font(.system(size: 9))
-            }
-            .foregroundColor(.secondary)
-
-            HStack(spacing: 3) {
-                markDot(.missed)
-                Text("missed")
-                    .font(.system(size: 9))
-            }
-            .foregroundColor(.secondary)
-
-            HStack(spacing: 3) {
-                Image(systemName: "moon.zzz")
+            HStack(spacing: 4) {
+                Image(systemName: "moon.zzz.fill")
                     .font(.system(size: 8))
                 Text("exempt")
-                    .font(.system(size: 9))
             }
-            .foregroundColor(.secondary)
 
-            Spacer()
+            Spacer(minLength: 0)
         }
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.75)
         .padding(.top, 2)
+        .accessibilityHidden(true)
     }
 
     // MARK: Year view
 
+    /// The year as twelve small months, three across: every day a square, green by how much of it
+    /// was on time and red where a prayer was missed (`yearCellColor`). Twelve bars said how much
+    /// of each month; this shows where in it.
     @ViewBuilder
     private var yearContent: some View {
         let year = calendar.component(.year, from: anchor)
-        let today = calendar.startOfDay(for: Date())
-        let months = yearMonthSummaries(year: year, today: today)
+        let earliestKey = settings.trackerEarliestDayKey()
+        let months = yearMonthSummaries(year: year, earliestKey: earliestKey)
 
-        VStack(spacing: 10) {
-            ForEach(months, id: \.month) { summary in
-                yearMonthRow(summary: summary, year: year)
+        VStack(spacing: 14) {
+            // Rows of three, by position: a month's place in the year is its identity.
+            ForEach(0..<4, id: \.self) { row in
+                HStack(alignment: .top, spacing: 14) {
+                    ForEach(0..<3, id: \.self) { column in
+                        let index = row * 3 + column
+                        if months.indices.contains(index) {
+                            miniMonth(months[index], year: year, earliestKey: earliestKey)
+                        }
+                    }
+                }
             }
+
+            yearLegend
         }
         .padding(.vertical, 6)
         .listRowSeparator(.hidden)
@@ -1616,27 +1230,32 @@ struct PrayerTrackerView: View {
     private struct MonthSummary {
         let month: Int
         let totals: PeriodTotals
+        /// The month's days in rows of seven, padded (`monthWeeks`), and to six rows so every
+        /// month of the year stands the same height.
+        let weeks: [[MonthSlot]]
     }
 
-    private func yearMonthSummaries(year: Int, today: Date) -> [MonthSummary] {
-        let earliestKey = settings.trackerEarliestDayKey()
-        return (1...12).compactMap { month in
+    private func yearMonthSummaries(year: Int, earliestKey: String?) -> [MonthSummary] {
+        (1...12).compactMap { month in
             guard let start = calendar.date(from: DateComponents(year: year, month: month, day: 1)) else { return nil }
-            guard start <= today else {
-                return MonthSummary(month: month, totals: PeriodTotals())
-            }
             let dayCount = calendar.range(of: .day, in: .month, for: start)?.count ?? 30
-            return MonthSummary(month: month, totals: PeriodTotals(records: dayRecords(from: start, count: dayCount), since: earliestKey))
+            let records = dayRecords(from: start, count: dayCount)
+            var weeks = monthWeeks(records: records, leadingBlanks: leadingBlanks(for: start))
+            while weeks.count < 6 {
+                let base = weeks.count * 7
+                weeks.append((0..<7).map { MonthSlot(id: base + $0, record: nil, dayNumber: 0) })
+            }
+            return MonthSummary(month: month, totals: PeriodTotals(records: records, since: earliestKey), weeks: weeks)
         }
     }
 
-    private func yearMonthRow(summary: MonthSummary, year: Int) -> some View {
+    private func miniMonth(_ summary: MonthSummary, year: Int, earliestKey: String?) -> some View {
         let totals = summary.totals
         let fraction = totals.possible > 0 ? Double(totals.prayed) / Double(totals.possible) : 0
         let hasData = totals.possible > 0 || totals.exempt > 0
+        let percent = totals.possible > 0 ? trackerPercentText(Int((fraction * 100).rounded())) : ""
 
         return Button {
-            guard hasData else { return }
             settings.hapticFeedback()
             // Plain writes: year → month swaps the section's rows structurally - see the note on
             // `body`.
@@ -1645,34 +1264,100 @@ struct PrayerTrackerView: View {
                 scope = .month
             }
         } label: {
-            HStack(spacing: 10) {
-                Text(Self.monthSymbol(at: summary.month - 1))
-                    .font(.caption.weight(.medium))
-                    .foregroundColor(hasData ? .primary : .secondary.opacity(0.5))
-                    .frame(width: 36, alignment: .leading)
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 2) {
+                    Text(Self.monthSymbol(at: summary.month - 1))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundColor(hasData ? .primary : .secondary.opacity(0.6))
 
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color.secondary.opacity(0.12))
+                    Spacer(minLength: 0)
 
-                        if fraction > 0 {
-                            Capsule()
-                                .fill(settings.accentColor.accent2.opacity(0.35 + 0.65 * fraction))
-                                .frame(width: max(6, geo.size.width * fraction))
+                    Text(percent.localizedDigits)
+                        .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                        .foregroundColor(settings.accentColor.accent2)
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+                VStack(spacing: 2) {
+                    ForEach(Array(summary.weeks.enumerated()), id: \.offset) { _, week in
+                        HStack(spacing: 2) {
+                            ForEach(week) { slot in
+                                RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                                    .fill(yearCellColor(slot.record, earliestKey: earliestKey))
+                                    .aspectRatio(1, contentMode: .fit)
+                                    .frame(maxWidth: .infinity)
+                            }
                         }
                     }
                 }
-                .frame(height: 10)
-
-                Text(totals.possible > 0 ? "\(Int((fraction * 100).rounded()))%" : (totals.exempt > 0 ? "exempt" : "–"))
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-                    .foregroundColor(totals.possible > 0 ? settings.accentColor.accent2 : .secondary.opacity(0.6))
-                    .frame(width: 48, alignment: .trailing)
             }
+            .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Self.monthSymbol(at: summary.month - 1) + (percent.isEmpty ? "" : ": \(percent)"))
+        .accessibilityHint("Opens this month.")
+    }
+
+    /// A day as one square. Green, deeper the more of the five were prayed on time (a late prayer
+    /// counts half), so a month of mostly-on-time days reads as the green it was; a day with a
+    /// missed prayer is red, the one thing the year should let the eye find. The first version
+    /// painted a whole day orange for one late prayer, and a 90% month looked like a bad one.
+    private func yearCellColor(_ record: DayRecord?, earliestKey: String?) -> Color {
+        guard let record else { return .clear }
+        let tracked = earliestKey.map { record.key >= $0 } ?? false
+        if record.isFuture || !tracked { return Color.secondary.opacity(0.08) }
+        if record.exempt { return Color.secondary.opacity(0.2) }
+        if record.tally.missed > 0 {
+            return PrayerMark.missed.tint.opacity(0.55 + 0.15 * Double(min(record.tally.missed, 3)))
+        }
+        return Self.yearGreen(Double(record.tally.onTime) + 0.5 * Double(record.tally.late))
+    }
+
+    /// The year's green for a day worth `score` of five (nothing answered is the neutral gray).
+    private static func yearGreen(_ score: Double) -> Color {
+        guard score > 0 else { return Color.secondary.opacity(0.18) }
+        let total = Double(Settings.canonicalObligatoryPrayers.count)
+        return PrayerMark.onTime.tint.opacity(0.2 + 0.8 * min(score / total, 1))
+    }
+
+    /// The year's own key: its squares say how much of a day was on time, not which prayer.
+    private var yearLegend: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 4) {
+                HStack(spacing: 2) {
+                    ForEach(1...5, id: \.self) { step in
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(Self.yearGreen(Double(step)))
+                            .frame(width: 9, height: 9)
+                    }
+                }
+                Text(PrayerMark.onTime.shortTitle)
+            }
+
+            HStack(spacing: 4) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(PrayerMark.missed.tint)
+                    .frame(width: 9, height: 9)
+                Text(PrayerMark.missed.shortTitle)
+            }
+
+            HStack(spacing: 4) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(Color.secondary.opacity(0.3))
+                    .frame(width: 9, height: 9)
+                Text("exempt")
+            }
+
+            Spacer(minLength: 0)
+        }
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.75)
+        .padding(.top, 2)
+        .accessibilityHidden(true)
     }
 
     // MARK: Menses pause
@@ -1689,6 +1374,7 @@ struct PrayerTrackerView: View {
                     // Plain write: the pause swaps today's rows in the Day view (and the Adhan tab's
                     // card), and that structural change must not animate - see the note on `body`.
                     settings.setMensesPause(newValue)
+                    pauseFlips += 1
                 }
             )) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -1704,89 +1390,9 @@ struct PrayerTrackerView: View {
             }
             .tint(settings.accentColor.accent2)
             .padding(.vertical, 2)
+            .id("pause")
         }
         .themedListRowBackground()
-    }
-
-    // MARK: Guidance
-
-    /// No SETTINGS section any more: "Mark Only After the Time Begins" was the tracker's one switch,
-    /// and since 2026-10-19 it is simply how the tracker works (the lock row below says so).
-    /// `MoreNotificationView` is reached from here on the same reasoning that once put the switch
-    /// here (Abu, 2026-09-18: the tracker's controls live on the tracker).
-    private var guidanceSection: some View {
-        Section(header: Text("GOOD TO KNOW")) {
-            VStack(alignment: .leading, spacing: 12) {
-                guidanceRow(symbol: "hand.tap",
-                            text: String(localized: "Tap a prayer to mark it prayed on time, and tap again to clear it. Press and hold to record it as prayed late or missed; the Day view offers all three directly."))
-
-                guidanceRow(symbol: "lock",
-                            text: String(localized: "A prayer can be marked only once its time has come in, so today's row shows what is still left to pray. Past days can always be filled in here."))
-
-                guidanceRow(symbol: "person.3",
-                            text: String(localized: "Jumuah (Friday prayer) counts as Dhuhr; marking either one covers that day's noon prayer."))
-
-                guidanceRow(symbol: "airplane",
-                            text: String(localized: "While traveling, the combined Dhuhr/Asr and Maghrib/Isha each count as both of their prayers."))
-
-                guidanceRow(symbol: "clock.arrow.circlepath",
-                            text: String(localized: "Missed a prayer? Pray it as soon as you remember. The Prophet ﷺ said: \"Whoever forgets a prayer, let him pray it when he remembers it\" (Bukhari 597). Then mark it here as prayed late."))
-
-                guidanceRow(symbol: "flame",
-                            text: String(localized: "A streak is a day where all five prayers were prayed, on time or late. A perfect day is all five on time. Exempt days never break a streak; it continues right through them."))
-            }
-            .padding(.vertical, 8)
-
-            // The tracker records what happened; notifications are what change it. Someone looking
-            // at a row of missed prayers is exactly the person nagging mode was built for, so the
-            // setting is named and reachable from here rather than only from Settings.
-            NavigationLink(destination: LazyDestination { MoreNotificationView() }) {
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: "bell.badge")
-                        .font(.footnote)
-                        .foregroundColor(settings.accentColor.accent2)
-                        .frame(width: 20)
-                        .padding(.top, 1)
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Struggling to pray on time?")
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(.primary)
-                        Text(naggingBlurb.localizedDigits)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-            .tint(settings.accentColor.color)
-        }
-        .themedListRowBackground()
-    }
-
-    /// Says what the reminders would do, or what they are already doing: a reader who has nagging
-    /// mode on should not be told to turn it on.
-    private var naggingBlurb: String {
-        if settings.naggingMode {
-            return String(localized: "Nagging mode is on: you are reminded before each prayer, then every 15 minutes, with final nudges at 10 and 5 minutes left. Adjust which prayers nag, and when they start, here.")
-        }
-        return String(localized: "Turn on prayer notifications, or nagging mode, to be reminded before each prayer and again every 15 minutes until you have prayed.")
-    }
-
-    private func guidanceRow(symbol: String, text: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: symbol)
-                .font(.footnote)
-                .foregroundColor(settings.accentColor.accent2)
-                .frame(width: 20)
-                .padding(.top, 1)
-
-            Text(text.localizedDigits)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
     }
 
     /// A full-width informational row - the Day view's empty/exempt/future states.
@@ -1811,26 +1417,52 @@ struct PrayerTrackerView: View {
     private func summaryLine(_ totals: PeriodTotals) -> some View {
         let percent = totals.possible > 0 ? Int((Double(totals.prayed) / Double(totals.possible) * 100).rounded()) : 0
 
-        return HStack(spacing: 10) {
-            Label("\(totals.prayed)/\(totals.possible) prayed", systemImage: "checkmark.circle")
-            Label("\(percent)%", systemImage: "percent")
-            Label("\(totals.perfect) perfect", systemImage: "star")
-            if totals.late > 0 {
-                Label("\(totals.late) late", systemImage: "clock")
-                    .foregroundColor(.orange)
+        // Glyph and text by hand, not `Label`: in a List row a Label takes the row's own label style,
+        // which gives the glyph a title-sized column and left "86/..." of the text.
+        let prayed = summaryItem("checkmark.circle", String(localized: "\(totals.prayed)/\(totals.possible) prayed"))
+        let share = summaryItem("percent", trackerPercentText(percent))
+        let perfect = summaryItem("star", String(localized: "\(totals.perfect) perfect"))
+        let late = summaryItem("clock", String(localized: "\(totals.late) late"), tint: PrayerMark.late.tint)
+        let missed = summaryItem("xmark.circle", String(localized: "\(totals.missed) missed"), tint: PrayerMark.missed.tint)
+
+        // One row where it fits, two where it does not (the large text sizes, a narrow column): the
+        // single row scaled down and then cut every item to "86...".
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                prayed
+                share
+                perfect
+                if totals.late > 0 { late }
+                if totals.missed > 0 { missed }
             }
-            if totals.missed > 0 {
-                Label("\(totals.missed) missed", systemImage: "xmark.circle")
-                    .foregroundColor(.red)
+            .fixedSize()
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 10) {
+                    prayed
+                    share
+                }
+                HStack(spacing: 10) {
+                    perfect
+                    if totals.late > 0 { late }
+                    if totals.missed > 0 { missed }
+                }
             }
-            Spacer()
+            .minimumScaleFactor(0.7)
         }
         .font(.caption2.monospacedDigit())
-        .foregroundColor(.secondary)
         .lineLimit(1)
-        .minimumScaleFactor(0.75)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 2)
         .listRowSeparator(.hidden)
+    }
+
+    private func summaryItem(_ symbol: String, _ text: String, tint: Color = .secondary) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: symbol)
+            Text(text.localizedDigits)
+        }
+        .foregroundColor(tint)
     }
 
     /// Every display formatter and symbol table below is pinned to the same localized GREGORIAN

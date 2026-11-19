@@ -20,6 +20,24 @@ final class SearchFoldTests: XCTestCase {
         XCTAssertEqual("Abi\u{0304} Da\u{0304}wu\u{0304}d".foldingLatinDiacritics, "Abi Dawud")
     }
 
+    /// What a search field hands on: the query without the invisible marks that only steer direction.
+    /// A right-to-left mark in front of "angels" (the keyboard's own doing, with an Arabic keyboard
+    /// active) matched no ayah, and the Quran fold keeps such a mark to this day (2026-11-19).
+    @MainActor
+    func testSearchFieldsDropInvisibleDirectionMarks() {
+        XCTAssertEqual("\u{200F}angels".removingInvisibleDirectionMarks, "angels")
+        XCTAssertEqual("\u{200E}2:255\u{200E}".removingInvisibleDirectionMarks, "2:255")
+        XCTAssertEqual("\u{202B}الملائكة\u{202C}".removingInvisibleDirectionMarks, "الملائكة")
+        XCTAssertEqual("\u{2067}faith\u{2069}\u{FEFF}\u{200B}".removingInvisibleDirectionMarks, "faith")
+        XCTAssertEqual("\u{061C}ملك".removingInvisibleDirectionMarks, "ملك")
+        // Nothing else moves: letters, vowel marks, spaces, operators, and the joiners that spell words.
+        let kept = "بِسْمِ ٱللَّهِ & mercy | \"the angels\" می\u{200C}خواهم"
+        XCTAssertEqual(kept.removingInvisibleDirectionMarks, kept)
+        XCTAssertEqual("".removingInvisibleDirectionMarks, "")
+        // The reason the field has to: the fold itself lets the mark through.
+        XCTAssertNotEqual(Settings.shared.cleanSearch("\u{200F}angels", whitespace: true), "angels")
+    }
+
     /// Arabic keeps every mark (its own folds decide what they mean), and plain text comes back as is.
     func testArabicAndPlainTextPassThrough() {
         let arabic = "سُنَن أَبِي داوُد ١٥"

@@ -47,6 +47,7 @@ enum SimpleTrim: String, CaseIterable, Identifiable {
     case playOtherOptions
     case playTestMode
     case hadithTodayPill
+    case hadithNarrators
     case bookStats
     case chapterStats
     case topChapterPair
@@ -179,6 +180,7 @@ enum SimpleTrim: String, CaseIterable, Identifiable {
         Entry(.playOtherOptions, surface: .playback, title: "Other Options in the readers' play menus", door: .elsewhere("Play Custom Range is the play button's hold; repeats live in that sheet; the random picks are dropped")),
         Entry(.playTestMode, surface: .playback, title: "Test Mode in the readers' play menus, while Test Mode is off", door: .settings("Quran Settings › Test Mode")),
         Entry(.hadithTodayPill, surface: .hadith, title: "The Today pill on the Hadith tab's YOUR SUMMARY", door: .moreMenu("Today")),
+        Entry(.hadithNarrators, surface: .hadith, title: "NARRATORS, until it is turned on", door: .settings("Hadith Settings › On the Hadith Tab › Narrators")),
         Entry(.bookStats, surface: .hadith, title: "A book's stats and era lines on the tab", door: .elsewhere("the book's own screen")),
         Entry(.chapterStats, surface: .hadithBook, title: "The CHAPTERS header's pills, each chapter's count and range", door: .elsewhere("the reading screen's chapter header")),
         Entry(.topChapterPair, surface: .hadithReader, title: "The top Previous/Next chapter pair", door: .elsewhere("the bottom pair")),

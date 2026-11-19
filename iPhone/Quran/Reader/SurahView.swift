@@ -545,6 +545,15 @@ struct SurahView: View {
     /// and a page can carry the tail of one surah and the head of the next - so the selection has to name the
     /// surah of every ayah in it (user rule: "allow me to select across multiple pages").
     @State private var selectedAyahs: Set<HighlightedAyahRef> = []
+    /// The ayah checked last by hand, which a hold on another ayah selects the run FROM
+    /// (`extendSelection`). Only trusted while it is still in the selection, so the places that
+    /// empty the selection need not clear it.
+    @State private var selectionAnchor: HighlightedAyahRef?
+    /// The ayahs the LIST is showing while a search narrows it (its results and its AI matches), nil
+    /// with no query: what select mode's Select All covers then, not the whole surah behind them. A reference
+    /// box the list writes as it is built (`ayahListScreen`), like `userTouching`: unobserved, since
+    /// it only changes when the list itself is rebuilt, and the bar that reads it is rebuilt with it.
+    @State private var listedSearchResults = ListedAyahIDs()
     /// Ayahs pinning their own display choices (beginner spacing, tajweed, tashkeel, dots, ...) - the bulk
     /// "Settings" menu and the per-ayah menu write the same shared store, so the list rows, the ayah
     /// preview cards and the mushaf page composer all agree, and the choice survives a row being recycled.
@@ -1467,8 +1476,18 @@ struct SurahView: View {
     /// One AI hit: the ayah's reference pill and a two-line translation snippet. Tapping lands on
     /// the ayah exactly like a keyword result: highlight it, clear the search, scroll to it.
     private func surahAIHitRow(_ ayah: Ayah) -> some View {
-        Button {
+        let picked = isSelectingAyahs && isSelectedAyah(ayah.id)
+        return Button {
             settings.hapticFeedback()
+            // Select mode: a hit is an ayah on screen like any other, so the tap picks it (the accent
+            // wash below says so). The jump it makes otherwise ends the search, which swapped the
+            // results being picked from for the whole surah mid-selection (2026-11-19).
+            if isSelectingAyahs {
+                withAnimation(.easeInOut(duration: 0.1)) {
+                    toggleSelection(surahID: surah.id, ayahID: ayah.id)
+                }
+                return
+            }
             highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: ayah.id)
             pendingScrollAfterSearchClear = ayah.id
             withAnimation {
@@ -1494,6 +1513,8 @@ struct SurahView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .rowWash(picked ? ReaderRowTint.accent(settings.accentColor.color, defaultView: settings.defaultView) : nil)
+        .accessibilityAddTraits(picked ? .isSelected : [])
     }
     #endif
 
@@ -1579,6 +1600,8 @@ struct SurahView: View {
                                 onToggleSelection: {
                                     toggleSelection(surahID: surah.id, ayahID: ayah.id)
                                 },
+                                onExtendSelection: extendSelectionHandler(ayah.id),
+                                onBeginSelecting: beginSelectingHandler(ayah.id),
                                 onAyahTextAppear: {
                                     visibility.visibleAyahIDs.insert(ayah.id)
                                     markKhatmViewedIfNeeded(ayah.id)
@@ -1979,6 +2002,11 @@ struct SurahView: View {
                         toggleSelection(surahID: surahID, ayahID: ayahID)
                     }
                 },
+                onExtendSelection: { surahID, ayahID in
+                    withAnimation(.easeInOut(duration: 0.1)) {
+                        extendSelection(surahID: surahID, ayahID: ayahID)
+                    }
+                },
                 // Same rule: only write what actually needs clearing. An ordinary swipe through a surah
                 // has nothing selected and no arrival snippet, and blindly re-assigning empty over empty
                 // re-ran this whole view (and its toolbar) once per page.
@@ -2128,7 +2156,8 @@ struct SurahView: View {
                 onRequestSecondary: { kind in
                     presentRowSheet(.secondary(kind), surah: request.surah, ayah: request.ayah)
                 },
-                onDismiss: { rowSheet = nil }
+                onDismiss: { rowSheet = nil },
+                onSelectAyahs: sheetSelectAyahsAction(request)
             )
         }
         // The follow-the-recitation scroll holds still while a row's sheet is up (`AyahSheetPresence`);
@@ -2321,24 +2350,6 @@ struct SurahView: View {
                 onSave: {}
             )
             .smallMediumSheetPresentation()
-        }
-        .confirmationDialog(
-            selectedAyahs.count == 1 ? "Remove bookmark?" : "Remove \(selectedAyahs.count) bookmarks?",
-            isPresented: $confirmBulkUnbookmark, titleVisibility: .visible
-        ) {
-            Button(bulkUnbookmarkLosesNotes ? "Remove (notes will be deleted)" : "Remove Bookmarks", role: .destructive) {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    for ref in selectedAyahs where settings.isBookmarked(surah: ref.surahID, ayah: ref.ayahID) {
-                        settings.toggleBookmark(surah: ref.surahID, ayah: ref.ayahID)
-                    }
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(bulkUnbookmarkLosesNotes
-                 ? "Some of the selected ayahs have notes attached to their bookmarks; removing the bookmarks deletes those notes."
-                 : "The selected ayahs will be removed from your bookmarks.")
         }
         .confirmationDialog("Note not saved", isPresented: $showBulkRespectAlert, titleVisibility: .visible) {
             Button("OK") {}
@@ -2636,6 +2647,22 @@ struct SurahView: View {
                 return joinedSilentQuery.map { fallbackBlob.contains($0) } ?? false
             }
         }()
+        // What select mode's Select All covers while this query narrows the list (see the box): the
+        // results, and the AI MATCHES listed over them, which select on a tap as the rows do.
+        if cleanQuery.isEmpty {
+            listedSearchResults.ids = nil
+        } else {
+            var listed = filteredAyahs.map { $0.id }
+            #if os(iOS)
+            if !isDividerKeywordSearch {
+                var seen = Set(listed)
+                for hit in surahAIHits where ayahByID[hit.ayah] != nil && seen.insert(hit.ayah).inserted {
+                    listed.append(hit.ayah)
+                }
+            }
+            #endif
+            listedSearchResults.ids = listed
+        }
         let boundaryModel = showBoundaryDividers ? quranData.boundaryModel(forSurah: surah.id) : nil
         let trailingSearchBoundaryDivider: BoundaryDividerModel? = {
             guard showBoundaryDividers, isPageOrJuzSearch, !isDividerKeywordSearch else { return nil }
@@ -2831,10 +2858,10 @@ struct SurahView: View {
                 #if os(iOS)
                 if !searchText.isEmpty, !isDividerKeywordSearch, !surahAIHits.isEmpty {
                     Section {
-                        ForEach(surahAIHits, id: \.ayah) { hit in
-                            if let ayah = ayahsForQiraah.first(where: { $0.id == hit.ayah }) {
-                                surahAIHitRow(ayah)
-                            }
+                        // Each hit's ayah is found before the ForEach, so a row is never an
+                        // `if let` (see `OneRow`).
+                        ForEach(surahAIHits.paired { hit in ayahsForQiraah.first(where: { $0.id == hit.ayah }) }, id: \.item.ayah) { pair in
+                            surahAIHitRow(pair.found)
                         }
                     } header: {
                         SectionPillHeader(title: String(localized: "AI MATCHES"), count: surahAIHits.count, icon: "sparkles")
@@ -3042,8 +3069,12 @@ struct SurahView: View {
                 // is presented FROM its List row, and scrolling that row out of the visible window
                 // tears the row down - which dismissed the open sheet (and could take the presentation
                 // stack down with it) on every ayah advance. See `AyahSheetPresence`.
+                //
+                // And while ayahs are being selected: the list scrolling itself to the reciter between
+                // two taps took the ayahs being picked off the screen (2026-11-19). Following resumes
+                // on the next ayah after Done.
                 if let id = newVal, surah.id == nowPlaying.currentSurahNumber, !userTouching.value,
-                   !AyahSheetPresence.shared.anySheetOpen {
+                   !AyahSheetPresence.shared.anySheetOpen, !isSelectingAyahs {
                     withAnimation { proxy.scrollTo(id, anchor: .top) }
                 }
             }
@@ -3479,23 +3510,130 @@ struct SurahView: View {
     /// mode a tint reads as "selected" although the bar's actions never touch it (Abu, 2026-11-16: "if an
     /// ayah was selected before unselect all ayahs so its not confusing"). A search arrival's accent
     /// snippet goes with it. Callers wrap this in their own animation.
-    private func beginSelectingAyahs() {
+    ///
+    /// `first` is the ayah the mode was started FROM (its ⋯ menu or its actions sheet), checked from
+    /// the start; the title menu passes nothing.
+    private func beginSelectingAyahs(with first: HighlightedAyahRef? = nil) {
         rebuildQiraahCaches()
+        // A search still being typed keeps its results under select mode, but not its keyboard: the
+        // bar it is typed in gives way to the action bar. The focus flag is cleared by hand because
+        // a field that leaves the screen focused never reports losing it, and left on it would bring
+        // the bar back after Done in its typing layout, without the play button.
+        endEditing()
+        if isAyahSearchFocused { isAyahSearchFocused = false }
         highlightedAyah = nil
         arrivalTerm = nil
         arrivalAyahID = nil
-        selectedAyahs = []
+        selectedAyahs = first.map { [$0] } ?? []
+        selectionAnchor = first
         isSelectingAyahs = true
     }
 
+    /// A row's ⋯ "Select Ayahs": select mode with that ayah checked. A function rather than a closure
+    /// written inline, for the `AyahRow` init's type-checking budget (see `ayahRowGroup`).
+    private func beginSelectingHandler(_ ayahID: Int) -> () -> Void {
+        let ref = HighlightedAyahRef(surahID: surah.id, ayahID: ayahID)
+        return {
+            withAnimation(.easeInOut) {
+                beginSelectingAyahs(with: ref)
+            }
+        }
+    }
+
+    /// The actions sheet's "Select Ayahs" tile: closes the sheet and starts select mode with its ayah
+    /// checked, in either reader (the page reader's long press opens this same sheet). Nil, so no
+    /// tile, while select mode is already on, and on the printed mushaf, where nothing can be selected
+    /// (the title menu's own rule).
+    private func sheetSelectAyahsAction(_ request: AyahRowSheetRequest) -> (() -> Void)? {
+        guard !isSelectingAyahs,
+              !(settings.quranPageMode && settings.resolvedMushafPageLanguage.isPDF) else { return nil }
+        let ref = HighlightedAyahRef(surahID: request.surah.id, ayahID: request.ayah.id)
+        return {
+            rowSheet = nil
+            withAnimation(.easeInOut) {
+                beginSelectingAyahs(with: ref)
+            }
+        }
+    }
+
     /// Toggle one ayah's membership in the selection. The single funnel for both readers, so a page-mode tap
-    /// and a list-mode tap build exactly the same set.
+    /// and a list-mode tap build exactly the same set. The ayah checked last is where a hold runs
+    /// from (`extendSelection`); unchecking that ayah leaves nothing to run from.
     private func toggleSelection(surahID: Int, ayahID: Int) {
         let ref = HighlightedAyahRef(surahID: surahID, ayahID: ayahID)
         if selectedAyahs.contains(ref) {
             selectedAyahs.remove(ref)
+            if selectionAnchor == ref { selectionAnchor = nil }
         } else {
             selectedAyahs.insert(ref)
+            selectionAnchor = ref
+        }
+    }
+
+    /// A hold in select mode, both readers: every ayah from the one checked last through the held
+    /// one joins the selection (2:30 checked, hold 2:40: eleven ayahs), and the held ayah is where
+    /// the next hold runs from. With nothing to run from (nothing checked yet, the last one
+    /// unchecked again, or the hold is on that very ayah) it is a slow tap and toggles the ayah, as
+    /// it did before there were runs. A run only ever adds: it never unchecks an ayah.
+    private func extendSelection(surahID: Int, ayahID: Int) {
+        let held = HighlightedAyahRef(surahID: surahID, ayahID: ayahID)
+        guard let anchor = selectionAnchor, anchor != held, selectedAyahs.contains(anchor) else {
+            toggleSelection(surahID: surahID, ayahID: ayahID)
+            return
+        }
+        let run = ayahRun(from: anchor, through: held)
+        guard !run.isEmpty else {
+            toggleSelection(surahID: surahID, ayahID: ayahID)
+            return
+        }
+        selectedAyahs.formUnion(run)
+        selectedAyahs.insert(held)
+        selectionAnchor = held
+    }
+
+    /// The ayahs between two refs in reading order, both ends included, whichever comes first. The
+    /// list under a search runs over what the search lists (its results and AI matches, by ayah
+    /// number), never the ayahs hidden between them: Select All's rule. The page reader can hold on
+    /// another page or in another surah, so the run crosses surahs, each filtered to the ayahs the
+    /// displayed qiraah has.
+    private func ayahRun(from a: HighlightedAyahRef, through b: HighlightedAyahRef) -> [HighlightedAyahRef] {
+        let ascending = (a.surahID, a.ayahID) <= (b.surahID, b.ayahID)
+        let low = ascending ? a : b
+        let high = ascending ? b : a
+
+        if let listed = listedSearchResultIDs {
+            guard low.surahID == surah.id, high.surahID == surah.id else { return [] }
+            return listed
+                .filter { $0 >= low.ayahID && $0 <= high.ayahID }
+                .map { HighlightedAyahRef(surahID: surah.id, ayahID: $0) }
+        }
+
+        let qiraah = settings.displayQiraahForArabic
+        var run: [HighlightedAyahRef] = []
+        for surahID in low.surahID...high.surahID {
+            let ayahIDs: [Int]
+            if surahID == surah.id {
+                ayahIDs = listAyahs.ayahs.map(\.id)
+            } else if let other = quranData.surah(surahID) {
+                ayahIDs = other.ayahs.filter { $0.existsInQiraah(qiraah, surahID: surahID) }.map(\.id)
+            } else {
+                continue
+            }
+            for id in ayahIDs {
+                if surahID == low.surahID, id < low.ayahID { continue }
+                if surahID == high.surahID, id > high.ayahID { continue }
+                run.append(HighlightedAyahRef(surahID: surahID, ayahID: id))
+            }
+        }
+        return run
+    }
+
+    /// A row's hold in select mode, as a function for the `AyahRow` init's type-checking budget
+    /// (see `beginSelectingHandler`).
+    private func extendSelectionHandler(_ ayahID: Int) -> () -> Void {
+        let surahID = surah.id
+        return {
+            extendSelection(surahID: surahID, ayahID: ayahID)
         }
     }
 
@@ -3512,9 +3650,21 @@ struct SurahView: View {
             }
     }
 
+    /// The list's search results while a query narrows it, else nil (the whole surah is listed). The
+    /// page reader has a find of its own and never filters by it.
+    private var listedSearchResultIDs: [Int]? {
+        settings.quranPageMode ? nil : listedSearchResults.ids
+    }
+
     /// The ayahs "Select All" acts on: every ayah of the surah currently ON SCREEN (which in page mode is
-    /// wherever the reader has paged to), filtered to the ones the displayed qiraah actually has.
+    /// wherever the reader has paged to), filtered to the ones the displayed qiraah actually has. While
+    /// a search narrows the list it is the RESULTS, the rows on screen: it used to check the whole
+    /// surah behind them, so Select All over five hits read "286 Selected" and Copy took all 286
+    /// (2026-11-19).
     private var selectAllTargets: [HighlightedAyahRef] {
+        if let listed = listedSearchResultIDs {
+            return listed.map { HighlightedAyahRef(surahID: surah.id, ayahID: $0) }
+        }
         let target = displayedSurah
         let ayahs = target.id == surah.id
             ? listAyahs.ayahs
@@ -3525,6 +3675,7 @@ struct SurahView: View {
     /// How many ayahs "Select All" would cover, counted without building the list of them: the bar
     /// renders on every selection change and only needs the number (see `selectionActionBar`).
     private var selectAllTargetCount: Int {
+        if let listed = listedSearchResultIDs { return listed.count }
         let target = displayedSurah
         if target.id == surah.id { return listAyahs.ayahs.count }
         let qiraah = settings.displayQiraahForArabic
@@ -3537,6 +3688,13 @@ struct SurahView: View {
     /// so "is everything here selected" is two integers rather than a scan of a freshly built array.
     /// A selection that crossed a page boundary into another surah is deliberately not counted.
     private var selectedInDisplayedSurah: Int {
+        // Search results: how many of the RESULTS are checked, not how many of the surah.
+        if let listed = listedSearchResultIDs {
+            let surahID = surah.id
+            return listed.reduce(into: 0) { total, ayahID in
+                if selectedAyahs.contains(HighlightedAyahRef(surahID: surahID, ayahID: ayahID)) { total += 1 }
+            }
+        }
         let targetID = displayedSurah.id
         return selectedAyahs.reduce(into: 0) { total, ref in
             if ref.surahID == targetID { total += 1 }
@@ -3566,6 +3724,24 @@ struct SurahView: View {
             bulkActionButton(allSelectedBookmarked ? String(localized: "Unbookmark") : String(localized: "Bookmark"),
                              systemImage: allSelectedBookmarked ? "bookmark.fill" : "bookmark") {
                 bulkToggleBookmarks()
+            }
+            // On the button, not the screen: iOS 26 draws the dialog as a popover out of whatever
+            // it is attached to, and from the reader's root it opened at the top of the screen, the
+            // far end from the button that asked (2026-11-19).
+            .confirmationDialog(
+                bulkUnbookmarkWords.title, isPresented: $confirmBulkUnbookmark, titleVisibility: .visible
+            ) {
+                Button(bulkUnbookmarkWords.confirm, role: .destructive) {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) {
+                        for ref in selectedAyahs where settings.isBookmarked(surah: ref.surahID, ayah: ref.ayahID) {
+                            settings.toggleBookmark(surah: ref.surahID, ayah: ref.ayahID)
+                        }
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(bulkUnbookmarkWords.message)
             }
             bulkHighlightMenu
             bulkActionButton(String(localized: "Note"), systemImage: "note.text") {
@@ -3605,8 +3781,9 @@ struct SurahView: View {
             .accessibilityAddTraits(.isHeader)
     }
 
-    /// "Select All" covers the surah on screen; anything picked in ANOTHER surah (a page-mode
-    /// selection that crossed a boundary) is kept, so the toggle never silently discards it.
+    /// "Select All" covers the surah on screen, or the list's search results while a query narrows
+    /// it (`selectAllTargets`); anything picked OUTSIDE that (a page-mode selection that crossed a
+    /// surah boundary) is kept, so the toggle never silently discards it.
     ///
     /// Only the COUNT is computed while rendering: building the target list here allocated an array
     /// of every ayah in the surah (286 in al-Baqarah, each filtered through `existsInQiraah`) and
@@ -3750,6 +3927,30 @@ struct SurahView: View {
     /// Whether removing the selected bookmarks would delete a note with one of them.
     private var bulkUnbookmarkLosesNotes: Bool {
         selectedAyahs.contains { settings.bookmarkHasNote(surah: $0.surahID, ayah: $0.ayahID) }
+    }
+
+    /// The unbookmark dialog's words. ONE selected ayah gets the single ayah's own dialog, word for
+    /// word (`Settings.toggleBookmarkOrConfirm`): it names the ayah. It used to ask "Remove bookmark?"
+    /// and then answer in the plural ("The selected ayahs ...", "Remove Bookmarks").
+    private var bulkUnbookmarkWords: (title: String, message: String, confirm: String) {
+        let losesNotes = bulkUnbookmarkLosesNotes
+        if selectedAyahs.count == 1, let only = selectedAyahs.first {
+            let name = quranData.surah(only.surahID)?.displayName ?? String(localized: "Surah \(only.surahID)")
+            return (
+                losesNotes ? String(localized: "Remove bookmark and delete note?") : String(localized: "Remove bookmark?"),
+                losesNotes
+                    ? String(localized: "\(name) \(only.surahID):\(only.ayahID) will be removed from your bookmarks, and its note will be deleted.")
+                    : String(localized: "\(name) \(only.surahID):\(only.ayahID) will be removed from your bookmarks."),
+                String(localized: "Remove Bookmark")
+            )
+        }
+        return (
+            String(localized: "Remove \(selectedAyahs.count) bookmarks?"),
+            losesNotes
+                ? String(localized: "Some of the selected ayahs have notes attached to their bookmarks; removing the bookmarks deletes those notes.")
+                : String(localized: "The selected ayahs will be removed from your bookmarks."),
+            losesNotes ? String(localized: "Remove (notes will be deleted)") : String(localized: "Remove Bookmarks")
+        )
     }
 
     /// Bookmark semantics for a mixed selection: anything unbookmarked -> bookmark everything; all already
@@ -5551,15 +5752,25 @@ private struct ReaderLegendMenu: View {
         }
         #endif
         .sheet(isPresented: $showingSheet) {
-            // The tajweed page is one screen of tiles (2026-11-17): it opens at full height so the
-            // whole grid is up at once, where the medium detent would cut it in half.
+            // The tajweed and Signs pages are one screen of tiles each (2026-11-17): the sheet opens
+            // at full height so the whole grid is up at once, where the medium detent would cut it in
+            // half. On every page since 2026-11-18: opened on Themes it stood at half height, and the
+            // picker then led to the two tile pages squeezed into that half.
             ReaderLegendSheet(initialPage: openingPage)
-                .smallMediumSheetPresentation(startLarge: openingPage == .tajweed)
+                .smallMediumSheetPresentation(startLarge: true)
         }
     }
 }
 
-/// The legend sheet: the tajweed legend and the theme legend behind one segmented picker in the bar.
+/// The legend sheet: the tajweed legend, the theme legend and the stop signs behind one segmented
+/// picker in the bar.
+///
+/// The bar is the SHEET's, and the same on all three pages (2026-11-18): close, the picker, and the
+/// Compact / Detailed switch. Each page used to bring its own trailing button, and Themes has none,
+/// so picking Themes took the button away and the bar laid the picker out again 16 points to the
+/// right, under the finger that had just tapped it; picking another page slid it back (Abu: "when I
+/// switch between tajweed, themes and signs it has a weird glitch"). The switch's place is now held
+/// on Themes too (`LegendModeToolbar`), and the two tile pages take their switch from here.
 private struct ReaderLegendSheet: View {
     private let settings = Settings.shared
     @ObservedObject private var systemSettings = SystemSettings.shared
@@ -5567,9 +5778,22 @@ private struct ReaderLegendSheet: View {
 
     @State private var page: ReaderLegendPage
     @AppStorage("readerLegendPage") private var lastPage = ReaderLegendPage.tajweed.rawValue
+    /// Each tile page's Compact / Detailed switch. Kept here, so a page comes back the way it was
+    /// left when the picker returns to it; every open of the sheet starts both on their tiles.
+    @State private var tajweedDetailed = false
+    @State private var signsDetailed = false
 
     init(initialPage: ReaderLegendPage) {
         _page = State(initialValue: initialPage)
+    }
+
+    /// The switch of the page on screen; nil on Themes, which has one form.
+    private var pageDetailed: Binding<Bool>? {
+        switch page {
+        case .tajweed: return $tajweedDetailed
+        case .signs: return $signsDetailed
+        case .themes: return nil
+        }
     }
 
     var body: some View {
@@ -5577,7 +5801,7 @@ private struct ReaderLegendSheet: View {
             Group {
                 switch page {
                 case .tajweed:
-                    TajweedLegendView(showsDismissButton: false)
+                    TajweedLegendView(showsDismissButton: false, detailed: $tajweedDetailed)
                 case .themes:
                     ThemeHighlightsView { surahID, ayahID in
                         // The reader is under this sheet: close it first, so the ayah opens in view.
@@ -5585,7 +5809,7 @@ private struct ReaderLegendSheet: View {
                         AppNavigation.shared.open(.ayah(surahID, ayahID))
                     }
                 case .signs:
-                    QuranStopSignsLegendView()
+                    QuranStopSignsLegendView(detailed: $signsDetailed)
                 }
             }
             .toolbar {
@@ -5600,12 +5824,44 @@ private struct ReaderLegendSheet: View {
                     .frame(width: 280)
                 }
             }
+            .modifier(LegendModeToolbar(detailed: pageDetailed))
             .sheetDismissToolbar()
         }
         .onChange(of: page) { newPage in
             settings.hapticFeedback()
             lastPage = newPage.rawValue
         }
+    }
+}
+
+/// The legend sheet's trailing toolbar item: the Compact / Detailed switch of the page on screen, and
+/// on a page without one (`detailed` nil) the same item left empty, so the bar's layout never changes
+/// between pages. Empty means no icon, no touch, nothing for VoiceOver, and on iOS 26 no glass: the
+/// system draws a toolbar item's capsule whatever is inside it.
+private struct LegendModeToolbar: ViewModifier {
+    let detailed: Binding<Bool>?
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.toolbar {
+                ToolbarItem(placement: .primaryAction) { button }
+                    .sharedBackgroundVisibility(detailed == nil ? .hidden : .automatic)
+            }
+        } else {
+            content.toolbar {
+                ToolbarItem(placement: .primaryAction) { button }
+            }
+        }
+    }
+
+    private var button: some View {
+        LegendModeButton(showsDetailed: detailed?.wrappedValue ?? false) {
+            guard let detailed else { return }
+            withAnimation(.easeInOut(duration: 0.2)) { detailed.wrappedValue.toggle() }
+        }
+        .opacity(detailed == nil ? 0 : 1)
+        .disabled(detailed == nil)
+        .accessibilityHidden(detailed == nil)
     }
 }
 
@@ -5666,6 +5922,12 @@ private struct ReaderLegendSheet: View {
     }
 }
 #endif
+
+/// The ayah ids the reading list shows under a search, nil while nothing narrows it. A reference the
+/// list writes while it is built, without invalidating the view (see `SurahView.listedSearchResults`).
+final class ListedAyahIDs {
+    var ids: [Int]?
+}
 
 /// A Bool the view can write from a scroll callback without invalidating itself (see `SurahView`).
 final class TouchFlag {

@@ -3565,36 +3565,109 @@ struct ArabicNumberGridTile: View {
 
 /// One of the mushaf's printed stop and pause signs: the sign as the Hafs print draws it, its name, and
 /// what it asks of the reciter (`meaning`; 2026-11-01, the reader Legend's Signs page and a tapped tile
-/// show it). `all` is the one catalogue every signs grid and the Legend draw from.
+/// show it). `all` is the one catalogue every signs grid and the Legend draw from. Since 2026-11-17 it
+/// also carries what the Legend's tiles and cards show: the gist, the Arabic name and a place in the
+/// Hafs text where the sign is printed.
 struct StopSignInfo: Identifiable {
+    /// The same in every language (the title is translated): the Legend's open card goes by it.
+    let key: String
     let title: String
     let symbol: String
     var meaning: String = ""
+    /// What it asks in a few words, under the title on the Legend's tile.
+    var gist: String = ""
+    /// Its name in Arabic and that name's transliteration, on the Legend's card.
+    var arabicName: String? = nil
+    var transliteration: String? = nil
+    /// The sign's scalars as the Hafs text writes it (the small high marks, ۞, ۩): the example paints
+    /// the word that carries one. U+06D9 (لا) and U+06DD (۝) never occur in the app's Hafs text; their
+    /// examples add the sign to the cut words (`Example.addsMark`, `Example.endsWithNumber`).
+    var marks: Set<UInt32> = []
+    /// Where the Hafs mushaf prints it. Every sign has one since 2026-11-18 (Abu: "give examples for each").
+    var example: Example? = nil
 
-    var id: String { symbol + title }
+    /// A place the sign is printed. The WORDS are always cut by token from the app's own Hafs text
+    /// (never typed here); only a sign that text does not carry is added to them.
+    struct Example {
+        let surah: Int
+        let ayah: Int
+        /// Token indices in the ayah's Hafs text (`WordTokens`).
+        let words: ClosedRange<Int>
+        /// Why the sign sits there, when that is the lesson.
+        var note: String? = nil
+        /// A sign the app's text does not print, set on this token of the ayah, where the prints that
+        /// use the sign set it. For لا (U+06D9), which the text has nowhere; the note says so.
+        var addsMark: (word: Int, scalar: UInt32)? = nil
+        /// Ends the words with the ayah's number, which the Quran face draws as the end-of-ayah ring
+        /// (the text has no U+06DD: the readers draw the ring from the number too).
+        var endsWithNumber = false
+    }
 
-    /// From "stop" to "read on", then the pauses, then the marks that are not stops at all.
+    var id: String { key }
+
+    /// From "stop" to "read on", then the pauses, then the marks that are not stops at all. The three
+    /// middle examples are all from Ayat al-Kursi, the ayah most people know by heart.
     static let all: [StopSignInfo] = [
-        StopSignInfo(title: String(localized: "Mandatory Stop"), symbol: "مـ",
-                     meaning: String(localized: "Stop here. Joining this word to the next would change or confuse the meaning.")),
-        StopSignInfo(title: String(localized: "Preferred Stop"), symbol: "قلى",
-                     meaning: String(localized: "Stopping is better than continuing, though both are allowed.")),
-        StopSignInfo(title: String(localized: "Permissible Stop"), symbol: "ج",
-                     meaning: String(localized: "Stop or continue as you like; both are equally fine.")),
-        StopSignInfo(title: String(localized: "Prefer Continue"), symbol: "صلى",
-                     meaning: String(localized: "Continuing is better than stopping, though stopping is allowed.")),
-        StopSignInfo(title: String(localized: "Must Continue"), symbol: "لا",
-                     meaning: String(localized: "Do not stop here. If you run out of breath, go back a word or two and join the words again.")),
-        StopSignInfo(title: String(localized: "Stop at One"), symbol: "∴ ∴",
-                     meaning: String(localized: "Two triplets close together: stop at one of them or the other, never at both.")),
-        StopSignInfo(title: String(localized: "Short Pause"), symbol: "س",
-                     meaning: String(localized: "Hold the sound for a moment without taking a breath, then continue. Hafs has four: 18:1, 36:52, 75:27 and 83:14.")),
-        StopSignInfo(title: String(localized: "Ayah End"), symbol: "۝",
-                     meaning: String(localized: "The number closes the ayah. Stopping here is always allowed, and the Prophet ﷺ recited ayah by ayah.")),
-        StopSignInfo(title: String(localized: "Make Sujood"), symbol: "۩",
-                     meaning: String(localized: "A prostration of recitation is recommended here, for the reciter and anyone listening: stop, prostrate once, then carry on.")),
-        StopSignInfo(title: String(localized: "Hizb Marker"), symbol: "۞",
-                     meaning: String(localized: "Marks a quarter of a hizb (half a juz). A place marker for memorizing and reviewing, not a stop sign."))
+        StopSignInfo(key: "mandatory", title: String(localized: "Mandatory Stop"), symbol: "مـ",
+                     meaning: String(localized: "Stop here. Joining this word to the next would change or confuse the meaning."),
+                     gist: String(localized: "Stop here"),
+                     arabicName: "الوَقفُ اللَّازِم", transliteration: "Waqf Laazim", marks: [0x06D8],
+                     example: Example(surah: 36, ayah: 76, words: 0...4,
+                                      note: String(localized: "Read on without stopping, and “Indeed, We know” would sound like part of what they say."))),
+        StopSignInfo(key: "preferred", title: String(localized: "Preferred Stop"), symbol: "قلى",
+                     meaning: String(localized: "Stopping is better than continuing, though both are allowed."),
+                     gist: String(localized: "Better to stop"),
+                     arabicName: "الوَقفُ أَولَى", transliteration: "Al-Waqf Awlaa", marks: [0x06D7],
+                     example: Example(surah: 2, ayah: 255, words: 16...22)),
+        StopSignInfo(key: "permissible", title: String(localized: "Permissible Stop"), symbol: "ج",
+                     meaning: String(localized: "Stop or continue as you like; both are equally fine."),
+                     gist: String(localized: "Stop or read on"),
+                     arabicName: "الوَقفُ الجَائِز", transliteration: "Waqf Jaa’iz", marks: [0x06DA],
+                     example: Example(surah: 2, ayah: 255, words: 5...9)),
+        StopSignInfo(key: "preferContinue", title: String(localized: "Prefer Continue"), symbol: "صلى",
+                     meaning: String(localized: "Continuing is better than stopping, though stopping is allowed."),
+                     gist: String(localized: "Better to read on"),
+                     arabicName: "الوَصلُ أَولَى", transliteration: "Al-Wasl Awlaa", marks: [0x06D6],
+                     example: Example(surah: 2, ayah: 255, words: 26...33)),
+        StopSignInfo(key: "mustContinue", title: String(localized: "Must Continue"), symbol: "لا",
+                     meaning: String(localized: "Do not stop here. If you run out of breath, go back a word or two and join the words again."),
+                     gist: String(localized: "Do not stop here"),
+                     arabicName: "الوَقفُ المَمنُوع", transliteration: "Waqf Mamnoo'", marks: [0x06D9],
+                     // The place the Madinah mushaf's own guide to its signs gives for لا.
+                     example: Example(surah: 16, ayah: 32, words: 0...6,
+                                      note: String(localized: "The angels take them while saying “Peace be upon you”, so the reciter reads on. The text in this app does not print this sign; it is shown where the prints that use it set it."),
+                                      addsMark: (word: 3, scalar: 0x06D9))),
+        StopSignInfo(key: "stopAtOne", title: String(localized: "Stop at One"), symbol: "∴ ∴",
+                     meaning: String(localized: "Two triplets close together: stop at one of them or the other, never at both."),
+                     gist: String(localized: "Never at both"),
+                     arabicName: "تَعَانُقُ الوَقف", transliteration: "Ta'aanuq al-Waqf", marks: [0x06DB],
+                     example: Example(surah: 2, ayah: 2, words: 0...6,
+                                      note: String(localized: "Stop after rayb or after feeh, never at both. Either way the meaning is whole: “no doubt; in it is guidance”, or “no doubt in it; a guidance for those conscious of Allah”."))),
+        StopSignInfo(key: "shortPause", title: String(localized: "Short Pause"), symbol: "س",
+                     meaning: String(localized: "Hold the sound for a moment without taking a breath, then continue. Hafs has four: 18:1, 36:52, 75:27 and 83:14."),
+                     gist: String(localized: "Pause, no breath"),
+                     arabicName: "السَّكت", transliteration: "Sakt", marks: [0x06DC],
+                     example: Example(surah: 75, ayah: 27, words: 0...2,
+                                      note: String(localized: "Without the pause the noon would merge into the raa, and man raaq would run together as one word."))),
+        StopSignInfo(key: "ayahEnd", title: String(localized: "Ayah End"), symbol: "۝",
+                     meaning: String(localized: "The number closes the ayah. Stopping here is always allowed, and the Prophet ﷺ recited ayah by ayah."),
+                     gist: String(localized: "Fine to stop"),
+                     // The Quran face draws an Arabic-Indic number as the ring, so the digits are its marks too.
+                     arabicName: "رَأسُ الآيَة", transliteration: "Ra’s al-Aayah", marks: Set([UInt32(0x06DD)] + Array(UInt32(0x0660)...UInt32(0x0669))),
+                     example: Example(surah: 112, ayah: 1, words: 0...3,
+                                      note: String(localized: "The ring holds the number of the ayah it closes."),
+                                      endsWithNumber: true)),
+        StopSignInfo(key: "sujood", title: String(localized: "Make Sujood"), symbol: "۩",
+                     meaning: String(localized: "A prostration of recitation is recommended here, for the reciter and anyone listening: stop, prostrate once, then carry on."),
+                     gist: String(localized: "Prostrate once"),
+                     arabicName: "سَجدَةُ التِّلَاوَة", transliteration: "Sajdat at-Tilaawah", marks: [0x06E9],
+                     example: Example(surah: 96, ayah: 19, words: 0...4)),
+        StopSignInfo(key: "hizb", title: String(localized: "Hizb Marker"), symbol: "۞",
+                     meaning: String(localized: "Marks a quarter of a hizb (half a juz). A place marker for memorizing and reviewing, not a stop sign."),
+                     gist: String(localized: "Not a stop"),
+                     arabicName: "رُبعُ الحِزب", transliteration: "Rub' al-Hizb", marks: [0x06DE],
+                     example: Example(surah: 2, ayah: 142, words: 0...4,
+                                      note: String(localized: "The second juz begins here.")))
     ]
 }
 

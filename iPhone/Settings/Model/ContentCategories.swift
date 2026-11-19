@@ -89,7 +89,8 @@ struct ContentCategory: Identifiable {
             measure: { $0.counted("themeHighlightsLit", "themeHighlightsSections").measure(String(localized: "highlight"), String(localized: "highlights")) { $0 == 1 ? String(localized: "1 highlight") : String(localized: "\($0) highlights") } }),
         ContentCategory(
             id: "tracker", title: String(localized: "Prayer Tracker"), systemImage: "calendar",
-            keys: ["prayerTrackerData", "prayerTrackerExemptDaysData", "mensesPauseActive", "mensesPauseStartStamp"],
+            keys: ["prayerTrackerData", "prayerTrackerExemptDaysData", "mensesPauseActive", "mensesPauseStartStamp",
+                   "prayerTrackerCongregationData", "prayerTrackerSunnahData", "prayerTrackerResumeDaysData"],
             files: [], summaryRank: 2,
             measure: { $0.counted("prayerTrackerData").measure(String(localized: "prayer day"), String(localized: "prayer days")) { $0 == 1 ? String(localized: "1 prayer day") : String(localized: "\($0) prayer days") } }),
         ContentCategory(

@@ -100,13 +100,18 @@ struct AyahRowSheetContent: View {
     /// The actions sheet asked for another sheet: the host closes this one first, then presents it.
     let onRequestSecondary: (AyahSecondarySheet) -> Void
     let onDismiss: () -> Void
+    /// The actions sheet's "Select Ayahs" tile: the reader closes the sheet and starts select mode
+    /// with this ayah checked. Nil where the host has no select mode (the tile is left out).
+    let onSelectAyahs: (() -> Void)?
 
     init(request: AyahRowSheetRequest,
          onRequestSecondary: @escaping (AyahSecondarySheet) -> Void,
-         onDismiss: @escaping () -> Void) {
+         onDismiss: @escaping () -> Void,
+         onSelectAyahs: (() -> Void)? = nil) {
         self.request = request
         self.onRequestSecondary = onRequestSecondary
         self.onDismiss = onDismiss
+        self.onSelectAyahs = onSelectAyahs
     }
 
     var body: some View {
@@ -120,7 +125,8 @@ struct AyahRowSheetContent: View {
                 // per-ayah "Word by Word" pin; the page reader's cannot. One host serves both readers
                 // now (the page reader routes its sheets here too), so the mode decides.
                 AyahActionsSheet(surah: surah, ayah: ayah, onRequestSheet: onRequestSecondary,
-                                 offersWordByWord: !settings.quranPageMode, opensLarge: request.opensLarge)
+                                 offersWordByWord: !settings.quranPageMode, opensLarge: request.opensLarge,
+                                 onSelectAyahs: onSelectAyahs)
                     .smallMediumSheetPresentation(startLarge: request.opensLarge)
 
             case .word(let tapped):
@@ -930,6 +936,9 @@ struct AyahActionsSheet: View {
     /// The detent this sheet opened at (`AyahRowSheetRequest.opensLarge`), so a sheet stacked on it
     /// (`StackedSecondaryPresentation`) rises to the same height instead of deciding again.
     var opensLarge: Bool = false
+    /// Starts the reader's select mode with this ayah checked (the "Select Ayahs" tile). Nil where
+    /// the host has no select mode, or is already in it: no tile then.
+    var onSelectAyahs: (() -> Void)? = nil
 
     private var isBookmarked: Bool { settings.bookmarkIndex(surah: surah.id, ayah: ayah.id) != nil }
     private var currentNote: String { settings.bookmarkNoteText(surah: surah.id, ayah: ayah.id) }
@@ -969,6 +978,15 @@ struct AyahActionsSheet: View {
     static let contentTopPadding: CGFloat = 8
     static let contentSpacing: CGFloat = 14
     static let actionTileHeight: CGFloat = 62
+    /// The tiles' corner, gentler than `GlassCorner.rectangle`: at 24 pt a 62 pt tile is most of the
+    /// way to a capsule. Share Ayah under them takes the same corner, so the block reads as one.
+    static let actionTileCornerRadius: CGFloat = 18
+    /// Between two tiles, and between a group's rows.
+    static let actionTileSpacing: CGFloat = 10
+    /// Between two groups of tiles, where the menus draw a divider.
+    static let actionGroupSpacing: CGFloat = 18
+    /// How much of its colour a tile's glass carries (the accent, or the highlight an ayah wears).
+    static let actionTileTint: Double = 0.10
     /// Air under the first row of actions before the medium detent counts as "fits". A hair only: the
     /// room is measured above the home indicator's safe area, under which the sheet's own background
     /// goes on, so a row that ends at the fold still has 34 pt of sheet beneath it (al-Fatihah 1:7 ends
@@ -1051,11 +1069,18 @@ struct AyahActionsSheet: View {
         .buttonStyle(.plain)
     }
 
+    /// The colour a tile is drawn in. `tint` overrides the accent for one tile (the highlighter,
+    /// showing its color). `destructive` still wins: a red tile is a warning, and nothing should be
+    /// able to paint over that.
+    private func actionTileColor(destructive: Bool = false, tint: Color? = nil) -> Color {
+        destructive ? Color.red : (tint ?? settings.accentColor.accent1)
+    }
+
+    /// A tile's symbol and title. Its ground is `actionTileGlass`, put on the Button or the Menu
+    /// that holds this label rather than inside it, as every other glass control in the app is.
     private func actionTileLabel(_ title: String, systemImage: String, destructive: Bool = false,
                                  tint: Color? = nil) -> some View {
-        // `tint` overrides the accent for one tile (the highlighter, showing its color). `destructive`
-        // still wins - a red tile is a warning, and nothing should be able to paint over that.
-        let color = destructive ? Color.red : (tint ?? settings.accentColor.accent1)
+        let color = actionTileColor(destructive: destructive, tint: tint)
 
         return VStack(spacing: 6) {
             Image(systemName: systemImage)
@@ -1081,11 +1106,7 @@ struct AyahActionsSheet: View {
         .foregroundStyle(color)
         .frame(maxWidth: .infinity)
         .frame(height: Self.actionTileHeight)
-        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(color.opacity(0.10))
-        )
+        .contentShape(RoundedRectangle(cornerRadius: Self.actionTileCornerRadius, style: .continuous))
     }
 
     /// One entry in the grid. `repeatMenu` is the odd one out - it opens a menu rather than firing an action - 
@@ -1103,16 +1124,25 @@ struct AyahActionsSheet: View {
         /// Paints the tile in the ayah's highlight color instead of the accent - only the highlight tile
         /// uses it, so the tile shows which color the ayah is wearing without being opened.
         var tint: Color? = nil
+        /// What VoiceOver reads where the title alone is not the whole story (Choose Reciter names
+        /// the reciter, which the one-line tile has no room for).
+        var accessibilityLabel: String? = nil
+        var accessibilityHint: String? = nil
         var action: () -> Void = {}
     }
 
-    /// Which tiles exist depends on the qiraah and on whether the ayah has a note, so the set is built first and
-    /// the column count is chosen from its size - see `columnCount`.
-    private var actions: [AyahAction] {
-        // The ayah menus' order and wording (the reader's ⋯ and ▶ menus, the Quran tab's long press):
-        // mark, study, Apply Settings, play, then the text. Abu, 2026-10-25: "make sure context menu is
-        // consistent with long hold ayah sheet". The grid stays flat where a menu nests (Study Ayah),
-        // but nothing here is named or ordered differently from the menus.
+    // MARK: The actions, in the menus' groups
+    //
+    // The ayah menus' order and wording (the reader's ⋯ and ▶ menus, the Quran tab's long press), group
+    // for group: mark, study, play, then the text. Abu, 2026-10-25: "make sure context menu is consistent
+    // with long hold ayah sheet", and again 2026-11-18: "context menu for quran isnt the same as long
+    // hold ayah". The Quran tab's hold menu, read top to bottom with its submenus opened, IS this list;
+    // the sheet lays flat what a menu nests (Study Ayah, Ayah Playback), and nothing here is named or
+    // ordered differently. Which tiles exist depends on the riwayah, the packs and whether the ayah has
+    // a note, so the rows are decided from each group's size (`AyahActionLayout`).
+
+    /// Bookmark, Highlight, Note.
+    private var markActions: [AyahAction] {
         var list: [AyahAction] = [
             AyahAction(
                 id: "bookmark",
@@ -1151,6 +1181,13 @@ struct AyahActionsSheet: View {
         } else {
             list.append(AyahAction(id: "note", title: String(localized: "Note"), systemImage: "note.text", kind: .noteMenu))
         }
+
+        return list
+    }
+
+    /// See Tafsir, the menus' Study Ayah submenu laid flat, then Apply Settings.
+    private var studyActions: [AyahAction] {
+        var list: [AyahAction] = []
 
         if canShowTafsir {
             list.append(AyahAction(id: "tafsir", title: String(localized: "See Tafsir"), systemImage: "text.book.closed", action: {
@@ -1213,79 +1250,110 @@ struct AyahActionsSheet: View {
             ))
         }
 
-        if settings.isHafsDisplay {
-            // The ▶ menu's playback list in its order (and the Quran tab's Ayah Playback submenu): Repeat
-            // Ayah, Play Custom Range, Play From Ayah, then Play This Ayah, the primary action, lowest and
-            // nearest the thumb. Who recites is the Choose Reciter row under the grid. Repeat and Play
-            // This close the sheet unless Keep Sheet Open While Playing is on (`closeAfterPlaying`);
-            // Play From always closes it, and Custom Range opens its own sheet.
-            list.append(AyahAction(id: "repeat", title: String(localized: "Repeat Ayah"), systemImage: "repeat", kind: .repeatMenu))
+        return list
+    }
 
-            list.append(AyahAction(id: "customRange", title: String(localized: "Play Custom Range"), systemImage: "slider.horizontal.3", action: {
-                settings.hapticFeedback()
-                // With Keep Sheet Open While Playing on, the range sheet stacks on this one, so a
-                // range of this one ayah can hand the sheet back (see `AyahSecondarySheetContent`);
-                // otherwise the host swaps it in, as for every other secondary sheet.
-                if settings.keepAyahSheetOpenOnPlay {
-                    sheetStack.present(.customRange)
-                } else {
-                    onRequestSheet?(.customRange)
-                }
-            }))
+    /// The Quran tab's hold menu from Play This Ayah down, its Ayah Playback submenu laid flat: Play
+    /// This Ayah, Play Word by Word, Choose Reciter, Repeat Ayah, Play Custom Range, Play From Ayah.
+    /// Six tiles, two full rows. Until 2026-11-18 the sheet ran them its own way round (Repeat first,
+    /// Play This Ayah last) and kept the reciter as a row in the options card. Hafs only, like the
+    /// menus' playback. Repeat and Play This close the sheet unless Keep Sheet Open While Playing is
+    /// on (`closeAfterPlaying`); Play From always closes it, and Custom Range opens its own sheet.
+    private var playActions: [AyahAction] {
+        guard settings.isHafsDisplay else { return [] }
+        var list: [AyahAction] = []
 
-            // A MENU since 2026-10-07 (Abu: "play from ayah ... it becomes a menu and then theres play
-            // til end of page, or end of surah or end of juz or end of infinitely"). The tile itself is
-            // unchanged; picking how far it carries is the choice the menu asks for.
-            list.append(AyahAction(id: "playFrom", title: String(localized: "Play From Ayah"), systemImage: "play.circle.fill",
-                                   kind: .playFromMenu))
-
-            // Play Word by Word (Abu, 2026-11-02): quran.com's clip of each word in turn, the word lit
-            // on the card above as it sounds (WordClipPlayer). The sheet stays up, following along being
-            // the point; the same tile stops the run.
-            let wordsPlaying = wordClips.isPlaying(surah: surah.id, ayah: ayah.id)
-            list.append(AyahAction(id: "wordByWord",
-                                   title: wordsPlaying ? String(localized: "Stop Word by Word") : String(localized: "Play Word by Word"),
-                                   systemImage: wordsPlaying ? "stop.circle" : "text.word.spacing", action: {
-                settings.hapticFeedback()
-                WordClipPlayer.shared.toggle(surah: surah.id, ayah: ayah.id)
-            }))
-
-            list.append(AyahAction(id: "play", title: String(localized: "Play This Ayah"), systemImage: "play.circle", action: {
-                settings.hapticFeedback()
-                quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id)
-                closeAfterPlaying()
-            }))
-        }
-
-        // Select Text and Copy Ayah ARE tiles (Abu, 2026-09-22: "select text and copy ayah in the
-        // long hold sheet make them normal grid buttons so only share ayah takes up the whole row").
-        // They were a half-width pair of their own under the grid from 2026-09-07, which gave the
-        // sheet three different button widths; now only Share Ayah is a row, the one filled button,
-        // and the thing you most often came for is still the biggest target on the sheet.
-        //
-        // Last in the grid, in the ellipsis menu's own order (Select Text, Copy Ayah, then Share):
-        // see `ayah-menu-parity-and-search-paint` - one action list, one order, every menu.
-        // `selection.pin.in.out`, not the menus' `highlighter`: the Highlight tile is RIGHT THERE in
-        // the same grid wearing that symbol, and two identical icons side by side say nothing. The
-        // menus never had the clash because a text list names every row. Titles still match exactly.
-        list.append(AyahAction(id: "selectText", title: String(localized: "Select Text"), systemImage: "selection.pin.in.out", action: {
+        list.append(AyahAction(id: "play", title: String(localized: "Play This Ayah"), systemImage: "play.circle", action: {
             settings.hapticFeedback()
-            onRequestSheet?(.selectText)
+            quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id)
+            closeAfterPlaying()
         }))
 
-        list.append(AyahAction(id: "copy", title: String(localized: "Copy Ayah"), systemImage: "doc.on.doc", action: {
+        // Play Word by Word (Abu, 2026-11-02): quran.com's clip of each word in turn, the word lit
+        // on the card above as it sounds (WordClipPlayer). The sheet stays up, following along being
+        // the point; the same tile stops the run.
+        let wordsPlaying = wordClips.isPlaying(surah: surah.id, ayah: ayah.id)
+        list.append(AyahAction(id: "wordByWord",
+                               title: wordsPlaying ? String(localized: "Stop Word by Word") : String(localized: "Play Word by Word"),
+                               systemImage: wordsPlaying ? "stop.circle" : "text.word.spacing", action: {
             settings.hapticFeedback()
-            ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah.id, ayahNumber: ayah.id,
-                                                settings: settings, quranData: quranData)
-            dismiss()
+            WordClipPlayer.shared.toggle(surah: surah.id, ayah: ayah.id)
         }))
+
+        // Who recites, where the menus' Ayah Playback submenu opens with it. The list rises on top
+        // of this sheet and closes on a pick, back to the tiles. The tile has one line, so the
+        // reciter's name is VoiceOver's to read; the list itself marks the current one.
+        list.append(AyahAction(
+            id: "reciter",
+            title: String(localized: "Choose Reciter"),
+            systemImage: "headphones",
+            accessibilityLabel: String(localized: "Reciter: \(settings.currentReciterDisplayName)"),
+            accessibilityHint: String(localized: "Opens the reciter list"),
+            action: {
+                settings.hapticFeedback()
+                showReciterPicker = true
+            }
+        ))
+
+        list.append(AyahAction(id: "repeat", title: String(localized: "Repeat Ayah"), systemImage: "repeat", kind: .repeatMenu))
+
+        list.append(AyahAction(id: "customRange", title: String(localized: "Play Custom Range"), systemImage: "slider.horizontal.3", action: {
+            settings.hapticFeedback()
+            // With Keep Sheet Open While Playing on, the range sheet stacks on this one, so a
+            // range of this one ayah can hand the sheet back (see `AyahSecondarySheetContent`);
+            // otherwise the host swaps it in, as for every other secondary sheet.
+            if settings.keepAyahSheetOpenOnPlay {
+                sheetStack.present(.customRange)
+            } else {
+                onRequestSheet?(.customRange)
+            }
+        }))
+
+        // A MENU since 2026-10-07 (Abu: "play from ayah ... it becomes a menu and then theres play
+        // til end of page, or end of surah or end of juz or end of infinitely"). The tile itself is
+        // unchanged; picking how far it carries is the choice the menu asks for.
+        list.append(AyahAction(id: "playFrom", title: String(localized: "Play From Ayah"), systemImage: "play.circle.fill",
+                               kind: .playFromMenu))
 
         return list
     }
 
-    /// The ONE full-width row under the grid (Abu, 2026-09-22: "only share ayah takes up the whole
-    /// row"): the filled, accent-colored button the sheet is built around. Select Text and Copy Ayah
-    /// used to flank it as a half-width pair; they are grid tiles now, see `actions`.
+    /// Select Text, Copy Ayah and, in a reader, Select Ayahs, one row over the Share Ayah bar that
+    /// closes the group (Abu, 2026-11-18). Select Text and Copy Ayah were the grid's last two tiles,
+    /// and with sixteen tiles Copy Ayah sat alone on a seventh row. Select Ayahs joined them the same
+    /// day, in the ⋯ menu's order (`AyahRow.menuBlock`): three across in a reader, the pair as halves
+    /// where the host has no select mode or is already in it.
+    ///
+    /// `selection.pin.in.out` for Select Text, in the menus too since 2026-11-18: they wore the
+    /// Highlight row's own `highlighter`, two rows of one menu under one symbol.
+    private var textActions: [AyahAction] {
+        var list = [
+            AyahAction(id: "selectText", title: String(localized: "Select Text"), systemImage: "selection.pin.in.out", action: {
+                settings.hapticFeedback()
+                onRequestSheet?(.selectText)
+            }),
+            AyahAction(id: "copy", title: String(localized: "Copy Ayah"), systemImage: "doc.on.doc", action: {
+                settings.hapticFeedback()
+                ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah.id, ayahNumber: ayah.id,
+                                                    settings: settings, quranData: quranData)
+                dismiss()
+            }),
+        ]
+        if let onSelectAyahs {
+            // The reader closes the sheet itself as select mode starts.
+            list.append(AyahAction(id: "selectAyahs", title: String(localized: "Select Ayahs"), systemImage: "checkmark.circle", action: {
+                settings.hapticFeedback()
+                onSelectAyahs()
+            }))
+        }
+        return list
+    }
+
+    /// The ONE full-width button on the sheet (Abu, 2026-09-22: "only share ayah takes up the whole
+    /// row"), closing the text group under Select Text and Copy Ayah. Liquid Glass with the accent on
+    /// its label since 2026-11-18 (`GlassActionButtonStyle`); it was a solid accent gradient under a
+    /// white label, with a shadow of its own (Abu: "that full colored background share ayah is
+    /// hideous ... lets make it liquid glass and look prettier").
     private var shareRow: some View {
         Button {
             settings.hapticFeedback()
@@ -1298,37 +1366,19 @@ struct AyahActionsSheet: View {
                     .font(.headline)
                     .lineLimit(1)
             }
-            .foregroundStyle(Color.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 50)
-            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [settings.accentColor.accent1, settings.accentColor.accent1.opacity(0.78)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        )
-                    )
-            )
-            .shadow(color: settings.accentColor.accent1.opacity(0.28), radius: 8, x: 0, y: 4)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.glassAction(cornerRadius: Self.actionTileCornerRadius))
     }
 
-    /// The sheet's own options, one card under Share (Abu, 2026-10-25): who recites, whether playing
-    /// from here closes the sheet, and whether the screen may sleep while it is up. It replaced the lone
-    /// "Keep Sheet Open" row, whose switch (Tafsir and the rest stacking on top of this sheet) still
-    /// lives in Quran Settings > Reading View. The reciter and the playing switch go with the playback
-    /// tiles, so they show only where those do (Hafs).
+    /// The sheet's own options, one card under Share (Abu, 2026-10-25): whether playing from here
+    /// closes the sheet, and whether the screen may sleep while it is up. It replaced the lone "Keep
+    /// Sheet Open" row, whose switch (Tafsir and the rest stacking on top of this sheet) still lives
+    /// in Quran Settings > Reading View. The playing switch goes with the playback tiles, so it shows
+    /// only where those do (Hafs). Choose Reciter led this card until 2026-11-18; it is a tile among
+    /// the playback tiles now, where the menus keep it.
     private var optionsCard: some View {
         VStack(spacing: 0) {
             if settings.isHafsDisplay {
-                reciterRow
-
-                Divider()
-                    .padding(.leading, 44)
-
                 optionToggle(
                     String(localized: "Keep Sheet Open While Playing"),
                     caption: String(localized: "Play This Ayah, Repeat Ayah and a custom range of this one ayah leave this sheet up so you can keep reading. Play From Ayah and wider ranges still close it."),
@@ -1349,7 +1399,7 @@ struct AyahActionsSheet: View {
         }
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Self.actionTileCornerRadius, style: .continuous)
                 .fill(settings.accentColor.accent1.opacity(0.10))
         )
         // The grid's rule: one-line titles at one size. "Keep Sheet Open While Playing" fills the
@@ -1358,52 +1408,10 @@ struct AyahActionsSheet: View {
         .dynamicTypeSize(...DynamicTypeSize.large)
         .onChange(of: quranDisplay.keepAyahSheetOpenOnPlay) { _ in settings.hapticFeedback() }
         .onChange(of: quranDisplay.ayahSheetKeepsScreenOn) { _ in settings.hapticFeedback() }
-        // On the card, not the reciter row: picking a reciter of another riwayah can switch the
-        // display off Hafs, which removes the row, and a sheet whose host vanishes is torn down
-        // mid-choice.
+        // On the card, not the Choose Reciter tile: picking a reciter of another riwayah can switch
+        // the display off Hafs, which removes the tile, and a sheet whose host vanishes is torn down
+        // mid-choice. The card is always here.
         .reciterPickerSheet(isPresented: $showReciterPicker)
-    }
-
-    /// Choose Reciter with the current voice under it, the menus' `ChooseReciterMenuLabel` as a row.
-    /// The list opens on top of this sheet and closes on a pick, back to the tiles.
-    private var reciterRow: some View {
-        Button {
-            settings.hapticFeedback()
-            showReciterPicker = true
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "headphones")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(settings.accentColor.accent1)
-                    .frame(width: 22)
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Choose Reciter")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(settings.accentColor.accent1)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    Text(settings.currentReciterDisplayName)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-
-                Spacer(minLength: 8)
-
-                Image(systemName: "chevron.forward")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Reciter: \(settings.currentReciterDisplayName)")
-        .accessibilityHint("Opens the reciter list")
     }
 
     private func optionToggle(_ title: String, caption: String, systemImage: String,
@@ -1433,134 +1441,178 @@ struct AyahActionsSheet: View {
         .padding(.vertical, 8)
     }
 
+    /// The tiles, group by group in the menus' order, then Share Ayah closing the text group. Rows
+    /// are as wide as the sheet whatever a group holds (`AyahActionLayout`): three across, a pair as
+    /// halves, and never a tile by itself beside empty cells, which a plain three-column grid over
+    /// sixteen tiles gave Copy Ayah (Abu, 2026-11-18). A wider gap stands between groups where the
+    /// menus draw a divider.
     private var actionGrid: some View {
-        // Always three across: a stable grid beats the old adaptive 2/3/4 column count, which made the
-        // sheet re-arrange itself depending on whether the ayah happened to carry a note.
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3),
-            spacing: 10
-        ) {
-            ForEach(actions) { item in
-                switch item.kind {
-                case .repeatMenu:
-                    Menu {
-                        // The menus' Repeat Ayah submenu, header included.
-                        Text("Repeat Count")
-                            .foregroundStyle(.secondary)
+        // Mark, study and play can come out short (another riwayah has no playback, and may leave
+        // the study group one tile), so those three are settled together; the text group is always
+        // a pair or a three (`textActions`) and keeps its own block with Share Ayah.
+        let groups = AyahActionLayout.merged([markActions, studyActions, playActions])
 
-                        ForEach([2, 3, 5, 10, 15, 20], id: \.self) { count in
-                            Button {
-                                settings.hapticFeedback()
-                                quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id, repeatCount: count)
-                                closeAfterPlaying()
-                            } label: {
-                                Label("Repeat \(count)×", systemImage: "\(count).circle")
-                            }
-                        }
+        return VStack(spacing: Self.actionGroupSpacing) {
+            ForEach(groups, id: \.first?.id) { group in
+                actionRows(group)
+            }
 
-                        Button {
-                            settings.hapticFeedback()
-                            quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id, repeatCount: QuranPlayer.infiniteRepeat)
-                            closeAfterPlaying()
-                        } label: {
-                            Label("Repeat Forever", systemImage: "infinity")
-                        }
-                        // Play Custom Range is its own tile beside this one; it no longer ends this
-                        // menu as well (the menus' one-home rule, 2026-10-21).
-                    } label: {
-                        actionTileLabel(item.title, systemImage: item.systemImage)
+            VStack(spacing: Self.actionTileSpacing) {
+                actionRows(textActions)
+                shareRow
+            }
+        }
+    }
+
+    /// One group's tiles in rows that each fill the width.
+    private func actionRows(_ group: [AyahAction]) -> some View {
+        VStack(spacing: Self.actionTileSpacing) {
+            ForEach(AyahActionLayout.rows(of: group), id: \.first?.id) { row in
+                HStack(spacing: Self.actionTileSpacing) {
+                    ForEach(row) { item in
+                        tile(for: item)
                     }
-
-                case .playFromMenu:
-                    Menu {
-                        // Always closes, whatever Keep Sheet Open While Playing says: the recitation
-                        // carries on past this ayah (see `closeAfterPlaying`).
-                        ayahPlayFromMenuItems(surah: surah.id, ayah: ayah.id, settings: settings,
-                                              quranPlayer: quranPlayer) { dismiss() }
-                    } label: {
-                        actionTileLabel(item.title, systemImage: item.systemImage)
-                    }
-                    // Page first, top to bottom, wherever the tile sits: a tile low in the sheet opens
-                    // its menu upward, and the automatic order would put Page at the bottom.
-                    .fixedMenuOrder()
-
-                case .comparisonMenu where !settings.showQiraahDetails && !settings.isHafsDisplay:
-                    // Neither comparison applies (riwayah details off while another riwayah is still on
-                    // display): no tile. The menu below would have had no rows, and a single-choice tile
-                    // here opened the Qiraah Comparison the user had switched off.
-                    EmptyView()
-
-                case .comparisonMenu where !(settings.showQiraahDetails && settings.isHafsDisplay):
-                    // One choice (no riwayah details, or a non-Hafs display): the tile opens it directly
-                    // instead of a menu holding a single row.
-                    actionTile(item.title, systemImage: item.systemImage) {
-                        settings.hapticFeedback()
-                        onRequestSheet?(settings.isHafsDisplay ? .translations : .qiraah)
-                    }
-
-                case .comparisonMenu:
-                    Menu {
-                        if settings.showQiraahDetails {
-                            Button {
-                                settings.hapticFeedback()
-                                onRequestSheet?(.qiraah)
-                            } label: {
-                                Label("Qiraah Comparison", systemImage: "character.book.closed.fill.ar")
-                            }
-                        }
-                        if settings.isHafsDisplay {
-                            Button {
-                                settings.hapticFeedback()
-                                onRequestSheet?(.translations)
-                            } label: {
-                                Label("Translation Comparison", systemImage: "character.book.closed")
-                            }
-                        }
-                    } label: {
-                        actionTileLabel(item.title, systemImage: item.systemImage)
-                    }
-
-                case .noteMenu:
-                    // The menus' Note submenu: shown once the ayah has a note.
-                    Menu {
-                        Button {
-                            settings.hapticFeedback()
-                            onRequestSheet?(.note)
-                        } label: {
-                            Label("Edit Note", systemImage: "note.text")
-                        }
-
-                        Button(role: .destructive) {
-                            settings.hapticFeedback()
-                            withAnimation(.easeInOut) {
-                                settings.removeBookmarkNote(surah: surah.id, ayah: ayah.id)
-                            }
-                        } label: {
-                            Label("Remove Note", systemImage: "minus.circle")
-                        }
-                    } label: {
-                        actionTileLabel(item.title, systemImage: item.systemImage)
-                    }
-
-                case .highlightMenu:
-                    Menu {
-                        ayahHighlightMenuItems(surah: surah.id, ayah: ayah.id, settings: settings)
-                    } label: {
-                        actionTileLabel(item.title, systemImage: item.systemImage, tint: item.tint)
-                    }
-
-                case .settingsMenu:
-                    Menu {
-                        ayahDisplayMenuItems(refs: [HighlightedAyahRef(surahID: surah.id, ayahID: ayah.id)],
-                                             settings: settings, offersWordByWord: offersWordByWord)
-                    } label: {
-                        actionTileLabel(item.title, systemImage: item.systemImage)
-                    }
-
-                case .button:
-                    actionTile(item.title, systemImage: item.systemImage, destructive: item.destructive, action: item.action)
                 }
             }
+        }
+    }
+
+    /// A tile on its glass: Liquid Glass carrying a tenth of the tile's colour (the accent, or the
+    /// highlight the ayah wears), where the tiles were a flat fill of that tenth until 2026-11-18.
+    /// `inRow`, so a hot or 3 GB-class phone draws the plain fill: there are seventeen of these and
+    /// they scroll with the sheet.
+    @ViewBuilder
+    private func tile(for item: AyahAction) -> some View {
+        let tile = tileControl(for: item)
+            .conditionalGlassEffect(useColor: Self.actionTileTint,
+                                    customTint: actionTileColor(destructive: item.destructive, tint: item.tint),
+                                    inRow: true,
+                                    cornerRadius: Self.actionTileCornerRadius)
+        if let label = item.accessibilityLabel {
+            tile
+                .accessibilityLabel(label)
+                .accessibilityHint(item.accessibilityHint ?? "")
+        } else {
+            tile
+        }
+    }
+
+    /// The Button or Menu behind a tile. A comparison tile is listed only where a comparison applies
+    /// (`canCompare`), so its cases need not answer for "neither".
+    @ViewBuilder
+    private func tileControl(for item: AyahAction) -> some View {
+        switch item.kind {
+        case .repeatMenu:
+            Menu {
+                // The menus' Repeat Ayah submenu, header included.
+                Text("Repeat Count")
+                    .foregroundStyle(.secondary)
+
+                ForEach([2, 3, 5, 10, 15, 20], id: \.self) { count in
+                    Button {
+                        settings.hapticFeedback()
+                        quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id, repeatCount: count)
+                        closeAfterPlaying()
+                    } label: {
+                        Label("Repeat \(count)×", systemImage: "\(count).circle")
+                    }
+                }
+
+                Button {
+                    settings.hapticFeedback()
+                    quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id, repeatCount: QuranPlayer.infiniteRepeat)
+                    closeAfterPlaying()
+                } label: {
+                    Label("Repeat Forever", systemImage: "infinity")
+                }
+                // Play Custom Range is its own tile beside this one; it no longer ends this
+                // menu as well (the menus' one-home rule, 2026-10-21).
+            } label: {
+                actionTileLabel(item.title, systemImage: item.systemImage)
+            }
+
+        case .playFromMenu:
+            Menu {
+                // Always closes, whatever Keep Sheet Open While Playing says: the recitation
+                // carries on past this ayah (see `closeAfterPlaying`).
+                ayahPlayFromMenuItems(surah: surah.id, ayah: ayah.id, settings: settings,
+                                      quranPlayer: quranPlayer) { dismiss() }
+            } label: {
+                actionTileLabel(item.title, systemImage: item.systemImage)
+            }
+            // Page first, top to bottom, wherever the tile sits: a tile low in the sheet opens
+            // its menu upward, and the automatic order would put Page at the bottom.
+            .fixedMenuOrder()
+
+        case .comparisonMenu where !(settings.showQiraahDetails && settings.isHafsDisplay):
+            // One choice (no riwayah details, or a non-Hafs display): the tile opens it directly
+            // instead of a menu holding a single row.
+            actionTile(item.title, systemImage: item.systemImage) {
+                settings.hapticFeedback()
+                onRequestSheet?(settings.isHafsDisplay ? .translations : .qiraah)
+            }
+
+        case .comparisonMenu:
+            Menu {
+                if settings.showQiraahDetails {
+                    Button {
+                        settings.hapticFeedback()
+                        onRequestSheet?(.qiraah)
+                    } label: {
+                        Label("Qiraah Comparison", systemImage: "character.book.closed.fill.ar")
+                    }
+                }
+                if settings.isHafsDisplay {
+                    Button {
+                        settings.hapticFeedback()
+                        onRequestSheet?(.translations)
+                    } label: {
+                        Label("Translation Comparison", systemImage: "character.book.closed")
+                    }
+                }
+            } label: {
+                actionTileLabel(item.title, systemImage: item.systemImage)
+            }
+
+        case .noteMenu:
+            // The menus' Note submenu: shown once the ayah has a note.
+            Menu {
+                Button {
+                    settings.hapticFeedback()
+                    onRequestSheet?(.note)
+                } label: {
+                    Label("Edit Note", systemImage: "note.text")
+                }
+
+                Button(role: .destructive) {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) {
+                        settings.removeBookmarkNote(surah: surah.id, ayah: ayah.id)
+                    }
+                } label: {
+                    Label("Remove Note", systemImage: "minus.circle")
+                }
+            } label: {
+                actionTileLabel(item.title, systemImage: item.systemImage)
+            }
+
+        case .highlightMenu:
+            Menu {
+                ayahHighlightMenuItems(surah: surah.id, ayah: ayah.id, settings: settings)
+            } label: {
+                actionTileLabel(item.title, systemImage: item.systemImage, tint: item.tint)
+            }
+
+        case .settingsMenu:
+            Menu {
+                ayahDisplayMenuItems(refs: [HighlightedAyahRef(surahID: surah.id, ayahID: ayah.id)],
+                                     settings: settings, offersWordByWord: offersWordByWord)
+            } label: {
+                actionTileLabel(item.title, systemImage: item.systemImage)
+            }
+
+        case .button:
+            actionTile(item.title, systemImage: item.systemImage, destructive: item.destructive, action: item.action)
         }
     }
 
@@ -1575,9 +1627,8 @@ struct AyahActionsSheet: View {
                             AyahPreviewCard(surah: surah, ayahs: [ayah]).estimatedHeight(width: width)
                         }
 
+                    // The tiles, with Share Ayah closing their last group.
                     actionGrid
-
-                    shareRow
 
                     optionsCard
 

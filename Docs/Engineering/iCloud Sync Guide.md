@@ -182,7 +182,8 @@ Merge works on the JSON inside each blob, generically, so the backup code needs 
 
 | Rule | Used for | Behaviour |
 |---|---|---|
-| `unionScalars` | favourite surahs, reciters, saved ayahs, favourite books, tajweed lessons, lit sections | Set union, local order first. |
+| `unionScalars` | favourite surahs, reciters, saved ayahs, favourite books, tajweed lessons, lit sections, the tracker's exempt days and the days a pause ended on | Set union, local order first. |
+| `unionScalarsPerKey` | the tracker's two side records: prayers prayed in congregation, Sunnah prayers ticked (`[day: [name]]`) | Per day, the set union: what either side recorded was prayed. A day with nothing new keeps its stored order, so an identical merge rewrites nothing. |
 | `unionObjects(id:newer:)` | bookmarks (`surah`,`ayah`), hadith bookmarks, journal entries (`id`), reflections, lit themes, custom reminders, histories | Union by identity. On a collision the newer timestamp wins; with no timestamp the local one stays, unless only the incoming one carries a note. |
 | `maxNumber` | tasbih lifetime and free count, letter quiz streak | The larger. |
 | `maxPerKey` | tasbih by day, preset counts, surah open and play counts, activity log days, hadith book counts | Per key, the larger; nested dictionaries merge per inner key. |

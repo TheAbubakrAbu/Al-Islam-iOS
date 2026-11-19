@@ -94,6 +94,8 @@ enum AppLifecycle {
             // Play the adhan in-app on time while open (the scheduled notification covers the closed
             // case and can be delivered late by the system, especially on Mac/Catalyst).
             ForegroundAdhanPlayer.shared.reschedule()
+            // Marks made on a tracker widget while the app was away, and a new day's streak.
+            TrackerWidgetBridge.schedulePublish()
             // A Live Activity can only be requested from the foreground, so this is the one place that
             // can start the fasting countdown. It no-ops outside Ramadan, and outside the hour before
             // Fajr (suhoor) or Maghrib (iftar).

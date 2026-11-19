@@ -962,39 +962,84 @@ struct DuaCollectionView: View {
     private func duaRows(_ shown: [DuaItem], scrollable: Bool = true) -> some View {
         let searching = !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         return Section(header: duasHeader(shown)) {
-            ForEach(shown) { item in
-                // Duas are always trailing, however short. They are quoted Quran, and a line of Quran
-                // should sit where Arabic prose sits - not flush left like a UI label. (Dhikr keeps the
-                // measured behavior: leading while it fits on one line, trailing once it wraps.)
-                AdhkarRow(
-                    arabicText: item.arabicText,
-                    transliteration: item.transliteration,
-                    translation: item.translation,
-                    useQuranicFont: settings.useFontArabic,
-                    searchQuery: searchText,
-                    alwaysTrailing: true,
-                    speechEnabled: true,
-                    source: item.displayReference,
-                    rowID: scrollable ? item.id : nil,
-                    // Only while searching: with the whole collection showing, the row is already where it lives.
-                    onScrollTo: (searching && scrollable) ? {
-                        withAnimation { searchText = "" }
-                        scrollTarget = item.id
-                    } : nil,
-                    scrollLabel: String(localized: "Scroll To Dua")
-                )
-                .equatable()
-                .spokenRowWash(item.arabicText)
-
-                #if os(iOS)
-                // The Hisn al-Muslim rows carry a recitation: the play pill sits under the dua.
-                if let audio = item.audioURL {
-                    HisnDuaAudioButton(url: audio)
-                        .padding(.top, -4)
-                        .padding(.bottom, 4)
+            // One ForEach element is one row, of one type (`DuaListRow`, `OneRow`). It used to be the
+            // dua and, for some, a second row for its play pill: one or two views, which the List
+            // could only count by building every dua of the collection each time this screen's body
+            // ran, and it re-inserted the rows above and below after every scroll (see `OneRow`).
+            ForEach(DuaListRow.rows(for: shown)) { row in
+                OneRow {
+                    switch row {
+                    case .dua(let item):
+                        // Duas are always trailing, however short. They are quoted Quran, and a line of Quran
+                        // should sit where Arabic prose sits - not flush left like a UI label. (Dhikr keeps the
+                        // measured behavior: leading while it fits on one line, trailing once it wraps.)
+                        AdhkarRow(
+                            arabicText: item.arabicText,
+                            transliteration: item.transliteration,
+                            translation: item.translation,
+                            useQuranicFont: settings.useFontArabic,
+                            searchQuery: searchText,
+                            alwaysTrailing: true,
+                            speechEnabled: true,
+                            source: item.displayReference,
+                            rowID: scrollable ? item.id : nil,
+                            // Only while searching: with the whole collection showing, the row is already where it lives.
+                            onScrollTo: (searching && scrollable) ? {
+                                withAnimation { searchText = "" }
+                                scrollTarget = item.id
+                            } : nil,
+                            scrollLabel: String(localized: "Scroll To Dua")
+                        )
+                        .equatable()
+                    #if os(iOS)
+                    case .recitation(_, let audio):
+                        // The Hisn al-Muslim rows carry a recitation: the play pill sits under the dua.
+                        HisnDuaAudioButton(url: audio)
+                            .padding(.top, -4)
+                            .padding(.bottom, 4)
+                    #endif
+                    }
                 }
+                // On the row, where the List holds it. The pill's row passes no text, so it is never
+                // the one being read aloud and keeps the plain cell.
+                .spokenRowWash(row.spokenText)
+            }
+        }
+    }
+
+    /// One row of a collection's list: a dua, or the play pill under a dua that has a recitation.
+    private enum DuaListRow: Identifiable {
+        case dua(DuaItem)
+        #if os(iOS)
+        case recitation(of: DuaItem.ID, URL)
+        #endif
+
+        var id: String {
+            switch self {
+            case .dua(let item): return "dua:\(item.id)"
+            #if os(iOS)
+            case .recitation(let dua, _): return "recitation:\(dua)"
+            #endif
+            }
+        }
+
+        /// What `spokenRowWash` matches against the text being read aloud: the dua's own words, and
+        /// nothing for the pill's row.
+        var spokenText: String {
+            if case .dua(let item) = self { return item.arabicText }
+            return ""
+        }
+
+        static func rows(for items: [DuaItem]) -> [DuaListRow] {
+            var rows: [DuaListRow] = []
+            rows.reserveCapacity(items.count)
+            for item in items {
+                rows.append(.dua(item))
+                #if os(iOS)
+                if let audio = item.audioURL { rows.append(.recitation(of: item.id, audio)) }
                 #endif
             }
+            return rows
         }
     }
 

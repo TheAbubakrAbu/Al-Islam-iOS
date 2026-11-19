@@ -323,7 +323,10 @@ private struct SystemSearchField: UIViewRepresentable {
         }
 
         @objc func editingChanged(_ field: UITextField) {
-            let value = field.text ?? ""
+            // The query, not the field's raw text: without the invisible marks (see
+            // `removingInvisibleDirectionMarks`). The field keeps what it holds, so the caret and any
+            // composition are untouched; `updateUIView` reads the cleaned value as the echo it is.
+            let value = (field.text ?? "").removingInvisibleDirectionMarks
             rememberSentText(value)
             text = value
             SystemSearchField.alignForContent(field)
@@ -334,9 +337,35 @@ private struct SystemSearchField: UIViewRepresentable {
 
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
             textField.resignFirstResponder()
-            text = textField.text ?? ""
+            text = (textField.text ?? "").removingInvisibleDirectionMarks
             onSearchButtonClicked?()
             return true
+        }
+    }
+}
+
+// MARK: - Invisible marks in a query
+
+extension String {
+    /// The text without the invisible characters that only steer its direction: the left-to-right
+    /// and right-to-left marks, the Arabic letter mark, the embedding, override and isolate controls,
+    /// the zero-width space and the byte order mark. They ride along with text copied out of a chat or
+    /// a web page, and the keyboard itself can put one in front of what is typed (a right-to-left
+    /// mark before Latin letters while an Arabic keyboard is the active one). No search fold drops
+    /// them, so a query that carried one matched nothing: "angels" in al-Baqarah listed no ayah, and
+    /// "faith" in Bukhari's Book of Belief no hadith (2026-11-19). Every search field hands its
+    /// binding the text without them. The joiners (U+200C, U+200D) stay: they spell words.
+    var removingInvisibleDirectionMarks: String {
+        guard unicodeScalars.contains(where: Self.isInvisibleDirectionMark) else { return self }
+        var kept = String.UnicodeScalarView()
+        kept.append(contentsOf: unicodeScalars.filter { !Self.isInvisibleDirectionMark($0) })
+        return String(kept)
+    }
+
+    private static func isInvisibleDirectionMark(_ scalar: UnicodeScalar) -> Bool {
+        switch scalar.value {
+        case 0x061C, 0x200B, 0x200E, 0x200F, 0x202A...0x202E, 0x2066...0x2069, 0xFEFF: return true
+        default: return false
         }
     }
 }

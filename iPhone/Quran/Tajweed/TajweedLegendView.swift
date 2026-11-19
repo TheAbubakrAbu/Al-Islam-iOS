@@ -1,5 +1,6 @@
 #if os(iOS)
 import SwiftUI
+import CoreText
 
 struct TajweedLegendView: View {
     private let settings = Settings.shared
@@ -26,15 +27,23 @@ struct TajweedLegendView: View {
     /// switches (Abu, 2026-11-17: "one screen no scrolling ... a toolbar button that allows us to
     /// change between detailed and compact").
     @State private var showsFullLegend = false
+    /// The reader's legend sheet holds the switch itself and draws its button (`detailed`): its bar
+    /// then stays the same on every page of its picker, and this page adds nothing to it.
+    private let hostedDetailed: Binding<Bool>?
     /// The compact tile whose card is up (its popover), by rule id.
     @State private var inspectedRule: String?
 
     /// `opensFullLegend`: a door that leads to something only the full page has (Customize Tajweed
     /// Colors: the color pickers sit on the full page's rule cards) opens there instead of on the basic list.
-    init(showsDismissButton: Bool = true, opensFullLegend: Bool = false) {
+    /// `detailed`: the host owns the Compact / Detailed switch and its toolbar button.
+    init(showsDismissButton: Bool = true, opensFullLegend: Bool = false, detailed: Binding<Bool>? = nil) {
         self.showsDismissButton = showsDismissButton
+        self.hostedDetailed = detailed
         _showsFullLegend = State(initialValue: opensFullLegend)
     }
+
+    private var detailedBinding: Binding<Bool> { hostedDetailed ?? $showsFullLegend }
+    private var isDetailed: Bool { detailedBinding.wrappedValue }
 
     /// Every riwayah that ships a print-derived color pack - a cheap static check (`fileName`, no pack
     /// load), so building the picker menu never parses 19 packs.
@@ -45,7 +54,8 @@ struct TajweedLegendView: View {
     /// The legend the page leads with: the previewed riwayah when one is picked (nil = the Hafs guide),
     /// else whatever is actually displayed.
     private var effectiveLegendTag: String? {
-        guard let previewTag else { return currentRiwayahLegendTag }
+        // The compact page explains what is being read, never a previewed riwayah.
+        guard isDetailed, let previewTag else { return currentRiwayahLegendTag }
         let canonical = Settings.Riwayah.canonicalTag(previewTag)
         return canonical == Settings.Riwayah.canonicalTag(Settings.Riwayah.hafsTag) ? nil : previewTag
     }
@@ -910,7 +920,7 @@ struct TajweedLegendView: View {
 
     var body: some View {
         Group {
-            if showsFullLegend {
+            if isDetailed {
                 detailedLegend
             } else {
                 compactLegend
@@ -924,8 +934,8 @@ struct TajweedLegendView: View {
         .navigationTitle("Legend")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                if showsDismissButton {
+            if showsDismissButton {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button {
                         settings.hapticFeedback()
                         presentationMode.wrappedValue.dismiss()
@@ -936,8 +946,18 @@ struct TajweedLegendView: View {
                     .tint(settings.accentColor.color)
                 }
             }
-            ToolbarItem(placement: .primaryAction) {
-                legendModeButton
+            // In the reader's legend sheet the sheet draws the switch, the same on its three pages.
+            if hostedDetailed == nil {
+                ToolbarItem(placement: .primaryAction) {
+                    legendModeButton
+                }
+            }
+        }
+        .onChange(of: isDetailed) { detailed in
+            inspectedRule = nil
+            if !detailed {
+                previewTag = nil
+                compareAll = false
             }
         }
     }
@@ -1089,7 +1109,7 @@ struct TajweedLegendView: View {
         // page. Headless screenshots only.
         .onAppear {
             let args = ProcessInfo.processInfo.arguments
-            if args.contains("-legendDetailed") { showsFullLegend = true }
+            if args.contains("-legendDetailed") { detailedBinding.wrappedValue = true }
             if let index = args.firstIndex(of: "-legendInspect"), args.indices.contains(index + 1) {
                 let id = args[index + 1]
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { inspectedRule = id }
@@ -1309,25 +1329,9 @@ struct TajweedLegendView: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// The toolbar's mode switch: the grid's icon on the detailed page, the book's on the compact one.
+    /// The toolbar's mode switch (`LegendModeButton`, shared with the Signs page).
     private var legendModeButton: some View {
-        Button {
-            settings.hapticFeedback()
-            inspectedRule = nil
-            withAnimation(.easeInOut(duration: 0.2)) {
-                showsFullLegend.toggle()
-                if !showsFullLegend {
-                    // The compact page explains what is being read, never a previewed riwayah.
-                    previewTag = nil
-                    compareAll = false
-                }
-            }
-        } label: {
-            Image(systemName: showsFullLegend ? "square.grid.2x2" : "text.book.closed")
-                .font(.body.weight(.semibold))
-        }
-        .tint(settings.accentColor.color)
-        .accessibilityLabel(showsFullLegend ? "Compact Legend" : "Detailed Legend")
+        LegendModeButton(showsDetailed: isDetailed, toggle: detailedBinding)
     }
 
     /// The ordinary legend page: master toggle, preview card, the applicable legend, signs and
@@ -1710,7 +1714,7 @@ struct TajweedRuleExample: View {
 /// Builds the legend's example blocks; both legends (Hafs and a riwayah's) call it.
 enum TajweedLegendExamples {
     /// The surah's name and the reference, "Al-Fatihah 1:2".
-    private static func reference(surah: Int, ayah: Int) -> String {
+    static func reference(surah: Int, ayah: Int) -> String {
         let name = QuranData.shared.surah(surah)?.displayName ?? "\(surah)"
         return "\(name) \(surah):\(ayah)".localizedDigits
     }
@@ -1768,131 +1772,508 @@ enum TajweedLegendExamples {
 
 // MARK: - Stop signs
 
+/// The legends' toolbar switch between the one-screen tiles and the detailed page: the book on the
+/// tiles (open the details), the grid on the details (back to the tiles). The tajweed and the Signs
+/// pages share it, so the two read as one legend.
+struct LegendModeButton: View {
+    let showsDetailed: Bool
+    let action: () -> Void
+
+    init(showsDetailed: Bool, action: @escaping () -> Void) {
+        self.showsDetailed = showsDetailed
+        self.action = action
+    }
+
+    /// The button over the page's own switch: each page drops its open card and whatever only the
+    /// other form shows when the value changes, so the sheet that hosts a page can flip it too.
+    init(showsDetailed: Bool, toggle: Binding<Bool>) {
+        self.init(showsDetailed: showsDetailed) {
+            withAnimation(.easeInOut(duration: 0.2)) { toggle.wrappedValue.toggle() }
+        }
+    }
+
+    var body: some View {
+        Button {
+            Settings.shared.hapticFeedback()
+            action()
+        } label: {
+            Image(systemName: showsDetailed ? "square.grid.2x2" : "text.book.closed")
+                .font(.body.weight(.semibold))
+        }
+        .tint(Settings.shared.accentColor.color)
+        .accessibilityLabel(showsDetailed ? "Compact Legend" : "Detailed Legend")
+    }
+}
+
+extension StopSignInfo {
+    /// The example's words out of the app's Hafs text, whatever riwayah is being read, with the sign
+    /// that text does not carry added where the example asks (`Example.addsMark`, `endsWithNumber`);
+    /// nil without an example or before the Quran has loaded.
+    var examplePhrase: String? {
+        guard let place = example,
+              let ayah = QuranData.shared.ayah(surah: place.surah, ayah: place.ayah) else { return nil }
+        let tokens = WordTokens.tokens(in: ayah.rawArabicText(surahId: place.surah, qiraahOverride: Settings.Riwayah.hafsTag))
+        guard tokens.indices.contains(place.words.lowerBound), tokens.indices.contains(place.words.upperBound) else { return nil }
+        var words = Array(tokens[place.words])
+        if let added = place.addsMark, place.words.contains(added.word), let scalar = Unicode.Scalar(added.scalar) {
+            words[added.word - place.words.lowerBound].unicodeScalars.append(scalar)
+        }
+        if place.endsWithNumber { words.append(arabicNumberString(from: place.ayah)) }
+        return words.joined(separator: " ")
+    }
+}
+
 /// The reader Legend's third page (Abu, 2026-11-01: "add a third tajweed legend, stopping signs"): the
-/// mushaf's stop and pause signs as one list, in the basic legend's dress, each row opening in place to
-/// what the sign asks of the reciter, and a door to the Waqf lesson under them. The signs are printed in
-/// every riwayah's text, so unlike the two color codes this page is never "off".
+/// mushaf's stop and pause signs. Since 2026-11-17 it is built like the tajweed page (Abu: "make stop
+/// signs similar too like prettier"): one screen of tiles, each opening a card with what the sign asks
+/// and a place the Hafs mushaf prints it, and the toolbar's Detailed button for every card at once. The
+/// signs are printed in every riwayah's text, so unlike the two color codes this page is never "off".
+///
+/// 2026-11-18 (Abu: "signs is way too small, we can make it way bigger and better ... give examples
+/// for each"): the tiles are a grid that fills the screen, the sign large over its name, and every
+/// sign has an example.
 struct QuranStopSignsLegendView: View {
     private let settings = Settings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @ObservedObject private var systemSettings = SystemSettings.shared
 
-    /// The open rows, by sign id.
-    @State private var expanded: Set<String> = []
+    /// Every card at once instead of the tiles. Every open starts on the tiles, as the tajweed page does.
+    @State private var showsDetailed = false
+    /// The reader's legend sheet holds the switch and draws its button (see `TajweedLegendView.init`).
+    private let hostedDetailed: Binding<Bool>?
+    /// The tile whose card is up, by sign key.
+    @State private var inspectedSign: String?
 
-    private static let glyphColumnWidth: CGFloat = 56
+    init(detailed: Binding<Bool>? = nil) {
+        hostedDetailed = detailed
+    }
+
+    private var detailedBinding: Binding<Bool> { hostedDetailed ?? $showsDetailed }
+    private var isDetailed: Bool { detailedBinding.wrappedValue }
+
+    private struct SignSection: Identifiable {
+        let id: String
+        let title: String
+        let signs: [StopSignInfo]
+
+        /// Two tiles a row.
+        var rows: [SignRow] {
+            stride(from: 0, to: signs.count, by: 2).map { SignRow(signs: Array(signs[$0 ..< min($0 + 2, signs.count)])) }
+        }
+    }
+
+    private struct SignRow: Identifiable {
+        let signs: [StopSignInfo]
+        var id: String { signs.first?.key ?? "" }
+    }
+
+    /// Whether to stop, then the pause and the marks that are not stops (`StopSignInfo.all`'s order).
+    private static let sections: [SignSection] = [
+        SignSection(id: "stop", title: String(localized: "Stop or Read On"), signs: Array(StopSignInfo.all.prefix(6))),
+        SignSection(id: "marks", title: String(localized: "Pauses and Other Marks"), signs: Array(StopSignInfo.all.dropFirst(6))),
+    ]
+
+    private static let tileShape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+
+    private var accent: Color { settings.accentColor.color }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("The small signs over the words say where a reciter may stop, must stop, or must read on. Tap a sign to see what it asks.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                signList
-
-                NavigationLink {
-                    TajweedWaqfView()
-                } label: {
-                    Label("Learn About Waqf", systemImage: "text.book.closed")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(settings.accentColor.color)
-                .conditionalGlassEffect(rectangle: true)
+        Group {
+            if isDetailed {
+                detailedSigns
+            } else {
+                compactSigns
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-            .padding(.bottom, 28)
         }
         .sheetNowPlayingBar()
         .accentWashedBackground()
         .navigationTitle("Signs")
         .navigationBarTitleDisplayMode(.inline)
-    }
-
-    /// The rows in one bordered block, hairlines between them (`TajweedLegendView.basicRuleList`).
-    private var signList: some View {
-        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
-        return VStack(spacing: 0) {
-            ForEach(Array(StopSignInfo.all.enumerated()), id: \.element.id) { index, sign in
-                if index > 0 {
-                    Divider()
+        .toolbar {
+            // In the reader's legend sheet the sheet draws the switch, the same on its three pages.
+            if hostedDetailed == nil {
+                ToolbarItem(placement: .primaryAction) {
+                    LegendModeButton(showsDetailed: isDetailed, toggle: detailedBinding)
                 }
-                signRow(sign)
             }
         }
-        .background(shape.fill(Color.primary.opacity(0.04)))
-        .clipShape(shape)
-        .overlay(shape.stroke(Color.primary.opacity(0.12), lineWidth: 1))
+        .onChange(of: isDetailed) { _ in inspectedSign = nil }
+        #if DEBUG
+        // "-signsInspect <sign key>" opens that tile's card; "-signsDetailed" starts on the detailed
+        // page. Headless screenshots only.
+        .onAppear {
+            let args = ProcessInfo.processInfo.arguments
+            if args.contains("-signsDetailed") { detailedBinding.wrappedValue = true }
+            if let index = args.firstIndex(of: "-signsInspect"), args.indices.contains(index + 1) {
+                let key = args[index + 1]
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { inspectedSign = key }
+            }
+        }
+        #endif
     }
 
-    private func signRow(_ sign: StopSignInfo) -> some View {
-        let isOpen = expanded.contains(sign.id)
-        let accent = settings.accentColor.color
-        let quranFace = settings.quranDisplayUsesCustomArabicFace
-        return VStack(alignment: .leading, spacing: 0) {
-            Button {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    if isOpen { expanded.remove(sign.id) } else { expanded.insert(sign.id) }
-                }
-            } label: {
-                HStack(spacing: 12) {
-                    // A mushaf glyph in the Quran's own face: SF Rounded draws قلى as a word.
-                    Text(sign.symbol)
-                        .font(quranFace
-                              ? Font.arabic(settings.quranDisplayFontName, size: 22, relativeTo: .headline)
-                              : .headline.weight(.semibold))
-                        .arabicFontDesign(custom: quranFace)
-                        .foregroundStyle(accent)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .frame(width: Self.glyphColumnWidth)
+    // MARK: Tiles
 
+    /// The default page: every sign as a tile, all on one screen, the rows sharing whatever height the
+    /// screen has so the grid fills it; a screen too short for it (the medium detent, a large text
+    /// size) scrolls rather than clips.
+    private var compactSigns: some View {
+        ViewThatFits(in: .vertical) {
+            compactContent(fillsScreen: true)
+            ScrollView { compactContent(fillsScreen: false) }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    /// A tile is never shorter than its sign, name and gist need; on one screen it grows up to this.
+    private static let tileMaxHeight: CGFloat = 132
+
+    /// One flat column (lead, heading, rows, heading, rows), so the five rows share the spare height
+    /// equally: grouped by section, the section of two rows would get as much of it as the one of three.
+    private func compactContent(fillsScreen: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            lead
+
+            ForEach(Self.sections) { section in
+                sectionHeader(section.title)
+                    .padding(.top, 6)
+
+                ForEach(section.rows) { row in
+                    HStack(spacing: 8) {
+                        ForEach(row.signs) { tile($0) }
+                    }
+                    // On one screen a row takes its share of the height; scrolling, its own, and
+                    // either way both tiles of a row are as tall as the taller.
+                    .frame(maxHeight: fillsScreen ? Self.tileMaxHeight : nil)
+                    .fixedSize(horizontal: false, vertical: !fillsScreen)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 12)
+    }
+
+    /// The page's lead, in the glass card the tajweed page gives its switch: what to do here, and the
+    /// door to the waqf lesson where the tajweed card has its toggle.
+    private var lead: some View {
+        HStack(spacing: 12) {
+            leadIcon
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Stop Signs")
+                    .font(.subheadline.weight(.semibold))
+                Text("Tap a sign to see what it asks")
+                    .font(.caption)
+                    .foregroundStyle(Color.secondaryOnGlass)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            NavigationLink {
+                TajweedWaqfView()
+            } label: {
+                HStack(spacing: 3) {
+                    Text("Learn")
+                    Image(systemName: "chevron.forward")
+                        .font(.caption2.weight(.bold))
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(accent)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Capsule().fill(accent.opacity(0.14)))
+                .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Learn About Waqf")
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .conditionalGlassEffect(rectangle: true)
+    }
+
+    private var leadIcon: some View {
+        Image(systemName: "hand.raised.fill")
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(accent)
+            .frame(width: 32, height: 32)
+            .background(Circle().fill(accent.opacity(0.14)))
+            .accessibilityHidden(true)
+    }
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .textCase(.uppercase)
+            .padding(.leading, 4)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// A grid tile: the sign large on its own plate, which takes whatever height the row has to
+    /// spare, over the sign's name and what it asks in a few words.
+    private func tile(_ sign: StopSignInfo) -> some View {
+        let shape = Self.tileShape
+        return Button {
+            settings.hapticFeedback()
+            inspectedSign = sign.key
+        } label: {
+            VStack(spacing: 5) {
+                GeometryReader { plate in
+                    glyph(sign, size: min(max(plate.size.height * 0.68, 24), 46), fallback: .title.weight(.semibold))
+                        .frame(width: plate.size.width, height: plate.size.height)
+                }
+                .frame(minHeight: 40)
+                .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(accent.opacity(0.14)))
+
+                VStack(spacing: 1) {
                     Text(sign.title)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.vertical, 12)
+                    Text(sign.gist)
+                        .font(.caption)
+                        .foregroundStyle(Color.secondaryOnGlass)
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .padding(.horizontal, 2)
+            }
+            .padding(6)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(shape.fill(accent.opacity(0.08)))
+            .overlay(shape.strokeBorder(accent.opacity(0.25), lineWidth: 1))
+            .contentShape(shape)
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Shows what the sign means")
+        .popover(isPresented: inspectedBinding(sign.key)) {
+            if #available(iOS 16.4, *) {
+                signCard(sign)
+                    .presentationCompactAdaptation(.popover)
+            } else {
+                // Pre-16.4 a popover adapts to a sheet on iPhone anyway: give it a sensible height.
+                signCard(sign)
+                    .smallMediumSheetPresentation()
+            }
+        }
+    }
 
-                    Spacer(minLength: 6)
+    private func inspectedBinding(_ key: String) -> Binding<Bool> {
+        Binding(
+            get: { inspectedSign == key },
+            set: { isPresented in
+                if !isPresented, inspectedSign == key { inspectedSign = nil }
+            }
+        )
+    }
 
-                    Image(systemName: "chevron.down")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(isOpen ? 180 : 0))
-                        .padding(.trailing, 14)
+    /// The Quran face draws these well under the letters' size (they sit over and between words), so
+    /// beside ج and صلى they read as specks without a lift.
+    private static let glyphScale: [String: CGFloat] = ["mandatory": 1.35, "stopAtOne": 1.3, "ayahEnd": 1.15, "sujood": 1.9, "hizb": 1.9]
+
+    /// The sign in the Quran's own face (SF draws قلى as a word, not the mushaf's ligature), in the
+    /// accent. At its own size whatever frame it is centered in: the Quran face's line is nearly twice
+    /// its letters' height, so a sign fitted into a plate or a badge would shrink to make room for air.
+    /// A fixed size, since the plate and the badge it sits on are sized by the layout, not by the text size.
+    private func glyph(_ sign: StopSignInfo, size: CGFloat, fallback: Font) -> some View {
+        let quranFace = settings.quranDisplayUsesCustomArabicFace
+        let fontName = settings.quranDisplayFontName
+        let scaled = size * (Self.glyphScale[sign.key] ?? 1)
+        return Text(sign.symbol)
+            .font(quranFace ? Font.custom(fontName, fixedSize: scaled) : fallback)
+            .arabicFontDesign(custom: quranFace)
+            .foregroundStyle(accent)
+            .lineLimit(1)
+            .fixedSize()
+            .offset(y: quranFace ? Self.inkLift(sign.symbol, fontName: fontName) * scaled : 0)
+            // The title says it; VoiceOver would spell the glyph's letters.
+            .accessibilityHidden(true)
+    }
+
+    private static var inkLifts: [String: CGFloat] = [:]
+
+    /// How far to move a line of `text` so its INK sits in the middle of its frame, per point of font
+    /// size (down is positive). A centered Text centers its line box, and in the Quran face the ink
+    /// is nowhere near the middle of that: ج and قلى hang off the baseline and touched the bottom of
+    /// their plate while لا floated in the middle of its own.
+    private static func inkLift(_ text: String, fontName: String) -> CGFloat {
+        let key = fontName + "|" + text
+        if let known = inkLifts[key] { return known }
+        var lift: CGFloat = 0
+        let reference: CGFloat = 100
+        if let font = UIFont(name: fontName, size: reference) {
+            let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [.font: font]))
+            let ink = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+            if !ink.isNull, ink.height > 0 {
+                // Both measured up from the baseline: the middle of the ink, the middle of the line box.
+                lift = (ink.midY - (font.ascender + font.descender) / 2) / reference
+            }
+        }
+        inkLifts[key] = lift
+        return lift
+    }
+
+    /// The sign on an accent square, for the cards.
+    private func badge(_ sign: StopSignInfo, glyphSize: CGFloat, fallback: Font, side: CGFloat) -> some View {
+        glyph(sign, size: glyphSize, fallback: fallback)
+            .frame(width: side, height: side)
+            .background(RoundedRectangle(cornerRadius: side * 0.28, style: .continuous).fill(accent.opacity(0.14)))
+    }
+
+    // MARK: Card
+
+    /// A tile's card: the popover on the tiles, one row each on the detailed page.
+    /// Scrolls where the screen has less room beside the tile than the card is tall (a long note
+    /// under a two-line example, a large text size): a popover clips what does not fit, top and bottom.
+    private func signCard(_ sign: StopSignInfo) -> some View {
+        let card = signDetail(sign)
+            .padding(16)
+            .frame(width: 340, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+        return ViewThatFits(in: .vertical) {
+            card
+            ScrollView { card }
+        }
+    }
+
+    /// The sign's names, what it asks, and a place the Hafs mushaf prints it.
+    private func signDetail(_ sign: StopSignInfo) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 14) {
+                badge(sign, glyphSize: 36, fallback: .title.weight(.semibold), side: 68)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(sign.title)
+                        .font(.title3.weight(.semibold))
+                    // In Arabic and Urdu the title already is the Arabic term.
+                    if !AppLanguage.isArabicScript {
+                        if let arabic = sign.arabicName {
+                            Text(arabic)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        if let transliteration = sign.transliteration {
+                            Text(verbatim: transliteration)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
                 .fixedSize(horizontal: false, vertical: true)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityElement(children: .combine)
-            .accessibilityHint(isOpen ? "Hides what the sign means" : "Shows what the sign means")
 
-            if isOpen {
-                Text(sign.meaning)
-                    .font(.caption)
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.leading, Self.glyphColumnWidth + 12)
-                    .padding(.trailing, 14)
-                    .padding(.bottom, 12)
-                    .transition(.opacity)
+                Spacer(minLength: 0)
+            }
+
+            Text(sign.meaning)
+                .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let example = example(for: sign) {
+                example
+                    .padding(12)
+                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.04)))
+
+                if let note = sign.example?.note {
+                    Text(note)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
-        // The accent as a column behind the glyphs, the basic legend's swatch column.
-        .background(alignment: .leading) {
-            accent.opacity(0.10)
-                .frame(width: Self.glyphColumnWidth)
+    }
+
+    /// The example block: the words in the Hafs face, each word carrying the sign in the accent.
+    private func example(for sign: StopSignInfo) -> TajweedRuleExample? {
+        guard let place = sign.example, let phrase = sign.examplePhrase else { return nil }
+        // The whole word that carries the sign, not the sign alone: a mark draws in its letter's color
+        // (a lone accent ۛ came out white), and the word is the place the reciter stops or reads on.
+        // In the UIKit scope over a label-colored base, as the tajweed painter writes its colors.
+        let painted = NSMutableAttributedString(string: phrase, attributes: [.foregroundColor: UIColor.label])
+        let units = phrase as NSString
+        let accentColor = UIColor(accent)
+        for range in WordTokens.ranges(in: phrase) {
+            let carriesSign = (range.location ..< NSMaxRange(range)).contains { sign.marks.contains(UInt32(units.character(at: $0))) }
+            if carriesSign { painted.addAttribute(.foregroundColor, value: accentColor, range: range) }
         }
+        let styled = (try? AttributedString(painted, including: \.uiKit)) ?? AttributedString(phrase)
+        return TajweedRuleExample(
+            reference: TajweedLegendExamples.reference(surah: place.surah, ayah: place.ayah),
+            text: phrase,
+            styled: styled,
+            fontName: settings.quranArabicFontName(for: nil),
+            size: 28
+        )
+    }
+
+    // MARK: Detailed
+
+    /// Every card at once, under the same two headings, for reading the whole guide through.
+    private var detailedSigns: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                detailedLead
+
+                ForEach(Self.sections) { section in
+                    VStack(alignment: .leading, spacing: 8) {
+                        sectionHeader(section.title)
+                        ForEach(section.signs) { sign in
+                            signDetail(sign)
+                                .padding(14)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Self.tileShape.fill(accent.opacity(0.06)))
+                                .overlay(Self.tileShape.strokeBorder(accent.opacity(0.18), lineWidth: 1))
+                        }
+                    }
+                }
+
+                learnButton
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 28)
+        }
+    }
+
+    /// The detailed page's lead: what the signs are for, in the same glass card.
+    private var detailedLead: some View {
+        HStack(spacing: 12) {
+            leadIcon
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Stop Signs")
+                    .font(.subheadline.weight(.semibold))
+                Text("The small signs over the words say where a reciter may stop, must stop, or must read on.")
+                    .font(.caption)
+                    .foregroundStyle(Color.secondaryOnGlass)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .conditionalGlassEffect(rectangle: true)
+    }
+
+    private var learnButton: some View {
+        NavigationLink {
+            TajweedWaqfView()
+        } label: {
+            Label("Learn About Waqf", systemImage: "text.book.closed")
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(accent)
+        .conditionalGlassEffect(rectangle: true)
     }
 }
 

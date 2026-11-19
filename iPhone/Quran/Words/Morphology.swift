@@ -459,23 +459,25 @@ struct RootOccurrencesView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    @ViewBuilder
     private func occurrenceRow(_ row: Row) -> some View {
         let content = WordOccurrenceRow(
             surah: row.surah, ayah: row.ayah, tokens: row.tokens,
             isOrigin: highlight?.surah == row.surah.id && highlight?.ayah == row.ayah.id
         ).equatable()
-        if let onOpenAyah {
-            Button {
-                settings.hapticFeedback()
-                onOpenAyah(row.surah.id, row.ayah.id)
-            } label: {
+        // One view by its type, as a List row must be (see `OneRow`).
+        return OneRow {
+            if let onOpenAyah {
+                Button {
+                    settings.hapticFeedback()
+                    onOpenAyah(row.surah.id, row.ayah.id)
+                } label: {
+                    content
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            } else {
                 content
-                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-        } else {
-            content
         }
     }
 }

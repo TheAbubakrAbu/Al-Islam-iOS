@@ -723,27 +723,28 @@ struct AdhkarView: View {
         return dhikr.searchBlob.contains(normalizedQuery)
     }
 
-    @ViewBuilder
-    private func filteredAdhkarRow(_ dhikr: CommonDhikr) -> some View {
-        if matchesSearch(dhikr) {
-            let searching = !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            AdhkarRow(
-                arabicText: dhikr.arabicText,
-                transliteration: dhikr.transliteration,
-                translation: dhikr.translation,
-                useQuranicFont: settings.useFontArabic,
-                searchQuery: searchText,
-                speechEnabled: true,
-                rowID: dhikr.id,
-                // Only while searching: with the full list showing, the row is already where it lives.
-                onScrollTo: searching ? {
-                    withAnimation { searchText = "" }
-                    scrollTarget = dhikr.id
-                } : nil
-            )
-            .equatable()
-            .spokenRowWash(dhikr.arabicText)
-        }
+    /// One remembrance's row. The search filters the DATA (`adhkarRows`), not the row: a row that is
+    /// an `if` is not one view by its type, and the List then deletes and re-inserts the section's
+    /// off-screen rows when this page's body runs again after a scroll (measured 2026-11-17; see
+    /// `SummaryTileGrid.body`).
+    private func adhkarRow(_ dhikr: CommonDhikr) -> some View {
+        let searching = !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return AdhkarRow(
+            arabicText: dhikr.arabicText,
+            transliteration: dhikr.transliteration,
+            translation: dhikr.translation,
+            useQuranicFont: settings.useFontArabic,
+            searchQuery: searchText,
+            speechEnabled: true,
+            rowID: dhikr.id,
+            // Only while searching: with the full list showing, the row is already where it lives.
+            onScrollTo: searching ? {
+                withAnimation { searchText = "" }
+                scrollTarget = dhikr.id
+            } : nil
+        )
+        .equatable()
+        .spokenRowWash(dhikr.arabicText)
     }
 
     private var introductionSection: some View {
@@ -776,8 +777,8 @@ struct AdhkarView: View {
 
     @ViewBuilder
     private var adhkarRows: some View {
-        ForEach(commonDhikrItems) { dhikr in
-            filteredAdhkarRow(dhikr)
+        ForEach(commonDhikrItems.filter { matchesSearch($0) }) { dhikr in
+            adhkarRow(dhikr)
         }
 
         // The rows above vanish one by one as the query narrows; when they've ALL gone, say so

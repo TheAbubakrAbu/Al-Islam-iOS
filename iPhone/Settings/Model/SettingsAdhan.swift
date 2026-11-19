@@ -3512,6 +3512,21 @@ extension Settings {
     /// names) - the same set that may carry an adhan.
     static var trackablePrayerNames: Set<String> { adhanEligiblePrayerNames }
 
+    /// The trackable prayers of `date` as the list shows them - traveling-aware (combined rows) and
+    /// Friday-aware (Jumuah) - i.e. exactly the slots a person actually prays that day. Lives here,
+    /// not beside the tracker's views, because the whole-day fill and the widget need it too.
+    func trackableSlots(for date: Date) -> [Prayer] {
+        let list: [Prayer]
+        if Calendar.current.isDate(date, inSameDayAs: Date()), let prayers = prayers {
+            list = prayers.prayers
+        } else {
+            list = getPrayerTimes(for: date) ?? []
+        }
+        return list
+            .filter { Settings.trackablePrayerNames.contains($0.nameTransliteration) }
+            .sorted { $0.time < $1.time }
+    }
+
     /// The five obligatory prayers in day order. Every tracker statistic is computed against these
     /// canonical names, whatever name a prayer was *recorded* under.
     static let canonicalObligatoryPrayers = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
@@ -3750,6 +3765,11 @@ extension Settings {
         }
         tracker[key] = day.isEmpty ? nil : day
         savePrayerTracker(tracker)
+        // "In congregation" describes a prayer that was prayed: it goes with the mark when the mark
+        // is cleared or becomes missed, and stays through a change between on time and late.
+        if mark?.isPrayed != true, !target.isEmpty {
+            clearCongregation(of: target, forDayKey: key)
+        }
 
         // Yesterday's Isha still has live nags: they fire before TODAY's Fajr, under today's identifier
         // (marking Isha in the small hours records it on the previous civil day - see `trackerDate`).
@@ -3836,45 +3856,108 @@ extension Settings {
         return key >= prayerTrackerKey(for: start)
     }
 
-    /// Starts or ends the menses pause. Ending it writes every day of the finished range into the
-    /// exempt-days set (`pauseDaysToRecord`: none for a pause ended the day it began), so the pause
-    /// is remembered by the history views after it is over. Both
-    /// directions rebuild notifications, because the pause silences nagging reminders.
+    /// Starts or ends the menses pause. Ending it writes the finished days into the exempt-days set
+    /// and the day it ended on into the resume-days set (`pauseEnd`: nothing for a pause ended the
+    /// day it began), so the pause is remembered by the history views after it is over, and the
+    /// tracker is back the moment the switch goes off. Both directions rebuild notifications,
+    /// because the pause silences nagging reminders.
     func setMensesPause(_ active: Bool) {
         guard active != mensesPauseActive else { return }
         if active {
             mensesPauseStartStamp = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970
             mensesPauseActive = true
         } else {
-            var days = loadExemptDays()
-            for day in Self.pauseDaysToRecord(from: mensesPauseStartDate ?? Date(), endingAt: Date()) {
-                days.insert(prayerTrackerKey(for: day))
+            // The day the card is tracking, which is still yesterday until Fajr: that is the day
+            // that has to come back.
+            let end = Self.pauseEnd(from: mensesPauseStartDate ?? Date(), openDay: currentTrackerDay())
+            if !end.exempt.isEmpty {
+                var days = loadExemptDays()
+                for day in end.exempt { days.insert(prayerTrackerKey(for: day)) }
+                saveExemptDays(days)
             }
-            saveExemptDays(days)
+            if let resumed = end.resumeDay { markTrackerResumeDay(resumed) }
             mensesPauseActive = false
             mensesPauseStartStamp = 0
         }
         fetchPrayerTimes(notification: true)
     }
 
-    /// The days a pause ending at `end` writes into the exempt set: each day from its start through
-    /// the day it ends, whose earlier prayers fell inside the period (that last day's card offers
-    /// Track Today). A pause ended the day it began writes nothing: no period is shorter than a day,
-    /// so it was a mistaken tap or a look, and until 2026-10-28 it left that whole day exempt (a
-    /// reader's 4.6.5 report: on and off again, and the Adhan tab still read "Tracking paused").
-    static func pauseDaysToRecord(from start: Date, endingAt end: Date, calendar: Calendar = .current) -> [Date] {
+    /// What a pause begun on `start` leaves behind when it is switched off while `openDay` is the
+    /// day being tracked: every day from its start up to the day BEFORE the open one is exempt, and
+    /// the open day is the day tracking resumed on (`isTrackerResumeDay`). The open day is not
+    /// exempt: until 2026-11-18 it was, so the Adhan tab still hid the five prayers behind "Today
+    /// is exempt" with the switch already off (Abu: "if I turn it off, the tracking does not come
+    /// back"). A pause ended the day it began leaves nothing: no period is shorter than a day, so
+    /// it was a mistaken tap or a look (a reader's 4.6.5 report, fixed 2026-10-28).
+    static func pauseEnd(from start: Date, openDay: Date, calendar: Calendar = .current) -> (exempt: [Date], resumeDay: Date?) {
         var days: [Date] = []
         var day = calendar.startOfDay(for: start)
-        let last = calendar.startOfDay(for: end)
-        guard day < last else { return [] }
-        while day <= last {
+        let open = calendar.startOfDay(for: openDay)
+        guard day < open else { return ([], nil) }
+        while day < open {
             days.append(day)
             guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
             // Re-anchored: where the clocks skip midnight the running date drifts to 01:00 and
-            // the last day (today) was never reached, so it was left out of the exempt range.
+            // would never land on a start of day again.
             day = calendar.startOfDay(for: next)
         }
+        return (days, open)
+    }
+
+    // MARK: - Prayer tracker: the day a pause ended
+
+    /// Decoded resume-day set, cached like the exempt days.
+    private static var resumeDaysCache: Set<String>?
+
+    private func loadResumeDays() -> Set<String> {
+        if let cached = Self.resumeDaysCache { return cached }
+        let decoded = UserDataRescue.decode([String].self, from: trackerResumeDaysData, key: "prayerTrackerResumeDaysData") ?? []
+        let days = Set(decoded)
+        Self.resumeDaysCache = days
         return days
+    }
+
+    private func saveResumeDays(_ days: Set<String>) {
+        var pruned = days
+        if let cutoffDate = Calendar.current.date(byAdding: .day, value: -1850, to: Date()) {
+            let cutoff = prayerTrackerKey(for: cutoffDate)
+            pruned = pruned.filter { $0 >= cutoff }
+        }
+        Self.resumeDaysCache = pruned
+        trackerResumeDaysData = (try? JSONEncoder().encode(Array(pruned).sorted())) ?? Data()
+    }
+
+    /// Whether tracking resumed partway through `date`: a pause ended on it, or its exemption was
+    /// lifted from the card while it was the open day. Some of its prayers were not owed, and the
+    /// tracker cannot tell which, so the day can only ever count FOR the reader: complete, it is a
+    /// complete day; incomplete, it ends no streak and its unanswered prayers are not counted.
+    func isTrackerResumeDay(on date: Date) -> Bool {
+        loadResumeDays().contains(prayerTrackerKey(for: date))
+    }
+
+    /// Records `date` as a day tracking resumed on. See `isTrackerResumeDay`.
+    func markTrackerResumeDay(_ date: Date) {
+        var days = loadResumeDays()
+        guard days.insert(prayerTrackerKey(for: date)).inserted else { return }
+        saveResumeDays(days)
+    }
+
+    /// The prayer day "now" belongs to: YESTERDAY until today's Fajr begins (the rule the Adhan
+    /// tab's card states at `PrayerTrackerSection.trackerDay`), so the page's hero, the card and the
+    /// end of a pause never disagree about which day is the open one.
+    func currentTrackerDay(now: Date = Date()) -> Date {
+        let calendar = Calendar.current
+        let fajr: Date? = {
+            if let today = prayers, calendar.isDate(today.day, inSameDayAs: now) {
+                return today.prayers.first { $0.nameTransliteration == "Fajr" }?.time
+            }
+            return getPrayerTimes(for: calendar.startOfDay(for: now))?
+                .first { $0.nameTransliteration == "Fajr" }?.time
+        }()
+        if let fajr, now < fajr, let yesterday = calendar.date(byAdding: .day, value: -1, to: now) {
+            return yesterday
+        }
+        return now
     }
 
     /// Manual per-day correction from the history views. Days inside the ACTIVE pause range can't be
@@ -3897,6 +3980,222 @@ extension Settings {
         return day < Calendar.current.startOfDay(for: start)
     }
 
+    // MARK: - Prayer tracker: prayed in congregation
+
+    /// Decoded congregation record, cached like the tracker: day key to the canonical prayers of
+    /// that day prayed in congregation.
+    private static var congregationCache: [String: Set<String>]?
+
+    private func loadCongregation() -> [String: Set<String>] {
+        if let cached = Self.congregationCache { return cached }
+        let record = Self.decodeDayNameSets(trackerCongregationData, rescueKey: "prayerTrackerCongregationData")
+        Self.congregationCache = record
+        return record
+    }
+
+    private func saveCongregation(_ record: [String: Set<String>]) {
+        let pruned = prunedToTrackerRetention(record)
+        Self.congregationCache = pruned
+        trackerCongregationData = Self.encodeDayNameSets(pruned)
+    }
+
+    /// True when everything `prayerName` stands for was prayed in congregation on `date` (both
+    /// halves of a combined "Dhuhr/Asr" row; a "Jumuah" row reads the day's Dhuhr).
+    func isPrayedInCongregation(_ prayerName: String, on date: Date = Date()) -> Bool {
+        let target = Self.canonicalCoverage(of: prayerName)
+        guard !target.isEmpty, let day = loadCongregation()[prayerTrackerKey(for: date)] else { return false }
+        return target.isSubset(of: day)
+    }
+
+    /// Records or clears "in congregation" for `prayerName` on `date`. Only a prayer marked prayed
+    /// can carry it: on an unmarked or missed prayer this does nothing.
+    func setPrayedInCongregation(_ prayerName: String, on date: Date = Date(), _ inCongregation: Bool) {
+        let target = Self.canonicalCoverage(of: prayerName)
+        guard !target.isEmpty else { return }
+        if inCongregation, !isPrayerMarkedPrayed(prayerName, on: date) { return }
+        let key = prayerTrackerKey(for: date)
+        var record = loadCongregation()
+        var day = record[key] ?? []
+        let before = day
+        if inCongregation { day.formUnion(target) } else { day.subtract(target) }
+        guard day != before else { return }
+        record[key] = day.isEmpty ? nil : day
+        saveCongregation(record)
+    }
+
+    private func clearCongregation(of target: Set<String>, forDayKey key: String) {
+        var record = loadCongregation()
+        guard var day = record[key], !day.isDisjoint(with: target) else { return }
+        day.subtract(target)
+        record[key] = day.isEmpty ? nil : day
+        saveCongregation(record)
+    }
+
+    // MARK: - Prayer tracker: Sunnah prayers
+
+    /// Decoded Sunnah record, cached like the tracker: day key to the `SunnahPrayer` raw values
+    /// ticked that day. Kept as raw strings, so a prayer a later build adds survives a save here.
+    private static var sunnahCache: [String: Set<String>]?
+
+    private func loadSunnah() -> [String: Set<String>] {
+        if let cached = Self.sunnahCache { return cached }
+        let record = Self.decodeDayNameSets(trackerSunnahData, rescueKey: "prayerTrackerSunnahData")
+        Self.sunnahCache = record
+        return record
+    }
+
+    /// The Sunnah prayers ticked on `date`.
+    func sunnahPrayed(on date: Date = Date()) -> Set<SunnahPrayer> {
+        guard let day = loadSunnah()[prayerTrackerKey(for: date)] else { return [] }
+        return Set(day.compactMap(SunnahPrayer.init(rawValue:)))
+    }
+
+    func setSunnahPrayed(_ prayer: SunnahPrayer, on date: Date = Date(), _ prayed: Bool) {
+        let key = prayerTrackerKey(for: date)
+        var record = loadSunnah()
+        var day = record[key] ?? []
+        let before = day
+        if prayed { day.insert(prayer.rawValue) } else { day.remove(prayer.rawValue) }
+        guard day != before else { return }
+        record[key] = day.isEmpty ? nil : day
+        let pruned = prunedToTrackerRetention(record)
+        Self.sunnahCache = pruned
+        trackerSunnahData = Self.encodeDayNameSets(pruned)
+    }
+
+    /// The two parallel records as they are stored, for the insight numbers: one consistent read
+    /// instead of a lookup per day.
+    func trackerExtrasSnapshot() -> (congregation: [String: Set<String>], sunnah: [String: Set<String>]) {
+        (loadCongregation(), loadSunnah())
+    }
+
+    /// `[day: [name]]` as sets. A blob that does not decode is kept under "<key>.corrupt" before
+    /// the empty record comes back, as the marks are (`decodePrayerTracker`).
+    static func decodeDayNameSets(_ data: Data, rescueKey: String? = nil) -> [String: Set<String>] {
+        guard !data.isEmpty else { return [:] }
+        if let decoded = try? JSONDecoder().decode([String: [String]].self, from: data) {
+            return decoded.mapValues(Set.init)
+        }
+        if let rescueKey { UserDataRescue.quarantine(defaultsKey: rescueKey, data: data, error: nil) }
+        return [:]
+    }
+
+    /// Sorted names and sorted keys: the same record always encodes to the same bytes.
+    static func encodeDayNameSets(_ record: [String: Set<String>]) -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return (try? encoder.encode(record.mapValues { $0.sorted() })) ?? Data()
+    }
+
+    /// The tracker's five years of history, applied to a day-keyed record (`savePrayerTracker`).
+    private func prunedToTrackerRetention<Value>(_ record: [String: Value]) -> [String: Value] {
+        guard let cutoffDate = Calendar.current.date(byAdding: .day, value: -1850, to: Date()) else { return record }
+        let cutoff = prayerTrackerKey(for: cutoffDate)
+        return record.filter { $0.key >= cutoff }
+    }
+
+    // MARK: - Prayer tracker: when a prayer's time runs out
+
+    /// When the time of the slot named `slotName` runs out on `day`: sunrise for Fajr, the next
+    /// obligatory prayer for Dhuhr, Asr and Maghrib, and the middle of the night for Isha (Sahih
+    /// Muslim 612). A combined traveling row ends where its second prayer does, and Jumuah where
+    /// Dhuhr does. Nil when the times cannot be worked out (no location yet).
+    ///
+    /// This decides only whether a tap ASKS: past this moment a tap on the slot offers "on time or
+    /// late" instead of recording on time, and the answer is the reader's own. The app still does
+    /// not rule on where Isha's time ends (the nagging deadlines keep both midnight and Fajr).
+    func prayerWindowEnd(forSlot slotName: String, on day: Date) -> Date? {
+        guard let last = Self.canonicalObligatoryPrayers.last(where: {
+            Self.canonicalCoverage(of: slotName).contains($0)
+        }) else { return nil }
+        guard let here = currentLocation,
+              let full = getPrayerTimes(for: day, at: here, fullPrayers: true) else { return nil }
+        func time(_ names: String...) -> Date? {
+            full.first(where: { names.contains($0.nameTransliteration) })?.time
+        }
+        switch last {
+        case "Fajr": return time("Shurooq")
+        case "Dhuhr": return time("Asr")
+        case "Asr": return time("Maghrib")
+        case "Maghrib": return time("Isha")
+        default:
+            return optionalPrayers(for: day, at: here, duha: false, islamicMidnight: true, lastThird: false)
+                .first(where: { $0.nameTransliteration == "Islamic Midnight" })?.time
+        }
+    }
+
+    /// Whether the slot's time on `day` is over at `now`. A day before yesterday needs no
+    /// astronomy: every one of its prayers ended long ago.
+    func prayerWindowHasEnded(forSlot slotName: String, on day: Date, at now: Date = Date()) -> Bool {
+        let calendar = Calendar.current
+        let dayStart = calendar.startOfDay(for: day)
+        let today = calendar.startOfDay(for: now)
+        if dayStart > today { return false }
+        if let gap = calendar.dateComponents([.day], from: dayStart, to: today).day, gap >= 2 { return true }
+        guard let end = prayerWindowEnd(forSlot: slotName, on: day) else {
+            // No times to judge by: yesterday is over, today is given the benefit of the doubt.
+            return dayStart < today
+        }
+        return now >= end
+    }
+
+    // MARK: - Prayer tracker: a whole day, and the missed prayers
+
+    /// Fills in or clears every slot of `day` at once. With a mark, only the slots still unmarked
+    /// (and already begun) take it: an answer already given is never overwritten by a bulk fill.
+    /// With nil the whole day is cleared.
+    func setWholeDay(_ mark: PrayerMark?, on day: Date) {
+        for slot in trackableSlots(for: day) {
+            let name = slot.nameTransliteration
+            if let mark {
+                guard prayerMark(for: name, on: day) == nil,
+                      canMarkPrayer(startingAt: slot.time, on: day) else { continue }
+                setPrayerMark(name, on: day, mark: mark)
+            } else if prayerMark(for: name, on: day) != nil {
+                setPrayerMark(name, on: day, mark: nil)
+            }
+        }
+        // A day recorded under other names than today's slots (marked while traveling, read at
+        // home): whatever is still stored goes too.
+        if mark == nil {
+            for canonical in Self.canonicalObligatoryPrayers where prayerMark(for: canonical, on: day) != nil {
+                setPrayerMark(canonical, on: day, mark: nil)
+            }
+        }
+    }
+
+    /// One prayer recorded as missed, for the make-up list.
+    struct MissedPrayer: Identifiable, Equatable {
+        let dayKey: String
+        let date: Date
+        /// One of the five canonical names.
+        let prayerName: String
+        var id: String { dayKey + "|" + prayerName }
+    }
+
+    /// Every prayer marked missed, newest day first and in day order within a day. Exempt days are
+    /// left out: nothing was owed on them.
+    func missedPrayers() -> [MissedPrayer] {
+        let snapshot = trackerSnapshot()
+        var result: [MissedPrayer] = []
+        for (key, stored) in snapshot.marks where Self.isWellFormedTrackerDayKey(key) {
+            if snapshot.exemptDays.contains(key) { continue }
+            if let start = snapshot.activePauseStartKey, key >= start { continue }
+            let marks = Self.canonicalMarks(of: stored)
+            guard marks.values.contains(.missed),
+                  let date = Self.prayerTrackerDayFormatter.date(from: key) else { continue }
+            for name in Self.canonicalObligatoryPrayers where marks[name] == .missed {
+                result.append(MissedPrayer(dayKey: key, date: date, prayerName: name))
+            }
+        }
+        let order = Dictionary(uniqueKeysWithValues: Self.canonicalObligatoryPrayers.enumerated().map { ($1, $0) })
+        return result.sorted {
+            $0.dayKey != $1.dayKey
+                ? $0.dayKey > $1.dayKey
+                : (order[$0.prayerName] ?? 0) < (order[$1.prayerName] ?? 0)
+        }
+    }
+
     // MARK: - Prayer tracker: statistics support
 
     /// The tracker's day key for `date` - public counterpart of `prayerTrackerKey` for the stats engine.
@@ -3904,12 +4203,20 @@ extension Settings {
         prayerTrackerKey(for: date)
     }
 
+    /// The day a tracker key names, at midday (so it reads back to the same key on a night the
+    /// clocks change). Nil for anything that is not a well-formed key.
+    func trackerDate(forDayKey key: String) -> Date? {
+        guard Self.isWellFormedTrackerDayKey(key),
+              let start = Self.prayerTrackerDayFormatter.date(from: key) else { return nil }
+        return start.addingTimeInterval(12 * 3600)
+    }
+
     /// One consistent snapshot of everything the statistics are computed from. Handing the decoded
     /// dictionaries out once lets the stats engine walk a whole year without a lookup-per-day through
     /// the accessor methods.
-    func trackerSnapshot() -> (marks: [String: [String: PrayerMark]], exemptDays: Set<String>, activePauseStartKey: String?) {
+    func trackerSnapshot() -> (marks: [String: [String: PrayerMark]], exemptDays: Set<String>, activePauseStartKey: String?, resumeDays: Set<String>) {
         let startKey = mensesPauseActive ? mensesPauseStartDate.map(prayerTrackerKey(for:)) : nil
-        return (loadPrayerTracker(), loadExemptDays(), startKey)
+        return (loadPrayerTracker(), loadExemptDays(), startKey, loadResumeDays())
     }
 
     /// Drops the presence-checked tracker caches so the next read re-decodes from storage. Needed by the
@@ -3918,6 +4225,9 @@ extension Settings {
     static func invalidateTrackerCaches() {
         prayerTrackerCache = nil
         exemptDaysCache = nil
+        resumeDaysCache = nil
+        congregationCache = nil
+        sunnahCache = nil
     }
 
     /// The first day that has any mark or exemption - "tracking since". Nil until something is

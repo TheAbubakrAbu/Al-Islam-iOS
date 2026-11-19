@@ -567,7 +567,7 @@ final class TafsirStore {
 
 #endif
 
-struct AyahContextMenuModifier: ViewModifier {
+struct AyahContextMenuModifier<Attachment: MenuAttachment>: ViewModifier {
     private let settings = Settings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @ObservedObject private var quranContent = QuranContent.shared
@@ -892,7 +892,7 @@ struct AyahContextMenuModifier: ViewModifier {
                 settings.hapticFeedback()
                 WordClipPlayer.shared.toggle(surah: surah, ayah: ayah)
             } label: {
-                Label("Play Word by Word", systemImage: "text.word.spacing")
+                WordByWordMenuLabel(surah: surah, ayah: ayah)
             }
             #endif
 
@@ -948,7 +948,9 @@ struct AyahContextMenuModifier: ViewModifier {
             settings.hapticFeedback()
             showSelectTextSheet = true
         } label: {
-            Label("Select Text", systemImage: "highlighter")
+            // Not `highlighter`: that is the Highlight row's, three rows up in this same menu. The
+            // actions sheet's symbol for it, so the row and the tile are one thing (2026-11-18).
+            Label("Select Text", systemImage: "selection.pin.in.out")
         }
 
         Button {
@@ -992,20 +994,11 @@ struct AyahContextMenuModifier: ViewModifier {
         let surahObj = quranData.surah(surah)
 
         #if os(iOS)
-        Group {
-            if let gridTileAction {
-                GridTileMenu(primaryAction: gridTileAction) {
-                    menuItems(surahObj: surahObj)
-                } label: {
-                    content
-                }
-            } else {
-                content
-                    .contextMenu {
-                        menuItems(surahObj: surahObj)
-                    }
-            }
-        }
+        // The menu goes on through `Attachment`, a type the caller picked, never an `if` here: this
+        // modifier sits on List rows (bookmarks, history, search results), and a branch made each of
+        // them a row the List builds to count (see `MenuAttachment`, `OneRow`).
+        content
+            .modifier(Attachment(items: AnyView(menuItems(surahObj: surahObj)), tileAction: gridTileAction))
             .overlay(alignment: .topTrailing) {
                 if inlineEllipsis {
                     Menu {
@@ -1154,10 +1147,38 @@ extension View {
         scrollToSurahID: Binding<Int>,
         lastRead: Bool = false,
         ayahOfTheDay: Bool = false,
-        inlineEllipsis: Bool = false,
-        gridTileAction: (() -> Void)? = nil
+        inlineEllipsis: Bool = false
     ) -> some View {
-        self.modifier(AyahContextMenuModifier(
+        self.modifier(AyahContextMenuModifier<RowMenuAttachment>(
+            surah: surah,
+            ayah: ayah,
+            favoriteSurahs: favoriteSurahs,
+            bookmarkedAyahs: bookmarkedAyahs,
+            searchText: searchText,
+            scrollToSurahID: scrollToSurahID,
+            lastRead: lastRead,
+            ayahOfTheDay: ayahOfTheDay,
+            inlineEllipsis: inlineEllipsis,
+            gridTileAction: nil
+        ))
+    }
+
+    /// The same menu on a grid TILE: the tile's whole face opens it on a hold, and a tap is
+    /// `gridTileAction` (`TileMenuAttachment`). The watch has no tile menu and draws the tile alone.
+    func ayahContextMenuModifier(
+        surah: Int,
+        ayah: Int,
+        favoriteSurahs: Set<Int>,
+        bookmarkedAyahs: Set<String>,
+        searchText: Binding<String>,
+        scrollToSurahID: Binding<Int>,
+        lastRead: Bool = false,
+        ayahOfTheDay: Bool = false,
+        inlineEllipsis: Bool = false,
+        gridTileAction: @escaping () -> Void
+    ) -> some View {
+        #if os(iOS)
+        self.modifier(AyahContextMenuModifier<TileMenuAttachment>(
             surah: surah,
             ayah: ayah,
             favoriteSurahs: favoriteSurahs,
@@ -1169,6 +1190,20 @@ extension View {
             inlineEllipsis: inlineEllipsis,
             gridTileAction: gridTileAction
         ))
+        #else
+        self.modifier(AyahContextMenuModifier<RowMenuAttachment>(
+            surah: surah,
+            ayah: ayah,
+            favoriteSurahs: favoriteSurahs,
+            bookmarkedAyahs: bookmarkedAyahs,
+            searchText: searchText,
+            scrollToSurahID: scrollToSurahID,
+            lastRead: lastRead,
+            ayahOfTheDay: ayahOfTheDay,
+            inlineEllipsis: inlineEllipsis,
+            gridTileAction: nil
+        ))
+        #endif
     }
 }
 

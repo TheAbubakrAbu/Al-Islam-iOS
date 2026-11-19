@@ -216,25 +216,28 @@ struct OpenScreenLink<Destination: View, Label: View>: View {
     }
 
     var body: some View {
-        if isHere {
-            VStack(alignment: .leading, spacing: 4) {
-                label()
+        // One view by its type: this is a List row nearly everywhere it is used (see `OneRow`).
+        OneRow {
+            if isHere {
+                VStack(alignment: .leading, spacing: 4) {
+                    label()
 
-                if !captionless {
-                    Text(alreadyHereCaption ?? screen.alreadyHereCaption)
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                    if !captionless {
+                        Text(alreadyHereCaption ?? screen.alreadyHereCaption)
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
-            }
-            // Greyed, unfocusable, and announced as unavailable rather than silently inert.
-            .foregroundStyle(.secondary)
-            .opacity(0.55)
-            .allowsHitTesting(false)
-            .accessibilityElement(children: .combine)
-            .accessibilityHint(alreadyHereCaption ?? screen.alreadyHereCaption)
-        } else {
-            NavigationLink(destination: LazyDestination(build: destination)) {
-                label()
+                // Greyed, unfocusable, and announced as unavailable rather than silently inert.
+                .foregroundStyle(.secondary)
+                .opacity(0.55)
+                .allowsHitTesting(false)
+                .accessibilityElement(children: .combine)
+                .accessibilityHint(alreadyHereCaption ?? screen.alreadyHereCaption)
+            } else {
+                NavigationLink(destination: LazyDestination(build: destination)) {
+                    label()
+                }
             }
         }
     }

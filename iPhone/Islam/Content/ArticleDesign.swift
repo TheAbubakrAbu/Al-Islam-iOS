@@ -103,6 +103,35 @@ extension View {
         self
         #endif
     }
+
+    /// `articleCardRow()` for a row that is a card only for some of its data (an article's blocks:
+    /// the lead is a card, a paragraph is not). One chain with the values chosen inside it, never
+    /// `if isCard { row.articleCardRow() } else { row }`: that branch would make the row one the
+    /// List has to build to count (see `OneRow`).
+    func articleCardRow(when isCard: Bool) -> some View {
+        modifier(ArticleCardRowWhen(isCard: isCard))
+    }
+}
+
+/// See `articleCardRow(when:)`.
+private struct ArticleCardRowWhen: ViewModifier {
+    @Environment(\.appearance) private var appearance
+    @Environment(\.skyPageFill) private var skyPageFill
+
+    let isCard: Bool
+
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content
+            // Not a card: what the List-wide `themedListRowBackground()` gives a row. A row's own
+            // background wins over the List-wide one, so a bare nil would wipe the theme's.
+            .listRowBackground(isCard ? Color.clear : (skyPageFill ? SkyPageFill.rowColor : appearance.themeRowBackground))
+            .listRowInsets(isCard ? EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0) : nil)
+            .listRowSeparator(isCard ? .hidden : .automatic)
+        #else
+        content
+        #endif
+    }
 }
 
 // MARK: - Paragraph

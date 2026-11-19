@@ -1308,15 +1308,18 @@ struct HadithBookView: View {
                 }
             }
 
-            ForEach(hadiths.prefix(rankedMatchLimit)) { hadith in
-                if let chapter = data.chapter(of: hadith) {
-                    chapterLink(chapter, data: data, scrollToHadithId: hadith.idInBook) {
-                        // The ranked rows paint the words the engine matched (a corrected spelling,
-                        // say), or a corrected hit would show no highlight at all.
-                        HadithRow(book: book, hadith: hadith,
-                                  searchText: inBookRanked.highlight.isEmpty ? searchText : inBookRanked.highlight,
-                                  compact: true).equatable()
-                    }
+            // Each hadith's chapter is found HERE, not by an `if let` in the row: a row that may be
+            // nothing is one the List has to build to count (see `OneRow`).
+            let placed = hadiths.prefix(rankedMatchLimit).compactMap { hadith in
+                data.chapter(of: hadith).map { (hadith: hadith, chapter: $0) }
+            }
+            ForEach(placed, id: \.hadith.id) { match in
+                chapterLink(match.chapter, data: data, scrollToHadithId: match.hadith.idInBook) {
+                    // The ranked rows paint the words the engine matched (a corrected spelling,
+                    // say), or a corrected hit would show no highlight at all.
+                    HadithRow(book: book, hadith: match.hadith,
+                              searchText: inBookRanked.highlight.isEmpty ? searchText : inBookRanked.highlight,
+                              compact: true).equatable()
                 }
             }
 
@@ -1363,38 +1366,43 @@ struct HadithBookView: View {
     /// Opening a chapter, in whichever navigation this screen is running: a push on iPhone, a swap of the
     /// detail column on iPad/Mac. The Quran tab's `quranNavigationLink`, for chapters - every row that
     /// opens a chapter (browsing, search matches, AI matches, last read) goes through this one place.
-    @ViewBuilder
+    ///
+    /// The branch sits inside `OneRow`: these are List rows, and a bare branch made each of them a row
+    /// the List builds to count and re-inserts after a scroll (see `OneRow`). A caller's cell modifiers
+    /// (`rowSelectionHighlight`, swipes, `id`) go on what this returns, as they always did.
     private func chapterLink<Label: View>(
         _ chapter: HadithBookData.Chapter,
         data: HadithBookData,
         scrollToHadithId: Int? = nil,
         @ViewBuilder label: () -> Label
     ) -> some View {
-        if usesColumnNavigation {
-            Button {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    selectChapter(chapter, data: data, scrollToHadithId: scrollToHadithId)
-                }
-            } label: {
-                HStack(spacing: 8) {
-                    label()
-                        .frame(maxWidth: .infinity, alignment: .leading)
+        OneRow {
+            if usesColumnNavigation {
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) {
+                        selectChapter(chapter, data: data, scrollToHadithId: scrollToHadithId)
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        label()
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
-                    Image(systemName: "chevron.forward")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
+                        Image(systemName: "chevron.forward")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .contentShape(Rectangle())
                 }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        } else {
-            NavigationLink {
-                LazyDestination {
-                    HadithChapterView(book: book, bookData: data, chapter: chapter, scrollToHadithId: scrollToHadithId)
+                .buttonStyle(.plain)
+            } else {
+                NavigationLink {
+                    LazyDestination {
+                        HadithChapterView(book: book, bookData: data, chapter: chapter, scrollToHadithId: scrollToHadithId)
+                    }
+                } label: {
+                    label()
                 }
-            } label: {
-                label()
             }
         }
     }
@@ -2329,6 +2337,11 @@ struct HadithChapterView: View {
             searchText = ""
             visibility.visibleIDs = []
             highlightedHadithID = nil
+            // The selection is this chapter's. A Previous/Next swap used to keep select mode on
+            // with the old chapter's picks counted in the title and nothing for the bar to act on
+            // (`syncChapterFromIndex` already ended it; the surah reader's swap does too).
+            isSelectingHadiths = false
+            selectedHadithIDs = []
         }
         onChapterChanged?(target)
         if recordLastRead, let first = hadiths.first {
@@ -2513,6 +2526,10 @@ struct HadithChapterView: View {
     // surah reader's select mode, for hadiths.
     @State private var isSelectingHadiths = false
     @State private var selectedHadithIDs: Set<Int> = []
+    /// The hadith checked last by hand, which a hold on another runs the selection FROM
+    /// (`extendHadithSelection`). Only trusted while it is still selected, so the places that empty
+    /// the selection need not clear it.
+    @State private var selectionAnchorID: Int?
 
     private var isSearchActive: Bool {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -2860,8 +2877,7 @@ struct HadithChapterView: View {
             Button {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) {
-                    isSelectingHadiths = true
-                    selectedHadithIDs = []
+                    beginSelectingHadiths()
                 }
             } label: {
                 Label("Select Hadiths", systemImage: "checkmark.circle")
@@ -2953,19 +2969,20 @@ struct HadithChapterView: View {
 
                         ForEach(numbered) { match in
                             Section {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(match.caption)
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.7)
+                                selectableRow(
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text(match.caption)
+                                            .font(.caption2.weight(.semibold))
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.7)
 
-                                    // No `searchText`: highlighting the digits inside the narration is
-                                    // noise - the number is the row's identity here, not a text match.
-                                    HadithRow(book: book, hadith: match.hadith, showsChapterPosition: true).equatable()
-                                }
-                                .contentShape(Rectangle())
-                                .onTapGesture { openMatch(match.hadith, scrollProxy: scrollProxy) }
+                                        // No `searchText`: highlighting the digits inside the narration is
+                                        // noise - the number is the row's identity here, not a text match.
+                                        chapterRow(match.hadith)
+                                    },
+                                    for: match.hadith
+                                ) { openMatch(match.hadith, scrollProxy: scrollProxy) }
                             }
                         }
                     }
@@ -2981,9 +2998,7 @@ struct HadithChapterView: View {
 
                         ForEach(aiOnly, id: \.row) { hadith in
                             Section {
-                                HadithRow(book: book, hadith: hadith, showsChapterPosition: true).equatable()
-                                    .contentShape(Rectangle())
-                                    .onTapGesture { openMatch(hadith, scrollProxy: scrollProxy) }
+                                selectableRow(chapterRow(hadith), for: hadith) { openMatch(hadith, scrollProxy: scrollProxy) }
                             }
                         }
                     }
@@ -3014,11 +3029,10 @@ struct HadithChapterView: View {
                     ForEach(matches) { hadith in
                         Section {
                             // The ranked rows paint the words the engine matched (a corrected spelling, say).
-                            HadithRow(book: book, hadith: hadith,
-                                      searchText: chapterRanked.isEmpty || chapterRanked.highlight.isEmpty ? searchText : chapterRanked.highlight,
-                                      showsChapterPosition: true).equatable()
-                                .contentShape(Rectangle())
-                                .onTapGesture { openMatch(hadith, scrollProxy: scrollProxy) }
+                            selectableRow(
+                                chapterRow(hadith, searchText: chapterRanked.isEmpty || chapterRanked.highlight.isEmpty ? searchText : chapterRanked.highlight),
+                                for: hadith
+                            ) { openMatch(hadith, scrollProxy: scrollProxy) }
                         }
                     }
                 } else {
@@ -3035,35 +3049,17 @@ struct HadithChapterView: View {
                     // that stood here only ever flashed.
                     ForEach(textReady ? shownHadiths : []) { hadith in
                         Section {
-                            let isSelected = selectedHadithIDs.contains(hadith.idInBook)
-                            HadithRow(book: book, hadith: hadith, searchText: searchText, showsChapterPosition: true).equatable()
-                                // The ayah list's tap grammar: selecting mode builds the selection
-                                // (accent tint); otherwise tap-to-mark (grey attention tint). The row's
-                                // own controls (number pill, menu) win their taps either way.
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    settings.hapticFeedback()
-                                    if isSelectingHadiths {
-                                        withAnimation(.easeInOut(duration: 0.1)) {
-                                            if isSelected {
-                                                selectedHadithIDs.remove(hadith.idInBook)
-                                            } else {
-                                                selectedHadithIDs.insert(hadith.idInBook)
-                                            }
-                                        }
-                                    } else {
-                                        withAnimation(.easeInOut(duration: 0.15)) {
-                                            highlightedHadithID = highlightedHadithID == hadith.idInBook ? nil : hadith.idInBook
-                                        }
-                                    }
+                            // The ayah list's tap grammar: selecting mode builds the selection
+                            // (accent tint, see `selectableRow`); otherwise tap-to-mark (grey
+                            // attention tint). Outside select mode the row's own controls (number
+                            // pill, menu) win their taps.
+                            selectableRow(chapterRow(hadith, searchText: searchText), for: hadith,
+                                          isMarked: highlightedHadithID == hadith.idInBook) {
+                                settings.hapticFeedback()
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    highlightedHadithID = highlightedHadithID == hadith.idInBook ? nil : hadith.idInBook
                                 }
-                                // The ayah row's wash, tint for tint, filling the whole cell. It was a
-                                // 14 pt box 6 pt outside the text, which left a 10 pt rim of card around
-                                // the mark (Abu, 2026-10-09: the ayah's highlight was fixed, "fix it for
-                                // hadith"). Select mode shows only the selection, as the ayah list does.
-                                .rowWash(isSelectingHadiths
-                                         ? (isSelected ? ReaderRowTint.accent(settings.accentColor.color, defaultView: settings.defaultView) : nil)
-                                         : (highlightedHadithID == hadith.idInBook ? ReaderRowTint.attention : nil))
+                            }
                                 .id("chapter-hadith-\(hadith.idInBook)")
                                 .onAppear { visibility.visibleIDs.insert(hadith.idInBook) }
                                 .onDisappear { visibility.visibleIDs.remove(hadith.idInBook) }
@@ -3163,6 +3159,128 @@ struct HadithChapterView: View {
 
     // MARK: Multi-select (the surah reader's bulk actions, for hadiths)
 
+    /// Turns select mode on with nothing in it (the title menu's Select Hadiths). The surah
+    /// reader's `beginSelectingAyahs`: a search keeps its results under select mode but not its
+    /// keyboard (the bar it is typed in gives way to the action bar, and a field that leaves the
+    /// screen focused never reports losing focus, so the flag is cleared by hand), and the reading
+    /// mark goes, a tint that would read as one more pick. Callers wrap this in their own animation.
+    private func beginSelectingHadiths() {
+        endEditing()
+        if isChapterSearchFocused { isChapterSearchFocused = false }
+        highlightedHadithID = nil
+        selectedHadithIDs = []
+        selectionAnchorID = nil
+        isSelectingHadiths = true
+    }
+
+    /// Toggle one hadith's place in the selection. The one checked last is where a hold runs from
+    /// (`extendHadithSelection`); unchecking it leaves nothing to run from.
+    private func toggleHadithSelection(_ idInBook: Int) {
+        if selectedHadithIDs.contains(idInBook) {
+            selectedHadithIDs.remove(idInBook)
+            if selectionAnchorID == idInBook { selectionAnchorID = nil }
+        } else {
+            selectedHadithIDs.insert(idInBook)
+            selectionAnchorID = idInBook
+        }
+    }
+
+    /// A hold in select mode, the surah reader's `extendSelection`: every hadith from the one
+    /// checked last through the held one joins the selection, in the order the list shows them
+    /// (the chapter's own, across its parts, or a search's results), and the held hadith is where
+    /// the next hold runs from. With nothing to run from it is a slow tap and toggles the hadith.
+    /// A run only ever adds.
+    private func extendHadithSelection(_ idInBook: Int) {
+        guard let anchor = selectionAnchorID, anchor != idInBook, selectedHadithIDs.contains(anchor) else {
+            toggleHadithSelection(idInBook)
+            return
+        }
+        let order = listedSearchHadithIDs ?? allChapterHadiths.map(\.idInBook)
+        guard let from = order.firstIndex(of: anchor), let to = order.firstIndex(of: idInBook) else {
+            toggleHadithSelection(idInBook)
+            return
+        }
+        selectedHadithIDs.formUnion(order[min(from, to)...max(from, to)])
+        selectionAnchorID = idInBook
+    }
+
+    /// The hadiths a search lists that can be picked, in the order the list shows them (by number,
+    /// the AI matches, then the matches), nil with no query: what Select All and a hold's run
+    /// cover while a search narrows the list, not the chapter behind it. A number match from
+    /// another chapter is left out (see `chapterRow`). The same rules the list is built by, from
+    /// the same state.
+    private var listedSearchHadithIDs: [Int]? {
+        guard isSearchActive else { return nil }
+        let numbered = numberMatches().map(\.hadith)
+        let allMatches = chapterMatches()
+        var ids: [Int] = []
+        var seen = Set<Int>()
+        func add(_ hadith: HadithBookData.Hadith) {
+            guard hadith.chapterId == chapter.id, seen.insert(hadith.idInBook).inserted else { return }
+            ids.append(hadith.idInBook)
+        }
+        numbered.forEach(add)
+        #if os(iOS)
+        let shownRows = Set(allMatches.map(\.row)).union(numbered.map(\.row))
+        chapterAIHits.filter { !shownRows.contains($0.row) }.forEach(add)
+        #endif
+        allMatches.prefix(Self.wholeChapterLimit).forEach(add)
+        return ids
+    }
+
+    /// A hadith as the reading list and its search draw it, wired for select mode. The selection
+    /// is this chapter's, so a number match from ANOTHER chapter takes no part in it.
+    private func chapterRow(_ hadith: HadithBookData.Hadith, searchText: String = "") -> some View {
+        let id = hadith.idInBook
+        let selectable = hadith.chapterId == chapter.id
+        return HadithRow(
+            book: book, hadith: hadith, searchText: searchText, showsChapterPosition: true,
+            isSelecting: isSelectingHadiths && selectable,
+            isSelected: isSelectingHadiths && selectedHadithIDs.contains(id),
+            onToggleSelection: {
+                withAnimation(.easeInOut(duration: 0.1)) { toggleHadithSelection(id) }
+            }
+        )
+        .equatable()
+    }
+
+    /// Select mode's gestures and wash on a row, a reading row or a search result alike: a tap
+    /// toggles the hadith, a hold selects the run up to it, and only the selection is tinted (the
+    /// ayah row's wash, filling the whole cell: Abu, 2026-10-09, "fix it for hadith"). Outside
+    /// select mode the row keeps its own tap (`plainTap`) and its reading mark (`isMarked`), and
+    /// the hold is masked off so the row's long-press menu opens. A search result used to jump to
+    /// its hadith on a tap in select mode too, which ended the search being picked from.
+    private func selectableRow<Row: View>(_ row: Row, for hadith: HadithBookData.Hadith, isMarked: Bool = false,
+                                          plainTap: @escaping () -> Void) -> some View {
+        let id = hadith.idInBook
+        let selectable = hadith.chapterId == chapter.id
+        let isSelected = isSelectingHadiths && selectedHadithIDs.contains(id)
+        let standsAside = isSelectingHadiths && !selectable
+        return row
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard isSelectingHadiths else {
+                    plainTap()
+                    return
+                }
+                guard selectable else { return }
+                settings.hapticFeedback()
+                withAnimation(.easeInOut(duration: 0.1)) { toggleHadithSelection(id) }
+            }
+            .highPriorityGesture(
+                LongPressGesture(minimumDuration: 0.45).onEnded { _ in
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut(duration: 0.1)) { extendHadithSelection(id) }
+                },
+                including: isSelectingHadiths && selectable ? .all : .subviews
+            )
+            .opacity(standsAside ? 0.45 : 1)
+            .allowsHitTesting(!standsAside)
+            .rowWash(isSelectingHadiths
+                     ? (isSelected ? ReaderRowTint.accent(settings.accentColor.color, defaultView: settings.defaultView) : nil)
+                     : (isMarked ? ReaderRowTint.attention : nil))
+    }
+
     private var selectedHadiths: [HadithBookData.Hadith] {
         allChapterHadiths.filter { selectedHadithIDs.contains($0.idInBook) }
     }
@@ -3178,6 +3296,12 @@ struct HadithChapterView: View {
     private func bulkToggleHadithBookmarks() {
         let targets = selectedHadiths
         if allSelectedBookmarked {
+            // One hadith: the single removal's own question, which names it ("Remove 1 bookmarks?"
+            // otherwise).
+            if targets.count == 1, let only = targets.first {
+                withAnimation(.easeInOut) { store.toggleBookmarkOrConfirm(book: book, hadith: only) }
+                return
+            }
             let noted = targets.filter { store.note(slug: book.slug, idInBook: $0.idInBook) != nil }.count
             RemovalConfirmation.present(
                 title: noted > 0 ? String(localized: "Remove \(targets.count) bookmarks and delete \(noted) notes?") : String(localized: "Remove \(targets.count) bookmarks?"),
@@ -3243,16 +3367,24 @@ struct HadithChapterView: View {
 
     /// The whole chapter on screen, or none of it. In a long chapter what is on screen is its part:
     /// Select All adds that part to whatever is already picked, and a second tap clears everything.
+    /// While a search narrows the list it is the results (`listedSearchHadithIDs`): it used to
+    /// take the chapter behind them.
     private var selectAllButton: some View {
         let shown = shownHadiths
-        let allSelected = isInParts
-            ? !shown.isEmpty && shown.allSatisfy { selectedHadithIDs.contains($0.idInBook) }
-            : !allChapterHadiths.isEmpty && selectedHadithIDs.count >= allChapterHadiths.count
+        let listed = listedSearchHadithIDs
+        let allSelected: Bool
+        if let listed {
+            allSelected = !listed.isEmpty && listed.allSatisfy { selectedHadithIDs.contains($0) }
+        } else if isInParts {
+            allSelected = !shown.isEmpty && shown.allSatisfy { selectedHadithIDs.contains($0.idInBook) }
+        } else {
+            allSelected = !allChapterHadiths.isEmpty && selectedHadithIDs.count >= allChapterHadiths.count
+        }
 
         return Button {
             settings.hapticFeedback()
             withAnimation(.easeInOut) {
-                selectedHadithIDs = allSelected ? [] : selectedHadithIDs.union(shown.map(\.idInBook))
+                selectedHadithIDs = allSelected ? [] : selectedHadithIDs.union(listed ?? shown.map(\.idInBook))
             }
         } label: {
             Text(allSelected ? "Deselect All" : "Select All")
@@ -3567,9 +3699,11 @@ struct HadithChapterPickerSheet: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .themedListRowBackground()
                     .id(chapter.id)
                 }
+                // On the ForEach, not on each row: the modifier is a branch, and on a row it makes
+                // the row one the List builds to count (see `OneRow`). Here it paints the same cells.
+                .themedListRowBackground()
             }
             .applyConditionalListStyle()
             .compactListSectionSpacing()

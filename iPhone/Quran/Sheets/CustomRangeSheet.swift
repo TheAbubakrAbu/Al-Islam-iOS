@@ -481,16 +481,8 @@ struct PlayCustomRangeSheet: View {
         return name
     }
 
-    /// A range longer than this previews as its two ends over a Show All row.
+    /// A range longer than this folds to its two ends, so the row under them reads "Show All".
     private static let previewEndsCount = 2
-
-    /// The rows the preview draws from `ayahs`: all of them while the range is short or expanded,
-    /// else its first and last ayah.
-    private func previewAyahs(of ayahs: [RangeAyah]) -> [RangeAyah] {
-        guard !showsEveryAyah, ayahs.count > Self.previewEndsCount,
-              let first = ayahs.first, let last = ayahs.last else { return ayahs }
-        return [first, last]
-    }
 
     // MARK: - Text fields
 
@@ -1291,53 +1283,142 @@ struct PlayCustomRangeSheet: View {
 
     // MARK: - Preview
 
-    /// The first and last ayah of the range, or every ayah once the row under them asks for it.
+    /// The two ends of the range in a box that never changes height, or every ayah in full once the
+    /// row under them asks for it.
+    ///
+    /// The preview sits ABOVE the From and To steppers, so anything here that grows or shrinks moves
+    /// them: with the ends drawn in full, each step swapped a one-line ayah for a three-line one and
+    /// the plus slid out from under the finger mid-run (Abu, 2026-11-18: "the button changes so it's
+    /// annoying having to keep clicking it ... we give it line limit 1 for both"). Folded, both ends
+    /// hold one line, a range of one ayah keeps the same box, and the row under them is always
+    /// there, so nothing above the steppers moves whatever the range.
     @ViewBuilder
     private var previewSection: some View {
         let ayahs = rangeAyahs
         Section {
-            ForEach(previewAyahs(of: ayahs)) { item in
-                previewRow(item)
+            if showsEveryAyah {
+                ForEach(ayahs) { item in
+                    previewRow(item)
+                }
+            } else if let first = ayahs.first, let last = ayahs.last {
+                previewEndsRow(first: first, last: last)
             }
-            if ayahs.count > Self.previewEndsCount {
+            if !ayahs.isEmpty {
                 previewToggleRow(count: ayahs.count)
             }
         } header: {
             // A plain String here is drawn verbatim, so it goes through the catalog; the Arabic
-            // interface names the surah in Arabic.
+            // interface names the surah in Arabic. One line: a range that runs into another surah
+            // has a longer title, and a wrapped header would move the steppers too.
             SectionIconHeader(previewHeader, icon: "book.closed")
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
     }
 
-    /// Under the two ends of a longer range: shows every ayah in place, and folds them back.
+    /// Under the preview: shows every ayah in full in place, and folds them back to the two ends.
+    /// "Show All" counts a longer range; one or two ayahs have nothing more to list, only more text.
     private func previewToggleRow(count: Int) -> some View {
-        Button {
+        let folds = count > Self.previewEndsCount
+        return Button {
             settings.hapticFeedback()
             withAnimation(.easeInOut(duration: 0.25)) { showsEveryAyah.toggle() }
         } label: {
-            Label(showsEveryAyah ? "Show First and Last Only" : "Show All \(count) Ayahs",
-                  systemImage: showsEveryAyah ? "chevron.up" : "chevron.down")
-                .font(.subheadline.weight(.medium))
-                .foregroundColor(settings.accentColor.color)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
+            Group {
+                if showsEveryAyah {
+                    Label(folds ? "Show First and Last Only" : "Show Less", systemImage: "chevron.up")
+                } else if folds {
+                    Label("Show All \(count) Ayahs", systemImage: "chevron.down")
+                } else {
+                    Label("Show More", systemImage: "chevron.down")
+                }
+            }
+            .font(.subheadline.weight(.medium))
+            .foregroundColor(settings.accentColor.color)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("customRangePreviewToggle")
     }
 
-    /// One ayah the range will play: its label (number + mushaf page) over the full Arabic text.
+    private var previewArabicSize: CGFloat { UIFont.preferredFont(forTextStyle: .title3).pointSize }
+
+    /// One line of the Quran face at the preview's size. Pinned, because a mark the face lacks
+    /// (drawn by a fallback font) makes that one ayah's line a few points taller than the others.
+    private var previewLineHeight: CGFloat {
+        ceil(UIFont(name: settings.quranDisplayFontName, size: previewArabicSize)?.lineHeight ?? previewArabicSize * 1.8)
+    }
+
+    private func previewArabic(_ item: RangeAyah) -> some View {
+        Text(item.ayah.displayArabicText(surahId: item.surah.id, clean: settings.cleanArabicText, qiraahOverride: settings.displayQiraahForArabic))
+            .font(Font.arabic(settings.quranDisplayFontName, size: previewArabicSize))
+            .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
+            .multilineTextAlignment(.trailing)
+            .foregroundColor(.primary)
+    }
+
+    private func previewLabelLine(_ item: RangeAyah) -> some View {
+        Text(previewLabel(item))
+            .font(.caption.weight(.medium))
+            .foregroundColor(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+    }
+
+    /// One end of the folded preview: its label over the first line of the ayah.
+    private func previewEnd(_ item: RangeAyah) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            previewLabelLine(item)
+
+            previewArabic(item)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .frame(height: previewLineHeight)
+                // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
+                .environment(\.layoutDirection, .leftToRight)
+        }
+    }
+
+    /// The folded preview, one row: the first ayah over the last, a line each. A range of one ayah
+    /// is drawn in the same box (the two-ends form laid out but hidden under it), with the room for
+    /// two lines of that ayah, so stepping between one ayah and two moves nothing either.
+    private func previewEndsRow(first: RangeAyah, last: RangeAyah) -> some View {
+        let ends = VStack(alignment: .leading, spacing: 8) {
+            previewEnd(first)
+            Divider()
+            previewEnd(last)
+        }
+        return Group {
+            if first.id == last.id {
+                ends
+                    .hidden()
+                    .accessibilityHidden(true)
+                    .overlay(alignment: .topLeading) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            previewLabelLine(first)
+
+                            previewArabic(first)
+                                .lineLimit(2)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                .frame(height: previewLineHeight * 2, alignment: .top)
+                                .environment(\.layoutDirection, .leftToRight)
+                        }
+                    }
+            } else {
+                ends
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    /// One ayah the range will play, in full: its label (number + mushaf page) over the Arabic text.
     private func previewRow(_ item: RangeAyah) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(previewLabel(item))
-                .font(.caption.weight(.medium))
-                .foregroundColor(.secondary)
+            previewLabelLine(item)
 
-            Text(item.ayah.displayArabicText(surahId: item.surah.id, clean: settings.cleanArabicText, qiraahOverride: settings.displayQiraahForArabic))
-                .font(Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .title3).pointSize))
-                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
-                .multilineTextAlignment(.trailing)
-                .foregroundColor(.primary)
+            previewArabic(item)
                 // Its ideal height, never a line: a List row sometimes offered the Quran face one
                 // line and cut a long ayah off with an ellipsis.
                 .fixedSize(horizontal: false, vertical: true)

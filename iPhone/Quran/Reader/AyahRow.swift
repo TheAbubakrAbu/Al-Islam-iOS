@@ -126,10 +126,18 @@ struct AyahRow: View, Equatable {
     var onToggleHighlight: (() -> Void)? = nil
 
     /// Multi-select mode: the reader is picking several ayahs for a bulk action (share/copy/bookmark/note/
-    /// beginner). Taps toggle membership instead of highlighting, and a checkmark circle leads the row.
+    /// beginner). Taps toggle membership instead of highlighting, and a checkmark circle stands in the
+    /// header where the ▶ and ⋯ were (`selectionMark`).
     var isSelecting: Bool = false
     var isSelected: Bool = false
     var onToggleSelection: (() -> Void)? = nil
+    /// A HOLD in select mode: the host selects the run from the ayah checked last through this one,
+    /// or toggles this one when there is nothing to run from (`SurahView.extendSelection`). Nil
+    /// falls back to the plain toggle.
+    var onExtendSelection: (() -> Void)? = nil
+    /// Starts select mode with THIS ayah already checked: the ⋯ menu's "Select Ayahs". Nil where the
+    /// host has no select mode, and the row is left out of the menu there.
+    var onBeginSelecting: (() -> Void)? = nil
 
     /// Fired when the ayah's actual text block (Arabic / translations) scrolls into view, not just the
     /// row's number/menu header. Drives last-read tracking and automatic khatm marking so an ayah only
@@ -203,11 +211,21 @@ struct AyahRow: View, Equatable {
 
     /// High priority makes the sheet open during the hold, before the reading surface's tap ends.
     /// Apply only to the text and reference pill, so each menu control owns its own gestures.
+    ///
+    /// In select mode a hold selects, in both readers (the page's long press does the same): the
+    /// run from the ayah checked last through this one, or this ayah alone when there is no such
+    /// ayah (`onExtendSelection`). Until 2026-11-19 the gesture was masked off while selecting, and
+    /// a press held past about three quarters of a second did nothing at all, since the row's tap
+    /// gives up by then.
     private var actionsHoldGesture: some Gesture {
         LongPressGesture(minimumDuration: 0.45)
             .onEnded { _ in
                 settings.hapticFeedback()
-                requestSheet(.actions)
+                if isSelecting {
+                    (onExtendSelection ?? onToggleSelection)?()
+                } else {
+                    requestSheet(.actions)
+                }
             }
     }
 
@@ -925,6 +943,26 @@ struct AyahRow: View, Equatable {
             .padding(slop)
             .contentShape(Rectangle())
     }
+
+    /// Select mode's circle, in the header slot the ▶ and ⋯ leave: their 25 pt glyph in their 28 pt
+    /// square, so the header is exactly as tall as it was and nothing under it moves. Not a button
+    /// to the finger: the row's own tap selects, the pill's too. VoiceOver gets one all the same
+    /// ("Selected, Select 2:30, button"), since the row's tap is not something it can find: the bare
+    /// symbol read as an image and said nothing about the ayah or what a tap would do.
+    private var selectionMark: some View {
+        let reference = "\(surah.id):\(ayah.id)"
+        return Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 25, height: 25)
+            .foregroundStyle(isSelected ? settings.accentColor.color : Color.secondary)
+            .frame(width: 28, height: 28)
+            .accessibilityElement()
+            .accessibilityLabel(Text("Select \(reference)"))
+            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+            .accessibilityAction { onToggleSelection?() }
+            .accessibilityIdentifier("ayahSelectionMark")
+    }
     #endif
 
     #if os(watchOS)
@@ -957,11 +995,15 @@ struct AyahRow: View, Equatable {
         defaultView: Bool,
         themeGround: Color? = nil
     ) -> Color? {
-        if isPlaying || (isSelecting && isSelected) {
-            return ReaderRowTint.accent(accent, defaultView: defaultView)
-        }
-        if !isSelecting && isMarked {
-            return ReaderRowTint.attention
+        // Select mode shows the SELECTION and nothing else momentary. The reciting ayah wears the
+        // selected ayah's own accent, so with audio playing it read as one more checked ayah while the
+        // count said otherwise (2026-11-19); the reading mark stood down for the same reason on
+        // 2026-11-16. The speaker badge on the pill and the player bar still say what is reciting.
+        if isSelecting {
+            if isSelected { return ReaderRowTint.accent(accent, defaultView: defaultView) }
+        } else {
+            if isPlaying { return ReaderRowTint.accent(accent, defaultView: defaultView) }
+            if isMarked { return ReaderRowTint.attention }
         }
         if let highlight {
             return highlight.tint(colorScheme)
@@ -1069,7 +1111,13 @@ struct AyahRow: View, Equatable {
                         )
                         .onTapGesture {
                             settings.hapticFeedback()
-                            toggleBookmarkOrConfirm()
+                            // In select mode the pill is part of the row and selects with it: it used to
+                            // bookmark the ayah mid-selection.
+                            if isSelecting {
+                                onToggleSelection?()
+                            } else {
+                                toggleBookmarkOrConfirm()
+                            }
                         }
                         // The bookmark keeps the RIGHT corner - that is where saving an ayah has always
                         // shown up. The listening badge moves to the LEFT (user rule), so the two no longer
@@ -1098,18 +1146,39 @@ struct AyahRow: View, Equatable {
                         }
 
                     #if os(iOS)
+                    // Select mode hands the hold to the whole header (below), so it fires once.
                     .highPriorityGesture(actionsHoldGesture, including: isSelecting ? .subviews : .all)
                     #endif
 
                     Spacer()
 
                     #if os(iOS)
-                    if shouldShowManualKhatmButton {
-                        Button {
-                            settings.hapticFeedback()
-                            settings.markKhatmAyahComplete(surah: surah.id, ayah: ayah.id, immediate: true)
-                        } label: {
-                            Image(systemName: "checkmark.circle")
+                    // Select mode: the circle takes the controls' slot, the same 28 pt square, so the
+                    // header keeps its height and the text under it never rewraps. The khatm marks, the
+                    // play menu and the ⋯ step aside while a tap means "select": they kept firing
+                    // mid-selection (Abu, 2026-11-18: select ayahs in the list is "just so annoying").
+                    if isSelecting {
+                        selectionMark
+                    } else {
+                        if shouldShowManualKhatmButton {
+                            Button {
+                                settings.hapticFeedback()
+                                settings.markKhatmAyahComplete(surah: surah.id, ayah: ayah.id, immediate: true)
+                            } label: {
+                                Image(systemName: "checkmark.circle")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 25, height: 25)
+                                    .foregroundColor(settings.accentColor.color)
+                                    .conditionalGlassEffect(inRow: true)
+                                    .frame(width: 28, height: 28)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Mark Ayah Viewed")
+                        }
+
+                        if shouldShowKhatmCheckmark {
+                            Image(systemName: "checkmark.circle.fill")
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
                                 .frame(width: 25, height: 25)
@@ -1117,77 +1186,65 @@ struct AyahRow: View, Equatable {
                                 .conditionalGlassEffect(inRow: true)
                                 .frame(width: 28, height: 28)
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Mark Ayah Viewed")
-                    }
 
-                    if shouldShowKhatmCheckmark {
-                        Image(systemName: "checkmark.circle.fill")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 25, height: 25)
-                            .foregroundColor(settings.accentColor.color)
-                            .conditionalGlassEffect(inRow: true)
-                            .frame(width: 28, height: 28)
-                    }
+                        // Simple Mode folds the play menu into the one ayah menu, whose first action is
+                        // Play This Ayah (Docs/Product/Simple Mode Guide.md).
+                        //
+                        // A tap opens the playback MENU and a hold opens Play Custom Range (Abu, 2026-10-23:
+                        // "return it as a menu... if you hold it open custom range"). The ⋯ beside it has the
+                        // same tap / hold shape (`ShortcutMenu`), so the pair behaves alike. For two days
+                        // (2026-10-21) the tap played and the hold opened the menu. Until 2026-11-01 a double
+                        // tap played from here to the end of the surah; it went with every other menu
+                        // button's double tap (Abu: "lag ... check all menus"), because a double-tap shortcut
+                        // made every plain tap wait out UIKit's double-tap interval before the menu opened.
+                        // Play From Ayah is a row of the menu. The one ayah stays the text's double tap
+                        // (`ayahDoubleTap`).
+                        if settings.isHafsDisplay, !settings.hides(.ayahPlayMenu) {
+                            ShortcutMenu(
+                                hold: MenuShortcut(String(localized: "Play Custom Range")) {
+                                    settings.hapticFeedback()
+                                    requestSheet(.secondary(.customRange))
+                                }
+                            ) {
+                                Text("Ayah Playback")
+                                    .foregroundStyle(.secondary)
 
-                    // Simple Mode folds the play menu into the one ayah menu, whose first action is
-                    // Play This Ayah (Docs/Product/Simple Mode Guide.md).
-                    //
-                    // A tap opens the playback MENU and a hold opens Play Custom Range (Abu, 2026-10-23:
-                    // "return it as a menu... if you hold it open custom range"). The ⋯ beside it has the
-                    // same tap / hold shape (`ShortcutMenu`), so the pair behaves alike. For two days
-                    // (2026-10-21) the tap played and the hold opened the menu. Until 2026-11-01 a double
-                    // tap played from here to the end of the surah; it went with every other menu
-                    // button's double tap (Abu: "lag ... check all menus"), because a double-tap shortcut
-                    // made every plain tap wait out UIKit's double-tap interval before the menu opened.
-                    // Play From Ayah is a row of the menu. The one ayah stays the text's double tap
-                    // (`ayahDoubleTap`).
-                    if settings.isHafsDisplay, !settings.hides(.ayahPlayMenu) {
+                                ayahPlaybackItems()
+                            } label: {
+                                headerControlIcon("play.circle", slop: Self.playHitSlop)
+                            }
+                            .padding(Self.playHitSlop.negated)
+                            .accessibilityLabel("Ayah Playback")
+                            .accessibilityIdentifier("ayahPlayButton")
+                        }
+
                         ShortcutMenu(
-                            hold: MenuShortcut(String(localized: "Play Custom Range")) {
+                            hold: MenuShortcut(String(localized: "Share Ayah")) {
                                 settings.hapticFeedback()
-                                requestSheet(.secondary(.customRange))
+                                requestSheet(.secondary(.share))
                             }
                         ) {
-                            Text("Ayah Playback")
+                            Text("Ayah Actions")
                                 .foregroundStyle(.secondary)
 
-                            ayahPlaybackItems()
+                            // The same list every other ayah menu shows (user rule 2026-09-05: the Quran
+                            // tab's long press, this menu and the page's sheet offer the same actions),
+                            // minus playback: the ▶ beside it IS the playback menu, so Play Ayah is not
+                            // repeated here (Abu, 2026-10-23: "remove that from three ellipses"). Simple
+                            // Mode is the other exception: five actions and More Actions, which opens the
+                            // long-press sheet with all of them (Abu, 2026-10-10).
+                            if settings.hides(.ayahLongMenu) {
+                                simpleMenuBlock(isBookmarked: isBookmarked)
+                            } else {
+                                menuBlock(isBookmarked: isBookmarked)
+                            }
                         } label: {
-                            headerControlIcon("play.circle", slop: Self.playHitSlop)
+                            headerControlIcon("ellipsis.circle", slop: Self.ellipsisHitSlop)
                         }
-                        .padding(Self.playHitSlop.negated)
-                        .accessibilityLabel("Ayah Playback")
-                        .accessibilityIdentifier("ayahPlayButton")
+                        .padding(Self.ellipsisHitSlop.negated)
+                        .accessibilityLabel("Ayah Actions")
+                        .accessibilityIdentifier("ayahActionsMenu")
                     }
-
-                    ShortcutMenu(
-                        hold: MenuShortcut(String(localized: "Share Ayah")) {
-                            settings.hapticFeedback()
-                            requestSheet(.secondary(.share))
-                        }
-                    ) {
-                        Text("Ayah Actions")
-                            .foregroundStyle(.secondary)
-
-                        // The same list every other ayah menu shows (user rule 2026-09-05: the Quran
-                        // tab's long press, this menu and the page's sheet offer the same actions),
-                        // minus playback: the ▶ beside it IS the playback menu, so Play Ayah is not
-                        // repeated here (Abu, 2026-10-23: "remove that from three ellipses"). Simple
-                        // Mode is the other exception: five actions and More Actions, which opens the
-                        // long-press sheet with all of them (Abu, 2026-10-10).
-                        if settings.hides(.ayahLongMenu) {
-                            simpleMenuBlock(isBookmarked: isBookmarked)
-                        } else {
-                            menuBlock(isBookmarked: isBookmarked)
-                        }
-                    } label: {
-                        headerControlIcon("ellipsis.circle", slop: Self.ellipsisHitSlop)
-                    }
-                    .padding(Self.ellipsisHitSlop.negated)
-                    .accessibilityLabel("Ayah Actions")
-                    .accessibilityIdentifier("ayahActionsMenu")
                     #else
                     HStack(spacing: 8) {
                         Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
@@ -1212,6 +1269,13 @@ struct AyahRow: View, Equatable {
                 }
                 .padding(.bottom, settings.showArabicText ? 4 : 2)
                 .padding(.trailing, 1)
+                #if os(iOS)
+                // Select mode: a hold anywhere on the header selects, the circle and the gap beside
+                // it included, as a tap there does. Off otherwise (the mask), where the pill and
+                // the two menus own their holds.
+                .contentShape(Rectangle())
+                .highPriorityGesture(actionsHoldGesture, including: isSelecting ? .all : .subviews)
+                #endif
 
                 ayahTextBlock(
                     showArabic: showArabic,
@@ -1235,7 +1299,7 @@ struct AyahRow: View, Equatable {
                 // Keep the row's actions hold on the reading surface. Putting it on the whole row
                 // lets SwiftUI's high-priority recognizer steal holds from the play/ellipsis controls.
                 .contentShape(Rectangle())
-                .highPriorityGesture(actionsHoldGesture, including: isSelecting ? .subviews : .all)
+                .highPriorityGesture(actionsHoldGesture)
                 // The ayah's two-tap play, on the same surface (see `ayahDoubleTap`): not the header,
                 // whose pill and controls answer taps of their own.
                 .simultaneousGesture(ayahDoubleTap, including: playsOnDoubleTap ? .all : .subviews)
@@ -1245,18 +1309,11 @@ struct AyahRow: View, Equatable {
             }
         }
         .lineLimit(nil)
-        // Multi-select: content slides right to make room for the leading checkmark circle.
-        .padding(.leading, isSelecting ? 32 : 0)
-        .overlay(alignment: .leading) {
-            if isSelecting {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(isSelected ? settings.accentColor.color : Color.secondary)
-            }
-        }
+        // Select mode's circle lives in the header (`selectionMark`). Until 2026-11-18 it led the row
+        // and the content slid 32 pt right to make room, so every row rewrapped, grew, and the list
+        // jumped on the way in and out.
         .animation(.easeInOut(duration: 0.15), value: isSelecting)
-        // The reading gutter, OUTERMOST: the select-mode checkmark stays inside the margin instead of
-        // sitting flush against the screen edge. The whole row moves in by this much.
+        // The reading gutter, OUTERMOST. The whole row moves in by this much.
         .padding(.horizontal, Self.readingGutter)
         #if os(iOS)
         // Report this row's sheet state to the shared tracker so the reader's follow-the-recitation
@@ -1305,8 +1362,10 @@ struct AyahRow: View, Equatable {
         #if os(iOS)
         // The tap-to-scroll jump, as a swipe too: while searching, swipe the result row to scroll down
         // to that ayah in the full list.
+        // Not while selecting: the jump ends the search, which would swap the results being picked
+        // from for the whole surah mid-selection.
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !isSelecting, !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Button {
                     settings.hapticFeedback()
                     withAnimation {
@@ -1789,12 +1848,34 @@ struct AyahRow: View, Equatable {
     #if os(iOS)
     /// The ayah's playback actions: the ▶ button's menu, flat (Abu, 2026-10-21: "organize all menus...
     /// if need be put menus in menus"; since 2026-10-23 the ⋯ menu no longer repeats them as a Play
-    /// Ayah submenu). Play This Ayah sits at the visual bottom, the primary action nearest the thumb, as
-    /// Play Surah does in the surah menus. Play Custom Range appears once: it used to end the Repeat
-    /// submenu as well. Choose Reciter leads, as in the Quran tab's Ayah Playback submenu and the actions
-    /// sheet's reciter row (Abu, 2026-10-25); the host presents the list (`AyahSecondarySheet.reciter`).
+    /// Ayah submenu). The Quran tab's hold menu from Play This Ayah down, row for row, with its Ayah
+    /// Playback submenu opened in place: Play This Ayah, Play Word by Word, who recites, then Repeat
+    /// Ayah, Play Custom Range and Play From Ayah. It is the actions sheet's play tiles in their
+    /// order too. Until 2026-11-18 the three ran three ways round (this one opened on Choose Reciter
+    /// and ended on Play This Ayah), and Abu: "context menu for quran isnt the same as long hold
+    /// ayah". Play Custom Range appears once: it used to end the Repeat submenu as well. The host
+    /// presents the reciter list (`AyahSecondarySheet.reciter`).
     @ViewBuilder
     private func ayahPlaybackItems() -> some View {
+        Button {
+            settings.hapticFeedback()
+            quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id)
+        } label: {
+            Label("Play This Ayah", systemImage: "play.circle")
+        }
+
+        #if os(iOS)
+        // Each word's own clip in turn, lit as it sounds (WordClipPlayer); the same row stops it.
+        Button {
+            settings.hapticFeedback()
+            WordClipPlayer.shared.toggle(surah: surah.id, ayah: ayah.id)
+        } label: {
+            WordByWordMenuLabel(surah: surah.id, ayah: ayah.id)
+        }
+        #endif
+
+        Divider()
+
         Button {
             settings.hapticFeedback()
             requestSheet(.secondary(.reciter))
@@ -1840,23 +1921,6 @@ struct AyahRow: View, Equatable {
         } label: {
             Label("Play From Ayah", systemImage: "play.circle.fill")
         }
-
-        Button {
-            settings.hapticFeedback()
-            quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id)
-        } label: {
-            Label("Play This Ayah", systemImage: "play.circle")
-        }
-
-        #if os(iOS)
-        // Each word's own clip in turn, lit as it sounds (WordClipPlayer); the same row stops it.
-        Button {
-            settings.hapticFeedback()
-            WordClipPlayer.shared.toggle(surah: surah.id, ayah: ayah.id)
-        } label: {
-            Label("Play Word by Word", systemImage: "text.word.spacing")
-        }
-        #endif
     }
 
     /// Add Note on its own; once a note is saved, one Note submenu holds Edit and Remove instead of
@@ -2010,7 +2074,7 @@ struct AyahRow: View, Equatable {
                 settings.hapticFeedback()
                 WordClipPlayer.shared.toggle(surah: surah.id, ayah: ayah.id)
             } label: {
-                Label("Play Word by Word", systemImage: "text.word.spacing")
+                WordByWordMenuLabel(surah: surah.id, ayah: ayah.id)
             }
             #endif
 
@@ -2150,7 +2214,9 @@ struct AyahRow: View, Equatable {
                 settings.hapticFeedback()
                 requestSheet(.secondary(.selectText))
             } label: {
-                Label("Select Text", systemImage: "highlighter")
+                // The actions sheet's symbol, not `highlighter`, which is the Highlight row's in
+                // this same menu (2026-11-18).
+                Label("Select Text", systemImage: "selection.pin.in.out")
             }
 
             Button {
@@ -2158,6 +2224,18 @@ struct AyahRow: View, Equatable {
                 ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah.id, ayahNumber: ayah.id, settings: settings, quranData: quranData)
             } label: {
                 Label("Copy Ayah", systemImage: "doc.on.doc")
+            }
+
+            // Select mode from the ayah you are on, with it already checked (2026-11-18): the title
+            // menu's Select Ayahs started with nothing, two menus away from the row. The actions sheet
+            // carries the same action as a tile, in the same place (`AyahActionsSheet.textActions`).
+            if let onBeginSelecting {
+                Button {
+                    settings.hapticFeedback()
+                    onBeginSelecting()
+                } label: {
+                    Label("Select Ayahs", systemImage: "checkmark.circle")
+                }
             }
 
             Button {

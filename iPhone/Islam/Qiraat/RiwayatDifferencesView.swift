@@ -741,12 +741,15 @@ struct RiwayahTraitsTable: View {
 
     var body: some View {
         ForEach(RiwayahTraits.all) { traits in
-            if let profile = QiraatProfiles.narrator(tag: traits.tag) {
-                NavigationLink(destination: LazyDestination { RiwayahNarratorDetailView(profile: profile) }) {
+            // One view by its type (see `OneRow`): a link where the narrator has a page.
+            OneRow {
+                if let profile = QiraatProfiles.narrator(tag: traits.tag) {
+                    NavigationLink(destination: LazyDestination { RiwayahNarratorDetailView(profile: profile) }) {
+                        row(traits)
+                    }
+                } else {
                     row(traits)
                 }
-            } else {
-                row(traits)
             }
         }
     }

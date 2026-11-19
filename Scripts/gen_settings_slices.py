@@ -47,7 +47,9 @@ SLICES = {
     'PrayerTracker': (
         'The prayer tracker marks and the menses pause: written from the tracker and the notification '
         'actions while the user is anywhere.',
-        {'prayerTrackerData', 'trackerExemptDaysData', 'mensesPauseActive', 'mensesPauseStartStamp'}),
+        {'prayerTrackerData', 'trackerExemptDaysData', 'mensesPauseActive', 'mensesPauseStartStamp',
+         'trackerCongregationData', 'trackerSunnahData', 'trackerCongregationEnabled', 'trackerSunnahEnabled',
+         'trackerResumeDaysData'}),
     'QuranDisplay': (
         'How the Quran reads: fonts and sizes, tajweed, translations, word by word, page mode, riwayah, '
         'the reciter, sort and list options, test mode.',

@@ -175,7 +175,7 @@ enum TabSection: CaseIterable, Identifiable {
         case .hadithSummary, .hadithAbout:
             return false
         case .hadithNarrators:
-            return settings.simpleMode
+            return settings.hides(.hadithNarrators)
         #endif
         }
     }

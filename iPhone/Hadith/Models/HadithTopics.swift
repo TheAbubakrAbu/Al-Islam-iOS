@@ -449,8 +449,9 @@ struct HadithHistoryView: View {
 
                 ForEach(derived.viewedByDay, id: \.day) { group in
                     Section(header: Text("OPENED · \(group.day.uppercased())")) {
-                        ForEach(group.rows) { entry in
-                            historyRow(slug: entry.slug, idInBook: entry.idInBook,
+                        ForEach(Self.inKnownBooks(group.rows, slug: \.slug), id: \.entry.id) { row in
+                            let entry = row.entry
+                            historyRow(book: row.book, idInBook: entry.idInBook,
                                        reference: HadithCatalogBook.displayReference(stored: entry.reference, slug: entry.slug),
                                        arabic: entry.arabicPreview, english: entry.englishPreview, chapterId: entry.chapterId)
                         }
@@ -459,8 +460,9 @@ struct HadithHistoryView: View {
 
                 if !leftOff.isEmpty {
                     Section(header: Text("WHERE YOU LEFT OFF")) {
-                        ForEach(leftOff, id: \.slug) { entry in
-                            historyRow(slug: entry.slug, idInBook: entry.idInBook,
+                        ForEach(Self.inKnownBooks(leftOff, slug: \.slug), id: \.entry.slug) { row in
+                            let entry = row.entry
+                            historyRow(book: row.book, idInBook: entry.idInBook,
                                        reference: HadithCatalogBook.displayReference(stored: entry.reference, slug: entry.slug),
                                        arabic: entry.arabicPreview, english: entry.englishPreview, chapterId: entry.chapterId)
                         }
@@ -469,8 +471,9 @@ struct HadithHistoryView: View {
 
                 if !daily.isEmpty {
                     Section(header: Text("HADITH OF THE DAY, EARLIER")) {
-                        ForEach(Array(daily.reversed().prefix(30)), id: \.dayKey) { entry in
-                            historyRow(slug: entry.slug, idInBook: entry.idInBook,
+                        ForEach(Self.inKnownBooks(Array(daily.reversed().prefix(30)), slug: \.slug), id: \.entry.dayKey) { row in
+                            let entry = row.entry
+                            historyRow(book: row.book, idInBook: entry.idInBook,
                                        reference: HadithCatalogBook.displayReference(stored: entry.reference, slug: entry.slug) + " · " + entry.dayKey.localizedDigits,
                                        arabic: entry.arabicPreview, english: entry.englishPreview, chapterId: nil)
                         }
@@ -510,39 +513,46 @@ struct HadithHistoryView: View {
         .onReceive(HadithStore.shared.$lastReadByBook) { _ in refresh() }
     }
 
-    @ViewBuilder
-    private func historyRow(slug: String, idInBook: Int, reference: String, arabic: String, english: String, chapterId: Int?) -> some View {
-        if let book = HadithCatalogBook.all.first(where: { $0.slug == slug }) {
-            NavigationLink(destination: LazyDestination {
-                HadithHistoryDestination(book: book, idInBook: idInBook, chapterId: chapterId)
-            }) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(reference)
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(settings.accentColor.color)
-                    if settings.showHadithArabic, !arabic.isEmpty {
-                        Text(arabic)
-                            .font(settings.useFontArabic ? Font.arabic(settings.nonQuranArabicFontName, size: 17) : .body)
-                            .arabicFontDesign(custom: settings.useFontArabic && settings.nonQuranArabicFontName != Settings.systemArabicFontName)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                            // The right edge in the Arabic interface too (`.trailing` is right only
-                            // left to right).
-                            .environment(\.layoutDirection, .leftToRight)
-                    }
-                    if settings.showHadithEnglish, !english.isEmpty {
-                        Text(english)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            // English content keeps the left edge in the Arabic interface.
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .leftToRightContent()
-                    }
+    /// Each entry beside its book, an entry of a book the catalog no longer carries left out. Found
+    /// here, before the ForEach, so a row is never an `if let`: a row that may be nothing is one the
+    /// List has to build to count, and it re-inserted this page's rows after every scroll (see
+    /// `OneRow`; 24 of a day's 32 rows, measured 2026-11-18).
+    private static func inKnownBooks<Entry>(_ entries: [Entry], slug: KeyPath<Entry, String>) -> [(entry: Entry, book: HadithCatalogBook)] {
+        entries.compactMap { entry in
+            HadithCatalogBook.bySlug[entry[keyPath: slug]].map { (entry: entry, book: $0) }
+        }
+    }
+
+    private func historyRow(book: HadithCatalogBook, idInBook: Int, reference: String, arabic: String, english: String, chapterId: Int?) -> some View {
+        NavigationLink(destination: LazyDestination {
+            HadithHistoryDestination(book: book, idInBook: idInBook, chapterId: chapterId)
+        }) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(reference)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(settings.accentColor.color)
+                if settings.showHadithArabic, !arabic.isEmpty {
+                    Text(arabic)
+                        .font(settings.useFontArabic ? Font.arabic(settings.nonQuranArabicFontName, size: 17) : .body)
+                        .arabicFontDesign(custom: settings.useFontArabic && settings.nonQuranArabicFontName != Settings.systemArabicFontName)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        // The right edge in the Arabic interface too (`.trailing` is right only
+                        // left to right).
+                        .environment(\.layoutDirection, .leftToRight)
                 }
-                .padding(.vertical, 2)
+                if settings.showHadithEnglish, !english.isEmpty {
+                    Text(english)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        // English content keeps the left edge in the Arabic interface.
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .leftToRightContent()
+                }
             }
+            .padding(.vertical, 2)
         }
     }
 }

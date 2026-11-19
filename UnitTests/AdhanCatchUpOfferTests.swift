@@ -1,3 +1,4 @@
+import AVFoundation
 import XCTest
 @testable import iPhone
 
@@ -113,6 +114,42 @@ final class AdhanCatchUpOfferTests: XCTestCase {
 
     private func momentKey(_ target: ForegroundAdhanPlayer.Target) -> String {
         "\(target.name)@\(Int(target.date.timeIntervalSince1970 / 60))"
+    }
+
+    /// Skips the calling test on a simulator whose audio will not start.
+    ///
+    /// A simulator plays through the Mac it runs on, and when that route is lost
+    /// `AVAudioPlayer.play()` returns false for every sound. The app then logs "Adhan playback
+    /// refused to start" and, rightly, neither shows an adhan as playing nor spends the moment, so a
+    /// test that needs a recording to begin fails with nothing wrong in the code. That was
+    /// 2026-11-18: this class passed, the Mac's audio guard moved the running simulator's output, and
+    /// from then on the same build failed, and a build of the last commit with it. Restarting the
+    /// simulator brought the sound, and the test, back.
+    ///
+    /// The probe is a player of its own, started the way the app starts one (the category, the
+    /// activation, then `play()`) at volume zero. A start the APP gets wrong therefore still fails
+    /// the test; only a simulator that can sound nothing skips it. A device is never probed.
+    private func skipUnlessThisSimulatorCanSound() async throws {
+        #if targetEnvironment(simulator)
+        let settings = Settings.shared
+        guard let resource = settings.adhanFullSoundResource(for: settings.adhanNotificationSound),
+              let path = Bundle.main.path(forResource: resource, ofType: "caf"),
+              let probe = try? AVAudioPlayer(contentsOf: URL(fileURLWithPath: path)) else { return }
+        probe.volume = 0
+        // Off the main thread, as the app does it: activating the session can block its caller.
+        let started = await Task.detached { () -> Bool in
+            let session = AVAudioSession.sharedInstance()
+            try? session.setCategory(.playback, mode: .default)
+            try? session.setActive(true)
+            probe.prepareToPlay()
+            let started = probe.play()
+            probe.stop()
+            // Handed back before the test begins, so this cannot land on the app's own activation.
+            try? session.setActive(false, options: [.notifyOthersOnDeactivation])
+            return started
+        }.value
+        try XCTSkipUnless(started, "this simulator's audio will not start (a silent probe's play() returned false), so no recording can begin here; `simaudio log` shows what moved its output")
+        #endif
     }
 
     /// Waits for the decision, which runs off the main thread (the probe, the session activation).
@@ -252,7 +289,11 @@ final class AdhanCatchUpOfferTests: XCTestCase {
     }
 
     /// A tap on the offer sounds the adhan through Silent Mode, and only then is the moment spent.
-    func testTappingTheOfferPlaysAndSpendsTheMoment() async {
+    ///
+    /// The one test here that needs a recording to really begin, so a simulator that cannot start a
+    /// sound skips it (`skipUnlessThisSimulatorCanSound`).
+    func testTappingTheOfferPlaysAndSpendsTheMoment() async throws {
+        try await skipUnlessThisSimulatorCanSound()
         SilentSwitch.debugOverride = .muted
         let target = injectMissedDhuhr()
         let player = ForegroundAdhanPlayer.shared

@@ -72,7 +72,10 @@ final class SimpleTrimCatalogTests: XCTestCase {
         XCTAssertFalse(settings.hides(.playTestMode, unless: false))
     }
 
+    /// Pinned on purpose: a new hide is a new catalog case, and the number moves with it. 45 since
+    /// 2026-11-18, when the Hadith tab's NARRATORS section got its case (`.hadithNarrators`): it had
+    /// been reading the flag raw, which Scripts/check_simple_trims.py fails.
     func testCatalogCount() {
-        XCTAssertEqual(SimpleTrim.allCases.count, 44)
+        XCTAssertEqual(SimpleTrim.allCases.count, 45)
     }
 }

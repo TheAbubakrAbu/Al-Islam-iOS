@@ -388,8 +388,8 @@ struct CreditsView: View {
 
         if !credits.isEmpty {
             Section(header: SectionPillHeader(title: String(localized: "CREDITS"), count: credits.count)) {
-                ForEach(credits) { item in
-                    creditResultRow(item)
+                ForEach(LinkedCredit.all(in: credits)) { credit in
+                    creditResultRow(credit)
                 }
             }
         }
@@ -415,21 +415,18 @@ struct CreditsView: View {
 
     /// A credit as a search result: the line with the match coloured. Tapping opens the link, as on the
     /// page; the menu and the trailing swipe scroll the page back to the credit's own row.
-    @ViewBuilder
-    private func creditResultRow(_ item: CreditItem) -> some View {
-        if let destination = URL(string: item.url) {
-            Link(destination: destination) {
-                HighlightedSnippet(
-                    source: item.detail,
-                    term: query,
-                    font: .body,
-                    accent: settings.accentColor.color,
-                    fg: .primary
-                )
-                .padding(.vertical, 2)
-            }
-            .creditRowActions(label: String(localized: "Scroll To Credit"), copyURL: item.url) { scrollToRow(item.rowID) }
+    private func creditResultRow(_ credit: LinkedCredit) -> some View {
+        Link(destination: credit.destination) {
+            HighlightedSnippet(
+                source: credit.item.detail,
+                term: query,
+                font: .body,
+                accent: settings.accentColor.color,
+                fg: .primary
+            )
+            .padding(.vertical, 2)
         }
+        .creditRowActions(label: String(localized: "Scroll To Credit"), copyURL: credit.item.url) { scrollToRow(credit.item.rowID) }
     }
 
     private static func appRowID(_ app: AppItem) -> String { "app_\(app.title)" }
@@ -556,10 +553,10 @@ struct CreditsView: View {
     private var creditsLinksSection: some View {
         ForEach(CreditItem.groupsPresent, id: \.self) { group in
             Section(header: Text(group.rawValue.localizedDisplay.uppercased())) {
-                ForEach(CreditItem.inGroup(group)) { item in
-                    creditLink(item)
-                        .id(item.rowID)
-                        .rowWash(landingWash(item.rowID), fade: Self.landingFade)
+                ForEach(LinkedCredit.all(in: CreditItem.inGroup(group))) { credit in
+                    creditLink(credit)
+                        .id(credit.item.rowID)
+                        .rowWash(landingWash(credit.item.rowID), fade: Self.landingFade)
                 }
                 .foregroundColor(settings.accentColor.color)
                 .font(.body)
@@ -593,21 +590,36 @@ struct CreditsView: View {
         }
     }
 
-    @ViewBuilder
-    private func creditLink(_ item: CreditItem) -> some View {
-        if let destination = URL(string: item.url) {
-            Link(item.detail.localizedDigits, destination: destination)
-                .contextMenu {
-                    Text("Copy")
-                        .foregroundStyle(.secondary)
+    private func creditLink(_ credit: LinkedCredit) -> some View {
+        Link(credit.item.detail.localizedDigits, destination: credit.destination)
+            .contextMenu {
+                Text("Copy")
+                    .foregroundStyle(.secondary)
 
-                    Button {
-                        settings.hapticFeedback()
-                        UIPasteboard.general.string = item.url
-                    } label: {
-                        Label("Copy Link", systemImage: "doc.on.doc")
-                    }
+                Button {
+                    settings.hapticFeedback()
+                    UIPasteboard.general.string = credit.item.url
+                } label: {
+                    Label("Copy Link", systemImage: "doc.on.doc")
                 }
+            }
+    }
+}
+
+/// A credit with its link already parsed. The rows are built from these, so each row is one view by
+/// its type. They used to be `if let destination = URL(string:) { Link }` inside the ForEach, and a
+/// row that is a branch makes the List delete and re-insert its section's off-screen rows the next
+/// time the page's body runs after a scroll (measured 2026-11-17: 23 of the Quran group's 36 rows at
+/// once; see `SummaryTileGrid.body`). A credit whose link does not parse gives no row, as before.
+private struct LinkedCredit: Identifiable {
+    let item: CreditItem
+    let destination: URL
+
+    var id: CreditItem.ID { item.id }
+
+    static func all(in items: [CreditItem]) -> [LinkedCredit] {
+        items.compactMap { item in
+            URL(string: item.url).map { LinkedCredit(item: item, destination: $0) }
         }
     }
 }

@@ -242,12 +242,15 @@ struct RiwayahColorCodeCards: View {
         Group {
             if let cards = model.cards {
                 ForEach(cards) { card in
-                    if let profile = QiraatProfiles.narrator(tag: card.option.tag) {
-                        NavigationLink(destination: LazyDestination { RiwayahNarratorDetailView(profile: profile) }) {
+                    // One view by its type (see `OneRow`): a link where the narrator has a page.
+                    OneRow {
+                        if let profile = QiraatProfiles.narrator(tag: card.option.tag) {
+                            NavigationLink(destination: LazyDestination { RiwayahNarratorDetailView(profile: profile) }) {
+                                row(card)
+                            }
+                        } else {
                             row(card)
                         }
-                    } else {
-                        row(card)
                     }
                 }
             } else {

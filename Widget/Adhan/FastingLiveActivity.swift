@@ -223,4 +223,20 @@ extension OpenQiblaIntent {
 extension OpenPrayerTimesIntent {
     func openPrayerTimes() async {}
 }
+
+// The extension's half of a Prayer Tracker widget's tap (`TrackerMarkIntent`, PrayerTrackerWidget.swift),
+// here for the same reason: this file is the Widget target's alone, and the app's half is in
+// iPhone/Adhan/Prayers/PrayerTrackerCard.swift. That intent is one the system runs in the app, so this
+// is the fallback for a tap that lands here anyway: the mark shows on the widget at once and waits in
+// the App Group, and the app records it (and quiets the reminders about it) the next time it runs.
+extension TrackerWidgetBridge {
+    @MainActor
+    static func tap(prayer: String, dayKey: String) {
+        var state = load()
+        let mark = next(after: state.mark(for: prayer, on: dayKey))
+        state.set(mark, for: prayer, on: dayKey)
+        state.pending.append(TrackerWidgetState.Pending(dayKey: dayKey, prayer: prayer, mark: mark?.rawValue ?? ""))
+        save(state)
+    }
+}
 #endif

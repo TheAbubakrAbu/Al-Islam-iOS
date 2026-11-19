@@ -78,6 +78,7 @@ Since Simple Mode v2 (2026-10-20) the table of what Simple hides is generated fr
 | playOtherOptions | playback | Other Options in the readers' play menus | Play Custom Range is the play button's hold; repeats live in that sheet; the random picks are dropped |
 | playTestMode | playback | Test Mode in the readers' play menus, while Test Mode is off | Settings › Quran Settings › Test Mode |
 | hadithTodayPill | hadith | The Today pill on the Hadith tab's YOUR SUMMARY | ⋯ menu › Today |
+| hadithNarrators | hadith | NARRATORS, until it is turned on | Settings › Hadith Settings › On the Hadith Tab › Narrators |
 | bookStats | hadith | A book's stats and era lines on the tab | The book's own screen |
 | chapterStats | hadithBook | The CHAPTERS header's pills, each chapter's count and range | The reading screen's chapter header |
 | topChapterPair | hadithReader | The top Previous/Next chapter pair | The bottom pair |
@@ -108,7 +109,7 @@ Turning Simple Mode on turns every settings screen's Show Advanced Settings swit
 
 ### Rule 10 (2026-10-28): a section's own switch wins
 
-A tab section with a switch of its own (`TabSection`, iPhone/Settings/Pages/TabSections.swift; so far the Adhan tab's PRAYER TRACKER and AT A GLANCE, and the Hadith tab's YOUR SUMMARY and ABOUT HADITH & THE SUNNAH, which Simple keeps) follows Simple Mode only while the reader has not chosen. Each tab's switches (ON THE ADHAN TAB in Prayer Settings, ON THE HADITH TAB in Hadith Settings), and the trash on a folded section's header, record a choice (`tabSectionChoices`), and that choice holds in both modes: At a Glance turned on stays on in Simple, the tracker put away stays away in Full. Each switch reads what the tab shows right now, so in Simple At a Glance reads off until it is turned on, and the section's footer names what Simple is leaving out. Folding (`tabSectionsCollapsed`) works the same in both modes. NEED A HAND? keeps its own switches and stays out of Simple as before.
+A tab section with a switch of its own (`TabSection`, iPhone/Settings/Pages/TabSections.swift; so far the Adhan tab's PRAYER TRACKER and AT A GLANCE, and the Hadith tab's YOUR SUMMARY and ABOUT HADITH & THE SUNNAH, which Simple keeps, and its NARRATORS, which Simple leaves out through the `.hadithNarrators` case) follows Simple Mode only while the reader has not chosen. Each tab's switches (ON THE ADHAN TAB in Prayer Settings, ON THE HADITH TAB in Hadith Settings), and the trash on a folded section's header, record a choice (`tabSectionChoices`), and that choice holds in both modes: At a Glance turned on stays on in Simple, the tracker put away stays away in Full. Each switch reads what the tab shows right now, so in Simple At a Glance reads off until it is turned on, and the section's footer names what Simple is leaving out. Folding (`tabSectionsCollapsed`) works the same in both modes. NEED A HAND? keeps its own switches and stays out of Simple as before.
 
 ## Help surfaces: trash when collapsed (everyone)
 

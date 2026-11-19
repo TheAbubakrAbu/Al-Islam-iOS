@@ -469,15 +469,10 @@ struct DuaSessionView: View {
             } label: {
                 Label(isLast ? String(localized: "Finish") : String(localized: "Next"), systemImage: isLast ? "checkmark" : "chevron.forward")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 46)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(settings.accentColor.color)
-                    )
             }
-            .buttonStyle(.plain)
+            // The step forward: glass with the accent in it, beside Listen's plain glass (it was a
+            // solid accent slab until 2026-11-18). 46 pt, the height of its two neighbours.
+            .buttonStyle(.glassAction(minHeight: 46))
         }
         .padding(.horizontal, 18)
         .padding(.bottom, 10)
@@ -527,15 +522,8 @@ struct DuaSessionView: View {
                 } label: {
                     Text("Go Again")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .background(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(settings.accentColor.color)
-                        )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.glassAction(minHeight: 48))
 
                 Button {
                     settings.hapticFeedback()

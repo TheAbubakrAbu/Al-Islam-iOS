@@ -853,23 +853,26 @@ struct SettingsScopedSearch<Content: View>: View {
             }
 
             ForEach(results) { entry in
-                if entry.destination.isPageRoot, entry.destination.scope == scope {
-                    // A control on this very root: nothing to push, so the row just names it.
-                    SettingsSearchResultRow(entry: entry, query: trimmedQuery, dropPrefix: scope.pathPrefix)
-                } else {
-                    NavigationLink(destination: LazyDestination {
-                        Group {
-                            if let own = resolve(entry.destination) {
-                                own
-                            } else {
-                                AnyView(SettingsSearchDestinationView.view(for: entry.destination))
-                            }
-                        }
-                        .revealsAdvancedSettings(entry.advanced)
-                    }) {
+                // One view by its type, as a List row must be (see `OneRow`).
+                OneRow {
+                    if entry.destination.isPageRoot, entry.destination.scope == scope {
+                        // A control on this very root: nothing to push, so the row just names it.
                         SettingsSearchResultRow(entry: entry, query: trimmedQuery, dropPrefix: scope.pathPrefix)
+                    } else {
+                        NavigationLink(destination: LazyDestination {
+                            Group {
+                                if let own = resolve(entry.destination) {
+                                    own
+                                } else {
+                                    AnyView(SettingsSearchDestinationView.view(for: entry.destination))
+                                }
+                            }
+                            .revealsAdvancedSettings(entry.advanced)
+                        }) {
+                            SettingsSearchResultRow(entry: entry, query: trimmedQuery, dropPrefix: scope.pathPrefix)
+                        }
+                        .tint(settings.accentColor.color)
                     }
-                    .tint(settings.accentColor.color)
                 }
             }
         }

@@ -123,7 +123,13 @@ enum AuxiliaryAudio {
     private static var observers: [NSObjectProtocol] = []
 
     static func prepareToPlay(stopping other: () -> Void) {
-        if QuranPlayer.shared.isPlaying { QuranPlayer.shared.pause() }
+        // A pending normal recitation must not start over the clips when its load finishes.
+        if QuranPlayer.shared.isLoading {
+            QuranPlayer.shared.stop()
+        } else if QuranPlayer.shared.isPlaying {
+            QuranPlayer.shared.pause()
+        }
+        WordClipPlayer.shared.stop()
         other()
         // Off the main thread: activation blocks for tens to hundreds of milliseconds (the
         // "AVAudioSession Hang Risk" warning). The clip's own player starts on a buffered item, so
@@ -138,6 +144,7 @@ enum AuxiliaryAudio {
     }
 
     static func stopAll() {
+        WordClipPlayer.shared.stop()
         QiraatClipPlayer.shared.stop()
         HisnDuaPlayer.shared.stop()
     }

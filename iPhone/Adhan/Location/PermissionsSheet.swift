@@ -345,11 +345,8 @@ struct AdhanPermissionSection: View {
             Button(action: askLocation) {
                 Text(locationButtonTitle)
                     .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(appearance.accent)
+            .buttonStyle(.glassAction)
             .disabled(asker.asking)
             .padding(.top, 8)
             .accessibilityIdentifier("adhanAllowLocation")

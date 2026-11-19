@@ -620,8 +620,11 @@ struct QiraatExplorerView: View {
     private func listenSection(_ tags: [String], surah: Int, ayah: Int) -> some View {
         if !tags.isEmpty {
             Section(header: Text("HEAR BOTH READINGS")) {
-                ForEach(tags, id: \.self) { tag in
-                    QiraatClipPairRow(tag: tag, surah: surah, ayah: ayah)
+                // A riwayah with no clips for this ayah has no row, and is left out HERE (the row
+                // draws nothing without its pair): a row that may be nothing is one the List has to
+                // build to count (see `OneRow`).
+                ForEach(tags.filter { QiraatVariantAudioStore.shared.pair(tag: $0, surah: surah, ayah: ayah) != nil }, id: \.self) { tag in
+                    OneRow { QiraatClipPairRow(tag: tag, surah: surah, ayah: ayah) }
                 }
             }
         }
@@ -1110,7 +1113,9 @@ struct QiraatSiteReadingRow: View {
                     .leftToRightContent()
             }
         }
-        return Group {
+        // `OneRow`, not a `Group`: this is a List row on the explorer, and a Group round a branch
+        // leaves it a branch.
+        return OneRow {
             if stacked {
                 VStack(alignment: .leading, spacing: 6) {
                     arabic

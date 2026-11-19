@@ -59,10 +59,15 @@ struct ConditionalGlassEffect: ViewModifier {
     /// sheets keep their glass (`AppearanceEnvironment.rowLiquidGlass`): each glass shape costs 2.5 to
     /// 4 ms when its row is built, and a scroll builds rows without pause.
     var inRow: Bool = false
+    /// A rounded rectangle at a radius of the caller's own, for a shape `GlassCorner.rectangle` is
+    /// too round for: a 62 pt action tile at 24 pt is most of the way to a capsule. Setting it
+    /// implies `rectangle`. A border drawn on such a shape must use the same number.
+    var cornerRadius: CGFloat? = nil
 
     /// A 24pt radius reads right on iPhone-sized cards; on the watch's small tiles it rounds them into
     /// near-stadiums that look chopped, so the watch uses a gentler curve.
-    private var rectangleCornerRadius: CGFloat { GlassCorner.rectangle }
+    private var rectangleCornerRadius: CGFloat { cornerRadius ?? GlassCorner.rectangle }
+    private var drawsRectangle: Bool { rectangle || cornerRadius != nil }
 
     func body(content: Content) -> some View {
         // `appearance.liquidGlass` is false on every pre-26 system and under the Classic Look (manual,
@@ -98,7 +103,7 @@ struct ConditionalGlassEffect: ViewModifier {
 
             if circle {
                 content.glassEffect(drawsClear ? clearStyle : regularStyle, in: Circle())
-            } else if rectangle {
+            } else if drawsRectangle {
                 content.glassEffect(drawsClear ? clearStyle : regularStyle, in: RoundedRectangle(cornerRadius: rectangleCornerRadius, style: .continuous))
             } else if drawsClear {
                 content.glassEffect(clearStyle)
@@ -113,7 +118,7 @@ struct ConditionalGlassEffect: ViewModifier {
     private func fallbackGlass(content: Content) -> some View {
         if circle {
             fallbackGlassShape(content: content, shape: Circle())
-        } else if rectangle {
+        } else if drawsRectangle {
             fallbackGlassShape(content: content, shape: RoundedRectangle(cornerRadius: rectangleCornerRadius, style: .continuous))
         } else {
             fallbackGlassShape(content: content, shape: Capsule())
@@ -429,9 +434,10 @@ extension View {
         themeTint: Bool = true,
         flat: Bool = false,
         systemGlass: Bool = false,
-        inRow: Bool = false
+        inRow: Bool = false,
+        cornerRadius: CGFloat? = nil
     ) -> some View {
-        modifier(ConditionalGlassEffect(clear: clear, rectangle: rectangle, circle: circle, useColor: useColor, customTint: customTint, interactive: interactive, themeTint: themeTint, flat: flat, systemGlass: systemGlass, inRow: inRow))
+        modifier(ConditionalGlassEffect(clear: clear, rectangle: rectangle, circle: circle, useColor: useColor, customTint: customTint, interactive: interactive, themeTint: themeTint, flat: flat, systemGlass: systemGlass, inRow: inRow, cornerRadius: cornerRadius))
     }
 
     /// Presents a `Menu`'s items in DECLARED order, top to bottom, wherever the menu pops up from.

@@ -6,7 +6,7 @@ import WidgetKit
 ///
 /// WidgetKit can't be driven from simctl (nothing places a widget on the simulator's home or lock screen
 /// headlessly), so this is how a layout change gets looked at before it ships: `-widgetGallery <page>`
-/// opens a page after the reveal (pages: glance, solar, day, grid, tiles, large, largesky, small, lock, dates)
+/// opens a page after the reveal (pages: glance, solar, day, grid, tiles, large, largesky, small, lock, dates, tracker)
 /// and `-widgetCity "<name>"` swaps in a city, since long names are what break footers. The layouts are
 /// the widget files' own entry views (the Widget/Adhan sources compile into the app for this), fed an
 /// entry built from the app's live prayers the way the provider builds one.
@@ -38,7 +38,7 @@ struct WidgetGalleryView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if items.isEmpty {
-                        Text("No page named \"\(page)\". Pages: glance, solar, day, grid, tiles, large, largesky, small, lock, dates.")
+                        Text("No page named \"\(page)\". Pages: glance, solar, day, grid, tiles, large, largesky, small, lock, dates, tracker.")
                             .font(.footnote)
                             .foregroundColor(.secondary)
                     }
@@ -243,6 +243,13 @@ struct WidgetGalleryView: View {
                 Item("Current Prayer Time", .accessoryCircular) { LockScreen1EntryView(entry: entry) },
                 Item("Prayer Progress Ring", .accessoryCircular) { PrayerProgressRingView(entry: entry) },
                 Item("Current Prayer Countdown", .accessoryCircular) { PrayerCountdownCircularView(entry: entry) },
+            ]
+        case "tracker":
+            return [
+                Item("Prayer Tracker", .systemSmall) { PrayerTrackerSmallView(entry: entry) },
+                Item("Prayer Tracker, medium", .systemMedium) { PrayerTrackerMediumView(entry: entry) },
+                Item("Prayer Tracker", .accessoryRectangular) { PrayerTrackerLockView(entry: entry) },
+                Item("Prayer Tracker", .accessoryCircular) { PrayerTrackerLockView(entry: entry) },
             ]
         case "dates":
             return [

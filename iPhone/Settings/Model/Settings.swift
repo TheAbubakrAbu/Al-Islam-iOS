@@ -229,6 +229,9 @@ enum AdhanWidgetKind: String, CaseIterable {
     case DualCalendarLockWidget
     case HijriDateLockWidget
     case HijriDateArabicLockWidget
+    // The Prayer Tracker's: Home Screen (small and medium) and Lock Screen (circular and rectangular).
+    case PrayerTrackerWidget
+    case PrayerTrackerLockWidget
 }
 
 final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, SettingsHost {
@@ -274,7 +277,16 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     private(set) var contentGeneration = 0
     private(set) var trackerGeneration = 0
     func bumpContentGeneration() { contentGeneration &+= 1 }
-    private func bumpTrackerGeneration() { trackerGeneration &+= 1; contentGeneration &+= 1 }
+    private func bumpTrackerGeneration() {
+        trackerGeneration &+= 1
+        contentGeneration &+= 1
+        Self.onTrackerChange?()
+    }
+    /// Told of every tracker write. The app sets it at launch so the tracker widgets' mirror in the
+    /// App Group follows (`TrackerWidgetBridge.install`, PrayerTrackerCard.swift); nil in every
+    /// other process, which is why it is a hook and not a call: this file compiles into the widget,
+    /// the Watch and the complication, and the mirror's writer exists only in the app.
+    static var onTrackerChange: (() -> Void)?
 
     /// `ayahRenderSettingsSignature` memo: ~47 `@AppStorage` reads per call, read once per reader body
     /// pass. Cleared on every publish (see `init`), since any Settings write may have changed an input.
@@ -1290,6 +1302,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         // The prayer tracker and menses-pause record: months of marks and exempt days - the most
         // clearly "the user's, not a preference" data in the app.
         "prayerTrackerData", "prayerTrackerExemptDaysData", "mensesPauseActive", "mensesPauseStartStamp",
+        // Its two parallel records: which prayers were in congregation, and the Sunnah prayers ticked.
+        "prayerTrackerCongregationData", "prayerTrackerSunnahData",
+        // The days a pause ended on (tracked again, never counted against a streak).
+        "prayerTrackerResumeDaysData",
         // Hadith content: marks, favorites, reading positions, search history, daily-hadith history,
         // the History screen's log.
         "hadithFavoriteBooks", "hadithFavoriteChapters", "hadithBookmarks",
@@ -1359,6 +1375,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         // re-add it (`QuranPlannerReminder.rearmIfKept`); its time and switch are the preferences.
         "quranPlannerReminderLast",
         "dailyWidgetsWrittenDay", "quranWidgetSnapshot", "dailyWidgetSnapshot", "mushaf.lastPageGeometry",
+        // The week of the tracker the widgets draw from, mirrored into the app group
+        // (`TrackerWidgetBridge.publishNow`): rebuilt from the tracker itself on every write and every
+        // launch, so a backup carries the tracker and never this copy of it.
+        "trackerWidgetState",
         // Whether a recitation is playing on this phone right now, mirrored into the app group for the
         // Control Center toggle (`QuranPlayer.mirrorPlaybackStateForControls`): live state, and a restore
         // onto another phone would show that phone's toggle playing.
@@ -1834,6 +1854,40 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         didSet { bumpTrackerGeneration() }
     }
     @Setting("mensesPauseStartStamp") var mensesPauseStartStamp: Double = 0 {
+        didSet { bumpTrackerGeneration() }
+    }
+
+    /// The days a pause ENDED on: encoded `[String]` of "yyyy-MM-dd" keys. Switching the pause off
+    /// brings the tracker back that same day, and the day's earlier prayers fell inside the period,
+    /// so the day is tracked like any other but can never count against anything: left incomplete it
+    /// does not end a streak, and its unanswered prayers are not counted as due. Helpers live in
+    /// SettingsAdhan.swift.
+    @Setting("prayerTrackerResumeDaysData") var trackerResumeDaysData: Data = Data() {
+        didSet { bumpTrackerGeneration() }
+    }
+
+    /// The prayers of each day that were prayed in congregation: encoded `[String: [String]]`, day key
+    /// to canonical prayer names. A store of its OWN beside `prayerTrackerData`, not a fourth mark:
+    /// a build that predates it reads and rewrites the marks exactly as before and simply never
+    /// shows this detail, where a new raw value inside the marks would have read there as "on time".
+    /// Helpers live in SettingsAdhan.swift.
+    @Setting("prayerTrackerCongregationData") var trackerCongregationData: Data = Data() {
+        didSet { bumpTrackerGeneration() }
+    }
+
+    /// The Sunnah prayers ticked on each day: encoded `[String: [String]]`, day key to
+    /// `SunnahPrayer` raw values. Prayed or not, nothing else: a Sunnah prayer left is not a prayer
+    /// missed, so there is no late and no missed here. Helpers live in SettingsAdhan.swift.
+    @Setting("prayerTrackerSunnahData") var trackerSunnahData: Data = Data() {
+        didSet { bumpTrackerGeneration() }
+    }
+
+    /// The tracker's two opt-in extras (Prayer Tracker › Also Track), both off until asked for: the
+    /// tracker a reader has always had is the five prayers and nothing more.
+    @Setting("trackerCongregationEnabled") var trackerCongregationEnabled: Bool = false {
+        didSet { bumpTrackerGeneration() }
+    }
+    @Setting("trackerSunnahEnabled") var trackerSunnahEnabled: Bool = false {
         didSet { bumpTrackerGeneration() }
     }
 

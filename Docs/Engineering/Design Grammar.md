@@ -106,7 +106,8 @@ screens open with the article kit's lead card, Browse by Theme and Browse by Top
 | A header accessory (count, shuffle, search, trash, fold) | Glass pill or glass circle (`conditionalGlassEffect`). |
 | A grid tile (Settings, the profile tiles, the Explore shelf) | `SettingsGridTile`: a 32 pt chip, the title, a one-line caption in `.secondaryOnGlass` (`captionLines: 2` where the caption is an answer the reader gave). |
 | A floating bar (search, Now Playing, the reader's legend) | Glass, `BottomBarCushion.standard` under it, `adaptiveSafeArea`. |
-| A full-width call to action in a notice or a welcome page | The system `.borderedProminent` (primary) tinted the accent (`WelcomeActionBar`, `BetaTextConsentCard`); a second full-width choice is `.bordered`; a text link under the primary ("Skip", "Back") is `.subheadline.weight(.medium)` on the accent. |
+| A full-width call to action (a notice, a welcome page, Share Ayah, a dua session's Next) | `.buttonStyle(.glassAction)`: Liquid Glass carrying the accent at 16%, the label in the accent, a capsule at least 50 pt tall (`WelcomeActionBar`, `BetaTextConsentCard`, the location ask). A second full-width choice is `.glassAction(tinted: false)`, plain glass; `cornerRadius:` squares it off where it closes a block of tiles (the ayah actions sheet). Never a solid accent fill under a white label, and never `.borderedProminent` (both until 2026-11-18). A text link under the primary ("Skip", "Back") is `.subheadline.weight(.medium)` on the accent. |
+| An action tile in a sheet's grid (the ayah actions sheet) | Glass at the tile's own colour, 10%, 18 pt corner, `inRow: true`; rows from `AyahActionLayout`, so every row fills the width and no tile stands alone. |
 | A toolbar button | A bare symbol, `.body.weight(.semibold)`, tinted the accent; a menu of options is `slider.horizontal.3`. |
 
 Never `.bordered` for a small chip in a row, and never a hand-drawn capsule at 0.08, 0.14 or 0.15: the chip style is

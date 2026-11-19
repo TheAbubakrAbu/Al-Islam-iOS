@@ -853,7 +853,9 @@ struct ArticleSectionsView: View {
         ForEach(sections.indices, id: \.self) { index in
             let section = sections[index]
             Section(header: ArticleHeader(section.heading)) {
-                ForEach(section.blocks.indices, id: \.self) { blockIndex in
+                // A door that leads nowhere on this platform is left out HERE: every block that
+                // reaches the ForEach is exactly one row (see `ArticleBlockView.body`).
+                ForEach(section.blocks.indices.filter { section.blocks[$0].drawsRow }, id: \.self) { blockIndex in
                     ArticleBlockView(block: section.blocks[blockIndex],
                                      role: Self.role(heading: section.heading, blockIndex: blockIndex))
                 }
@@ -881,46 +883,101 @@ struct ArticleBlockView: View {
     var role: Role = .body
 
     var body: some View {
-        switch block {
-        case .text(let prose):
-            switch role {
-            case .lead: ArticleLead(prose)
-            case .closing: ArticleClosing(prose)
-            case .body:
-                ArticleParagraph(verbatim: prose)
+        // One view by its type: every paragraph, quote and card of every article is a List row made
+        // here, and as a bare `switch` each was a row the List builds to count and re-inserts after
+        // a scroll (see `OneRow`). The lead card's cell modifiers are restated on the row, since from
+        // inside the container `ArticleLead`'s own never reach the cell.
+        OneRow {
+            switch block {
+            case .text(let prose):
+                switch role {
+                case .lead: ArticleLead(prose)
+                case .closing: ArticleClosing(prose)
+                case .body:
+                    ArticleParagraph(verbatim: prose)
+                }
+            case .markdown(let prose):
+                ArticleParagraph(articleMarkdown: prose)
+            case .quote(let text, let arabic, let dimmed):
+                ScriptureQuote(text: text, arabic: arabic, dimmed: dimmed)
+            case .ayah(let reference, let words):
+                ScriptureQuote(quran: reference, words: words)
+            case .hadith(let link, let cite, let arabic, let english, let text, let arabicText):
+                ScriptureQuote(hadith: link, cite: cite, arabic: arabic, english: english, text: text, arabicText: arabicText)
+            case .lead(let prose):
+                ArticleLead(prose)
+            case .step(let prose):
+                ArticleStep(prose)
+            case .bullet(let prose):
+                ArticleBullet(prose)
+            case .callout(let prose, let title, let icon):
+                ArticleCallout(prose, title: title, systemImage: icon)
+            case .term(let term, let arabic, let meaning):
+                ArticleTermCard(term, arabic: arabic, meaning: meaning)
+            case .stats(let stats):
+                ArticleStatGrid(stats)
+            case .chain(let links, let caption):
+                ArticleChainDiagram(links, caption: caption)
+            case .isnad(let caption, let isnad):
+                ArticleIsnadCard(caption, isnad: isnad)
+            case .checklist(let items, let title, let icon):
+                ArticleChecklist(items, title: title, systemImage: icon)
+            case .versus(let left, let right, let quranic):
+                ArticleVersus(left, right, quranic: quranic)
+            case .gradeLadder:
+                HadithGradeLadder()
+            case .door(let door):
+                ArticleDoorRow(door: door)
             }
-        case .markdown(let prose):
-            ArticleParagraph(articleMarkdown: prose)
-        case .quote(let text, let arabic, let dimmed):
-            ScriptureQuote(text: text, arabic: arabic, dimmed: dimmed)
-        case .ayah(let reference, let words):
-            ScriptureQuote(quran: reference, words: words)
-        case .hadith(let link, let cite, let arabic, let english, let text, let arabicText):
-            ScriptureQuote(hadith: link, cite: cite, arabic: arabic, english: english, text: text, arabicText: arabicText)
-        case .lead(let prose):
-            ArticleLead(prose)
-        case .step(let prose):
-            ArticleStep(prose)
-        case .bullet(let prose):
-            ArticleBullet(prose)
-        case .callout(let prose, let title, let icon):
-            ArticleCallout(prose, title: title, systemImage: icon)
-        case .term(let term, let arabic, let meaning):
-            ArticleTermCard(term, arabic: arabic, meaning: meaning)
-        case .stats(let stats):
-            ArticleStatGrid(stats)
-        case .chain(let links, let caption):
-            ArticleChainDiagram(links, caption: caption)
-        case .isnad(let caption, let isnad):
-            ArticleIsnadCard(caption, isnad: isnad)
-        case .checklist(let items, let title, let icon):
-            ArticleChecklist(items, title: title, systemImage: icon)
-        case .versus(let left, let right, let quranic):
-            ArticleVersus(left, right, quranic: quranic)
-        case .gradeLadder:
-            HadithGradeLadder()
-        case .door(let door):
-            ArticleDoorRow(door: door)
+        }
+        .articleCardRow(when: isLeadCard)
+    }
+
+    /// Whether this block draws as `ArticleLead`, the card that IS its row.
+    private var isLeadCard: Bool {
+        switch block {
+        case .lead: return true
+        case .text: return role == .lead
+        default: return false
+        }
+    }
+}
+
+extension ArticleBlock {
+    /// False for a door `ArticleDoorRow` draws nothing for (a page this platform does not have, an
+    /// id the catalog does not know): `ArticleSectionsView` leaves those out of its rows.
+    var drawsRow: Bool {
+        if case .door(let door) = self { return door.opens }
+        return true
+    }
+}
+
+extension ArticleDoor {
+    /// Whether `ArticleDoorRow` has a row to draw for this door: its conditions, restated.
+    var opens: Bool {
+        switch self {
+        case .article(let id):
+            return IslamArticleCatalog.byID[id] != nil
+        case .link(let raw, _, _):
+            return URL(string: raw) != nil
+        case .prophecy(let id):
+            #if os(iOS)
+            return PropheciesView.entries.contains { $0.id == id }
+            #else
+            return false
+            #endif
+        case .prophetMiracle(let id):
+            #if os(iOS)
+            return ProphetMiraclesView.entries.contains { $0.id == id }
+            #else
+            return false
+            #endif
+        case .miracle, .library, .provingIslam:
+            #if os(iOS)
+            return true
+            #else
+            return false
+            #endif
         }
     }
 }

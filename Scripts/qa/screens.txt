@@ -2,6 +2,9 @@
 # Resets use launch arguments: simctl spawn defaults <bundle id> does not reach the app's domain on iOS 27.
 adhan|9|
 adhan-tracker|8|-openPrayerTracker
+adhan-tracker-insights|8|-openPrayerTracker -trackerScrollTo insights
+adhan-tracker-month|8|-openPrayerTracker -trackerScope month -trackerScrollTo history
+adhan-tracker-year|8|-openPrayerTracker -trackerScope year -trackerScrollTo history
 adhan-city|8|-openCityPrayerTimes
 adhan-qibla|8|-showBigQibla
 adhan-glance-calc|7|-glanceAction calculation
@@ -108,6 +111,7 @@ settings-cloudBackup|8|-launchTabSettings -settingsOpen cloudBackup
 settings-aboutYou|8|-showAboutYou
 settings-credits|8|-launchTabSettings -showCredits
 settings-widget-gallery|8|-widgetGallery
+adhan-tracker-widgets|8|-widgetGallery tracker
 settings-profile|8|-launchTabSettings -openProfile
 settings-daily-hub|8|-launchTabQuran -openDailyHub
 settings-learn-more|8|-launchTabIslam -islamScrollToApps -openLearnMore

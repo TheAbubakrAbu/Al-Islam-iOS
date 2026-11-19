@@ -125,6 +125,47 @@ enum PrayerMark: String, CaseIterable, Codable {
     }
 }
 
+/// A Sunnah prayer the tracker can tick beside the five (Prayer Tracker › Also Track, off until
+/// asked for). The first five are the rawatib the prayer table lists as primary: two before Fajr,
+/// four before Dhuhr and two after it, two after Maghrib, two after Isha, twelve rak'at in all
+/// (Sahih Muslim 728, the How to Pray the Sunnah Prayers guide). Then Witr, Duha and the night
+/// prayer. Each is prayed or not: a Sunnah prayer left is not a prayer missed, so none of these is
+/// ever late, missed, nagged about, or counted in a streak.
+enum SunnahPrayer: String, CaseIterable, Codable {
+    case fajrBefore, dhuhrBefore, dhuhrAfter, maghribAfter, ishaAfter, witr, duha, night
+
+    /// One of the twelve regular rak'at around the obligatory prayers.
+    var isRatibah: Bool {
+        switch self {
+        case .fajrBefore, .dhuhrBefore, .dhuhrAfter, .maghribAfter, .ishaAfter: return true
+        case .witr, .duha, .night: return false
+        }
+    }
+
+    /// The rak'at this one adds to the twelve (0 outside the rawatib, whose counts vary).
+    var regularRakat: Int {
+        switch self {
+        case .dhuhrBefore: return 4
+        case .fajrBefore, .dhuhrAfter, .maghribAfter, .ishaAfter: return 2
+        case .witr, .duha, .night: return 0
+        }
+    }
+
+    /// The obligatory prayer a regular Sunnah sits beside, nil for the three that stand alone.
+    var anchorPrayer: String? {
+        switch self {
+        case .fajrBefore: return "Fajr"
+        case .dhuhrBefore, .dhuhrAfter: return "Dhuhr"
+        case .maghribAfter: return "Maghrib"
+        case .ishaAfter: return "Isha"
+        case .witr, .duha, .night: return nil
+        }
+    }
+
+    static let rawatib: [SunnahPrayer] = allCases.filter(\.isRatibah)
+    static let regularRakatTotal = rawatib.reduce(0) { $0 + $1.regularRakat }
+}
+
 struct HijriDate: Identifiable, Codable {
     var id: Date { date }
 

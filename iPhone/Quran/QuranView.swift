@@ -1747,62 +1747,84 @@ struct QuranView: View {
         #endif
     }
 
+    /// The surah and the ayah a row is about, for `paired(with:)`: looked up BEFORE the ForEach, so
+    /// the row itself is never an `if let` (a row that may be nothing is one the List has to build
+    /// to count: see `OneRow`).
+    private func surahAndAyah(_ surah: Int, _ ayah: Int) -> (surah: Surah, ayah: Ayah)? {
+        quranData.surah(surah).flatMap { found in
+            quranData.ayah(surah: surah, ayah: ayah).map { (surah: found, ayah: $0) }
+        }
+    }
+
+    /// Opening a route, in whichever navigation this screen is running: a push on iPhone, a swap of
+    /// the detail column on iPad/Mac, a pick that closes the sheet in Choose Surah.
+    ///
+    /// The branch sits inside `OneRow` and the cell's mark outside it: every row of the tab goes
+    /// through here, and a bare branch made each of them a row the List builds to count (114 row
+    /// builders per run of the tab's body in list mode). See `OneRow`.
+    ///
+    /// `pickerWash` is Choose Surah's tint for the surah being read, which only the surah rows pass.
     @ViewBuilder
     private func quranNavigationLink<Label: View>(
         route: QuranRoute,
+        pickerWash: RowCellWash = .none,
         @ViewBuilder label: () -> Label
     ) -> some View {
         #if os(iOS)
-        if usesColumnNavigation || isPicker {
-            // The row the detail column is showing stays marked (Abu, 2026-10-05: "when i tap on a
-            // column it stays highlighted ... sometimes it doesnt highlight at all"). These rows are
-            // plain Buttons - a Button so that re-tapping the OPEN row still answers - and
-            // `.buttonStyle(.plain)` draws no selection, so without this a tap opened the detail with
-            // nothing to say which row it came from. The grid tiles beside these rows already ringed
-            // (`gridSelectionRing`); this is the same promise for list mode.
-            //
-            // Not in the picker sheet: it has one column, dismisses on a pick, and already tints the
-            // surah being read (`PickerCurrentSurahWash`).
-            let isOpenInDetail = !isPicker && usesColumnNavigation
-                && (selectedRoute ?? defaultDetailRoute) == route
+        // The row the detail column is showing stays marked (Abu, 2026-10-05: "when i tap on a
+        // column it stays highlighted ... sometimes it doesnt highlight at all"). These rows are
+        // plain Buttons - a Button so that re-tapping the OPEN row still answers - and
+        // `.buttonStyle(.plain)` draws no selection, so without this a tap opened the detail with
+        // nothing to say which row it came from. The grid tiles beside these rows already ringed
+        // (`gridSelectionRing`); this is the same promise for list mode.
+        //
+        // Not in the picker sheet: it has one column, dismisses on a pick, and tints the surah
+        // being read instead (`pickerWash`).
+        let isOpenInDetail = !isPicker && usesColumnNavigation
+            && (selectedRoute ?? defaultDetailRoute) == route
 
-            Button {
-                settings.hapticFeedback()
-                selectQuranRoute(route)
-            } label: {
-                HStack(spacing: 8) {
+        OneRow {
+            if usesColumnNavigation || isPicker {
+                Button {
+                    settings.hapticFeedback()
+                    selectQuranRoute(route)
+                } label: {
+                    HStack(spacing: 8) {
+                        label()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        // A pick closes the sheet; nothing is pushed, so nothing is promised.
+                        if !isPicker {
+                            Image(systemName: "chevron.forward")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .contentShape(Rectangle())
+            } else if #available(iOS 16.0, *) {
+                NavigationLink(value: route) {
                     label()
                         .frame(maxWidth: .infinity, alignment: .leading)
-
-                    // A pick closes the sheet; nothing is pushed, so nothing is promised.
-                    if !isPicker {
-                        Image(systemName: "chevron.forward")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                    }
+                        .contentShape(Rectangle())
+                }
+                .contentShape(Rectangle())
+            } else {
+                NavigationLink(destination: LazyDestination { routeDestination(route) }) {
+                    label()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .contentShape(Rectangle())
-            // The row's whole cell, so only one of the two marks may claim it: in the picker that is
-            // the surah being read (`PickerCurrentSurahWash`).
-            .rowSelectionHighlight(isOpenInDetail, isActive: !isPicker)
-        } else if #available(iOS 16.0, *) {
-            NavigationLink(value: route) {
-                label()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-            }
-            .contentShape(Rectangle())
-        } else {
-            NavigationLink(destination: LazyDestination { routeDestination(route) }) {
-                label()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-            }
-            .contentShape(Rectangle())
         }
+        // The row's whole cell, so only one of the two marks may claim it: the open row in column
+        // mode, the surah being read in the picker. On the `OneRow`, not in it: from inside a
+        // container a cell background never reaches the cell.
+        .rowSelectionHighlight(isOpenInDetail, isActive: usesColumnNavigation && !isPicker,
+                               wash: isPicker ? pickerWash : .none)
         #else
         NavigationLink(destination: LazyDestination { routeDestination(route) }) {
             label()
@@ -2834,73 +2856,72 @@ struct QuranView: View {
             // duplicate ForEach ids are undefined behavior. "Today" keeps full brightness - it IS the
             // current ayah, not history.
             ForEach(Array(recentAyahsOfTheDay.enumerated()), id: \.element.dayLabel) { index, entry in
-                if index == 0 {
-                    // The "Today" row IS the current ayah - full brightness, and it carries the shuffle
-                    // that replaces today's pick with a fresh random one.
-                    HStack(spacing: 8) {
-                        summaryHistoryRow(surah: entry.surah, ayah: entry.ayah, caption: entry.dayLabel, dimmed: false)
+                // One view by its type, as a List row must be (see `OneRow`).
+                OneRow {
+                    if index == 0 {
+                        // The "Today" row IS the current ayah - full brightness, and it carries the shuffle
+                        // that replaces today's pick with a fresh random one.
+                        HStack(spacing: 8) {
+                            summaryHistoryRow(surah: entry.surah, ayah: entry.ayah, caption: entry.dayLabel, dimmed: false)
 
-                        Image(systemName: "shuffle")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundColor(settings.accentColor.color)
-                            .frame(width: SectionPillHeader.pillHeight, height: SectionPillHeader.pillHeight)
-                            .conditionalGlassEffect(circle: true)
-                            .onTapGesture {
-                                settings.hapticFeedback()
-                                withAnimation(.easeInOut) { settings.shuffleAyahOfTheDay() }
-                            }
-                            .accessibilityLabel("Shuffle the Ayah of the Day")
+                            Image(systemName: "shuffle")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundColor(settings.accentColor.color)
+                                .frame(width: SectionPillHeader.pillHeight, height: SectionPillHeader.pillHeight)
+                                .conditionalGlassEffect(circle: true)
+                                .onTapGesture {
+                                    settings.hapticFeedback()
+                                    withAnimation(.easeInOut) { settings.shuffleAyahOfTheDay() }
+                                }
+                                .accessibilityLabel("Shuffle the Ayah of the Day")
+                        }
+                    } else {
+                        summaryHistoryRow(surah: entry.surah, ayah: entry.ayah, caption: entry.dayLabel)
                     }
-                } else {
-                    summaryHistoryRow(surah: entry.surah, ayah: entry.ayah, caption: entry.dayLabel)
                 }
             }
+        // The three histories find each entry's surah and ayah BEFORE the ForEach (`paired`), so a
+        // row is never an `if let` (see `OneRow`).
         case .reading:
-            ForEach(playbackHistory.readingHistory) { item in
-                if let surah = quranData.surah(item.surahNumber),
-                   let ayah = surah.ayahs.first(where: { $0.id == max(1, item.ayahNumber) }) {
-                    summaryHistoryRow(surah: surah, ayah: ayah, caption: nil, timestamp: item.timestamp)
-                }
+            ForEach(playbackHistory.readingHistory.paired { surahAndAyah($0.surahNumber, max(1, $0.ayahNumber)) }, id: \.item.id) { pair in
+                summaryHistoryRow(surah: pair.found.surah, ayah: pair.found.ayah, caption: nil, timestamp: pair.item.timestamp)
             }
         case .listenedAyah:
-            ForEach(playbackHistory.ayahListeningHistory) { item in
-                if let surah = quranData.surah(item.surahNumber),
-                   let ayah = surah.ayahs.first(where: { $0.id == item.ayahNumber }) {
-                    summaryHistoryRow(
-                        surah: surah,
-                        ayah: ayah,
-                        caption: item.reciter.displayNameWithEnglishQiraah,
-                        timestamp: item.timestamp
-                    )
-                }
+            ForEach(playbackHistory.ayahListeningHistory.paired { surahAndAyah($0.surahNumber, $0.ayahNumber) }, id: \.item.id) { pair in
+                summaryHistoryRow(
+                    surah: pair.found.surah,
+                    ayah: pair.found.ayah,
+                    caption: pair.item.reciter.displayNameWithEnglishQiraah,
+                    timestamp: pair.item.timestamp
+                )
             }
         case .listenedSurah:
-            ForEach(playbackHistory.listeningHistory) { item in
-                if let surah = quranData.surah(item.surahNumber) {
-                    Button {
-                        settings.hapticFeedback()
-                        push(surahID: surah.id, ayahID: nil)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            // Top-left "when", matching the ayah history rows (there is no number
-                            // pill on a surah row, so it simply leads the card).
-                            historyTimestampLabel(item.timestamp)
+            ForEach(playbackHistory.listeningHistory.paired { quranData.surah($0.surahNumber) }, id: \.item.id) { pair in
+                let item = pair.item
+                let surah = pair.found
+                Button {
+                    settings.hapticFeedback()
+                    push(surahID: surah.id, ayahID: nil)
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        // Top-left "when", matching the ayah history rows (there is no number
+                        // pill on a surah row, so it simply leads the card).
+                        historyTimestampLabel(item.timestamp)
 
-                            Text("\(surah.id) - \(surah.displayName)")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(settings.accentColor.color)
+                        Text("\(surah.id) - \(surah.displayName)")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(settings.accentColor.color)
 
-                            Text(item.reciter.displayNameWithEnglishQiraah)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                        .opacity(0.75)
+                        Text(item.reciter.displayNameWithEnglishQiraah)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
                     }
-                    .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .opacity(0.75)
                 }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -3227,8 +3248,8 @@ struct QuranView: View {
                             .tileGridChunkRow(start: start, count: sortedBookmarks.count, chunk: chunk)
                         }
                     } else {
-                        ForEach(sortedBookmarks, id: \.id) { bookmarkedAyah in
-                            bookmarkRow(bookmarkedAyah, context: context)
+                        ForEach(sortedBookmarks.paired { surahAndAyah($0.surah, $0.ayah) }, id: \.item.id) { pair in
+                            bookmarkRow(pair.item, surah: pair.found.surah, ayah: pair.found.ayah, context: context)
                         }
                     }
                 }
@@ -3294,8 +3315,8 @@ struct QuranView: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 } else {
-                    ForEach(matches, id: \.id) { bookmarkedAyah in
-                        bookmarkRow(bookmarkedAyah, context: context)
+                    ForEach(matches.paired { surahAndAyah($0.surah, $0.ayah) }, id: \.item.id) { pair in
+                        bookmarkRow(pair.item, surah: pair.found.surah, ayah: pair.found.ayah, context: context)
                     }
                 }
             }
@@ -3366,40 +3387,37 @@ struct QuranView: View {
     }
 
     @ViewBuilder
-    private func bookmarkRow(_ bookmarkedAyah: BookmarkedAyah, context: SearchDisplayContext) -> some View {
-          if let surah = quranData.surah(bookmarkedAyah.surah),
-              let ayah = quranData.ayah(surah: bookmarkedAyah.surah, ayah: bookmarkedAyah.ayah) {
-            let noteText = bookmarkedAyah.note?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let noteToShow = (noteText?.isEmpty == false) ? noteText : nil
+    private func bookmarkRow(_ bookmarkedAyah: BookmarkedAyah, surah: Surah, ayah: Ayah, context: SearchDisplayContext) -> some View {
+        let noteText = bookmarkedAyah.note?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let noteToShow = (noteText?.isEmpty == false) ? noteText : nil
 
-            quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: ayah.id)) {
-                SurahAyahRow(surah: surah, ayah: ayah, note: noteToShow)
-                    .equatable()
-            }
-            .tag(surah.id)
-            .rightSwipeActions(
-                surahID: surah.id,
-                surahName: surah.nameTransliteration,
-                ayahID: ayah.id,
-                searchText: $searchText,
-                scrollToSurahID: $scrollToSurahID
-            )
-            .leftSwipeActions(
-                surah: surah.id,
-                favoriteSurahs: context.favoriteSurahs,
-                bookmarkedAyahs: context.bookmarkedAyahs,
-                bookmarkedSurah: bookmarkedAyah.surah,
-                bookmarkedAyah: bookmarkedAyah.ayah
-            )
-            .ayahContextMenuModifier(
-                surah: surah.id,
-                ayah: ayah.id,
-                favoriteSurahs: context.favoriteSurahs,
-                bookmarkedAyahs: context.bookmarkedAyahs,
-                searchText: $searchText,
-                scrollToSurahID: $scrollToSurahID
-            )
+        quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: ayah.id)) {
+            SurahAyahRow(surah: surah, ayah: ayah, note: noteToShow)
+                .equatable()
         }
+        .tag(surah.id)
+        .rightSwipeActions(
+            surahID: surah.id,
+            surahName: surah.nameTransliteration,
+            ayahID: ayah.id,
+            searchText: $searchText,
+            scrollToSurahID: $scrollToSurahID
+        )
+        .leftSwipeActions(
+            surah: surah.id,
+            favoriteSurahs: context.favoriteSurahs,
+            bookmarkedAyahs: context.bookmarkedAyahs,
+            bookmarkedSurah: bookmarkedAyah.surah,
+            bookmarkedAyah: bookmarkedAyah.ayah
+        )
+        .ayahContextMenuModifier(
+            surah: surah.id,
+            ayah: ayah.id,
+            favoriteSurahs: context.favoriteSurahs,
+            bookmarkedAyahs: context.bookmarkedAyahs,
+            searchText: $searchText,
+            scrollToSurahID: $scrollToSurahID
+        )
     }
 
     @ViewBuilder
@@ -3420,8 +3438,8 @@ struct QuranView: View {
                             .tileGridChunkRow(start: start, count: sortedFavorites.count, chunk: chunk)
                         }
                     } else {
-                        ForEach(sortedFavorites, id: \.self) { surahID in
-                            favoriteRow(surahID: surahID, context: context)
+                        ForEach(sortedFavorites.compactMap { quranData.surah($0) }, id: \.id) { surah in
+                            favoriteRow(surah: surah, context: context)
                         }
                     }
                 }
@@ -3512,32 +3530,30 @@ struct QuranView: View {
     }
 
     @ViewBuilder
-    private func favoriteRow(surahID: Int, context: SearchDisplayContext) -> some View {
-        if let surah = quranData.surah(surahID) {
-            quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: nil)) {
-                SurahRow(surah: surah, isFavorite: context.favoriteSurahs.contains(surah.id)).equatable()
-            }
-            .rightSwipeActions(
-                surahID: surahID,
+    private func favoriteRow(surah: Surah, context: SearchDisplayContext) -> some View {
+        quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: nil)) {
+            SurahRow(surah: surah, isFavorite: context.favoriteSurahs.contains(surah.id)).equatable()
+        }
+        .rightSwipeActions(
+            surahID: surah.id,
+            surahName: surah.nameTransliteration,
+            searchText: $searchText,
+            scrollToSurahID: $scrollToSurahID
+        )
+        .leftSwipeActions(surah: surah.id, favoriteSurahs: context.favoriteSurahs)
+        #if os(iOS)
+        .contextMenu {
+            SurahContextMenu(
+                surahID: surah.id,
                 surahName: surah.nameTransliteration,
+                favoriteSurahs: context.favoriteSurahs,
                 searchText: $searchText,
                 scrollToSurahID: $scrollToSurahID
             )
-            .leftSwipeActions(surah: surah.id, favoriteSurahs: context.favoriteSurahs)
-            #if os(iOS)
-            .contextMenu {
-                SurahContextMenu(
-                    surahID: surah.id,
-                    surahName: surah.nameTransliteration,
-                    favoriteSurahs: context.favoriteSurahs,
-                    searchText: $searchText,
-                    scrollToSurahID: $scrollToSurahID
-                )
-            } /*preview: {
-                SurahRow(surah: surah, isFavorite: context.favoriteSurahs.contains(surah.id), hideInfo: false)
-            }*/
-            #endif
-        }
+        } /*preview: {
+            SurahRow(surah: surah, isFavorite: context.favoriteSurahs.contains(surah.id), hideInfo: false)
+        }*/
+        #endif
     }
 
     private var usesDescendingQuranSort: Bool {
@@ -4351,14 +4367,14 @@ struct QuranView: View {
                     }
                 } else {
                     let firstRowID = sectionData.rows.first?.id
-                    ForEach(sectionData.rows) { row in
-                        preprocessedJuzRow(row: row, context: context)
-                            .id(row.id == firstRowID ? Self.juzRowAnchor(juz.id) : "juz\(juz.id)-\(row.id)")
+                    ForEach(sectionData.rows.paired { quranData.surah($0.surahID) }, id: \.item.id) { pair in
+                        preprocessedJuzRow(row: pair.item, surah: pair.found, context: context)
+                            .id(pair.item.id == firstRowID ? Self.juzRowAnchor(juz.id) : "juz\(juz.id)-\(pair.item.id)")
                     }
                 }
                 #else
-                ForEach(sectionData.rows) { row in
-                    preprocessedJuzRow(row: row, context: context)
+                ForEach(sectionData.rows.paired { quranData.surah($0.surahID) }, id: \.item.id) { pair in
+                    preprocessedJuzRow(row: pair.item, surah: pair.found, context: context)
                 }
                 #endif
             }
@@ -4628,30 +4644,28 @@ struct QuranView: View {
     #endif
 
     @ViewBuilder
-    private func preprocessedJuzRow(row: QuranData.JuzSectionData.Row, context: SearchDisplayContext) -> some View {
-        if let surah = quranData.surah(row.surahID) {
-            quranNavigationLink(route: preprocessedJuzRoute(row: row, surah: surah)) {
-                preprocessedJuzLabel(row: row, surah: surah, favoriteSurahs: context.favoriteSurahs)
-            }
-            #if os(iOS)
-            .rightSwipeActions(
+    private func preprocessedJuzRow(row: QuranData.JuzSectionData.Row, surah: Surah, context: SearchDisplayContext) -> some View {
+        quranNavigationLink(route: preprocessedJuzRoute(row: row, surah: surah)) {
+            preprocessedJuzLabel(row: row, surah: surah, favoriteSurahs: context.favoriteSurahs)
+        }
+        #if os(iOS)
+        .rightSwipeActions(
+            surahID: surah.id,
+            surahName: surah.nameTransliteration,
+            searchText: $searchText,
+            scrollToSurahID: $scrollToSurahID
+        )
+        .leftSwipeActions(surah: surah.id, favoriteSurahs: context.favoriteSurahs)
+        .contextMenu {
+            SurahContextMenu(
                 surahID: surah.id,
                 surahName: surah.nameTransliteration,
+                favoriteSurahs: context.favoriteSurahs,
                 searchText: $searchText,
                 scrollToSurahID: $scrollToSurahID
             )
-            .leftSwipeActions(surah: surah.id, favoriteSurahs: context.favoriteSurahs)
-            .contextMenu {
-                SurahContextMenu(
-                    surahID: surah.id,
-                    surahName: surah.nameTransliteration,
-                    favoriteSurahs: context.favoriteSurahs,
-                    searchText: $searchText,
-                    scrollToSurahID: $scrollToSurahID
-                )
-            }
-            #endif
         }
+        #endif
     }
 
     @ViewBuilder
@@ -4749,7 +4763,11 @@ struct QuranView: View {
         let khatmCompleted = settings.quranSortMode == .khatm ? settings.khatmCompletedCount(for: surah) : nil
         let khatmTotal = settings.quranSortMode == .khatm ? surah.numberOfAyahs : nil
 
-        quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: nil)) {
+        // Choose Surah tints the surah the reader is on, the way the old picker sheet did: the whole
+        // row (`rowWash`). Only in the picker (`quranNavigationLink` drops it elsewhere); the tab's
+        // own surah list keeps the system's cells.
+        quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: nil),
+                            pickerWash: .tint(picker?.currentSurahID == surah.id ? settings.accentColor.color.opacity(0.15) : nil)) {
             if showsRevelationOrder {
                 HStack(spacing: 10) {
                     revelationOrderBadge(surah.revelationOrder ?? 0)
@@ -4762,9 +4780,6 @@ struct QuranView: View {
         }
         .id("surah_\(surah.id)")
         #if os(iOS)
-        .modifier(PickerCurrentSurahWash(isPicker: picker != nil,
-                                         isCurrent: picker?.currentSurahID == surah.id,
-                                         accent: settings.accentColor.color))
         .rightSwipeActions(
             surahID: surah.id,
             surahName: surah.nameTransliteration,
@@ -4783,25 +4798,6 @@ struct QuranView: View {
         }
         #endif
     }
-
-    #if os(iOS)
-    /// Choose Surah tints the surah the reader is on, the way the old picker sheet did: the whole row
-    /// (`rowWash`). Only in the picker; the tab's own surah list keeps the system's cells.
-    private struct PickerCurrentSurahWash: ViewModifier {
-        let isPicker: Bool
-        let isCurrent: Bool
-        let accent: Color
-
-        @ViewBuilder
-        func body(content: Content) -> some View {
-            if isPicker {
-                content.rowWash(isCurrent ? accent.opacity(0.15) : nil)
-            } else {
-                content
-            }
-        }
-    }
-    #endif
 
     private func khatmSurahRowLabel(
         surah: Surah,
@@ -5300,9 +5296,9 @@ struct QuranView: View {
                 if showBest {
                     Section(header: bestAyahHeader(count: bestHits.count)) {
                         rankedSearchNotice
-                        ForEach(bestHits) { hit in
-                            ayahHitRow(hit: hit, context: context, section: "best",
-                                       highlight: rankedOutcome?.highlightQuery)
+                        ForEach(bestHits.paired { surahAndAyah($0.surah, $0.ayah) }, id: \.item.id) { pair in
+                            ayahHitRow(hit: pair.item, surah: pair.found.surah, ayah: pair.found.ayah, context: context,
+                                       section: "best", highlight: rankedOutcome?.highlightQuery)
                         }
                     }
                 }
@@ -5356,8 +5352,9 @@ struct QuranView: View {
 
                 ForEach(grouped, id: \.surahId) { group in
                     Section {
-                        ForEach(group.hits) { hit in
-                            ayahHitRow(hit: hit, context: context, section: "grouped")
+                        ForEach(group.hits.paired { surahAndAyah($0.surah, $0.ayah) }, id: \.item.id) { pair in
+                            ayahHitRow(hit: pair.item, surah: pair.found.surah, ayah: pair.found.ayah, context: context,
+                                       section: "grouped")
                         }
                     } header: {
                         surahSearchSectionHeader(surahId: group.surahId, matchCount: group.hits.count)
@@ -5414,8 +5411,8 @@ struct QuranView: View {
 
                     ForEach(aiHitsGroupedBySurah, id: \.surahId) { group in
                         Section {
-                            ForEach(group.hits) { hit in
-                                aiHitRow(hit)
+                            ForEach(group.hits.paired { surahAndAyah($0.surah, $0.ayah) }, id: \.item.id) { pair in
+                                aiHitRow(pair.item, surah: pair.found.surah, ayah: pair.found.ayah)
                             }
                         } header: {
                             surahSearchSectionHeader(surahId: group.surahId, matchCount: group.hits.count)
@@ -5478,31 +5475,28 @@ struct QuranView: View {
     /// One semantic match - the standard compact ayah search row (same fonts, tajweed-off rule, arrival
     /// term travel) so AI results read exactly like every other ayah result.
     @ViewBuilder
-    private func aiHitRow(_ hit: AISearchHit) -> some View {
-        if let surah = quranData.surah(hit.surah),
-           let ayah = quranData.ayah(surah: hit.surah, ayah: hit.ayah) {
-            quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: ayah.id)) {
-                AyahSearchRow(
-                    surahName: surah.nameTransliteration,
-                    surah: hit.surah,
-                    ayah: hit.ayah,
-                    query: searchText,
-                    arabic: ayah.displayArabicText(surahId: hit.surah, clean: settings.cleanArabicText),
-                    transliteration: ayah.textTransliteration,
-                    englishSaheeh: ayah.textEnglishSaheeh,
-                    englishMustafa: ayah.textEnglishMustafa,
-                    page: ayah.page,
-                    juz: ayah.juz,
-                    favoriteSurahs: Set(settings.favoriteSurahs),
-                    bookmarkedAyahs: Set(settings.bookmarkedAyahs.map(\.id)),
-                    searchText: $searchText,
-                    scrollToSurahID: $scrollToSurahID,
-                    qiraahRefreshKey: settings.displayQiraah,
-                    compact: true,
-                    disableTajweedColors: true
-                )
-                .id("ayah-results-ai-\(surah.id)-\(ayah.id)")
-            }
+    private func aiHitRow(_ hit: AISearchHit, surah: Surah, ayah: Ayah) -> some View {
+        quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: ayah.id)) {
+            AyahSearchRow(
+                surahName: surah.nameTransliteration,
+                surah: hit.surah,
+                ayah: hit.ayah,
+                query: searchText,
+                arabic: ayah.displayArabicText(surahId: hit.surah, clean: settings.cleanArabicText),
+                transliteration: ayah.textTransliteration,
+                englishSaheeh: ayah.textEnglishSaheeh,
+                englishMustafa: ayah.textEnglishMustafa,
+                page: ayah.page,
+                juz: ayah.juz,
+                favoriteSurahs: Set(settings.favoriteSurahs),
+                bookmarkedAyahs: Set(settings.bookmarkedAyahs.map(\.id)),
+                searchText: $searchText,
+                scrollToSurahID: $scrollToSurahID,
+                qiraahRefreshKey: settings.displayQiraah,
+                compact: true,
+                disableTajweedColors: true
+            )
+            .id("ayah-results-ai-\(surah.id)-\(ayah.id)")
         }
     }
     #endif
@@ -5522,8 +5516,9 @@ struct QuranView: View {
     private func rankedMainSections(outcome: QuranRankedSearch.Outcome, context: SearchDisplayContext) -> some View {
         Section(header: rankedMainHeader(shown: outcome.hits.count, total: outcome.total)) {
             rankedSearchNotice
-            ForEach(outcome.hits) { hit in
-                ayahHitRow(hit: hit, context: context, section: "ranked", highlight: outcome.highlightQuery)
+            ForEach(outcome.hits.paired { surahAndAyah($0.surah, $0.ayah) }, id: \.item.id) { pair in
+                ayahHitRow(hit: pair.item, surah: pair.found.surah, ayah: pair.found.ayah, context: context,
+                           section: "ranked", highlight: outcome.highlightQuery)
             }
         }
 
@@ -5666,44 +5661,41 @@ struct QuranView: View {
     }
 
     @ViewBuilder
-    private func ayahHitRow(hit: VerseIndexEntry, context: SearchDisplayContext, section: String,
+    private func ayahHitRow(hit: VerseIndexEntry, surah: Surah, ayah: Ayah, context: SearchDisplayContext, section: String,
                             highlight: String? = nil) -> some View {
-        if let surah = quranData.surah(hit.surah),
-           let ayah = quranData.ayah(surah: hit.surah, ayah: hit.ayah) {
-            let row = AyahSearchRow(
-                surahName: surah.nameTransliteration,
-                surah: hit.surah,
-                ayah: hit.ayah,
-                // The ranked rows paint the words the engine matched (a corrected spelling, say) rather
-                // than the typed ones, or a corrected hit would show no highlight at all.
-                query: highlight ?? searchText,
-                arabic: ayah.displayArabicText(surahId: hit.surah, clean: settings.cleanArabicText),
-                transliteration: ayah.textTransliteration,
-                englishSaheeh: ayah.textEnglishSaheeh,
-                englishMustafa: ayah.textEnglishMustafa,
-                page: ayah.page,
-                juz: ayah.juz,
-                favoriteSurahs: context.favoriteSurahs,
-                bookmarkedAyahs: context.bookmarkedAyahs,
-                searchText: $searchText,
-                scrollToSurahID: $scrollToSurahID,
-                qiraahRefreshKey: settings.displayQiraah,
-                compact: true,
-                disableTajweedColors: true
-            )
-            // Section-scoped id: the same ayah can appear in both "best" and "grouped" sections, and
-            // duplicate List identities cause scroll jank. No per-row .animation here - that previously
-            // re-animated every visible row whenever verseHits.count changed (e.g. while loading more
-            // results during scroll), which is what made scrolling feel laggy versus SurahView.
-            .id("ayah-results-\(section)-\(surah.id)-\(ayah.id)")
+        let row = AyahSearchRow(
+            surahName: surah.nameTransliteration,
+            surah: hit.surah,
+            ayah: hit.ayah,
+            // The ranked rows paint the words the engine matched (a corrected spelling, say) rather
+            // than the typed ones, or a corrected hit would show no highlight at all.
+            query: highlight ?? searchText,
+            arabic: ayah.displayArabicText(surahId: hit.surah, clean: settings.cleanArabicText),
+            transliteration: ayah.textTransliteration,
+            englishSaheeh: ayah.textEnglishSaheeh,
+            englishMustafa: ayah.textEnglishMustafa,
+            page: ayah.page,
+            juz: ayah.juz,
+            favoriteSurahs: context.favoriteSurahs,
+            bookmarkedAyahs: context.bookmarkedAyahs,
+            searchText: $searchText,
+            scrollToSurahID: $scrollToSurahID,
+            qiraahRefreshKey: settings.displayQiraah,
+            compact: true,
+            disableTajweedColors: true
+        )
+        // Section-scoped id: the same ayah can appear in both "best" and "grouped" sections, and
+        // duplicate List identities cause scroll jank. No per-row .animation here - that previously
+        // re-animated every visible row whenever verseHits.count changed (e.g. while loading more
+        // results during scroll), which is what made scrolling feel laggy versus SurahView.
+        .id("ayah-results-\(section)-\(surah.id)-\(ayah.id)")
 
-            quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: ayah.id)) {
-                row
-            }
-            // The search term rides along via the route-change hooks on the navigation state (see
-            // `stashArrivalTerm`) - a gesture here, even a simultaneous one, swallowed the
-            // NavigationLink's own tap and made the hit rows dead.
+        quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: ayah.id)) {
+            row
         }
+        // The search term rides along via the route-change hooks on the navigation state (see
+        // `stashArrivalTerm`) - a gesture here, even a simultaneous one, swallowed the
+        // NavigationLink's own tap and made the hit rows dead.
     }
 
     @ViewBuilder

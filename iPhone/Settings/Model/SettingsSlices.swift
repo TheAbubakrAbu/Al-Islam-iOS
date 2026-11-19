@@ -1031,7 +1031,9 @@ final class PrayerTracker: ObservableObject, SettingsSlice {
     static let shared = PrayerTracker()
     static let label = "PrayerTracker"
     static let keys: Set<String> = [
-        "mensesPauseActive", "mensesPauseStartStamp", "prayerTrackerData", "prayerTrackerExemptDaysData",
+        "mensesPauseActive", "mensesPauseStartStamp", "prayerTrackerCongregationData", "prayerTrackerData",
+        "prayerTrackerExemptDaysData", "prayerTrackerResumeDaysData", "prayerTrackerSunnahData", "trackerCongregationEnabled",
+        "trackerSunnahEnabled",
     ]
 
     private init() { ObjectPublishCounter.attach(self, label: Self.label) }
@@ -1062,9 +1064,44 @@ final class PrayerTracker: ObservableObject, SettingsSlice {
     #endif
 
     #if HAS_ADHAN
+    var trackerCongregationData: Data {
+        get { Settings.shared.trackerCongregationData }
+        set { Settings.shared.trackerCongregationData = newValue }
+    }
+    #endif
+
+    #if HAS_ADHAN
+    var trackerCongregationEnabled: Bool {
+        get { Settings.shared.trackerCongregationEnabled }
+        set { Settings.shared.trackerCongregationEnabled = newValue }
+    }
+    #endif
+
+    #if HAS_ADHAN
     var trackerExemptDaysData: Data {
         get { Settings.shared.trackerExemptDaysData }
         set { Settings.shared.trackerExemptDaysData = newValue }
+    }
+    #endif
+
+    #if HAS_ADHAN
+    var trackerResumeDaysData: Data {
+        get { Settings.shared.trackerResumeDaysData }
+        set { Settings.shared.trackerResumeDaysData = newValue }
+    }
+    #endif
+
+    #if HAS_ADHAN
+    var trackerSunnahData: Data {
+        get { Settings.shared.trackerSunnahData }
+        set { Settings.shared.trackerSunnahData = newValue }
+    }
+    #endif
+
+    #if HAS_ADHAN
+    var trackerSunnahEnabled: Bool {
+        get { Settings.shared.trackerSunnahEnabled }
+        set { Settings.shared.trackerSunnahEnabled = newValue }
     }
     #endif
 }

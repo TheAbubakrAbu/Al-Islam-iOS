@@ -273,13 +273,26 @@ struct HadithRow: View, Equatable {
     /// parent re-render delivers a fresh value and fails `==`, same as `renderSettingsSignature`.
     let isLastRead: Bool
 
+    /// Multi-select, the chapter reader's Select Hadiths (the ayah row's `isSelecting`): the host's
+    /// tap and hold on the row build the selection, so the row's own controls stand down. A circle
+    /// takes the ⋯ slot (`selectionMark`), the pill selects instead of bookmarking, the chain cards
+    /// and the grade line let their taps through to the row, and the long-press menu and the swipes
+    /// are off. They all stayed live mid-selection until 2026-11-19, with no circle to say which
+    /// hadiths were picked.
+    var isSelecting: Bool = false
+    var isSelected: Bool = false
+    var onToggleSelection: (() -> Void)? = nil
+
     init(
         book: HadithCatalogBook,
         hadith: HadithBookData.Hadith,
         searchText: String = "",
         compact: Bool = false,
         fontScale: CGFloat = 1,
-        showsChapterPosition: Bool = false
+        showsChapterPosition: Bool = false,
+        isSelecting: Bool = false,
+        isSelected: Bool = false,
+        onToggleSelection: (() -> Void)? = nil
     ) {
         self.book = book
         self.hadith = hadith
@@ -287,6 +300,9 @@ struct HadithRow: View, Equatable {
         self.compact = compact
         self.fontScale = fontScale
         self.showsChapterPosition = showsChapterPosition
+        self.isSelecting = isSelecting
+        self.isSelected = isSelected
+        self.onToggleSelection = onToggleSelection
         self.isLastRead = MainActor.assumeIsolated {
             HadithStore.shared.lastRead(for: book.slug)?.idInBook == hadith.idInBook
         }
@@ -304,7 +320,9 @@ struct HadithRow: View, Equatable {
         l.compact == r.compact &&
         l.fontScale == r.fontScale &&
         l.renderSettingsSignature == r.renderSettingsSignature &&
-        l.isLastRead == r.isLastRead
+        l.isLastRead == r.isLastRead &&
+        l.isSelecting == r.isSelecting &&
+        l.isSelected == r.isSelected
     }
 
     @State private var showShareSheet = false
@@ -399,7 +417,27 @@ struct HadithRow: View, Equatable {
             .environment(\.layoutDirection, .leftToRight)
         }
         .buttonStyle(.plain)
+        // Select mode: the card is part of the row, and its tap selects with it.
+        .allowsHitTesting(!isSelecting)
         .accessibilityHint(Text("Shows the chain of narrators"))
+    }
+
+    /// Select mode's circle, in the slot the ⋯ leaves: its 25 pt glyph in its 28 pt square, so the
+    /// header is as tall as it was and nothing under it moves (the ayah row's `selectionMark`). Not
+    /// a button to the finger, since the row's own tap selects; VoiceOver gets one all the same
+    /// ("Selected, Select Sahih al-Bukhari 5, button").
+    private var selectionMark: some View {
+        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 25, height: 25)
+            .foregroundStyle(isSelected ? settings.accentColor.color : Color.secondary)
+            .frame(width: 28, height: 28)
+            .accessibilityElement()
+            .accessibilityLabel(Text("Select \(displayReference)"))
+            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+            .accessibilityAction { onToggleSelection?() }
+            .accessibilityIdentifier("hadithSelectionMark")
     }
 
     /// The Arabic chain of a row that draws it apart from the hadith: smaller and secondary, in the
@@ -702,7 +740,13 @@ struct HadithRow: View, Equatable {
                 .contentShape(Rectangle())
                 .onTapGesture {
                     settings.hapticFeedback()
-                    withAnimation(.easeInOut) { userData.toggleBookmarkOrConfirm(book: book, hadith: hadith) }
+                    // In select mode the pill is part of the row and selects with it: it used to
+                    // bookmark the hadith mid-selection.
+                    if isSelecting {
+                        onToggleSelection?()
+                    } else {
+                        withAnimation(.easeInOut) { userData.toggleBookmarkOrConfirm(book: book, hadith: hadith) }
+                    }
                 }
                 // The ayah pill's badge grammar: the bookmark badge when bookmarked (the tinted pill
                 // plus this corner mark IS the bookmarked state - the actions button no longer morphs),
@@ -730,27 +774,32 @@ struct HadithRow: View, Equatable {
                 // bookmark state lives on the pill (tint + corner badge), the Quran rows' grammar.
                 // Tap = menu, hold = share. No double tap since 2026-11-01: it made every plain tap wait
                 // before the menu opened (`ShortcutMenu`); Copy Hadith is a row of the menu.
-                ShortcutMenu(
-                    hold: MenuShortcut(String(localized: "Share Hadith")) {
-                        settings.hapticFeedback()
-                        showShareSheet = true
+                // Select mode: the circle takes the menu's slot, the same 28 pt square.
+                if isSelecting {
+                    selectionMark
+                } else {
+                    ShortcutMenu(
+                        hold: MenuShortcut(String(localized: "Share Hadith")) {
+                            settings.hapticFeedback()
+                            showShareSheet = true
+                        }
+                    ) {
+                        menuContent
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: compact ? 19 : 25, height: compact ? 19 : 25)
+                            .foregroundColor(settings.accentColor.color)
+                            // The glass is the pill's height (22 / 28), not the glyph's: see AyahRow's
+                            // `headerControlIcon` (2026-11-16).
+                            .frame(width: compact ? 22 : 28, height: compact ? 22 : 28)
+                            .conditionalGlassEffect(inRow: true)
+                            .contentShape(Rectangle())
                     }
-                ) {
-                    menuContent
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: compact ? 19 : 25, height: compact ? 19 : 25)
-                        .foregroundColor(settings.accentColor.color)
-                        // The glass is the pill's height (22 / 28), not the glyph's: see AyahRow's
-                        // `headerControlIcon` (2026-11-16).
-                        .frame(width: compact ? 22 : 28, height: compact ? 22 : 28)
-                        .conditionalGlassEffect(inRow: true)
-                        .contentShape(Rectangle())
+                    .accessibilityLabel("Hadith Actions")
+                    .accessibilityIdentifier("hadithActionsMenu")
                 }
-                .accessibilityLabel("Hadith Actions")
-                .accessibilityIdentifier("hadithActionsMenu")
             }
 
             // The scholar verdicts, sunnah.com's way, right under the reference and above the text
@@ -774,6 +823,7 @@ struct HadithRow: View, Equatable {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .allowsHitTesting(!isSelecting)
                 .accessibilityHint(Text("Shows the chain of narrators"))
             } else {
                 HadithGradeLine(grades: grades, font: compact ? .caption2 : .footnote)
@@ -925,35 +975,45 @@ struct HadithRow: View, Equatable {
         .padding(.vertical, compact ? 2 : 4)
         // A pinch zooms this hadith in place (`zoomScale`).
         .simultaneousGesture(RowZoomPinch(scale: $zoomScale, base: $zoomBase))
-        .contextMenu { menuContent }
+        // Not while selecting (an empty builder shows no menu): there a hold belongs to the host,
+        // which selects the run up to this hadith, and the menu acted on its one hadith while the
+        // bar acted on the picked ones.
+        .contextMenu {
+            if !isSelecting { menuContent }
+        }
         // The ayah rows' swipes (2026-09-21): bookmark on the leading edge, copy and share on the
-        // trailing one. Inert outside a List (the standalone cards), harmless there.
+        // trailing one. Inert outside a List (the standalone cards), harmless there. Off while
+        // selecting, like the menu.
         .swipeActions(edge: .leading) {
-            Button {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) { userData.toggleBookmarkOrConfirm(book: book, hadith: hadith) }
-            } label: {
-                Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+            if !isSelecting {
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) { userData.toggleBookmarkOrConfirm(book: book, hadith: hadith) }
+                } label: {
+                    Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                }
+                .tint(settings.accentColor.color)
             }
-            .tint(settings.accentColor.color)
         }
         .swipeActions(edge: .trailing) {
-            Button {
-                settings.hapticFeedback()
-                showShareSheet = true
-            } label: {
-                Image(systemName: "square.and.arrow.up")
-            }
-            .tint(settings.accentColor.color)
+            if !isSelecting {
+                Button {
+                    settings.hapticFeedback()
+                    showShareSheet = true
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .tint(settings.accentColor.color)
 
-            Button {
-                settings.hapticFeedback()
-                UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
-                CopyConfirmation.shared.show()
-            } label: {
-                Image(systemName: "doc.on.doc")
+                Button {
+                    settings.hapticFeedback()
+                    UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
+                    CopyConfirmation.shared.show()
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                }
+                .tint(.secondary)
             }
-            .tint(.secondary)
         }
         .sheet(isPresented: $showShareSheet) {
             HadithShareSheet(book: book, hadith: hadith)
@@ -1189,6 +1249,9 @@ struct HadithRow: View, Equatable {
             Label("Copy Hadith", systemImage: "doc.on.doc")
         }
 
+        // No "Select Hadiths" here, unlike the ayah menu's Select Ayahs: this menu's nine rows and
+        // three dividers are all the 17 Pro shows without scrolling, and a tenth row cut Share
+        // Hadith in half (measured 2026-11-19). The chapter title's menu starts select mode.
         Button {
             settings.hapticFeedback()
             showShareSheet = true
@@ -1693,10 +1756,11 @@ struct HadithSearchAllRow: View {
 /// The bookmarked-hadith menu and every sheet it opens, in one place so the LIST row and the GRID
 /// tile offer exactly the same actions (Abu, 2026-09-19: press-and-hold should work on tiles too).
 ///
-/// `gridTileAction` decides the entrance: nil gives the row a `contextMenu`; non-nil wraps the tile in
-/// a `GridTileMenu`, whose tap runs the action and whose long press opens the menu - a `contextMenu`
-/// in a grid lifts the whole List row (every tile at once) as its preview.
-struct HadithBookmarkMenu: ViewModifier {
+/// `Attachment` decides the entrance (`MenuAttachment`): the row's gives it a `contextMenu`; the
+/// tile's wraps it in a `GridTileMenu`, whose tap runs `gridTileAction` and whose long press opens
+/// the menu, because a `contextMenu` in a grid lifts the whole List row (every tile at once) as its
+/// preview.
+struct HadithBookmarkMenu<Attachment: MenuAttachment>: ViewModifier {
     private let settings = Settings.shared
     @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var userData = HadithUserData.shared
@@ -1778,17 +1842,9 @@ struct HadithBookmarkMenu: ViewModifier {
     }
 
     func body(content: Content) -> some View {
-        Group {
-            if let gridTileAction {
-                GridTileMenu(primaryAction: gridTileAction) {
-                    menuItems
-                } label: {
-                    content
-                }
-            } else {
-                content.contextMenu { menuItems }
-            }
-        }
+        // Through `Attachment`, a type the caller picked, never an `if` here: on a List row a branch
+        // made the row one the List builds to count (see `MenuAttachment`, `OneRow`).
+        content.modifier(Attachment(items: AnyView(menuItems), tileAction: gridTileAction))
         .sheet(item: $shareHadith) { hadith in
             HadithShareSheet(book: book, hadith: hadith)
                 .smallMediumSheetPresentation()
@@ -1822,13 +1878,20 @@ struct HadithBookmarkMenu: ViewModifier {
 
 extension View {
     /// See `HadithBookmarkMenu`.
+    func hadithBookmarkMenu(bookmark: HadithBookmark, book: HadithCatalogBook) -> some View {
+        modifier(HadithBookmarkMenu<RowMenuAttachment>(bookmark: bookmark, book: book, gridTileAction: nil))
+    }
+
+    #if os(iOS)
+    /// The same menu on a grid TILE (`TileMenuAttachment`): a hold opens it, a tap is `gridTileAction`.
     func hadithBookmarkMenu(
         bookmark: HadithBookmark,
         book: HadithCatalogBook,
-        gridTileAction: (() -> Void)? = nil
+        gridTileAction: @escaping () -> Void
     ) -> some View {
-        modifier(HadithBookmarkMenu(bookmark: bookmark, book: book, gridTileAction: gridTileAction))
+        modifier(HadithBookmarkMenu<TileMenuAttachment>(bookmark: bookmark, book: book, gridTileAction: gridTileAction))
     }
+    #endif
 }
 
 struct HadithBookmarkRow: View, Equatable {

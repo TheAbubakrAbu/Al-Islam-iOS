@@ -191,8 +191,12 @@ struct LastListenedSurahRow: View {
                 .contentShape(Rectangle())
 
                 if showListeningHistory && !playbackHistory.listeningHistory.isEmpty {
-                    ForEach(playbackHistory.listeningHistory) { item in
-                        if let historySurah = quranData.surah(item.surahNumber) {
+                    // Each entry's surah is looked up before the ForEach and the two-armed row sits in
+                    // one view, so a row is one view by its type (see `OneRow`).
+                    ForEach(playbackHistory.listeningHistory.paired { quranData.surah($0.surahNumber) }, id: \.item.id) { entry in
+                        let item = entry.item
+                        let historySurah = entry.found
+                        OneRow {
                             if let onSelectSurah {
                                 Button {
                                     settings.hapticFeedback()
@@ -936,53 +940,59 @@ struct LastReadAyahRow: View {
             )
 
             if showReadingHistory && !playbackHistory.readingHistory.isEmpty {
-                ForEach(playbackHistory.readingHistory) { item in
-                    let normalizedAyah = max(1, item.ayahNumber)
-                    if let surah = quranData.surah(item.surahNumber), let ayah = quranData.ayah(surah: item.surahNumber, ayah: normalizedAyah) {
-                        Group {
-                            if let onSelectAyah {
-                                Button {
-                                    settings.hapticFeedback()
-                                    onSelectAyah(surah.id, ayah.id)
-                                } label: {
-                                    readHistoryLabel(surah: surah, ayah: ayah, timestamp: item.timestamp)
-                                }
-                                .buttonStyle(.plain)
-                                .contentShape(Rectangle())
-                            } else {
-                                NavigationLink(destination: LazyDestination { SurahView(surah: surah, ayah: ayah.id) }) {
-                                    readHistoryLabel(surah: surah, ayah: ayah, timestamp: item.timestamp)
-                                }
-                                .tag(surah.id)
-                                .contentShape(Rectangle())
-                            }
-                        }
-                        .rightSwipeActions(
-                            surahID: surah.id,
-                            surahName: surah.nameTransliteration,
-                            ayahID: ayah.id,
-                            searchText: $searchText,
-                            scrollToSurahID: $scrollToSurahID
-                        )
-                        .leftSwipeActions(
-                            surah: surah.id,
-                            favoriteSurahs: favoriteSurahs,
-                            bookmarkedAyahs: bookmarkedAyahs,
-                            bookmarkedSurah: surah.id,
-                            bookmarkedAyah: ayah.id
-                        )
-                        // No `lastRead:` here, as on the listening history's rows: that flag leads the
-                        // menu with Remove, which clears the LAST READ position, so holding an older
-                        // history entry and tapping Remove wiped the card above and kept the entry.
-                        .ayahContextMenuModifier(
-                            surah: surah.id,
-                            ayah: ayah.id,
-                            favoriteSurahs: favoriteSurahs,
-                            bookmarkedAyahs: bookmarkedAyahs,
-                            searchText: $searchText,
-                            scrollToSurahID: $scrollToSurahID
-                        )
+                // Each entry's surah and ayah are looked up before the ForEach and the two-armed row
+                // sits in one view, so a row is one view by its type (see `OneRow`).
+                let entries = playbackHistory.readingHistory.paired { item in
+                    quranData.surah(item.surahNumber).flatMap { surah in
+                        quranData.ayah(surah: item.surahNumber, ayah: max(1, item.ayahNumber)).map { (surah: surah, ayah: $0) }
                     }
+                }
+                ForEach(entries, id: \.item.id) { entry in
+                    let item = entry.item
+                    let surah = entry.found.surah
+                    let ayah = entry.found.ayah
+                    OneRow {
+                        if let onSelectAyah {
+                            Button {
+                                settings.hapticFeedback()
+                                onSelectAyah(surah.id, ayah.id)
+                            } label: {
+                                readHistoryLabel(surah: surah, ayah: ayah, timestamp: item.timestamp)
+                            }
+                            .buttonStyle(.plain)
+                            .contentShape(Rectangle())
+                        } else {
+                            NavigationLink(destination: LazyDestination { SurahView(surah: surah, ayah: ayah.id) }) {
+                                readHistoryLabel(surah: surah, ayah: ayah, timestamp: item.timestamp)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                    }
+                    .rightSwipeActions(
+                        surahID: surah.id,
+                        surahName: surah.nameTransliteration,
+                        ayahID: ayah.id,
+                        searchText: $searchText,
+                        scrollToSurahID: $scrollToSurahID
+                    )
+                    .leftSwipeActions(
+                        surah: surah.id,
+                        favoriteSurahs: favoriteSurahs,
+                        bookmarkedAyahs: bookmarkedAyahs,
+                        bookmarkedSurah: surah.id,
+                        bookmarkedAyah: ayah.id
+                    )
+                    // No `lastRead:` here, as on the listening history's rows: that flag leads the
+                    // menu with Remove, which clears the LAST READ position, so holding an older
+                    // history entry and tapping Remove wiped the card above and kept the entry.
+                    .ayahContextMenuModifier(
+                        surah: surah.id,
+                        ayah: ayah.id,
+                        favoriteSurahs: favoriteSurahs,
+                        bookmarkedAyahs: bookmarkedAyahs,
+                        searchText: $searchText,
+                        scrollToSurahID: $scrollToSurahID
+                    )
                 }
             }
         }
@@ -1050,51 +1060,56 @@ struct LastListenedAyahRow: View {
         .contentShape(Rectangle())
     }
 
-    @ViewBuilder
-    private func historyRow(_ item: AyahListeningHistoryItem) -> some View {
-        if let histSurah = quranData.surah(item.surahNumber),
-           let histAyah = histSurah.ayahs.first(where: { $0.id == item.ayahNumber }) {
-            Group {
-                if let onSelectAyah {
-                    Button {
-                        settings.hapticFeedback()
-                        onSelectAyah(histSurah.id, histAyah.id)
-                    } label: {
-                        ayahHistoryLabel(histSurah: histSurah, histAyah: histAyah, timestamp: item.timestamp)
-                    }
-                    .buttonStyle(.plain)
-                    .contentShape(Rectangle())
-                } else {
-                    NavigationLink(destination: LazyDestination { SurahView(surah: histSurah, ayah: histAyah.id) }) {
-                        ayahHistoryLabel(histSurah: histSurah, histAyah: histAyah, timestamp: item.timestamp)
-                    }
-                    .tag(histSurah.id)
-                    .contentShape(Rectangle())
-                }
+    /// The history's entries beside the surah and ayah each names, the ones not loaded left out:
+    /// looked up before the ForEach, so a row is never an `if let` (see `OneRow`).
+    private var historyEntries: [(item: AyahListeningHistoryItem, found: (surah: Surah, ayah: Ayah))] {
+        playbackHistory.ayahListeningHistory.paired { item in
+            quranData.surah(item.surahNumber).flatMap { surah in
+                surah.ayahs.first(where: { $0.id == item.ayahNumber }).map { (surah: surah, ayah: $0) }
             }
-            .rightSwipeActions(
-                surahID: histSurah.id,
-                surahName: histSurah.nameTransliteration,
-                ayahID: histAyah.id,
-                searchText: $searchText,
-                scrollToSurahID: $scrollToSurahID
-            )
-            .leftSwipeActions(
-                surah: histSurah.id,
-                favoriteSurahs: favoriteSurahs,
-                bookmarkedAyahs: bookmarkedAyahs,
-                bookmarkedSurah: histSurah.id,
-                bookmarkedAyah: histAyah.id
-            )
-            .ayahContextMenuModifier(
-                surah: histSurah.id,
-                ayah: histAyah.id,
-                favoriteSurahs: favoriteSurahs,
-                bookmarkedAyahs: bookmarkedAyahs,
-                searchText: $searchText,
-                scrollToSurahID: $scrollToSurahID
-            )
         }
+    }
+
+    private func historyRow(_ item: AyahListeningHistoryItem, histSurah: Surah, histAyah: Ayah) -> some View {
+        OneRow {
+            if let onSelectAyah {
+                Button {
+                    settings.hapticFeedback()
+                    onSelectAyah(histSurah.id, histAyah.id)
+                } label: {
+                    ayahHistoryLabel(histSurah: histSurah, histAyah: histAyah, timestamp: item.timestamp)
+                }
+                .buttonStyle(.plain)
+                .contentShape(Rectangle())
+            } else {
+                NavigationLink(destination: LazyDestination { SurahView(surah: histSurah, ayah: histAyah.id) }) {
+                    ayahHistoryLabel(histSurah: histSurah, histAyah: histAyah, timestamp: item.timestamp)
+                }
+                .contentShape(Rectangle())
+            }
+        }
+        .rightSwipeActions(
+            surahID: histSurah.id,
+            surahName: histSurah.nameTransliteration,
+            ayahID: histAyah.id,
+            searchText: $searchText,
+            scrollToSurahID: $scrollToSurahID
+        )
+        .leftSwipeActions(
+            surah: histSurah.id,
+            favoriteSurahs: favoriteSurahs,
+            bookmarkedAyahs: bookmarkedAyahs,
+            bookmarkedSurah: histSurah.id,
+            bookmarkedAyah: histAyah.id
+        )
+        .ayahContextMenuModifier(
+            surah: histSurah.id,
+            ayah: histAyah.id,
+            favoriteSurahs: favoriteSurahs,
+            bookmarkedAyahs: bookmarkedAyahs,
+            searchText: $searchText,
+            scrollToSurahID: $scrollToSurahID
+        )
     }
 
     var body: some View {
@@ -1190,8 +1205,8 @@ struct LastListenedAyahRow: View {
             }
 
             if showAyahListeningHistory && !playbackHistory.ayahListeningHistory.isEmpty {
-                ForEach(playbackHistory.ayahListeningHistory) { item in
-                    historyRow(item)
+                ForEach(historyEntries, id: \.item.id) { entry in
+                    historyRow(entry.item, histSurah: entry.found.surah, histAyah: entry.found.ayah)
                 }
             }
         }
@@ -1353,6 +1368,24 @@ struct QuranHistoryView: View {
         let reading = playbackHistory.readingHistory
         let listenedAyahs = playbackHistory.ayahListeningHistory
         let listenedSurahs = playbackHistory.listeningHistory
+        // Each row's surah and ayah are looked up HERE, not inside the ForEach. A row that is an
+        // `if let` is not one view by its type, and the List then deletes and re-inserts the section's
+        // off-screen rows when this body runs again after a scroll (measured 2026-11-17; see
+        // `SummaryTileGrid.body`). An item whose ayah is not loaded gives no row, as before, and its
+        // section still shows by the history itself, as before.
+        let readingRows = reading.compactMap { item in
+            quranData.surah(item.surahNumber).flatMap { surah in
+                surah.ayahs.first(where: { $0.id == max(1, item.ayahNumber) }).map { (item: item, surah: surah, ayah: $0) }
+            }
+        }
+        let listenedAyahRows = listenedAyahs.compactMap { item in
+            quranData.surah(item.surahNumber).flatMap { surah in
+                surah.ayahs.first(where: { $0.id == item.ayahNumber }).map { (item: item, surah: surah, ayah: $0) }
+            }
+        }
+        let listenedSurahRows = listenedSurahs.compactMap { item in
+            quranData.surah(item.surahNumber).map { (item: item, surah: $0) }
+        }
         let daily = settings.showAyahOfTheDay ? recentAyahsOfTheDay : []
         let searches = settings.quranSearchHistory
 
@@ -1376,36 +1409,28 @@ struct QuranHistoryView: View {
 
                 if !reading.isEmpty {
                     Section(header: Text("WHAT YOU READ")) {
-                        ForEach(reading) { item in
-                            if let surah = quranData.surah(item.surahNumber),
-                               let ayah = surah.ayahs.first(where: { $0.id == max(1, item.ayahNumber) }) {
-                                ayahRow(surah: surah, ayah: ayah, caption: nil, timestamp: item.timestamp)
-                            }
+                        ForEach(readingRows, id: \.item.id) { row in
+                            ayahRow(surah: row.surah, ayah: row.ayah, caption: nil, timestamp: row.item.timestamp)
                         }
                     }
                 }
 
                 if !listenedAyahs.isEmpty {
                     Section(header: Text("AYAHS YOU LISTENED TO")) {
-                        ForEach(listenedAyahs) { item in
-                            if let surah = quranData.surah(item.surahNumber),
-                               let ayah = surah.ayahs.first(where: { $0.id == item.ayahNumber }) {
-                                ayahRow(surah: surah, ayah: ayah,
-                                        caption: item.reciter.displayNameWithEnglishQiraah,
-                                        timestamp: item.timestamp)
-                            }
+                        ForEach(listenedAyahRows, id: \.item.id) { row in
+                            ayahRow(surah: row.surah, ayah: row.ayah,
+                                    caption: row.item.reciter.displayNameWithEnglishQiraah,
+                                    timestamp: row.item.timestamp)
                         }
                     }
                 }
 
                 if !listenedSurahs.isEmpty {
                     Section(header: Text("SURAHS YOU LISTENED TO")) {
-                        ForEach(listenedSurahs) { item in
-                            if let surah = quranData.surah(item.surahNumber) {
-                                surahRow(surah: surah,
-                                         reciter: item.reciter.displayNameWithEnglishQiraah,
-                                         timestamp: item.timestamp)
-                            }
+                        ForEach(listenedSurahRows, id: \.item.id) { row in
+                            surahRow(surah: row.surah,
+                                     reciter: row.item.reciter.displayNameWithEnglishQiraah,
+                                     timestamp: row.item.timestamp)
                         }
                     }
                 }

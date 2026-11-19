@@ -342,14 +342,18 @@ struct NameDetailView: View {
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 #if HAS_QURAN
-                ForEach(verses) { verse in
-                    if let surah = quranData.surah(verse.surah),
-                       let ayah = quranData.ayah(surah: verse.surah, ayah: verse.ayah) {
-                        NavigationLink(destination: LazyDestination { SurahView(surah: surah, ayah: verse.ayah) }) {
-                            WordOccurrenceRow(surah: surah, ayah: ayah, tokens: verse.tokens,
-                                              caption: verse.tokens.isEmpty ? String(localized: "Named in another form here") : nil)
-                                .equatable()
-                        }
+                // The surah and the ayah are found HERE, not by an `if let` in the row: a row that
+                // may be nothing is one the List has to build to count (see `OneRow`).
+                let found = verses.compactMap { verse in
+                    quranData.surah(verse.surah).flatMap { surah in
+                        quranData.ayah(surah: verse.surah, ayah: verse.ayah).map { (verse: verse, surah: surah, ayah: $0) }
+                    }
+                }
+                ForEach(found, id: \.verse.id) { match in
+                    NavigationLink(destination: LazyDestination { SurahView(surah: match.surah, ayah: match.verse.ayah) }) {
+                        WordOccurrenceRow(surah: match.surah, ayah: match.ayah, tokens: match.verse.tokens,
+                                          caption: match.verse.tokens.isEmpty ? String(localized: "Named in another form here") : nil)
+                            .equatable()
                     }
                 }
                 #else

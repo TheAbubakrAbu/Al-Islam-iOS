@@ -388,19 +388,22 @@ struct GuardedScreenLink<Destination: View, Label: View>: View {
     private var isOpen: Bool { openInstances.contains(OpenScreenInstance(screen: screen, id: id)) }
 
     var body: some View {
-        if isOpen {
-            VStack(alignment: .leading, spacing: 2) {
-                label()
+        // One view by its type: this is a List row wherever it is used (see `OneRow`).
+        OneRow {
+            if isOpen {
+                VStack(alignment: .leading, spacing: 2) {
+                    label()
 
-                Text(alreadyHere ?? screen.alreadyHereCaption)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-            .opacity(0.55)
-            .accessibilityElement(children: .combine)
-        } else {
-            NavigationLink(destination: LazyDestination(build: destination)) {
-                label()
+                    Text(alreadyHere ?? screen.alreadyHereCaption)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .opacity(0.55)
+                .accessibilityElement(children: .combine)
+            } else {
+                NavigationLink(destination: LazyDestination(build: destination)) {
+                    label()
+                }
             }
         }
     }
@@ -879,9 +882,35 @@ struct LetterTajweedProfile: View {
         return line
     }
 
+    /// One row of the exits: an exit's pictures (iPhone), or the link to its zone beneath them.
+    private struct MakhrajRow: Identifiable {
+        let makhraj: LetterMakhraj
+        /// The zone the row opens; nil for the pictures row.
+        let zone: LetterFamily?
+        let id: String
+    }
+
+    /// Each exit's pictures and then its zone's link, as the entries of one flat list, so that a
+    /// row is one view by its type (see `OneRow`): an element that was a row or two made the List
+    /// build and re-insert these rows. The first exit's pictures carry the id the
+    /// "-scrollToMakhraj" launch argument scrolls to.
+    private var makhrajRows: [MakhrajRow] {
+        makharij.flatMap { makhraj -> [MakhrajRow] in
+            var rows: [MakhrajRow] = []
+            #if os(iOS)
+            rows.append(MakhrajRow(makhraj: makhraj, zone: nil,
+                                   id: makhraj.id == makharij.first?.id ? "makhrajPictures" : "makhrajPictures\(makhraj.id)"))
+            #endif
+            if let zone = LetterTraits.family(id: makhraj.zoneID) {
+                rows.append(MakhrajRow(makhraj: makhraj, zone: zone, id: "makhrajZone\(makhraj.id)"))
+            }
+            return rows
+        }
+    }
+
     #if os(iOS)
-    /// The exit's number and short place over its two pictures. The first exit's row carries the id
-    /// the "-scrollToMakhraj" launch argument scrolls to.
+    /// The exit's number and short place over its two pictures, opening the exit's own family
+    /// where it has one. The row's one view and its id are `profileSection`'s (see `makhrajRows`).
     @ViewBuilder
     private func makhrajPictures(_ makhraj: LetterMakhraj) -> some View {
         let row = VStack(alignment: .leading, spacing: 6) {
@@ -901,39 +930,39 @@ struct LetterTajweedProfile: View {
 
             MakhrajPicturesRow(exits: [makhraj], letter: letter)
         }
-        let rowID = makhraj.id == makharij.first?.id ? "makhrajPictures" : "makhrajPictures\(makhraj.id)"
 
         if let exitFamily = LetterTraits.family(id: "exit\(makhraj.id)") {
             LetterFamilyLink(family: exitFamily) { row }
-                .id(rowID)
         } else {
             row
-                .id(rowID)
         }
     }
     #endif
 
     private var profileSection: some View {
         Section {
-            ForEach(makharij) { makhraj in
-                #if os(iOS)
-                // The pictures first: the exit on a cut through the head, and the organ on its own (Abu,
-                // 2026-10-22: "for each letter there is a picture/pictures explaining the makhraj").
-                // They open the exit's own family; the row under them opens the wider zone.
-                makhrajPictures(makhraj)
-                #endif
-
-                if let zone = LetterTraits.family(id: makhraj.zoneID) {
-                    LetterFamilyLink(family: zone) {
-                        LetterTraitRow(
-                            systemImage: "mouth",
-                            lead: String(localized: "Where it is made"),
-                            title: zone.displayMeaning,
-                            arabic: makhraj.arabic,
-                            caption: groupLine(makhraj)
-                        )
+            // The pictures first: the exit on a cut through the head, and the organ on its own (Abu,
+            // 2026-10-22: "for each letter there is a picture/pictures explaining the makhraj").
+            // They open the exit's own family; the row under them opens the wider zone.
+            ForEach(makhrajRows) { entry in
+                OneRow {
+                    if let zone = entry.zone {
+                        LetterFamilyLink(family: zone) {
+                            LetterTraitRow(
+                                systemImage: "mouth",
+                                lead: String(localized: "Where it is made"),
+                                title: zone.displayMeaning,
+                                arabic: entry.makhraj.arabic,
+                                caption: groupLine(entry.makhraj)
+                            )
+                        }
+                    } else {
+                        #if os(iOS)
+                        makhrajPictures(entry.makhraj)
+                        #endif
                     }
                 }
+                .id(entry.id)
             }
 
             #if os(iOS)
@@ -1131,10 +1160,13 @@ private struct SoundAlikeLink: View {
     }
 
     var body: some View {
-        if let partner, !openInstances.contains(OpenScreenInstance(screen: .arabicLetter, id: partner.letter)) {
-            NavigationLink(destination: LazyDestination { ArabicLetterView(letterData: partner) }) { label }
-        } else {
-            label.opacity(0.55)
+        // One view by its type: a List row (see `OneRow`).
+        OneRow {
+            if let partner, !openInstances.contains(OpenScreenInstance(screen: .arabicLetter, id: partner.letter)) {
+                NavigationLink(destination: LazyDestination { ArabicLetterView(letterData: partner) }) { label }
+            } else {
+                label.opacity(0.55)
+            }
         }
     }
 }

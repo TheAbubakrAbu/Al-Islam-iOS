@@ -609,14 +609,33 @@ struct ProseText: View {
     }
 }
 
+/// Whether the custom bottom bars shrink while their list scrolls down (the Apple Music look). OFF
+/// since 4.6.0: `minimizedBarStyle` and `collapsibleBarRow` draw nothing different, so with this off
+/// `collapseBarsOnScroll` does not watch the scroll at all.
+///
+/// It used to keep watching, and wrote the screen's `barsCollapsed` on every change of direction for
+/// a look nobody could see. That write is `@State` of the WHOLE screen, so each one ran the screen's
+/// body again in the middle of a scroll (measured 2026-11-17 on the Quran tab: six runs in under
+/// two seconds around one turn, 114 row builders each in list mode), and on the surah grid a run
+/// after new rows had scrolled in made the List throw its off-screen rows away (see `OneRow`).
+///
+/// Before turning this back on: the flag should live in a small model that only the BARS observe
+/// (as `ScrollProgressModel` does for the progress bar), not in the screen's own state.
+enum BarShrink {
+    static let isOn = false
+}
+
 extension View {
     /// Watches this scroll view's direction and drives `collapsed`: true while scrolling down, false on
     /// scroll-up or near either END of the content. Attach to the `List`/`ScrollView` whose bars should
-    /// minimize. iOS 18+; on earlier OSes `collapsed` simply never becomes true.
+    /// minimize. iOS 18+; on earlier OSes `collapsed` simply never becomes true. Nothing is watched
+    /// and `collapsed` stays false while the shrink is off (`BarShrink.isOn`).
     @ViewBuilder
     func collapseBarsOnScroll(_ collapsed: Binding<Bool>) -> some View {
         #if os(iOS)
-        if #available(iOS 18.0, *) {
+        if !BarShrink.isOn {
+            self
+        } else if #available(iOS 18.0, *) {
             self.onScrollGeometryChange(for: ScrollCollapseMetrics.self) { geometry in
                 ScrollCollapseMetrics(
                     offset: geometry.contentOffset.y + geometry.contentInsets.top,
@@ -715,7 +734,8 @@ extension View {
     /// secondary rows.
     ///
     /// CURRENTLY OFF: the bars keep full size while scrolling. To bring the shrink back, uncomment the
-    /// three modifiers below (0.75 is the agreed minimized scale).
+    /// three modifiers below (0.75 is the agreed minimized scale) and turn `BarShrink.isOn` on, after
+    /// reading its note.
     func minimizedBarStyle(_ collapsed: Bool) -> some View {
         self
             // .scaleEffect(collapsed ? 0.75 : 1, anchor: .bottom)
@@ -2269,6 +2289,47 @@ struct ReciterPickerSheet: ViewModifier {
 }
 #endif
 
+#endif
+
+/// How a row or a tile carries its menu: a row as its context menu, a grid tile as the hold menu
+/// its whole face opens (`GridTileMenu`). Two TYPES, and the caller names one, because a modifier
+/// that chose between them with an `if` (`if let gridTileAction { GridTileMenu ... } else {
+/// content.contextMenu ... }`) made every ROW wearing it a branch by its type, a row the List has to
+/// build to count (see `OneRow`). `items` is type-erased so one protocol covers both; it is the
+/// menu's content, never the row.
+protocol MenuAttachment: ViewModifier {
+    init(items: AnyView, tileAction: (() -> Void)?)
+}
+
+/// A List row's menu: the row itself is left as it is, cell modifiers and all.
+struct RowMenuAttachment: MenuAttachment {
+    let items: AnyView
+
+    init(items: AnyView, tileAction: (() -> Void)?) {
+        self.items = items
+    }
+
+    func body(content: Content) -> some View {
+        content.contextMenu { items }
+    }
+}
+
+#if os(iOS)
+/// A grid tile's menu: the tile becomes the label of a `GridTileMenu`, and a tap is `tileAction`.
+struct TileMenuAttachment: MenuAttachment {
+    let items: AnyView
+    let action: () -> Void
+
+    init(items: AnyView, tileAction: (() -> Void)?) {
+        self.items = items
+        self.action = tileAction ?? {}
+    }
+
+    func body(content: Content) -> some View {
+        GridTileMenu(primaryAction: action) { items } label: { content }
+    }
+}
+
 /// A grid tile that taps to act and PRESSES-AND-HOLDS to open its row's menu.
 ///
 /// Grid tiles carried no menu for most of this app's life, because a `.contextMenu` on a tile lifts the
@@ -2831,6 +2892,53 @@ extension View {
     }
 }
 
+/// One List row, whatever is inside it. Wrap a row that is a bare branch: an `if / else`, a `switch`,
+/// an `if #available`.
+///
+/// A List row must be ONE view by its type. A row that is a bare branch (those, an `if let`, an
+/// `AnyView`, a conditional modifier on the row; a `Group` round it changes nothing) is "one of
+/// several views" to SwiftUI: it cannot read how many rows the ForEach makes off the type, so it
+/// counts them by BUILDING them. Measured 2026-11-18, on a 60-row test list and on the app's own:
+/// - every run of the screen's body builds every row of the ForEach, not just those near the screen
+///   (60 of 60 against 34; Hadith History built all 166 of its rows each time);
+/// - once the list has scrolled a screen or so (about 20 frames), it has forgotten the rows it
+///   left, and the next run of the body tells the collection view to DELETE them and INSERT them
+///   again. UIKit then forgets their measured heights (Hadith History: the content 714 pt shorter
+///   in one frame, the scroll bar jumping). At rest it holds the visible rows still; in the middle
+///   of a scroll the list leapt to other rows and rebuilt a screenful, cross-faded (Abu,
+///   2026-11-17: "Why are rows being remade as I'm scrolling down Quran view").
+///
+/// Inside one real container the row is one view again: the List counts it without building it and
+/// never forgets it. The ZStack here stacks nothing; it is that container.
+///
+/// Two things it cannot do:
+/// - Carry the row's own modifiers. `listRowInsets`, `listRowBackground`, `listRowSeparator`,
+///   `swipeActions`, `id` and `tag` speak to the CELL, and from inside a container they never
+///   reach it: put them on the `OneRow`, not in it.
+/// - Stand in for an optional row (`if let x { row }`): it would show an empty row where there was
+///   none. Move that branch into the DATA (filter or resolve before the ForEach).
+///
+/// A branch round a whole Section or round the ForEach is harmless, and so is one row per Section.
+struct OneRow<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        ZStack { content }
+    }
+}
+
+extension Sequence {
+    /// Each element beside what `find` looks up for it, the elements it finds nothing for left out.
+    ///
+    /// For a ForEach whose row needs something found per element (the surah a bookmark names, the
+    /// book a history entry is from): `ForEach(items.paired { lookup($0) }, id: \.item.id)`. The
+    /// row then takes what was found and is never an `if let`, which is the fix `OneRow` cannot
+    /// give an optional row.
+    func paired<Found>(with find: (Element) -> Found?) -> [(item: Element, found: Found)] {
+        compactMap { item in find(item).map { (item: item, found: $0) } }
+    }
+}
+
 /// `spacing` is the replaced grid's row spacing, and its column spacing too unless `columnSpacing`
 /// says otherwise; `alignment: .top` stands for its `GridItem(alignment: .top)`, and anything else
 /// centres a cell in its row. `adaptiveMinimum` stands for `GridItem(.adaptive(minimum:))`: as many
@@ -2864,15 +2972,20 @@ struct SummaryTileGrid<Content: View>: View {
     }
 
     var body: some View {
-        if #available(iOS 16.0, watchOS 9.0, *) {
-            EqualColumnsLayout(columns: columns, adaptiveMinimum: adaptiveMinimum, spacing: spacing,
-                               columnSpacing: columnSpacing, alignment: alignment) { content }
-        } else {
-            let cellAlignment: Alignment? = alignment == .top ? .top : nil
-            let items = adaptiveMinimum.map {
-                [GridItem(.adaptive(minimum: $0), spacing: columnSpacing, alignment: cellAlignment)]
-            } ?? Array(repeating: GridItem(.flexible(), spacing: columnSpacing, alignment: cellAlignment), count: columns)
-            LazyVGrid(columns: items, alignment: .leading, spacing: spacing) { content }
+        // One view by its type, as a List row must be (see `OneRow`: this is the row that taught it,
+        // 52 of the surah grid's 57 rows deleted and inserted, surahs 31-40 swapped for 61-68). The
+        // branch stays for the sibling apps' iOS 15.
+        OneRow {
+            if #available(iOS 16.0, watchOS 9.0, *) {
+                EqualColumnsLayout(columns: columns, adaptiveMinimum: adaptiveMinimum, spacing: spacing,
+                                   columnSpacing: columnSpacing, alignment: alignment) { content }
+            } else {
+                let cellAlignment: Alignment? = alignment == .top ? .top : nil
+                let items = adaptiveMinimum.map {
+                    [GridItem(.adaptive(minimum: $0), spacing: columnSpacing, alignment: cellAlignment)]
+                } ?? Array(repeating: GridItem(.flexible(), spacing: columnSpacing, alignment: cellAlignment), count: columns)
+                LazyVGrid(columns: items, alignment: .leading, spacing: spacing) { content }
+            }
         }
     }
 }
@@ -3036,42 +3149,68 @@ extension View {
     ///
     /// Only the selected row paints its cell. A sidebar draws its other cells transparent over the
     /// section's card, with their own hover and press states; painting them all (as `rowWash` does)
-    /// lifted every row off the card. `isActive` false leaves the row untouched, for the screens that
-    /// share these rows with the iPhone's stack.
-    func rowSelectionHighlight(_ isSelected: Bool, isActive: Bool = true) -> some View {
-        modifier(RowSelectionHighlight(isSelected: isSelected, isActive: isActive))
+    /// lifted every row off the card. `isActive` false is for the screens that share these rows
+    /// with the iPhone's stack: the row comes out as the List-wide `themedListRowBackground()`
+    /// leaves it.
+    ///
+    /// `wash` is for a row that is never selected but may be marked instead (Choose Surah tints the
+    /// surah being read): given, the row wears `rowWash(wash)` and no selection, so the two marks
+    /// that claim a row's cell are one modifier and cannot fight over it.
+    func rowSelectionHighlight(_ isSelected: Bool, isActive: Bool = true, wash: RowCellWash = .none) -> some View {
+        modifier(RowSelectionHighlight(isSelected: isSelected, isActive: isActive, wash: wash))
     }
+}
+
+/// See `rowSelectionHighlight(_:isActive:wash:)`.
+enum RowCellWash: Equatable {
+    /// The row is not a washed one: selection, or nothing.
+    case none
+    /// The row wears `rowWash` with this tint (nil while unmarked).
+    case tint(Color?)
 }
 
 /// See `rowSelectionHighlight`.
 private struct RowSelectionHighlight: ViewModifier {
     @Environment(\.appearance) private var appearance
+    @Environment(\.skyPageFill) private var skyPageFill
     #if os(iOS)
     @StateObject private var cellShape = SidebarCellShape()
     #endif
 
     let isSelected: Bool
     let isActive: Bool
+    var wash: RowCellWash = .none
 
-    @ViewBuilder
     func body(content: Content) -> some View {
         #if os(iOS)
-        if isActive {
-            content
-                .background(SidebarCellProbe(shape: cellShape, isSelected: isSelected))
-                // An unselected row keeps the system's cell, or the theme's row color the List-wide
-                // `themedListRowBackground()` would give it (a bare nil here would wipe that).
-                .listRowBackground(isSelected
-                    ? AnyView(SidebarSelectionPill(shape: cellShape, ground: appearance.themeRowBackground,
-                                                   fill: appearance.accent.opacity(0.15)))
-                    : appearance.themeRowBackground.map { AnyView($0) })
-        } else {
-            content
-        }
+        // ONE chain whatever the state, never `if isActive { ... } else { content }`: this sits on
+        // List rows, and a branch here made every one of them a row the List has to build to count
+        // (see `OneRow`). So the cell background is always written, and the idle cases write what
+        // the row would have had anyway.
+        content
+            .background(showsSelection ? SidebarCellProbe(shape: cellShape, isSelected: isSelected) : nil)
+            .listRowBackground(cellBackground)
         #else
         content
         #endif
     }
+
+    #if os(iOS)
+    private var showsSelection: Bool { isActive && wash == .none }
+
+    private var cellBackground: AnyView? {
+        if case .tint(let tint) = wash { return AnyView(RowWashBackground(wash: tint)) }
+        if isActive, isSelected {
+            return AnyView(SidebarSelectionPill(shape: cellShape, ground: appearance.themeRowBackground,
+                                                fill: appearance.accent.opacity(0.15)))
+        }
+        // Idle: the system's cell, or what the List-wide `themedListRowBackground()` gives a row
+        // (the sky's glass, the theme's row color). A row's own background wins over the
+        // List-wide one, so a bare nil here would wipe those.
+        if skyPageFill, !isActive { return AnyView(SkyPageFill.rowColor) }
+        return appearance.themeRowBackground.map { AnyView($0) }
+    }
+    #endif
 }
 
 #if os(iOS)
@@ -3687,6 +3826,56 @@ extension ButtonStyle where Self == AccentChipButtonStyle {
     /// The chip in its filled (active) form, or in a colour of its own.
     static func accentChip(filled: Bool = false, tint: Color? = nil) -> AccentChipButtonStyle {
         AccentChipButtonStyle(filled: filled, tint: tint)
+    }
+}
+
+/// A full-width call to action (Share Ayah, a welcome page's Continue, Allow Location, a dua
+/// session's Next): Liquid Glass carrying a breath of the accent, with the label in the accent.
+///
+/// These were solid accent slabs under white labels until 2026-11-18, the system's
+/// `.borderedProminent` in the notices and two hand-drawn fills (Abu: "that full colored background
+/// share ayah is hideous and so are all buttons like that lets make it liquid glass and look
+/// prettier"). The tint is what sets the primary apart from a plain glass button beside it (the dua
+/// session's Listen), and `tinted: false` is that plain glass for a second full-width choice under
+/// a primary (Use the Beta Text), which was the system's `.bordered`. Under the Classic Look and
+/// before iOS 26 the same shape draws the glass fallback, a material under the tint, so it is never
+/// the slab again.
+///
+/// The button is as wide as it is offered and at least `minHeight` tall; the label brings its own
+/// font. A capsule, or a rounded rectangle at `cornerRadius` where it closes a block of tiles.
+struct GlassActionButtonStyle: ButtonStyle {
+    @Environment(\.appearance) private var appearance
+    @Environment(\.isEnabled) private var isEnabled
+
+    /// How much of the accent the primary's glass carries.
+    static let tint: Double = 0.16
+
+    var tinted = true
+    var minHeight: CGFloat = 50
+    var cornerRadius: CGFloat? = nil
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundColor(appearance.accent)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: minHeight)
+            .contentShape(Rectangle())
+            .conditionalGlassEffect(useColor: tinted ? Self.tint : nil, cornerRadius: cornerRadius)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.7 : 1) : 0.5)
+    }
+}
+
+extension ButtonStyle where Self == GlassActionButtonStyle {
+    /// `.buttonStyle(.glassAction)`: the full-width call to action.
+    static var glassAction: GlassActionButtonStyle { GlassActionButtonStyle() }
+
+    /// The call to action at a height of its own, squared off to sit with a block of tiles, or
+    /// untinted as the second choice under a primary.
+    static func glassAction(tinted: Bool = true, minHeight: CGFloat = 50,
+                            cornerRadius: CGFloat? = nil) -> GlassActionButtonStyle {
+        GlassActionButtonStyle(tinted: tinted, minHeight: minHeight, cornerRadius: cornerRadius)
     }
 }
 

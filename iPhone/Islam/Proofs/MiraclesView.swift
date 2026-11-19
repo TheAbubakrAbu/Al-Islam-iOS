@@ -39,6 +39,12 @@ enum MiracleBlock {
     case quote(text: String, sourceLabel: String, sourceURL: String)
     /// An illustration on the CDN; `alt` is the site's caption (often its page builder's default).
     case image(path: String, alt: String)
+
+    /// The claim is drawn with the title, not as a row of the article's blocks.
+    var isClaim: Bool {
+        if case .claim = self { return true }
+        return false
+    }
 }
 
 enum MiracleLevel: String, CaseIterable, Identifiable {
@@ -866,8 +872,10 @@ struct MiracleArticleView: View {
                 }
 
                 Section {
-                    ForEach(Array(article.blocks.enumerated()), id: \.offset) { _, block in
-                        MiracleBlockView(block: block)
+                    // The claim is set with the title above and draws nothing here, so it is left
+                    // out of the rows, and each row is one view by its type (see `OneRow`).
+                    ForEach(Array(article.blocks.enumerated()).filter { !$0.element.isClaim }, id: \.offset) { _, block in
+                        OneRow { MiracleBlockView(block: block) }
                     }
                 }
 

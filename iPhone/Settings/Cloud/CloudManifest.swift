@@ -109,7 +109,7 @@ enum CloudManifest {
         "startHereHidden",
         "startHereVisited", "sunnahReminders", "switchHijriDateAtMaghrib", "tabSectionChoices", "tabSectionsCollapsed",
         "tajweedCompareGrouping",
-        "tajweedCustomColors", "tasbihFreeCycle", "travelAutomatic",
+        "tajweedCustomColors", "tasbihFreeCycle", "trackerCongregationEnabled", "trackerSunnahEnabled", "travelAutomatic",
         "travelingShowFullPrayers", "useFontArabic", "userBackground", "wordByWordInline",
         "wordByWordInlineTranslation", "wordByWordInlineTransliteration", "wordByWordMeanings",
         "zakahNisabBasis", "zakahYearBasis",

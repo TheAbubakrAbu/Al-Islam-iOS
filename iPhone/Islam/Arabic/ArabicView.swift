@@ -900,6 +900,10 @@ struct ArabicView: View {
             quranWordsSection
             #endif
 
+            #if os(iOS)
+            tongueTwistersSection
+            #endif
+
             // Tashkeel, Default Tashkeel and Basic Grammar used to be link rows here too. They are
             // Explore tiles at the top now (Abu, 2026-09-22), so everything there is to STUDY is in
             // one place; the two shape pages stayed behind, next to the letters they are made of.
@@ -998,6 +1002,18 @@ struct ArabicView: View {
     }
     #endif
 
+    #if os(iOS)
+    /// Tongue twisters (Abu, 2026-11-17: "could be a fun exercise to put in tajweed or arabic"): a
+    /// section of its own like Quran Words, so the Explore shelf stays two rows of three.
+    private var tongueTwistersSection: some View {
+        Section {
+            ForEach(ArabicTopicCatalog.tongueTwisterTopics) { topicRow($0) }
+        } header: {
+            Text("TONGUE TWISTERS")
+        }
+    }
+    #endif
+
     /// One study tool on the Explore shelf.
     private struct ExploreTile: Identifiable {
         let id: String
@@ -1071,17 +1087,20 @@ struct ArabicView: View {
     private var exploreSection: some View {
         Section {
             ForEach(Array(exploreRows.enumerated()), id: \.offset) { _, row in
-                if row.count == 1, let tile = row.first {
-                    wideExploreTile(tile)
-                } else {
-                    HStack(alignment: .top, spacing: 8) {
-                        ForEach(row) { tile in
-                            exploreTile(tile)
+                // One view by its type, as a List row must be (see `OneRow`).
+                OneRow {
+                    if row.count == 1, let tile = row.first {
+                        wideExploreTile(tile)
+                    } else {
+                        HStack(alignment: .top, spacing: 8) {
+                            ForEach(row) { tile in
+                                exploreTile(tile)
+                            }
                         }
+                        // Equal heights when one caption wraps and its neighbours do not.
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, 2)
                     }
-                    // Equal heights when one caption wraps and its neighbours do not.
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
                 }
             }
         } header: {
@@ -1569,21 +1588,24 @@ struct ArabicView: View {
             if !topics.isEmpty {
                 Section(header: SectionPillHeader(title: String(localized: "TOPICS"), count: topics.count)) {
                     ForEach(topics) { topic in
-                        switch topic.opens {
-                        case .page:
-                            topicRow(topic, inSearch: true)
-                        case .scroll(let rowID):
-                            // A section of this screen: the row clears the search and scrolls to it,
-                            // the way a letter result's "Scroll To Letter" does.
-                            Button {
-                                settings.hapticFeedback()
-                                withAnimation { searchText = "" }
-                                scrollTarget = rowID
-                            } label: {
-                                ArabicTopicLinkLabel(specimen: topic.specimen, title: topic.title, caption: topic.caption,
-                                                     eyebrow: topic.section.title, face: topic.face, trailingSymbol: "arrow.down.to.line")
+                        // One view by its type, as a List row must be (see `OneRow`).
+                        OneRow {
+                            switch topic.opens {
+                            case .page:
+                                topicRow(topic, inSearch: true)
+                            case .scroll(let rowID):
+                                // A section of this screen: the row clears the search and scrolls to it,
+                                // the way a letter result's "Scroll To Letter" does.
+                                Button {
+                                    settings.hapticFeedback()
+                                    withAnimation { searchText = "" }
+                                    scrollTarget = rowID
+                                } label: {
+                                    ArabicTopicLinkLabel(specimen: topic.specimen, title: topic.title, caption: topic.caption,
+                                                         eyebrow: topic.section.title, face: topic.face, trailingSymbol: "arrow.down.to.line")
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }

@@ -87,7 +87,13 @@ final class TipsCatalogTests: XCTestCase {
                    "app.menushortcuts", "islam.locators"] {
             XCTAssertNotNil(tip(id), id)
         }
-        XCTAssertEqual(TipCatalog.all.count, 163)
+        // 163 until 2026-11-18, when the rebuilt Prayer Tracker brought five: the week on the card, the
+        // whole-day fill, the make-up list, congregation and Sunnah prayers, and the tracker widget.
+        XCTAssertEqual(TipCatalog.all.count, 168)
+        for id in ["adhan.trackerweek", "adhan.trackerwholeday", "adhan.trackermakeup", "adhan.trackerextras",
+                   "adhan.trackerwidget"] {
+            XCTAssertNotNil(tip(id), id)
+        }
 
         if case .quranPage(let page)? = tip("quran.testmode")?.destination {
             XCTAssertEqual(page, .testMode)

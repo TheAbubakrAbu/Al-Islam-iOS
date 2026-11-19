@@ -579,8 +579,11 @@ struct TajweedLessonDetailView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                ForEach(lesson.examples) { example in
-                    TajweedExampleCard(example: example, accent: accent)
+                // An example whose ayah is not loaded has no card, and is left out HERE (the card
+                // draws nothing without it): a row that may be nothing is one the List has to build
+                // to count (see `OneRow`).
+                ForEach(lesson.examples.filter { TajweedExampleCard.hasAyah($0) }) { example in
+                    OneRow { TajweedExampleCard(example: example, accent: accent) }
                 }
             }
         }
@@ -595,7 +598,11 @@ struct TajweedLessonDetailView: View {
                 ForEach(lesson.videos) { video in
                     // The kit's row (ArticleDesign.swift): the same look as the Foundations pages, and
                     // a hold copies the link.
-                    ArticleVideoLink(title: video.title, url: video.url.absoluteString, channel: video.channel, translated: true)
+                    // In `OneRow`: the link's body is an `if let` on its address (always there, it
+                    // comes from a URL), which as a bare row is a branch.
+                    OneRow {
+                        ArticleVideoLink(title: video.title, url: video.url.absoluteString, channel: video.channel, translated: true)
+                    }
                 }
             }
         }
@@ -1011,53 +1018,56 @@ struct TajweedDoorRow: View {
     }
 
     var body: some View {
-        switch door {
-        case .tajweedLegend:
-            Button {
-                Settings.shared.hapticFeedback()
-                showLegend = true
-            } label: {
-                HStack {
-                    label
-                    Spacer(minLength: 8)
+        // One view by its type: a List row wherever it is used (see `OneRow`).
+        OneRow {
+            switch door {
+            case .tajweedLegend:
+                Button {
+                    Settings.shared.hapticFeedback()
+                    showLegend = true
+                } label: {
+                    HStack {
+                        label
+                        Spacer(minLength: 8)
+                    }
+                    .contentShape(Rectangle())
                 }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        case .tajweedArticle:
-            // The article links back to the Tajweed Course: the pair is a corridor.
-            OpenScreenLink(screen: .tajweedArticle) {
-                TajweedView()
-            } label: {
-                label
-            }
-        case .quranArticle:
-            NavigationLink(destination: LazyDestination { QuranPillarView() }) { label }
-        case .ahrufArticle:
-            NavigationLink(destination: LazyDestination { AhrufView() }) { label }
-        case .qiraatArticle:
-            NavigationLink(destination: LazyDestination { QiraatView() }) { label }
-        case .letterFamilies:
-            OpenScreenLink(screen: .letterFamilies) {
-                LetterFamiliesView()
-            } label: {
-                label
-            }
-        case .soundAlikes:
-            NavigationLink(destination: LazyDestination { SoundAlikeLettersView() }) { label }
-        case .makharijShelf:
-            GuardedScreenLink(screen: .letterFamilies, id: "makhraj") {
-                LetterFamiliesView(title: String(localized: "Makharij"), axes: [.makhraj, .exit])
-                    .openScreen(.letterFamilies, id: "makhraj")
-            } label: {
-                label
-            }
-        case .sifaatShelf:
-            GuardedScreenLink(screen: .letterFamilies, id: "sifaat") {
-                LetterFamiliesView(title: String(localized: "Sifaat"), axes: LetterAxis.Shelf.qualities.axes)
-                    .openScreen(.letterFamilies, id: "sifaat")
-            } label: {
-                label
+                .buttonStyle(.plain)
+            case .tajweedArticle:
+                // The article links back to the Tajweed Course: the pair is a corridor.
+                OpenScreenLink(screen: .tajweedArticle) {
+                    TajweedView()
+                } label: {
+                    label
+                }
+            case .quranArticle:
+                NavigationLink(destination: LazyDestination { QuranPillarView() }) { label }
+            case .ahrufArticle:
+                NavigationLink(destination: LazyDestination { AhrufView() }) { label }
+            case .qiraatArticle:
+                NavigationLink(destination: LazyDestination { QiraatView() }) { label }
+            case .letterFamilies:
+                OpenScreenLink(screen: .letterFamilies) {
+                    LetterFamiliesView()
+                } label: {
+                    label
+                }
+            case .soundAlikes:
+                NavigationLink(destination: LazyDestination { SoundAlikeLettersView() }) { label }
+            case .makharijShelf:
+                GuardedScreenLink(screen: .letterFamilies, id: "makhraj") {
+                    LetterFamiliesView(title: String(localized: "Makharij"), axes: [.makhraj, .exit])
+                        .openScreen(.letterFamilies, id: "makhraj")
+                } label: {
+                    label
+                }
+            case .sifaatShelf:
+                GuardedScreenLink(screen: .letterFamilies, id: "sifaat") {
+                    LetterFamiliesView(title: String(localized: "Sifaat"), axes: LetterAxis.Shelf.qualities.axes)
+                        .openScreen(.letterFamilies, id: "sifaat")
+                } label: {
+                    label
+                }
             }
         }
     }
@@ -1085,6 +1095,11 @@ private struct TajweedExampleCard: View {
     }
 
     private var isPlayingThis: Bool { isThisAyah && nowPlaying.isPlaying && !nowPlaying.isPaused }
+
+    /// Whether `body` has an ayah to draw: its own condition, for the list that leaves the rest out.
+    static func hasAyah(_ example: TajweedLessonExample) -> Bool {
+        QuranData.shared.surah(example.surahId)?.ayahs.contains { $0.id == example.ayahNumber } ?? false
+    }
 
     var body: some View {
         if let surah = quranData.surah(example.surahId),

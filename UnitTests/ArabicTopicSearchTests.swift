@@ -87,8 +87,9 @@ final class ArabicTopicSearchTests: XCTestCase {
     }
 
     func testTheOrderOfTiesIsTheScreensOrder() {
-        // "drill" is a keyword of exactly these four, none of which is named for it, so they tie and
-        // come back in the order the screen shows them: the vowel practice, then the three wasl drills.
-        XCTAssertEqual(ids("drill"), ["vowelPractice", "waslStart", "waslTanween", "waslReadOn"])
+        // "drill" is a keyword of exactly these five, none of which is named for it, so they tie and
+        // come back in the order the screen shows them: the vowel practice, the three wasl drills,
+        // then the tongue twisters (2026-11-17).
+        XCTAssertEqual(ids("drill"), ["vowelPractice", "waslStart", "waslTanween", "waslReadOn", "tongueTwisters"])
     }
 }

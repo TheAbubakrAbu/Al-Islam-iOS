@@ -1637,6 +1637,22 @@
         }
       }
     },
+    "%@ and %lld more to mark." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بانتظار التسجيل: %1$@ و%2$lld غيرها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ اور %2$lld مزید پر نشان لگانا باقی ہے۔"
+          }
+        }
+      }
+    },
     "%@ and a half" : {
       "localizations" : {
         "ar" : {
@@ -2311,6 +2327,22 @@
         }
       }
     },
+    "%@ is next to mark." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التالية للتسجيل: %@."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اگلا نشان %@ پر لگانا ہے۔"
+          }
+        }
+      }
+    },
     "%@ is one of the five qalqalah letters (قُطۡبُ جَدٍّ: ق ط ب ج د). When it carries a sukoon, or you stop on it, it is pronounced with a short, crisp bounce: a quick echo of the letter, never a flat stop. The Quran reader colors it this way when tajweed colors are on." : {
       "localizations" : {
         "ar" : {
@@ -2323,6 +2355,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ قلقلہ کے پانچ حروف (قُطۡبُ جَدٍّ: ق ط ب ج د) میں سے ایک ہے۔ جب یہ ساکن ہو، یا آپ اس پر وقف کریں، تو اسے مختصر اور واضح قلقلہ کے ساتھ ادا کیا جاتا ہے: حرف کی ایک تیز گونج، بے جان ٹھہراؤ نہیں۔ تجوید کے رنگ آن ہوں تو قرآن پڑھنے کی اسکرین اسے اسی رنگ میں دکھاتی ہے۔"
+          }
+        }
+      }
+    },
+    "%@ is the one to guard, on time %lld%% of the time." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ أولى صلواتك بالمحافظة: في وقتها بنسبة %2$lld٪."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ کی پابندی سب سے ضروری ہے: %2$lld%% بار وقت پر۔"
           }
         }
       }
@@ -2371,6 +2419,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "آئندہ کل %1$@ ہے: %2$@۔"
+          }
+        }
+      }
+    },
+    "%@ is your hardest day, on time %lld%% of the time." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ أصعب أيامك: في وقتها بنسبة %2$lld٪."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ آپ کا سب سے مشکل دن ہے: %2$lld%% بار وقت پر۔"
+          }
+        }
+      }
+    },
+    "%@ is your strongest prayer, on time %lld%% of the time." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ أقوى صلواتك: في وقتها بنسبة %2$lld٪."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ آپ کی سب سے مضبوط نماز ہے: %2$lld%% بار وقت پر۔"
           }
         }
       }
@@ -3671,6 +3751,7 @@
         }
       }
     },
+    "%@: %lld / %lld" : {},
     "%@: %lld ayahs" : {
       "localizations" : {
         "ar" : {
@@ -3704,6 +3785,7 @@
         }
       }
     },
+    "%@: %lld%% %@" : {},
     "%@: About Surah %lld: %@" : {
       "localizations" : {
         "ar" : {
@@ -5680,6 +5762,22 @@
         }
       }
     },
+    "%lld day to a %lld-day streak" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الأيام المتبقية لبلوغ سلسلة طولها %2$lld: %1$lld"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld مسلسل دنوں تک پہنچنے میں %1$lld دن باقی"
+          }
+        }
+      }
+    },
     "%lld day%@" : {
       "extractionState" : "stale"
     },
@@ -5756,6 +5854,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%2$lld تک %1$lld دن باقی"
+          }
+        }
+      }
+    },
+    "%lld days to a %lld-day streak" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الأيام المتبقية لبلوغ سلسلة طولها %2$lld: %1$lld"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld مسلسل دنوں تک پہنچنے میں %1$lld دن باقی"
           }
         }
       }
@@ -7692,6 +7806,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%2$lld میں سے %1$lld ادا کی گئیں۔ وقت پر کا نشان لگانے کے لیے ٹیپ کریں، تاخیر سے یا چھوٹ جانے کے لیے دبائے رکھیں۔"
+          }
+        }
+      },
+      "extractionState" : "stale"
+    },
+    "%lld of %lld prayers in congregation" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld من %2$lld صلاة في جماعة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld میں سے %1$lld نمازیں باجماعت"
           }
         }
       }
@@ -10697,6 +10828,55 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld%% وقت پر"
+          }
+        }
+      },
+      "extractionState" : "stale"
+    },
+    "%lld%% on time in the 30 days before" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld٪ في وقتها في الثلاثين يومًا السابقة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس سے پہلے کے 30 دنوں میں %lld%% وقت پر"
+          }
+        }
+      }
+    },
+    "%lld%% on time in the 7 days before" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld٪ في وقتها في الأيام السبعة السابقة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس سے پہلے کے 7 دنوں میں %lld%% وقت پر"
+          }
+        }
+      }
+    },
+    "%lld%% on time in the year before" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld٪ في وقتها في السنة السابقة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس سے پہلے کے سال میں %lld%% وقت پر"
           }
         }
       }
@@ -15216,6 +15396,22 @@
         }
       }
     },
+    "30 Days" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "٣٠ يومًا"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 دن"
+          }
+        }
+      }
+    },
     "30 days in the prayer tracker" : {
       "localizations" : {
         "ar" : {
@@ -15816,7 +16012,8 @@
             "value" : "5 ادا شدہ"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "5, lightest but still heavy" : {
       "extractionState" : "manual",
@@ -16191,6 +16388,22 @@
     },
     "7 + 3" : {},
     "7 Ahruf (Modes)" : {},
+    "7 Days" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "٧ أيام"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 دن"
+          }
+        }
+      }
+    },
     "7, all before a form of طَآئِفَة" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -17683,6 +17896,22 @@
         }
       }
     },
+    "A different bookmark each time" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "علامة مختلفة في كل مرة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر بار ایک الگ بک مارک"
+          }
+        }
+      }
+    },
     "A different sound for each prayer" : {
       "localizations" : {
         "ar" : {
@@ -18604,6 +18833,22 @@
         }
       }
     },
+    "A generous man: whenever I praise him, all people praise him with me, and whenever I blame him, I blame him alone." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رجل كريم: متى مدحته مدحه الناس جميعًا معي، وإذا لمته لمته وحدي."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایک سخی آدمی: جب بھی میں اس کی تعریف کروں، سب لوگ میرے ساتھ اس کی تعریف کرتے ہیں، اور جب بھی اسے ملامت کروں تو اکیلا ملامت کرتا ہوں۔"
+          }
+        }
+      }
+    },
     "A guided course from the alphabet to the rules, with Quranic examples you can hear." : {
       "extractionState" : "stale"
     },
@@ -18766,6 +19011,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ایک کلمے کے آخر میں ہمزہ اور اگلے کلمے کے شروع میں ع۔ سنیں کہ پہلا ہوا کو روکتا ہے اور دوسرا اسے چلتا رہنے دیتا ہے۔"
+          }
+        }
+      }
+    },
+    "A hamza is a clean catch in the throat; an ’ayn is a squeeze. Do not let the ’ayn fade into a hamza." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الهمزة انحباس نظيف في الحلق، والعين عصرة فيه. لا تجعل العين تذوب في همزة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہمزہ حلق میں ایک صاف رکاوٹ ہے، اور عین ایک دباؤ۔ عین کو ہمزہ میں نہ بدلنے دیں۔"
           }
         }
       }
@@ -20050,6 +20311,22 @@
         }
       }
     },
+    "A line of Abu Tammam’s. The books of balagha cite it because amdaHhu amdaHhu puts Haa against haa twice, two throat letters back to back." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بيت لأبي تمام. تستشهد به كتب البلاغة لأن «أَمۡدَحۡهُ أَمۡدَحۡهُ» تجمع الحاء والهاء مرتين، وهما حرفان حلقيان متجاوران."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ابو تمام کا ایک شعر۔ بلاغت کی کتابیں اسے اس لیے پیش کرتی ہیں کہ «أَمۡدَحۡهُ أَمۡدَحۡهُ» میں حاء اور ہاء دو بار آگے پیچھے آتے ہیں، دونوں حلق کے حروف۔"
+          }
+        }
+      }
+    },
     "A line of Tuhfat al-Atfal: the first letter of each word is a sun letter." : {
       "localizations" : {
         "ar" : {
@@ -20078,6 +20355,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "تحفۃ الاطفال کا ایک شعر: ہر لفظ کا پہلا حرف اخفاء کا حرف ہے۔"
+          }
+        }
+      }
+    },
+    "A list of what to make up" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قائمة بما يُقضى"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قضا کی فہرست"
           }
         }
       }
@@ -21371,6 +21664,22 @@
         }
       }
     },
+    "A prayed prayer can also be marked as prayed in congregation." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يمكن أيضًا تسجيل الصلاة المؤدّاة على أنها في جماعة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ادا کی گئی نماز پر باجماعت کا نشان بھی لگایا جا سکتا ہے۔"
+          }
+        }
+      }
+    },
     "A prayer can be marked only once its time has come in, so today's row shows what is still left to pray. Past days can always be filled in from History & Insights." : {
       "localizations" : {
         "ar" : {
@@ -21385,7 +21694,8 @@
             "value" : "نماز پر نشان صرف اس کا وقت شروع ہونے کے بعد لگایا جا سکتا ہے، اس لیے آج کی قطار وہی دکھاتی ہے جو ابھی پڑھنا باقی ہے۔ گزرے ہوئے دن «ریکارڈ اور تجزیہ» سے کبھی بھی بھرے جا سکتے ہیں۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "A prayer can be marked only once its time has come in, so today's row shows what is still left to pray. Past days can always be filled in here." : {
       "localizations" : {
@@ -21399,6 +21709,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "نماز پر نشان صرف اس کا وقت داخل ہونے کے بعد لگایا جا سکتا ہے، اس لیے آج کی قطار وہی دکھاتی ہے جو ابھی پڑھنا باقی ہے۔ پچھلے دن یہاں کبھی بھی پُر کیے جا سکتے ہیں۔"
+          }
+        }
+      }
+    },
+    "A prayer can be marked only once its time has come in, so today's row shows what is still left to pray. Past days can always be filled in, from the seven days under the card or from History & Insights." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا يمكن تسجيل الصلاة إلا بعد دخول وقتها، لذا يُظهر صف اليوم ما بقي عليك أن تصلّيه. ويمكنك دائمًا تعبئة الأيام الماضية، من الأيام السبعة تحت البطاقة أو من «السجل والتحليلات»."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نماز پر نشان صرف اس کا وقت شروع ہونے کے بعد لگایا جا سکتا ہے، اس لیے آج کی قطار وہی دکھاتی ہے جو ابھی پڑھنا باقی ہے۔ گزرے ہوئے دن کبھی بھی بھرے جا سکتے ہیں، کارڈ کے نیچے سات دنوں سے یا «ریکارڈ اور تجزیہ» سے۔"
           }
         }
       }
@@ -21572,6 +21898,22 @@
     },
     "A question, a follow-up, a “what does this mean”: answered on your device by Apple Intelligence, with the ayahs and hadiths the app found cited beneath each reply, ready to open. Nothing leaves your phone." : {
       "extractionState" : "stale"
+    },
+    "A question, a verb and two pronouns in one word. Keep the laam’s sukoon clean and do not rush the end." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "استفهام وفعل وضميران في كلمة واحدة. أظهر سكون اللام، ولا تستعجل آخرها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایک لفظ میں استفہام، فعل اور دو ضمیریں۔ لام کا سکون صاف رکھیں اور آخر میں جلدی نہ کریں۔"
+          }
+        }
+      }
     },
     "A rakah table at hand" : {
       "localizations" : {
@@ -22855,6 +23197,22 @@
         }
       }
     },
+    "A short ayah from anywhere in the Quran" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آية قصيرة من أي موضع في القرآن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن میں کہیں سے بھی ایک مختصر آیت"
+          }
+        }
+      }
+    },
     "A short bounce when the letter carries a sukoon or is stopped on." : {
       "localizations" : {
         "ar" : {
@@ -23014,6 +23372,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ایک ایسی زینت جو پڑھی نہیں جاتی"
+          }
+        }
+      }
+    },
+    "A silk thread on Khalil’s wall." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خيط من حرير على جدار خليل."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خلیل کی دیوار پر ریشم کا ایک دھاگا۔"
           }
         }
       }
@@ -24643,6 +25017,22 @@
         }
       }
     },
+    "A whole sentence in one word: fa (and), asqaynaa (We gave to drink), kum (you), hu (it). Give every syllable its full length." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جملة كاملة في كلمة واحدة: الفاء للعطف، و«أَسۡقَيۡنَا» الفعل، و«كُمُ» ضمير المخاطبين، و«هُ» ضمير الماء. أعطِ كل مقطع حقه من الطول."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایک لفظ میں پورا جملہ: فَ (اور)، أَسۡقَيۡنَا (ہم نے پلایا)، كُمُ (تمہیں)، هُ (اسے)۔ ہر حصے کو اس کی پوری لمبائی دیں۔"
+          }
+        }
+      }
+    },
     "A wobble turns a held vowel into an ornament, and it makes the length impossible to judge by ear." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -25606,6 +25996,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "دیگر نام"
+          }
+        }
+      }
+    },
+    "ALSO TRACK" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تتبَّع أيضًا"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہ بھی ٹریک کریں"
           }
         }
       }
@@ -27714,6 +28120,23 @@
             "value" : "«منتخب آیت» ویجیٹ اپنی ہوم اسکرین یا لاک اسکرین پر شامل کریں، پھر اسے دبائے رکھیں اور «ویجیٹ میں ترمیم کریں» منتخب کریں۔ اپنے بک مارکس میں سے کوئی ایک چنیں، یا 2:255 یا یٰسین 9 جیسا حوالہ لکھیں۔ جب تک آپ انتخاب نہ کریں، یہ آپ کا تازہ ترین بک مارک دکھاتا ہے۔"
           }
         }
+      },
+      "extractionState" : "stale"
+    },
+    "Add the Chosen Ayah widget to your Home Screen or Lock Screen, then hold it and choose Edit Widget. Show one ayah, a list of ayahs that take turns, a random bookmark or a random ayah, changing every 15 minutes, every hour or every day. Pick from your bookmarks, or type a reference such as 2:255 or Yaseen 9." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أضف أداة «الآية المختارة» إلى الشاشة الرئيسية أو شاشة القفل، ثم اضغط عليها مطولًا واختر «تعديل الأداة». اعرض آية واحدة، أو قائمة آيات تتناوب، أو علامة عشوائية، أو آية عشوائية، تتغير كل ١٥ دقيقة أو كل ساعة أو كل يوم. اختر من علاماتك، أو اكتب مرجعًا مثل ٢:٢٥٥ أو يس ٩."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«منتخب آیت» ویجیٹ اپنی ہوم اسکرین یا لاک اسکرین پر شامل کریں، پھر اسے دبائے رکھیں اور «ویجیٹ میں ترمیم کریں» منتخب کریں۔ ایک آیت، باری باری بدلنے والی آیات کی فہرست، بے ترتیب بک مارک یا بے ترتیب آیت دکھائیں، جو ہر 15 منٹ، ہر گھنٹے یا ہر دن بدلے۔ اپنے بک مارکس میں سے چنیں، یا 2:255 یا یٰسین 9 جیسا حوالہ لکھیں۔"
+          }
+        }
       }
     },
     "Add the Resume Recitation control to Control Center, the Lock Screen, or the Action button, and it plays the last surah you were listening to, from where you left off, without opening the app." : {
@@ -28203,6 +28626,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ایڈوانسڈ"
+          }
+        }
+      }
+    },
+    "After %@" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بعد %@"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ کے بعد"
           }
         }
       }
@@ -28737,6 +29176,22 @@
         }
       }
     },
+    "Ahmad entrusted Hamid with a pledge, and Hamid kept Ahmad’s pledge." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عهد أحمد إلى حامد بعهد، فحفظ حامد عهد أحمد."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "احمد نے حامد کو ایک عہد سونپا، اور حامد نے احمد کا عہد نبھایا۔"
+          }
+        }
+      }
+    },
     "Akbar, disputed as a name" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -29134,6 +29589,22 @@
     },
     "Al-Islam · The Ten Qiraat" : {
       "extractionState" : "stale"
+    },
+    "Al-Jahiz quotes this line in al-Bayan wat-Tabyeen as words whose letters clash: hardly anyone can say it three times in a row without stumbling. The books of balagha still use it to teach tanaafur." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يورد الجاحظ هذا البيت في «البيان والتبيين» مثالًا لألفاظ تتنافر حروفها: لا يكاد أحد ينشده ثلاث مرات متتابعة دون أن يتتعتع. وما زالت كتب البلاغة تعلّم به التنافر."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جاحظ نے «البیان والتبیین» میں یہ شعر ایسے الفاظ کی مثال میں نقل کیا ہے جن کے حروف آپس میں ٹکراتے ہیں: شاید ہی کوئی اسے تین بار لگاتار بغیر اٹکے پڑھ سکے۔ بلاغت کی کتابیں آج بھی اسی سے تنافر سکھاتی ہیں۔"
+          }
+        }
+      }
     },
     "Al-Jawf: The Empty Space" : {
       "extractionState" : "manual",
@@ -29656,6 +30127,22 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Ali gave Amin honey, and Amin gave Ali rice." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أعطى عليٌّ أمينًا عسلًا، وأعطى أمينٌ عليًّا أرزًّا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "علی نے امین کو شہد دیا، اور امین نے علی کو چاول دیے۔"
           }
         }
       }
@@ -31344,6 +31831,22 @@
         }
       }
     },
+    "All three come from the throat: ه from its deepest part, ع and ح from the middle. Give each its own sound." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الثلاثة كلها من الحلق: الهاء من أقصاه، والعين والحاء من وسطه. أعطِ كل حرف صوته."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تینوں حلق سے نکلتے ہیں: ه حلق کے سب سے گہرے حصے سے، ع اور ح درمیان سے۔ ہر ایک کو اس کی اپنی آواز دیں۔"
+          }
+        }
+      }
+    },
     "All three in one word. Count two on each without letting the middle one shrink." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -31446,6 +31949,122 @@
         }
       }
     },
+    "All twelve regular rak'at on %lld day" : {
+      "localizations" : {
+        "ar" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الركعات الاثنتا عشرة الراتبة كلها في يوم واحد"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الركعات الاثنتا عشرة الراتبة كلها في يومين"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الركعات الاثنتا عشرة الراتبة كلها في %lld أيام"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الركعات الاثنتا عشرة الراتبة كلها في %lld يومًا"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الركعات الاثنتا عشرة الراتبة كلها في %lld يوم"
+                }
+              }
+            }
+          }
+        },
+        "ur" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "ایک دن بارہ کی بارہ سنن رواتب"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld دن بارہ کی بارہ سنن رواتب"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "All twelve regular rak'at on %lld days" : {
+      "localizations" : {
+        "ar" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الركعات الاثنتا عشرة الراتبة كلها في يوم واحد"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الركعات الاثنتا عشرة الراتبة كلها في يومين"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الركعات الاثنتا عشرة الراتبة كلها في %lld أيام"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الركعات الاثنتا عشرة الراتبة كلها في %lld يومًا"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "الركعات الاثنتا عشرة الراتبة كلها في %lld يوم"
+                }
+              }
+            }
+          }
+        },
+        "ur" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "ایک دن بارہ کی بارہ سنن رواتب"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld دن بارہ کی بارہ سنن رواتب"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "All twenty-eight" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -31540,6 +32159,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "اللہ جانتا ہے کہ آپ کیا جھیل رہے ہیں، اور اس کا وعدہ ہے کہ تنگی کے ساتھ آسانی ہے [1]۔"
+          }
+        }
+      }
+    },
+    "Allah will be enough for you against them" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سيكفيك الله أمرهم"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اللہ ان کے مقابلے میں تمہیں کافی ہوگا"
           }
         }
       }
@@ -31854,6 +32489,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ترتیبِ تہجی اصطلاحی ہے، اس میں کوئی صوتی دلالت نہیں۔ ترتیبِ مخارج آپ کے اپنے منہ کا نقشہ ہے، اور وہ ان حروف کو ساتھ ساتھ رکھتی ہے جن میں آپ خلط کرتے ہیں، جہاں آپ فرق سن سکتے ہیں۔"
+          }
+        }
+      }
+    },
+    "Also Track adds an In Congregation choice to a prayed prayer, and a row for the twelve regular rak'at, Witr, Duha and the night prayer. Both are off until you turn them on, and a Sunnah prayer left is never counted as missed." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«تتبَّع أيضًا» يضيف خيار «في جماعة» إلى الصلاة المؤدّاة، وصفًّا للركعات الاثنتي عشرة الراتبة والوتر والضحى وقيام الليل. وكلاهما متوقف حتى تشغّله، وصلاة السنة المتروكة لا تُحسب فائتة أبدًا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«یہ بھی ٹریک کریں» ادا کی گئی نماز میں «باجماعت» کا اختیار، اور بارہ سنن رواتب، وتر، چاشت اور قیام اللیل کی ایک قطار شامل کرتا ہے۔ دونوں اس وقت تک بند رہتے ہیں جب تک آپ انہیں چالو نہ کریں، اور چھوڑی گئی سنت نماز کبھی چھوٹی ہوئی شمار نہیں ہوتی۔"
           }
         }
       }
@@ -32527,6 +33178,22 @@
         }
       }
     },
+    "An ayah you choose, a list that takes turns, a random bookmark or a random ayah. Hold the widget and choose Edit Widget." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آية تختارها، أو قائمة تتناوب، أو علامة عشوائية، أو آية عشوائية. المس الأداة مطولًا واختر «تعديل الأداة»."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آپ کی چنی ہوئی آیت، باری باری بدلنے والی فہرست، بے ترتیب بک مارک یا بے ترتیب آیت۔ ویجیٹ کو دبائے رکھیں اور «ویجیٹ میں ترمیم کریں» منتخب کریں۔"
+          }
+        }
+      }
+    },
     "An ayah you choose: one of your bookmarks, or any reference you type. Hold the widget and choose Edit Widget to pick it." : {
       "localizations" : {
         "ar" : {
@@ -32541,7 +33208,8 @@
             "value" : "آپ کی منتخب کردہ آیت: آپ کے بک مارکس میں سے کوئی ایک، یا کوئی بھی حوالہ جو آپ لکھیں۔ اسے منتخب کرنے کے لیے ویجیٹ کو دبائے رکھیں اور «ویجیٹ میں ترمیم کریں» منتخب کریں۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "An ayah, a bookmarked hadith or a dua, kept with the entry." : {
       "localizations" : {
@@ -37422,6 +38090,22 @@
         }
       }
     },
+    "Ayahs You Pick" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آيات تختارها"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آپ کی چنی ہوئی آیات"
+          }
+        }
+      }
+    },
     "Ayahs are counted as revised when you read them in the app, in any mode, or when you mark them here." : {
       "localizations" : {
         "ar" : {
@@ -38481,6 +39165,22 @@
         }
       }
     },
+    "Balagha, the study of eloquence, names it tanaafur when letters clash. These are its two classic examples." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يسمي علم البلاغة ثقل الحروف على اللسان إذا اجتمعت تنافرًا. وهذان مثالاه المشهوران."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بلاغت، یعنی فصاحت کا علم، حروف کے آپس میں ٹکرانے کو تنافر کہتا ہے۔ یہ اس کی دو مشہور مثالیں ہیں۔"
+          }
+        }
+      }
+    },
     "Banknotes are measured against the lower of the two nisabs, which is silver." : {
       "localizations" : {
         "ar" : {
@@ -38591,7 +39291,8 @@
             "value" : "رنگوں کی مختصر کلید"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Basic Noun" : {
       "localizations" : {
@@ -40064,6 +40765,22 @@
         }
       }
     },
+    "Before %@" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قبل %@"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ سے پہلے"
+          }
+        }
+      }
+    },
     "Before Asr" : {
       "localizations" : {
         "ar" : {
@@ -41187,6 +41904,38 @@
         }
       }
     },
+    "Better to read on" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الوصل أحسن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ملا کر پڑھنا بہتر"
+          }
+        }
+      }
+    },
+    "Better to stop" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الوقف أحسن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رکنا بہتر"
+          }
+        }
+      }
+    },
     "Between 4 and 5 the choice is yours, but it is a choice you make once. Reciting some muttasils at 4 and others at 5 in the same sitting is not two permitted readings, it is one inconsistent one. The rule of thumb teachers give is simple: pick the length you can hold steadily while breathing normally, and keep it." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -41795,6 +42544,38 @@
         }
       }
     },
+    "Both are heavy, and many people say them as one sound. ض is the side of the tongue on the molars, ظ the tip of the tongue on the edge of the teeth." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كلاهما مفخّم، وكثير من الناس ينطقهما صوتًا واحدًا. الضاد من حافة اللسان مع الأضراس، والظاء من طرف اللسان مع أطراف الثنايا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دونوں پُر ہیں، اور بہت سے لوگ انہیں ایک ہی آواز میں ادا کرتے ہیں۔ ض میں زبان کا کنارہ داڑھوں سے لگتا ہے، ظ میں زبان کی نوک دانتوں کے کنارے پر۔"
+          }
+        }
+      }
+    },
+    "Both are optional. A Sunnah prayer is ticked or left: leaving one is never counted as missed and never touches a streak. The regular Sunnah prayers are twelve rak'at a day: four before Dhuhr and two after it, two after Maghrib, two after Isha and two before Fajr. Whoever keeps twelve is promised a house in Paradise (Sahih Muslim 728)." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كلاهما اختياري. صلاة السنة تُسجَّل أو تُترك: تركها لا يُحسب فائتة أبدًا ولا يمسّ السلسلة. والسنن الرواتب اثنتا عشرة ركعة في اليوم: أربع قبل الظهر وركعتان بعدها، وركعتان بعد المغرب، وركعتان بعد العشاء، وركعتان قبل الفجر. ومن حافظ على اثنتي عشرة ركعة وُعد ببيت في الجنة (صحيح مسلم ٧٢٨)."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دونوں اختیاری ہیں۔ سنت نماز پر نشان لگتا ہے یا وہ رہ جاتی ہے: اسے چھوڑنا کبھی چھوٹی ہوئی نماز شمار نہیں ہوتا اور مسلسل دنوں پر کوئی اثر نہیں ڈالتا۔ سنن رواتب دن میں بارہ رکعتیں ہیں: ظہر سے پہلے چار اور اس کے بعد دو، مغرب کے بعد دو، عشاء کے بعد دو اور فجر سے پہلے دو۔ جو بارہ رکعتوں کی پابندی کرے اس سے جنت میں ایک گھر کا وعدہ ہے (صحیح مسلم 728)۔"
+          }
+        }
+      }
+    },
     "Both are prayed together in this one slot, starting at the first prayer's time." : {
       "localizations" : {
         "ar" : {
@@ -41874,6 +42655,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "دونوں شہروں کے اوقات ساتھ ساتھ"
+          }
+        }
+      }
+    },
+    "Both come from the top of the throat: خ is the breathy scrape, غ the voiced gargle." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كلاهما من أدنى الحلق: الخاء احتكاك مهموس، والغين غرغرة مجهورة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دونوں حلق کے اوپری حصے سے نکلتے ہیں: خ سانس والی رگڑ ہے، غ آواز والا غرارہ۔"
           }
         }
       }
@@ -44582,6 +45379,22 @@
         }
       }
     },
+    "Changes" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التغيير"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تبدیلی"
+          }
+        }
+      }
+    },
     "Changing a harakah is lahn jali by definition, and here it also changes the meaning. The ruling is that it is forbidden and has to be fixed, which is why it outranks any refinement work." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -45975,6 +46788,22 @@
       },
       "extractionState" : "stale"
     },
+    "Clear the Day" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مسح تسجيلات اليوم"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دن کے نشان صاف کریں"
+          }
+        }
+      }
+    },
     "Clear the Known Marks" : {
       "localizations" : {
         "ar" : {
@@ -47255,6 +48084,22 @@
         }
       }
     },
+    "Compact Legend" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مفتاح الألوان المختصر"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رنگوں کی مختصر کلید"
+          }
+        }
+      }
+    },
     "Companion" : {
       "localizations" : {
         "ar" : {
@@ -47979,6 +48824,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "خلط تقریباً ہمیشہ ساتھ والی سطر سے ہوتا ہے، دور کی سطر سے نہیں۔"
+          }
+        }
+      }
+    },
+    "Congregation and Sunnah prayers" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الجماعة وصلوات السنن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جماعت اور سنت نمازیں"
           }
         }
       }
@@ -51081,7 +51942,8 @@
             "value" : "موجودہ مسلسل دن"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Current prayer" : {
       "localizations" : {
@@ -53828,6 +54690,22 @@
         }
       }
     },
+    "Detailed Legend" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مفتاح الألوان المفصّل"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رنگوں کی تفصیلی کلید"
+          }
+        }
+      }
+    },
     "Deviation" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -53905,6 +54783,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "نقطۂ شبنم %@"
+          }
+        }
+      }
+    },
+    "Dhafir’s guest kept laughing at noon, and Dhafir stayed annoyed." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ظلّ ضيف ظافر ضاحكًا وقت الظهر، وظلّ ظافر ضجرًا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ظافر کا مہمان دوپہر کو ہنستا رہا، اور ظافر جھنجھلایا رہا۔"
           }
         }
       }
@@ -55305,6 +56199,22 @@
         }
       }
     },
+    "Do not stop here" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صِل ولا تقف"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہاں نہ رکیں"
+          }
+        }
+      }
+    },
     "Do not stop here. If you run out of breath, go back a word or two and join the words again." : {
       "localizations" : {
         "ar" : {
@@ -55944,6 +56854,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "حرف کو مشدّد تو کرنا مگر غنّہ بھول جانا۔"
+          }
+        }
+      }
+    },
+    "Down by %lld" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "انخفاض بمقدار %lld"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld کی کمی"
           }
         }
       }
@@ -56955,6 +57881,22 @@
         }
       }
     },
+    "Duha" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الضحى"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "چاشت"
+          }
+        }
+      }
+    },
     "Duha, Islamic midnight, last third" : {
       "localizations" : {
         "ar" : {
@@ -56999,6 +57941,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "چاشت ایک نفل نماز ہے جو سورج کے ایک نیزے کے برابر بلند ہو جانے کے بعد، یعنی طلوعِ آفتاب کے تقریباً 15 منٹ بعد سے ظہر سے کچھ پہلے تک پڑھی جاتی ہے۔ اس کا افضل وقت دن چڑھے ہے، جب سورج کی تپش تیز ہو جاتی ہے۔\n\n«رجوع کرنے والوں (اوّابین) کی نماز اس وقت ہے جب اونٹ کے بچے سورج کی تپش محسوس کرنے لگیں» (مسلم 784)۔\n\n«میرے خلیل (نبی کریم ﷺ) نے مجھے تین باتوں کی وصیت فرمائی: (1) ہر مہینے تین دن روزے رکھنا؛ (2) چاشت کی دو رکعتیں پڑھنا؛ اور (3) سونے سے پہلے وتر پڑھنا» (بخاری 1981)۔"
+          }
+        }
+      }
+    },
+    "Durayd’s lizard got lost, so Diyaa showed Durayd’s lizard the way." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ضلّ ضبّ دريد، فدلّ ضياءٌ ضبّ دريد على الطريق."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "درید کا سانڈا راستہ بھول گیا، تو ضیاء نے درید کے سانڈے کو راستہ دکھایا۔"
           }
         }
       }
@@ -57418,7 +58376,8 @@
             "value" : "ہر رنگ تجوید کے ایک حکم کی نشاندہی کرتا ہے۔ کسی حکم پر ٹیپ کریں تاکہ اس کا مطلب دیکھ سکیں۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Each day" : {
       "localizations" : {
@@ -58399,6 +59358,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "عید الفطر پہلی تاریخ کو ہوتی ہے، اس کے بعد چھ مستحب روزے۔"
+          }
+        }
+      }
+    },
+    "Eight meem sounds in a row: the tanween and both noons merge into the meem after them, each with ghunnah." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ثماني ميمات متتالية في النطق: يُدغم التنوين والنونان في الميم التي بعدها، كلٌّ بغنة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لگاتار آٹھ میم کی آوازیں: تنوین اور دونوں نون اپنے بعد والے میم میں غنہ کے ساتھ مدغم ہوتے ہیں۔"
           }
         }
       }
@@ -59547,6 +60522,22 @@
         }
       }
     },
+    "Every 15 Minutes" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كل ١٥ دقيقة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر 15 منٹ"
+          }
+        }
+      }
+    },
     "Every Arabic word is a noun, a verb or a harf. A noun (ism) names a person, a thing, a place or an idea, and its last mark tells you what job it does in the sentence." : {
       "localizations" : {
         "ar" : {
@@ -59595,6 +60586,22 @@
         }
       }
     },
+    "Every Day" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كل يوم"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر دن"
+          }
+        }
+      }
+    },
     "Every Difference" : {
       "localizations" : {
         "ar" : {
@@ -59639,6 +60646,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ہر جمعہ"
+          }
+        }
+      }
+    },
+    "Every Hour" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كل ساعة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر گھنٹے"
           }
         }
       }
@@ -61140,6 +62163,22 @@
         }
       }
     },
+    "Every prayer on time in this span. Alhamdulillah." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كل الصلوات في وقتها في هذه المدة. الحمد لله."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس مدت میں ہر نماز وقت پر۔ الحمد للہ۔"
+          }
+        }
+      }
+    },
     "Every prophecy and every sign of the prophets in these libraries opens from the chapter it belongs to, and the strongest readings in Miracles of the Quran from “The Errors It Did Not Make.”" : {},
     "Every qira'ah lengthens it; they differ only over how much (Warsh and Hamzah read 6)." : {
       "extractionState" : "manual",
@@ -62353,6 +63392,38 @@
         }
       }
     },
+    "Exempt Day" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يوم إعفاء"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معافی کا دن"
+          }
+        }
+      }
+    },
+    "Exempt day" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يوم إعفاء"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معافی کا دن"
+          }
+        }
+      }
+    },
     "Exempt day (menstruation / postpartum)" : {
       "localizations" : {
         "ar" : {
@@ -62365,6 +63436,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "معافی کا دن (حیض / نفاس)"
+          }
+        }
+      }
+    },
+    "Exempt day. It does not count against your streaks." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يوم إعفاء. لا يُحتسب على سلسلتك."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معافی کا دن۔ یہ آپ کے مسلسل دنوں کے خلاف شمار نہیں ہوتا۔"
           }
         }
       }
@@ -63398,6 +64485,38 @@
         }
       }
     },
+    "FROM THE BOOKS OF BALAGHA" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "من كتب البلاغة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بلاغت کی کتابوں سے"
+          }
+        }
+      }
+    },
+    "FROM THE QURAN" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "من القرآن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرآن سے"
+          }
+        }
+      }
+    },
     "FULL TITLE" : {
       "localizations" : {
         "ar" : {
@@ -63751,6 +64870,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "سب سے دور، اظہار سے قریب"
+          }
+        }
+      }
+    },
+    "Fast" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سريع"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تیز"
           }
         }
       }
@@ -65027,6 +66162,22 @@
         }
       }
     },
+    "Fill in a whole day" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تعبئة يوم كامل"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پورا دن بھریں"
+          }
+        }
+      }
+    },
     "Fill the Gap" : {
       "localizations" : {
         "ar" : {
@@ -65293,6 +66444,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "اختلاف کے مقامات تلاش ہو رہے ہیں…"
+          }
+        }
+      }
+    },
+    "Fine to stop" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يجوز الوقف"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رکنا درست ہے"
           }
         }
       }
@@ -68675,7 +69842,8 @@
             "value" : "رنگوں کی پوری کلید"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Full Light" : {
       "localizations" : {
@@ -72216,6 +73384,23 @@
         }
       }
     },
+    "Hadith Settings › On the Hadith Tab › Narrators" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إعدادات الحديث › في تبويب الحديث › الرواة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حدیث کی ترتیبات › حدیث ٹیب پر › راوی"
+          }
+        }
+      }
+    },
     "Hadith Settings, Reading View" : {
       "localizations" : {
         "ar" : {
@@ -74043,6 +75228,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "حق وہ ہے جو حرف بذاتِ خود ہے: اس کا مخرج، اور وہ صفات جو اس سے کبھی جدا نہیں ہوتیں۔ باقی تینوں صرف پڑوسی حرف کی وجہ سے وجود میں آتی ہیں، اسی لیے وہ مستحق ہیں۔"
+          }
+        }
+      }
+    },
+    "Harb’s grave is in a barren place, and there is no grave near Harb’s grave." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قبر حرب في مكان قفر، وليس بقرب قبر حرب قبر."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حرب کی قبر ایک ویران جگہ پر ہے، اور حرب کی قبر کے پاس کوئی قبر نہیں۔"
           }
         }
       }
@@ -76261,6 +77462,22 @@
         }
       }
     },
+    "Hide This Color" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إخفاء هذا اللون"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہ رنگ چھپائیں"
+          }
+        }
+      }
+    },
     "Hide banner" : {
       "localizations" : {
         "ar" : {
@@ -76600,7 +77817,8 @@
             "value" : "حکم کی وضاحت چھپاتا ہے"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Hides the transliterations (\"ba\", \"bi\", \"bu\") under the tashkeel glyphs, so the marks can be practised from the Arabic alone." : {
       "localizations" : {
@@ -78743,6 +79961,22 @@
         }
       }
     },
+    "Home Screen and Lock Screen widgets" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أدوات الشاشة الرئيسية وشاشة القفل"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہوم اسکرین اور لاک اسکرین ویجیٹس"
+          }
+        }
+      }
+    },
     "Home Screen and Lock Screen, Edit Widget" : {
       "localizations" : {
         "ar" : {
@@ -79611,6 +80845,22 @@
         }
       }
     },
+    "How the Tracker Works" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كيف يعمل المتتبّع"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ٹریکر کیسے کام کرتا ہے"
+          }
+        }
+      }
+    },
     "How the readings are spelled: H, S, aa, and the rest" : {
       "localizations" : {
         "ar" : {
@@ -80434,6 +81684,22 @@
       }
     },
     "IN %@" : {},
+    "IN CONGREGATION" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "في جماعة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "باجماعت"
+          }
+        }
+      }
+    },
     "IN HAFS AN 'ASIM" : {
       "localizations" : {
         "ar" : {
@@ -80593,6 +81859,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "اِنَّ اور اس جیسے حروف: بعد میں زبر"
+          }
+        }
+      }
+    },
+    "INSIGHTS" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التحليلات"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تجزیہ"
           }
         }
       }
@@ -83128,6 +84410,22 @@
         }
       }
     },
+    "In Congregation" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "في جماعة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "باجماعت"
+          }
+        }
+      }
+    },
     "In Hafs it is a leen letter: no length while reading on, and 2, 4 or 6 counts only at a stop." : {
       "localizations" : {
         "ar" : {
@@ -83241,18 +84539,18 @@
         }
       }
     },
-    "In a chapter, tap the title for Choose Chapter and for Select Hadiths, which copies, shares, or bookmarks several at once." : {
+    "In a chapter, tap the title for Choose Chapter and for Select Hadiths, which copies, shares, or bookmarks several at once. While selecting, hold a hadith to add every hadith from the last one you picked through it." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "داخل الباب، اضغط على العنوان لـ«اختيار الباب» و«تحديد الأحاديث»، الذي ينسخ عدة أحاديث أو يشاركها أو يضع عليها علامات دفعة واحدة."
+            "value" : "داخل الباب، اضغط على العنوان لـ«اختيار الباب» و«تحديد الأحاديث»، الذي ينسخ عدة أحاديث أو يشاركها أو يضع عليها علامات دفعة واحدة. وأثناء التحديد، اضغط مطولًا على حديث لتضيف كل الأحاديث من آخر حديث حددته إليه."
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "کسی باب میں عنوان پر ٹیپ کریں تو «باب منتخب کریں» اور «احادیث منتخب کریں» ملتے ہیں، جو کئی احادیث کو ایک ساتھ کاپی، شیئر یا بک مارک کرتا ہے۔"
+            "value" : "کسی باب میں عنوان پر ٹیپ کریں تو «باب منتخب کریں» اور «احادیث منتخب کریں» ملتے ہیں، جو کئی احادیث کو ایک ساتھ کاپی، شیئر یا بک مارک کرتا ہے۔ انتخاب کے دوران کسی حدیث کو دبائے رکھیں تو آخری منتخب کی ہوئی حدیث سے اس حدیث تک سب احادیث شامل ہو جاتی ہیں۔"
           }
         }
       }
@@ -83286,6 +84584,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "کسی بھی گرڈ میں ٹیپ کرنے سے ٹائل کھلتا ہے اور چھو کر دبائے رکھنے سے اس کا مینو۔ ٹائل کے کونے میں چھوٹا ستارہ اسے کھولے بغیر پسندیدہ میں شامل کر دیتا ہے۔"
+          }
+        }
+      }
+    },
+    "In congregation" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "في جماعة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "باجماعت"
           }
         }
       }
@@ -83534,6 +84848,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "اصطلاحی"
+          }
+        }
+      }
+    },
+    "In the Day view, Mark the Whole Day answers every prayer still open at once and leaves the answers already given. Touch and hold a day of the month for the same choices." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "في عرض اليوم، يسجّل «تسجيل اليوم كله» دفعة واحدة كل صلاة لم تُسجَّل بعد، ويُبقي ما سُجّل على حاله. والمس مطولًا يومًا من الشهر للخيارات نفسها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دن کے منظر میں «پورے دن پر نشان لگائیں» ہر اس نماز پر ایک ساتھ نشان لگاتا ہے جو ابھی باقی ہو، اور پہلے سے دیے گئے جواب برقرار رکھتا ہے۔ انہی اختیارات کے لیے مہینے کے کسی دن کو دبائے رکھیں۔"
           }
         }
       }
@@ -89774,6 +91104,22 @@
       },
       "extractionState" : "stale"
     },
+    "Kaaf after kaaf, then haa: the letters of a long word crowd together before the name of Allah." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كاف بعد كاف ثم هاء: حروف كلمة طويلة تتزاحم قبل لفظ الجلالة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کاف کے بعد کاف، پھر ہاء: ایک لمبے لفظ کے حروف اللہ کے نام سے پہلے اکٹھے ہو جاتے ہیں۔"
+          }
+        }
+      }
+    },
     "Kaaf is light, with a puff of breath. Qaaf is one step further back, heavy, and bounces with a sukoon." : {
       "localizations" : {
         "ar" : {
@@ -90928,6 +92274,22 @@
         }
       }
     },
+    "Khalid planted peaches, and Ghanim planted carob." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "غرس خالد خوخًا، وغرس غانم خرّوبًا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خالد نے آڑو لگائے، اور غانم نے خرنوب لگایا۔"
+          }
+        }
+      }
+    },
     "Khallad" : {
       "localizations" : {
         "ar" : {
@@ -91761,6 +93123,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "حروف کے خاندان"
+          }
+        }
+      }
+    },
+    "LETTER PAIRS" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أزواج الحروف"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حروف کے جوڑے"
           }
         }
       }
@@ -92688,6 +94066,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "حرکت کو یاء کی طرف جھکائیں مگر اس تک پہنچیں نہیں۔ آواز ایک ہی مائل آواز رہتی ہے۔"
+          }
+        }
+      }
+    },
+    "Learn" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تعلّم"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سیکھیں"
           }
         }
       }
@@ -97021,6 +98415,22 @@
         }
       }
     },
+    "Longing has stirred my longing, so my longing longs for you. Has longing stirred your longing the way my longing longs for yours? And if longing has stirred your longing as it stirred mine, my longing is still the stronger longing!" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لقد هيّج الشوقُ شوقي فاشتاق إليك. فهل هيّج الشوقُ شوقك كما يشتاق شوقي إلى شوقك؟ فإن كان الشوق قد هيّج شوقك كما هيّج شوقي، فشوقي أشدّ شوقًا من شوقك!"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شوق نے میرے شوق کو بھڑکا دیا، تو میرا شوق تمہارا مشتاق ہو گیا۔ کیا شوق نے تمہارے شوق کو بھی ایسے بھڑکایا جیسے میرا شوق تمہارے شوق کا مشتاق ہے؟ اور اگر شوق نے تمہارے شوق کو میرے شوق کی طرح بھڑکایا ہے، تو بھی میرا شوق تمہارے شوق سے بڑھ کر ہے!"
+          }
+        }
+      }
+    },
     "Look and Feel" : {
       "localizations" : {
         "ar" : {
@@ -97581,6 +98991,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "الفِ مقصورہ یا حرفِ یا؟ اس سے پہلے کی حرکت فیصلہ کرتی ہے"
+          }
+        }
+      }
+    },
+    "MARKING" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التسجيل"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نشان لگانا"
           }
         }
       }
@@ -99873,6 +101299,22 @@
         }
       }
     },
+    "Mark %@ prayed" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تسجيل أداء %@"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ پر ادا کا نشان لگائیں"
+          }
+        }
+      }
+    },
     "Mark 1,000 prayers" : {
       "localizations" : {
         "ar" : {
@@ -99953,6 +101395,54 @@
         }
       }
     },
+    "Mark All Late" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تسجيل الكل متأخرة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سب پر تاخیر سے کا نشان لگائیں"
+          }
+        }
+      }
+    },
+    "Mark All Missed" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تسجيل الكل فائتة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سب پر چھوٹ جانے کا نشان لگائیں"
+          }
+        }
+      }
+    },
+    "Mark All On Time" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تسجيل الكل في وقتها"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سب پر وقت پر کا نشان لگائیں"
+          }
+        }
+      }
+    },
     "Mark Ayah Viewed" : {
       "localizations" : {
         "ar" : {
@@ -99971,6 +101461,22 @@
     },
     "Mark Only After the Time Begins" : {
       "extractionState" : "stale"
+    },
+    "Mark Prayer" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تسجيل صلاة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نماز پر نشان لگائیں"
+          }
+        }
+      }
     },
     "Mark a prayer on the Adhan tab, on time, late, or missed, and its reminders stop for the day. Clear the mark and they come back." : {
       "localizations" : {
@@ -100038,6 +101544,86 @@
     },
     "Mark as done" : {
       "extractionState" : "stale"
+    },
+    "Mark the Rest Late" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تسجيل الباقي متأخرة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "باقی پر تاخیر سے کا نشان لگائیں"
+          }
+        }
+      }
+    },
+    "Mark the Rest Missed" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تسجيل الباقي فائتة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "باقی پر چھوٹ جانے کا نشان لگائیں"
+          }
+        }
+      }
+    },
+    "Mark the Rest On Time" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تسجيل الباقي في وقتها"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "باقی پر وقت پر کا نشان لگائیں"
+          }
+        }
+      }
+    },
+    "Mark the Whole Day" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تسجيل اليوم كله"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پورے دن پر نشان لگائیں"
+          }
+        }
+      }
+    },
+    "Mark the Whole Day, in the Day view or by holding a day of the month, answers every prayer still open at once and leaves the answers already given." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«تسجيل اليوم كله»، في عرض اليوم أو بالضغط المطوّل على يوم من الشهر، يسجّل دفعة واحدة كل صلاة لم تُسجَّل بعد، ويُبقي ما سُجّل على حاله."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«پورے دن پر نشان لگائیں»، دن کے منظر میں یا مہینے کے کسی دن کو دبائے رکھنے پر، ہر اس نماز پر ایک ساتھ نشان لگاتا ہے جو ابھی باقی ہو، اور پہلے سے دیے گئے جواب برقرار رکھتا ہے۔"
+          }
+        }
+      }
     },
     "Mark your first ayah read" : {
       "localizations" : {
@@ -100135,6 +101721,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "اس حرف کی نشاندہی کرتا ہے جس کے بعد کوئی حرکت نہ ہو۔ منہ حرف پر ٹھہر جاتا ہے: «اَبْ»، نہ کہ «اَبَ»۔"
+          }
+        }
+      }
+    },
+    "Marks a prayer in the Prayer Tracker." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يسجّل صلاة في متتبّع الصلاة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نماز ٹریکر میں ایک نماز پر نشان لگاتا ہے۔"
           }
         }
       }
@@ -101724,6 +103326,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "چھوٹ گئی"
+          }
+        }
+      }
+    },
+    "Missed Prayers" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الصلوات الفائتة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "چھوٹی ہوئی نمازیں"
           }
         }
       }
@@ -103822,6 +105440,22 @@
         }
       }
     },
+    "NARRATORS, until it is turned on" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«الرواة» حتى تُشغَّل"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«راوی»، جب تک اسے آن نہ کیا جائے"
+          }
+        }
+      }
+    },
     "NASB: WHAT IT IS DONE TO" : {
       "localizations" : {
         "ar" : {
@@ -105510,6 +107144,22 @@
         }
       }
     },
+    "Never at both" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا تقف عند كلتيهما"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دونوں پر نہیں"
+          }
+        }
+      }
+    },
     "Never break a madd in the middle: one smooth airflow from start to finish." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -106030,6 +107680,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "رات %lld از %lld"
+          }
+        }
+      }
+    },
+    "Night Prayer" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قيام الليل"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قیام اللیل"
           }
         }
       }
@@ -106864,6 +108530,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "کسی سند سے اس جگہ بسملہ منقول نہیں۔ اس کا چھوڑنا خود اُسی نقل کا حصہ ہے۔"
+          }
+        }
+      }
+    },
+    "No change" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا تغيير"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کوئی تبدیلی نہیں"
           }
         }
       }
@@ -107935,6 +109617,22 @@
       },
       "extractionState" : "stale"
     },
+    "No page named \"%@\". Pages: glance, solar, day, grid, tiles, large, largesky, small, lock, dates, tracker." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا توجد صفحة باسم «%@»."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@” نام کا کوئی صفحہ نہیں۔ صفحات: “glance”، “solar”، “day”، “grid”، “tiles”، “large”، “largesky”، “small”، “lock”، “dates”، “tracker”۔"
+          }
+        }
+      }
+    },
     "No page named \"%@\". Pages: glance, solar, day, grid, tiles, large, largesky, small, lock, dates." : {
       "localizations" : {
         "ar" : {
@@ -107949,7 +109647,8 @@
             "value" : "“%@” نام کا کوئی صفحہ نہیں۔ صفحات: “glance”، “solar”، “day”، “grid”، “tiles”، “large”، “largesky”، “small”، “lock”، “dates”۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "No passage outline for this surah." : {
       "localizations" : {
@@ -108324,6 +110023,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "وقف نہیں تو عوض نہیں۔ اس کے بجائے تنوین کے عام احکام لگائیں۔"
+          }
+        }
+      }
+    },
+    "No streak yet" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا سلسلة بعد"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ابھی کوئی مسلسل دن نہیں"
           }
         }
       }
@@ -108835,6 +110550,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "نہیں، قراءت تبدیل نہ کریں"
+          }
+        }
+      }
+    },
+    "No, I missed it" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا، فاتتني"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نہیں، چھوٹ گئی"
           }
         }
       }
@@ -109440,6 +111171,22 @@
         }
       }
     },
+    "Not Missed" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ليست فائتة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "چھوٹی نہیں"
+          }
+        }
+      }
+    },
     "Not Now" : {
       "localizations" : {
         "ar" : {
@@ -109583,6 +111330,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "اس روایت میں یہ الگ آیت نہیں۔"
+          }
+        }
+      }
+    },
+    "Not a stop" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ليست علامة وقف"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقف کی علامت نہیں"
           }
         }
       }
@@ -110518,6 +112281,22 @@
         }
       }
     },
+    "Nothing is marked in this span yet. Mark a few prayers and their pattern shows here." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لم يُسجَّل شيء في هذه المدة بعد. سجّل بعض الصلوات ليظهر نمطها هنا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس مدت میں ابھی کسی نماز پر نشان نہیں لگا۔ چند نمازوں پر نشان لگائیں تو ان کا رجحان یہاں نظر آئے گا۔"
+          }
+        }
+      }
+    },
     "Nothing is transmitted differently between these two narrators via al-Durrah, so they carry one text. Open either for the detail." : {
       "localizations" : {
         "ar" : {
@@ -110562,6 +112341,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ابھی کچھ محفوظ نہیں کیا گیا"
+          }
+        }
+      }
+    },
+    "Nothing left to mark." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لم يبقَ ما يُسجَّل."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نشان لگانے کو کچھ باقی نہیں۔"
           }
         }
       }
@@ -110773,6 +112568,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ابھی تقسیم کے لیے کچھ نہیں۔"
+          }
+        }
+      }
+    },
+    "Nothing to make up. Alhamdulillah." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا شيء للقضاء. الحمد لله."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قضا کے لیے کچھ نہیں۔ الحمد للہ۔"
           }
         }
       }
@@ -112178,6 +113989,22 @@
         }
       }
     },
+    "ON TIME" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "في وقتها"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقت پر"
+          }
+        }
+      }
+    },
     "ON TIME · LATE · MISSED" : {
       "localizations" : {
         "ar" : {
@@ -112190,6 +114017,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "وقت پر • تاخیر سے • چھوٹ گئی"
+          }
+        }
+      },
+      "extractionState" : "stale"
+    },
+    "ON TIME, BY PRAYER" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "في وقتها، حسب الصلاة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقت پر، نماز کے لحاظ سے"
+          }
+        }
+      }
+    },
+    "ON TIME, BY WEEKDAY" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "في وقتها، حسب أيام الأسبوع"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقت پر، ہفتے کے دن کے لحاظ سے"
           }
         }
       }
@@ -113328,6 +115188,22 @@
     "Once a day, the first time the app opens, today's reminder (a verse, a hadith, a Sunnah, a dua, a dhikr or a Name of Allah) comes up as a card. The card always sits at the top of the Islam tab as well." : {
       "extractionState" : "stale"
     },
+    "Once a prayer's time has ended, a tap asks whether it was on time or late, so a prayer ticked hours afterward is recorded as it was." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بعد انتهاء وقت الصلاة، يسألك الضغط هل صلّيتها في وقتها أم متأخرة، فتُسجَّل الصلاة التي تُعلَّم بعد ساعات كما كانت."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نماز کا وقت ختم ہو جانے کے بعد ٹیپ کرنے پر پوچھا جاتا ہے کہ وہ وقت پر تھی یا تاخیر سے، تاکہ گھنٹوں بعد نشان لگائی گئی نماز ویسی ہی درج ہو جیسی وہ تھی۔"
+          }
+        }
+      }
+    },
     "Once the final letter is sakin, two rules that were dormant wake up. If that letter is one of ق ط ب ج د it now has a sukoon it did not have a moment ago, so it bounces: this is qalqalah kubra, and it is the reason ٱلۡفَلَقِ read on has no bounce and ٱلۡفَلَقْ stopped on does. And if the letter before it is a madd letter, that madd is now followed by a sukoon, so it stretches: مدّ عارض للسكون, held 2, 4 or 6 counts. All three lengths are read in Hafs. Choose one and keep it for the whole sitting, because what is wrong is not the number, it is changing it from ayah to ayah." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -113424,6 +115300,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "الاسلام ٹیب پر روزانہ ایک عربی لفظ، اس کے مادے اور قرآن مجید میں اس کے مقامات کے ساتھ۔"
+          }
+        }
+      }
+    },
+    "One Ayah" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آية واحدة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایک آیت"
           }
         }
       }
@@ -113557,6 +115449,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "یہاں ایک آیت (%lld–%lld پر محیط)"
+          }
+        }
+      }
+    },
+    "One ayah, a list that takes turns, a random bookmark or a random ayah. Pick from your bookmarks, or type a reference such as 2:255 or Yaseen 9." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آية واحدة، أو قائمة تتناوب، أو علامة عشوائية، أو آية عشوائية. اختر من علاماتك، أو اكتب مرجعًا مثل ٢:٢٥٥ أو يس ٩."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایک آیت، باری باری بدلنے والی فہرست، بے ترتیب بک مارک یا بے ترتیب آیت۔ اپنے بک مارکس میں سے چنیں، یا 2:255 یا یٰسین 9 جیسا حوالہ لکھیں۔"
           }
         }
       }
@@ -116385,6 +118293,22 @@
         }
       }
     },
+    "Open Day" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فتح اليوم"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دن کھولیں"
+          }
+        }
+      }
+    },
     "Open Dhikr" : {
       "localizations" : {
         "ar" : {
@@ -117583,6 +119507,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "یہ %@ ایپ میں کھلتا ہے۔ ایپ کے بغیر App Store کھلتا ہے۔"
+          }
+        }
+      }
+    },
+    "Opens this month." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يفتح هذا الشهر."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہ مہینہ کھولتا ہے۔"
           }
         }
       }
@@ -119883,6 +121823,22 @@
         }
       }
     },
+    "Pause, no breath" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سكتة دون تنفّس"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سکتہ، سانس لیے بغیر"
+          }
+        }
+      }
+    },
     "Paused" : {
       "localizations" : {
         "ar" : {
@@ -119911,6 +121867,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ سے موقوف"
+          }
+        }
+      }
+    },
+    "Pauses and Other Marks" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "السكت وعلامات أخرى"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سکتہ اور دوسری علامات"
           }
         }
       }
@@ -120388,6 +122360,22 @@
         }
       }
     },
+    "Phrases known for being hard on the tongue, in the mushaf’s own spelling. Recite them with their tajweed, not at speed." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عبارات معروفة بثقلها على اللسان، برسم المصحف نفسه. اتلُها بتجويدها، لا بسرعة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وہ عبارتیں جو زبان پر بھاری ہونے میں مشہور ہیں، مصحف کی اپنی املا میں۔ انہیں تجوید کے ساتھ پڑھیں، تیزی سے نہیں۔"
+          }
+        }
+      }
+    },
     "Phrases this ayah shares word for word with others, longest first, from the Quranic Universal Library's Mutashabihat ul Quran. Open one to read every occurrence side by side." : {
       "localizations" : {
         "ar" : {
@@ -120579,7 +122567,8 @@
             "value" : "اپنے بک مارکس میں سے کوئی ایک منتخب کریں، یا کوئی حوالہ لکھیں، جیسے 2:255 یا یٰسین 9۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Pick up where you left off" : {
       "localizations" : {
@@ -122749,6 +124738,22 @@
         }
       }
     },
+    "Prayed" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صلّيت"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ادا کی"
+          }
+        }
+      }
+    },
     "Prayed %@ late" : {
       "localizations" : {
         "ar" : {
@@ -122777,6 +124782,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ وقت پر ادا کر لی"
+          }
+        }
+      }
+    },
+    "Prayed It Later" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صلّيتها لاحقًا"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بعد میں ادا کی"
           }
         }
       }
@@ -123944,6 +125965,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "نشان زد نمازیں"
+          }
+        }
+      }
+    },
+    "Prayers marked missed are gathered under To Make Up. Prayed It Later records one as prayed late and takes it off the list." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الصلوات المسجَّلة فائتة تُجمع تحت «للقضاء». و«صلّيتها لاحقًا» يسجّل إحداها متأخرة ويرفعها من القائمة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جن نمازوں پر چھوٹ جانے کا نشان ہو وہ «قضا کے لیے» کے تحت جمع ہوتی ہیں۔ «بعد میں ادا کی» کسی ایک کو تاخیر سے ادا کے طور پر درج کرتا ہے اور اسے فہرست سے ہٹا دیتا ہے۔"
           }
         }
       }
@@ -125936,6 +127973,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "نبوی رہنمائی"
+          }
+        }
+      }
+    },
+    "Prostrate once" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اسجد سجدة واحدة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایک سجدہ کریں"
           }
         }
       }
@@ -129358,6 +131411,38 @@
         }
       }
     },
+    "Random Ayah" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آية عشوائية"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بے ترتیب آیت"
+          }
+        }
+      }
+    },
+    "Random Bookmark" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "علامة عشوائية"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بے ترتیب بک مارک"
+          }
+        }
+      }
+    },
     "Random Reciter" : {
       "localizations" : {
         "ar" : {
@@ -130729,6 +132814,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "وصل میں مختصر زبر پڑھیں، اور الف صرف اس وقت ادا کریں جب آپ لفظ پر وقف کریں۔"
+          }
+        }
+      }
+    },
+    "Read on without stopping, and “Indeed, We know” would sound like part of what they say." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لو وصلتَ دون وقف لبدا «إنا نعلم» كأنه من قولهم."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بغیر رکے ملا کر پڑھیں تو «بے شک ہم جانتے ہیں» انہی کی بات کا حصہ لگے گا۔"
           }
         }
       }
@@ -137845,6 +139946,22 @@
         }
       }
     },
+    "SUNNAH PRAYERS" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صلوات السنن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سنت نمازیں"
+          }
+        }
+      }
+    },
     "SUPPLICATION" : {
       "localizations" : {
         "ar" : {
@@ -138969,6 +141086,22 @@
     "Sami'na wa ata'na · We hear and we obey" : {
       "extractionState" : "stale"
     },
+    "Samir caught a small fish, and Salih caught two fat fish." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سامرٌ صاد سمكة صغيرة، وصالحٌ صاد سمكتين سمينتين."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سامر نے ایک چھوٹی مچھلی پکڑی، اور صالح نے دو موٹی مچھلیاں پکڑیں۔"
+          }
+        }
+      }
+    },
     "Sanctity of the Sacred Mosque" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -139323,6 +141456,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ہر ایک کو تنہا پڑھیں، اس کے گرد کوئی کلمہ نہ ہو۔ جو کچھ آپ سنتے ہیں وہ سب حقِ حرف ہے، اور آنے والے دو باب اسی کے سوا کسی چیز کے بارے میں نہیں۔ پڑوس کے احکام میں سے ابھی ایک بھی لاگو نہیں ہوتا۔"
+          }
+        }
+      }
+    },
+    "Say each one slowly, then faster, then three times in a row without a slip. Every line packs letters that sit close together in the mouth, so where you stumble shows you which pair needs work." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قل كل واحدة ببطء، ثم أسرع، ثم ثلاث مرات متتالية دون خطأ. في كل سطر حروف متقاربة المخارج، فالموضع الذي تتعثر فيه يدلك على الزوج الذي يحتاج إلى تمرين."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ہر ایک کو پہلے آہستہ کہیں، پھر تیز، پھر بغیر غلطی کے تین بار لگاتار۔ ہر سطر میں ایسے حروف ہیں جن کے مخارج قریب قریب ہیں، اس لیے جہاں آپ اٹکیں وہیں سے پتا چلتا ہے کہ کس جوڑے پر محنت چاہیے۔"
           }
         }
       }
@@ -141832,6 +143981,22 @@
         }
       }
     },
+    "Seen is light and Saad is heavy: for Saad, raise the back of the tongue toward the roof of the mouth so the sound fills it." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "السين مرققة والصاد مفخمة: في الصاد ارفع أقصى اللسان نحو الحنك حتى يمتلئ الفم بالصوت."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سین باریک ہے اور صاد پُر: صاد کے لیے زبان کی جڑ تالو کی طرف اٹھائیں تاکہ آواز منہ بھر دے۔"
+          }
+        }
+      }
+    },
     "Seen is the plain whistle, zaay is the same whistle with the voice switched on, and Saad is the whistle made heavy." : {
       "localizations" : {
         "ar" : {
@@ -141896,18 +144061,18 @@
         }
       }
     },
-    "Select Ayahs, in the title's menu, lets you tap as many ayahs as you like and then copy, share, bookmark, highlight, or annotate them together." : {
+    "Select Ayahs, in the title's menu or an ayah's actions, lets you tap as many ayahs as you like and then copy, share, bookmark, highlight, or annotate them together. Hold an ayah to add every ayah from the last one you picked through it." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "يتيح لك «تحديد الآيات»، في قائمة العنوان، الضغط على ما تشاء من الآيات ثم نسخها أو مشاركتها أو وضع علامة عليها أو تمييزها أو إضافة ملاحظة إليها معًا."
+            "value" : "يتيح لك «تحديد الآيات»، في قائمة العنوان أو في إجراءات الآية، الضغط على ما تشاء من الآيات ثم نسخها أو مشاركتها أو وضع علامة عليها أو تمييزها أو إضافة ملاحظة إليها معًا. اضغط مطولًا على آية لتضيف كل الآيات من آخر آية حددتها إليها."
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "عنوان کے مینو میں «آیات منتخب کریں» سے آپ جتنی چاہیں آیات پر ٹیپ کر کے انہیں ایک ساتھ کاپی، شیئر، بک مارک یا ہائی لائٹ کر سکتے ہیں، یا ان پر نوٹ لکھ سکتے ہیں۔"
+            "value" : "عنوان کے مینو یا آیت کے اختیارات میں «آیات منتخب کریں» سے آپ جتنی چاہیں آیات پر ٹیپ کر کے انہیں ایک ساتھ کاپی، شیئر، بک مارک یا ہائی لائٹ کر سکتے ہیں، یا ان پر نوٹ لکھ سکتے ہیں۔ کسی آیت کو دبائے رکھیں تو آخری منتخب کی ہوئی آیت سے اس آیت تک سب آیات شامل ہو جاتی ہیں۔"
           }
         }
       }
@@ -143368,6 +145533,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "حروف کی شکلیں، حرکات اور علامات۔ اگر رسم الخط نیا ہے تو یہاں سے شروع کریں۔"
+          }
+        }
+      }
+    },
+    "Shaqshaqa is the roar of a camel that has been stirred up; here, longing stirring longing. Sheen and qaaf in almost every word." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الشقشقة هدير الجمل إذا هاج، وهي هنا شوق يهيّج شوقًا. الشين والقاف في كل كلمة تقريبًا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شقشقہ اس اونٹ کی گرج ہے جو جوش میں آ جائے؛ یہاں شوق شوق کو بھڑکاتا ہے۔ تقریباً ہر لفظ میں شین اور قاف۔"
           }
         }
       }
@@ -145264,6 +147445,22 @@
         }
       }
     },
+    "Show This Color" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إظهار هذا اللون"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہ رنگ دکھائیں"
+          }
+        }
+      }
+    },
     "Show Times In" : {
       "localizations" : {
         "ar" : {
@@ -146211,7 +148408,8 @@
             "value" : "حکم کی وضاحت دکھاتا ہے"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Shows the small compass" : {
       "localizations" : {
@@ -146225,6 +148423,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "چھوٹا قطب نما دکھاتا ہے"
+          }
+        }
+      }
+    },
+    "Shows this day on the card." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يعرض هذا اليوم في البطاقة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہ دن کارڈ پر دکھاتا ہے۔"
+          }
+        }
+      }
+    },
+    "Shows what the rule means" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يعرض معنى الحكم"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قاعدے کا مطلب دکھاتا ہے"
           }
         }
       }
@@ -148116,6 +150346,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "لامِ قمریہ میں حرکت گھسا دینا: أَلِحَمۡدُ۔"
+          }
+        }
+      }
+    },
+    "Slow" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بطيء"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آہستہ"
           }
         }
       }
@@ -151211,6 +153457,22 @@
         }
       }
     },
+    "Stop after rayb or after feeh, never at both. Either way the meaning is whole: “no doubt; in it is guidance”, or “no doubt in it; a guidance for those conscious of Allah”." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قف عند «ريب» أو عند «فيه»، ولا تقف عندهما معًا. وفي الحالين يتم المعنى: «لا ريب؛ فيه هدى»، أو «لا ريب فيه؛ هدى للمتقين»."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«ریب» کے بعد رکیں یا «فیہ» کے بعد، دونوں پر نہیں۔ دونوں صورتوں میں معنی پورا ہے: «کوئی شک نہیں؛ اس میں ہدایت ہے»، یا «اس میں کوئی شک نہیں؛ اللہ سے ڈرنے والوں کے لیے ہدایت»۔"
+          }
+        }
+      }
+    },
     "Stop after the surah, stop after the basmalah, then begin" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -151611,6 +153873,22 @@
         }
       }
     },
+    "Stop or Read On" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الوقف والوصل"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقف یا وصل"
+          }
+        }
+      }
+    },
     "Stop or continue as you like; both are equally fine." : {
       "localizations" : {
         "ar" : {
@@ -151623,6 +153901,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "رکیں یا آگے بڑھیں، جیسے چاہیں؛ دونوں برابر درست ہیں۔"
+          }
+        }
+      }
+    },
+    "Stop or read on" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قف أو صِل"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رکیں یا ملا کر پڑھیں"
           }
         }
       }
@@ -153660,6 +155954,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "شمسیہ: لام ساکت رہتی ہے اور اگلا حرف مشدّد ہو جاتا ہے۔"
+          }
+        }
+      }
+    },
+    "Sunnah Prayers" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صلوات السنن"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سنت نمازیں"
           }
         }
       }
@@ -155815,6 +158125,22 @@
     "THE READINGS AND WHAT THEY MEAN" : {
       "extractionState" : "stale"
     },
+    "THE RING" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الحلقة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حلقہ"
+          }
+        }
+      }
+    },
     "THE ROW OVER THE RESULTS" : {
       "localizations" : {
         "ar" : {
@@ -156333,6 +158659,22 @@
         }
       }
     },
+    "TO MAKE UP" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "للقضاء"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قضا کے لیے"
+          }
+        }
+      }
+    },
     "TODAY" : {
       "localizations" : {
         "ar" : {
@@ -156367,6 +158709,22 @@
     },
     "TODAY'S REMINDER" : {
       "extractionState" : "stale"
+    },
+    "TONGUE TWISTERS" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جمل صعبة النطق"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "زبان کی مشقیں"
+          }
+        }
+      }
     },
     "TOOLS" : {
       "localizations" : {
@@ -157493,6 +159851,22 @@
         }
       }
     },
+    "Takes turns through your list" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تتناوب على قائمتك"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آپ کی فہرست میں باری باری"
+          }
+        }
+      }
+    },
     "Taking a separated madd at four counts in one ayah and two in the next." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -158089,6 +160463,22 @@
         }
       }
     },
+    "Tap Slow to hear it first, then Fast to hear the speed to aim for." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اضغط «بطيء» لتسمعها أولًا، ثم «سريع» لتسمع السرعة التي تسعى إليها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پہلے سننے کے لیے «آہستہ» دبائیں، پھر «تیز» دبا کر وہ رفتار سنیں جس تک پہنچنا ہے۔"
+          }
+        }
+      }
+    },
     "Tap Stop to end the adhan" : {
       "localizations" : {
         "ar" : {
@@ -158165,6 +160555,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "کسی کارڈ پر ٹیپ کر کے اس کا حکم دکھائیں یا چھپائیں۔ ہر حکم کا رنگ یہاں اس کے کارڈ سے بدلا جا سکتا ہے۔"
+          }
+        }
+      }
+    },
+    "Tap a color to see what it means" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اضغط على لون لترى معناه"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کسی رنگ کا مطلب دیکھنے کے لیے اسے دبائیں"
           }
         }
       }
@@ -158281,6 +160687,22 @@
         }
       }
     },
+    "Tap a prayer to mark it prayed. Hold for late or missed." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اضغط على صلاة لتسجيلها. واضغط مطولًا لتسجيلها متأخرة أو فائتة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نماز پر ٹیپ کر کے ادا کا نشان لگائیں۔ تاخیر سے یا چھوٹ جانے کے لیے دبائے رکھیں۔"
+          }
+        }
+      }
+    },
     "Tap a prayer under Prayer Notifications to choose between the adhan, a short excerpt of it, and an ordinary tone: a full adhan at Maghrib and a quiet tone at Fajr, if that suits your house." : {
       "localizations" : {
         "ar" : {
@@ -158325,6 +160747,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "نماز کو وقت پر ادا شدہ نشان زد کرنے کے لیے اس کے دائرے پر ٹیپ کریں، اور ہٹانے کے لیے دوبارہ ٹیپ کریں۔ «تاخیر سے» اور «چھوٹ گئی» کے لیے دبائے رکھیں۔"
+          }
+        }
+      },
+      "extractionState" : "stale"
+    },
+    "Tap a prayer's circle to mark it prayed on time, and tap again to clear it. Touch and hold for Late and Missed. Once a prayer's time has ended, a tap asks whether it was on time or late." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اضغط على دائرة الصلاة لتسجيلها مؤدّاة في وقتها، واضغط مجددًا لمسحها. والمسها مطولًا لـ«متأخرة» و«فائتة». وبعد انتهاء وقت الصلاة، يسألك الضغط هل كانت في وقتها أم متأخرة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نماز کو وقت پر ادا شدہ نشان زد کرنے کے لیے اس کے دائرے پر ٹیپ کریں، اور ہٹانے کے لیے دوبارہ ٹیپ کریں۔ «تاخیر سے» اور «چھوٹ گئی» کے لیے دبائے رکھیں۔ نماز کا وقت ختم ہو جانے کے بعد ٹیپ کرنے پر پوچھا جاتا ہے کہ وہ وقت پر تھی یا تاخیر سے۔"
+          }
+        }
+      }
+    },
+    "Tap a sign to see what it asks" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اضغط على علامة لتعرف ما تطلبه"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کسی علامت پر ٹیپ کریں تو معلوم ہو کہ وہ کیا چاہتی ہے"
           }
         }
       }
@@ -158893,6 +161348,23 @@
             "value" : "وقت پر ادا کا نشان لگانے کے لیے ٹیپ کریں۔ تاخیر سے یا چھوٹ جانے کے لیے دبائے رکھیں۔"
           }
         }
+      },
+      "extractionState" : "stale"
+    },
+    "Tap to mark prayed. Press and hold for late or missed." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اضغط للتسجيل. واضغط مطولًا لتسجيلها متأخرة أو فائتة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ادا کا نشان لگانے کے لیے ٹیپ کریں۔ تاخیر سے یا چھوٹ جانے کے لیے دبائے رکھیں۔"
+          }
+        }
       }
     },
     "Tap, double tap, hold" : {
@@ -158973,6 +161445,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "تقویٰ"
+          }
+        }
+      }
+    },
+    "Tariq’s mulberries are fresh, and Tamir’s mulberries are good." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "توت طارقٍ طريّ، وتوت تامرٍ طيّب."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "طارق کے شہتوت تازہ ہیں، اور تامر کے شہتوت عمدہ ہیں۔"
           }
         }
       }
@@ -159883,6 +162371,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "متنی موازنہ"
+          }
+        }
+      }
+    },
+    "Thamir drank a third of the tea, and Samir drank two thirds of it." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شرب ثامرٌ ثلث الشاي، وشرب سامرٌ ثلثيه."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ثامر نے چائے کا تہائی حصہ پیا، اور سامر نے اس کے دو تہائی۔"
           }
         }
       }
@@ -162051,6 +164555,22 @@
         }
       }
     },
+    "The Prayer Tracker widget shows the day's ring on the Home Screen or the Lock Screen. On iOS 17 and later, tapping a prayer on the Home Screen widget marks it prayed, and a second tap marks it late." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أداة «متتبّع الصلاة» تعرض حلقة اليوم على الشاشة الرئيسية أو شاشة القفل. وفي iOS 17 وما بعده، يسجّل الضغط على صلاة في أداة الشاشة الرئيسية أداءها، والضغطة الثانية تسجّلها متأخرة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«نماز ٹریکر» ویجیٹ ہوم اسکرین یا لاک اسکرین پر دن کا حلقہ دکھاتا ہے۔ iOS 17 اور اس کے بعد، ہوم اسکرین ویجیٹ پر کسی نماز پر ٹیپ کرنے سے اس پر ادا کا نشان لگتا ہے، اور دوسری ٹیپ سے تاخیر کا۔"
+          }
+        }
+      }
+    },
     "The Prophet Muhammad ﷺ quote card" : {
       "localizations" : {
         "ar" : {
@@ -162712,6 +165232,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "«رکعتوں کی رہنمائی» کا بٹن ہر نماز کی فرض اور سنت رکعتیں کھول دیتا ہے، اور یہ بھی کہ جمعہ کے دن اور سفر میں کیا بدلتا ہے۔"
+          }
+        }
+      }
+    },
+    "The Regular Sunnah" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "السنن الرواتب"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سنن رواتب"
           }
         }
       }
@@ -163717,6 +166253,22 @@
         }
       }
     },
+    "The angels take them while saying “Peace be upon you”, so the reciter reads on. The text in this app does not print this sign; it is shown where the prints that use it set it." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تتوفّاهم الملائكة قائلين «سلام عليكم»، فيواصل القارئ القراءة. نص هذا التطبيق لا يطبع هذه العلامة، وهي معروضة حيث تضعها المصاحف التي تستعملها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فرشتے انہیں وفات دیتے وقت کہتے ہیں ”تم پر سلام ہو“، اس لیے قاری پڑھتا جاتا ہے۔ اس ایپ کے متن میں یہ علامت نہیں چھپی؛ یہ وہاں دکھائی گئی ہے جہاں اسے برتنے والے نسخے لگاتے ہیں۔"
+          }
+        }
+      }
+    },
     "The answer stopped early. Ask again to continue." : {
       "localizations" : {
         "ar" : {
@@ -164071,6 +166623,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "یہی آیت فقہا مصحف چھونے پر پیش کرتے ہیں۔ اکثر مفسرین اسے فرشتوں اور کتابِ مکنون پر محمول کرتے ہیں۔"
+          }
+        }
+      }
+    },
+    "The ayah you pick, or your newest bookmark" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الآية التي تختارها، أو أحدث علاماتك"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آپ کی چنی ہوئی آیت، یا آپ کا تازہ ترین بک مارک"
           }
         }
       }
@@ -168262,6 +170830,22 @@
         }
       }
     },
+    "The heart of Qasim’s dog is like the heart of Kamil’s dog." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قلب كلب قاسم كقلب كلب كامل."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قاسم کے کتے کا دل کامل کے کتے کے دل جیسا ہے۔"
+          }
+        }
+      }
+    },
     "The heaviness itself is ordinary tafkheem: the back of the tongue rises, the sound fills the mouth, and nothing gets longer. Because the lam is doubled, the weight has to be held across both halves of the shadda. A common half-measure is to start heavy and let the second half thin out, which produces a lam that is neither one thing nor the other." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -169823,6 +172407,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "لفظ کے حروف غلط ترتیب میں رکھے گئے"
+          }
+        }
+      }
+    },
+    "The letters people mix up, said fast" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الحروف التي يخلط الناس بينها، بسرعة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وہ حروف جن میں لوگ الجھ جاتے ہیں، تیزی سے"
+          }
+        }
+      }
+    },
+    "The letters people mix up, said fast, and four hard Quran phrases" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الحروف التي يخلط الناس بينها بسرعة، وأربع عبارات قرآنية صعبة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وہ حروف جن میں لوگ الجھ جاتے ہیں تیزی سے، اور قرآن کی چار مشکل عبارتیں"
           }
         }
       }
@@ -173673,6 +176289,22 @@
         }
       }
     },
+    "The past week, on the card" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الأسبوع الماضي، في البطاقة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "گزشتہ ہفتہ، کارڈ پر"
+          }
+        }
+      }
+    },
     "The pause itself lasts a breath. What is worth studying is what happens to the word, not to the silence." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -174846,6 +177478,54 @@
         }
       }
     },
+    "The ring holds the number of the ayah it closes." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحمل الدائرة رقم الآية التي تختمها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس دائرے میں اس آیت کا نمبر ہوتا ہے جسے یہ ختم کرتا ہے۔"
+          }
+        }
+      }
+    },
+    "The ring is a day: five arcs from Fajr round to Isha, green for on time, orange for late, red for missed. The seven rings under the card are the past week, and tapping one puts that day on the card to answer there." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الحلقة يوم: خمسة أقواس من الفجر دورةً حتى العشاء، الأخضر في وقتها، والبرتقالي متأخرة، والأحمر فائتة. والحلقات السبع تحت البطاقة هي الأسبوع الماضي، والضغط على إحداها يعرض ذلك اليوم في البطاقة لتسجيله هناك."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حلقہ ایک دن ہے: فجر سے گھوم کر عشاء تک پانچ قوسیں، سبز وقت پر، نارنجی تاخیر سے، سرخ چھوٹ گئی۔ کارڈ کے نیچے سات حلقے گزشتہ ہفتہ ہیں، اور کسی ایک پر ٹیپ کرنے سے وہ دن کارڈ پر آ جاتا ہے تاکہ وہیں نشان لگایا جائے۔"
+          }
+        }
+      }
+    },
+    "The ring is one day: five arcs, Fajr at the top and on round the clock to Isha. Green is prayed on time, orange is prayed late, red is missed, and gray is not answered yet." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الحلقة يوم واحد: خمسة أقواس، الفجر في الأعلى ثم مع اتجاه عقارب الساعة حتى العشاء. الأخضر صلاة في وقتها، والبرتقالي صلاة متأخرة، والأحمر فائتة، والرمادي لم تُسجَّل بعد."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حلقہ ایک دن ہے: پانچ قوسیں، فجر سب سے اوپر اور پھر گھڑی کی سمت میں عشاء تک۔ سبز کا مطلب وقت پر ادا، نارنجی تاخیر سے ادا، سرخ چھوٹ گئی، اور سرمئی پر ابھی نشان نہیں لگا۔"
+          }
+        }
+      }
+    },
     "The riwayat differ in places such as madd lengths and the treatment of the hamzah. Each difference was revealed, taught by the Prophet ﷺ and reached us through continuous transmission, so none of them is a mistake." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -175698,6 +178378,22 @@
         }
       }
     },
+    "The same spot behind the teeth for both: ت is light, ط fills the mouth." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "المخرج واحد عند أصول الثنايا: التاء مرققة، والطاء تملأ الفم."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دونوں کا مخرج دانتوں کے پیچھے ایک ہی ہے: ت باریک ہے، ط منہ بھر دیتا ہے۔"
+          }
+        }
+      }
+    },
     "The same subject across the books" : {
       "localizations" : {
         "ar" : {
@@ -176232,6 +178928,22 @@
         }
       }
     },
+    "The second juz begins here." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هنا يبدأ الجزء الثاني."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دوسرا پارہ یہیں سے شروع ہوتا ہے۔"
+          }
+        }
+      }
+    },
     "The second mark is the shadda (ـّ), and it is best read as a receipt. A shadda is written where a letter is doubled, and one of the ways a letter gets doubled is that something merged into it. In هُدٗى مِّن the meem of مِّن carries a shadda that the word does not own by itself: it is there because the tanween before it was absorbed. So a shadda on the first letter of a word, right after a bare nun or tanween, is idghaam already recorded in the ink. The same reading works inside the definite article, which is the next mark." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -176720,6 +179432,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "سات اسماء"
+          }
+        }
+      }
+    },
+    "The seven rings under the card are the past week. Tap one to put that day on the card and answer it there." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الحلقات السبع تحت البطاقة هي الأسبوع الماضي. اضغط على إحداها لعرض ذلك اليوم في البطاقة وتسجيله هناك."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کارڈ کے نیچے سات حلقے گزشتہ ہفتہ ہیں۔ کسی ایک پر ٹیپ کریں تو وہ دن کارڈ پر آ جاتا ہے اور وہیں اس پر نشان لگایا جا سکتا ہے۔"
           }
         }
       }
@@ -177449,6 +180177,22 @@
         }
       }
     },
+    "The small signs over the words say where a reciter may stop, must stop, or must read on." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "العلامات الصغيرة فوق الكلمات تبيّن أين يجوز للقارئ أن يقف، وأين يجب أن يقف، وأين يجب أن يواصل."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لفظوں کے اوپر چھوٹی علامتیں بتاتی ہیں کہ قاری کہاں رک سکتا ہے، کہاں رکنا لازم ہے اور کہاں پڑھتے جانا ہے۔"
+          }
+        }
+      }
+    },
     "The small signs over the words say where a reciter may stop, must stop, or must read on. Tap a sign to see what it asks." : {
       "localizations" : {
         "ar" : {
@@ -177463,7 +180207,8 @@
             "value" : "لفظوں کے اوپر چھوٹی علامتیں بتاتی ہیں کہ قاری کہاں رک سکتا ہے، کہاں رکنا لازم ہے اور کہاں پڑھتے جانا ہے۔ کسی علامت پر ٹیپ کریں تو معلوم ہو کہ وہ کیا چاہتی ہے۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "The small superscript ۥ or ۦ in the mushaf IS the silah. No small letter means no silah." : {
       "extractionState" : "manual",
@@ -179146,6 +181891,22 @@
         }
       }
     },
+    "The time for %@ has ended." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "انتهى وقت %@."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ کا وقت ختم ہو چکا ہے۔"
+          }
+        }
+      }
+    },
     "The time the letter is held" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -179605,6 +182366,22 @@
         }
       }
     },
+    "The tracker as a widget" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "المتتبّع في أداة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ٹریکر بطور ویجیٹ"
+          }
+        }
+      }
+    },
     "The traits and honors of the Prophet, the attributes of believers, their rewards, and descriptions of Paradise." : {
       "localizations" : {
         "ar" : {
@@ -179667,6 +182444,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "حکم لانے والے حروف کا یہ مجموعہ بے سبب نہیں۔ چھ کے چھ حروف حلق سے نکلتے ہیں، اور حلق زبان کی اُس نوک سے سب سے دور ہے جہاں سے نون نکلتا ہے۔ اتنی دور سے نکلنے والی دو آوازیں آپس میں گھل نہیں سکتیں، اس لیے کچھ ہوتا ہی نہیں: نون اپنی حالت پر ادا ہوتا ہے، پھر حلقی حرف اپنی حالت پر ادا ہوتا ہے۔"
+          }
+        }
+      }
+    },
+    "The twelve regular rak'at, Witr, Duha and the night prayer, ticked beside the five." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الركعات الاثنتا عشرة الراتبة، والوتر، والضحى، وقيام الليل، تُسجَّل بجانب الصلوات الخمس."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بارہ سنن رواتب، وتر، چاشت اور قیام اللیل، پانچ نمازوں کے ساتھ نشان زد۔"
           }
         }
       }
@@ -188157,6 +190950,38 @@
     "Today's date in both calendars; the inline size sits above the clock" : {
       "extractionState" : "stale"
     },
+    "Today's five prayers as a ring, and a tap to mark one prayed" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صلوات اليوم الخمس في حلقة، وضغطة لتسجيل إحداها"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آج کی پانچ نمازیں ایک حلقے میں، اور ایک ٹیپ سے کسی پر ادا کا نشان"
+          }
+        }
+      }
+    },
+    "Today's five prayers as a ring: which are prayed, and which is next" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صلوات اليوم الخمس في حلقة: ما صُلّي منها، وما التالية"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آج کی پانچ نمازیں ایک حلقے میں: کون سی ادا ہوئیں، اور اگلی کون سی ہے"
+          }
+        }
+      }
+    },
     "Today's prayer times in two columns, over the current prayer's sky gradient" : {
       "localizations" : {
         "ar" : {
@@ -188378,6 +191203,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "لسان"
+          }
+        }
+      }
+    },
+    "Tongue Twisters" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جمل صعبة النطق"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "زبان کی مشقیں"
           }
         }
       }
@@ -189187,6 +192028,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ٹریکنگ موقوف"
+          }
+        }
+      }
+    },
+    "Tracking resumed. Unmarked prayers on this day are not counted." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "استُؤنف التتبع. الصلوات غير المسجَّلة في هذا اليوم لا تُحتسب."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ٹریکنگ دوبارہ شروع ہو گئی۔ اس دن کی بغیر نشان والی نمازیں شمار نہیں ہوتیں۔"
           }
         }
       }
@@ -193637,6 +196494,22 @@
         }
       }
     },
+    "Under the tracker, History & Insights shows how often each of the five is prayed on time, how the last 7 days, 30 days or year compare with the span before, and your days, weeks, months, and years. Tap a day in the month, or a month in the year, to open it." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحت المتتبّع، يعرض «السجل والتحليلات» كم مرة تُصلّى كل صلاة من الخمس في وقتها، وكيف تُقارن الأيام السبعة أو الثلاثون الأخيرة أو السنة بالمدة التي قبلها، وأيامك وأسابيعك وشهورك وسنواتك. اضغط على يوم في الشهر، أو شهر في السنة، لفتحه."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ٹریکر کے نیچے «ریکارڈ اور تجزیہ» دکھاتا ہے کہ پانچوں میں سے ہر نماز کتنی بار وقت پر ادا ہوتی ہے، پچھلے 7 دن، 30 دن یا سال اپنے سے پہلے کی مدت کے مقابلے میں کیسے رہے، اور آپ کے دن، ہفتے، مہینے اور سال۔ کھولنے کے لیے مہینے میں کسی دن پر، یا سال میں کسی مہینے پر ٹیپ کریں۔"
+          }
+        }
+      }
+    },
     "Under the tracker, History & Insights shows your days, weeks, months, and years, with streaks. Tap a day in the month, or a month in the year, to open it." : {
       "localizations" : {
         "ar" : {
@@ -193651,7 +196524,8 @@
             "value" : "ٹریکر کے نیچے «ریکارڈ اور تجزیہ» آپ کے دن، ہفتے، مہینے اور سال، مسلسل دنوں کے ساتھ دکھاتا ہے۔ کھولنے کے لیے مہینے میں کسی دن پر، یا سال میں کسی مہینے پر ٹیپ کریں۔"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Undo" : {
       "localizations" : {
@@ -194313,6 +197187,22 @@
         }
       }
     },
+    "Up by %lld" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ارتفاع بمقدار %lld"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld کا اضافہ"
+          }
+        }
+      }
+    },
     "Up next" : {
       "localizations" : {
         "ar" : {
@@ -194479,6 +197369,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "روزانہ زیادہ سے زیادہ ایک یاد دہانی، اور نماز درج کرنے کے بعد اس کی کوئی یاد دہانی نہیں۔"
+          }
+        }
+      }
+    },
+    "Up to date. %@ begins at %@." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كل شيء مسجَّل. يدخل وقت %1$@ في %2$@."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سب درج ہے۔ %1$@ کا وقت %2$@ پر شروع ہوگا۔"
           }
         }
       }
@@ -195327,6 +198233,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "عموماً 17 شمار کی جاتی ہیں، اگرچہ علما کی تقسیم مختلف ہے"
+          }
+        }
+      }
+    },
+    "Usually said in its spoken form, with حيط for wall. Khaa and Haa take turns all the way through." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تُقال عادة بالعامية: «حيط» بدل «حائط». الخاء والحاء تتناوبان من أولها إلى آخرها."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عام طور پر بول چال کی شکل میں کہا جاتا ہے، دیوار کے لیے حيط کے ساتھ۔ خاء اور حاء شروع سے آخر تک باری باری آتے ہیں۔"
           }
         }
       }
@@ -196417,6 +199339,22 @@
         }
       }
     },
+    "WELL KNOWN" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مشهورة"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مشہور"
+          }
+        }
+      }
+    },
     "WHAT A PRINTED PAGE CANNOT SHOW" : {
       "localizations" : {
         "ar" : {
@@ -196493,6 +199431,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "یہاں کیا بدلتا ہے"
+          }
+        }
+      }
+    },
+    "WHAT COUNTS" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ما يُحتسب"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کیا شمار ہوتا ہے"
           }
         }
       }
@@ -205613,6 +208567,22 @@
         }
       }
     },
+    "Without the pause the noon would merge into the raa, and man raaq would run together as one word." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لولا السكتة لأُدغمت النون في الراء، فاتصلت «من راق» كأنها كلمة واحدة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سکتے کے بغیر نون راء میں مدغم ہو جاتا، اور «من راق» مل کر ایک لفظ بن جاتا۔"
+          }
+        }
+      }
+    },
     "Without: %@" : {
       "localizations" : {
         "ar" : {
@@ -205645,6 +208615,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "گواہ اور ثبوت"
+          }
+        }
+      }
+    },
+    "Witr" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الوتر"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وتر"
           }
         }
       }
@@ -206491,6 +209477,22 @@
         }
       }
     },
+    "Written for this page, one for each pair on Sound-Alikes." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كُتبت لهذه الصفحة، واحدة لكل زوج في «المتشابهة في النطق»."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس صفحے کے لیے لکھے گئے، «ملتی جلتی آوازیں» کے ہر جوڑے کے لیے ایک۔"
+          }
+        }
+      }
+    },
     "Written in the word, and you read on" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -206671,6 +209673,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "گزشتہ کل"
+          }
+        }
+      }
+    },
+    "YESTERDAY, UNTIL FAJR" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أمس، حتى الفجر"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "گزشتہ کل، فجر تک"
           }
         }
       }
@@ -210326,6 +213344,22 @@
         }
       }
     },
+    "Zayd thought the wolf was a gazelle, so Zayd went to visit the wolf." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ظنّ زيدٌ أن الذئب ظبي، فذهب زيدٌ يزور الذئب."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "زید نے سمجھا کہ بھیڑیا ہرن ہے، تو زید بھیڑیے سے ملنے چلا گیا۔"
+          }
+        }
+      }
+    },
     "Zero counts. A sakin letter has no length of its own." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -211937,6 +214971,22 @@
         }
       }
     },
+    "and We gave it to you to drink" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فسقيناكم إياه"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اور ہم نے تمہیں وہ پلایا"
+          }
+        }
+      }
+    },
     "and establish prayer" : {
       "localizations" : {
         "ar" : {
@@ -211968,6 +215018,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "اور رہبانیت، جو انہوں نے خود ایجاد کر لی"
+          }
+        }
+      }
+    },
+    "and on nations from among those with you" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وعلى أمم ممن معك"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اور ان امتوں پر جو تمہارے ساتھیوں میں سے ہیں"
           }
         }
       }
@@ -218517,7 +221583,8 @@
             "value" : "تاخیر سے"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "layta, if only: oh, I wish that I were dust" : {
       "localizations" : {
@@ -221486,6 +224553,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "مختصر حرکت یا سکون"
+          }
+        }
+      }
+    },
+    "should we force it upon you" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أنُكرهكم عليها"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کیا ہم اسے تم پر زبردستی لازم کر دیں"
           }
         }
       }
@@ -226367,6 +229450,22 @@
     "تَقَبَّلَ اللهُ مِنَّا وَمِنْكُمْ" : {
       "extractionState" : "stale"
     },
+    "ث puts the tongue between the teeth; س and ش hiss and hush behind them. A ث said as a س changes the word." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الثاء من طرف اللسان مع أطراف الثنايا، والسين والشين صفير وتفشٍّ خلفها. والثاء إذا نُطقت سينًا تغيّرت الكلمة."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ث میں زبان دانتوں کے درمیان آتی ہے؛ س اور ش ان کے پیچھے سیٹی اور سرسراہٹ ہیں۔ ث کو س پڑھنے سے لفظ بدل جاتا ہے۔"
+          }
+        }
+      }
+    },
     "ثُمَّ" : {
       "extractionState" : "stale"
     },
@@ -226382,6 +229481,22 @@
     },
     "خَوۡف" : {
       "extractionState" : "stale"
+    },
+    "ذ and ظ put the tip of the tongue on the edge of the upper teeth, ظ heavy and ذ light; ز hisses just behind them." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الذال والظاء من طرف اللسان مع أطراف الثنايا العليا، الظاء مفخمة والذال مرققة، والزاي صفير خلفهما."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ذ اور ظ میں زبان کی نوک اوپر کے دانتوں کے کنارے پر آتی ہے، ظ پُر اور ذ باریک؛ ز ان کے ذرا پیچھے سیٹی ہے۔"
+          }
+        }
+      }
     },
     "ذَٰلِكَ ٱلۡكِتَٰبُ لَا رَيۡبَۛ فِيهِ" : {
       "extractionState" : "stale"
@@ -226405,6 +229520,22 @@
     "رَزَقۡنَٰهُمۡ بِٱلۡغَيۡبِ" : {
       "extractionState" : "stale"
     },
+    "ضَلَّ is to get lost and دَلَّ to show the way: one letter apart. د taps the tip of the tongue behind the teeth; ض presses the side of the tongue against the upper molars." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«ضَلَّ» من الضلال و«دَلَّ» من الدلالة: بينهما حرف واحد. الدال من طرف اللسان مع أصول الثنايا العليا، والضاد من حافة اللسان مع الأضراس العليا."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ضَلَّ کا مطلب ہے بھٹک جانا اور دَلَّ کا راستہ دکھانا: صرف ایک حرف کا فرق۔ د میں زبان کی نوک دانتوں کے پیچھے لگتی ہے؛ ض میں زبان کا کنارہ اوپر کی داڑھوں سے دبتا ہے۔"
+          }
+        }
+      }
+    },
     "على" : {},
     "عَلَىٰ" : {},
     "عَلَيۡكُمۡ سَلَامٌ" : {
@@ -226421,6 +229552,22 @@
     "فِي" : {},
     "ق ط ب ج د" : {
       "extractionState" : "stale"
+    },
+    "قَلۡب and كَلۡب are the same letters with one swapped. ق is made at the very back of the tongue, ك a little further forward." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«قَلۡب» و«كَلۡب» لا يختلفان إلا في حرف واحد. القاف من أقصى اللسان، والكاف أدنى منه قليلًا إلى الفم."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قَلۡب اور كَلۡب میں صرف ایک حرف بدلا ہے۔ ق زبان کی بالکل جڑ سے نکلتا ہے، ك ذرا آگے سے۔"
+          }
+        }
+      }
     },
     "قَوَارِيرَا۠ (stop: قَوَارِيرَا)" : {
       "extractionState" : "stale"
@@ -230579,7 +233726,9 @@
         }
       }
     },
-    "–" : {},
+    "–" : {
+      "extractionState" : "stale"
+    },
     "‘alaa, on, over: over all things competent" : {
       "localizations" : {
         "ar" : {

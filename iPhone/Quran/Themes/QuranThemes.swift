@@ -878,8 +878,8 @@ struct ThemeTopicDetailView: View {
             }
 
             Section(header: Text("\(topic.ayahs.count) AYAHS")) {
-                ForEach(topic.ayahs, id: \.self) { key in
-                    ayahRow(key)
+                ForEach(topic.ayahs.paired { surahAndAyah($0) }, id: \.item) { pair in
+                    ayahRow(pair.item, surah: pair.found.surah, ayah: pair.found.ayah)
                 }
             }
         }
@@ -912,43 +912,48 @@ struct ThemeTopicDetailView: View {
     /// The two bindings it wants are inert here - this list has no scroll target and no search - so
     /// they are constants. The row's tap opens the ayah in the reader instead of toggling the
     /// reader's highlight, which is what this screen has always done.
-    @ViewBuilder
-    private func ayahRow(_ key: String) -> some View {
+    /// The surah and the ayah a "2:255" key names, found BEFORE the ForEach (`paired`), so a row is
+    /// never an `if let`: a row that may be nothing is one the List has to build to count, all 267
+    /// of a long topic each time this page's body ran (see `OneRow`). Both lookups indexed:
+    /// `surah.ayahs.first(where:)` was a linear walk per row.
+    private func surahAndAyah(_ key: String) -> (surah: Surah, ayah: Ayah)? {
         let parts = key.split(separator: ":").compactMap { Int($0) }
-        // Both lookups indexed: `surah.ayahs.first(where:)` here was a linear walk per row, which on a
-        // 267-ayah topic over Al-Baqarah's 286 ayahs is real per-frame work while the list scrolls.
-        if parts.count == 2,
-           let surah = quranData.surah(parts[0]),
-           let ayah = quranData.ayah(surah: parts[0], ayah: parts[1]) {
-            VStack(alignment: .leading, spacing: 6) {
-                // Which surah this is: the reader's row carries the ayah number but not the surah,
-                // and a topic list crosses all 114.
-                Text("\(surah.displayName) \(parts[0]):\(parts[1])")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(settings.accentColor.color)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+        guard parts.count == 2, let surah = quranData.surah(parts[0]),
+              let ayah = quranData.ayah(surah: parts[0], ayah: parts[1]) else { return nil }
+        return (surah, ayah)
+    }
 
-                AyahRow(
-                    surah: surah,
-                    ayah: ayah,
-                    renderSettingsSignature: settings.ayahRenderSettingsSignature,
-                    scrollDown: .constant(nil),
-                    searchText: .constant(""),
-                    onToggleHighlight: onOpenAyah.map { open in
-                        {
-                            settings.hapticFeedback()
-                            open(parts[0], parts[1])
-                        }
-                    },
-                    onRequestSheet: { kind in
-                        rowSheet = AyahRowSheetRequest(surah: surah, ayah: ayah, kind: kind)
-                    },
-                    openSheet: (rowSheet?.surah.id == surah.id && rowSheet?.ayah.id == ayah.id) ? rowSheet?.kind : nil
-                )
-                .equatable()
-            }
-            .padding(.vertical, 2)
+    @ViewBuilder
+    private func ayahRow(_ key: String, surah: Surah, ayah: Ayah) -> some View {
+        let parts = [surah.id, ayah.id]
+        VStack(alignment: .leading, spacing: 6) {
+            // Which surah this is: the reader's row carries the ayah number but not the surah,
+            // and a topic list crosses all 114.
+            Text("\(surah.displayName) \(parts[0]):\(parts[1])")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(settings.accentColor.color)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            AyahRow(
+                surah: surah,
+                ayah: ayah,
+                renderSettingsSignature: settings.ayahRenderSettingsSignature,
+                scrollDown: .constant(nil),
+                searchText: .constant(""),
+                onToggleHighlight: onOpenAyah.map { open in
+                    {
+                        settings.hapticFeedback()
+                        open(parts[0], parts[1])
+                    }
+                },
+                onRequestSheet: { kind in
+                    rowSheet = AyahRowSheetRequest(surah: surah, ayah: ayah, kind: kind)
+                },
+                openSheet: (rowSheet?.surah.id == surah.id && rowSheet?.ayah.id == ayah.id) ? rowSheet?.kind : nil
+            )
+            .equatable()
         }
+        .padding(.vertical, 2)
     }
 }
 #endif
