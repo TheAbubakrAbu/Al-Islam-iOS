@@ -409,10 +409,11 @@ struct GlanceCard: View {
     private static func distanceText(_ meters: CLLocationDistance) -> String {
         let miles = meters / 1609.34
         let kilometers = meters / 1000
-        // The locale's digits in Arabic, like the whole-number branch below; English keeps "2.4 mi (3.9 km)".
+        // The locale's digits and decimal mark outside English ("٢٫٤", Turkish "2,4"), like the whole-number
+        // branch below; English keeps "2.4 mi (3.9 km)".
         guard miles >= 10 else {
             return String(format: NSLocalizedString("%.1f mi (%.1f km)", comment: ""),
-                          locale: AppLanguage.isArabicScript ? Locale.current : nil, miles, kilometers)
+                          locale: AppLanguage.isEnglish ? nil : Locale.current, miles, kilometers)
         }
         let mi = distanceFormatter.string(from: NSNumber(value: miles)) ?? "\(Int(miles))"
         let km = distanceFormatter.string(from: NSNumber(value: kilometers)) ?? "\(Int(kilometers))"
@@ -549,7 +550,7 @@ private struct GlanceTile: View, Equatable {
                     }
                 }
 
-                Text(tile.title.uppercased())
+                Text(tile.title.localizedUppercase)
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(Self.secondaryInk)
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)

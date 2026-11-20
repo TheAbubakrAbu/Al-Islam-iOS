@@ -400,9 +400,10 @@ struct QiblaView: View {
                     // repeating it, leaving the one line that tells you what to do.
                     [isAtKaaba ? nil
                                : distanceToKaabaMiles.map {
-                                   // The locale's digits in Arabic ("٨٬٣٥٤٫٩"); English keeps its plain "8354.9".
+                                   // The locale's digits and decimal mark outside English ("٨٬٣٥٤٫٩",
+                                   // "8.354,9"); English keeps its plain "8354.9".
                                    String(format: NSLocalizedString("%.1f miles away", comment: ""),
-                                          locale: AppLanguage.isArabicScript ? Locale.current : nil, $0)
+                                          locale: AppLanguage.isEnglish ? nil : Locale.current, $0)
                                },
                      accuracyText]
                         .compactMap { $0 }

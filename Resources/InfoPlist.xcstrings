@@ -17,10 +17,94 @@
             "value" : "Al-Islam"
           }
         },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam"
+          }
+        },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "الاسلام"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam"
+          }
+        },
+        "ml" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam"
+          }
+        }
+      }
+    },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Watch"
           }
         }
       }
@@ -41,10 +125,82 @@
             "value" : "Al-Islam uses your location to calculate your prayer times and Qibla direction. Only Al-Islam and Apple ever see it, and it is never shared with anyone else."
           }
         },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam menggunakan lokasi Anda untuk menghitung waktu salat dan arah kiblat. Hanya Al-Islam dan Apple yang dapat melihatnya, dan lokasi Anda tidak pernah dibagikan kepada siapa pun."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam menggunakan lokasi anda untuk mengira waktu solat dan arah kiblat. Hanya Al-Islam dan Apple yang dapat melihatnya, dan lokasi anda tidak akan dikongsi dengan sesiapa pun."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam, namaz vakitlerinizi ve kıble yönünü hesaplamak için konumunuzu kullanır. Konumunuzu yalnızca Al-Islam ve Apple görür; başka hiç kimseyle paylaşılmaz."
+          }
+        },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "الاسلام ایپ نماز کے اوقات اور قبلہ کی سمت معلوم کرنے کے لیے آپ کا مقام استعمال کرتی ہے۔ اسے صرف الاسلام ایپ اور Apple دیکھتے ہیں، اور یہ کبھی کسی اور کے ساتھ شیئر نہیں کیا جاتا۔"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam utilise votre position pour calculer vos heures de prière et la direction de la qibla. Seuls Al-Islam et Apple y ont accès, et elle n’est jamais partagée avec qui que ce soit d’autre."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam использует вашу геопозицию, чтобы рассчитать время намаза и направление киблы. Ее видят только Al-Islam и Apple, и она никогда не передается никому другому."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "নামাজের সময় ও কিবলার দিক নির্ণয় করতে Al-Islam আপনার লোকেশন ব্যবহার করে। এটি শুধু Al-Islam ও Apple দেখতে পায়, এবং অন্য কারও সাথে কখনো শেয়ার করা হয় না।"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam आपकी लोकेशन का इस्तेमाल आपकी नमाज़ के समय और क़िबला की दिशा पता करने के लिए करता है। इसे सिर्फ़ Al-Islam और Apple देखते हैं, और यह कभी किसी और के साथ शेयर नहीं की जाती।"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam verwendet deinen Standort, um deine Gebetszeiten und die Qibla-Richtung zu berechnen. Nur Al-Islam und Apple sehen ihn, und er wird niemals mit anderen geteilt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam usa tu ubicación para calcular tus horas de oración y la dirección de la qibla. Solo Al-Islam y Apple la ven, y nunca se comparte con nadie más."
+          }
+        },
+        "ml" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "നിങ്ങളുടെ നിസ്കാര സമയങ്ങളും ഖിബ്ലയുടെ ദിശയും കണക്കാക്കാൻ Al-Islam നിങ്ങളുടെ ലൊക്കേഷൻ ഉപയോഗിക്കുന്നു. Al-Islam, Apple എന്നിവയ്ക്ക് മാത്രമേ ഇത് കാണാനാകൂ; ഇത് മറ്റാരുമായും ഒരിക്കലും പങ്കിടില്ല."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "உங்கள் தொழுகை நேரங்களையும் கிப்லா திசையையும் கணக்கிட Al-Islam உங்கள் இருப்பிடத்தைப் பயன்படுத்துகிறது. Al-Islam, Apple ஆகியவை மட்டுமே அதைப் பார்க்கும்; அது வேறு யாருடனும் ஒருபோதும் பகிரப்படாது."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam gebruikt je locatie om je gebedstijden en de qibla-richting te berekenen. Alleen Al-Islam en Apple krijgen je locatie te zien, en die wordt nooit met anderen gedeeld."
           }
         }
       }
@@ -65,10 +221,82 @@
             "value" : "Al-Islam uses your location to calculate your prayer times and Qibla direction. Only Al-Islam and Apple ever see it, and it is never shared with anyone else."
           }
         },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam menggunakan lokasi Anda untuk menghitung waktu salat dan arah kiblat. Hanya Al-Islam dan Apple yang dapat melihatnya, dan lokasi Anda tidak pernah dibagikan kepada siapa pun."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam menggunakan lokasi anda untuk mengira waktu solat dan arah kiblat. Hanya Al-Islam dan Apple yang dapat melihatnya, dan lokasi anda tidak akan dikongsi dengan sesiapa pun."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam, namaz vakitlerinizi ve kıble yönünü hesaplamak için konumunuzu kullanır. Konumunuzu yalnızca Al-Islam ve Apple görür; başka hiç kimseyle paylaşılmaz."
+          }
+        },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "الاسلام ایپ نماز کے اوقات اور قبلہ کی سمت معلوم کرنے کے لیے آپ کا مقام استعمال کرتی ہے۔ اسے صرف الاسلام ایپ اور Apple دیکھتے ہیں، اور یہ کبھی کسی اور کے ساتھ شیئر نہیں کیا جاتا۔"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam utilise votre position pour calculer vos heures de prière et la direction de la qibla. Seuls Al-Islam et Apple y ont accès, et elle n’est jamais partagée avec qui que ce soit d’autre."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam использует вашу геопозицию, чтобы рассчитать время намаза и направление киблы. Ее видят только Al-Islam и Apple, и она никогда не передается никому другому."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "নামাজের সময় ও কিবলার দিক নির্ণয় করতে Al-Islam আপনার লোকেশন ব্যবহার করে। এটি শুধু Al-Islam ও Apple দেখতে পায়, এবং অন্য কারও সাথে কখনো শেয়ার করা হয় না।"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam आपकी लोकेशन का इस्तेमाल आपकी नमाज़ के समय और क़िबला की दिशा पता करने के लिए करता है। इसे सिर्फ़ Al-Islam और Apple देखते हैं, और यह कभी किसी और के साथ शेयर नहीं की जाती।"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam verwendet deinen Standort, um deine Gebetszeiten und die Qibla-Richtung zu berechnen. Nur Al-Islam und Apple sehen ihn, und er wird niemals mit anderen geteilt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam usa tu ubicación para calcular tus horas de oración y la dirección de la qibla. Solo Al-Islam y Apple la ven, y nunca se comparte con nadie más."
+          }
+        },
+        "ml" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "നിങ്ങളുടെ നിസ്കാര സമയങ്ങളും ഖിബ്ലയുടെ ദിശയും കണക്കാക്കാൻ Al-Islam നിങ്ങളുടെ ലൊക്കേഷൻ ഉപയോഗിക്കുന്നു. Al-Islam, Apple എന്നിവയ്ക്ക് മാത്രമേ ഇത് കാണാനാകൂ; ഇത് മറ്റാരുമായും ഒരിക്കലും പങ്കിടില്ല."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "உங்கள் தொழுகை நேரங்களையும் கிப்லா திசையையும் கணக்கிட Al-Islam உங்கள் இருப்பிடத்தைப் பயன்படுத்துகிறது. Al-Islam, Apple ஆகியவை மட்டுமே அதைப் பார்க்கும்; அது வேறு யாருடனும் ஒருபோதும் பகிரப்படாது."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam gebruikt je locatie om je gebedstijden en de qibla-richting te berekenen. Alleen Al-Islam en Apple krijgen je locatie te zien, en die wordt nooit met anderen gedeeld."
           }
         }
       }
@@ -89,10 +317,82 @@
             "value" : "Al-Islam uses your location to calculate your prayer times and Qibla direction. Only Al-Islam and Apple ever see it, and it is never shared with anyone else."
           }
         },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam menggunakan lokasi Anda untuk menghitung waktu salat dan arah kiblat. Hanya Al-Islam dan Apple yang dapat melihatnya, dan lokasi Anda tidak pernah dibagikan kepada siapa pun."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam menggunakan lokasi anda untuk mengira waktu solat dan arah kiblat. Hanya Al-Islam dan Apple yang dapat melihatnya, dan lokasi anda tidak akan dikongsi dengan sesiapa pun."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam, namaz vakitlerinizi ve kıble yönünü hesaplamak için konumunuzu kullanır. Konumunuzu yalnızca Al-Islam ve Apple görür; başka hiç kimseyle paylaşılmaz."
+          }
+        },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "الاسلام ایپ نماز کے اوقات اور قبلہ کی سمت معلوم کرنے کے لیے آپ کا مقام استعمال کرتی ہے۔ اسے صرف الاسلام ایپ اور Apple دیکھتے ہیں، اور یہ کبھی کسی اور کے ساتھ شیئر نہیں کیا جاتا۔"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam utilise votre position pour calculer vos heures de prière et la direction de la qibla. Seuls Al-Islam et Apple y ont accès, et elle n’est jamais partagée avec qui que ce soit d’autre."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam использует вашу геопозицию, чтобы рассчитать время намаза и направление киблы. Ее видят только Al-Islam и Apple, и она никогда не передается никому другому."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "নামাজের সময় ও কিবলার দিক নির্ণয় করতে Al-Islam আপনার লোকেশন ব্যবহার করে। এটি শুধু Al-Islam ও Apple দেখতে পায়, এবং অন্য কারও সাথে কখনো শেয়ার করা হয় না।"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam आपकी लोकेशन का इस्तेमाल आपकी नमाज़ के समय और क़िबला की दिशा पता करने के लिए करता है। इसे सिर्फ़ Al-Islam और Apple देखते हैं, और यह कभी किसी और के साथ शेयर नहीं की जाती।"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam verwendet deinen Standort, um deine Gebetszeiten und die Qibla-Richtung zu berechnen. Nur Al-Islam und Apple sehen ihn, und er wird niemals mit anderen geteilt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam usa tu ubicación para calcular tus horas de oración y la dirección de la qibla. Solo Al-Islam y Apple la ven, y nunca se comparte con nadie más."
+          }
+        },
+        "ml" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "നിങ്ങളുടെ നിസ്കാര സമയങ്ങളും ഖിബ്ലയുടെ ദിശയും കണക്കാക്കാൻ Al-Islam നിങ്ങളുടെ ലൊക്കേഷൻ ഉപയോഗിക്കുന്നു. Al-Islam, Apple എന്നിവയ്ക്ക് മാത്രമേ ഇത് കാണാനാകൂ; ഇത് മറ്റാരുമായും ഒരിക്കലും പങ്കിടില്ല."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "உங்கள் தொழுகை நேரங்களையும் கிப்லா திசையையும் கணக்கிட Al-Islam உங்கள் இருப்பிடத்தைப் பயன்படுத்துகிறது. Al-Islam, Apple ஆகியவை மட்டுமே அதைப் பார்க்கும்; அது வேறு யாருடனும் ஒருபோதும் பகிரப்படாது."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al-Islam gebruikt je locatie om je gebedstijden en de qibla-richting te berekenen. Alleen Al-Islam en Apple krijgen je locatie te zien, en die wordt nooit met anderen gedeeld."
           }
         }
       }
@@ -103,20 +403,92 @@
       "localizations" : {
         "ar" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "لحفظ الخلفيات التي تختارها في مكتبة الصور."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Used to save wallpapers you choose to your Photo Library."
+            "value" : "Used to save wallpapers you choose to your Photo Library."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Digunakan untuk menyimpan wallpaper pilihan Anda ke Perpustakaan Foto."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Digunakan untuk menyimpan hiasan latar pilihan anda ke Pustaka Foto."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seçtiğiniz duvar kâğıtlarını Fotoğraf Arşivi’nize kaydetmek için kullanılır."
           }
         },
         "ur" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "آپ کے منتخب کردہ وال پیپرز فوٹو لائبریری میں محفوظ کرنے کے لیے۔"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permet d’enregistrer dans votre photothèque les fonds d’écran que vous choisissez."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Используется, чтобы сохранять выбранные вами обои в медиатеку."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "আপনার বেছে নেওয়া ওয়ালপেপার ফটো লাইব্রেরিতে সংরক্ষণ করতে ব্যবহৃত হয়।"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपके चुने हुए वॉलपेपर आपकी फ़ोटो लाइब्रेरी में सहेजने के लिए इस्तेमाल होता है।"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird verwendet, um ausgewählte Hintergrundbilder in deiner Fotomediathek zu sichern."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se usa para guardar en tu fototeca los fondos de pantalla que elijas."
+          }
+        },
+        "ml" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "നിങ്ങൾ തിരഞ്ഞെടുക്കുന്ന വാൾപേപ്പറുകൾ നിങ്ങളുടെ ഫോട്ടോ ലൈബ്രറിയിൽ സേവ് ചെയ്യാൻ ഉപയോഗിക്കുന്നു."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "நீங்கள் தேர்ந்தெடுக்கும் வால்பேப்பர்களை உங்கள் புகைப்பட லைப்ரரியில் சேமிக்கப் பயன்படுகிறது."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wordt gebruikt om de achtergronden die je kiest in je fotobibliotheek te bewaren."
           }
         }
       }

@@ -521,7 +521,7 @@ struct AyahQiraatVariantsView: View {
             HStack(alignment: .top, spacing: 8) {
                 VStack(alignment: .leading, spacing: 3) {
                     if mine {
-                        Text("YOUR RIWAYAH · \(currentLabel.uppercased())")
+                        Text("YOUR RIWAYAH · \(currentLabel.localizedUppercase)")
                             .font(.caption2.weight(.bold))
                             .foregroundColor(settings.accentColor.color)
                     }

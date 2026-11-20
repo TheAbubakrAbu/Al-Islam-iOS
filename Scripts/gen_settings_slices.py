@@ -70,7 +70,8 @@ SLICES = {
         {'favoriteReciterIDsData', 'favoriteQiraahTagsData', 'favoriteEnglishTranslationIDsData',
          'savedSajdahAyahIDsData', 'savedBrokenLetterAyahIDsData', 'favoriteSurahsData', 'khatmCompletedAyahsData',
          'quranPlanData', 'quranRevisionPlanData', 'quranRevisionRevisedData', 'bookmarkedAyahsData',
-         'quranSearchHistoryData', 'ayahOfTheDayHiddenDate', 'ayahOfTheDayOverride', 'nowPlayingExpanded'}),
+         'quranSearchHistoryData', 'ayahOfTheDayHiddenDate', 'ayahOfTheDayOverride', 'nowPlayingExpanded',
+         'recitationSpeed'}),
     'HadithSettings': (
         'The Hadith tab: languages, sizes, Allah highlight, the daily hadith, search history.',
         {'showHadithArabic', 'showHadithEnglish', 'highlightAllahNamesHadith', 'hadithArabicFontSize',

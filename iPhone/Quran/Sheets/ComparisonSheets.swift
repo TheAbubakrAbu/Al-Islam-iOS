@@ -477,7 +477,7 @@ struct AyahQiraahComparisonSheet: View {
         }
 
         ForEach(grouped, id: \.teacher) { group in
-            Section(header: Text("\(group.teacher.uppercased()) - \(group.teacherArabic)")) {
+            Section(header: Text("\(group.teacher.localizedUppercase) - \(group.teacherArabic)")) {
                 ForEach(group.options) { option in
                     qiraahRow(option)
                 }
@@ -660,7 +660,7 @@ struct AyahQiraahComparisonSheet: View {
             if count > 1 || site.caption != nil {
                 Text(QiraatSiteCopy.header(site, index: index, of: count))
                     .font(.caption.weight(.bold))
-                    .tracking(0.6)
+                    .tracking(AppLanguage.letterSpacing(0.6))
                     .foregroundStyle(.secondary)
             }
             ForEach(Array(site.readings.enumerated()), id: \.element.id) { position, reading in

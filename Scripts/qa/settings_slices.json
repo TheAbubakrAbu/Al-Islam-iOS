@@ -325,7 +325,8 @@
    "nowPlayingExpanded",
    "quranPlanData",
    "quranRevisionPlanData",
-   "quranRevisionRevisedData"
+   "quranRevisionRevisedData",
+   "recitationSpeed"
   ],
   "keys": [
    "ayahOfTheDayHiddenDate",
@@ -343,6 +344,7 @@
    "quranRevisionPlanData",
    "quranRevisionRevisedData",
    "quranSearchHistoryData",
+   "recitationSpeed",
    "savedBrokenLetterAyahIDsData",
    "savedSajdahAyahIDsData",
    "surahOpenCountsData",

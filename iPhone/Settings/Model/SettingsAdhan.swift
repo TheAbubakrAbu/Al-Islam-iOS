@@ -1568,11 +1568,14 @@ extension Settings {
         return f
     }()
 
+    /// The Latin-script line (`HijriDate.english`): "Jumada I 13, 1448 AH" in English, and in every other
+    /// left-to-right language the locale's own long Hijri date ("13 Jumadilawal 1448 H", "Hicri 13
+    /// Cemaziyelevvel 1448", "13 джумада I 1448 г. хиджры"), with that language's own month names.
     private static let hijriFormatterEN: DateFormatter = {
         let f = DateFormatter()
         f.calendar = hijriCalendarAR
         f.timeZone = .autoupdatingCurrent
-        f.locale   = Locale(identifier: "en")
+        f.locale   = AppLanguage.isEnglish ? Locale(identifier: "en") : .current
         f.dateStyle = .long
         return f
     }()
@@ -1621,7 +1624,7 @@ extension Settings {
         // Arabic interface's Gregorian line (`HijriDate.companionLine`) turns over at midnight while a
         // Hijri day switched at Maghrib does not.
         if let h = hijriDate, Self.gregorian.isDate(h.date, inSameDayAs: effectiveDate), h.offset == hijriOffset,
-           let made = h.computedAt, Self.gregorian.isDate(made, inSameDayAs: now) {
+           let made = h.computedAt, Self.gregorian.isDate(made, inSameDayAs: now), h.language == AppLanguage.code {
             return
         }
 
@@ -1630,7 +1633,8 @@ extension Settings {
         let english = Self.hijriFormatterEN.string(from: base)
 
         withAnimation {
-            hijriDate = HijriDate(english: english, arabic: arabic, date: effectiveDate, offset: hijriOffset, computedAt: now)
+            hijriDate = HijriDate(english: english, arabic: arabic, date: effectiveDate, offset: hijriOffset, computedAt: now,
+                                  language: AppLanguage.code)
         }
     }
 

@@ -188,7 +188,7 @@ struct PrayerMarkChooser: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("PRAYER TRACKER")
                 .font(.caption2.weight(.bold))
-                .tracking(0.6)
+                .tracking(AppLanguage.letterSpacing(0.6))
                 .foregroundColor(.secondary)
 
             if settings.isTrackerExempt(on: day) {

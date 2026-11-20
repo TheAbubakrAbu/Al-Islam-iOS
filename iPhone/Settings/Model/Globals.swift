@@ -188,11 +188,11 @@ enum SentenceListType {
 extension Array where Element == String {
     /// These phrases as one list inside a sentence. In English the list reads exactly as the sentence
     /// always wrote it (`english`: some lists are commas only, some end on "and" with no serial comma).
-    /// In Arabic it takes the language's own list format ("أ وب وج"), never Arabic phrases strung on a
-    /// Latin ", ". The formatter isolates only a phrase in another script ("Apple Watch"), so a list of
-    /// Arabic phrases comes back as plain Arabic text.
+    /// Every other language takes its own list format ("أ وب وج", "a, b, dan c", "a, b ve c"), never its
+    /// phrases strung on an English "and" or a Latin ", " in Arabic. The formatter isolates only a phrase in
+    /// another script ("Apple Watch"), so a list of Arabic phrases comes back as plain Arabic text.
     func sentenceList(_ type: SentenceListType = .and, english: ([String]) -> String) -> String {
-        guard AppLanguage.isArabicScript else { return english(self) }
+        guard !AppLanguage.isEnglish else { return english(self) }
         let locale = Locale(identifier: AppLanguage.code)
         switch type {
         case .and: return formatted(.list(type: .and).locale(locale))

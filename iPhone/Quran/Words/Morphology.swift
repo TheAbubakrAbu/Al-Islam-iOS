@@ -347,7 +347,7 @@ struct WordMorphologySection: View {
 
     private func morphologyTile(title: String, value: String, count: Int) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title.uppercased())
+            Text(title.localizedUppercase)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.secondary)
 

@@ -105,7 +105,7 @@ struct JuzHeader: View {
                 if AppLanguage.isArabicScript {
                     Text(verbatim: "- \(juz.displayName)")
                 } else {
-                    Text("- \(juz.nameTransliteration.uppercased()) - \(Settings.shared.cleanedQuranArabic(juz.nameArabic))")
+                    Text("- \(juz.nameTransliteration.localizedUppercase) - \(Settings.shared.cleanedQuranArabic(juz.nameArabic))")
                 }
             }
             .font(.footnote)

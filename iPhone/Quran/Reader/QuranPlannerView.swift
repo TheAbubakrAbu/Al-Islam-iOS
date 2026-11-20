@@ -1771,7 +1771,7 @@ struct QuranPlannerView: View {
                     .font(.caption)
                     .foregroundColor(accent2)
 
-                Text(label.uppercased())
+                Text(label.localizedUppercase)
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(.secondary)
                     .lineLimit(1)

@@ -1250,7 +1250,7 @@ struct ArabicView: View {
             if focusedFamilyID == nil {
                 let rest = LetterTraits.unclaimedLetters(of: axis).compactMap { letterData(for: $0) }
                 if !rest.isEmpty {
-                    countedLetterSection(axis.restTitle.uppercased(), rest, footer: axis.restNote)
+                    countedLetterSection(axis.restTitle.localizedUppercase, rest, footer: axis.restNote)
                 }
             }
         }
@@ -1272,7 +1272,7 @@ struct ArabicView: View {
         } header: {
             HStack(alignment: .center, spacing: 8) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("\(family.displayName.uppercased()) \u{00B7} \(family.displayMeaning.uppercased())")
+                    Text("\(family.displayName.localizedUppercase) \u{00B7} \(family.displayMeaning.localizedUppercase)")
 
                     Text(family.arabic)
                         .font(.footnote)
@@ -1364,7 +1364,7 @@ struct ArabicView: View {
             // The shelf's name joins the heading when the banner carries its chips ("GROUPED BY ·
             // TAJWEED RULES"); a lone axis keeps the plain heading.
             Text(axis.shelf.axes.count > 1
-                 ? String(localized: "GROUPED BY \u{00B7} \(axis.shelf.transliteration.uppercased())")
+                 ? String(localized: "GROUPED BY \u{00B7} \(axis.shelf.transliteration.localizedUppercase)")
                  : String(localized: "GROUPED BY"))
         }
     }

@@ -8,11 +8,18 @@ enum AdhanWidgetDateFormatting {
         return calendar
     }()
 
+    /// The locale of the Latin-script Hijri line: English in English and beside an Arabic-script interface
+    /// (where the Latin tile is the explicit English one), the interface's own in every other language,
+    /// whose formatters write their own month names ("24 Rabiulawal 1448 H", "24 rabia al awal 1448 AH").
+    static var latinLocale: Locale {
+        AppLanguage.isEnglish || AppLanguage.isArabicScript ? Locale(identifier: "en") : .current
+    }
+
     static let mediumHijriFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = hijriCalendar
         formatter.dateStyle = .medium
-        formatter.locale = Locale(identifier: "en")
+        formatter.locale = latinLocale
         return formatter
     }()
 
@@ -21,7 +28,7 @@ enum AdhanWidgetDateFormatting {
         let formatter = DateFormatter()
         formatter.calendar = hijriCalendar
         formatter.dateStyle = .long
-        formatter.locale = Locale(identifier: "en")
+        formatter.locale = latinLocale
         return formatter
     }()
 
@@ -65,7 +72,7 @@ enum AdhanWidgetDateFormatting {
         }
         let date = hijriReferenceDate(for: entry)
         guard style == .full else { return mediumHijriFormatter.string(from: date) }
-        let weekday = englishWeekdayFormatter.string(from: hijriWeekdayDate(for: entry))
+        let weekday = latinWeekdayFormatter.string(from: hijriWeekdayDate(for: entry))
         return "\(weekday), \(longHijriFormatter.string(from: date))"
     }
 
@@ -118,7 +125,23 @@ enum AdhanWidgetDateFormatting {
         return formatter
     }
 
-    private static let englishWeekdayFormatter = hijriFormatter(locale: "en", format: "EEEE")
+    private static let latinWeekdayFormatter: DateFormatter = {
+        let formatter = hijriFormatter(locale: "en", format: "EEEE")
+        formatter.locale = latinLocale
+        return formatter
+    }()
+    /// Outside English: the locale's month name and its year with era ("1448 H", "Hicri 1448").
+    private static let latinMonthFormatter: DateFormatter = {
+        let formatter = hijriFormatter(locale: "en", format: "MMMM")
+        formatter.locale = latinLocale
+        return formatter
+    }()
+    private static let latinYearFormatter: DateFormatter = {
+        let formatter = hijriFormatter(locale: "en", format: "y")
+        formatter.locale = latinLocale
+        formatter.setLocalizedDateFormatFromTemplate("yG")
+        return formatter
+    }()
     private static let arabicWeekdayFormatter = hijriFormatter(locale: "ar", format: "EEEE")
     private static let arabicMonthFormatter = hijriFormatter(locale: "ar", format: "MMMM")
 
@@ -134,10 +157,12 @@ enum AdhanWidgetDateFormatting {
         case .english:
             return HijriDateParts(
                 language: .english,
-                weekday: englishWeekdayFormatter.string(from: weekdayDate),
+                weekday: latinWeekdayFormatter.string(from: weekdayDate),
                 day: String(day),
-                month: hijriMonths.first { $0.number == month }?.english ?? "",
-                year: "\(year) AH"
+                // English keeps the app's own spellings ("Rabi al-Awwal"); another language its formatter's.
+                month: latinLocale.identifier == "en" ? hijriMonths.first { $0.number == month }?.english ?? ""
+                    : latinMonthFormatter.string(from: date),
+                year: latinLocale.identifier == "en" ? "\(year) AH" : latinYearFormatter.string(from: date)
             )
         case .arabic:
             return HijriDateParts(

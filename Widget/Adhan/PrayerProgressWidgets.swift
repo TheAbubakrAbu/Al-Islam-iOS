@@ -225,7 +225,7 @@ func prayerAbbreviation(_ prayer: Prayer) -> String {
     case "Asr":                     return String(localized: "ASR", comment: "Three-letter prayer abbreviation")
     case "Maghrib", "Maghrib/Isha": return String(localized: "MGB", comment: "Three-letter prayer abbreviation")
     case "Isha":                    return String(localized: "ISH", comment: "Three-letter prayer abbreviation")
-    default:                        return String(prayer.displayName.localizedDisplay.prefix(3)).uppercased()
+    default:                        return String(prayer.displayName.localizedDisplay.prefix(3)).localizedUppercase
     }
 }
 

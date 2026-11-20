@@ -403,13 +403,14 @@ struct MoonViewer: View {
         return (text, calendar.component(.day, from: adjusted))
     }
 
-    /// The header's English Hijri format (`Settings.updateDates`).
+    /// The header's Latin-script Hijri format (`Settings.updateDates`): English, or the locale's own in every
+    /// other left-to-right language.
     private static let hijriFormatter: DateFormatter = {
         var calendar = Calendar(identifier: .islamicUmmAlQura)
         calendar.locale = Locale(identifier: "ar")
         let formatter = DateFormatter()
         formatter.calendar = calendar
-        formatter.locale = Locale(identifier: "en")
+        formatter.locale = AppLanguage.isEnglish ? Locale(identifier: "en") : .current
         formatter.dateStyle = .long
         return formatter
     }()

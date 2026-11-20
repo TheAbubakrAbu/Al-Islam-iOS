@@ -908,11 +908,14 @@ extension Settings {
             showQiraah ? allCases : [.madani, .maghribi]
         }
 
+        /// Dotted keys: a bare "Madani" is also the surah filter (the Medinan surahs, مدنية), and
+        /// "Maghribi" the font picker's face name, so the scripts' own names need keys of their own
+        /// (المدني beside المغربي, Мединский beside Магрибский).
         var label: String {
             switch self {
             case .automatic: return String(localized: "Automatic")
-            case .madani: return String(localized: "Madani")
-            case .maghribi: return String(localized: "Maghribi")
+            case .madani: return String(localized: "script.madani", defaultValue: "Madani")
+            case .maghribi: return String(localized: "script.maghribi", defaultValue: "Maghribi")
             }
         }
 

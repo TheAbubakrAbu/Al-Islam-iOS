@@ -243,7 +243,7 @@ struct ArabicTopicLinkLabel: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 if let eyebrow {
-                    Text(eyebrow.uppercased())
+                    Text(eyebrow.localizedUppercase)
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(settings.accentColor.color)
                         .lineLimit(1)

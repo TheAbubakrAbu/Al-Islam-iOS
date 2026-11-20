@@ -4208,7 +4208,7 @@ struct WordMeaningSheet: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("WORDS IN THIS AYAH")
                 .font(.caption2.weight(.semibold))
-                .tracking(0.8)
+                .tracking(AppLanguage.letterSpacing(0.8))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)
 

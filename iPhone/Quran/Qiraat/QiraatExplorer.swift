@@ -837,7 +837,7 @@ struct QiraatPlacePickerSheet: View {
 
     private var thisSurahSection: some View {
         let name = quranData.surah(surahID)?.displayName ?? String(localized: "Surah \(surahID)")
-        return Section(header: SectionHeaderLine(name.uppercased()) {
+        return Section(header: SectionHeaderLine(name.localizedUppercase) {
             Text(places.count == 1 ? "1 place" : "\(places.count) places")
         }) {
             if places.isEmpty {
@@ -941,7 +941,7 @@ struct QiraatPlacePickerSheet: View {
                                 }
                             }
                             if !AppLanguage.isArabicScript {
-                                Text(surah.nameEnglish)
+                                Text(surah.localizedMeaning)
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }

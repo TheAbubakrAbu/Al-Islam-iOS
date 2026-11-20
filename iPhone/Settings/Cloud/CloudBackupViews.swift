@@ -851,7 +851,7 @@ struct CloudBackupSettingsView: View {
     }
 
     private var profileSection: some View {
-        Section(header: Text("THIS \(CloudDevice.kind.uppercased())'S PROFILE")) {
+        Section(header: Text("THIS \(CloudDevice.kind.localizedUppercase)'S PROFILE")) {
             // One row for the name and its rename (the two used to be a Name row and a Rename row).
             Button {
                 settings.hapticFeedback()
@@ -1134,7 +1134,7 @@ struct CloudContentsView: View {
 
     var body: some View {
         List {
-            Section(header: Text("ON THIS \(CloudDevice.kind.uppercased()) NOW"), footer: Text(footer)) {
+            Section(header: Text("ON THIS \(CloudDevice.kind.localizedUppercase) NOW"), footer: Text(footer)) {
                 if let inventory {
                     ForEach(inventory.rows) { row in
                         line(row.category.title, systemImage: row.category.systemImage,

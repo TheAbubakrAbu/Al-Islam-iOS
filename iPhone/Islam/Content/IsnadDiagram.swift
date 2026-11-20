@@ -169,7 +169,7 @@ struct IsnadDiagram: View {
         } else {
             Text(title)
                 .font(.caption2.weight(.bold))
-                .tracking(tracking)
+                .tracking(AppLanguage.letterSpacing(tracking))
                 .foregroundStyle(forImage ? Color.black.opacity(0.55) : Color.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)

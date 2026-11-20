@@ -487,7 +487,7 @@ private struct HijriEventRow: View {
                         .foregroundColor(isPast ? .primary.opacity(0.6) : .primary)
 
                     if isNext, let countdownText {
-                        Text(countdownText.uppercased())
+                        Text(countdownText.localizedUppercase)
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(accent)
                             .padding(.horizontal, 6)

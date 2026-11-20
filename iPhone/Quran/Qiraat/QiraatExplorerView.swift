@@ -565,7 +565,7 @@ struct QiraatExplorerView: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("HAFS AN ASIM")
                     .font(.caption.weight(.bold))
-                    .tracking(0.8)
+                    .tracking(AppLanguage.letterSpacing(0.8))
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 8)
                 if let summary {
@@ -1182,7 +1182,7 @@ struct QiraatSiteReadingRow: View {
 enum QiraatSiteCopy {
     /// "2 OF 3 · DIFFERS IN SENSE": the site's place among the ayah's sites and the reference's caption.
     static func header(_ site: QiraatSite, index: Int, of count: Int) -> String {
-        let caption = site.caption?.uppercased()
+        let caption = site.caption?.localizedUppercase
         guard count > 1 else { return caption ?? String(localized: "READ DIFFERENTLY") }
         return caption.map { String(localized: "\(index + 1) OF \(count) · \($0)") } ?? String(localized: "\(index + 1) OF \(count)")
     }

@@ -4936,7 +4936,7 @@ struct QuranView: View {
         if let query = parseDivisionQuery(compiledSearch.navigation),
            let ayahs = divisionAyahs(query.division, number: query.number) {
             let title = query.division.title
-            Section(header: pageSearchHeader(title: String(localized: "\(title.uppercased()) SEARCH RESULT"),
+            Section(header: pageSearchHeader(title: String(localized: "\(title.localizedUppercase) SEARCH RESULT"),
                                              valueText: String(localized: "\(title) \(query.number) of \(QuranMetadata.count(of: query.division)) • \(ayahs.count) Ayahs"))) {
                 pageJuzRangeRows(first: ayahs.first, last: ayahs.last, count: ayahs.count)
             }
@@ -5595,9 +5595,10 @@ struct QuranView: View {
                     }
                 }
             } else if let s = quranData.surah(surahId) {
-                let latinHeader1 = "\(s.id). \(s.nameTransliteration)".uppercased()
+                // The locale's capitals: Turkish writes İ for i.
+                let latinHeader1 = "\(s.id). \(s.nameTransliteration)".localizedUppercase
 
-                let latinHeader2 = "(\(s.nameEnglish)) - ".uppercased()
+                let latinHeader2 = "(\(s.localizedMeaning)) - ".localizedUppercase
 
                 HStack(spacing: 6) {
                     Text(latinHeader1)
@@ -5644,7 +5645,7 @@ struct QuranView: View {
         HStack {
             // An ayah found by its name says the name back: the row alone shows "2:255".
             Text(context.isExactAyahReference
-                 ? (NamedAyah.resolve(compiledSearch.navigation)?.title.uppercased() ?? String(localized: "AYAH SEARCH RESULTS"))
+                 ? (NamedAyah.resolve(compiledSearch.navigation)?.title.localizedUppercase ?? String(localized: "AYAH SEARCH RESULTS"))
                  : String(localized: "AYAH SEARCH RESULTS"))
 
             Spacer()

@@ -336,7 +336,7 @@ enum Faraid {
         if let residuary {
             for heir in FaraidHeir.residuaryOrder
             where heir != residuary && FaraidHeir.distantResiduaries.contains(heir) && n(heir) > 0 {
-                blocked.append((heir, String(localized: "blocked by a nearer relative on the father's side (\(residuary.title.lowercased()))")))
+                blocked.append((heir, String(localized: "blocked by a nearer relative on the father's side (\(residuary.title.midSentence))")))
             }
         }
 

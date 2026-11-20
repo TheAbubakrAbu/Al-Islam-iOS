@@ -89,7 +89,9 @@ final class TipsCatalogTests: XCTestCase {
         }
         // 163 until 2026-11-18, when the rebuilt Prayer Tracker brought five: the week on the card, the
         // whole-day fill, the make-up list, congregation and Sunnah prayers, and the tracker widget.
-        XCTAssertEqual(TipCatalog.all.count, 168)
+        // 169 since 2026-11-19: the recitation speed (a reader's request).
+        XCTAssertNotNil(tip("quran.speed"))
+        XCTAssertEqual(TipCatalog.all.count, 169)
         for id in ["adhan.trackerweek", "adhan.trackerwholeday", "adhan.trackermakeup", "adhan.trackerextras",
                    "adhan.trackerwidget"] {
             XCTAssertNotNil(tip(id), id)

@@ -551,7 +551,7 @@ private struct TajweedFoundationsHero: View {
         return VStack(alignment: .leading, spacing: 8) {
             Text("WHAT THE TAJWEED COLORS MARK")
                 .font(.system(size: 9, weight: .heavy))
-                .tracking(1.4)
+                .tracking(AppLanguage.letterSpacing(1.4))
                 .foregroundColor(accent)
 
             // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
@@ -917,9 +917,9 @@ struct TajweedFix: View {
 
     private func line(_ label: String, _ text: String, color: Color, weight: Font.Weight) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text(label.uppercased())
+            Text(label.localizedUppercase)
                 .font(.system(size: 9.5, weight: .heavy))
-                .tracking(0.5)
+                .tracking(AppLanguage.letterSpacing(0.5))
                 .foregroundColor(color)
                 .fixedSize()
                 .frame(minWidth: 70)

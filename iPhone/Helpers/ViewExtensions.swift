@@ -2202,7 +2202,7 @@ struct CalculatorResultCard<Detail: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased())
+            Text(title.localizedUppercase)
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(.secondary)
 
@@ -2447,8 +2447,8 @@ struct ShortcutMenu<Content: View, Label: View>: View {
 
     private var hint: String {
         var parts = [String(localized: "Tap for menu.")]
-        if let doubleTap { parts.append(String(localized: "Double tap to \(doubleTap.title.lowercased()).")) }
-        if let hold { parts.append(String(localized: "Hold to \(hold.title.lowercased()).")) }
+        if let doubleTap { parts.append(String(localized: "Double tap to \(doubleTap.title.midSentence).")) }
+        if let hold { parts.append(String(localized: "Hold to \(hold.title.midSentence).")) }
         return parts.joined(separator: " ")
     }
 
@@ -3687,7 +3687,7 @@ struct SectionFoldControls: View {
                 Settings.shared.hapticFeedback()
                 withAnimation { isExpanded.wrappedValue.toggle() }
             }
-            .accessibilityLabel(isExpanded.wrappedValue ? String(localized: "Collapse \(title.lowercased())") : String(localized: "Expand \(title.lowercased())"))
+            .accessibilityLabel(isExpanded.wrappedValue ? String(localized: "Collapse \(title.midSentence)") : String(localized: "Expand \(title.midSentence)"))
             .accessibilityRemoveTraits(.isImage)
             .accessibilityAddTraits(.isButton)
     }

@@ -49,10 +49,17 @@ struct LetterFamily: Identifiable, Hashable {
 
     func contains(_ letter: String) -> Bool { letters.contains(letter) }
 
-    /// `meaning` in the interface's language, for display only. "Voice" has a key of its own: the catalog's
-    /// "Voice" is the grammar card's (active or passive, البناء).
+    /// `meaning` in the interface's language, for display only. Three meanings have keys of their own: the
+    /// catalog's "Voice" is the grammar card's (active or passive, البناء), its "Clear" is the button that
+    /// empties a list (مسح), not izhar's "pronounced clearly", and its "Hidden" is the tajweed legend's
+    /// VoiceOver value for a rule switched off (مخفي), not ikhfa's concealment.
     var displayMeaning: String {
-        meaning == "Voice" ? String(localized: "sifah.voice", defaultValue: "Voice") : meaning.localizedDisplay
+        switch meaning {
+        case "Voice": return String(localized: "sifah.voice", defaultValue: "Voice")
+        case "Clear": return String(localized: "idhaar.clear", defaultValue: "Clear")
+        case "Hidden": return String(localized: "ikhfaa.hidden", defaultValue: "Hidden")
+        default: return meaning.localizedDisplay
+        }
     }
 
     /// `name` for display only: the few English names ("Heavy or Light") through the catalog, the

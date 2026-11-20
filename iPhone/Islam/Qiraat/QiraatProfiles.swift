@@ -881,7 +881,7 @@ struct RiwayahNarratorDetailView: View {
         List {
             Group {
                 Section {
-                    QiraatProfileHero(kicker: String(localized: "THE NARRATOR · RIWAYAH OF \(profile.masterID.localizedDisplay.uppercased())"), name: profile.fullName,
+                    QiraatProfileHero(kicker: String(localized: "THE NARRATOR · RIWAYAH OF \(profile.masterID.localizedDisplay.localizedUppercase)"), name: profile.fullName,
                                       meta: String(localized: "\(profile.city.localizedDisplay) · \(profile.lifespan)"), arabic: profile.arabic,
                                       summary: profile.summary)
                 }
@@ -896,7 +896,7 @@ struct RiwayahNarratorDetailView: View {
                 // says why they do, so the reason travels with the narrator rather than sitting
                 // only in the comparison sheet where the match is first noticed.
                 if let partner = QiraatProfiles.sharedTextPartner(of: profile.id) {
-                    Section(header: Text("THE SAME TEXT AS \(QiraatProfiles.shortName(of: partner).localizedDisplay.uppercased())")) {
+                    Section(header: Text("THE SAME TEXT AS \(QiraatProfiles.shortName(of: partner).localizedDisplay.localizedUppercase)")) {
                         ProseText(text: QiraatProfiles.sharedTextExplanation)
                     }
                 }
@@ -1059,7 +1059,8 @@ struct QiraahLineageRow: View {
                 QiraatProfileRow(
                     title: "\(master.id) · \(master.city)",
                     arabic: master.arabic,
-                    detail: narrators.isEmpty ? "" : "Narrated by \(narrators.joined(separator: " and "))",
+                    // One whole sentence, its list in the interface's own form ("Qalun dan Warsh").
+                    detail: narrators.isEmpty ? "" : String(localized: "Narrated by \(narrators.map(\.localizedDisplay).sentenceList { $0.joined(separator: " and ") })"),
                     note: note,
                     ordinal: QiraatProfiles.ordinal(ofMaster: masterID)
                 )
@@ -1180,7 +1181,7 @@ struct QiraatProfileHero: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(kicker)
                         .font(.caption2.weight(.bold))
-                        .tracking(0.8)
+                        .tracking(AppLanguage.letterSpacing(0.8))
                         .foregroundStyle(.secondary)
                     Text(name)
                         .font(.title3.weight(.bold))

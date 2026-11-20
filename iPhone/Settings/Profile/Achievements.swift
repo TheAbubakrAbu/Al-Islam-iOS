@@ -954,7 +954,7 @@ private struct AchievementBannerCard: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("ACHIEVEMENT UNLOCKED")
                     .font(.system(size: 10, weight: .heavy))
-                    .tracking(0.8)
+                    .tracking(AppLanguage.letterSpacing(0.8))
                     .foregroundStyle(accent)
 
                 Text(badge.title)

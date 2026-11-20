@@ -283,7 +283,7 @@ struct TajweedTestTierView: View {
         let tint = accent
         return Section {
             ResourceHero(
-                eyebrow: String(localized: "Chapter \(tier.number) of \(tier.count)\(tier.stage.map { " \u{00B7} " + $0.titleEn.localizedDisplay } ?? "")").uppercased(),
+                eyebrow: String(localized: "Chapter \(tier.number) of \(tier.count)\(tier.stage.map { " \u{00B7} " + $0.titleEn.localizedDisplay } ?? "")").localizedUppercase,
                 systemImage: "checkmark.seal.fill",
                 headline: tier.title,
                 message: tier.subtitle
@@ -527,7 +527,7 @@ struct TajweedTestSessionView: View {
             .id(Self.promptID)
         } header: {
             StudyQuestionHeader(
-                title: isPlacement ? String(localized: "CHAPTER \(question.tier.number): \(question.tier.title.uppercased())")
+                title: isPlacement ? String(localized: "CHAPTER \(question.tier.number): \(question.tier.title.localizedUppercase)")
                     : String(localized: "QUESTION \(index + 1) OF \(questions.count)"),
                 streak: isPlacement ? 0 : streak)
         }
@@ -659,7 +659,7 @@ struct TajweedTestSessionView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text("From the lesson")
                             .font(.caption2.weight(.heavy))
-                            .tracking(0.7)
+                            .tracking(AppLanguage.letterSpacing(0.7))
                             .foregroundStyle(.secondary)
                         Text(question.lesson.titleEn.localizedDisplay)
                             .font(.subheadline.weight(.semibold))

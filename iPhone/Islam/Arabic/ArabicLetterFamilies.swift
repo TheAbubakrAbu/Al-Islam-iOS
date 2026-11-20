@@ -342,7 +342,7 @@ struct LetterTraitRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 if let lead {
-                    Text(lead.uppercased())
+                    Text(lead.localizedUppercase)
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(.secondary)
                 }
@@ -595,7 +595,7 @@ struct LetterFamiliesView: View {
             ForEach(axis.families) { familyLink($0) }
         } header: {
             HStack(alignment: .firstTextBaseline) {
-                Text(axis.title.uppercased())
+                Text(axis.title.localizedUppercase)
 
                 Spacer(minLength: 8)
 
@@ -649,7 +649,7 @@ struct LetterFamilyView: View {
         let tint = family.legendColor ?? appearance.accent
         Section {
             ResourceHero(
-                eyebrow: (axis?.title ?? String(localized: "Letter Families")).uppercased(),
+                eyebrow: (axis?.title ?? String(localized: "Letter Families")).localizedUppercase,
                 systemImage: family.systemImage,
                 headline: family.title,
                 arabic: family.arabic,
@@ -798,7 +798,7 @@ struct LetterFamilyView: View {
                 }
             } header: {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(axis.title.uppercased())
+                    Text(axis.title.localizedUppercase)
 
                     Spacer(minLength: 8)
 
@@ -877,7 +877,7 @@ struct LetterTajweedProfile: View {
         if let role = makhraj.roleNote, makharij.count > 1 { line = String(localized: "\(makhraj.place) (\(role)).") }
         if let group = makhraj.groupName, let arabic = makhraj.groupArabic, makhraj.letters.count > 1 {
             let letters = makhraj.letters.joined(separator: " ")
-            line += " " + String(localized: "One of the \(group.lowercased()) letters (\(arabic)): \(letters).")
+            line += " " + String(localized: "One of the \(group.midSentence) letters (\(arabic)): \(letters).")
         }
         return line
     }
@@ -1144,7 +1144,7 @@ private struct SoundAlikeLink: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 if let partner {
-                    Text(partner.transliteration.prefix(1).uppercased() + partner.transliteration.dropFirst())
+                    Text(partner.transliteration.prefix(1).localizedUppercase + partner.transliteration.dropFirst())
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(.primary)
                 }
@@ -1317,7 +1317,7 @@ struct SoundAlikeLettersView: View {
         let secondText = answer(difference.second, letter: pair.second, isPlace: isPlace, shared: shared)
 
         return VStack(alignment: .leading, spacing: 2) {
-            Text(difference.axis.title.uppercased())
+            Text(difference.axis.title.localizedUppercase)
                 .font(.caption2.weight(.semibold))
                 .foregroundColor(.secondary)
 

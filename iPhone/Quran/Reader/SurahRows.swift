@@ -398,7 +398,7 @@ struct SurahRow: View, Equatable {
                     )
 
                     HighlightedSnippet(
-                        source: surah.nameEnglish,
+                        source: surah.localizedMeaning,
                         term: searchQuery,
                         font: .caption,
                         accent: accentColor.color,
@@ -542,7 +542,7 @@ struct SurahRow: View, Equatable {
                 .minimumScaleFactor(0.6)
 
                 HighlightedSnippet(
-                    source: surah.nameEnglish,
+                    source: surah.localizedMeaning,
                     term: searchQuery,
                     font: .caption,
                     accent: accentColor.color,

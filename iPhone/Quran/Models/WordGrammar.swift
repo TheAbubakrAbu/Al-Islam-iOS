@@ -489,9 +489,9 @@ struct WordGrammarPage: View {
                     } label: {
                         HStack(alignment: .center, spacing: 12) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(segment.kind.title.uppercased())
+                                Text(segment.kind.title.localizedUppercase)
                                     .font(.caption2.weight(.bold))
-                                    .tracking(0.6)
+                                    .tracking(AppLanguage.letterSpacing(0.6))
                                     .foregroundStyle(isOn ? appearance.accent : .secondary)
                                 Text(WordGrammarText.describe(segment))
                                     .font(.subheadline)
@@ -843,7 +843,7 @@ struct StudyCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .tracking(0.6)
+                .tracking(AppLanguage.letterSpacing(0.6))
                 .foregroundStyle(.secondary)
             content()
         }

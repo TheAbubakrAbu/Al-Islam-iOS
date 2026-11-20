@@ -163,7 +163,7 @@ struct RiwayahRuleCard: View {
 
             Text(verbatim: uses.count == 1 ? "MARKED BY ONE PRINT" : "MARKED BY \(uses.count) PRINTS")
                 .font(.system(size: 9, weight: .bold))
-                .tracking(0.8)
+                .tracking(AppLanguage.letterSpacing(0.8))
                 .foregroundColor(accent)
                 .padding(.top, 2)
 

@@ -142,7 +142,7 @@ struct FocusNameDetails: View {
                 VStack(spacing: 8) {
                     Text("ALSO CALLED")
                         .font(.caption2.weight(.bold))
-                        .tracking(0.8)
+                        .tracking(AppLanguage.letterSpacing(0.8))
                         .foregroundColor(settings.accentColor.color)
                         .keepsFocusOverlayOpen()
 

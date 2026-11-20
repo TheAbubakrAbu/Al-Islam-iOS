@@ -141,7 +141,7 @@ struct QasrHeaderBadge: View {
                 .accessibilityHidden(true)
             Text(settings.travelingShowFullPrayers ? "TRAVELING" : "QASR")
                 .font(.caption2.weight(.heavy))
-                .tracking(0.6)
+                .tracking(AppLanguage.letterSpacing(0.6))
         }
         .foregroundColor(.white)
         .padding(.horizontal, 8)

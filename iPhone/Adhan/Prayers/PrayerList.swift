@@ -509,7 +509,7 @@ struct PrayerList: View {
     }
 
     private var selectedDateHeaderText: String {
-        Self.selectedDateHeaderFormatter.string(from: selectedDate).uppercased()
+        Self.selectedDateHeaderFormatter.string(from: selectedDate).localizedUppercase
     }
 
     private func prayerGroupHeader(_ title: String) -> some View {

@@ -468,43 +468,50 @@ struct HadithCatalogBook: Identifiable, Hashable {
 // MARK: - Display names (the Arabic interface)
 
 // What the reader SEES of a book's name. The Arabic interface shows the catalog's own Arabic
-// (`arabicTitle`, `authorArabic`); English shows exactly what it always did. DISPLAY only: the
-// reference parser, the search, the saved references ("Sahih al-Bukhari 1" in bookmarks, history and
-// last read), the on-device model and the logs all keep the English fields.
+// (`arabicTitle`, `authorArabic`); English shows exactly what it always did; every other language reads
+// the English through the string catalog (the title and the compiler are manual keys there: "Сахих
+// Муслим", "Forty Hadith Qudsi" -> "Quarante hadiths qudsi"; a transliterated title the language keeps
+// has no entry and reads as it is). DISPLAY only: the reference parser, the search, the saved references
+// ("Sahih al-Bukhari 1" in bookmarks, history and last read), the on-device model and the logs all keep
+// the English fields.
 extension HadithCatalogBook {
-    /// The book's title: `arabicTitle` in the Arabic interface, `englishTitle` otherwise.
+    /// The book's title: `arabicTitle` in the Arabic interface, the catalog's translation of
+    /// `englishTitle` in the other languages, `englishTitle` in English.
     var displayTitle: String {
-        AppLanguage.isArabicScript && !arabicTitle.isEmpty ? arabicTitle : englishTitle
+        if AppLanguage.isArabicScript && !arabicTitle.isEmpty { return arabicTitle }
+        return AppLanguage.isEnglish ? englishTitle : englishTitle.localizedDisplay
     }
 
-    /// The compiler's name: `authorArabic` in the Arabic interface, `authorEnglish` otherwise.
+    /// The compiler's name, the same way as `displayTitle`.
     var displayAuthor: String {
-        AppLanguage.isArabicScript && !authorArabic.isEmpty ? authorArabic : authorEnglish
+        if AppLanguage.isArabicScript && !authorArabic.isEmpty { return authorArabic }
+        return AppLanguage.isEnglish ? authorEnglish : authorEnglish.localizedDisplay
     }
 
     /// "Sahih al-Bukhari 1" as the reader sees it. English is the saved form exactly, "\(englishTitle)
-    /// \(number)"; Arabic reads "صَحِيح البُخارِي ١", the number in the interface's digits.
+    /// \(number)"; Arabic reads "صَحِيح البُخارِي ١", the number in the interface's digits; Russian
+    /// "Сахих аль-Бухари 1".
     func displayReference(_ number: String) -> String {
-        guard AppLanguage.isArabicScript else { return "\(englishTitle) \(number)" }
+        guard !AppLanguage.isEnglish else { return "\(englishTitle) \(number)" }
         return "\(displayTitle) \(Self.displayNumber(number))"
     }
 
     /// A hadith number ("2950", "8a", "3:12", "Introduction 9") in the interface's digits
-    /// (`HadithDigits`), and in the Arabic interface its words too ("المقدمة ٩").
+    /// (`HadithDigits`), and outside English its words too ("المقدمة ٩", "Введение 9").
     static func displayNumber(_ number: String) -> String {
         let introduction = "Introduction "
-        if AppLanguage.isArabicScript, number.hasPrefix(introduction) {
+        if !AppLanguage.isEnglish, number.hasPrefix(introduction) {
             return String(localized: "Introduction") + " " + HadithDigits.display(String(number.dropFirst(introduction.count)))
         }
         return HadithDigits.display(number)
     }
 
-    /// A SAVED reference (a bookmark's, the last read's, a history entry's), rebuilt for display: in
-    /// the Arabic interface its English title is swapped for the book's Arabic one and its number put
-    /// in the interface's digits. English, an unknown book, or a reference that does not open with
-    /// the book's title comes back exactly as stored.
+    /// A SAVED reference (a bookmark's, the last read's, a history entry's), rebuilt for display:
+    /// outside English its English title is swapped for the book's `displayTitle` (Arabic, «Сахих
+    /// аль-Бухари», ...) and its number put in the interface's digits. English, an unknown book, or a
+    /// reference that does not open with the book's title comes back exactly as stored.
     static func displayReference(stored reference: String, slug: String) -> String {
-        guard AppLanguage.isArabicScript, let book = bySlug[slug] else { return reference }
+        guard !AppLanguage.isEnglish, let book = bySlug[slug] else { return reference }
         let prefix = book.englishTitle + " "
         guard reference.hasPrefix(prefix) else { return reference }
         return book.displayReference(String(reference.dropFirst(prefix.count)))
@@ -1332,8 +1339,8 @@ struct HadithBookmark: Codable, Identifiable, Equatable {
         return slug == "muslim" && chapterId == 0 ? "Introduction \(citation)" : citation
     }
 
-    /// `reference` as the reader sees it: rebuilt in Arabic for the Arabic interface, the saved
-    /// line exactly in English (`HadithCatalogBook.displayReference(stored:slug:)`).
+    /// `reference` as the reader sees it: rebuilt in the interface's language, the saved line exactly
+    /// in English (`HadithCatalogBook.displayReference(stored:slug:)`).
     var displayReference: String {
         HadithCatalogBook.displayReference(stored: reference, slug: slug)
     }

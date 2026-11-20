@@ -13,6 +13,8 @@ struct NowPlayingView: View {
     @ObservedObject private var nowPlaying = QuranPlayer.shared.nowPlaying
     /// The progress poll runs at 1 s on the reduced tier (Phase 5 step 11).
     @Environment(\.appearance) private var appearance
+    /// For the speed chip's menu, which is placed by hand (`speedMenu`).
+    @Environment(\.layoutDirection) private var layoutDirection
 
     @State private var quranView: Bool
     @Binding private var scrollDown: Int
@@ -128,6 +130,10 @@ struct NowPlayingView: View {
                     if isExpanded {
                         quitButton
                     }
+                }
+                // The big player's speed menu, over its chip beside the reciter (`speedMark`).
+                .overlayPreferenceValue(RecitationSpeedChipBounds.self) { anchor in
+                    speedMenu(over: anchor)
                 }
                 .contextMenu {
                     contextMenu(for: ctx)
@@ -702,13 +708,23 @@ struct NowPlayingView: View {
         }
 
         if let reciter = nowPlaying.nowPlayingReciter {
+            #if os(iOS)
+            // The speed rides the reciter line: how it is being recited sits beside who recites it.
+            HStack(spacing: 6) {
+                Text(reciter)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+
+                speedMark(expanded: expanded)
+            }
+            #else
             Text(reciter)
                 .font(.caption2)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
-                #if os(iOS)
-                .minimumScaleFactor(0.5)
-                #endif
+            #endif
         }
 
         // Custom range: the "Ayahs 1–10 · 3/30" line under the reciter in BOTH sizes, opening the range
@@ -729,6 +745,62 @@ struct NowPlayingView: View {
             }
         }
     }
+
+    #if os(iOS)
+    /// The recitation speed beside the reciter (RecitationSpeed.swift).
+    ///
+    /// On the big player it is always there, and it is a control. The chip drawn here only holds
+    /// the place: it is hidden, and reports where it is. The one that shows is the label of the menu
+    /// `speedMenu(over:)` lays over that spot from OUTSIDE the bar's own button, the way the two
+    /// corner buttons sit, so a tap on it opens the speeds and never reaches the bar. The small
+    /// player shows the chip only for a speed that is not 1×, and there it is a read-out: the hold
+    /// menu's Speed row changes it.
+    @ViewBuilder
+    private func speedMark(expanded: Bool) -> some View {
+        let speed = RecitationSpeed.nearest(to: settings.recitationSpeed)
+        if expanded {
+            RecitationSpeedChip(speed: speed, accent: settings.accentColor.color)
+                .hidden()
+                .anchorPreference(key: RecitationSpeedChipBounds.self, value: .bounds) { $0 }
+        } else if speed != RecitationSpeed.normal {
+            RecitationSpeedChip(speed: speed, accent: settings.accentColor.color)
+                .accessibilityLabel("Recitation speed, \(RecitationSpeed.label(speed).localizedDigits)")
+        }
+    }
+
+    /// How far the speed menu's touch target rises above its chip (`speedMenu`).
+    private static let speedTargetRise: CGFloat = 14
+
+    /// The big player's speed menu, drawn over the place `speedMark` holds. Its touch target is
+    /// larger than the 13 pt line the chip sits on, and comes out of the air around the chip, not
+    /// out of the layout: the card keeps its height, which the page reader's fitted page depends on.
+    /// The extra height is all ABOVE the chip. The scrubber's touch band starts right under the
+    /// reciter line, and a target that reached down into it opened the speeds for a touch meant
+    /// to seek.
+    @ViewBuilder
+    private func speedMenu(over anchor: Anchor<CGRect>?) -> some View {
+        if let anchor {
+            GeometryReader { proxy in
+                let chip = proxy[anchor]
+                let speed = RecitationSpeed.nearest(to: settings.recitationSpeed)
+                // The anchor answers in left-origin points whatever the interface's direction, and
+                // `position` counts from the right under Arabic or Urdu: unmirrored, the menu sat on
+                // the reciter's name, the chip's mirror image across the card.
+                let centre = layoutDirection == .rightToLeft ? proxy.size.width - chip.midX : chip.midX
+                Menu {
+                    RecitationSpeedPicker()
+                } label: {
+                    RecitationSpeedChip(speed: speed, accent: settings.accentColor.color)
+                        .frame(width: chip.width + 16, height: chip.height + Self.speedTargetRise, alignment: .bottom)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("Recitation speed")
+                .accessibilityValue(RecitationSpeed.label(speed).localizedDigits)
+                .position(x: centre, y: chip.midY - Self.speedTargetRise / 2)
+            }
+        }
+    }
+    #endif
 
     /// The range line, which opens the range sheet on iOS. A tap gesture, not a Button: the block sits
     /// inside the bar's own NavigationLink / Button, where the transport icons already take their taps
@@ -844,6 +916,16 @@ struct NowPlayingView: View {
 
             Divider()
         }
+
+        #if os(iOS)
+        // The speed, in both sizes: the small player has no chip to tap, and here the big one's
+        // choice is a hold away too.
+        Menu {
+            RecitationSpeedPicker()
+        } label: {
+            Label("Speed", systemImage: "speedometer")
+        }
+        #endif
 
         Button {
             settings.hapticFeedback()

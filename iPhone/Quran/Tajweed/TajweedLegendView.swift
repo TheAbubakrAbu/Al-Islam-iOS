@@ -460,7 +460,7 @@ struct TajweedLegendView: View {
         LazyVStack(alignment: .leading, spacing: 14) {
             ForEach(Self.compareQiraahGroups) { group in
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(AppLanguage.isArabicScript ? group.teacherArabic : "\(group.teacher.uppercased()) - \(group.teacherArabic)")
+                    Text(AppLanguage.isArabicScript ? group.teacherArabic : "\(group.teacher.localizedUppercase) - \(group.teacherArabic)")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
 

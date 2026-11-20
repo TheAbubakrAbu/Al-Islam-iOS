@@ -314,7 +314,7 @@ struct ReadingTierView: View {
     /// languages, then the specimen set large and where the learner stands, as the footer.
     private func heroSection(_ record: StudyRecord) -> some View {
         ResourceHeroSection(ResourceHero(
-            eyebrow: String(localized: "Tier \(tier.number) of \(ReadingTier.all.count) \u{00B7} \(tier.stage.title)").uppercased(),
+            eyebrow: String(localized: "Tier \(tier.number) of \(ReadingTier.all.count) \u{00B7} \(tier.stage.title)").localizedUppercase,
             systemImage: "text.book.closed.fill",
             headline: tier.title,
             arabic: tier.arabic,
@@ -608,7 +608,7 @@ struct ReadingSessionView: View {
             .id(Self.promptID)
         } header: {
             StudyQuestionHeader(
-                title: isPlacement ? String(localized: "TIER \(question.tier.number): \(question.tier.title.uppercased())")
+                title: isPlacement ? String(localized: "TIER \(question.tier.number): \(question.tier.title.localizedUppercase)")
                     : isSpeed ? String(localized: "QUESTION \(index + 1)")
                     : String(localized: "QUESTION \(index + 1) OF \(questions.count)"),
                 streak: isPlacement ? 0 : streak,

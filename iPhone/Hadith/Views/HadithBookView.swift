@@ -177,7 +177,7 @@ private struct HadithBookNameBlock: View {
     private func label(_ text: String) -> some View {
         Text(text)
             .font(.caption2.weight(.bold))
-            .tracking(1.1)
+            .tracking(AppLanguage.letterSpacing(1.1))
             .foregroundColor(.secondary)
             .accessibilityAddTraits(.isHeader)
     }

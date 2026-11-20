@@ -58,7 +58,7 @@ private struct ArticleEyebrow: View {
                 .font(.caption.weight(.bold))
             Text(text.articleDisplayDigits)
                 .font(.caption.weight(.bold))
-                .tracking(1.1)
+                .tracking(AppLanguage.letterSpacing(1.1))
         }
         .foregroundColor(accent)
         .accessibilityElement(children: .combine)
@@ -614,7 +614,7 @@ struct ArticleEtymologyCard: View {
             HStack(spacing: 8) {
                 Text("ROOT")
                     .font(.caption2.weight(.bold))
-                    .tracking(1.1)
+                    .tracking(AppLanguage.letterSpacing(1.1))
                     .foregroundColor(accent)
 
                 Text(root)
@@ -964,7 +964,7 @@ struct ArticleVersus: View {
         return VStack(alignment: .leading, spacing: 6) {
             Text(side.label.uppercased())
                 .font(.caption2.weight(.bold))
-                .tracking(1)
+                .tracking(AppLanguage.letterSpacing(1))
                 .foregroundColor(emphasized ? accent : .secondary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1111,7 +1111,7 @@ struct HadithGradeLadder: View {
                         .foregroundColor(grade.color)
                     Text(grade.english.uppercased())
                         .font(.caption2.weight(.bold))
-                        .tracking(1)
+                        .tracking(AppLanguage.letterSpacing(1))
                         .foregroundColor(.secondary)
                 }
 
@@ -1247,7 +1247,7 @@ struct ResourceHero<Footer: View>: View {
             HStack(spacing: 6) {
                 Image(systemName: systemImage)
                 Text(eyebrow.articleDisplayDigits)
-                    .tracking(1.3)
+                    .tracking(AppLanguage.letterSpacing(1.3))
                     .lineLimit(2)
                     // A single word wider than the card cannot wrap: at the largest accessibility
                     // sizes "THE FOUNDATIONS" read "THE FOUNDATI..." (2026-10-04). It shrinks first.

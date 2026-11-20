@@ -824,7 +824,7 @@ struct MakhrajPicturesRow: View {
     }
 
     private var summary: String {
-        exits.map { String(localized: "exit \($0.id), \($0.place.lowercased())") }
+        exits.map { String(localized: "exit \($0.id), \($0.place.midSentence)") }
             .joined(separator: AppLanguage.isArabicScript ? "\u{061B} " : "; ")
     }
 

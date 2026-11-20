@@ -1,7 +1,8 @@
 import Foundation
 import SwiftUI
 
-// Arabic interface (2026-10-24), Urdu (2026-10-26). Interface text written in the code goes through `String(localized:)` or a
+// Arabic interface (2026-10-24), Urdu (2026-10-26), Indonesian, Malay and Turkish (2026-11-19), French, Bangla and
+// Russian (2026-11-20). Interface text written in the code goes through `String(localized:)` or a
 // SwiftUI literal, which the compiler extracts into Resources/Localizable.xcstrings. What this file covers is
 // the other kind: the app's English DATA shown to the reader (an enum's raw value, a reciter's name). That
 // stays English wherever it is stored, compared, searched or sent to the model, and is translated only at the
@@ -9,6 +10,13 @@ import SwiftUI
 // keep reading English (`AppLanguage.pinsArticlesEnglish`); the rest of that tab is translated.
 
 extension String {
+    /// A translated label set into the middle of a sentence ("Hold to %@.", "exit 3, %@"): lowercased by the
+    /// interface language's own rules (Turkish İ becomes i, not i with a combining dot), except in German, where
+    /// every noun keeps its capital ("Zu Favoriten hinzufügen", "Zungenspitze"; 2026-11-20). DISPLAY only.
+    var midSentence: String {
+        AppLanguage.code.hasPrefix("de") ? self : lowercased(with: Locale(identifier: AppLanguage.code))
+    }
+
     /// This data string as the reader should see it: looked up in Localizable.xcstrings, or itself when the
     /// catalog has no entry for it. A translation's written-out digits follow the locale (`localizedDigits`).
     /// For DISPLAY only; never store, compare or key on the result.
@@ -92,12 +100,37 @@ enum AppLanguage {
 
     static var isUrdu: Bool { code.hasPrefix("ur") }
 
+    /// The interface is English. Indonesian, Malay, Turkish (since 2026-11-19), French, Bangla, Russian, Hindi,
+    /// German, Spanish, Malayalam, Tamil and Dutch (2026-11-20) read left to right like English, so they take the English layout everywhere
+    /// `isArabicScript` branches; this is for
+    /// what only English may do: write a date or a list in its own fixed English form ("Jumada I 13, 1448 AH",
+    /// "a, b and c") instead of the locale's.
+    static var isEnglish: Bool { code.hasPrefix("en") }
+
+    /// Siri can run in the interface language, so a Siri phrase quoted on screen is in it. Not Urdu,
+    /// Indonesian, Bangla, Hindi, Malayalam or Tamil: Siri has none of them (Apple's feature availability,
+    /// 2026-11-19 and 2026-11-20; India has English Siri only), so those screens quote the English phrases, with
+    /// the name Siri hears (Al-Islam), and they have no AppShortcuts.strings.
+    static var siriSpeaksInterfaceLanguage: Bool {
+        !(isUrdu || ["id", "bn", "hi", "ml", "ta"].contains(where: code.hasPrefix))
+    }
+
     /// The interface is written in the Arabic script: Arabic, or Urdu (since 2026-10-26). Where a comment says
     /// "the Arabic interface" it means this: a surah, juz, riwayah, hadith book or letter is named once, by its
     /// Arabic name, with no Latin transliteration or English meaning beside it (those would be untranslated
     /// English in either language), and lists take the Arabic comma and semicolon (، ؛), which Urdu writes
     /// too. `isArabic` alone is for what only Arabic does: the name Siri says back.
     static var isArabicScript: Bool { isArabic || isUrdu }
+
+    /// Letter spacing for a small tracked caption ("AFTER NOON SAKINAH", "NEXT"): none in a script whose letters
+    /// join (Arabic, Urdu) or hang from one headline stroke (Hindi, Bangla), where spacing pulls every word
+    /// apart into loose letters (seen 2026-11-20 on the letter-family banner in all four), nor in Malayalam and
+    /// Tamil, whose vowel signs and conjuncts are shaped as one cluster with their consonant. Every `.tracking`
+    /// and `.kerning` in the app goes through it.
+    static func letterSpacing(_ points: CGFloat) -> CGFloat { spacesLetters ? points : 0 }
+
+    /// The interface script reads well with extra letter spacing (Latin, Cyrillic).
+    static var spacesLetters: Bool { !(isArabicScript || ["hi", "bn", "ml", "ta"].contains(where: code.hasPrefix)) }
 
     /// The interface reads right to left. UIKit then lays out paging scroll views from the right on its own.
     /// A list, not `Locale.characterDirection(forLanguage:)`: that is deprecated on the iOS 16 floor, and its

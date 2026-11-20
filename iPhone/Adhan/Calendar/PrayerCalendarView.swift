@@ -61,7 +61,7 @@ struct PrayerCalendarView: View {
     // MARK: Rows
 
     private func monthHeader(_ month: MonthModel) -> some View {
-        Text(month.title.uppercased())
+        Text(month.title.localizedUppercase)
     }
 
     private var columnHeader: some View {

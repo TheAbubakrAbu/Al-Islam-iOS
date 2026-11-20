@@ -111,7 +111,7 @@ struct DailyReminderWidgetView: View {
             HStack(spacing: 5) {
                 Image(systemName: "sparkles")
                     .font(.caption2.weight(.semibold))
-                Text(entry.kindLabel.uppercased())
+                Text(entry.kindLabel.localizedUppercase)
                     .font(.caption2.weight(.bold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)

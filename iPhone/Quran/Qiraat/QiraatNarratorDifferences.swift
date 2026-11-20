@@ -243,7 +243,7 @@ struct RiwayahDifferencesSection: View {
                 }
             }
         } header: {
-            Text("WHERE \(name.uppercased()) DIFFERS FROM HAFS")
+            Text("WHERE \(name.localizedUppercase) DIFFERS FROM HAFS")
         } footer: {
             if unlocked {
                 Text("From this app's own text of the riwayah, compared with Hafs word by word the way the Qiraat Explorer compares them. Meanings are from the Quran.com qiraat reference; a recording plays where one reciter recorded both readings.")

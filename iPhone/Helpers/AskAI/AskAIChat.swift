@@ -905,7 +905,7 @@ private struct AskAISourceCard: View {
                 HStack(spacing: 5) {
                     Image(systemName: source.systemImage)
                         .font(.caption2.weight(.semibold))
-                    Text(source.kindLabel.uppercased())
+                    Text(source.kindLabel.localizedUppercase)
                         .font(.caption2.weight(.semibold))
                     if source.isSubject {
                         Text("SUBJECT")

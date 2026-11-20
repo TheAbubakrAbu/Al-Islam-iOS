@@ -150,7 +150,9 @@ struct ProphetIdrisView: View {
         }
         .englishArticle().selectableArticleList(article: "ProphetIdrisView")
         .prophetMiraclesHost()
-        .navigationTitle("Idris")
+        // Its own key: the catalog's "Idris" is the qiraat narrator, who keeps the Latin spelling in Turkish
+        // (like Warsh and Qalun) where the prophet is İdris.
+        .navigationTitle(String(localized: "prophet.idris", defaultValue: "Idris"))
     }
 }
 
@@ -584,7 +586,8 @@ struct ProphetIshaqView: View {
         }
         .englishArticle().selectableArticleList(article: "ProphetIshaqView")
         .prophetMiraclesHost()
-        .navigationTitle("Ishaq")
+        // Its own key: the catalog's "Ishaq" is the qiraat narrator (Latin in Turkish, where the prophet is İshak).
+        .navigationTitle(String(localized: "prophet.ishaq", defaultValue: "Ishaq"))
     }
 }
 

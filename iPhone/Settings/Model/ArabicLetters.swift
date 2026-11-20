@@ -132,7 +132,9 @@ let standardArabicLetters: [LetterData] = [
         transliteration: "raa",
         showTashkeel: true,
         sound: "r",
-        englishSound: "A rolled r, like the Spanish “perro”; a single tap, not the English r in “red”.",
+        // A TAPPED r: Spanish "pero" (one tap), not "perro" (the trill), which the line used to name while
+        // saying "a single tap" (2026-11-20); the sifat lesson teaches takrir as a fault to avoid.
+        englishSound: "A tapped r, like the Spanish “pero”; a single tap, not the English r in “red”.",
         weight: .conditional,
         weightRule: "Heavy with fatha/damma, or sukoon preceded by fatha/damma (or by an incidental kasra); light with kasra, or sukoon preceded by an original kasra, unless an isti'la letter with fatha/damma follows in the same word (قِرطَاس), which makes it heavy."
     ),

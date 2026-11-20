@@ -811,7 +811,7 @@ struct MiracleArticleView: View {
         let eyebrow = HStack(spacing: 6) {
             Image(systemName: "sparkle")
             Text(verbatim: AppLanguage.article("IN SHORT"))
-                .tracking(1.1)
+                .tracking(AppLanguage.letterSpacing(1.1))
         }
         .font(.caption.weight(.bold))
         .foregroundColor(accent)

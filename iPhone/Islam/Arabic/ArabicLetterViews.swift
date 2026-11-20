@@ -303,7 +303,7 @@ struct TashkeelLettersView: View {
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(groupedMarks, id: \.title) { group in
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(group.title.uppercased())
+                        Text(group.title.localizedUppercase)
                             .font(.caption2.weight(.semibold))
                             .foregroundColor(.secondary)
 
@@ -401,7 +401,7 @@ struct TashkeelLettersView: View {
     }
 
     private var lettersSection: some View {
-        Section(selectedMark.map { String(localized: "LETTERS WITH \(displayName($0).uppercased())") } ?? String(localized: "LETTERS")) {
+        Section(selectedMark.map { String(localized: "LETTERS WITH \(displayName($0).localizedUppercase)") } ?? String(localized: "LETTERS")) {
             // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
             // each self-sizing pass, which iOS 26 traps on.
             SummaryTileGrid(adaptiveMinimum: 60, spacing: 6) {
@@ -669,7 +669,7 @@ struct TashkeelLettersView: View {
                         .padding(.vertical, 2)
                     }
                 } header: {
-                    Text("\(letter.displayName.uppercased()) WITH SHADDAH")
+                    Text("\(letter.displayName.localizedUppercase) WITH SHADDAH")
                 } footer: {
                     Text("A shaddah doubles the letter: the first is silent (sukoon) and the second carries the vowel. It never appears at the start of a word. Press the chevron to see the doubling written out beneath: the letter with sukoon, then the letter with its vowel.")
                 }
@@ -959,7 +959,7 @@ struct ArabicLetterPage: View {
                 // The transliteration is the ANSWER to the glyph beside it, so it goes with the rest of
                 // the English when the reader is practising from the Arabic alone.
                 if showsReadings {
-                    Text(letterData.transliteration.prefix(1).uppercased() + letterData.transliteration.dropFirst())
+                    Text(letterData.transliteration.prefix(1).localizedUppercase + letterData.transliteration.dropFirst())
                         .font(.headline)
                 }
 

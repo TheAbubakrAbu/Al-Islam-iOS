@@ -249,6 +249,18 @@ CORRECTIONS: list[tuple[str, str]] = [
      "and the Prophet ﷺ himself would recite leaning on A'ishah's lap (Sahih al-Bukhari 297)."),
     ("because stopping at an ayah end is itself something the Prophet is reported to have done ayah by ayah.",
      "because the Prophet ﷺ is reported to have stopped at the end of each ayah (Sunan Abi Dawud 4001; graded sahih by al-Albani)."),
+    # A typo in the noon sakin lesson: the noon that has lost its sukoon mark (2026-11-20).
+    ("right after a noon-less noon,", "right after a sukoon-less noon,"),
+    # Mojibake in the Noorania quiz on ط and ت: the two letters arrived as UTF-8 read as Latin-1 (2026-11-20).
+    ("Ø· is also a qalqalah letter and Øª is not, so a sakin Ø· bounces where a sakin Øª does not.",
+     "ط is also a qalqalah letter and ت is not, so a sakin ط bounces where a sakin ت does not."),
+    # Qalqalah's reason had the two attributes swapped: jahr holds the breath and shiddah the sound, as the
+    # sifat chapter itself defines them (2026-11-20).
+    ("Shiddah blocks the breath and jahr blocks the voice.",
+     "Jahr blocks the breath and shiddah blocks the voice."),
+    # The tongue's ten exits: its own sum has FOUR threes (ج ش ي, ط د ت, ص س ز, ظ ذ ث), twelve letters (2026-11-20).
+    ("Notice that three of the ten hold three letters each. Those nine letters are",
+     "Notice that four of the ten hold three letters each. Those twelve letters are"),
 ]
 
 # ---------------------------------------------------------------------------------------------

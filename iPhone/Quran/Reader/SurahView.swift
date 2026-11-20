@@ -4704,7 +4704,7 @@ struct SurahView: View {
                 // Not in the Arabic interface either: the English meaning under an Arabic title read
                 // as untranslated, and the Arabic name already sits in the pill.
                 if verticalSizeClass != .compact, !AppLanguage.isArabicScript {
-                    Text(surah.nameEnglish)
+                    Text(surah.localizedMeaning)
                         .font(.caption2)
                         .lineLimit(1)
                         .padding(.top, -8)

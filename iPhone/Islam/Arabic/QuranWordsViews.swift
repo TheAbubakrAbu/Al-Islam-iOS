@@ -358,7 +358,7 @@ struct QuranWordsTierView: View {
                     .listRowSeparator(.hidden)
                 } header: {
                     HStack {
-                        StudySectionHeader(tier.title.uppercased(), systemImage: "list.number")
+                        StudySectionHeader(tier.title.localizedUppercase, systemImage: "list.number")
                         Spacer()
                         StudyRecordBadge(record: record, isNext: false)
                     }

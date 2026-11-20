@@ -408,7 +408,7 @@ struct QiraatIsnadIndexView: View {
                 }
 
                 ForEach(QiraatProfiles.masters(in: QiraatProfiles.sevenIDs + QiraatProfiles.threeIDs)) { master in
-                    Section(header: Text("\(master.id.localizedDisplay.uppercased()) · \(master.arabic)")) {
+                    Section(header: Text("\(master.id.localizedDisplay.localizedUppercase) · \(master.arabic)")) {
                         NavigationLink(destination: LazyDestination { QiraatIsnadPage(masterID: master.id) }) {
                             QiraatProfileRow(title: String(localized: "The reading of \(master.id.localizedDisplay)"), arabic: master.arabic,
                                              detail: String(localized: "\(master.city.localizedDisplay) · d. \(String(master.diedAH).localizedDigits) AH"), ordinal: nil, systemImage: "point.3.connected.trianglepath.dotted")

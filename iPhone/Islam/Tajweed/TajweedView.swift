@@ -414,7 +414,7 @@ struct TajweedCourseView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("STAGE \(stage.number)")
                     .font(.caption2.weight(.heavy))
-                    .tracking(0.7)
+                    .tracking(AppLanguage.letterSpacing(0.7))
                     .foregroundColor(Color(.secondaryLabel))
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(stage.stage.titleEn.localizedDisplay)

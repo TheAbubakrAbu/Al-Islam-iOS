@@ -59,7 +59,7 @@ DAILY WORSHIP AND LEARNING
 - How-To Guides, the Pillars of Islam and Faith, Zakah and inheritance calculators, the Hijri calendar, and Masjid and Halal Food locators.
 
 MADE YOUR WAY
-- English, Arabic, or Urdu, following your iPhone's language.
+- English, Arabic, Urdu, Indonesian, Malay, Turkish, French, Bangla, Russian, Hindi, German, or Spanish, following your iPhone's language.
 - Simple Mode keeps the essentials on screen. Switch to Full any time.
 - Back up named profiles to your own iCloud and restore them on any device.
 - Text sizes, Arabic fonts, accent and sky colors, and a search on every settings page.
@@ -70,4 +70,4 @@ Al-Islam is completely free. No ads, no accounts, no subscriptions, and no track
 
 Whether you seek prayer times, the Quran, the Hadith of the Prophet Muhammad (peace be upon him), or a deeper understanding of Islam, download Al-Islam today.
 
-**3,777 / 4,000 characters.**
+**3,856 / 4,000 characters.**

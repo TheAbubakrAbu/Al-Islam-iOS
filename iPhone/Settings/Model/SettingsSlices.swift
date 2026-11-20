@@ -1566,8 +1566,8 @@ final class QuranContent: ObservableObject, SettingsSlice {
         "ayahOfTheDayHiddenDate", "ayahOfTheDayOverride", "bookmarkedAyahsData", "favoriteEnglishTranslationIDsData",
         "favoriteQiraahTagsData", "favoriteReciterIDsData", "favoriteSurahsData", "khatmCompletedAyahsData",
         "lastListenedAyahData", "lastListenedSurahData", "nowPlayingExpanded", "quranPlanData",
-        "quranRevisionPlanData", "quranRevisionRevisedData", "quranSearchHistoryData", "savedBrokenLetterAyahIDsData",
-        "savedSajdahAyahIDsData", "surahOpenCountsData", "surahPlayCountsData",
+        "quranRevisionPlanData", "quranRevisionRevisedData", "quranSearchHistoryData", "recitationSpeed",
+        "savedBrokenLetterAyahIDsData", "savedSajdahAyahIDsData", "surahOpenCountsData", "surahPlayCountsData",
     ]
 
     private init() { ObjectPublishCounter.attach(self, label: Self.label) }
@@ -1614,6 +1614,11 @@ final class QuranContent: ObservableObject, SettingsSlice {
     var quranRevisionRevisedData: Data {
         get { Settings.shared.quranRevisionRevisedData }
         set { Settings.shared.quranRevisionRevisedData = newValue }
+    }
+
+    var recitationSpeed: Double {
+        get { Settings.shared.recitationSpeed }
+        set { Settings.shared.recitationSpeed = newValue }
     }
 }
 

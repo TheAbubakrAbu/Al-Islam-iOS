@@ -559,7 +559,7 @@ struct JournalView: View {
             let title: String
             if calendar.isDateInToday(day) { title = String(localized: "TODAY") }
             else if calendar.isDateInYesterday(day) { title = String(localized: "YESTERDAY") }
-            else { title = dayFormatter.string(from: day).uppercased() }
+            else { title = dayFormatter.string(from: day).localizedUppercase }
             groups.append((title, list))
         }
         return groups
@@ -820,7 +820,7 @@ struct JournalView: View {
                 Image(systemName: entry.kind.symbol)
                     .font(.caption)
                     .foregroundColor(accent)
-                Text(entry.kind.title.uppercased())
+                Text(entry.kind.title.localizedUppercase)
                     .font(.caption2.weight(.bold))
                     .foregroundColor(accent)
                 if entry.pinned {
@@ -945,7 +945,7 @@ struct JournalEntryView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack(spacing: 6) {
                                 Image(systemName: entry.kind.symbol)
-                                Text(entry.kind.title.uppercased())
+                                Text(entry.kind.title.localizedUppercase)
                                 if entry.pinned { Image(systemName: "pin.fill") }
                                 Spacer()
                                 Text(entry.createdAt, style: .date)

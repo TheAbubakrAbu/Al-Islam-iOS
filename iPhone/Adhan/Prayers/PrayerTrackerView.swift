@@ -320,7 +320,7 @@ struct PrayerTrackerView: View {
                     VStack(alignment: .leading, spacing: 5) {
                         Text(Calendar.current.isDateInToday(today) ? "TODAY" : "YESTERDAY, UNTIL FAJR")
                             .font(.caption2.weight(.bold))
-                            .tracking(0.6)
+                            .tracking(AppLanguage.letterSpacing(0.6))
                             .foregroundColor(.secondary)
 
                         Text(exempt ? String(localized: "Exempt day")
@@ -432,7 +432,7 @@ struct PrayerTrackerView: View {
             HStack(spacing: 6) {
                 AccentIconChip(systemImage: symbol, tint: settings.accentColor.accent2, size: 20)
 
-                Text(label.uppercased())
+                Text(label.localizedUppercase)
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(.secondary)
                     // Wraps to a second line at the large text sizes ("CURRENT STR..." before), and

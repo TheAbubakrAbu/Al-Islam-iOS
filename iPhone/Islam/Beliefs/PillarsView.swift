@@ -544,7 +544,7 @@ struct IslamPillarsHero: View {
                         .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
                     Text("ISLAM IS BUILT ON FIVE")
                         .font(.system(size: 9, weight: .heavy))
-                        .tracking(1.4)
+                        .tracking(AppLanguage.letterSpacing(1.4))
                 }
                 .foregroundColor(.white)
                 .padding(.top, 16)
@@ -596,7 +596,7 @@ struct IslamPillarsHero: View {
             VStack(spacing: 6) {
                 Text("ON THE SIX PILLARS OF IMAN")
                     .font(.system(size: 9, weight: .heavy))
-                    .tracking(1.4)
+                    .tracking(AppLanguage.letterSpacing(1.4))
                     .foregroundColor(accent)
 
                 // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height

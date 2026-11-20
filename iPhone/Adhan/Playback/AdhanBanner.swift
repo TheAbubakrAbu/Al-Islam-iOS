@@ -132,7 +132,7 @@ private struct AdhanBannerCard: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(kicker)
                     .font(.system(size: 10, weight: .heavy))
-                    .tracking(0.8)
+                    .tracking(AppLanguage.letterSpacing(0.8))
                     .foregroundStyle(accent)
 
                 Text(prayerName)

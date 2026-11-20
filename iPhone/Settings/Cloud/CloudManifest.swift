@@ -83,7 +83,7 @@ enum CloudManifest {
         "quranPageMode", "quranPlannerReminderEnabled", "quranPlannerReminderMinutes",
         "quranSearchFilterPreferences", "quranSearchHelpCollapsed", "quranSearchHelpRemoved", "quranSortDirection", "quranSortMode",
         "quranTestModeEndsOnLeave", "quranTestModeHides", "quranTestModeReveals", "quranTestModeRevealsRecited", "quranWaslSign",
-        "quranicSukoonInLetterPractice", "readerLegendPage", "reciteType", "reciter", "reciterId",
+        "quranicSukoonInLetterPractice", "readerLegendPage", "recitationSpeed", "reciteType", "reciter", "reciterId",
         "removeArabicDots", "riwayahPickerSort", "riwayahTajweedHiddenRules", "saveLastListenedAyah", "saveLastListenedSurah",
         "saveLastReadAyah", "searchFilterBarEveryButton", "searchForSurahs", "searchOpensOnAIResults",
         "shareArabicFont", "shareAyahBackdrop",

@@ -279,7 +279,7 @@ struct VowelVerdictChip: View {
     let isVowel: Bool
 
     var body: some View {
-        Text(VowelRoleText.verdict(isVowel).uppercased())
+        Text(VowelRoleText.verdict(isVowel).localizedUppercase)
             .font(.caption2.weight(.bold))
             .foregroundColor(isVowel ? appearance.accent : .primary)
             .padding(.horizontal, 8)

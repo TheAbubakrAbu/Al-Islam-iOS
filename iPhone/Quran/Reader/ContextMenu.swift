@@ -1569,13 +1569,13 @@ extension FocusItem {
             id: "surah-\(surah.id)",
             arabic: displayName,
             title: "\(surah.id) · \(surah.nameTransliteration)",
-            subtitle: surah.nameEnglish,
+            subtitle: surah.localizedMeaning,
             footnote: footnote,
             secondaryArabic: surah.idArabic,
             shareLabel: String(localized: "Share Surah"),
             shareText: String(localized: """
             Surah \(surah.id) - \(surah.nameTransliteration) (\(displayName))
-            \(surah.nameEnglish)
+            \(surah.localizedMeaning)
             \(surah.type.capitalized.localizedDisplay) · \(surah.numberOfAyahs) ayahs
             """)
         )

@@ -636,7 +636,7 @@ struct ProfileView: View {
                 if !shown.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(alignment: .firstTextBaseline) {
-                            Text(family.title.uppercased())
+                            Text(family.title.localizedUppercase)
                                 .font(.caption2.weight(.semibold))
                                 .foregroundColor(.secondaryOnGlass)
 
@@ -1043,7 +1043,7 @@ private struct BadgeDetailSheet: View {
                 .onAppear { appeared = true }
 
                 VStack(spacing: 6) {
-                    Text(badge.family.title.uppercased())
+                    Text(badge.family.title.localizedUppercase)
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(settings.accentColor.color)
                         .padding(.horizontal, 8)

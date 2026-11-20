@@ -176,7 +176,7 @@ struct ThemeHighlightsView: View {
                         Circle()
                             .fill(color.color)
                             .frame(width: 8, height: 8)
-                        Text(section.rangeLabel.uppercased())
+                        Text(section.rangeLabel.localizedUppercase)
                             .font(.caption2.weight(.bold))
                             .foregroundStyle(.secondary)
                         Text("· \(color.meaning)")

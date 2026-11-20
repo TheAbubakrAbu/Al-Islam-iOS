@@ -552,7 +552,7 @@ struct CreditsView: View {
     @ViewBuilder
     private var creditsLinksSection: some View {
         ForEach(CreditItem.groupsPresent, id: \.self) { group in
-            Section(header: Text(group.rawValue.localizedDisplay.uppercased())) {
+            Section(header: Text(group.rawValue.localizedDisplay.localizedUppercase)) {
                 ForEach(LinkedCredit.all(in: CreditItem.inGroup(group))) { credit in
                     creditLink(credit)
                         .id(credit.item.rowID)

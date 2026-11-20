@@ -216,7 +216,7 @@ struct HadithTopicsView: View {
     private func laneHeader(_ lane: HadithLane) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             // The count as the pill every counted header wears (a bare number until 2026-10-26).
-            SectionHeaderLine(lane.label.localizedDisplay.uppercased()) {
+            SectionHeaderLine(lane.label.localizedDisplay.localizedUppercase) {
                 CountPill(count: store.count(inLane: lane.id))
             }
             Text(lane.subtitle.localizedDisplay)
@@ -283,7 +283,7 @@ struct HadithTopicView: View {
                     }
                 } else {
                     ForEach(groups, id: \.book.slug) { group in
-                        Section(header: SectionPillHeader(title: group.book.displayTitle.uppercased(), count: group.rows.count)) {
+                        Section(header: SectionPillHeader(title: group.book.displayTitle.localizedUppercase, count: group.rows.count)) {
                             ForEach(group.rows) { row in
                                 // Lazy: an eager destination built a `HadithChapterView` per visible
                                 // row, whose init slices the chapter and checks its text blocks.
@@ -448,7 +448,7 @@ struct HadithHistoryView: View {
                 }
 
                 ForEach(derived.viewedByDay, id: \.day) { group in
-                    Section(header: Text("OPENED · \(group.day.uppercased())")) {
+                    Section(header: Text("OPENED · \(group.day.localizedUppercase)")) {
                         ForEach(Self.inKnownBooks(group.rows, slug: \.slug), id: \.entry.id) { row in
                             let entry = row.entry
                             historyRow(book: row.book, idInBook: entry.idInBook,

@@ -1485,7 +1485,7 @@ private struct QiraahGroupSectionHeader: View {
         HStack(spacing: 6) {
             // The imam's Arabic name in the Arabic interface, which then needs no second line.
             let arabicTitle = AppLanguage.isArabicScript && !teacherArabic.isEmpty
-            Text("QIRAAH OF \(arabicTitle ? teacherArabic : teacher.uppercased())")
+            Text("QIRAAH OF \(arabicTitle ? teacherArabic : teacher.localizedUppercase)")
                 .foregroundStyle(settings.accentColor.color)
                 .lineLimit(2)
                 .minimumScaleFactor(0.75)
@@ -1776,56 +1776,56 @@ struct ReciterListView: View {
             // which stranded its only reciter in the OTHER GROUP catch-all at the bottom.
             ReciterSectionGroup(
                 id: "shubah",
-                title: Settings.Riwayah.shubah.uppercased(),
+                title: Settings.Riwayah.shubah.localizedUppercase,
                 arabic: Settings.Riwayah.shubahArabic,
                 reciters: filteredReciters(recitersShubah),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "khalaf",
-                title: Settings.Riwayah.khalaf.uppercased(),
+                title: Settings.Riwayah.khalaf.localizedUppercase,
                 arabic: Settings.Riwayah.khalafArabic,
                 reciters: filteredReciters(recitersKhalaf),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "warsh",
-                title: Settings.Riwayah.warsh.uppercased(),
+                title: Settings.Riwayah.warsh.localizedUppercase,
                 arabic: Settings.Riwayah.warshArabic,
                 reciters: filteredReciters(recitersWarsh),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "qaloon",
-                title: Settings.Riwayah.qaloon.uppercased(),
+                title: Settings.Riwayah.qaloon.localizedUppercase,
                 arabic: Settings.Riwayah.qaloonArabic,
                 reciters: filteredReciters(recitersQaloon),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "buzzi",
-                title: Settings.Riwayah.buzzi.uppercased(),
+                title: Settings.Riwayah.buzzi.localizedUppercase,
                 arabic: Settings.Riwayah.buzziArabic,
                 reciters: filteredReciters(recitersBuzzi),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "qunbul",
-                title: Settings.Riwayah.qunbul.uppercased(),
+                title: Settings.Riwayah.qunbul.localizedUppercase,
                 arabic: Settings.Riwayah.qunbulArabic,
                 reciters: filteredReciters(recitersQunbul),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "duri",
-                title: Settings.Riwayah.duri.uppercased(),
+                title: Settings.Riwayah.duri.localizedUppercase,
                 arabic: Settings.Riwayah.duriArabic,
                 reciters: filteredReciters(recitersDuri),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "susi",
-                title: Settings.Riwayah.susi.uppercased(),
+                title: Settings.Riwayah.susi.localizedUppercase,
                 arabic: Settings.Riwayah.susiArabic,
                 reciters: filteredReciters(recitersSusi),
                 isQiraah: true
@@ -1834,77 +1834,77 @@ struct ReciterListView: View {
             // so every riwayah the app can display also has full-surah audio.
             ReciterSectionGroup(
                 id: "hisham",
-                title: Settings.Riwayah.hisham.uppercased(),
+                title: Settings.Riwayah.hisham.localizedUppercase,
                 arabic: Settings.Riwayah.hishamArabic,
                 reciters: filteredReciters(recitersHisham),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "ibnDhakwan",
-                title: Settings.Riwayah.ibnDhakwan.uppercased(),
+                title: Settings.Riwayah.ibnDhakwan.localizedUppercase,
                 arabic: Settings.Riwayah.ibnDhakwanArabic,
                 reciters: filteredReciters(recitersIbnDhakwan),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "khallad",
-                title: Settings.Riwayah.khallad.uppercased(),
+                title: Settings.Riwayah.khallad.localizedUppercase,
                 arabic: Settings.Riwayah.khalladArabic,
                 reciters: filteredReciters(recitersKhallad),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "abuHarith",
-                title: Settings.Riwayah.abuHarith.uppercased(),
+                title: Settings.Riwayah.abuHarith.localizedUppercase,
                 arabic: Settings.Riwayah.abuHarithArabic,
                 reciters: filteredReciters(recitersAbuHarith),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "duriKisai",
-                title: Settings.Riwayah.duriKisai.uppercased(),
+                title: Settings.Riwayah.duriKisai.localizedUppercase,
                 arabic: Settings.Riwayah.duriKisaiArabic,
                 reciters: filteredReciters(recitersDuriKisai),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "ibnWardan",
-                title: Settings.Riwayah.ibnWardan.uppercased(),
+                title: Settings.Riwayah.ibnWardan.localizedUppercase,
                 arabic: Settings.Riwayah.ibnWardanArabic,
                 reciters: filteredReciters(recitersIbnWardan),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "ibnJammaz",
-                title: Settings.Riwayah.ibnJammaz.uppercased(),
+                title: Settings.Riwayah.ibnJammaz.localizedUppercase,
                 arabic: Settings.Riwayah.ibnJammazArabic,
                 reciters: filteredReciters(recitersIbnJammaz),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "ruways",
-                title: Settings.Riwayah.ruways.uppercased(),
+                title: Settings.Riwayah.ruways.localizedUppercase,
                 arabic: Settings.Riwayah.ruwaysArabic,
                 reciters: filteredReciters(recitersRuways),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "rawh",
-                title: Settings.Riwayah.rawh.uppercased(),
+                title: Settings.Riwayah.rawh.localizedUppercase,
                 arabic: Settings.Riwayah.rawhArabic,
                 reciters: filteredReciters(recitersRawh),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "ishaq",
-                title: Settings.Riwayah.ishaq.uppercased(),
+                title: Settings.Riwayah.ishaq.localizedUppercase,
                 arabic: Settings.Riwayah.ishaqArabic,
                 reciters: filteredReciters(recitersIshaq),
                 isQiraah: true
             ),
             ReciterSectionGroup(
                 id: "idris",
-                title: Settings.Riwayah.idris.uppercased(),
+                title: Settings.Riwayah.idris.localizedUppercase,
                 arabic: Settings.Riwayah.idrisArabic,
                 reciters: filteredReciters(recitersIdris),
                 isQiraah: true

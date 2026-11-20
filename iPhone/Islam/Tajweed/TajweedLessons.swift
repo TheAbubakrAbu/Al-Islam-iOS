@@ -153,7 +153,7 @@ struct TajweedLessonDetailView: View {
         let done = progress.isDone(lesson.id)
         return Section {
             ResourceHero(
-                eyebrow: (TajweedLessonsStore.shared.chapter(of: lesson.id)?.title.localizedDisplay ?? String(localized: "Tajweed")).uppercased(),
+                eyebrow: (TajweedLessonsStore.shared.chapter(of: lesson.id)?.title.localizedDisplay ?? String(localized: "Tajweed")).localizedUppercase,
                 systemImage: "graduationcap.fill",
                 headline: lesson.titleEn.localizedDisplay,
                 arabic: lesson.titleAr.isEmpty ? nil : lesson.titleAr,
@@ -753,8 +753,8 @@ struct TajweedLessonDetailView: View {
             VStack(alignment: leading ? .leading : .trailing, spacing: 3) {
                 HStack(spacing: 4) {
                     if leading { Image(systemName: systemImage) }
-                    Text(label.uppercased())
-                        .tracking(0.6)
+                    Text(label.localizedUppercase)
+                        .tracking(AppLanguage.letterSpacing(0.6))
                     if !leading { Image(systemName: systemImage) }
                 }
                 .font(.caption2.weight(.heavy))
@@ -802,9 +802,9 @@ struct TajweedCapsLabel: View {
     init(_ text: String) { self.text = text }
 
     var body: some View {
-        Text(text.uppercased())
+        Text(text.localizedUppercase)
             .font(.caption2.weight(.heavy))
-            .tracking(0.8)
+            .tracking(AppLanguage.letterSpacing(0.8))
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -816,9 +816,9 @@ private struct TajweedPill: View {
     let color: Color
 
     var body: some View {
-        Text(text.uppercased())
+        Text(text.localizedUppercase)
             .font(.system(size: 9.5, weight: .heavy))
-            .tracking(0.5)
+            .tracking(AppLanguage.letterSpacing(0.5))
             .foregroundColor(color)
             .fixedSize()
             .frame(minWidth: 70)
@@ -952,9 +952,9 @@ private struct TajweedLessonTableView: View {
 
             HStack(alignment: .top, spacing: 10) {
                 ForEach(Array(table.columns.enumerated()), id: \.offset) { _, column in
-                    Text(column.localizedDisplay.uppercased())
+                    Text(column.localizedDisplay.localizedUppercase)
                         .font(.system(size: 9.5, weight: .heavy))
-                        .tracking(0.6)
+                        .tracking(AppLanguage.letterSpacing(0.6))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1343,7 +1343,7 @@ struct TajweedQuizCards: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(chosen == question.answer ? String(localized: "CORRECT") : String(localized: "NOT QUITE"))
                         .font(.caption2.weight(.heavy))
-                        .tracking(0.7)
+                        .tracking(AppLanguage.letterSpacing(0.7))
                         .foregroundColor(chosen == question.answer ? .green : .red)
                     Text(question.explain.localizedDisplay)
                         .font(.caption)

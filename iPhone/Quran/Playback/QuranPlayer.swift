@@ -315,6 +315,11 @@ final class QuranPlayer: ObservableObject {
             }
             lastKnownSeconds = 0
             if let p = player {
+                // Every recitation player passes through here, the queues and a prewarmed surah
+                // included, so this is where each one learns the listener's speed: `play()` starts
+                // at `defaultRate` (RecitationSpeed.swift).
+                let rate = recitationRate
+                if p.defaultRate != rate { p.defaultRate = rate }
                 playheadObserver = p.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.25, preferredTimescale: 600),
                                                              queue: .main) { [weak self] time in
                     self?.lastKnownSeconds = CMTimeGetSeconds(time)
@@ -800,6 +805,7 @@ final class QuranPlayer: ObservableObject {
         let asset = AVURLAsset(url: url, options: options)
         let item = AVPlayerItem(asset: asset)
         item.preferredForwardBufferDuration = bufferDuration
+        RecitationSpeed.keepPitch(of: item)
         return item
     }
 
@@ -850,8 +856,9 @@ final class QuranPlayer: ObservableObject {
             // is two dispatch hops), so that write carries rate 0 and elapsed 0; nothing else wrote it
             // again, and a prewarmed next surah (no stall, no `.toMinimizeStalls` wait) left the lock
             // screen frozen at 0:00 for the whole surah (35 -> 36, 2026-10-22). This is the one moment
-            // the rate is known to be 1. After a stall it also puts the clock back where the audio is
-            // (the rate stayed 1 through the wait, so the lock screen ran on over the silence).
+            // the rate is known to be the recitation's own (1, or the listener's speed). After a stall
+            // it also puts the clock back where the audio is (the rate stayed up through the wait, so
+            // the lock screen ran on over the silence).
             bufferingWasWaiting = false
             updateNowPlayingInfo()
         case .waitingToPlayAtSpecifiedRate:
@@ -1073,7 +1080,7 @@ final class QuranPlayer: ObservableObject {
                    AVAudioSession.InterruptionOptions(rawValue: opts).contains(.shouldResume) {
                     self.whenAudioSessionReady {
                         guard self.isPlaying else { return }   // a pause or stop got in first
-                        self.player?.play()
+                        self.playAtSpeed(self.player)
                     }
                     self.isPlaying = true
                     self.isPaused = false
@@ -1133,7 +1140,7 @@ final class QuranPlayer: ObservableObject {
             DispatchQueue.main.async {
                 self.whenAudioSessionReady {
                     guard self.isPlaying else { return }   // a pause or stop got in first
-                    self.player?.play()
+                    self.playAtSpeed(self.player)
                 }
                 self.isPlaying = true
                 self.isPaused = false
@@ -1285,6 +1292,50 @@ final class QuranPlayer: ObservableObject {
         }
     }
     
+    // MARK: - Recitation speed (RecitationSpeed.swift)
+
+    /// The listener's speed as a player rate. The watch always recites at 1×: its card has no
+    /// control to show or change the speed with.
+    var recitationRate: Float {
+        #if os(iOS)
+        return Float(RecitationSpeed.nearest(to: settings.recitationSpeed))
+        #else
+        return 1
+        #endif
+    }
+
+    /// Changes the speed of this recitation and of every later one (the Speed menu on the Now
+    /// Playing bar). A player that is running, or waiting on the network to run, takes the new rate
+    /// at once. One that is paused or still loading is left alone, because writing `rate` to it IS
+    /// a play: it starts at the new speed when it starts (`playAtSpeed`, and the fast starts).
+    func setRecitationSpeed(_ speed: Double) {
+        let speed = RecitationSpeed.nearest(to: speed)
+        if settings.recitationSpeed != speed { settings.recitationSpeed = speed }
+        guard let p = player else { return }
+        let rate = recitationRate
+        if p.defaultRate != rate { p.defaultRate = rate }
+        if p.rate != 0, p.rate != rate { p.rate = rate }
+        // The lock screen draws its bar from the rate it was last told.
+        updateNowPlayingInfo()
+    }
+
+    /// `play()` at the listener's speed. `play()` starts at the player's `defaultRate`, which is
+    /// brought up to date first: the speed may have changed while this player sat paused, or
+    /// under it (a restore, a reset).
+    private func playAtSpeed(_ p: AVPlayer?) {
+        guard let p else { return }
+        let rate = recitationRate
+        if p.defaultRate != rate { p.defaultRate = rate }
+        p.play()
+    }
+
+    /// How long before a surah's end the next one is readied, in seconds of AUDIO. The lead is
+    /// meant in clock time, and at 2× ten seconds of audio pass in five, so a faster recitation
+    /// starts sooner. Never later than at normal speed: a slow one only gains time.
+    static func prewarmLead(_ base: TimeInterval, rate: Float) -> TimeInterval {
+        base * Double(max(1, rate))
+    }
+
     func pause(saveInfo: Bool = true) {
         if saveInfo { saveLastListenedSurah(); saveLastListenedAyah(immediate: true) }
         player?.pause()
@@ -1306,7 +1357,7 @@ final class QuranPlayer: ObservableObject {
             // The start lands a lane round trip later: a pause or a stop that got in first wins, or
             // the bar would read paused over audio (the flags below are set before this runs).
             guard let self, self.isPlaying else { return }
-            self.player?.play()
+            self.playAtSpeed(self.player)
         }
         isPlaying = true; isPaused = false
         updateNowPlayingInfo()
@@ -1771,7 +1822,8 @@ final class QuranPlayer: ObservableObject {
     /// prewarmed item is already ready, invoked directly since KVO doesn't fire for the current value).
     private func onSurahItemReady(surahNumber: Int, surahName: String, reciter: Reciter, certainReciter: Bool, skipSurah: Bool) {
         whenAudioSessionReady { [weak self] in
-            self?.player?.playImmediately(atRate: 1.0)
+            guard let self else { return }
+            self.player?.playImmediately(atRate: self.recitationRate)
         }
         // A repeat that moved onto its downloaded copy: the same playback continuing, so no second
         // history entry, no last-listened save and no resume seek.
@@ -1886,7 +1938,7 @@ final class QuranPlayer: ObservableObject {
                 self.seek(toSeconds: 0) {
                     // A pause that landed during the seek holds.
                     guard !self.isPaused else { return }
-                    self.player?.play()
+                    self.playAtSpeed(self.player)
                     self.isPlaying = true
                     self.updateNowPlayingInfo()
                 }
@@ -1974,7 +2026,7 @@ final class QuranPlayer: ObservableObject {
         let cur = lastKnownSeconds   // never `currentTime()` on main (see `lastKnownSeconds`)
         guard dur.isFinite, dur > 0, cur.isFinite else { return }
         let remaining = dur - cur
-        guard remaining > 0, remaining <= surahPrewarmLeadTime else { return }
+        guard remaining > 0, remaining <= Self.prewarmLead(surahPrewarmLeadTime, rate: recitationRate) else { return }
 
         guard let next = nextSurahDescriptor() else { return }
         if prewarmedSurah?.surahNumber == next.number { return }   // already prewarmed
@@ -2448,7 +2500,7 @@ final class QuranPlayer: ObservableObject {
                     let held = self.takePauseRequestedWhileFetching()
                     if !held {
                         self.whenAudioSessionReady {
-                            self.queuePlayer?.playImmediately(atRate: 1.0)
+                            self.queuePlayer?.playImmediately(atRate: self.recitationRate)
                         }
                     }
                     self.isPlaying = !held
@@ -2604,7 +2656,7 @@ final class QuranPlayer: ObservableObject {
             if ranDry {
                 self.isLoading = false
                 // Not over a pause: a range paused while its next ayah was loading resumed by itself (R4).
-                if !self.isPaused { q.play() }
+                if !self.isPaused { self.playAtSpeed(q) }
             }
             // The ayah after it starts downloading now, as in Play From Ayah (`warmContinueFile`), so a
             // short ayah followed by a long one is not left waiting at the hand-off. A repeating range
@@ -2981,7 +3033,7 @@ final class QuranPlayer: ObservableObject {
                         let held = self.takePauseRequestedWhileFetching()
                         if !held {
                             self.whenAudioSessionReady {
-                                self.player?.playImmediately(atRate: 1.0)
+                                self.player?.playImmediately(atRate: self.recitationRate)
                             }
                         }
                         // Clear isLoading in the same update that sets isPlaying to avoid a one-frame
@@ -3032,7 +3084,7 @@ final class QuranPlayer: ObservableObject {
                                               remaining: self.ayahRepeatRemaining)
                         // A pause that landed during the seek holds: the next pass waits for Play.
                         if !self.isPaused {
-                            self.player?.play()
+                            self.playAtSpeed(self.player)
                             self.isPlaying = true
                         }
                         self.updateNowPlayingInfo()
@@ -3084,7 +3136,7 @@ final class QuranPlayer: ObservableObject {
                 self.idleTimerSet(true)
                 if itm.status == .readyToPlay {
                     self.whenAudioSessionReady {
-                        self.queuePlayer?.playImmediately(atRate: 1.0)
+                        self.queuePlayer?.playImmediately(atRate: self.recitationRate)
                     }
                     let base = "\(surah.displayName) \(surahNumber):\(ayahNumber)"
                     // Clear isLoading together with isPlaying so the control never flashes the play
@@ -3269,7 +3321,7 @@ final class QuranPlayer: ObservableObject {
                 // The ayah before it ended while this one downloaded: carry on, unless the listener
                 // paused meanwhile (then `resume()` plays it).
                 self.isLoading = false
-                if !self.isPaused { q.play() }
+                if !self.isPaused { self.playAtSpeed(q) }
             }
             self.warmContinueFile(after: position, reciter: reciter)
         }
@@ -3604,6 +3656,8 @@ final class QuranPlayer: ObservableObject {
         }
         info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = elapsed ?? lastKnownSeconds
         info[MPNowPlayingInfoPropertyPlaybackRate] = player?.rate
+        // The listener's speed is this recitation's normal rate, not a fast-forward.
+        info[MPNowPlayingInfoPropertyDefaultPlaybackRate] = recitationRate
         if let artwork = Self.nowPlayingArtwork {
             info[MPMediaItemPropertyArtwork] = artwork
         }
@@ -5093,13 +5147,19 @@ final class AyahTimingStore {
         // playback engine's main thread - but `assumeIsolated` would CRASH (a release-mode dispatch
         // precondition) if any future path ever arrived off-main, so prove the assumption safely: hop
         // synchronously when needed instead of trapping.
+        // A slice of the surah file recited as one ayah: it keeps its pitch at any speed, like every
+        // other recitation item (`makeFastStartItem`).
         if Thread.isMainThread {
             return MainActor.assumeIsolated {
-                AVPlayerItem(asset: composition)
+                let item = AVPlayerItem(asset: composition)
+                RecitationSpeed.keepPitch(of: item)
+                return item
             }
         }
         return DispatchQueue.main.sync {
-            AVPlayerItem(asset: composition)
+            let item = AVPlayerItem(asset: composition)
+            RecitationSpeed.keepPitch(of: item)
+            return item
         }
     }
 }

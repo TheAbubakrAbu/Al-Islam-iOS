@@ -183,6 +183,9 @@ struct HijriDate: Identifiable, Codable {
     /// Maghrib) does not, so `updateDates()` recomputes once the civil day has changed. Optional, like
     /// `offset`, for entries persisted before it existed.
     var computedAt: Date? = nil
+    /// The interface language `english` was written in (`AppLanguage.code`): outside English that line is the
+    /// locale's own Hijri date, so a language change recomputes it the same day. Optional, as above.
+    var language: String? = nil
 }
 
 extension HijriDate {
@@ -200,9 +203,11 @@ extension HijriDate {
         AppLanguage.isArabicScript ? Self.gregorianFormatter.string(from: Date()) : english
     }
 
-    /// What "Copy" puts on the pasteboard for `companionLine`'s row.
+    /// What "Copy" puts on the pasteboard for `companionLine`'s row. Outside English and the Arabic script
+    /// the line is the Hijri date in the interface's language (Indonesian, French, Russian, ...), not English.
     var companionCopyTitle: String {
-        AppLanguage.isArabicScript ? String(localized: "Copy Gregorian Date") : String(localized: "Copy English Date")
+        if AppLanguage.isArabicScript { return String(localized: "Copy Gregorian Date") }
+        return AppLanguage.isEnglish ? String(localized: "Copy English Date") : String(localized: "Copy Hijri Date")
     }
 
     /// Today in the Gregorian calendar, in the interface's language. The calendar is set explicitly: a

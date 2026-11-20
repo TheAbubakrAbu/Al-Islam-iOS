@@ -2378,7 +2378,7 @@ struct SimpleModeSettingsView: View {
                 SimpleModeSection(showsCatalogRow: false)
 
                 ForEach(SimpleTrim.grouped, id: \.surface) { group in
-                    Section(header: SectionIconHeader(group.surface.title.uppercased(), icon: group.surface.systemImage)) {
+                    Section(header: SectionIconHeader(group.surface.title.localizedUppercase, icon: group.surface.systemImage)) {
                         ForEach(group.entries) { entry in
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(entry.title.localizedDigits)

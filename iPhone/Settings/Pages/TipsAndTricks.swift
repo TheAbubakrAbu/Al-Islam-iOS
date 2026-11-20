@@ -20,7 +20,7 @@ import SwiftUI
 // Center controls, the menu shortcuts, History and the locators got their tips). A tip that describes
 // something the app does not do is worse than no tip, so: when a feature's labels or gestures change,
 // change its tip in the same commit, and never add one from memory. Things the app does NOT have, which
-// a tip must therefore never promise: a sleep timer, a playback speed control, a hadith page mode, a
+// a tip must therefore never promise: a sleep timer, a hadith page mode, a
 // narrator search, favorites or counters on individual duas, Hadith or Islam widgets and Siri
 // shortcuts, and an .ics export of prayer times.
 //
@@ -307,9 +307,9 @@ enum TipCatalog {
 
     /// The app's name in a tip: الإسلام on an Arabic screen, Al-Islam to Ask AI.
     private static let app = InterfaceText(display: AppIdentifiers.displayName, english: AppIdentifiers.appName)
-    /// The app's name inside a phrase said to Siri. Siri has no Urdu: an Urdu screen quotes the phrases in
-    /// English, the language Siri runs in there, so the name is the one Siri hears, Al-Islam.
-    private static let siriApp = InterfaceText(display: AppLanguage.isUrdu ? AppIdentifiers.appName : AppIdentifiers.displayName,
+    /// The app's name inside a phrase said to Siri. Siri has no Urdu, Indonesian or Bangla: those screens quote the
+    /// phrases in English, the language Siri runs in there, so the name is the one Siri hears, Al-Islam.
+    private static let siriApp = InterfaceText(display: AppLanguage.siriSpeaksInterfaceLanguage ? AppIdentifiers.displayName : AppIdentifiers.appName,
                                                english: AppIdentifiers.appName)
     private static var hasAppleIntelligence: Bool { OnDeviceAsk.isAvailable }
     private static var hasLiquidGlass: Bool {
@@ -790,6 +790,10 @@ enum TipCatalog {
         AppTip(id: "quran.nowplaying", area: .quran, group: InterfaceText("LISTENING"), systemImage: "waveform.circle.fill",
                title: InterfaceText("Hold the Now Playing bar"),
                detail: InterfaceText("Touch and hold the player for Stop Playing, Play from Beginning, the queue, and favoriting the surah or bookmarking the ayah. While a custom range plays it adds Range Ayahs. Inside the reader, tapping the player jumps to the ayah being recited."),
+               place: InterfaceText("Now Playing bar")),
+        AppTip(id: "quran.speed", area: .quran, group: InterfaceText("LISTENING"), systemImage: "speedometer",
+               title: InterfaceText("Slow the recitation down, or speed it up"),
+               detail: InterfaceText("Touch and hold the player and choose Speed for anything from half speed to double. The reciter's voice keeps its pitch. On the big player, the speed sits beside the reciter's name: tap it to change it. The speed stays as you set it until you change it again."),
                place: InterfaceText("Now Playing bar")),
         AppTip(id: "quran.dots", area: .quran, group: InterfaceText("LISTENING"), systemImage: "circle.fill",
                title: InterfaceText("What the reciter dots mean"),
@@ -1345,7 +1349,7 @@ struct FeatureListView: View {
         List {
             Group {
                 ForEach(groups, id: \.area.id) { group in
-                    Section(header: Text(group.area.title.uppercased())) {
+                    Section(header: Text(group.area.title.localizedUppercase)) {
                         // A tip with nowhere to go has no row, and is left out HERE: a row that may
                         // be nothing is one the List has to build to count (see `OneRow`).
                         ForEach(group.tips.paired { $0.destination }, id: \.item.id) { pair in
@@ -1793,7 +1797,7 @@ struct TipsHubView: View {
                     // A section per area, so a result always says WHICH settings page it belongs to -
                     // the header is the only thing that places it, since the rows come from all six.
                     ForEach(matches, id: \.area.id) { match in
-                        Section(header: Text(match.area.title.uppercased())) {
+                        Section(header: Text(match.area.title.localizedUppercase)) {
                             ForEach(match.tips) { tip in
                                 TipRow(tip: tip)
                             }
@@ -1849,7 +1853,7 @@ struct SettingsSpotlightSection: View {
         let tips = TipCatalog.spotlight
         // Simple Mode keeps the one row to every tip and leaves the thirteen cards out
         // (Docs/Product/Simple Mode Guide.md).
-        Section(header: SectionIconHeader(settings.hides(.spotlightCards) ? String(localized: "TIPS & TRICKS") : String(localized: "ONLY IN \(AppIdentifiers.displayName.uppercased())"), icon: "lightbulb.fill")) {
+        Section(header: SectionIconHeader(settings.hides(.spotlightCards) ? String(localized: "TIPS & TRICKS") : String(localized: "ONLY IN \(AppIdentifiers.displayName.localizedUppercase)"), icon: "lightbulb.fill")) {
             if settings.hides(.spotlightCards) {
                 EmptyView()
             } else if rows {

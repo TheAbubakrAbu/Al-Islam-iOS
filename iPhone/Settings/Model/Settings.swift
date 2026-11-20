@@ -2571,6 +2571,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// Big vs. small in-app Now Playing player. An in-app UI preference, not shared with the widget/watch.
     @Setting("nowPlayingExpanded") var nowPlayingExpanded: Bool = false
 
+    /// How fast the recitation plays, 1 being as recorded (RecitationSpeed.swift; a reader's request,
+    /// 2026-11-19). Remembered until it is changed, from the Now Playing bar. Read through
+    /// `RecitationSpeed.nearest(to:)`, never raw: only the offered speeds reach the player.
+    @Setting("recitationSpeed") var recitationSpeed: Double = 1
+
     @Setting("reciter") var reciter: String = "Muhammad Al-Minshawi (Murattal)"
 
     /// Disambiguates reciters that share the same display name (qiraah / surah base URL).

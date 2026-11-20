@@ -643,7 +643,7 @@ struct ThemesBrowseView: View {
 
         // The domain is English data (and the fold key below): only the shown title is translated.
         Section(header: SectionPillHeader(
-            title: group.domain.localizedDisplay.uppercased(),
+            title: group.domain.localizedDisplay.localizedUppercase,
             count: group.topics.count,
             isExpanded: isSearching ? nil : Binding(
                 get: { !collapsedDomains.contains(group.domain) },
@@ -832,9 +832,11 @@ struct ThemeTopicDetailView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Highlight in the Reader")
                                     .font(.subheadline.weight(.semibold))
+                                // The meaning keeps its capitals: lowercasing it wrote "signs of allah", "the
+                                // prophet" (and the same in every translation, Turkish İ included).
                                 Text(isLit
-                                     ? String(localized: "Lit in \(color.name) (\(color.meaning.lowercased())) across \(topic.ayahs.count) ayahs")
-                                     : String(localized: "A faint \(color.name) wash, the color of \(color.meaning.lowercased()), on its \(topic.ayahs.count) ayahs"))
+                                     ? String(localized: "Lit in \(color.name) (\(color.meaning)) across \(topic.ayahs.count) ayahs")
+                                     : String(localized: "A faint \(color.name) wash, the color of \(color.meaning), on its \(topic.ayahs.count) ayahs"))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }

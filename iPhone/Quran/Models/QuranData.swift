@@ -151,10 +151,19 @@ struct Surah: Codable, Identifiable, Equatable {
         Settings.shared.cleanArabicText ? name.removingArabicDiacriticsAndSigns : name
     }
 
-    /// The English meaning drawn under or beside the name ("The Cow"), or nil in an Arabic interface,
-    /// where the Arabic name already says it.
+    /// The meaning drawn under or beside the name ("The Cow"), or nil in an Arabic interface, where the
+    /// Arabic name already says it.
     var displayMeaning: String? {
-        AppLanguage.isArabicScript ? nil : nameEnglish
+        AppLanguage.isArabicScript ? nil : localizedMeaning
+    }
+
+    /// The meaning in the interface's language ("The Cow", "Sapi Betina", "İnek"): one catalog key per
+    /// surah, `surah.meaning.<id>`, whose English is `nameEnglish` (2026-11-19, for the left-to-right
+    /// languages after English). DISPLAY only: search, the on-device model, the English share cards and
+    /// stored records keep `nameEnglish`.
+    var localizedMeaning: String {
+        guard !AppLanguage.isEnglish else { return nameEnglish }
+        return Bundle.main.localizedString(forKey: "surah.meaning.\(id)", value: nameEnglish, table: nil)
     }
 
     /// `displayName` for a surah known only by its number (a stored record), falling back to the
@@ -5145,6 +5154,9 @@ final class QuranData: ObservableObject {
                 settings.cleanSearch(String(surah.id)),
                 settings.cleanSearch(surah.idArabic)
             ] + surah.normalizedSearchNames.map { settings.cleanSearch($0) }
+                // The meaning the list shows outside English ("Sapi Betina", "İnek", "Корова") finds
+                // the surah too. English adds nothing: its meaning is `nameEnglish`, already above.
+                + (AppLanguage.isEnglish ? [] : [settings.cleanSearch(surah.localizedMeaning)])
 
             // The space-joined blob is UNCHANGED: it is what the ordinary substring search reads,
             // and its spaces are exactly what keep one name from running into the next.

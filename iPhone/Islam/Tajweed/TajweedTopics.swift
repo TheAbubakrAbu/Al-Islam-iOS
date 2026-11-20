@@ -475,7 +475,7 @@ struct TajweedHeavyLightView: View {
                     TajweedWordCard(String(localized: "Each letter its own weight"), words: [
                         TajweedWord("خَلَقَ", "kha-la-qa", note: String(localized: "light laam between two heavy letters")),
                         TajweedWord("أَصۡحَـٰب", "as-hab", note: String(localized: "light haa after a heavy saad")),
-                        TajweedWord("ٱلۡمُسۡتَقِيم", "al-mustaqim", note: String(localized: "light seen, then heavy taa and qaaf")),
+                        TajweedWord("ٱلۡمُسۡتَقِيم", "al-mustaqim", note: String(localized: "light seen and taa, then a heavy qaaf")),
                     ])
                 }
 
