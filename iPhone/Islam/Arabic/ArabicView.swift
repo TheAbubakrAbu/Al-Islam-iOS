@@ -389,7 +389,7 @@ struct ArabicView: View {
             .foregroundColor(settings.accentColor.color)
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentSurface(clear: true, rectangle: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -736,8 +736,10 @@ struct ArabicView: View {
         .onChange(of: settings.useFontArabic) { _ in settings.hapticFeedback() }
         #else
         IslamArabicFontPicker()
-            // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
-            .conditionalGlassEffect(interactive: false)
+            // A content surface since 2026-11-22, so no glass here. `interactive: false` stays for the one
+            // place a surface is glass (the Adhan tab's sky): interactive Liquid Glass steals per-segment taps
+            // on real iOS 26 hardware.
+            .contentSurface(interactive: false)
         #endif
     }
 
@@ -1144,7 +1146,7 @@ struct ArabicView: View {
             .contentShape(Rectangle())
             // The same clear glass as the letter tiles under it: a flat accent wash made the shelf
             // read as foreign to the page (Abu, 2026-10-20: "why they look so different").
-            .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
+            .contentSurface(clear: true, rectangle: true, inRow: true)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
@@ -1186,7 +1188,7 @@ struct ArabicView: View {
             }
             .padding(.vertical, 8)
             .padding(.horizontal, 10)
-            .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
+            .contentSurface(clear: true, rectangle: true, inRow: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -1288,7 +1290,7 @@ struct ArabicView: View {
                     .font(.caption2.weight(.bold))
                     .foregroundColor(settings.accentColor.color)
                     .frame(width: SectionPillHeader.pillHeight, height: SectionPillHeader.pillHeight)
-                    .conditionalGlassEffect(circle: true)
+                    .contentSurface(circle: true)
                     .onTapGesture {
                         settings.hapticFeedback()
                         openDoor { door = .family(family) }

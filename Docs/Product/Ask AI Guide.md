@@ -13,6 +13,11 @@ verbatim, the Arabic where there is one, and a footer saying where it comes from
 translation; collection, compiler, chapter, narrator and grade; tafsir author; article; dua reference;
 setting path).
 
+Since 2026-11-22 the verses and hadiths that lead a turn are not read alone: each carries NOTES, the
+app's own data on that same verse or hadith (its tafsir, the other translation, the readings that
+differ in it; the hadith's explanation and the other collections that record it). See "Depth" below.
+Every visit to the chat opens a new conversation, and the last two are kept under History.
+
 Runs on the on-device model (iOS 26 with Apple Intelligence). Private Cloud Compute (iOS 27, 32k
 context) is wired but off: see "Private Cloud Compute" below.
 
@@ -21,12 +26,13 @@ context) is wired but off: see "Private Cloud Compute" below.
 | File | Owns |
 | --- | --- |
 | `AskAISources.swift` | `AskAISource` (kind, reference, title, verbatim text, Arabic, transliteration, provenance facts, aliases, subject flag) and `AskAISourceFactory`, which builds one from an ayah, hadith, tafsir entry, surah background, article section, Name of Allah, dua (app collections and Hisn al-Muslim), tip, settings entry, or today's prayer times. `promptLine` is what the model reads. `clip` cuts at a sentence end. |
+| `AskAIDepth.swift` | `AskAISourceNote` (kind, whose it is, the clipped English, the references it names; `promptLabel`, `promptLine`, `displayLabel`, `quotedAttribution`) and `AskAIDepth.attach`, which gives the best-ranked verses and hadiths of a turn their notes within `Budget.noteCharacters`: the subject's first, then round by round. `speaksToQuestion` gates commentary on a source the question did not name; `readingsText` turns the qiraat table into sentences. See "Depth". |
 | `AskAIIntent.swift` | `AskAIIntent` (greeting, thanks, farewell, capabilities, smallTalk, sourceQuestion, recap, crisis, appHelp, prayerTimes, reference, scripture, hadith, define, howTo, ruling, story, dua, general), each with `retrieves`, token cap, temperature and a task line. `AskAIQuestion.analyze` classifies, detects follow-ups, extracts content words (ruling words such as "haram" steer the intent but never the search), expands synonyms (`AskAILexicon`, English and Arabic terms both ways; `canonicalTopic` gives the head a chip names a topic by) and adds phrase hints ("how much" searches as amount, rate, nisab). |
 | `AskAICrisis.swift` | `AskAICrisis`: `isCrisis` (a first-person expression of suicidal intent or self-harm: one English regex over the folded text, and one Arabic and Urdu regex over the same text with the hamza forms folded to the bare letters, since `fold` keeps them), `mentionsSelfHarm` (a question ABOUT it, in the three languages), the reply the app writes itself (translated to Arabic and Urdu in the catalog), `helpLine(regionCode:)` (988 in the US and Canada, Samaritans in the UK and Ireland, Lifeline in Australia, 1737 in New Zealand, Tele-MANAS in India, findahelpline.com elsewhere; digits follow the locale), `helpLineAction(regionCode:)` (the same as a `tel:` or web link with a button label), its two chips (English, like every chip; the Quran one only with `HAS_QURAN`) and its sources (94:5, the Hisn dua for anxiety and sorrow). |
 | `AskAIRetrieval.swift` | `AskAIRetriever.retrieve`: the lanes (subject, surahName, carried, prayer, tips, settings, articles, keyEvidence, quranSemantic, quranKeyword, quranTopics, hadithSemantic, hadithRanked, hadithTopics, names, duas), reciprocal-rank fusion with per-intent weights, a 60% per-family diversity cap, subjects first. A how-to swaps in the article's step section; a follow-up also searches the sections of the article the previous answer cited; a Name is retrieved (`exactNames`) or made the subject (`typedNames`) only when typed with its article ("as-salam", "al wadood", "assalam") or beside a Names cue (name, names, husna, asmaul, attribute: "the name wali", "is aziz a good name"), never as a bare English word (spelling-folded, "mother" was Al-Musawwir and "money" Al-Mani), and a Name-only question skips the hadith lanes. `duaTopicWords()` is the set of topics the app has a dua for, for the chips. Hadith text blocks are inflated off the main actor before their sources are built; the dua catalogues are folded once. Non-subject sources carry `focusTerms`, so a long one is clipped around the sentence that matched. `prewarm()` readies the indexes on appear. `keyEvidence` (2026-11-16, the smallest version of the review's rec 10) maps a lexicon canonical topic to the verses (optionally with Ibn Kathir on them) and hadiths a scholar opens first, weighted 8 so they lead every turn on that topic; it holds only "music" so far (Bukhari 5590, 31:6 with Ibn Kathir, Ibn Majah 4020, Bukhari 952), because no search lane ever found 5590 on its own. Add a topic only with sources checked in the app's own text. |
 | `AskAIEngine.swift` | `AskAIProfile` (per-engine budgets), `AskAIEngine` (session creation, streaming with the repetition cut, error classification for both error families, the cloud offer gate), `AskAIPrompt` (the instructions, the prompt builder, the clipped history, the reference task by subject kind). |
 | `AskAIText.swift` | Hygiene (echo labels, markdown, loops, trailing reference lists, copied source lines, em dashes, sentence capitalization with the proper nouns and surah names restored), citation markers (`normalizeMarkers`, `citedSources` by number then by reference or alias), `policeCitations` (recalled parenthetical references), `policeQuotations` (quotes of five or more words not in any source; an elided quote is verified piece by piece in one source), `EchoGuard` (paragraphs that repeat an earlier answer), `attributedAnswer` (markers as raised accent numerals), `shareText`, `suggestions`. |
-| `AskAIConversation.swift` | `AskAIConversation.shared`: the messages, ask/cancel/reset/retryLast, the crisis short circuit, the retry policy (leaner on overflow; a guardrail decline is shown as one, with the sources, and never re-asked from general knowledge; on-device fallback when the cloud fails before its first word), stream coalescing at 0.1 s, persistence in Documents/askai-conversation.json (see "Persistence" below), the `-askAILog` writer. |
+| `AskAIConversation.swift` | `AskAIConversation.shared`: the messages, ask/cancel/reset/retryLast, the crisis short circuit, the retry policy (leaner on overflow; a guardrail decline is shown as one, with the sources, and never re-asked from general knowledge; on-device fallback when the cloud fails before its first word), stream coalescing at 0.1 s, persistence in Documents/askai-conversation.json (see "Persistence" below), the `-askAILog` writer. Since 2026-11-22 also History: `beginVisit` (a visit opens a new conversation), `startNewChat`, `openRecent`, `deleteRecent`, `recentChats` (the last two, `SavedChat`), `filing` (the pure rule the tests pin). |
 | `AskAIChat.swift` | `AskAIChatView`, `AskAIChatSheet(initialQuestion:)` (the entry-point signature every search screen uses), the welcome, the answer card, the source card, the composer, `AskAISourceDestination` (what a card opens). |
 | `OnDeviceAsk.swift` | The summarize sheets' model access, `isAvailable`, `supportsArabic`, `repetitionCutoff`. No chat code any more. |
 
@@ -78,8 +84,12 @@ context) is wired but off: see "Private Cloud Compute" below.
    `AskAIRetriever.retrieve` under the engine's budget (on device: 8 sources of 500 characters,
    subjects 1,400; 12 of 600 once `SystemLanguageModel.contextSize` reports 8,192 or more).
    `AskAIPrompt.fit` estimates the window at 3.4 characters a token with the instructions' real
-   length, then (iOS 26.4+) measures the built prompt with the model's own `tokenCount` and drops
-   the lowest-ranked source until it fits; the RETRIEVAL log line ends `window=4096 instructions=895`.
+   length (charging each source what it will actually send, not its ceiling), and where the model's
+   own `tokenCount` exists (iOS 26.4+) measures the built prompt from the WHOLE list instead and
+   trims until it fits; the RETRIEVAL log line ends `window=4096 instructions=1010`. What goes
+   first is in "Depth": a note before a source.
+   After the sources are chosen, `AskAIDepth.attach` gives the leading verses and hadiths their
+   notes; the log's NOTES line lists them per source with their lengths.
 3. `AskAIPrompt.build` writes SOURCES, the task line and the question. The earlier turns
    ("context only; never repeat") go in ONLY for a follow-up, a thanks, a goodbye or a recap
    (`sendsHistory`): sent on every turn, the hell answer leaked into the suicide turn and the socks
@@ -107,6 +117,118 @@ context) is wired but off: see "Private Cloud Compute" below.
    "What is the opposite of mahr?") and a misread follow-up carried "go back sleep after fajr" into
    a question about hair dye.
 
+## Depth: what a verse or a hadith is read with (2026-11-22)
+
+Abu: "whenever ... it's quoting an ayah or a Hadith look at different riwayaat and tafsir and
+translations and explanations to get an all encompassing answer."
+
+**What is attached** (`AskAIDepth.swift`), every piece the app's own data:
+
+| Source | Notes, in the order they are handed out |
+| --- | --- |
+| A verse | Tafsir Ibn Kathir on it (skipped when that entry is a source of its own, as for the subject); the other translation (`textEnglishMustafa`, "Clear Quran (Mustafa Khattab)"); how the readings differ, only while "Show Riwayah / Qiraah" is on (`QiraatVariantsStore`: each way it is read, transliterated, what it means, who reads it so, the reference's note); then Maarif Ul Quran and Tazkirul Quran as the window grows (the subject gets Maarif on the 4k window too). |
+| A hadith | The Hadith Encyclopedia's explanation (the row's own Explanation page, `HadithExplanationStore`); where else it is recorded (`SimilarHadithsStore`: the same text first, then similar wording from score 60, one narration a collection, the six books first); for the subject or a larger window, how the closest other collection words it, and what is drawn from it. |
+
+**Who gets them.** The source the question names (always, everything it has), then the first
+`notedSources` verses and hadiths by rank (4 on the 4k window). A retrieved source is read in depth
+only when it is ON the question: its text, its other translation or its commentary holds one of
+the question's words (`speaksToQuestion`). The ranking puts unrelated verses near the top often
+enough that their tafsir was five hundred characters of something else (2:213 and 90:14 led "what
+does the Quran say about backbiting").
+
+**The budget.** `noteCharacters` a turn (2,000 on the 4k window, 4,800 from 8k), handed out by
+importance: the subject's notes, then every chosen source's first note, then every second one.
+
+**What gives way** (`AskAIPrompt.trim`), in this order: a note on a source the question did not
+name (the lowest-ranked source's last note first); then the lowest-ranked sources down to
+`noteFloor` (5 of 8) while the subject still has notes; then the subject's notes; then sources
+again, never below two. A note never costs a retrieved source its place: the first build let the
+top three sources' notes push out sources 6 to 8, and the replay lost Sahih Muslim 2589 (the hadith
+that defines backbiting) and Tirmidhi 2884 that way.
+
+**In the prompt** a note is a line under its source: `   With [2], the tafsir Ibn Kathir on this
+verse (the commentator's words, not the Quran's): ...`. It is cited by the source's number.
+Instruction rule 7 says what the lines are. A wording note (the other translation, another
+collection's wording) goes in quotation marks; commentary does not.
+
+**Guards.** The model put the Encyclopedia's explanation of Sahih Muslim 2564a in quotation marks
+after "He also explained this as". Three things answer that: the commentary labels say whose words
+they are not; rule 7 says a tafsir or an explanation is never the words of Allah or of the Prophet;
+and `policeQuotations` follows any quotation that is a commentary note's wording with where it is
+from ("(from the Hadith Encyclopedia's explanation, not the hadith itself)"). A paraphrase cannot
+be caught that way. `policeCitations` accepts a reference a note names (`AskAISourceNote.references`),
+`droppingSourceEchoes` drops a copied note line, and `normalizeMarkers(sources:)` turns a
+verse-shaped bracket ("[2:83]", "[3:14]", seen once the prompt carried note lines) into the marker
+of the source it means.
+
+**On screen** a source card with notes names them on one line (CLEAR QURAN (MUSTAFA KHATTAB) •
+TAFSIR: IBN KATHIR • OTHER QIRAAT) and shows each, exactly as the model was given it, under "Show
+the whole text". The welcome's HOW IT WORKS has a row for it (`AskAICopy.readWith`, or
+`readWithoutReadings` while the readings are not shown).
+
+**The readings follow "Show Riwayah / Qiraah"** (Abu, 2026-11-22, the same day: "only analyze qiraat
+if show qiraat is on"). `AskAIDepth.readsQiraat` is `Settings.showQiraahDetails`, the Quran
+settings switch (off by default) that shows the readings everywhere else in the app: the ayah
+sheet's OTHER QIRAAT, the Qiraat Explorer. Off, a turn is given nothing about the readings:
+
+- no verse carries a readings note (`attach` reads the setting once a turn; every turn rebuilds
+  its notes, so a follow-up after the switch is turned off drops them too);
+- rule 7 of the instructions does not name them (`AskAIPrompt.instructions(readsQiraat:)`; the
+  two texts differ by those words only, and the window is measured with the longer one);
+- the verse task asks for the readings paragraph only when the subject carries a readings note,
+  whatever the setting;
+- the welcome's row does not promise them.
+
+A conversation saved while the switch was on keeps what it was read with: its cards still list
+OTHER QIRAAT, since the answer above them speaks of the readings. Qiraat articles stay searchable
+either way, as they are in the Islam tab.
+
+**Also fixed on the way.** `AskAIRetriever.hadithReference(in:)`: a hadith named inside a sentence
+("Explain Bukhari 1") is now the subject, and the question a `reference` (`AskAIQuestion.classify`
+reads the same finder), so it gets the reference task and lane weights. The parser reads a whole
+search field, so the question is tried whole and then as the few words that end at each number;
+those words must name exactly one collection ("pray 5 times" names none). Before, that question
+opened on Bukhari 4485 with Bukhari 1 second of eight guesses and tied it to 75:16; now it names the
+narrator, the parallels in Abu Dawud 2201, an-Nasa'i 75 and Ahmad 168, and the Encyclopedia's
+explanation as the Encyclopedia's.
+
+**The readings took three tries.** "What does 1:4 mean?" was answered without a word on Owner and
+King while the note read "X, “...”, is read by A; Y, “...”, is read by B" with the readers in the
+table's scholarly spelling. What worked: one sentence a reading, who first ("Asim, al-Kisai, Yaqub,
+Khalaf read māliki yawmi d-dīni, meaning “Owner of the Day of Judgement”"), the readers' names in
+plain letters (the readings keep their marks: māliki and maliki differ by one), and a task line
+that asks for a short paragraph on the readings when the line is there.
+
+**Measured (iOS 27 simulator, 4k window, 2026-11-22).** Instructions 1,026 tokens (888 before rule 7).
+Every one of the 42 replayed turns kept all its sources. Medians, before to after: the depth set
+first token 2.4 s to 2.9 s and total 6.5 s to 9.2 s; the hard set 2.0 to 3.0 and 6.9 to 9.7; the
+everyday set 2.1 to 2.6 and 6.1 to 8.3 (the Mac was under heavy load from other sessions during the
+after runs, so read the size of the gap loosely; the prompts are longer and so are the answers).
+Failures 0, no "scholars generally"; the extra declines the scorer counts are honest ones the old
+runs worded differently ("You do not find Istikhara in the sources"). The gains are where the
+sources were right ("Explain Ayat al-Kursi" cites Ibn Kathir and Maarif, "What does 1:4 mean?"
+gives both readings, "Explain Bukhari 1" is about Bukhari 1), and a wrong retrieval is still a
+wrong answer: "What did the Prophet say about kindness to parents?" still opens on the slander
+story. Logs: `Scripts/qa/askai/after-2026-11-22/` (`depth-before.txt` is the same eight questions
+on the build before this work; `depth.txt` is the final build, the other three the build just
+before the reference-intent refinement). Questions: `questions-depth.txt`.
+
+## History: a new conversation each visit (2026-11-22)
+
+Abu: "When I go to ask ai always make a new chat but maybe show the last 2 chats as history."
+
+- `AskAIChatView.onAppear` calls `AskAIConversation.beginVisit(asking:)` once per presentation (the
+  same guard as the initial question: a popped source reader is not a visit). The open conversation
+  is set aside under History and an empty one opens. Two visits carry on instead: one that finds an
+  answer still streaming, and a search sheet reopened on the query it already asked.
+- `recentChats` keeps the last two (`recentChatLimit`), newest first. The welcome lists them under
+  HISTORY (first question, relative date; hold to delete) and the menu under History. Opening one
+  makes it the conversation again, topic and all, so a follow-up works; the open one takes its place.
+- The menu: New Conversation (sets aside, no confirmation: nothing is lost but the oldest of the
+  kept), Copy Conversation, History, Delete Conversation (clears the open one for good, asks first).
+- A conversation with no question in it is never filed; one reopened and set aside again is listed
+  once (it keeps its id). "Erase Everything" clears History too.
+
 ## Headless testing
 
 Use the iOS 27 iPhone 17 Pro simulator. The iOS 26.5 runtime's model fails every generation under
@@ -125,6 +247,15 @@ the container's Documents/askai-log.txt with intent, follow-up flag, engine, ret
 lane counts, the fused ranking, the sources, the citations, the removed and flagged counts, the
 suggestions and the answer; `-askAILogPrompt` also writes the last prompt to Documents/askai-prompt.txt.
 Read the log, not the screen: it is where the fabricated references and echoed answers show.
+
+A replay has the readings (qiraat) OFF, the app's default: `run.sh` seeds the switch off so the
+run does not depend on what the simulator was left with. `SEED=showOtherQiraatReciters=1
+Scripts/qa/askai/run.sh ...` turns "Show Riwayah / Qiraah" on for the run (the script folds SEED
+into its one `-seedBool`; the app reads only the first). The `depth.txt` log of 2026-11-22 predates
+the switch and was made with the readings always read; `depth-qiraat-off.txt` and
+`depth-qiraat-on.txt` beside it are the two states after it (off: the eight depth questions, no
+readings note and not a word on the readings in any answer; on: "What does 1:4 mean?" carries the
+note and gives the Owner and King readings their paragraph).
 
 `Scripts/qa/askai/run.sh <questions.txt> <out.txt>` does the launch above for a file of questions
 (one per line) on the iOS 27 iPhone 17 Pro, waits for every turn and copies the log out;
@@ -227,10 +358,16 @@ batch (`-askAI`) and in `-askAITextProbe`:
   unknown intent or engine reads as nil, an unreadable message is dropped. A file that does not
   decode at all is moved aside as `askai-conversation.json.corrupt-<time>` (`UserDataRescue`,
   Globals.swift) and never saved over.
-- Saves run on one serial queue, in order; "New Conversation" asks first, stops an answer without
-  saving it, then saves once (two racing saves brought the old transcript back on the next launch).
-- The most recent 40 messages are kept, and a saved source's text is clipped to 2,400 characters
-  (memory keeps the full text for the cards of the current session).
+- Saves run on one serial queue, in order; "New Conversation" and "Delete Conversation" stop an
+  answer without saving it, then save once (two racing saves brought the old transcript back on the
+  next launch).
+- The most recent 40 messages of each conversation are kept, and a saved source's text is clipped
+  to 2,400 characters (memory keeps the full text for the cards of the current session). Notes are
+  saved as they are (already clipped to what the model read); a note kind a later build adds drops
+  that source's notes, never the source.
+- The file holds the open conversation (`messages`, `topic`, `id`, `updated`) and `recent`, the
+  conversations before it; a file saved before History existed reads as an open conversation with
+  no history. It is removed only when both are empty.
 
 ## The sibling apps (Al-Quran, Al-Adhan)
 

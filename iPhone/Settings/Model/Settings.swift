@@ -4364,6 +4364,14 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// backdrop pass; on the reduced tier the classic fallback is a flat fill, the cheapest thing there is.
     @Setting("classicLookInLowPower") var classicLookInLowPower: Bool = true
 
+    /// Liquid Glass on the content as well: the tiles, cards, banners, count and number pills, row
+    /// buttons and section header buttons that `contentSurface(...)` draws in the Classic Look's fill
+    /// since 2026-11-22 go back to glass, the look before that day. Off by default (Abu, 2026-11-22:
+    /// "have an option ... to have liquid glass everywhere like the old stuff ... but default off").
+    /// It only matters while Liquid Glass is on, and a hot or 3 GB-class phone still draws the shapes
+    /// inside list rows in the fill (`AppearanceEnvironment.rowLiquidGlass`), as it did before.
+    @Setting("liquidGlassEverywhere") var liquidGlassEverywhere: Bool = false
+
     /// The soft accent-colored radial wash at the top of every list (see `washedListBackground`).
     @Setting("showAccentGlow") var showAccentGlow: Bool = true
 

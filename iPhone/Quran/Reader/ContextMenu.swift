@@ -1022,7 +1022,7 @@ struct AyahContextMenuModifier<Attachment: MenuAttachment>: ViewModifier {
                             // hugging the 19pt glyph, the button sat 9pt shorter than the pill beside
                             // it). The glyph keeps the size Abu picked on 2026-11-01.
                             .frame(width: 28, height: 28)
-                            .conditionalGlassEffect(inRow: true)
+                            .contentSurface(inRow: true)
                             .contentShape(Rectangle())
                     }
                     // Lands in the 28pt slot the compact search row reserves at its header's

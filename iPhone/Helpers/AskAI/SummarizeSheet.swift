@@ -368,7 +368,7 @@ struct SummarizeSheet: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .conditionalGlassEffect(clear: true, rectangle: true)
+        .contentSurface(clear: true, rectangle: true)
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(settings.accentColor.color.opacity(0.18), lineWidth: 1)
@@ -422,7 +422,7 @@ struct SummarizeSheet: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentSurface(clear: true, rectangle: true)
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .stroke(settings.accentColor.color.opacity(0.18), lineWidth: 1)

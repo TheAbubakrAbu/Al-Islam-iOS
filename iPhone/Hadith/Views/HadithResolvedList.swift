@@ -1,21 +1,30 @@
 #if os(iOS)
 import SwiftUI
 
-// The list the hadith study sheets share (Abu, 2026-10-27): the similar narrations of one hadith, the
-// narrations carried by the same chain, and every narration naming a narrator are all lists of rows
-// resolved from their books, read in place, sorted and grouped by match, book or grade from the
-// toolbar menu, narrowed to chosen books, each row bookmarkable and openable in its book.
+// The list the hadith study screens share (Abu, 2026-10-27): the similar narrations of one hadith, the
+// narrations carried by the same chain, a road of a tree, and every narration naming a narrator are
+// all lists of rows read in place from their books, bookmarkable and openable in the book.
+//
+// Since 2026-11-22 (Abu: "when I click on a narrator one theres a progress view that loads", "make it
+// more powerful and useful and stronger and better filtering", "instead of filtering being at the top
+// right put it at the bottom right with a search bar"):
+// - A list is ready on the frame its screen opens. An entry holds its row's place in its book and
+//   nothing of its text; the row reads its words when it is drawn, one block lookup, as the reader's
+//   rows do. Every list used to read all of its text first, behind a spinner: about a second for a
+//   narrator of six thousand narrations.
+// - What shapes it lives in `HadithListModel`: the order, the groups, the books shown, where the
+//   narrator stands in the chain, the grade, and a search of the narrations' own words. The screen
+//   that owns the list owns the model, so its header can narrow the list too (a narrator's counts
+//   are buttons).
+// - The search field sits at the foot of the screen with the options menu at its far side, the
+//   Quran and Arabic screens' bar.
 
-/// One narration resolved from its book, with everything its row draws.
+/// One narration of a list: where it stands on the shelf, and what its list decorates it with.
 struct HadithListEntry: Identifiable {
     let book: HadithCatalogBook
     /// The book's place on the shelf (`HadithCatalogBook.all`), for the book order and grouping.
     let bookOrder: Int
     let hadith: HadithBookData.Hadith
-    let text: (arabic: String, narrator: String, text: String)
-    let grades: [(name: String, grade: String)]
-    /// The grade line as the row prints it ("Sahih (Al-Albani)"); "" when the book records none.
-    let gradeLine: String
     /// The match tier, in the similar sheet; nil in the lists that have no tiers.
     let tier: SimilarHadithMatch.Tier?
     /// The match score (100 outside the similar sheet), for the closest-match order.
@@ -23,10 +32,33 @@ struct HadithListEntry: Identifiable {
     /// The row's badge ("82% similar", "Same text"), and a second, quieter one ("Same English").
     let badge: String?
     let secondaryBadge: String?
-    /// What to tint in `text.arabic`, as UTF-16 ranges the pack shipped; empty for no tint.
+    /// What to tint in the row's Arabic, as UTF-16 ranges the pack shipped; empty for no tint.
     let sharedRanges: [NSRange]
+    /// A narrator's list: where he stands in this narration's chain, and the grade the pack counted
+    /// it under. Nil in the other lists.
+    let role: HadithNarratorRef.Role?
+    let category: HadithGradeCategory?
 
     var id: String { "\(book.slug)-\(hadith.idInBook)" }
+
+    /// The row's words, read from its book where they stand: one block lookup, on the row's own
+    /// draw. Never kept on the entry, so a list of thousands costs its text only as it is scrolled.
+    var text: (arabic: String, narrator: String, text: String) { hadith.allText }
+
+    var grades: [(name: String, grade: String)] { hadith.grades }
+
+    /// The grade line as the row prints it ("Sahih (Al-Albani)"); "" when the book records none.
+    var gradeLine: String { HadithGradeLine.joined(grades) }
+
+    /// The line the Grade sort and the Grade grouping file the row under: its verdicts as printed, and
+    /// "Sahih" for the two Sahihs. They carry no grade line by design, because the collections are
+    /// sahih, so their narrations never stand under "No Grade Recorded" (Abu, 2026-11-22: "when it
+    /// says no grade reported if it's sahih Bukhari or Muslim that means sahih"). The search filters
+    /// (`HadithSearchFilters.classes`) and the narrators' counts already read them so.
+    var gradeGroup: String {
+        let line = gradeLine
+        return line.isEmpty && HadithSearchFilters.sahihayn.contains(book.slug) ? String(localized: "Sahih") : line
+    }
 
     /// What a list asks for: a row by its key, with the decoration the list wants on it.
     struct Request {
@@ -37,45 +69,49 @@ struct HadithListEntry: Identifiable {
         var badge: String? = nil
         var secondaryBadge: String? = nil
         var sharedRanges: [NSRange] = []
+        var role: HadithNarratorRef.Role? = nil
+        var category: HadithGradeCategory? = nil
     }
 
-    /// Every request resolved to its row: the books opened off the main thread when they are not open
-    /// yet, then one block lookup per row for its text and grades, as the reader's rows do. A request
-    /// whose row is not on the shelf is left out.
-    static func resolve(_ requests: [Request]) async -> [HadithListEntry] {
-        var opened: [String: HadithBookData] = [:]
-        for request in requests where opened[request.slug] == nil {
-            guard let catalog = HadithCatalogBook.bySlug[request.slug] else { continue }
-            if let data = await HadithStore.shared.openOffMain(catalog) { opened[request.slug] = data }
-        }
+    /// Every request as its entry, at once: the shelf's books are open from launch
+    /// (`HadithStore.prewarmBooks`, a map and an id table each), and one that is not is opened here,
+    /// two or three milliseconds. No text is read. A request whose row is not on the shelf is left out.
+    @MainActor
+    static func make(_ requests: [Request]) -> [HadithListEntry] {
+        var books: [String: (HadithCatalogBook, HadithBookData, Int)] = [:]
+        var missing: Set<String> = []
         let order = Dictionary(HadithCatalogBook.all.enumerated().map { ($0.element.slug, $0.offset) },
                                uniquingKeysWith: { first, _ in first })
-        let books = opened
-        return await Task.detached(priority: .userInitiated) { () -> [HadithListEntry] in
-            requests.compactMap { request in
-                guard let catalog = HadithCatalogBook.bySlug[request.slug], let data = books[request.slug],
-                      let found = data.hadith(numbered: request.idInBook) else { return nil }
-                let grades = found.grades
-                return HadithListEntry(book: catalog, bookOrder: order[request.slug] ?? order.count, hadith: found,
-                                       text: found.allText, grades: grades, gradeLine: HadithGradeLine.joined(grades),
-                                       tier: request.tier, score: request.score, badge: request.badge,
-                                       secondaryBadge: request.secondaryBadge, sharedRanges: request.sharedRanges)
+        var out: [HadithListEntry] = []
+        out.reserveCapacity(requests.count)
+        for request in requests {
+            if books[request.slug] == nil, !missing.contains(request.slug) {
+                if let catalog = HadithCatalogBook.bySlug[request.slug],
+                   let data = HadithStore.shared.cachedBook(request.slug) ?? HadithStore.shared.book(catalog) {
+                    books[request.slug] = (catalog, data, order[request.slug] ?? order.count)
+                } else {
+                    missing.insert(request.slug)
+                }
             }
-        }.value
+            guard let (catalog, data, bookOrder) = books[request.slug],
+                  let found = data.hadith(numbered: request.idInBook) else { continue }
+            out.append(HadithListEntry(book: catalog, bookOrder: bookOrder, hadith: found, tier: request.tier,
+                                       score: request.score, badge: request.badge, secondaryBadge: request.secondaryBadge,
+                                       sharedRanges: request.sharedRanges, role: request.role, category: request.category))
+        }
+        return out
     }
 }
 
-/// The list of resolved rows under a sheet's own sections, with the toolbar options menu that orders,
-/// groups and narrows it. `tiered` lists (the similar sheet's) offer the match order and grouping too.
-struct HadithResolvedList<Header: View>: View {
-    private let settings = Settings.shared
-    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
-    @ObservedObject private var hadithSettings = HadithSettings.shared
-    @ObservedObject private var systemSettings = SystemSettings.shared
+// MARK: - The model
 
+/// What shapes one list, and the list as shaped: the screen that shows the list makes one, hands it
+/// to `HadithResolvedList`, and may narrow the list from its own header through it.
+@MainActor
+final class HadithListModel: ObservableObject {
     /// The order within a group: the closest match first (the pack's own order), the shelf's order, or
-    /// the grade line alphabetically. The verdicts are never ranked (see `HadithBookData.Hadith.grades`):
-    /// the grade sort only keeps equal verdicts together.
+    /// by grade. The verdicts are never ranked (see `HadithBookData.Hadith.grades`): the grade sort only
+    /// keeps equal verdicts together.
     enum Sort: String, CaseIterable, Identifiable {
         case match, book, grade
 
@@ -91,7 +127,7 @@ struct HadithResolvedList<Header: View>: View {
     }
 
     enum Grouping: String, CaseIterable, Identifiable {
-        case match, book, grade, none
+        case match, book, grade, place, none
 
         var id: String { rawValue }
 
@@ -100,78 +136,123 @@ struct HadithResolvedList<Header: View>: View {
             case .match: return String(localized: "By Match")
             case .book: return String(localized: "By Book")
             case .grade: return String(localized: "By Grade")
+            case .place: return String(localized: "By Place in the Chain")
             case .none: return String(localized: "No Groups")
             }
         }
     }
 
-    private struct Bucket: Identifiable {
+    struct Bucket: Identifiable {
         let id: String
         let title: String
         let rows: [HadithListEntry]
     }
 
     let entries: [HadithListEntry]
-    /// The similar sheet's list: match order and grouping on offer, and the default.
-    var tiered = false
-    /// What an empty list says.
-    let emptyText: String
-    /// The last section's footnote: where the list came from.
-    let footnote: String
-    @ViewBuilder let header: () -> Header
+    /// The similar sheet's list: the match order and grouping are on offer, and the default.
+    let tiered: Bool
+    /// A narrator's list: its rows know their place in the chain and their grade, so the list can
+    /// be narrowed and grouped by both.
+    let narrator: Bool
 
-    @State private var sort: Sort?
-    @State private var grouping: Grouping?
+    @Published var sort: Sort { didSet { if sort != oldValue { rebuild() } } }
+    @Published var grouping: Grouping { didSet { if grouping != oldValue { rebuild() } } }
     /// The books taken out through the Books menu; empty shows every book.
-    @State private var hiddenBooks: Set<String> = []
+    @Published var hiddenBooks: Set<String> = [] { didSet { if hiddenBooks != oldValue { rebuild() } } }
+    /// A narrator's list held to one place in the chain; nil shows every place.
+    @Published var role: HadithNarratorRef.Role? { didSet { if role != oldValue { rebuild() } } }
+    /// A narrator's list held to one grade; nil shows every grade.
+    @Published var grade: HadithGradeCategory? { didSet { if grade != oldValue { rebuild() } } }
+    /// The search field's text: the list is held to the narrations whose words carry every word of it.
+    @Published var query = "" { didSet { if query != oldValue { search() } } }
 
-    private var currentSort: Sort { sort ?? (tiered ? .match : .book) }
-    private var currentGrouping: Grouping { grouping ?? (tiered ? .match : .book) }
+    /// The list as shaped, a section a group.
+    @Published private(set) var sections: [Bucket] = []
+    /// How many rows the sections hold between them.
+    @Published private(set) var shown = 0
+    /// A search of the narrations' words is under way (a long list's takes a moment).
+    @Published private(set) var searching = false
 
-    var body: some View {
-        let visible = entries.filter { !hiddenBooks.contains($0.book.slug) }
-        let sections = grouped(sorted(visible))
-        List {
-            Group {
-                header()
+    /// The rows the search matched, by `HadithListEntry.id`; nil while nothing is searched for.
+    private var matched: Set<String>?
+    /// The query `matched` answers.
+    private(set) var matchedQuery = ""
+    private var searchTask: Task<Void, Never>?
 
-                if entries.isEmpty {
-                    Text(emptyText)
-                        .foregroundStyle(.secondary)
-                } else if visible.isEmpty {
-                    Text("Every book is hidden. Show one from the Books menu.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
-                        Section {
-                            ForEach(section.rows) { row in
-                                HadithListRow(entry: row)
-                            }
-                        } header: {
-                            // The app's section header: capitals and the count in its pill (it was
-                            // a bare number at the far edge of a mixed-case title).
-                            if !section.title.isEmpty {
-                                SectionPillHeader(title: section.title.localizedUppercase, count: section.rows.count)
-                            }
-                        } footer: {
-                            if index == sections.count - 1 {
-                                Text(footnote)
-                                    .font(.caption2)
-                            }
-                        }
-                    }
-                }
-            }
-            .themedListRowBackground()
+    init(entries: [HadithListEntry], tiered: Bool = false, narrator: Bool = false) {
+        self.entries = entries
+        self.tiered = tiered
+        self.narrator = narrator
+        sort = tiered ? .match : .book
+        grouping = tiered ? .match : .book
+        rebuild()
+    }
+
+    /// The model of a list of rows by their keys (`HadithListEntry.make`).
+    convenience init(requests: [HadithListEntry.Request], tiered: Bool = false, narrator: Bool = false) {
+        self.init(entries: HadithListEntry.make(requests), tiered: tiered, narrator: narrator)
+    }
+
+    var sorts: [Sort] { Sort.allCases.filter { tiered || $0 != .match } }
+
+    var groupings: [Grouping] {
+        Grouping.allCases.filter { ($0 != .match || tiered) && ($0 != .place || narrator) }
+    }
+
+    /// Whether anything narrows the list: a hidden book, a place, a grade, a search.
+    var isNarrowed: Bool {
+        !hiddenBooks.isEmpty || role != nil || grade != nil || matched != nil
+    }
+
+    /// Everything shown again: the books, every place and grade, the search field emptied.
+    func reset() {
+        hiddenBooks = []
+        role = nil
+        grade = nil
+        if !query.isEmpty { query = "" }
+    }
+
+    /// The books the rows come from, in the shelf's order, with how many rows each has here.
+    private(set) lazy var books: [(book: HadithCatalogBook, count: Int)] = {
+        var counts: [String: Int] = [:]
+        var found: [String: (HadithCatalogBook, Int)] = [:]
+        for row in entries {
+            counts[row.book.slug, default: 0] += 1
+            found[row.book.slug] = (row.book, row.bookOrder)
         }
-        .applyConditionalListStyle()
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) { optionsMenu }
-        }
+        return found.values
+            .sorted { $0.1 < $1.1 }
+            .map { (book: $0.0, count: counts[$0.0.slug] ?? 0) }
+    }()
+
+    /// The four places a narrator can stand in a chain, from the Prophet ﷺ down to the compiler,
+    /// with what the page calls each: its tiles, its badges, the groups and the menu.
+    static var places: [(role: HadithNarratorRef.Role, title: String)] {
+        [(.top, String(localized: "From the Prophet ﷺ")),
+         (.end, String(localized: "Top of the Chain")),
+         (.link, String(localized: "Middle Links")),
+         (.teacher, String(localized: "Taught the compiler"))]
+    }
+
+    /// How many of a narrator's rows stand at a place in the chain, for the menu's counts.
+    func count(role: HadithNarratorRef.Role) -> Int { entries.reduce(0) { $0 + ($1.role == role ? 1 : 0) } }
+
+    func count(grade: HadithGradeCategory) -> Int { entries.reduce(0) { $0 + ($1.category == grade ? 1 : 0) } }
+
+    // MARK: Shaping
+
+    private func rebuild() {
+        var rows = entries
+        if !hiddenBooks.isEmpty { rows = rows.filter { !hiddenBooks.contains($0.book.slug) } }
+        if let role { rows = rows.filter { $0.role == role } }
+        if let grade { rows = rows.filter { $0.category == grade } }
+        if let matched { rows = rows.filter { matched.contains($0.id) } }
+        shown = rows.count
+        sections = grouped(sorted(rows))
     }
 
     private func sorted(_ rows: [HadithListEntry]) -> [HadithListEntry] {
-        switch currentSort {
+        switch sort {
         case .match:
             return rows.sorted {
                 ($0.tier?.rawValue ?? 0, -$0.score, $0.bookOrder, $0.hadith.idInBook)
@@ -180,17 +261,27 @@ struct HadithResolvedList<Header: View>: View {
         case .book:
             return rows.sorted { ($0.bookOrder, $0.hadith.idInBook) < ($1.bookOrder, $1.hadith.idInBook) }
         case .grade:
-            // Graded rows first, alphabetically by their line; within a line, the shelf's order.
-            return rows.sorted {
-                ($0.gradeLine.isEmpty ? 1 : 0, $0.gradeLine, $0.tier?.rawValue ?? 0, -$0.score, $0.bookOrder, $0.hadith.idInBook)
-                    < ($1.gradeLine.isEmpty ? 1 : 0, $1.gradeLine, $1.tier?.rawValue ?? 0, -$1.score, $1.bookOrder, $1.hadith.idInBook)
+            if narrator {
+                // The pack's own counts: sahih, hasan, da'if, then the rest, in the shelf's order within.
+                return rows.sorted {
+                    ($0.category?.rawValue ?? 9, $0.bookOrder, $0.hadith.idInBook)
+                        < ($1.category?.rawValue ?? 9, $1.bookOrder, $1.hadith.idInBook)
+                }
             }
+            // Graded rows first, alphabetically by their line (the two Sahihs under "Sahih"); within a
+            // line, the shelf's order. The lines are read once, here.
+            let keyed = rows.map { (row: $0, line: $0.gradeGroup) }
+            return keyed.sorted {
+                ($0.line.isEmpty ? 1 : 0, $0.line, $0.row.tier?.rawValue ?? 0, -$0.row.score, $0.row.bookOrder, $0.row.hadith.idInBook)
+                    < ($1.line.isEmpty ? 1 : 0, $1.line, $1.row.tier?.rawValue ?? 0, -$1.row.score, $1.row.bookOrder, $1.row.hadith.idInBook)
+            }.map(\.row)
         }
     }
 
-    /// The sorted rows cut into sections (buckets); each keeps the rows' order.
+    /// The sorted rows cut into sections; each keeps the rows' order.
     private func grouped(_ rows: [HadithListEntry]) -> [Bucket] {
-        switch currentGrouping {
+        guard !rows.isEmpty else { return [] }
+        switch grouping {
         case .none:
             return [Bucket(id: "all", title: "", rows: rows)]
         case .match:
@@ -199,27 +290,35 @@ struct HadithResolvedList<Header: View>: View {
                 return members.isEmpty ? nil : Bucket(id: "tier-\(tier.rawValue)", title: Self.title(for: tier), rows: members)
             }
         case .book:
-            var order: [String] = []
             var byBook: [String: [HadithListEntry]] = [:]
-            for row in rows {
-                if byBook[row.book.slug] == nil { order.append(row.book.slug) }
-                byBook[row.book.slug, default: []].append(row)
-            }
-            return order
-                .sorted { (byBook[$0]?.first?.bookOrder ?? 0) < (byBook[$1]?.first?.bookOrder ?? 0) }
-                .compactMap { slug in
-                    guard let members = byBook[slug], let first = members.first else { return nil }
-                    return Bucket(id: "book-\(slug)", title: first.book.displayTitle, rows: members)
+            for row in rows { byBook[row.book.slug, default: []].append(row) }
+            return byBook.values
+                .sorted { ($0.first?.bookOrder ?? 0) < ($1.first?.bookOrder ?? 0) }
+                .compactMap { members in
+                    members.first.map { Bucket(id: "book-\($0.book.slug)", title: $0.book.displayTitle, rows: members) }
                 }
+        case .place:
+            // From the Prophet ﷺ down to the compiler: the chain's own order.
+            return Self.places.compactMap { place in
+                let members = rows.filter { $0.role == place.role }
+                return members.isEmpty ? nil : Bucket(id: "place-\(place.role.rawValue)", title: place.title, rows: members)
+            }
         case .grade:
+            if narrator {
+                return HadithGradeCategory.allCases.compactMap { category in
+                    let members = rows.filter { $0.category == category }
+                    return members.isEmpty ? nil : Bucket(id: "grade-\(category.rawValue)", title: category.title, rows: members)
+                }
+            }
             var order: [String] = []
             var byGrade: [String: [HadithListEntry]] = [:]
             for row in rows {
-                if byGrade[row.gradeLine] == nil { order.append(row.gradeLine) }
-                byGrade[row.gradeLine, default: []].append(row)
+                let line = row.gradeGroup
+                if byGrade[line] == nil { order.append(line) }
+                byGrade[line, default: []].append(row)
             }
-            // The largest groups first; the rows whose book records no grade (al-Bukhari and Muslim,
-            // by design) last.
+            // The largest groups first; the rows whose book records no grade last. Al-Bukhari's and
+            // Muslim's are not among those: they stand under "Sahih" (`gradeGroup`).
             return order
                 .sorted { a, b in
                     if a.isEmpty != b.isEmpty { return b.isEmpty }
@@ -241,15 +340,212 @@ struct HadithResolvedList<Header: View>: View {
         }
     }
 
+    // MARK: Search
+
+    /// The typed words looked for in the rows' own text, off the main thread, a beat after the last
+    /// keystroke: each word folded as the packs fold their text (`HadithFold`) and matched as bytes
+    /// in the search blocks the books ship, so nothing is decoded into Strings. A number alone finds
+    /// the narration of that number. An emptied field shows the list whole again at once.
+    private func search() {
+        searchTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            searching = false
+            matchedQuery = ""
+            if matched != nil {
+                matched = nil
+                rebuild()
+            }
+            return
+        }
+        searching = true
+        let rows = entries
+        searchTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 220_000_000)
+            guard !Task.isCancelled else { return }
+            let found = await Task.detached(priority: .userInitiated) { Self.matches(trimmed, in: rows) }.value
+            guard !Task.isCancelled, let self else { return }
+            self.matched = found
+            self.matchedQuery = trimmed
+            self.searching = false
+            self.rebuild()
+        }
+    }
+
+    nonisolated private static func matches(_ raw: String, in rows: [HadithListEntry]) -> Set<String> {
+        let words = raw.split(whereSeparator: \.isWhitespace).map { HadithFold.query(String($0)) }.filter { !$0.isEmpty }
+        let number = raw.allSatisfy(\.isNumber) ? Int(raw) : nil
+        var out: Set<String> = []
+        for (index, row) in rows.enumerated() {
+            if index % 512 == 0, Task.isCancelled { return out }
+            if let number, row.hadith.idInBook == number || HadithCatalogBook.displayNumber(row.hadith.displayNumber) == raw {
+                out.insert(row.id)
+            } else if !words.isEmpty, words.allSatisfy({ row.hadith.matches($0) }) {
+                out.insert(row.id)
+            }
+        }
+        return out
+    }
+}
+
+// MARK: - The list
+
+/// The rows of a `HadithListModel` under a screen's own sections, with the bar at the foot that
+/// searches and shapes them.
+struct HadithResolvedList<Header: View>: View {
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var hadithSettings = HadithSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
+
+    @ObservedObject var model: HadithListModel
+    /// What an empty list says.
+    let emptyText: String
+    /// The last section's footnote: where the list came from.
+    let footnote: String
+    /// The search field's prompt.
+    var prompt = String(localized: "Search these narrations")
+    @ViewBuilder let header: () -> Header
+
+    var body: some View {
+        List {
+            Group {
+                header()
+
+                if model.entries.isEmpty {
+                    Section {
+                        Text(emptyText)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    if model.isNarrowed || model.searching {
+                        Section {
+                            narrowedRow
+                        }
+                    }
+
+                    ForEach(Array(model.sections.enumerated()), id: \.element.id) { index, section in
+                        Section {
+                            ForEach(section.rows) { row in
+                                HadithListRow(entry: row, term: model.matchedQuery)
+                            }
+                        } header: {
+                            // The app's section header: capitals and the count in its pill.
+                            if !section.title.isEmpty {
+                                SectionPillHeader(title: section.title.localizedUppercase, count: section.rows.count,
+                                                  countText: section.rows.count.formatted())
+                            }
+                        } footer: {
+                            if index == model.sections.count - 1 {
+                                Text(footnote)
+                            }
+                        }
+                    }
+                }
+            }
+            .themedListRowBackground()
+        }
+        .applyConditionalListStyle()
+        .adaptiveSafeArea(edge: .bottom) {
+            VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+                HStack(spacing: 8) {
+                    SearchBar(text: $model.query, placeholder: prompt)
+
+                    optionsMenu
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, BottomBarCushion.standard)
+            .background(Color.white.opacity(0.00001))
+        }
+        #if DEBUG
+        // "-narrationsQuery <words>": the list searched for them as it appears. Headless
+        // verification only (a search field cannot be typed into from a script).
+        .onAppear {
+            let arguments = ProcessInfo.processInfo.arguments
+            if model.query.isEmpty, let index = arguments.firstIndex(of: "-narrationsQuery"), arguments.indices.contains(index + 1) {
+                model.query = arguments[index + 1]
+            }
+        }
+        #endif
+    }
+
+    /// What the list is held to, in one row: how many of its narrations are shown, and the way back
+    /// to all of them. While a search runs, that it does.
+    private var narrowedRow: some View {
+        HStack(spacing: 10) {
+            if model.searching {
+                ProgressView()
+                Text("Searching")
+                    .foregroundStyle(.secondary)
+            } else if model.shown == 0 {
+                Text(model.matchedQuery.isEmpty
+                     ? String(localized: "No narration fits these filters.")
+                     : String(localized: "No narration here carries \u{201C}\(model.matchedQuery)\u{201D}."))
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(String(localized: "Showing \(model.shown) of \(model.entries.count)"))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 8)
+
+            if model.isNarrowed {
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) { model.reset() }
+                } label: {
+                    Text("Show All")
+                }
+                .buttonStyle(.accentChip)
+            }
+        }
+        .font(.subheadline)
+    }
+
     // MARK: The options menu
 
-    /// What shapes the list, as the toolbar options menu: the order, the grouping, and the books shown.
+    /// What shapes the list, as the menu at the search field's far side: the place in the chain and
+    /// the grade (a narrator's list), the order, the grouping, and the books shown.
     private var optionsMenu: some View {
         Menu {
+            if model.narrator {
+                Section("Place in the Chain") {
+                    Picker("Place in the Chain", selection: Binding(get: { model.role }, set: { pick in
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) { model.role = pick }
+                    })) {
+                        Text("Anywhere in the Chain").tag(HadithNarratorRef.Role?.none)
+                        ForEach(HadithListModel.places.filter { model.count(role: $0.role) > 0 }, id: \.role) { place in
+                            Text(place.title).tag(Optional(place.role))
+                        }
+                    }
+                    .pickerStyle(.inline)
+                }
+
+                Section {
+                    Picker(selection: Binding(get: { model.grade }, set: { pick in
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) { model.grade = pick }
+                    })) {
+                        Text("All").tag(HadithGradeCategory?.none)
+                        ForEach(HadithGradeCategory.allCases.filter { model.count(grade: $0) > 0 }, id: \.rawValue) { category in
+                            Text(category.title).tag(Optional(category))
+                        }
+                    } label: {
+                        Label("Grade", systemImage: "checkmark.seal")
+                    }
+                    .pickerStyle(.menu)
+                }
+            }
+
             // Inline pickers under their own headers, the Ask AI menu's shape.
             Section("Sort By") {
-                Picker("Sort By", selection: Binding(get: { currentSort }, set: { sort = $0; settings.hapticFeedback() })) {
-                    ForEach(Sort.allCases.filter { tiered || $0 != .match }) { choice in
+                Picker("Sort By", selection: Binding(get: { model.sort }, set: { pick in
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) { model.sort = pick }
+                })) {
+                    ForEach(model.sorts) { choice in
                         Text(choice.title).tag(choice)
                     }
                 }
@@ -257,18 +553,21 @@ struct HadithResolvedList<Header: View>: View {
             }
 
             Section("Group") {
-                Picker("Group", selection: Binding(get: { currentGrouping }, set: { grouping = $0; settings.hapticFeedback() })) {
-                    ForEach(Grouping.allCases.filter { tiered || $0 != .match }) { choice in
+                Picker("Group", selection: Binding(get: { model.grouping }, set: { pick in
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) { model.grouping = pick }
+                })) {
+                    ForEach(model.groupings) { choice in
                         Text(choice.title).tag(choice)
                     }
                 }
                 .pickerStyle(.inline)
             }
 
-            if booksShown.count > 1 {
+            if model.books.count > 1 {
                 Section {
                     Menu {
-                        ForEach(booksShown, id: \.book.slug) { entry in
+                        ForEach(model.books, id: \.book.slug) { entry in
                             Toggle(isOn: binding(for: entry.book.slug)) {
                                 Text(entry.book.displayTitle)
                                 Text(String(localized: "\(entry.count) narrations"))
@@ -282,34 +581,40 @@ struct HadithResolvedList<Header: View>: View {
                     }
                 }
             }
+
+            if model.isNarrowed {
+                Section {
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) { model.reset() }
+                    } label: {
+                        Label("Reset All Filters", systemImage: "arrow.counterclockwise")
+                    }
+                }
+            }
         } label: {
-            Image(systemName: "slider.horizontal.3")
+            // The Arabic screen's menu button: a glass circle the search field's height, filled in
+            // while something narrows the list.
+            Image(systemName: model.isNarrowed ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .foregroundColor(settings.accentColor.color)
+                .frame(width: 26, height: 26)
+                .frame(width: 50, height: 50)
+                .contentShape(Rectangle())
+                .conditionalGlassEffect()
         }
         .fixedMenuOrder()
-        .tint(settings.accentColor.color)
         .accessibilityLabel("Sort and group options")
-    }
-
-    /// The books the rows come from, in the shelf's order, with how many rows each has here.
-    private var booksShown: [(book: HadithCatalogBook, count: Int)] {
-        var counts: [String: Int] = [:]
-        var books: [String: (HadithCatalogBook, Int)] = [:]
-        for row in entries {
-            counts[row.book.slug, default: 0] += 1
-            books[row.book.slug] = (row.book, row.bookOrder)
-        }
-        return books.values
-            .sorted { $0.1 < $1.1 }
-            .map { (book: $0.0, count: counts[$0.0.slug] ?? 0) }
     }
 
     private func binding(for slug: String) -> Binding<Bool> {
         Binding(
-            get: { !hiddenBooks.contains(slug) },
+            get: { !model.hiddenBooks.contains(slug) },
             set: { shown in
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) {
-                    if shown { hiddenBooks.remove(slug) } else { hiddenBooks.insert(slug) }
+                    if shown { model.hiddenBooks.remove(slug) } else { model.hiddenBooks.insert(slug) }
                 }
             }
         )
@@ -380,6 +685,8 @@ struct HadithListRow: View {
     @Environment(\.hadithOpenInBook) private var openInBook
 
     let entry: HadithListEntry
+    /// The words the list was searched for, painted where the row carries them; "" paints nothing.
+    var term = ""
 
     @State private var showShareSheet = false
     @State private var showChainSheet = false
@@ -395,9 +702,13 @@ struct HadithListRow: View {
     }
 
     var body: some View {
+        // The row's words and verdicts, read here from the book's own blocks (one lookup each): the
+        // list keeps none of them, so it opens without reading any.
+        let text = entry.text
+        let grades = entry.grades
         // Both toggles off still shows the Arabic: a row with nothing on it answers nothing.
-        let showsArabic = (settings.showHadithArabic || !settings.showHadithEnglish) && !entry.text.arabic.isEmpty
-        let showsEnglish = settings.showHadithEnglish && !(entry.text.narrator.isEmpty && entry.text.text.isEmpty)
+        let showsArabic = (settings.showHadithArabic || !settings.showHadithEnglish) && !text.arabic.isEmpty
+        let showsEnglish = settings.showHadithEnglish && !(text.narrator.isEmpty && text.text.isEmpty)
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 pill
@@ -413,18 +724,18 @@ struct HadithListRow: View {
                         .foregroundColor(accent)
                         // The glass at the pill's 28pt height, as every row's (2026-11-16).
                         .frame(width: 28, height: 28)
-                        .conditionalGlassEffect(inRow: true)
+                        .contentSurface(inRow: true)
                         .contentShape(Rectangle())
                 }
                 .accessibilityLabel("Hadith Actions")
             }
 
-            if !entry.grades.isEmpty {
-                HadithGradeLine(grades: entry.grades, font: .footnote)
+            if !grades.isEmpty {
+                HadithGradeLine(grades: grades, font: .footnote)
             }
 
-            if showsArabic { arabicBlock }
-            if showsEnglish { englishBlock }
+            if showsArabic { arabicBlock(text.arabic) }
+            if showsEnglish { englishBlock(narrator: text.narrator, body: text.text) }
         }
         .padding(.vertical, 4)
         .contextMenu { menuItems }
@@ -451,7 +762,7 @@ struct HadithListRow: View {
         .minimumScaleFactor(0.6)
         .padding(.horizontal, 8)
         .frame(height: 28)
-        .conditionalGlassEffect(
+        .contentSurface(
             useColor: isBookmarked ? 0.3 : nil,
             customTint: isBookmarked ? accent : nil,
             interactive: false,
@@ -521,24 +832,24 @@ struct HadithListRow: View {
         }
     }
 
-    private var arabicBlock: some View {
+    private func arabicBlock(_ arabic: String) -> some View {
         let custom = settings.hadithArabicWantsCustomFace
         let size = CGFloat(settings.hadithArabicFontSize)
         let font: Font = custom ? Font.arabic(settings.nonQuranArabicFontName, size: size) : .system(size: size)
         return Group {
-            if HadithArabicChunks.needed(entry.text.arabic) {
+            if HadithArabicChunks.needed(arabic) {
                 // The longest narrations, in the chosen face: sentence-bounded chunks (`HadithArabicChunks`).
                 HadithArabicText(
-                    text: entry.text.arabic,
-                    term: "",
+                    text: arabic,
+                    term: term,
                     font: font,
                     lineSpacing: 6,
                     extraHighlightRanges: entry.sharedRanges
                 )
             } else {
                 HighlightedSnippet(
-                    source: entry.text.arabic,
-                    term: "",
+                    source: arabic,
+                    term: term,
                     font: font,
                     accent: accent,
                     fg: .primary,
@@ -558,10 +869,10 @@ struct HadithListRow: View {
     }
 
     @ViewBuilder
-    private var englishBlock: some View {
+    private func englishBlock(narrator: String, body: String) -> some View {
         let size = CGFloat(settings.hadithEnglishFontSize)
-        if !entry.text.narrator.isEmpty {
-            Text(entry.text.narrator)
+        if !narrator.isEmpty {
+            Text(narrator)
                 .font(.system(size: size).italic())
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -570,10 +881,10 @@ struct HadithListRow: View {
                 .leftToRightContent()
         }
 
-        if !entry.text.text.isEmpty {
+        if !body.isEmpty {
             HighlightedSnippet(
-                source: entry.text.text,
-                term: "",
+                source: body,
+                term: term,
                 font: .system(size: size),
                 accent: accent,
                 fg: .primary,

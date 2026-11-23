@@ -21,6 +21,19 @@ SurahSections:  {"1": {"overview": "<english overview or ''>",
                  ...}                                        - sections in order.
                  A fifth element, 1, marks the whole-surah row of a surah that has no other
                  passage (1, 42, 44): the wash and the passage list use it, the outline skips it.
+                 A fifth element, 2, marks a passage this app added where the outline left an
+                 ayah out (GAP_FILLS); the app gives it an id of its own, so the source rows'
+                 ids (their positions) never move.
+                 A fifth element, 3, marks a source passage this app widened to take such an
+                 ayah in, followed by the range the source gave it:
+                 [start, end, "<english>", "<arabic>", 3, source start, source end].
+
+Every ayah sits in a passage: "Highlight Every Passage" washes by passage, and an ayah
+in none stayed bare (76:4, 2026-11-21). verify_quran_themes.py holds that.
+
+The wash and the passage list read rows 2 and 3 as they stand. The outline in About this
+Surah is shown as Quranpedia's, so it prints the source's own: no row 2, and a row 3 at
+the range the source gave it.
 
 RUN:  python3 Scripts/build_quran_themes.py [tilawa-root]
 Fails, writing nothing, on any ayah reference outside this app's Quran.
@@ -54,6 +67,77 @@ DEFAULT_TILAWA = ROOT.parent / "Tilawa"
 # "overview" as the signs of Allah, so the wash matches Tilawa's.
 GENERIC_OVERVIEW = "surah overview"
 WHOLE_SURAH_TITLE = "Surah Overview"
+
+# The fifth element of a passage this app added, and of a source passage it widened (see the
+# format above).
+ADDED_ROW = 2
+WIDENED_ROW = 3
+
+# The 20 ayahs (13 surahs) Quranpedia's outline puts in no passage, and where each goes.
+# "prev" / "next": the ayah joins that neighbouring passage, whose range grows to take it in.
+# The side is the one QUL's passage themes (Resources/Data/Quran/AyahThemes.json.xz) group it
+# with: 12:58 (the brothers arrive) opens the passage after it, 5:64 (the Jews' slander)
+# closes the one before.
+#
+# A tuple is a passage of its own, where neither neighbour is about the ayah: 17:1 would have
+# read "Honoring our Master Moses", 73:20 "Threatening the disbelievers", and 76:4 (the chains
+# and the blaze prepared for the disbelievers) "The reward of the righteous", in the believers'
+# green. Their titles are this app's, from the ayahs' own words, and worded so the classifier
+# (ThemeColorGuide) reads them as the Prophet (green), as worship (brown) and as Hellfire (red;
+# 76:4 scores level with "the disbelievers" and takes red on the classifier's tie order).
+# The build fails if an entry stops being a gap (a new source would need a look).
+GAP_FILLS: dict[tuple[int, int, int], str | tuple[str, str]] = {
+    (5, 11, 11): "prev",
+    (5, 64, 64): "prev",
+    (5, 89, 89): "prev",
+    (6, 21, 21): "next",
+    (12, 58, 58): "next",
+    (16, 65, 65): "prev",
+    (17, 1, 1): ("The Night Journey of the Prophet, peace be upon him", "الإسراء بالنبي صلى الله عليه وسلم"),
+    (21, 107, 112): "prev",
+    (24, 61, 61): "prev",
+    (39, 21, 21): "prev",
+    (49, 18, 18): "prev",
+    (71, 28, 28): "prev",
+    (73, 20, 20): ("Lightening the night prayer", "التخفيف في صلاة الليل"),
+    (76, 4, 4): ("The torment prepared for the disbelievers", "ما أُعِدَّ للكافرين من السلاسل والأغلال والسعير"),
+    (84, 6, 6): "next",
+}
+
+
+def fill_gaps(surah: int, body: list[list], problems: list[str]) -> list[list]:
+    """`body` with this surah's GAP_FILLS applied, in reading order."""
+    for (s, first, last), fill in GAP_FILLS.items():
+        if s != surah:
+            continue
+        if any(row[0] <= ayah <= row[1] for row in body for ayah in range(first, last + 1)):
+            problems.append(f"surah {surah}: {first}-{last} is in a passage now, drop its GAP_FILLS entry")
+            continue
+        if isinstance(fill, tuple):
+            english, arabic = fill
+            body.append([first, last, english, arabic, ADDED_ROW])
+            continue
+        if fill == "prev":
+            hits = [row for row in body if row[1] == first - 1]
+        else:
+            hits = [row for row in body if row[0] == last + 1]
+        if len(hits) != 1:
+            problems.append(f"surah {surah}: {first}-{last} has {len(hits)} '{fill}' passages to join")
+            continue
+        row = hits[0]
+        if len(row) == 4:
+            # The range the source gave it rides along, for the outline (see the format above).
+            row += [WIDENED_ROW, row[0], row[1]]
+        elif row[4] != WIDENED_ROW:
+            problems.append(f"surah {surah}: {first}-{last} would widen a row that is not the source's")
+            continue
+        if fill == "prev":
+            row[1] = last
+        else:
+            row[0] = first
+    # Stable: rows that share a start (surah 18's two "Two Gardens") keep the source's order.
+    body.sort(key=lambda row: row[0])
+    return body
 
 
 def ayah_counts() -> dict[int, int]:
@@ -157,6 +241,9 @@ def main() -> None:
             # with the overview, so it does not print the row again.
             body.append(whole)
             section_rows += 1
+        before = len(body)
+        body = fill_gaps(surah, body, problems)
+        section_rows += len(body) - before
         if overview or body:
             sections_out[str(surah)] = {"overview": overview, "sections": body}
 

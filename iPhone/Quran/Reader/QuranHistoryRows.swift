@@ -123,7 +123,7 @@ struct LastListenedSurahRow: View {
                         Image(systemName: showListeningHistory ? "minus.circle" : "plus.circle")
                             .foregroundColor(settings.accentColor.color)
                             .padding(4)
-                            .conditionalGlassEffect()
+                            .contentSurface()
                             .onTapGesture {
                                 settings.hapticFeedback()
                                 
@@ -533,7 +533,7 @@ struct SummaryAyahTile: View {
             .frame(height: rowHeight)
             // Clear conditional glass (never accent-tinted) - these summary tiles have no favorite state, so
             // they stay a plain glass card like the rest of the app's clear tiles.
-            .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
+            .contentSurface(clear: true, rectangle: true, inRow: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -798,7 +798,7 @@ struct SummarySurahTile: View {
             .frame(height: rowHeight)
             // Clear conditional glass (never accent-tinted) - these summary tiles have no favorite state, so
             // they stay a plain glass card like the rest of the app's clear tiles.
-            .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
+            .contentSurface(clear: true, rectangle: true, inRow: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -886,7 +886,7 @@ struct LastReadAyahRow: View {
                     Image(systemName: showReadingHistory ? "minus.circle" : "plus.circle")
                         .foregroundColor(settings.accentColor.color)
                         .padding(4)
-                        .conditionalGlassEffect()
+                        .contentSurface()
                         .onTapGesture {
                             settings.hapticFeedback()
                             
@@ -1123,7 +1123,7 @@ struct LastListenedAyahRow: View {
                     Image(systemName: showAyahListeningHistory ? "minus.circle" : "plus.circle")
                         .foregroundColor(settings.accentColor.color)
                         .padding(4)
-                        .conditionalGlassEffect()
+                        .contentSurface()
                         .onTapGesture {
                             settings.hapticFeedback()
                             withAnimation {
@@ -1261,7 +1261,7 @@ struct AyahOfTheDayRow: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .conditionalGlassEffect(rectangle: true, useColor: 0.18)
+        .contentSurface(rectangle: true, useColor: 0.18)
         .contentShape(Rectangle())
     }
 

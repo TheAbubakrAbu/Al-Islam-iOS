@@ -50,20 +50,29 @@ struct AskAIProfile {
     let historyCharacters: Int
     /// The ceiling an intent's own token cap is clipped to.
     let responseTokenCap: Int
+    /// What the verses and hadiths are read WITH (their notes, AskAIDepth.swift): the characters
+    /// all the notes of a turn may take, and how many sources besides the subject carry any.
+    let noteCharacters: Int
+    let notedSources: Int
 
     /// 8 sources of 500 characters is ~1.3k tokens against the 4k window, leaving room for the
-    /// instructions (~850), the recent conversation (~400), the question and a full answer;
+    /// instructions (~1,000), the recent conversation (~400), the question and a full answer;
     /// `AskAIPrompt.fit` drops the lowest-ranked sources when a subject's longer text would not fit.
+    /// The notes take up to 2,000 characters (~600 tokens) over the four best verses and hadiths:
+    /// a tafsir excerpt or an explanation each, then the other translation and the parallels. They
+    /// fill the room the sources leave and are the first thing to go when there is none.
     static let onDevice = AskAIProfile(kind: .onDevice, contextTokens: 4096, sourceLimit: 8, sourceCharacters: 500,
-                                       subjectCharacters: 1_400, historyCharacters: 1_200, responseTokenCap: 900)
+                                       subjectCharacters: 1_400, historyCharacters: 1_200, responseTokenCap: 900,
+                                       noteCharacters: 2_000, notedSources: 4)
 
     /// The on-device profile for the window the model reports (`SystemLanguageModel.contextSize`,
     /// 4,096 on today's devices; newer ones report more): a doubled window takes half again as many
-    /// sources, each a little longer, and a longer answer.
+    /// sources, each a little longer, a longer answer, and more read with each verse and hadith.
     static func onDevice(contextTokens: Int) -> AskAIProfile {
         guard contextTokens >= 8192 else { return onDevice }
         return AskAIProfile(kind: .onDevice, contextTokens: contextTokens, sourceLimit: 12, sourceCharacters: 600,
-                            subjectCharacters: 2_000, historyCharacters: 1_600, responseTokenCap: 1_000)
+                            subjectCharacters: 2_000, historyCharacters: 1_600, responseTokenCap: 1_000,
+                            noteCharacters: 4_800, notedSources: 6)
     }
 
     static func privateCloud(contextTokens: Int) -> AskAIProfile {
@@ -71,11 +80,13 @@ struct AskAIProfile {
         return AskAIProfile(kind: .privateCloud, contextTokens: contextTokens,
                             sourceLimit: min(18, Int(8 * scale)), sourceCharacters: min(1_000, Int(500 * scale)),
                             subjectCharacters: min(3_200, Int(1_400 * scale)), historyCharacters: min(9_000, Int(1_800 * scale)),
-                            responseTokenCap: 1_400)
+                            responseTokenCap: 1_400,
+                            noteCharacters: min(14_000, Int(3_600 * scale)), notedSources: min(12, Int(4 * scale)))
     }
 
     var retrievalBudget: AskAIRetriever.Budget {
-        .init(limit: sourceLimit, sourceCharacters: sourceCharacters, subjectCharacters: subjectCharacters)
+        .init(limit: sourceLimit, sourceCharacters: sourceCharacters, subjectCharacters: subjectCharacters,
+              noteCharacters: noteCharacters, notedSources: notedSources)
     }
 }
 
@@ -320,8 +331,20 @@ enum AskAIEngine {
 
 enum AskAIPrompt {
     /// The rules every chat session is created with: who the assistant is, how it talks, how it
-    /// uses and cites the sources, what it never does.
-    static let instructions = """
+    /// uses and cites the sources, what it never does. Rule 7 names the readings (qiraat) only
+    /// for a reader who has them shown (`AskAIDepth.readsQiraat`): with "Show Riwayah / Qiraah"
+    /// off no verse carries a readings line, and a rule that names them would be the one place
+    /// the model could pick the subject up from.
+    static func instructions(readsQiraat: Bool) -> String {
+        readsQiraat ? instructions : instructionsWithoutReadings
+    }
+
+    /// The rules with the readings named: what the window is measured and prewarmed with (the
+    /// longer of the two by a dozen words).
+    static let instructions = rules(readsQiraat: true)
+    private static let instructionsWithoutReadings = rules(readsQiraat: false)
+
+    private static func rules(readsQiraat: Bool) -> String { """
     You are the assistant inside Al-Islam, an app for the Quran, the hadith and prayer times. You talk \
     with the reader the way a warm, well-read friend would: naturally, directly, in plain English. A \
     greeting gets a friendly greeting back, thanks get a brief warm reply, and a real question gets a \
@@ -361,6 +384,12 @@ enum AskAIPrompt {
     else's words (a Companion's objection, a questioner) that the Prophet then answered or corrected, \
     and the chapter title beside it says what the collector understood it to establish.
     6. Never state a prayer time or a time of day that is not written in a source.
+    7. Indented lines under a verse or a hadith that begin with the word With and its number are what \
+    else the app holds on it: another translation, a tafsir, \(readsQiraat ? "how the readings (qiraat) differ in it, " : "")an \
+    explanation of the hadith, or where else it is recorded. Read them with the source, let the tafsir or \
+    the explanation shape how you explain it, and name whose it is: a tafsir or an explanation is its \
+    author's commentary, never the words of Allah or of the Prophet. Cite them by that source's number. \
+    Bring up a difference between translations\(readsQiraat ? " or readings" : "") only where it adds to what was asked.
 
     HONESTY. Say plainly when something is disputed among scholars or when you are not sure; do not \
     manufacture doubt where there is none. Never present your own words as what scholars say. Never give a fatwa or a personal ruling: for "is this \
@@ -368,6 +397,7 @@ enum AskAIPrompt {
     point to a qualified scholar for a personal ruling. Answer in English even when asked in another \
     language, keeping key Arabic terms in transliteration.
     """
+    }
 
     /// One completed exchange, as the next turn's prompt carries it.
     struct Turn {
@@ -412,15 +442,43 @@ enum AskAIPrompt {
         var budget = window - responseCharacters - instructionCharacters - overheadCharacters - historyCharacters
         budget = max(1_500, budget)
         func cost(_ source: AskAISource) -> Int {
-            let text = min(source.maxCharacters, source.isSubject ? profile.subjectCharacters : profile.sourceCharacters)
-            return text + 40 + source.reference.count + source.provenance.reduce(0) { $0 + $1.count + 2 }
+            // What the source will send: its own length when that is under its ceiling (a verse
+            // of sixty characters was charged five hundred, and a turn of eight short verses was
+            // cut to six to make room it already had).
+            let ceiling = min(source.maxCharacters, source.isSubject ? profile.subjectCharacters : profile.sourceCharacters)
+            return min(source.text.count, ceiling) + 40 + source.reference.count
+                + source.provenance.reduce(0) { $0 + $1.count + 2 } + source.notesCost
         }
         var kept = sources
-        var total = kept.reduce(0) { $0 + cost($1) }
-        while total > budget, kept.count > 2 {
-            total -= cost(kept.removeLast())
-        }
+        let floor = noteFloor(for: profile)
+        while kept.reduce(0, { $0 + cost($1) }) > budget, trim(&kept, floor: floor) {}
         return kept
+    }
+
+    /// How few sources a turn keeps while the SUBJECT still carries a note: five of the on-device
+    /// eight. What the question names is read whole before the weakest three sources are.
+    static func noteFloor(for profile: AskAIProfile) -> Int {
+        max(3, profile.sourceLimit * 5 / 8)
+    }
+
+    /// Makes room once, giving up what matters least first. A note on a source the question did
+    /// not name goes before any source does (the lowest-ranked source's last note first): the
+    /// ranking is not sure enough of its top three to spend the seventh source on their tafsir,
+    /// and the replay of 2026-11-22 lost the hadith that defines backbiting that way. Then the
+    /// lowest-ranked sources, down to `floor` while the subject still has notes; then the
+    /// subject's notes; then sources again, never below two. False when nothing more can go.
+    private static func trim(_ kept: inout [AskAISource], floor: Int) -> Bool {
+        if let index = kept.lastIndex(where: { !$0.isSubject && !$0.notes.isEmpty }) {
+            kept[index].notes.removeLast()
+            return true
+        }
+        if kept.count <= floor, let index = kept.lastIndex(where: { !$0.notes.isEmpty }) {
+            kept[index].notes.removeLast()
+            return true
+        }
+        guard kept.count > 2 else { return false }
+        kept.removeLast()
+        return true
     }
 
     /// The estimate above, then the model's own count: the prompt is built and measured, and the
@@ -429,16 +487,22 @@ enum AskAIPrompt {
     /// the estimate (the API is iOS 26.4; the estimate stays conservative for the devices before it).
     static func fit(question: AskAIQuestion, sources: [AskAISource], history: [Turn], profile: AskAIProfile,
                     measure: ((String) async -> Int?)?) async -> [AskAISource] {
-        var kept = fit(question: question, sources: sources, history: history, profile: profile)
-        guard let measure else { return kept }
+        let estimated = fit(question: question, sources: sources, history: history, profile: profile)
+        guard let measure else { return estimated }
         let instructionTokens: Int
         if #available(iOS 26.0, *) { instructionTokens = AskAIEngine.instructionTokens } else { instructionTokens = 846 }
         let reserved = instructionTokens + min(question.intent.maxResponseTokens, profile.responseTokenCap) + 64
-        while kept.count > 2 {
+        let floor = noteFloor(for: profile)
+        // Measured from the whole list, not from the estimate's: the tokenizer is the authority
+        // where it exists, and the estimate (kept conservative for the devices without it) had
+        // already dropped sources and notes the window had room for.
+        var kept = sources
+        var measured = false
+        while true {
             let prompt = build(question: question, sources: kept, history: history, profile: profile)
-            guard let promptTokens = await measure(prompt) else { return kept }
-            guard reserved + promptTokens > profile.contextTokens else { break }
-            kept.removeLast()
+            guard let promptTokens = await measure(prompt) else { return measured ? kept : estimated }
+            measured = true
+            guard reserved + promptTokens > profile.contextTokens, trim(&kept, floor: floor) else { break }
         }
         return kept
     }
@@ -495,13 +559,19 @@ enum AskAIPrompt {
     private static func referenceTask(for subject: AskAISource) -> String {
         switch subject.kind {
         case .hadith:
-            return "The question names a hadith, marked SUBJECT OF THE QUESTION. Explain that hadith: who narrated it and where it is recorded (from the details beside it), what it says in your own words with at most one short quotation, its context and meaning, and what scholars draw from it. Cite by number."
+            return "The question names a hadith, marked SUBJECT OF THE QUESTION. Explain that hadith: who narrated it and where it is recorded (from the details beside it and from the lines beneath it, when they say where else it is recorded), what it says in your own words with at most one short quotation, its context and meaning drawing on the explanation beneath it when there is one, and what is drawn from it. Cite by number."
         case .surah:
             return "The question names a surah, marked SUBJECT OF THE QUESTION. Say what that surah is about from its background source: its name and where it was revealed, its main themes and how it unfolds, and anything notable about it. Cite by number. Do not describe some other surah."
         case .name:
             return "The question names one of the Names of Allah, marked SUBJECT OF THE QUESTION. Explain that Name: its meaning, where it occurs in the Quran (from the details beside it), and what it teaches about Allah and how a believer relates to it. Cite by number."
         default:
-            return "The question names a verse, marked SUBJECT OF THE QUESTION. Explain that verse: its surah and where it sits, what it says in your own words with at most one short quotation, its context and meaning drawing on the tafsir source when there is one, and say where each point comes from. Cite by number. Do not describe some other verse."
+            // The readings are asked for only when the verse carries them: none does while "Show
+            // Riwayah / Qiraah" is off (`AskAIDepth.readsQiraat`), and a task that names the qiraat
+            // with nothing beneath it invites the model to speak of them from memory.
+            let readings = subject.notes.contains { $0.kind == .readings }
+                ? " If a line beneath the verse says how the readings (qiraat) differ in it, give that its own short paragraph: each way the verse is read, what that reading means and who reads it so."
+                : ""
+            return "The question names a verse, marked SUBJECT OF THE QUESTION. Explain that verse: its surah and where it sits, what it says in your own words with at most one short quotation, its context and meaning drawing on the tafsir source when there is one, and say where each point comes from.\(readings) If a line gives another translation, say what its wording adds. Cite by number. Do not describe some other verse."
         }
     }
 
@@ -537,9 +607,13 @@ struct AskAIProfile {
     let sourceLimit: Int
     let sourceCharacters: Int
     let subjectCharacters: Int
-    static let onDevice = AskAIProfile(kind: .onDevice, sourceLimit: 8, sourceCharacters: 500, subjectCharacters: 1_400)
+    let noteCharacters: Int
+    let notedSources: Int
+    static let onDevice = AskAIProfile(kind: .onDevice, sourceLimit: 8, sourceCharacters: 500, subjectCharacters: 1_400,
+                                       noteCharacters: 2_000, notedSources: 4)
     var retrievalBudget: AskAIRetriever.Budget {
-        .init(limit: sourceLimit, sourceCharacters: sourceCharacters, subjectCharacters: subjectCharacters)
+        .init(limit: sourceLimit, sourceCharacters: sourceCharacters, subjectCharacters: subjectCharacters,
+              noteCharacters: noteCharacters, notedSources: notedSources)
     }
 }
 

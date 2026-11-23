@@ -26,7 +26,8 @@ SLICES = {
         'Accent, theme, color scheme, glass and glow: what the chrome everywhere draws with (the '
         'appearance environment snapshots these).',
         {'accentColor', 'customAccentColorHex', 'customBackgroundColorHex', 'defaultView', 'classicLook',
-         'classicLookInLowPower', 'showAccentGlow', 'alIslamGlow', 'colorSchemeString', 'userBackgroundRaw'}),
+         'classicLookInLowPower', 'liquidGlassEverywhere', 'showAccentGlow', 'alIslamGlow', 'colorSchemeString',
+         'userBackgroundRaw'}),
     'SystemSettings': (
         'App-wide switches no tab owns: onboarding flags, Simple Mode, Advanced, haptics, keep screen on, '
         'the launch tab, grid modes, help doors, tab sections, the daily rollover hour.',

@@ -757,7 +757,7 @@ struct QuranPlannerView: View {
                     .font(.system(size: 30))
                     .foregroundColor(accent)
                     .frame(width: 64, height: 64)
-                    .conditionalGlassEffect(circle: true)
+                    .contentSurface(circle: true)
 
                 Text(editingGoal ? "Adjust Your Goal" : "Plan Your Khatm")
                     .font(.title3.weight(.semibold))
@@ -972,7 +972,7 @@ struct QuranPlannerView: View {
                     .font(.system(size: 30))
                     .foregroundColor(accent)
                     .frame(width: 64, height: 64)
-                    .conditionalGlassEffect(circle: true)
+                    .contentSurface(circle: true)
 
                 Text(editingRevision ? "Adjust Your Revision" : "Plan Your Revision")
                     .font(.title3.weight(.semibold))
@@ -1794,7 +1794,7 @@ struct QuranPlannerView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
     }
 
     private func actionTile(title: String, subtitle: String, symbol: String, action: @escaping () -> Void) -> some View {
@@ -1824,7 +1824,7 @@ struct QuranPlannerView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
     }
 
     /// The last 7 days as mini bars - a glanceable "did I keep up this week".
@@ -1897,7 +1897,7 @@ struct QuranPlannerView: View {
                         LinearGradient(colors: [accent, accent2], startPoint: .topLeading, endPoint: .bottomTrailing)
                     )
                     .frame(width: 76, height: 76)
-                    .conditionalGlassEffect(circle: true)
+                    .contentSurface(circle: true)
 
                 Text("Khatm Complete")
                     .font(.title2.weight(.bold))

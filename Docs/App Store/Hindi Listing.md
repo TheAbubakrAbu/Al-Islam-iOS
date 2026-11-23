@@ -159,7 +159,7 @@ Al-Islam इस्लाम पर अमल के लिए आपका प�
 - "तरीक़ा सीखें" गाइड, इस्लाम और ईमान के अरकान, ज़कात और विरासत कैलकुलेटर, हिजरी कैलेंडर, मस्जिद की खोज और हलाल खाने की खोज।
 
 आपके अंदाज़ में
-- इंटरफ़ेस हिंदी, अंग्रेज़ी, अरबी और उर्दू समेत 12 भाषाओं में: iOS सेटिंग्ज़ में इस ऐप के लिए भाषा चुनें। इस्लाम टैब के विस्तृत लेख अभी अंग्रेज़ी में हैं।
+- इंटरफ़ेस हिंदी, अंग्रेज़ी, अरबी और उर्दू समेत 15 भाषाओं में: iOS सेटिंग्ज़ में इस ऐप के लिए भाषा चुनें। इस्लाम टैब के विस्तृत लेख अभी अंग्रेज़ी में हैं।
 - सरल मोड सिर्फ़ ज़रूरी चीज़ें सामने रखता है। जब चाहें, पूरे मोड पर जाएँ।
 - अपनी पसंद के नाम से प्रोफ़ाइल बनाकर अपने iCloud में बैकअप करें, और किसी भी डिवाइस पर रीस्टोर करें।
 - टेक्स्ट का आकार, अरबी फ़ॉन्ट, एक्सेंट और आसमान के रंग, और सेटिंग्ज़ के हर पेज पर खोज।
@@ -175,11 +175,11 @@ Al-Islam पूरी तरह मुफ़्त है। न कोई व�
 
 ## 5. What's New
 
-The release that adds the Hindi interface; all nine new languages ship in one release. Only the interface
+The release that adds the Hindi interface; all twelve new languages ship in one release. Only the interface
 notes are here so far. The Urdu text's right-to-left and digit lines have no Hindi counterpart and are left
 out; in their place are the Latin surah names with their Hindi meanings, the prayer names as the Hindi
 catalog writes them (फ़ज्र, ज़ुहर, अस्र, मग़रिब, इशा), and a line saying the translations are English. The
-language line names the other eight new languages, then all twelve interface languages.
+language line names the other eleven new languages, then all fifteen interface languages.
 
 ```
 Al-Islam का इंटरफ़ेस अब हिंदी में: अज़ान, क़ुरआन और हदीस से लेकर इस्लाम और सेटिंग्ज़ तक।
@@ -193,7 +193,7 @@ Al-Islam का इंटरफ़ेस अब हिंदी में: अ�
 - क़ुरआन और हदीस के अनुवाद अभी अंग्रेज़ी में हैं, अरबी टेक्स्ट के साथ।
 
 नई भाषाएँ:
-- Al-Islam अब इंडोनेशियाई, मलय, तुर्की, फ़्रेंच, बांग्ला, रूसी, जर्मन और स्पेनिश में भी उपलब्ध है। कुल 12 भाषाएँ: अंग्रेज़ी, अरबी, उर्दू, इंडोनेशियाई, मलय, तुर्की, फ़्रेंच, बांग्ला, रूसी, हिंदी, जर्मन और स्पेनिश।
+- Al-Islam अब इंडोनेशियाई, मलय, तुर्की, फ़्रेंच, बांग्ला, रूसी, जर्मन, स्पेनिश, मलयालम, तमिल और डच में भी उपलब्ध है। कुल 15 भाषाएँ: अंग्रेज़ी, अरबी, उर्दू, इंडोनेशियाई, मलय, तुर्की, फ़्रेंच, बांग्ला, रूसी, हिंदी, जर्मन, स्पेनिश, मलयालम, तमिल और डच।
 
 भाषा चुनना:
 - iOS सेटिंग्ज़ में आप इस ऐप के लिए जो भाषा चुनते हैं, ऐप वही भाषा अपनाता है, और ऐप की सेटिंग्ज़ में "भाषा" वाली पंक्ति आपको वहीं ले जाती है।
@@ -202,7 +202,7 @@ Al-Islam का इंटरफ़ेस अब हिंदी में: अ�
 - इस्लाम टैब के विस्तृत लेख और अर्थ से खोज अभी अंग्रेज़ी में हैं।
 ```
 
-**1,098 / 4,000 characters.**
+**1,134 / 4,000 characters.**
 
 **To finish this release:** when the English notes for this version are written in `Whats New.md`, translate
 the rest of them and append them below the last line of the block above, under the same headings the English

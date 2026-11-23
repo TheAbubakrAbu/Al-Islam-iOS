@@ -24,8 +24,8 @@ Rules:
 - Accent title and icon only for a section that is YOURS (Your Summary, Favorites, Bookmarks, Saved Reflections,
   Last Read, Khatm Progress, the Prayer Tracker, Start Here, Need a Hand?). Catalogs, settings, search results and
   Ask AI stay gray. The icon follows its title.
-- The trailing cluster's order is fixed: count pill, search, shuffle, trash, chevron. Header buttons are glass
-  circles the height of the count pill; a header's text action is `SectionHeaderAction("Clear All")` (caption
+- The trailing cluster's order is fixed: count pill, search, shuffle, trash, chevron. Header buttons are
+  circles the height of the count pill, on the same content surface as the pill (section 4a); a header's text action is `SectionHeaderAction("Clear All")` (caption
   semibold, accent, title case).
 - Never `.font(...)` or `.textCase(nil)` on a plain header. The List sets the size and the case.
 - Ask AI's header is `SectionIconHeader("ASK AI", icon: "sparkles")` on all three tabs.
@@ -58,15 +58,15 @@ Rules:
 | A switch | `SettingsToggle(title, caption:, systemImage:, isOn:)`: body title, caption inside the label, accent tint, haptic, the flagged page animation. Never a `Toggle` with `.font(.subheadline)` or `.font(.caption)`, never `.scaleEffect` on it (the share sheets' secondary options were 0.8 until 2026-10-26), never `.animation()` on its binding, never a second haptic in the binding's setter. The Adhan tab's optional-prayer switches keep the tab's second accent as their tint. The share sheets' switches are plain accent `Toggle`s at full size in their scroll view, every one padded the same. |
 | A text size | `FontSizeSlider` (one write on release). |
 | An action row (Set Home City, Preview Sound, Restore Default Colors) | Accent text, body size, default button style. Destructive: `role: .destructive`. |
-| A content row (a surah, a book, a chapter, a theme, a name) | One family across the tabs (section 3a): a glass number pill, a `.subheadline.weight(.semibold)` title, `.caption2` captions in `.secondaryOnGlass`, the Arabic name in the primary colour with its number in the accent. |
+| A content row (a surah, a book, a chapter, a theme, a name) | One family across the tabs (section 3a): a number pill, a `.subheadline.weight(.semibold)` title, `.caption2` captions in `.secondaryOnGlass`, the Arabic name in the primary colour with its number in the accent. |
 
 Rules:
 
 - Row titles are body size. Subheadline semibold is for an eyebrow over Arabic content, not for a navigable
   row's title.
-- A count beside a row or in a header is `CountPill` (glass), never a hand-drawn capsule. A read-out that is
+- A count beside a row or in a header is `CountPill`, never a hand-drawn capsule. A read-out that is
   not a number ("12 of 40", "Page 2 • 7 Ayahs") goes in the same pill through `countText:`.
-- Secondary text on a glass tile is `.secondaryOnGlass`, never `.secondary` (3.1:1 there).
+- Secondary text on a tile is `.secondaryOnGlass`, never `.secondary` (3.1:1 there).
 - A door drawn as a `Button` (one that pushes through state because its row cannot hold a link) passes
   `showsChevron: true` so it still reads as a door.
 
@@ -78,7 +78,7 @@ as one app:
 
 | Part | List row | Grid tile |
 | --- | --- | --- |
-| Number | A glass pill the row's height, caption bold on the accent, tinted when favorited; the star in its corner | The tile's corner star |
+| Number | A pill the row's height, caption bold on the accent, tinted when favorited; the star in its corner | The tile's corner star |
 | Title | `.subheadline.weight(.semibold)` primary (two lines for a book) | "1: Title", the number `.subheadline` bold on the accent |
 | Captions | `.caption2` in `.secondaryOnGlass`: "286 Ayahs", "97 Chapters • 7,277 Hadiths", the era | The same lines, centered |
 | Arabic name | At the trailing edge, `.title3` in the primary colour, its number beside it in the accent (the Arabic face draws the digits in the ayah ring) | The top line, number first |
@@ -103,15 +103,44 @@ screens open with the article kit's lead card, Browse by Theme and Browse by Top
 | Control | Part |
 | --- | --- |
 | A chip inside a row or a card (Hear Hafs, a goal preset, Hear It, a quick filter) | `.buttonStyle(.accentChip)`: caption semibold on the accent at 12%, capsule. `.accentChip(filled: true)` for the active state (white on the accent), `tint:` for a rule's own colour. |
-| A header accessory (count, shuffle, search, trash, fold) | Glass pill or glass circle (`conditionalGlassEffect`). |
-| A grid tile (Settings, the profile tiles, the Explore shelf) | `SettingsGridTile`: a 32 pt chip, the title, a one-line caption in `.secondaryOnGlass` (`captionLines: 2` where the caption is an answer the reader gave). |
-| A floating bar (search, Now Playing, the reader's legend) | Glass, `BottomBarCushion.standard` under it, `adaptiveSafeArea`. |
+| A header accessory (count, shuffle, search, trash, fold) | A pill or a circle on the content surface (`contentSurface()`, `contentSurface(circle: true)`). |
+| A grid tile (Settings, the profile tiles, the Explore shelf) | `SettingsGridTile`, on the content surface: a 32 pt chip, the title, a one-line caption in `.secondaryOnGlass` (`captionLines: 2` where the caption is an answer the reader gave). |
+| A floating bar (search, Now Playing, the reader's legend) | Glass (`conditionalGlassEffect`), `BottomBarCushion.standard` under it, `adaptiveSafeArea`. On iOS 26 a bottom bar stands on the hard scroll-edge ground, so rows end behind the bar and never show through the search field; `groundsBar: false` only for one large card (the Tasbih counter) or a bar over a map. |
 | A full-width call to action (a notice, a welcome page, Share Ayah, a dua session's Next) | `.buttonStyle(.glassAction)`: Liquid Glass carrying the accent at 16%, the label in the accent, a capsule at least 50 pt tall (`WelcomeActionBar`, `BetaTextConsentCard`, the location ask). A second full-width choice is `.glassAction(tinted: false)`, plain glass; `cornerRadius:` squares it off where it closes a block of tiles (the ayah actions sheet). Never a solid accent fill under a white label, and never `.borderedProminent` (both until 2026-11-18). A text link under the primary ("Skip", "Back") is `.subheadline.weight(.medium)` on the accent. |
-| An action tile in a sheet's grid (the ayah actions sheet) | Glass at the tile's own colour, 10%, 18 pt corner, `inRow: true`; rows from `AyahActionLayout`, so every row fills the width and no tile stands alone. |
+| An action tile in a sheet's grid (the ayah actions sheet) | Glass (it is a button that acts) at the tile's own colour, 10%, 18 pt corner, `inRow: true`; rows from `AyahActionLayout`, so every row fills the width and no tile stands alone. |
 | A toolbar button | A bare symbol, `.body.weight(.semibold)`, tinted the accent; a menu of options is `slider.horizontal.3`. |
 
 Never `.bordered` for a small chip in a row, and never a hand-drawn capsule at 0.08, 0.14 or 0.15: the chip style is
 the one tint strength.
+
+### 4a. Glass floats, content does not (2026-11-22)
+
+Every shape the app draws behind something takes one of two modifiers, both in `Helpers/UI/GlassEffect.swift`:
+
+| The shape | Modifier | With Liquid Glass on |
+| --- | --- | --- |
+| Floats over the page: a bottom or top bar and the controls in it, a floating or pinned header, the title pill, an overlay (the search help card, a map's panels, the focus overlay), the Now Playing bar | `conditionalGlassEffect(...)` | Liquid Glass |
+| A button that acts and stands alone: a call to action, an action tile, a share or play button, the location pill, a prayer bell, Next Question | `conditionalGlassEffect(...)` | Liquid Glass |
+| Holds content: a card, a tile (even one that opens something), a banner, a stat, a picker's backing | `contentSurface(...)` | The Classic Look's fill and hairline |
+| A read-only badge: a count, a number pill, an ayah or hadith reference | `contentSurface(...)` | The same |
+| Repeats down a scrolling list: a row's play and more buttons, a section header's accessories | `contentSurface(...)` | The same |
+
+Why: a glass tile inside a list card is a lit pillow (measured in Dark: fill 58 on a card of 28, a rim at 110, a
+shadow) where the surface is a quiet 42 with a hairline, and a screen of them outshouts its own text. Abu,
+2026-11-22: "maybe make it a little less. I kind of like how it looks like with classic mode". It is also Apple's
+rule (HIG, Materials: "Don't use Liquid Glass in the content layer"), and each glass shape costs 2.5 to 4 ms when
+its row is built. Before that day all ~250 shapes were glass.
+
+- Under the Adhan tab's whole-tab sky every surface is clear glass again: there the page is a picture.
+- The Classic Look and iOS 18 draw both modifiers the same way, so a surface looks the same in both looks.
+- The watch keeps glass on its surfaces.
+- **Liquid Glass Everywhere** (Appearance › Look and Feel, under Show Liquid Glass; `Settings.liquidGlassEverywhere`, OFF by default) draws the surfaces as glass again, the look before 2026-11-22, for anyone who preferred it (Abu, 2026-11-22: "have an option ... to have liquid glass everywhere like the old stuff ... but default off"). It changes only the surfaces: the bars keep their ground, and a hot or 3 GB-class phone still draws the shapes in list rows in the fill. The DEBUG `-contentGlass` argument turns it on without touching the stored setting, for a before and after from one build.
+
+The bars got the other half of what the Classic Look did better. Left to `.automatic`, iOS 26 draws a blurred
+ground under a `safeAreaBar` only when the bar holds text outside glass, which is the Classic Look and never
+Liquid Glass: with glass on, the Quran tab's surah tiles stood in full ink behind the search field. So
+`adaptiveSafeArea(edge: .bottom)` asks for `.scrollEdgeEffectStyle(.hard, for: .bottom)` in both looks. `.soft`
+was tried and fades the rows only near the screen's edge, which leaves text behind the upper rows of a stacked bar.
 
 ## 5. Colour
 
@@ -141,6 +170,7 @@ the one tint strength.
 2. Every switch is a `SettingsToggle`; every text size is a `FontSizeSlider`.
 3. Every door row is a `SettingsRowLabel`; counts are `CountPill`.
 4. Footers are plain `Text`; captions under one control are `SettingsCaption`.
-5. In-row chips are `.accentChip`; header accessories are glass.
+5. In-row chips are `.accentChip`; header accessories, tiles, cards and badges are `contentSurface`; glass
+   (`conditionalGlassEffect`) is for what floats and for a button that acts (section 4a).
 6. Options live in a toolbar menu; modes in a segmented control.
 7. Nothing reads smaller than `.caption`; no literal colour outside the semantic set.

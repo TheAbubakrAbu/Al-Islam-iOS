@@ -324,7 +324,7 @@ struct CloudNameField: View {
         .padding(.leading, 16)
         .padding(.trailing, focused && !text.isEmpty ? 8 : 16)
         .frame(minHeight: 52)
-        .conditionalGlassEffect(clear: true, rectangle: true, interactive: false)
+        .contentSurface(clear: true, rectangle: true, interactive: false)
         .overlay(
             RoundedRectangle(cornerRadius: GlassCorner.rectangle, style: .continuous)
                 .strokeBorder(focused ? appearance.accent : Color.primary.opacity(0.12), lineWidth: focused ? 1.5 : 1)

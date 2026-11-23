@@ -1260,7 +1260,7 @@ struct IslamView: View {
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
         .contentShape(Rectangle())
-        .conditionalGlassEffect(
+        .contentSurface(
             clear: !settings.isIslamResourceFavorite(item.rawValue),
             rectangle: true,
             useColor: settings.isIslamResourceFavorite(item.rawValue) ? 0.25 : nil,
@@ -1289,7 +1289,7 @@ struct IslamView: View {
         .contentShape(Rectangle())
         // Favorites are accent-tinted, everything else is clear - the same pattern as the surah, 99 Names,
         // and Arabic letter grids, so a favorite reads the same way everywhere.
-        .conditionalGlassEffect(
+        .contentSurface(
             clear: !settings.isIslamResourceFavorite(item.rawValue),
             rectangle: true,
             useColor: settings.isIslamResourceFavorite(item.rawValue) ? 0.25 : nil,
@@ -2400,7 +2400,7 @@ struct AlIslamAppsSection: View {
                     #endif
                 }
             }
-            .conditionalGlassEffect(rectangle: true)
+            .contentSurface(rectangle: true)
             .onAppear(perform: runAppCardsPopAnimation)
             #if DEBUG
             .onAppear { MemoryFootprint.logLater("app tiles") }

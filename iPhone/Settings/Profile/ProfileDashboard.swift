@@ -150,7 +150,7 @@ struct ActivityDashboardCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .conditionalGlassEffect(rectangle: true, interactive: false)
+        .contentSurface(rectangle: true, interactive: false)
     }
 
     private static func todayLine(_ today: [ActivityKind: Int]) -> String {

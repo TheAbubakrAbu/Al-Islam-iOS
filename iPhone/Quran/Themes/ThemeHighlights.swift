@@ -384,7 +384,7 @@ final class ThemeHighlights: ObservableObject {
         var count: Int { ayahs.count }
     }
 
-    /// How many themes can be lit at once. Passages have no limit: the whole Quran is 744 of them.
+    /// How many themes can be lit at once. Passages have no limit: the whole Quran is 747 of them.
     static let limit = 7
     private static let storageKey = "themeHighlightsLit"
     private static let allSectionsKey = "themeHighlightsAllSections"

@@ -32,6 +32,20 @@ again in the middle of her own chain (51 chains), or a road opened by a "و" set
 55 was read against its text; three joint generations beside a namesake stay drawn (nasai:4110,
 darimi:210, darimi:229).
 
+Nor, since 2026-11-22, a word of the report read as a narrator (Abu: "who is li??": "لي" stood in the
+narrators' index as a Companion with 184 narrations). 549 chains had one at their top, between the
+Companion and the Prophet ﷺ. What was learned, each from the shelf's own text: the one spoken to is
+passed over ("قال قال لي رسول الله", "ذكر لنا أنس بن مالك": ADDRESSED); a clause after "أنّ" that runs
+into the Prophet's mention is the report's opening, so the chain ends at the narrator before it, by
+the three-word rule above ("أنّ أصحاب النبي ﷺ", "أنه شهد النبي ﷺ", "أنّ رجلا سأل رسول الله ﷺ": THAT),
+and claims nothing when the clause speaks of something of his (`possessed`: "أنه رأى قبر النبي ﷺ");
+"أنه سمعه يقول" is a word of transmission (HEARD_HIM); "ذُكِرَ" in the passive names no one
+(`passive_mention`); "سمعت أبا القاسم ﷺ" is the Prophet ﷺ (`is_prophet`); "وكانت له صحبة" and "ولم
+يسمعه منه" are asides on the narrator before them (SAID_OF_HIM); and a piece that opens with a word no
+name begins with is not a name (NOT_NAME, reason "not-name"). Measured: 46,597 chains drawn before,
+48,288 after (1,743 more, most of them chains a clause like "أنّ رجلا سأل" used to disqualify; 52
+fewer, each read: a wrong piece in every one); 22 of the new ones read against their text.
+
     python3 Scripts/build_hadith_chains.py            # writes the pack and UnitTests/HadithChainSamples.swift
     python3 Scripts/build_hadith_chains.py --stats    # coverage per book, nothing written
 
@@ -55,7 +69,12 @@ narrates from the Prophet ﷺ himself, in how many he is the compiler's own teac
 collections are) and by book, and the list of every narration (book, row, role, grade); and, per
 group, its members. The app reads a profile and its list; it compares nothing. Names are matched as
 written, so a narrator cited two ways (ابن شهاب and الزهري) has two profiles; nothing here guesses
-that two spellings are one man.
+that two spellings are one man. The written forms of one man are joined by the rules `Identities`
+prints (2026-10-31), and since 2026-11-22 those joins reach only as far as they were measured: the
+top two generations of a chain, never its foot (`resolve_mention`: "حدثنا علي" is al-Bukhari's
+teacher, and stood on Ali ibn Abi Talib's page 66 times), and a page is titled by the name it was
+filed under ("علي بن أبي طالب", not the bare "علي" most chains write). A relation in any voice ("أخي",
+"أباه") and someone left unnamed ("شيخ", "غير واحد", "أصحاب النبي ﷺ") are drawn and are no one's page.
 """
 import json, re, struct, sys
 from collections import Counter, defaultdict
@@ -100,8 +119,15 @@ def key(tok):
 STRONG = {'حدثنا','حدثني','اخبرنا','اخبرني','انبانا','انباني','نبانا','ثنا','حدثناه','حدثنيه','اخبرناه','اخبرنيه',
           'حدثه','اخبره','حدثهم','اخبرهم','حدثاه','حدثتني','اخبرتني','حدثتنا','اخبرتنا','حدثها','اخبرها','حدثهما',
           'سمعت','سمع','سمعنا','سمعا','سمعته','سمعاه','قرات','قرئ','قراه','قرانا',
-          'اخبرهما','حدثاه','اخبراه','حدثوه','اخبروه','حدثتهم','اخبرتهم','حدثتهما','اخبرته','حدثته','حدثوهم','حدثونا','اخبرونا'}
+          'اخبرهما','حدثاه','اخبراه','حدثوه','اخبروه','حدثتهم','اخبرتهم','حدثتهما','اخبرته','حدثته','حدثوهم','حدثونا','اخبرونا',
+          # "عن أسامة بن زيد أنه سمعه يقول": he heard him, the narrator just named (2026-11-22: "سمعه" was
+          # drawn as a narrator of its own between Usamah and the Prophet ﷺ, fifty chains)
+          'سمعه','سمعها','سمعهم','سمعهما'}
 for w in list(STRONG): STRONG.add('و' + w); STRONG.add('ف' + w)
+HEARD_HIM = {'سمعه','سمعها','سمعهم','سمعهما'}
+# Three words said of the narrator just named, not a narrator beside him: "and he was a Companion",
+# "and he did not hear it from him".
+SAID_OF_HIM = {('وكانت', 'له', 'صحبه'), ('وكان', 'له', 'صحبه'), ('ولم', 'يسمعه', 'منه')}
 ANN = {'عن','ان','انه','انها','انهم','انهما'}
 SAY = {'قال','قالت','قالا','قالوا','يقول','تقول','يقولان','يحدث','تحدث','يخبر','يحدثه','فقال','يذكر','ذكر'}
 JOINT_END = {'قالا','قالوا','جميعا','كلاهما','كلهم','ثلاثتهم','اربعتهم'}
@@ -114,6 +140,17 @@ STOP = {'يا','يرويه','يرفعه','رفعه','يبلغ','يبلغه','ي�
         'بهذاالاسناد','وزاد','زاد','وذكر','فذكر','بمعناه','معناه','لفظ','واللفظ','حديث','الحديث','نحو','مثل','قيل','اول',
         'عليه','عليها','وسلم','الله','رسول','النبي','نبي','صلي','وهم','انا','نحن','هم','اني','انه','كل','بعض','اذ','حين','حتي'}
 STOP_ALLOW_IN_NAME = {'الله'}  # عبد الله, رضي الله handled separately
+# Words no name begins with, each one met as a "narrator" on the shelf (2026-11-22): the one spoken to
+# ("قال لي", "ذكر لنا"), "ذُكر عند النبي", "ولم يذكر", "سمعه منه", "وربما قال", "وكان رديف رسول الله".
+# A piece that opens with one is not a name and its chain is not drawn (`validate`); unlike a STOP
+# word they are let be inside a longer piece ("مولاة لنا يقال لها ليلى" is a narrator described).
+NOT_NAME = {'لي','لنا','عند','لم','ولم','ولا','منه','منها','منهم','منهما','ربما','وربما','وكان','وكانت','كانوا','وكانوا'}
+# "قال لي رسول الله", "قال لنا أنس": the one the speaker spoke to is the narrator himself, never a
+# narrator of his own (Abu, 2026-11-22: "who is li??": "لي" stood in the index as a Companion with 184
+# narrations, the top of every chain that ends "قال قال لي رسول الله ﷺ").
+ADDRESSED = {'لي','لنا'}
+# "أنّ" and its pronouns: what follows is a clause, "أنّ أصحاب النبي ﷺ كانوا", "أنه شهد النبي ﷺ".
+THAT = {'ان','انه','انها','انهم','انهما'}
 
 # "عن عمه، واسع بن حبان": after one of these the comma names him, it does not add a second narrator.
 KIN = {'ابيه','عمه','جده','امه','خاله','اخيه','ابنه','مولاه','مولاته','عمته','خالته','اخته','جدته','ابيها','امها','عمها'}
@@ -138,10 +175,53 @@ def is_prophet(keys, i):
     if k in ('النبي', 'للنبي', 'بالنبي'): return 1
     if k in ('رسول', 'برسول', 'لرسول') and nxt.startswith('الله'): return 2
     if k == 'نبي' and nxt == 'الله': return 2
+    # "سمعت أبا القاسم ﷺ": his kunya, when the blessing follows it (2026-11-22: thirteen chains drew
+    # "أبو القاسم" as a narrator above Abu Hurairah). Without the blessing it can be another man's.
+    if k in ('ابا', 'ابو', 'ابي') and nxt == 'القاسم' and honorific(keys, i + 2): return 2
     return 0
+
+def after_prophet(keys, i):
+    """The index after the Prophet's mention at i and the blessing that follows it."""
+    j = i + is_prophet(keys, i)
+    while j < len(keys):
+        if not keys[j]:
+            j += 1
+            continue
+        h = honorific(keys, j)
+        if not h:
+            break
+        j += h
+    return j
+
+
+# Words after which the Prophet's name in the genitive is still him being met, asked or sat with
+# ("مع رسولِ الله", "على عهد النبيِّ"), not something of his.
+BEFORE_HIM = {'مع', 'علي', 'عند', 'الي', 'من', 'عن', 'في', 'عهد', 'زمن', 'زمان', 'خلف', 'وراء', 'بعد', 'قبل', 'بين', 'يدي',
+              # "كان رديف النبي ﷺ" (riding behind him), "قبّل يد النبي ﷺ": with him, in the genitive
+              'رديف', 'ردف', 'يد'}
+
+
+def possessed(raw, keys, i):
+    """The Prophet's mention at i is the owner of the word before it ("قبر النبيِّ ﷺ", "أصحاب النبيِّ",
+    "تلبية رسولِ الله"): written in the genitive, by the shelf's own vowels, with no preposition before
+    it. Such a clause speaks of something of his; it does not say the narrator met or heard him."""
+    if keys[i] not in ('النبي', 'رسول', 'نبي'):
+        return False
+    case = next((ch for ch in reversed(raw[i]) if ch in 'َُِ'), '')
+    j = i - 1
+    while j >= 0 and not keys[j]: j -= 1
+    return case == 'ِ' and j >= 0 and keys[j] not in BEFORE_HIM
+
+
+def passive_mention(raw, keys, i):
+    """"ذُكِرَ" (it was mentioned), not "ذَكَرَ" (he mentioned): the shelf's own vowels tell them apart. No
+    one is narrating in "ذُكر عند النبي ﷺ" or "ذُكر لي أن النبي ﷺ"."""
+    return keys[i] == 'ذكر' and 'ذُ' in raw[i]
+
 
 def honorific(keys, i):
     """'رضي الله عنه' / 'رضى الله عنهما' / 'صلى الله عليه وسلم' / 'عليه السلام' -> its length."""
+    if i >= len(keys): return 0
     k = keys[i]
     if k in ('رضي',) and i + 2 < len(keys) and keys[i+1] == 'الله' and keys[i+2].startswith('عن'): return 3
     if k == 'صلي' and i + 3 < len(keys) and keys[i+1] == 'الله' and keys[i+2] == 'عليه' and keys[i+3] == 'وسلم': return 4
@@ -185,6 +265,7 @@ def parse(arabic, max_scan=140):
     verb = None           # index of the verb before the next name
     prophet_verb = None
     ended = None
+    unreached = False     # the report opens with something of the Prophet's, not with him
     joint_at = {}
     restate = None
     while i < n and i < max_scan:
@@ -229,6 +310,13 @@ def parse(arabic, max_scan=140):
         if k in STRONG:
             verb = i; i += 1
             if k in ('قرات','وقرات') and i < n and keys[i] in ('علي',): i += 1
+            # "عن أبي الأحوص سمعه منه عن عبد الله": he heard it from him, the narrator just named
+            if (k in HEARD_HIM or k == 'سمعته') and i < n and keys[i] in ('منه','منها','منهم','منهما'): i += 1
+            # "سمع جابرا يقول سمعه من النبي ﷺ"
+            if k in HEARD_HIM and i + 1 < n and keys[i] == 'من' and is_prophet(keys, i + 1):
+                prophet_verb = verb; ended = 'prophet'; break
+            # "حدثنا أو سمعت جابر": the narrator's doubt between two words of transmission
+            if i + 1 < n and keys[i] == 'او' and keys[i + 1] in STRONG: i += 1
             continue
         if k in ANN:
             if is_prophet(keys, i + 1):
@@ -265,11 +353,18 @@ def parse(arabic, max_scan=140):
                        or (len(road) > 1 and any(' '.join(x for x in keys[m.first:m.last + 1] if x).startswith(said_by) for m in road[-2])):
                         restate = len(road)
                         verb = j; i = j + 1; continue
-            if road and nxt < n and keys[nxt] in SAY and not is_prophet(keys, nxt + 1):
+            if road and nxt < n and keys[nxt] in SAY and not is_prophet(keys, nxt + 1) and not passive_mention(raw, keys, nxt):
                 # "أنه قال قال أنس بن مالك": he reports from Anas
                 after = nxt + 1
                 while after < n and not keys[after]: after += 1
-                if after < n and keys[after] not in STOP and keys[after] not in SAY and keys[after] not in ANN:
+                # "قال قال لي رسول الله", "قال ذكر لنا أنس بن مالك": the one spoken to is passed over
+                spoken_to = after < n and keys[after] in ADDRESSED
+                if spoken_to:
+                    after += 1
+                    while after < n and not keys[after]: after += 1
+                    if after < n and is_prophet(keys, after):
+                        prophet_verb = i; ended = 'prophet'; break
+                if after < n and keys[after] not in STOP and keys[after] not in NOT_NAME and keys[after] not in SAY and keys[after] not in ANN:
                     verb = nxt; i = after; continue
             if nxt < n and keys[nxt] in ANN and road:
                 if is_prophet(keys, nxt + 1):
@@ -288,6 +383,26 @@ def parse(arabic, max_scan=140):
         if is_prophet(keys, i):
             if verb is not None and road and road[-1][-1].last < verb:
                 prophet_verb = verb
+            elif verb is None and len(road) > 1 and len(road[-1]) == 1 and road[-1][0].verb is not None \
+                    and keys[road[-1][0].verb] in THAT and not road[-1][0].aside:
+                # "عن عروة عن أبيه أنّ أصحاب النبي ﷺ ...", "عن جندب أنه شهد النبي ﷺ ...", "عن أنس أنّ
+                # خياطا دعا رسول الله ﷺ": the words between "أنّ" and the Prophet's mention are the
+                # report's own opening, not a narrator (2026-11-22: 218 chains drew them as one, and the
+                # index listed "أصحاب", "شهد", "أزواج" among the Companions). The chain ends at the
+                # narrator before, by the rule of every report: it reaches the Prophet ﷺ when it names
+                # him in its first three words. A name with its epithet stays ("أنّ ميمونة مولاة النبي ﷺ
+                # قالت": more than one word, and a word of transmission after the blessing).
+                clause = road[-1][0]
+                words = [x for x in keys[clause.first:clause.last + 1] if x]
+                nxt = after_prophet(keys, i)
+                narrates = nxt < n and (keys[nxt] in SAY or keys[nxt] in STRONG or keys[nxt] in ANN)
+                if len(words) == 1 or not narrates:
+                    # "أنه رأى قبر النبي ﷺ", "أن أزواج النبي ﷺ كنّ": something of his, so the chain
+                    # ends at its narrator and claims no more.
+                    unreached = possessed(raw, keys, i)
+                    road.pop()
+                    i = clause.verb
+                    ended = 'say'; break
             ended = 'prophet'; break
         if k in JOINT_END:
             if road: joint_at.setdefault(id(road), len(road))
@@ -337,12 +452,19 @@ def parse(arabic, max_scan=140):
                 break
             if kk in JOINT_END:
                 break
+            if i > cur_start and i + 2 < n and (kk, keys[i + 1], keys[i + 2]) in SAID_OF_HIM:
+                # "عن أبي وهب الجشمي، وكانت له صحبة، قال": said of the narrator just named, an aside on him
+                names.append((cur_start, i - 1)); epithet_aside.append((i, i + 2))
+                i += 3
+                cur_start = None
+                break
             if kk in STRONG or kk in ANN or kk in SAY or kk in TAHWIL or honorific(keys, i) or is_prophet(keys, i) \
                or kk in ('يعني','يعنى','وهو','هو','واللفظ') or raw[i] in ('-','–'):
                 break
             # a second narrator joined by و after a comma: "أبو بكر بن أبي شيبة، وأبو كريب"
             if kk.startswith('و') and i > cur_start and raw[i-1].endswith(('،', ',')) \
-               and not (i - cur_start == 1 and keys[cur_start] in KIN) and kk not in ('وكيع','وهب','واصل','وائل','ورقاء','وهيب','واقد','وبرة','وراد'):
+               and not (i - cur_start == 1 and keys[cur_start] in KIN) and kk not in ('وكيع','وهب','واصل','وائل','ورقاء','وهيب','واقد','وبرة','وراد') \
+               and not (kk == 'واحد' and keys[i-1] in ('غير', 'وغير')):
                 names.append((cur_start, i - 1)); cur_start = i; kinds.append('waw')
             waw_apart = False
             i += 1
@@ -385,7 +507,7 @@ def parse(arabic, max_scan=140):
     if not roads: return None, 'none'
     joints = [joint_at.get(id(r)) for r in roads]
     implied = False
-    if ended == 'say':
+    if ended == 'say' and not unreached:
         j = i + 1
         seen = 0
         while j < n and seen < 3:
@@ -408,6 +530,9 @@ def validate(chain, keys, raw):
                 if not ks or len(ks) > 8: return 'length'
                 # a conjunction alone is no one: "و" set apart before a word the reading did not join it to
                 if ks == ['و'] or not node_key(node, keys): return 'empty'
+                # nor is "أو" between two words of transmission ("حدثنا أو، سمعت جابر"), nor a piece
+                # that opens with a word no name begins with ("لي", "عند", "ولم")
+                if ks == ['او'] or ks[0] in NOT_NAME: return 'not-name'
                 if any(k in STOP for k in ks if k not in STOP_ALLOW_IN_NAME) and not (len(ks) >= 2 and ks[0] == 'عبد'): return 'stop:' + ' '.join(ks)
     return None
 
@@ -580,6 +705,15 @@ def read_all():
             if chain:
                 bad = validate(chain, keys, raw)
                 if bad:
+                    if bad == 'not-name' and merge(chain, keys) is not None:
+                        # Its other pieces are still names met on the shelf, counted as they were
+                        # while that piece passed for one (so no real narrator falls under MIN_SEEN).
+                        for road in chain['roads']:
+                            for layer in road:
+                                for node in layer:
+                                    ks = [k for k in keys[node.first:node.last + 1] if k]
+                                    if ks != ['او'] and ks[0] not in NOT_NAME:
+                                        counts[node_key(node, keys)] += 1
                     chain, why = None, bad.split(':')[0]
             if chain and slug == 'malik':
                 first = chain['roads'][0][0][0]
@@ -646,10 +780,23 @@ NARRATOR_SAMPLES = ROOT / "UnitTests/HadithNarratorSamples.swift"
 GRADE_SAHIH, GRADE_HASAN, GRADE_DAIF, GRADE_DIFFER, GRADE_OTHER, GRADE_NONE = range(6)
 GRADE_NAMES = ('sahih', 'hasan', "da'if", 'graders differ', 'other', 'none')
 ROLE_LINK, ROLE_TOP, ROLE_TEACHER = 0, 1, 2
+# In a narrator's list of narrations (never in `chain_nodes`): the top of a chain that does NOT name
+# the Prophet ﷺ above it. The chain as written stops at him, so the narration is his own words or his
+# own account, and the app must not file it under "From the Prophet ﷺ" (it did until 2026-11-22: the
+# badge went on every top, 815 of 'Ali's rows for the 590 that reach the Prophet ﷺ).
+ROLE_END = 3
 WEAK = re.compile(r"da'?if|daeef|weak|munkar|mawdu|maudu|fabricat|batil|shadh", re.I)
 # "his father", "her mother", "his client": a relation to the narrator before, not a person of his own.
 RELATIVE = KIN | {'ابي', 'ابيها', 'امها', 'جدته', 'اخته', 'عمته', 'خالته', 'ابنه', 'ابنته', 'مولاه', 'مولاته', 'زوجها',
-                  'زوجته', 'جدها', 'عمها', 'خالها', 'اخيها', 'اخوه', 'جديه', 'ابويه', 'امراته', 'امراه'}
+                  'زوجته', 'جدها', 'عمها', 'خالها', 'اخيها', 'اخوه', 'جديه', 'ابويه', 'امراته', 'امراه',
+                  # the same relations in the speaker's own voice and in the accusative (2026-11-22: "حدثني
+                  # أخي", "سمعت عمي", "أن أباه" were each one "narrator", every man's brother on one page)
+                  'اباه', 'اباها', 'جدي', 'عمي', 'اخي', 'جدتي', 'عمتي', 'ابيهما'}
+# Someone the narration leaves unnamed ("عن شيخ", "حدثني الثقة", "عن غير واحد", "وغيره", "أصحاب النبي ﷺ",
+# "قالت الأنصار", "أن أعرابيا"): a piece that opens with one of these is drawn as written and is no
+# one's page, as a relation is not.
+UNNAMED = {'غير', 'غيره', 'غيرهما', 'غيرهم', 'احد', 'احدهما', 'اخر', 'شيخ', 'شيخا', 'فلان', 'ثقه', 'ناس', 'نساء', 'رجلان',
+           'بعضهم', 'قوما', 'اصحاب', 'ازواج', 'انصار', 'اعرابي', 'اعرابيا', 'اهل'}
 SHARD = 256
 BOOK_SLUGS = list(BOOKS)
 NARRATOR_RECORD = struct.Struct('<BIBB')
@@ -681,7 +828,7 @@ def narrator_key(k):
     """The identity a node's name is filed under, or None for a relation ("أبيه"): `node_key`'s fold
     with a leading "أبي"/"أبا" read as "أبو", so the case the sentence puts him in does not split him."""
     words = k.split()
-    if not words or k in RELATIVE:
+    if not words or k in RELATIVE or words[0] in UNNAMED:
         return None
     if words[0] in ('ابي', 'ابا'):
         words[0] = 'ابو'
@@ -722,7 +869,7 @@ TITLES = (('ام', 'المؤمنين'),)
 # A word of the report that ran on after a name ("عائشة أخبرتها", "ابن عمر أراه"): not a name either.
 TRAILING = STRONG | SAY | ANN | REFERS | {'اراه', 'اظنه', 'احسبه', 'اخبرتها', 'حدثتها', 'اخبرته', 'حدثته', 'ارق'}
 # Words that make a longer name another man's ("عائشة بنت طلحة" is not Aishah): never dropped.
-NAME_WORDS = {'بن', 'ابن', 'بنت', 'ابي', 'ابو', 'ابا', 'ام', 'مولي', 'عبد', 'اخي', 'اخو', 'اخت', 'زوج', 'صاحب', 'او'}
+NAME_WORDS = {'بن', 'ابن', 'بنت', 'ابي', 'ابو', 'ابا', 'ام', 'مولي', 'مولاه', 'عبد', 'اخي', 'اخو', 'اخت', 'زوج', 'صاحب', 'او'}
 # One fuller name has to outnumber every other the shorter one fits by this much to take it.
 DOMINANCE = 10
 # A fuller name takes a shorter one only when the shelf names it at the top this many times, and at
@@ -730,6 +877,13 @@ DOMINANCE = 10
 # never takes the 850 mentions of "Abu Sa'id", who is al-Khudri).
 MIN_TOP = 3
 MIN_SHARE = 0.1
+# How far down a chain the joins made for its top reach: the top generation and the one below it (a
+# Companion narrating from a Companion). Deeper, and at the foot of the chain, a name is filed as it
+# is written: "حدثنا علي حدثنا سفيان" is al-Bukhari's teacher, not Ali ibn Abi Talib.
+TOP_REACH = 2
+# The mark, inside this script only, of a short name's page for its mentions at the foot of a chain,
+# when the page of the top is a fuller name's ("حدثنا أبو سعيد" beside Abu Sa'id al-Khudri).
+DEEP = '\x00'
 
 
 def cleaned(k):
@@ -770,6 +924,8 @@ class Identities:
     def __init__(self, stats):
         self.stats = stats
         self.canon = {}
+        self.rule = {}
+        self._absorbing = None
         self.report = defaultdict(list)
         self.count = {k: v['count'] for k, v in stats.items()}
         self.top = {k: v['top'] for k, v in stats.items()}
@@ -791,7 +947,40 @@ class Identities:
         if short == full or self.resolve(full) == short:
             return
         self.canon[short] = full
+        self.rule[short] = rule
         self.report[rule].append((short, full, self.count.get(short, 0)))
+
+    def resolve_mention(self, k, at_top, foot=False):
+        """`resolve` for one mention. The joins made at the top of the chain hold where the name stands
+        there (`at_top`: within TOP_REACH of the top, and not the compiler's own teacher). Elsewhere
+        only what the writing itself settles is followed: a case ending, a word of the report left
+        on the name, a nisba written out ("أبي سعيد الخدري" is al-Khudri wherever he stands), and
+        "ابن X" for the one man the shelf calls so. A bare given name is not folded into the fuller
+        name of the top (Abu, 2026-11-22: Ali ibn Abi Talib's page said he taught the compilers 66
+        narrations, every "حدثنا علي" of Ali ibn al-Madini), and at the `foot` of a chain a bare kunya
+        whose page at the top is a nisba's ("أبو سعيد", al-Khudri's) gets a page of its own: the
+        compiler's teacher is never the Companion (122 narrations, Abu Sa'id al-Ashajj's and others')."""
+        if at_top:
+            return self.resolve(k)
+        seen = set()
+        fuller = False
+        while k in self.canon and k not in seen:
+            rule = self.rule[k]
+            if rule == 'prefix' and not k.startswith('ابن '):
+                break
+            fuller = fuller or rule in ('nisba', 'leftover')
+            seen.add(k)
+            k = self.canon[k]
+        if foot and not fuller and len(k.split()) <= 2 and k in self.absorbing:
+            k += DEEP
+        return k
+
+    @property
+    def absorbing(self):
+        """The short names a nisba was folded into: their page at the top is that fuller name's."""
+        if self._absorbing is None:
+            self._absorbing = {full for short, full in self.canon.items() if self.rule[short] == 'nisba'}
+        return self._absorbing
 
     def truly_short(self, s):
         """A name the shelf writes in full often enough beside it to be short for several men ("عبد الله",
@@ -813,7 +1002,8 @@ class Identities:
             words = k.split()
             for i, w in enumerate(words):
                 if len(w) > 2 and w.endswith('ا') and w not in NAME_WORDS:
-                    stem = ' '.join(words[:i] + [w[:-1]] + words[i + 1:])
+                    # "عَمْرًا" is 'Amr: عمرو drops its waw for the alef, and "عمر" never takes one.
+                    stem = ' '.join(words[:i] + ['عمرو' if w == 'عمرا' else w[:-1]] + words[i + 1:])
                     if self.count.get(stem, 0) >= max(MIN_SEEN, self.count[k]):
                         self.join(k, stem, 'accusative')
                         break
@@ -938,11 +1128,11 @@ def annotate(books):
     print(f"   context    {len(context):4} (student, name) pairs resolved, e.g. "
           + '; '.join(f"{short} under {student} -> {full}" for (student, short), full in list(context.items())[:3]))
 
-    def node_identity(node, keys, student_key=None):
+    def node_identity(node, keys, place, student_key=None):
         k = narrator_key(node_key(node, keys))
         if not k:
             return None
-        identity = identities.resolve(cleaned(k))
+        identity = identities.resolve_mention(cleaned(k), *place)
         if student_key is not None:
             identity = context.get((student_key, identity), identity)
         return identity
@@ -952,6 +1142,8 @@ def annotate(books):
         keys = chain['keys']
         out = {}
         columns = chain_layers_top_down(chain)
+        # (within reach of the top, at the foot) for each node
+        place = {node: (depth <= TOP_REACH and role != ROLE_TEACHER, role == ROLE_TEACHER) for node, role, depth in chain_nodes(chain)}
         for column in columns:
             for index, layer in enumerate(column):
                 lower = column[index + 1] if index + 1 < len(column) else []
@@ -961,7 +1153,7 @@ def annotate(books):
                     if node in out:
                         continue
                     student = student_keys[0] if len(student_keys) == 1 and index == 0 and chain['prophet'] else None
-                    identity = node_identity(node, keys, student)
+                    identity = node_identity(node, keys, place.get(node, (False, False)), student)
                     if identity:
                         out[node] = identity
         return out
@@ -992,16 +1184,20 @@ def annotate(books):
     for k in ordered:
         # The page's title: the fullest of the names joined here that the shelf writes often enough
         # (a fifth of the mentions), so Ibn Umar's page is "عبد الله بن عمر" and Abu Sa'id's names
-        # al-Khudri; the others are listed under it, each with its count.
+        # al-Khudri; the others are listed under it, each with its count. The name the joins filed
+        # the page under always stands for the title, however seldom it is written out: every
+        # shorter form was folded into it as this man's (Abu, 2026-11-22: "for Ali it says just Ali
+        # ... instead of his full name Ali ibn Abi Talib. Fix for all": "علي بن أبي طالب" is a sixth
+        # of his mentions, under the fifth the bare "علي" won by).
         total = sum(sum(c.values()) for c in forms[k].values())
-        candidates = [(key, c) for key, c in forms[k].items() if sum(c.values()) * 5 >= total] or list(forms[k].items())
+        candidates = [(key, c) for key, c in forms[k].items() if sum(c.values()) * 5 >= total or key == k] or list(forms[k].items())
         own_key, own = max(candidates, key=lambda kc: (len(kc[0].split()), sum(kc[1].values())))
         name = own.most_common(1)[0][0]
         other_forms = sorted(((c.most_common(1)[0][0], sum(c.values())) for key, c in forms[k].items() if key != own_key),
                              key=lambda f: -f[1])
         depth = depths[k].most_common(1)[0][0] if depths[k] else 0
-        narrators.append({'id': ids[k], 'key': k, 'name': name, 'english': transliterate(name), 'depth': min(depth, 255),
-                          'forms': other_forms, 'refs': [], 'from_prophet': 0, 'teacher': 0, 'grades': [0] * 6,
+        narrators.append({'id': ids[k], 'key': k.replace(DEEP, ''), 'name': name, 'english': transliterate(name), 'depth': min(depth, 255),
+                          'forms': other_forms, 'refs': [], 'from_prophet': 0, 'teacher': 0, 'ends': 0, 'grades': [0] * 6,
                           'books': [0] * len(BOOK_SLUGS)})
     groups = sorted((members for members in by_signature.values() if len(members) > 1), key=lambda m: (-len(m), m))
     group_of = {member: n + 1 for n, members in enumerate(groups) for member in members}
@@ -1021,8 +1217,11 @@ def annotate(books):
                 roles[ids[identity]] = max(roles.get(ids[identity], ROLE_LINK), role, key=lambda r: (r == ROLE_TOP, r == ROLE_TEACHER))
             for narrator_id, role in roles.items():
                 entry = narrators[narrator_id - 1]
+                if role == ROLE_TOP and not chain['prophet']:
+                    role = ROLE_END
                 entry['refs'].append((book, int(id_text), role, grade))
-                entry['from_prophet'] += role == ROLE_TOP and chain['prophet']
+                entry['from_prophet'] += role == ROLE_TOP
+                entry['ends'] += role == ROLE_END
                 entry['teacher'] += role == ROLE_TEACHER
                 entry['grades'][grade] += 1
                 entry['books'][book] += 1
@@ -1086,7 +1285,7 @@ def packed_string(text):
 
 def narrator_payload(entry):
     out = packed_string(entry['name'])
-    out += struct.pack('<III', len(entry['refs']), entry['from_prophet'], entry['teacher'])
+    out += struct.pack('<IIII', len(entry['refs']), entry['from_prophet'], entry['teacher'], entry['ends'])
     out += struct.pack('<6I', *entry['grades'])
     out += struct.pack(f'<B{len(BOOK_SLUGS)}I', len(BOOK_SLUGS), *entry['books'])
     out += struct.pack('<B', entry['depth']) + packed_string(entry['english']) + packed_string(entry['key'])
@@ -1104,6 +1303,7 @@ def write_narrators_pack(narrators, groups):
                       u32 narrators, u32 shard size, u32 shards, u32 groups
       block 0 (LZMA)  the narrators: a row block by narrator id (1-based, by mentions descending):
                       string name, u32 narrations, u32 from the Prophet, u32 the compiler's teacher,
+                      u32 the top of a chain that does not name the Prophet ﷺ,
                       u32 x 6 by grade (sahih, hasan, da'if, graders differ, other, none),
                       u8 books, u32 narrations per book,
                       u8 generation (1 = narrates from the Prophet ﷺ, 2 below him, ... ; 0 unknown),
@@ -1111,7 +1311,8 @@ def write_narrators_pack(narrators, groups):
                       u16 other written forms, each: string form (as most written), u32 mentions
       block 1..S      the narrations naming each narrator: a row block by id, shard k holding the ids
                       k*SHARD+1 ... (k+1)*SHARD; a row's payload is its refs, 7 bytes each:
-                      u8 book, u32 idInBook, u8 role (0 link, 1 top, 2 the compiler's teacher), u8 grade
+                      u8 book, u32 idInBook, u8 role (0 link, 1 top of a chain that reaches the
+                      Prophet ﷺ, 2 the compiler's teacher, 3 top of a chain that does not), u8 grade
       block S+1       the groups of equal chains: a row block by group id (1-based, largest first), a
                       row's payload its members, 5 bytes each: u8 book, u32 idInBook
 
@@ -1182,7 +1383,7 @@ def write_narrator_samples(narrators, groups, books):
              '    struct Ref { let slug: String; let idInBook: Int; let role: Int; let grade: Int }',
              '    struct Form { let name: String; let count: Int }',
              '    struct Narrator { let id: Int; let name: String; let english: String; let depth: Int; let narrations: Int;'
-             ' let fromProphet: Int; let teacher: Int; let grades: [Int]; let books: [Int]; let forms: [Form]; let firstRefs: [Ref] }',
+             ' let fromProphet: Int; let teacher: Int; let ends: Int; let grades: [Int]; let books: [Int]; let forms: [Form]; let firstRefs: [Ref] }',
              '    struct Group { let id: Int; let members: [(slug: String, idInBook: Int)] }',
              f'    static let narratorCount = {len(narrators)}',
              f'    static let groupCount = {len(groups)}',
@@ -1193,7 +1394,7 @@ def write_narrator_samples(narrators, groups, books):
         forms = ', '.join(f'Form(name: {json.dumps(f, ensure_ascii=False)}, count: {c})' for f, c in e['forms'])
         lines.append(f'        Narrator(id: {e["id"]}, name: {json.dumps(e["name"], ensure_ascii=False)}, '
                      f'english: {json.dumps(e["english"])}, depth: {e["depth"]}, narrations: {len(e["refs"])}, '
-                     f'fromProphet: {e["from_prophet"]}, teacher: {e["teacher"]}, grades: {e["grades"]}, books: {e["books"]}, '
+                     f'fromProphet: {e["from_prophet"]}, teacher: {e["teacher"]}, ends: {e["ends"]}, grades: {e["grades"]}, books: {e["books"]}, '
                      f'forms: [{forms}], firstRefs: [{refs}]),')
     lines += ['    ]', '    static let groups: [Group] = [']
     for n in (0, 1, len(groups) // 2, len(groups) - 1):

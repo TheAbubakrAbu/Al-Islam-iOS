@@ -243,7 +243,7 @@ struct SurahRow: View, Equatable {
             .foregroundColor(accentColor.color)
             .frame(width: badgeWidth)
             .frame(maxHeight: .infinity)
-            .conditionalGlassEffect(
+            .contentSurface(
                 useColor: favoriteState ? 0.3 : nil,
                 customTint: favoriteState ? accentColor.color : nil,
                 inRow: true
@@ -591,7 +591,7 @@ struct SurahRow: View, Equatable {
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         // Favorites are tinted, everything else is clear - see the 99 Names grid for the same reasoning.
-        .conditionalGlassEffect(
+        .contentSurface(
             clear: !favoriteState,
             rectangle: true,
             useColor: favoriteState ? 0.25 : nil,
@@ -773,7 +773,7 @@ struct SurahAyahRow: View, Equatable {
                         .padding(.vertical, 8)
                         .padding(.horizontal, 11)
                         #endif
-                        .conditionalGlassEffect(
+                        .contentSurface(
                             useColor: isBookmarked ? 0.3 : nil,
                             customTint: isBookmarked ? bookmarkTint : nil,
                             interactive: false,
@@ -901,7 +901,7 @@ struct SurahAyahRow: View, Equatable {
         .padding(12)
         // Always CLEAR glass, even when bookmarked - the accent-filled bookmark icon in the corner carries
         // the state; a tinted card here read as too loud next to the surah grid.
-        .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
+        .contentSurface(clear: true, rectangle: true, inRow: true)
         .overlay(alignment: .topTrailing) {
             Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                 .font(.system(size: 11, weight: .semibold))
@@ -1323,7 +1323,7 @@ struct AyahSearchRow: View, Equatable {
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 .frame(width: badgeWidth, height: 28, alignment: .center)
-                .conditionalGlassEffect(
+                .contentSurface(
                     useColor: isBookmarked ? 0.3 : nil,
                     customTint: isBookmarked ? bookmarkTint : nil,
                     interactive: false,

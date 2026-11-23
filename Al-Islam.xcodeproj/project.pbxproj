@@ -74,6 +74,7 @@
 		33E939077360487795440D54 /* AskAIRetrieval.swift in Sources */ = {isa = PBXBuildFile; fileRef = 477073279F2F414FABB5E81E /* AskAIRetrieval.swift */; };
 		3758DD297B7A5153DD61F840 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50571BC49608A24CCF424F45 /* Localization.swift */; };
 		37E7458BCC334798BD6EF286 /* AskAIPromptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57B27BDD3C9C4034AED7D058 /* AskAIPromptTests.swift */; };
+		844657EDA96446C78A24CF41 /* AskAIDepthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E85A4DA837D94A0F809F33C4 /* AskAIDepthTests.swift */; };
 		39B560187A774BC99E5E8498 /* ThemeHighlights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ADC7477F58F426E98493CD8 /* ThemeHighlights.swift */; };
 		3AE3ABCFA08A4154B06A9313 /* PrayerTrackerInsightsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC7D365E53946E69FBBC765 /* PrayerTrackerInsightsTests.swift */; };
 		3B02B3F2A29F6A02028214A5 /* ArabicGrammarViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AE074B1094CB9771CD902C3 /* ArabicGrammarViews.swift */; };
@@ -320,6 +321,7 @@
 		72A15E00000000000000D001 /* quran-en.svec in Resources */ = {isa = PBXBuildFile; fileRef = 72A15E00000000000000C001 /* quran-en.svec */; };
 		72A15E00000000000000D002 /* hadith-all.svec in Resources */ = {isa = PBXBuildFile; fileRef = 72A15E00000000000000C002 /* hadith-all.svec */; };
 		72A5CA1B00000000000AC002 /* AskAIChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A5CA1A00000000000AC001 /* AskAIChat.swift */; };
+		67696955C3C744248AD35F4E /* AskAIDepth.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CD28942397447A8F102AED /* AskAIDepth.swift */; };
 		72A7C0022FB1000000AA1002 /* PrayerTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A7C0012FB1000000AA1001 /* PrayerTrackerView.swift */; };
 		72A7C0042FB1000000AA1004 /* SettingsHadithView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A7C0032FB1000000AA1003 /* SettingsHadithView.swift */; };
 		72A7C0062FB1000000AA1006 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A7C0052FB1000000AA1005 /* ProfileView.swift */; };
@@ -1028,6 +1030,7 @@
 		56434FF04CFA4CB9966C2B25 /* HadithChainSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HadithChainSheet.swift; sourceTree = "<group>"; };
 		5772679CEB3D4ACF92A8FCCB /* ThemeWashTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeWashTests.swift; sourceTree = "<group>"; };
 		57B27BDD3C9C4034AED7D058 /* AskAIPromptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskAIPromptTests.swift; sourceTree = "<group>"; };
+		E85A4DA837D94A0F809F33C4 /* AskAIDepthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskAIDepthTests.swift; sourceTree = "<group>"; };
 		5C3F924E746F407ABF466CE4 /* QuranRankedSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranRankedSearch.swift; sourceTree = "<group>"; };
 		5DB27302E307C42377A39670 /* ShareSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSupport.swift; sourceTree = "<group>"; };
 		5E9CB3C0F9C14DC0A39E84CE /* SunnahContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SunnahContent.swift; sourceTree = "<group>"; };
@@ -1174,6 +1177,7 @@
 		72A15E00000000000000C001 /* quran-en.svec */ = {isa = PBXFileReference; lastKnownFileType = file; path = "quran-en.svec"; sourceTree = "<group>"; };
 		72A15E00000000000000C002 /* hadith-all.svec */ = {isa = PBXFileReference; lastKnownFileType = file; path = "hadith-all.svec"; sourceTree = "<group>"; };
 		72A5CA1A00000000000AC001 /* AskAIChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskAIChat.swift; sourceTree = "<group>"; };
+		C0CD28942397447A8F102AED /* AskAIDepth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskAIDepth.swift; sourceTree = "<group>"; };
 		72A7C0012FB1000000AA1001 /* PrayerTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerTrackerView.swift; sourceTree = "<group>"; };
 		72A7C0032FB1000000AA1003 /* SettingsHadithView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsHadithView.swift; sourceTree = "<group>"; };
 		72A7C0052FB1000000AA1005 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
@@ -1861,6 +1865,7 @@
 				78D76AD6D2AD4BA7A639676E /* AskAISuggestionTests.swift */,
 				CF138B968EA64FAEB0D2D8C0 /* AskAINamesTests.swift */,
 				57B27BDD3C9C4034AED7D058 /* AskAIPromptTests.swift */,
+				E85A4DA837D94A0F809F33C4 /* AskAIDepthTests.swift */,
 				69ED944CCF3C4DDB990700B8 /* AskAICrisisTests.swift */,
 				7249B76B30770CAF007F1D04 /* AyahReferenceParsingTests.swift */,
 				03F9DE499C174D3EABFAD5BB /* AppLinkTests.swift */,
@@ -2663,6 +2668,7 @@
 			isa = PBXGroup;
 			children = (
 				72A5CA1A00000000000AC001 /* AskAIChat.swift */,
+				C0CD28942397447A8F102AED /* AskAIDepth.swift */,
 				334250CAFEDF4097A6ED0294 /* AskAICrisis.swift */,
 				D8B41B88CE3342DC813FE9E1 /* AskAIConversation.swift */,
 				1A4EC4EC8C2649588B18FB67 /* AskAIEngine.swift */,
@@ -2698,6 +2704,7 @@
 				72109F282A65D77400BD373E /* Sources */,
 				72109F292A65D77400BD373E /* Frameworks */,
 				72109F2A2A65D77400BD373E /* Resources */,
+				7E5C0000000000000000A002 /* Trim Watch Strings */,
 			);
 			buildRules = (
 			);
@@ -2781,6 +2788,7 @@
 				72B5319F2A22DCFE007FA002 /* Frameworks */,
 				72B531A02A22DCFE007FA002 /* Resources */,
 				72109F3B2A65D77600BD373E /* Embed Foundation Extensions */,
+				7E5C0000000000000000A001 /* Trim Watch Strings */,
 			);
 			buildRules = (
 			);
@@ -3103,6 +3111,49 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		7E5C0000000000000000A002 /* Trim Watch Strings */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Trim Watch Strings";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "python3 \"${PROJECT_DIR}/Scripts/trim_watch_strings.py\"\n";
+			showEnvVarsInLog = 0;
+		};
+		7E5C0000000000000000A001 /* Trim Watch Strings */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Trim Watch Strings";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "python3 \"${PROJECT_DIR}/Scripts/trim_watch_strings.py\" --with-data-keys\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		72109F282A65D77400BD373E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -3357,6 +3408,7 @@
 				72AE0003AE5F4C7D00000003 /* SemanticSearch.swift in Sources */,
 				72AE0005AE5F4C7D00000005 /* OnDeviceAsk.swift in Sources */,
 				72A5CA1B00000000000AC002 /* AskAIChat.swift in Sources */,
+				67696955C3C744248AD35F4E /* AskAIDepth.swift in Sources */,
 				FB965FD1336D4EE186CA0068 /* AskAICrisis.swift in Sources */,
 				876D938BCA0644CC95F4E88D /* AskAIConversation.swift in Sources */,
 				89A21C28E8064FBB8BC56648 /* AskAIText.swift in Sources */,
@@ -3748,6 +3800,7 @@
 				94DD8FC3AB0646B48876C6A2 /* AskAISuggestionTests.swift in Sources */,
 				4EB01775F08648A6BF52ACB1 /* AskAINamesTests.swift in Sources */,
 				37E7458BCC334798BD6EF286 /* AskAIPromptTests.swift in Sources */,
+				844657EDA96446C78A24CF41 /* AskAIDepthTests.swift in Sources */,
 				FFE1CF8E58A24B779B35A0A1 /* AskAICrisisTests.swift in Sources */,
 				7249B78C30770CAF007F1D04 /* AyahReferenceParsingTests.swift in Sources */,
 				6559829AF60B4FE489F63B5F /* AppLinkTests.swift in Sources */,
@@ -3913,6 +3966,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8HQMC4MQ59;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Resources/Info-Widget.plist";
@@ -3950,6 +4004,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8HQMC4MQ59;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Resources/Info-Widget.plist";
@@ -4337,6 +4392,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Resources/Info-Main.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Al-Islam";
@@ -4375,6 +4431,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Resources/Info-Main.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Al-Islam";

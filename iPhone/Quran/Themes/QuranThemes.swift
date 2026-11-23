@@ -172,10 +172,15 @@ final class ThematicTopicsStore: @unchecked Sendable {
 
 /// One passage of a surah's outline (Quranpedia, via Tilawa): where it runs and what it is about.
 struct SurahSection: Identifiable, Hashable {
-    /// "<surah>:<order>": two passages can share a range (surah 18's two "Two Gardens" rows), so the
-    /// position in the outline is the identity.
+    /// "<surah>:<n>", the passage's place among the SOURCE outline's passages: two can share a range
+    /// (surah 18's two "Two Gardens" rows), so position is the identity. A passage this app added where
+    /// the outline left an ayah out is "<surah>:a<first ayah>" instead, so adding one never renumbers
+    /// the ids people have lit (and synced) before it existed.
     let id: String
     let surahID: Int
+    /// The passage's place among the SOURCE outline's passages too (an added one takes the place it
+    /// sits before): `ThemeColorGuide` rotates a title it cannot read through the legend by this, so
+    /// counting an added passage would recolour every such passage after it (al-Isra's, 2026-11-21).
     let order: Int
     let ayahStart: Int
     let ayahEnd: Int
@@ -218,12 +223,17 @@ final class SurahSectionsStore: @unchecked Sendable {
         lock.unlock()
         let rows = (loadedTable()?["\(surah)"] as? [String: Any])?["sections"] as? [[Any]] ?? []
         var sections: [SurahSection] = []
+        var sourcePosition = 0
         for row in rows {
             guard row.count >= 4, let start = row[0] as? Int, let end = row[1] as? Int, end >= start else { continue }
+            let added = Self.isAddedRow(row)
+            let id = added ? "\(surah):a\(start)" : "\(surah):\(sourcePosition)"
+            let order = sourcePosition
+            if !added { sourcePosition += 1 }
             sections.append(SurahSection(
-                id: "\(surah):\(sections.count)",
+                id: id,
                 surahID: surah,
-                order: sections.count,
+                order: order,
                 ayahStart: start,
                 ayahEnd: end,
                 title: (row[2] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
@@ -236,7 +246,7 @@ final class SurahSectionsStore: @unchecked Sendable {
         return sectionsBySurah[surah] ?? sections
     }
 
-    /// Every passage of every surah (744 of them), mushaf order.
+    /// Every passage of every surah (747 of them), mushaf order.
     func allSections() -> [SurahSection] {
         lock.lock()
         if let cached = allSectionsCache { lock.unlock(); return cached }
@@ -247,11 +257,12 @@ final class SurahSectionsStore: @unchecked Sendable {
         return all
     }
 
+    /// By id, not by index: an added passage sits between the source's own, so an id's number is no
+    /// longer its index in the list (`SurahSection.id`).
     func section(id: String) -> SurahSection? {
         let parts = id.split(separator: ":")
-        guard parts.count == 2, let surah = Int(parts[0]), let order = Int(parts[1]) else { return nil }
-        let list = sections(surah: surah)
-        return list.indices.contains(order) ? list[order] : nil
+        guard parts.count == 2, let surah = Int(parts[0]) else { return nil }
+        return sections(surah: surah).first { $0.id == id }
     }
 
     /// The passages naming this ayah, narrowest first (an outline can nest a passage in a passage).
@@ -304,8 +315,11 @@ final class SurahSectionsStore: @unchecked Sendable {
         for row in sections {
             // The whole-surah row IS the overview above it (or a placeholder title where the source
             // wrote none): it exists for the wash, and printing it here would say the lead twice.
-            guard row.count >= 4, !Self.isWholeSurahRow(row),
-                  let start = row[0] as? Int, let end = row[1] as? Int else { continue }
+            // A passage this app added is not printed either, and one it widened is printed at the
+            // range the source gave it: this outline is shown, and read to the on-device model, as
+            // Quranpedia's, so it says what Quranpedia wrote.
+            guard row.count >= 4, !Self.isWholeSurahRow(row), !Self.isAddedRow(row),
+                  let (start, end) = Self.sourceRange(row) else { continue }
             let english = (row[2] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             let arabic = (row[3] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             let range: String
@@ -326,6 +340,22 @@ final class SurahSectionsStore: @unchecked Sendable {
     /// A row's optional fifth element, 1, marks the whole-surah passage (see build_quran_themes.py).
     private static func isWholeSurahRow(_ row: [Any]) -> Bool {
         row.count > 4 && (row[4] as? Int) == 1
+    }
+
+    /// A fifth element of 2 marks a passage this app added where the outline left ayahs out
+    /// (build_quran_themes.py `GAP_FILLS`): every ayah sits in a passage, or the wash skips it.
+    private static func isAddedRow(_ row: [Any]) -> Bool {
+        row.count > 4 && (row[4] as? Int) == 2
+    }
+
+    /// The range the SOURCE gave a row: its own, or, for a passage this app widened to take a
+    /// left-out ayah in (a fifth element of 3), the two numbers after the marker.
+    private static func sourceRange(_ row: [Any]) -> (Int, Int)? {
+        if row.count > 6, (row[4] as? Int) == 3, let start = row[5] as? Int, let end = row[6] as? Int {
+            return (start, end)
+        }
+        guard let start = row[0] as? Int, let end = row[1] as? Int else { return nil }
+        return (start, end)
     }
 
     private func loadedTable() -> [String: Any]? {

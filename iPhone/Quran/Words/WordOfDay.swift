@@ -311,7 +311,7 @@ struct SummaryWordTile: View, Equatable {
             })
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .frame(height: rowHeight)
-            .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
+            .contentSurface(clear: true, rectangle: true, inRow: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

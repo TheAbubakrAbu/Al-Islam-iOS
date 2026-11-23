@@ -1014,17 +1014,23 @@ struct SurahPageReader<Controls: View>: View {
     @State private var selectRoom = false
     @State private var selectVisible = true
     /// The player band's height, FROZEN per mount and size (`playerBand`): measured once when the card
-    /// lands and held until its room goes or its size changes, so nothing the card does to its own
-    /// content can move the band. It needed this: the big card hides its progress bar the moment the
-    /// player is torn down (`transportRowWithProgress`, `if total > 0`), 9 pt before the state the
-    /// reader watches flips, so the band reported a height the page never rests at (432 then 526 on the
-    /// 17 Pro), the page bounced under the fading card, and the pair learned on a stop was off by it.
+    /// lands and held until its room goes, its size changes or its lines change (`applyPlayerLines`),
+    /// so nothing else the card does to its own content can move the band. It needed this: the big
+    /// card hid its progress bar the moment the player was torn down (`transportRowWithProgress`,
+    /// `if total > 0`; it keeps the bar's slot now), 9 pt before the state the reader watches flips, so
+    /// the band reported a height the page never rests at (432 then 526 on the 17 Pro), the page
+    /// bounced under the fading card, and the pair learned on a stop was off by it.
     private struct PlayerBandFreeze: Equatable {
         let singleRow: Bool
         let expanded: Bool
         let height: CGFloat
     }
     @State private var playerBandFreeze: PlayerBandFreeze?
+    /// The card's lines (`NowPlayingView.TitleLines`) as the band was last made for them. When the live
+    /// lines differ while the bar is up, the band is measured again (`applyPlayerLines`): the freeze
+    /// above held the old height, and a range started over a recitation already playing squeezed its
+    /// four lines into the two-line card's room (2026-11-21).
+    @State private var playerLines = NowPlayingView.titleLines(QuranPlayer.shared.nowPlaying)
 
     /// The ayahs matching the find query, in reading order - on the visible page, or across the whole surah
     /// once the reader has widened the find (`findSurahID`). Matching is diacritic-insensitive over Arabic +
@@ -1550,6 +1556,9 @@ struct SurahPageReader<Controls: View>: View {
     /// Whether the mini player belongs on screen: playing or paused (the bar stays up through a pause).
     private var playerActive: Bool { nowPlaying.isPlaying || nowPlaying.isPaused }
 
+    /// The lines the card stacks right now (`NowPlayingView.TitleLines`).
+    private var liveLines: NowPlayingView.TitleLines { NowPlayingView.titleLines(nowPlaying) }
+
     /// Mounts the mini player the way an unfold brings the bars back (its room first, in one step, then
     /// the bar fades into it), and removes it the way a fold clears them (the bar fades out where it
     /// stands, then its room goes). The page switches ONCE either way, to a layout normally fitted
@@ -1567,6 +1576,17 @@ struct SurahPageReader<Controls: View>: View {
                     // The size the card was last left at, wherever it was toggled (the list reader, the
                     // Quran tab): it mounts at that size with its room, never grows into it afterwards.
                     playerExpandedRoom = settings.nowPlayingExpanded
+                    playerLines = liveLines
+                }
+            } else if playerLines != liveLines {
+                // Playback came back inside the fade-out, so the room never went, and the card's lines
+                // changed while it was down, when `applyPlayerLines` does not act: a repeating range
+                // started over a recitation stops it, fetches, then plays, and a fetch quicker than the
+                // fade lands here. The band is measured again under the fade.
+                if !bottomBarsCollapsed { noteJump(.playerSize) }
+                withTransaction(mushafStillTransaction) {
+                    playerLines = liveLines
+                    playerBandFreeze = nil
                 }
             }
             withAnimation(.easeOut(duration: mushafChromeFadeIn)) { playerVisible = true }
@@ -1612,6 +1632,40 @@ struct SurahPageReader<Controls: View>: View {
             // height goes with the old size; the new one is measured as the card lands.
             withTransaction(mushafStillTransaction) {
                 playerExpandedRoom = settings.nowPlayingExpanded
+                playerBandFreeze = nil
+                playerLines = liveLines
+            }
+            withAnimation(.easeOut(duration: mushafChromeFadeIn)) { playerVisible = true }
+        }
+    }
+
+    /// The card gaining or losing a line while it is up, taken the way a size change is: the card fades
+    /// out, its band is measured again with the page switching in one step (kind `.playerSize`), and it
+    /// fades back in. Without this the band kept the height it was frozen at (`PlayerBandFreeze`), and a
+    /// range started over a recitation already playing drew its title, reciter and range line at half
+    /// size in the old two-line room (Abu, 2026-11-21). A change while the bar is leaving is not one:
+    /// stopping clears a range's lines as the card fades, and the band holds through that fade, which
+    /// is what the freeze is for.
+    private func applyPlayerLines(_ lines: NowPlayingView.TitleLines) {
+        guard lines != playerLines, playerActive else { return }
+        guard playerRoom, playerVisible else {
+            // No card on screen to fade (not mounted yet, or fading out with playback already back):
+            // the band is simply measured again when it shows.
+            withTransaction(mushafStillTransaction) {
+                playerLines = lines
+                playerBandFreeze = nil
+            }
+            return
+        }
+        pagerBand.playerGeneration &+= 1
+        let generation = pagerBand.playerGeneration
+        withAnimation(.easeIn(duration: mushafChromeFadeOut)) { playerVisible = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + mushafChromeFadeOut) {
+            guard pagerBand.playerGeneration == generation, playerRoom, playerActive else { return }
+            if !bottomBarsCollapsed { noteJump(.playerSize) }
+            // The lines as they stand now: a burst of changes lands on the latest.
+            withTransaction(mushafStillTransaction) {
+                playerLines = liveLines
                 playerBandFreeze = nil
             }
             withAnimation(.easeOut(duration: mushafChromeFadeIn)) { playerVisible = true }
@@ -2126,6 +2180,7 @@ struct SurahPageReader<Controls: View>: View {
         // reader owns their ROOM so the pager can take each change in one step.
         .onChange(of: playerActive) { applyPlayerRoom($0) }
         .onChange(of: settings.nowPlayingExpanded) { applyPlayerExpanded($0) }
+        .onChange(of: liveLines) { applyPlayerLines($0) }
         .onChange(of: isSelecting) { applySelecting($0) }
         // Folding (or restoring) the bottom bars changes every page's height budget. No handling here:
         // the fold animates the visible page's geometry, and `lastGeometry`'s debounced settle sweep

@@ -434,6 +434,11 @@ final class PerformanceProfile: ObservableObject {
     /// (Performance Guide, section 19). Bars, cards, buttons and sheets keep their glass (Abu,
     /// 2026-11-13). Low Power Mode is not part of it: that has its own switch
     /// (`Settings.classicLookInLowPower`), and someone who turned it off asked to keep the glass.
+    ///
+    /// Since 2026-11-22 the rows' pills, buttons and tiles are content surfaces, which draw the fill
+    /// on every phone (`View.contentSurface`), so this only reaches the glass that is left in a row:
+    /// the buttons that act (the ayah actions sheet's tiles, a name row's View First Found), and a
+    /// surface under the Adhan tab's sky.
     var shouldPlainRowGlass: Bool {
         #if DEBUG
         // "-perfTierReduced" stands in for the 3 GB phone the simulator cannot be.

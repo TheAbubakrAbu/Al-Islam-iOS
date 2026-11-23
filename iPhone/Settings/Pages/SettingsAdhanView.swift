@@ -2006,7 +2006,7 @@ struct PrayerCalculationListView: View {
                 .foregroundStyle(settings.accentColor.color)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .conditionalGlassEffect()
+                .contentSurface()
                 .padding(.vertical, -16)
         }
         .font(.subheadline.weight(.semibold))

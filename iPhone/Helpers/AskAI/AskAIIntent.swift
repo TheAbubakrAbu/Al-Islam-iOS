@@ -298,7 +298,9 @@ struct AskAIQuestion {
         let withoutClockTimes = AskAILexicon.maskingClockTimes(trimmed)
         var namesReference = AskAILexicon.referenceRegex.firstMatch(in: withoutClockTimes, range: NSRange(location: 0, length: (withoutClockTimes as NSString).length)) != nil
         #if HAS_HADITH
-        if !namesReference, HadithReferenceParser.parse(trimmed) != nil { namesReference = true }
+        // Whole ("bukhari 6114") or inside a sentence ("Explain Bukhari 1"): the same finder the
+        // retrieval's subject lane uses, so a named hadith gets the reference task and weights.
+        if !namesReference, AskAIRetriever.hadithReference(in: withoutClockTimes) != nil { namesReference = true }
         #endif
         if namesReference { return .reference }
         if AskAILexicon.duaWords.contains(where: { lowered.contains($0) }) { return .dua }

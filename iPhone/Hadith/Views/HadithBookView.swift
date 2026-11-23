@@ -793,7 +793,7 @@ struct HadithBookView: View {
                                 .foregroundColor(settings.accentColor.color)
                                 .padding(.vertical, 8)
                                 .padding(.horizontal, 12)
-                                .conditionalGlassEffect(clear: true, rectangle: true)
+                                .contentSurface(clear: true, rectangle: true)
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
@@ -1147,7 +1147,7 @@ struct HadithBookView: View {
         .minimumScaleFactor(0.7)
     }
 
-    /// A small glass stat chip, in the count-pill language - padded to match the catalog's `statChip`,
+    /// A small stat chip on the content surface, in the count-pill language, padded to match the catalog's `statChip`,
     /// which had to tighten to survive the narrow content column.
     private func statPill(_ text: String) -> some View {
         Text(text)
@@ -1156,7 +1156,7 @@ struct HadithBookView: View {
             .foregroundStyle(settings.accentColor.color)
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
-            .conditionalGlassEffect()
+            .contentSurface()
     }
 
     /// "ASK AI" with the sparkles glyph in the header gray, as the Quran search's `askAIHeader` draws it, for this book.
@@ -1494,7 +1494,7 @@ struct HadithBookView: View {
                 .foregroundColor(settings.accentColor.color)
                 .frame(width: chapterBadgeWidth)
                 .frame(maxHeight: .infinity)
-                .conditionalGlassEffect(
+                .contentSurface(
                     useColor: favorite ? 0.3 : nil,
                     customTint: favorite ? settings.accentColor.color : nil,
                     inRow: true
@@ -1750,7 +1750,7 @@ struct HadithBookView: View {
             // if its favorited" (Abu, 2026-09-25). The tint is the favorite's alone now; both can show.
             .gridSelectionRing(isCurrent)
         }
-        .conditionalGlassEffect(
+        .contentSurface(
             clear: !favorite,
             rectangle: true,
             useColor: favorite ? 0.25 : nil,
@@ -3659,7 +3659,7 @@ struct HadithChapterPickerSheet: View {
                                 .foregroundColor(settings.accentColor.color)
                                 .frame(minWidth: 30)
                                 .padding(.vertical, 6)
-                                .conditionalGlassEffect(
+                                .contentSurface(
                                     useColor: chapter.id == currentChapterID ? 0.3 : nil,
                                     customTint: chapter.id == currentChapterID ? settings.accentColor.color : nil,
                                     inRow: true

@@ -43,6 +43,10 @@ struct WidgetGalleryView: View {
                             .foregroundColor(.secondary)
                     }
 
+                    if page == "dates" {
+                        lockScreenLines
+                    }
+
                     ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                         HStack(alignment: .top, spacing: 12) {
                             ForEach(row) { card($0) }
@@ -268,6 +272,54 @@ struct WidgetGalleryView: View {
             return []
         }
     }
+
+    // MARK: The lock screen's date line
+
+    /// The row a person actually reads: iOS's own short date ("Thu 19"), its gap, then the inline slot,
+    /// in the line's font and width, white on black. The inline cards show the slot alone at the
+    /// family's size; an inline widget is never seen that way on a lock screen. Measured off a 17 Pro
+    /// lock screen (2026-11-23): the line is about 350pt wide, its font about 20pt semibold, and the
+    /// gap before the slot about 10pt.
+    private var lockScreenLines: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Lock screen date line")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+
+            lockScreenLine("Hijri Date") { HijriDateLockView(entry: entry, language: .english) }
+            lockScreenLine("Hijri Date (Arabic)") { HijriDateLockView(entry: entry, language: .arabic) }
+            lockScreenLine("Hijri & Gregorian") { DualCalendarLockView(entry: entry) }
+        }
+    }
+
+    private func lockScreenLine<V: View>(_ title: String, @ViewBuilder slot: () -> V) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+
+            HStack(spacing: 10) {
+                Text(Self.lockScreenShortDate.string(from: entry.date))
+                slot()
+                    .environment(\.previewWidgetFamily, .accessoryInline)
+            }
+            .font(.system(size: 20, weight: .semibold))
+            .lineLimit(1)
+            .foregroundColor(.white)
+            .frame(width: min(350, Self.screenWidth - 52), height: 40)
+            .padding(.horizontal, 10)
+            .background(Color.black, in: Capsule())
+            .environment(\.colorScheme, .dark)
+        }
+    }
+
+    /// "Thu 19": the date iOS keeps on the line when an inline widget sits beside it.
+    private static let lockScreenShortDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.setLocalizedDateFormatFromTemplate("EEEd")
+        return formatter
+    }()
 
     /// Items packed into rows by their widths, so the small and lock-screen tiles sit side by side.
     private var rows: [[Item]] {

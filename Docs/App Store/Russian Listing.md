@@ -103,7 +103,7 @@ A Russian rendering of `App Store Description.md`, section for section, with the
 short Russian ALL-CAPS headers on their own lines. Russian runs longer than English, so a few words are
 trimmed to fit (the zakah and inheritance calculators are named together, as the English names them, not by
 their two labels), and the feature labels take guillemets. Three changes from the English: the translation
-is called "английский перевод"; the language line in КАК ВАМ УДОБНО gives the count of 12 interface languages
+is called "английский перевод"; the language line in КАК ВАМ УДОБНО gives the count of 15 interface languages
 (naming Russian, English and Arabic, since the full list does not fit under 4,000), chosen per app in iOS Settings, and says the translations and the articles are English; and the books and
 scholars take their Russian names (see the guidelines).
 
@@ -147,7 +147,7 @@ Al-Islam поможет вам в практике ислама, исповед�
 - «Пошаговые руководства», столпы ислама и веры, калькуляторы закята и наследства, «Календарь хиджры», «Поиск мечетей» и «Поиск халяльной еды».
 
 КАК ВАМ УДОБНО
-- Интерфейс на 12 языках, в том числе на русском, английском и арабском: язык приложения задается в Настройках iOS. Переводы Корана, хадисов, дуа и статьи вкладки «Ислам» на английском.
+- Интерфейс на 15 языках, в том числе на русском, английском и арабском: язык приложения задается в Настройках iOS. Переводы Корана, хадисов, дуа и статьи вкладки «Ислам» на английском.
 - «Упрощенный режим» оставляет на экране главное; полный режим включается в любой момент.
 - Резервные копии профилей в вашем iCloud и восстановление на любом устройстве.
 - Размер текста, арабские шрифты, цвета акцента и неба, поиск на каждой странице настроек.
@@ -163,12 +163,12 @@ Al-Islam поможет вам в практике ислама, исповед�
 
 ## 5. What's New
 
-The release that adds the Russian interface; the opening line names the other eight new languages, since
-all nine ship in one release. Only the new interface is here
+The release that adds the Russian interface; the opening line names the other eleven new languages, since
+all twelve ship in one release. Only the new interface is here
 so far.
 
 ```
-Приложение теперь полностью на русском: Азан, Коран, Хадисы, Ислам и Настройки. Также в этом обновлении интерфейс появился на индонезийском, малайском, турецком, французском, бенгальском, хинди, немецком и испанском.
+Приложение теперь полностью на русском: Азан, Коран, Хадисы, Ислам и Настройки. Также в этом обновлении интерфейс появился на индонезийском, малайском, турецком, французском, бенгальском, хинди, немецком, испанском, малаялам, тамильском и нидерландском.
 
 Русский интерфейс:
 - Все экраны, меню, настройки, уведомления и виджеты переведены на русский: на iPhone, iPad, Mac и Apple Watch.
@@ -184,7 +184,7 @@ so far.
 - Подробные статьи вкладки «Ислам» пока на английском. Поиск по смыслу работает с английскими фразами; переводы Корана, хадисов и дуа на английском.
 ```
 
-**1,162 / 4,000 characters.**
+**1,199 / 4,000 characters.**
 
 **To finish this release:** when the English notes for this version are written in `Whats New.md`, translate
 the rest of them and append them below the last line of the block above, under the same headings the English

@@ -799,6 +799,9 @@ enum ArticleBlock {
     case versus(ArticleVersus.Side, ArticleVersus.Side, quranic: Bool = true)
     /// The scale of hadith grades (`HadithGradeLadder`).
     case gradeLadder
+    /// The classes of report by how many carried it, counted at the narrowest point
+    /// (`HadithCountLadder`).
+    case countLadder
     /// A row that opens another page: an article, a prophecy, a site.
     case door(ArticleDoor)
 }
@@ -926,6 +929,8 @@ struct ArticleBlockView: View {
                 ArticleVersus(left, right, quranic: quranic)
             case .gradeLadder:
                 HadithGradeLadder()
+            case .countLadder:
+                HadithCountLadder()
             case .door(let door):
                 ArticleDoorRow(door: door)
             }
@@ -1692,7 +1697,7 @@ struct AskAISearchSection: View {
                     .foregroundColor(appearance.accent)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 12)
-                    .conditionalGlassEffect(clear: true, rectangle: true)
+                    .contentSurface(clear: true, rectangle: true)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

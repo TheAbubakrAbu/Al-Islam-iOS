@@ -207,7 +207,7 @@ struct TajweedLegendView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(alignment: .topLeading)
         .padding(12)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(entry.color.opacity(0.35), lineWidth: 1)
@@ -281,7 +281,7 @@ struct TajweedLegendView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(alignment: .topLeading)
         .padding(12)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(item.color.opacity(0.35), lineWidth: 1)
@@ -376,7 +376,7 @@ struct TajweedLegendView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
     }
 
     /// A menu row for one riwayah, checkmarked when it is the previewed one.
@@ -531,7 +531,7 @@ struct TajweedLegendView: View {
                     }
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .conditionalGlassEffect(rectangle: true)
+                    .contentSurface(rectangle: true)
                 }
             }
         } else {
@@ -763,7 +763,7 @@ struct TajweedLegendView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
     }
 
     /// Tapping any riwayah in the comparison previews ITS legend - the reason to read the comparison
@@ -903,7 +903,7 @@ struct TajweedLegendView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(alignment: .topLeading)
         .padding(14)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(item.color.opacity(0.2), lineWidth: 1)
@@ -1029,7 +1029,7 @@ struct TajweedLegendView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
     }
 
     // MARK: Compact legend
@@ -1126,7 +1126,7 @@ struct TajweedLegendView: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .conditionalGlassEffect(rectangle: true)
+                .contentSurface(rectangle: true)
 
             if let tag = effectiveLegendTag {
                 Text("The colors follow \(optionLabel(forTag: tag))'s printed mushaf: each word or letter is colored exactly where that print colors it.")
@@ -1438,7 +1438,7 @@ struct TajweedLegendView: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(14)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .conditionalGlassEffect(rectangle: true, useColor: 0.1)
+                            .contentSurface(rectangle: true, useColor: 0.1)
                     }
                 }
 
@@ -1569,7 +1569,7 @@ struct QiraahTajweedLegendView: View {
         .opacity(visible ? 1 : 0.45)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(entry.color.opacity(0.2), lineWidth: 1)
@@ -1992,7 +1992,7 @@ struct QuranStopSignsLegendView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
     }
 
     private var leadIcon: some View {
@@ -2258,7 +2258,7 @@ struct QuranStopSignsLegendView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
     }
 
     private var learnButton: some View {

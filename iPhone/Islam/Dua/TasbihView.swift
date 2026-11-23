@@ -357,7 +357,7 @@ struct TasbihStatsStrip: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
-        .conditionalGlassEffect(rectangle: true, interactive: false)
+        .contentSurface(rectangle: true, interactive: false)
     }
 }
 
@@ -426,7 +426,10 @@ struct TasbihView: View {
         // added first sits nearest the content and later ones go underneath it. With the bar first, the
         // Now Playing player landed UNDER it (Abu, 2026-10-07). The Quran tab's order is the same.
         .applyConditionalListStyle()
-        .adaptiveSafeArea(edge: .bottom) {
+        // `groundsBar: false`: the counter is a third of the screen, and the hard scroll-edge ground the
+        // other bottom bars take (2026-11-22) would close the list at the card's top edge. Here the
+        // card keeps floating over the list, as the line above says.
+        .adaptiveSafeArea(edge: .bottom, groundsBar: false) {
             activeTasbihCard
                 .padding(.horizontal, 24)
                 .padding(.vertical, 12)

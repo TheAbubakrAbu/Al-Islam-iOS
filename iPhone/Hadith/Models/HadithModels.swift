@@ -690,6 +690,21 @@ struct HadithBookData: @unchecked Sendable {
             if case let .packed(pack, row) = storage { return pack.grades(row: row) }
             return []
         }
+
+        /// Whether this narration's words carry the folded query: `HadithBookData.matches`, for a
+        /// caller that holds the row and not its book (a list of rows from many books).
+        func matches(_ query: HadithFold.Query) -> Bool {
+            guard !query.isEmpty else { return false }
+            switch storage {
+            case let .packed(pack, row):
+                return pack.matches(row: row, query: query)
+            case let .literal(arabic, english):
+                let haystack = query.isArabic
+                    ? HadithFold.arabic(arabic)
+                    : HadithFold.english(english.text + "\n" + english.narrator)
+                return haystack.contains(query.folded)
+            }
+        }
     }
 
     let pack: HadithPack

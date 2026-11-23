@@ -465,7 +465,7 @@ struct PrayerTrackerView: View {
         // Fills the row's height too, so a wrapped caption never leaves its neighbour a shorter tile.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(12)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
     }
 
     private func unitText(_ text: String) -> some View {

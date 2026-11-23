@@ -130,11 +130,11 @@ short Spanish ALL-CAPS headers on their own lines, kept as terse as the French l
 articles where Apple's Spanish feature lists do, and a few details give way (the sabr gloss, "in depth" on the
 99 Names, "named" on the profiles, and the closing's "deeper understanding of Islam"). Three changes from the
 English: the translation is called "traducción al inglés"; the language line in A TU MANERA says the interface
-comes in 12 languages, naming Spanish, English and Arabic as the other listings name theirs (the twelve:
-English, Arabic, Urdu, Indonesian, Malay, Turkish, French, Bangla, Russian, Hindi, German, Spanish), chosen per
+comes in 15 languages, naming Spanish, English and Arabic as the other listings name theirs (the fifteen:
+English, Arabic, Urdu, Indonesian, Malay, Turkish, French, Bangla, Russian, Hindi, German, Spanish, Malayalam, Tamil, Dutch), chosen per
 app in iOS Settings, and says the translations and the articles are English; and the Pillars of Islam and Faith
 and Hadith & Its Sciences take the app's labels, Pilares y creencias and Las ciencias del hadiz. The English
-line and the other listings give the same twelve.
+line and the other listings give the same fifteen.
 
 ```
 Tanto si practicas desde siempre como si acabas de abrazar el Islam o lo estás descubriendo, Al-Islam te acompaña. Corán, hadices, tafsir, horarios y registro de oraciones, búsqueda con IA: una app gratuita, sin anuncios y que respeta tu privacidad.
@@ -176,7 +176,7 @@ PRÁCTICA DIARIA Y APRENDIZAJE
 - Guías prácticas, Pilares y creencias, calculadoras de zakat y herencias, Calendario de la hégira, Buscador de mezquitas y Buscador de comida halal.
 
 A TU MANERA
-- Interfaz en 12 idiomas, entre ellos español, inglés y árabe, a elegir para la app en los ajustes de iOS. Las traducciones (Corán, hadices, duas) y los artículos de la pestaña Islam están en inglés.
+- Interfaz en 15 idiomas, entre ellos español, inglés y árabe, a elegir para la app en los ajustes de iOS. Las traducciones (Corán, hadices, duas) y los artículos de la pestaña Islam están en inglés.
 - El Modo sencillo muestra solo lo esencial; cambia al modo Completo cuando quieras.
 - Perfiles guardados en tu iCloud, restaurables en cualquier dispositivo.
 - Tamaños de texto, tipos de letra árabes, colores de acento y del cielo, y búsqueda en los ajustes.
@@ -192,11 +192,11 @@ El Corán, la oración y los hadices del Profeta Muhammad (la paz y las bendicio
 
 ## 5. What's New
 
-The release that adds the Spanish interface; the opening line names the other eight new languages, since
-all nine ship in one release. Only the new interface is here so far.
+The release that adds the Spanish interface; the opening line names the other eleven new languages, since
+all twelve ship in one release. Only the new interface is here so far.
 
 ```
-Toda la app ya está en español: Adhan, Corán, Hadices, Islam y Ajustes. Con esta versión llegan también las interfaces en indonesio, en malayo, en turco, en francés, en bengalí, en ruso, en hindi y en alemán.
+Toda la app ya está en español: Adhan, Corán, Hadices, Islam y Ajustes. Con esta versión llegan también las interfaces en indonesio, en malayo, en turco, en francés, en bengalí, en ruso, en hindi, en alemán, en malayalam, en tamil y en neerlandés.
 
 Interfaz en español:
 - Todas las pantallas, menús, ajustes, notificaciones y widgets están en español, en iPhone, iPad, Mac y Apple Watch.
@@ -212,7 +212,7 @@ Elección del idioma:
 - Por ahora, los artículos detallados de la pestaña Islam están en inglés. La búsqueda por significado funciona con frases en inglés, y las traducciones del Corán, los hadices y las duas están en inglés.
 ```
 
-**1,295 / 4,000 characters.**
+**1,334 / 4,000 characters.**
 
 **To finish this release:** when the English notes for this version are written in `Whats New.md`, translate
 the rest of them and append them below the last line of the block above, under the same headings the English

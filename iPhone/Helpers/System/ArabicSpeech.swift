@@ -556,7 +556,7 @@ struct ListenAllPill: View {
             .foregroundColor(appearance.accent)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .conditionalGlassEffect()
+            .contentSurface()
             .onTapGesture {
                 Settings.shared.hapticFeedback()
                 if speech.isSpeakingQueue {

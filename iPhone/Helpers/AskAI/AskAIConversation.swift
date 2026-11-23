@@ -1,8 +1,12 @@
 import SwiftUI
 import Foundation
 
-// Ask AI - the running conversation: one for the app, kept across launches, so reopening the chat
-// from any entry point continues where it left off (until "New conversation").
+// Ask AI - the running conversation, and the two before it.
+//
+// Every visit to the chat starts on an EMPTY conversation (Abu, 2026-11-22: "When I go to ask ai
+// always make a new chat but maybe show the last 2 chats as history"): the one that was open is set
+// aside as it stood, and the welcome screen lists the last two under HISTORY (the menu does too).
+// Opening one makes it the conversation again, follow-ups and all. All of it is kept across launches.
 //
 // A turn: the question is analysed (AskAIIntent.swift), the app's library is searched for it
 // (AskAIRetrieval.swift) unless it is conversation, the prompt is built to the engine's budget
@@ -76,8 +80,46 @@ final class AskAIConversation: ObservableObject {
         }
     }
 
+    /// A conversation set aside when a new one began: one row of the chat's History.
+    struct SavedChat: Identifiable, Codable {
+        var id = UUID()
+        var messages: [Message]
+        /// The subject a bare follow-up would search with, kept so the conversation can go on.
+        var topic: String?
+        /// When it was last added to.
+        var updated: Date
+
+        /// What History calls it: its first question.
+        var title: String { messages.first(where: { $0.role == .user })?.text ?? "" }
+
+        init(id: UUID = UUID(), messages: [Message], topic: String?, updated: Date) {
+            self.id = id
+            self.messages = messages
+            self.topic = topic
+            self.updated = updated
+        }
+
+        /// Lenient, like the transcript itself: a message that no longer decodes is dropped alone.
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+            messages = (try container.decodeIfPresent([Lossy<Message>].self, forKey: .messages) ?? []).compactMap(\.value)
+            topic = try container.decodeIfPresent(String.self, forKey: .topic)
+            updated = try container.decodeIfPresent(Date.self, forKey: .updated) ?? Date()
+        }
+    }
+
+    /// How many earlier conversations History keeps.
+    nonisolated static let recentChatLimit = 2
+
     @Published private(set) var messages: [Message] = []
     @Published private(set) var isAnswering = false
+    /// The conversations before this one, newest first, at most `recentChatLimit`.
+    @Published private(set) var recentChats: [SavedChat] = []
+    /// The open conversation's identity (a conversation reopened from History keeps the one it had)
+    /// and when it was last added to.
+    private var chatID = UUID()
+    private var lastActivity = Date()
     /// The engine the reader chose. Mirrors `AskAIEngine.preferred`; a cloud choice only takes
     /// effect while the cloud model is on offer.
     @Published var engineKind: AskAIEngineKind {
@@ -115,8 +157,78 @@ final class AskAIConversation: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.reset() }
+            MainActor.assumeIsolated { self?.eraseEverything() }
         }
+    }
+
+    // MARK: - History
+
+    /// `recents` with `chat` set aside at its head: the newest first, at most `limit`, a
+    /// conversation never listed twice, and one with no question in it not listed at all.
+    nonisolated static func filing(_ chat: SavedChat, into recents: [SavedChat], limit: Int = recentChatLimit) -> [SavedChat] {
+        guard chat.messages.contains(where: { $0.role == .user }) else { return recents }
+        return Array(([chat] + recents.filter { $0.id != chat.id }).prefix(limit))
+    }
+
+    /// The chat screen is opening: the visit starts on an empty conversation, and the one that was
+    /// open goes to History. Two visits carry on instead: one that finds an answer still being
+    /// written (the reader came back to it), and a search screen's sheet reopened on the query it
+    /// already asked (`question`), which shows that conversation rather than asking it twice.
+    func beginVisit(asking question: String? = nil) {
+        guard !isAnswering else { return }
+        if let question, !question.isEmpty, messages.last(where: { $0.role == .user })?.text == question { return }
+        startNewChat()
+    }
+
+    /// Sets the open conversation aside under History and opens an empty one. Nothing is lost but
+    /// the oldest of the kept conversations.
+    func startNewChat() {
+        cancel(saving: false)
+        setAsideOpenChat()
+        save()
+    }
+
+    /// Makes a conversation from History the open one again (the open one takes its place there).
+    func openRecent(_ id: UUID) {
+        guard let chosen = recentChats.first(where: { $0.id == id }) else { return }
+        cancel(saving: false)
+        recentChats.removeAll { $0.id == id }
+        setAsideOpenChat()
+        chatID = chosen.id
+        messages = chosen.messages
+        topic = chosen.topic
+        topicDisplay = chosen.topic
+        lastActivity = chosen.updated
+        save()
+    }
+
+    func deleteRecent(_ id: UUID) {
+        guard recentChats.contains(where: { $0.id == id }) else { return }
+        recentChats.removeAll { $0.id == id }
+        save()
+    }
+
+    /// The open conversation into `recentChats`, and a fresh one in its place (not saved here).
+    private func setAsideOpenChat() {
+        recentChats = Self.filing(SavedChat(id: chatID, messages: messages, topic: topic, updated: lastActivity), into: recentChats)
+        messages = []
+        topic = nil
+        topicDisplay = nil
+        currentQuestion = nil
+        chatID = UUID()
+        lastActivity = Date()
+    }
+
+    /// "Erase Everything": the open conversation and History both.
+    private func eraseEverything() {
+        cancel(saving: false)
+        recentChats = []
+        messages = []
+        topic = nil
+        topicDisplay = nil
+        currentQuestion = nil
+        chatID = UUID()
+        save()
     }
 
     // MARK: - Turns
@@ -167,6 +279,7 @@ final class AskAIConversation: ObservableObject {
         }
         guard OnDeviceAsk.isAvailable else { return }
         cancel()
+        lastActivity = Date()
         helpLineForCurrentTurn = AskAICrisis.mentionsSelfHarm(trimmed)
             ? AskAICrisis.helpLine(regionCode: Locale.current.region?.identifier) : nil
         let history = completedTurns()
@@ -273,6 +386,7 @@ final class AskAIConversation: ObservableObject {
     /// off, so the chat (and the headless `-askAI` queue, which advances on that flip) sees a turn.
     private func answerCrisis(_ trimmed: String) {
         cancel()
+        lastActivity = Date()
         helpLineForCurrentTurn = nil
         currentQuestion = nil
         // The earlier thread is over: a "why?" after this must not continue it.
@@ -336,7 +450,7 @@ final class AskAIConversation: ObservableObject {
                 lastPrompt = prompt
                 let options = GenerationOptions(temperature: question.intent.temperature,
                                                 maximumResponseTokens: min(question.intent.maxResponseTokens, profile.responseTokenCap))
-                for try await text in AskAIEngine.stream(kind: kind, instructions: AskAIPrompt.instructions, prompt: prompt, options: options) {
+                for try await text in AskAIEngine.stream(kind: kind, instructions: AskAIPrompt.instructions(readsQiraat: AskAIDepth.readsQiraat), prompt: prompt, options: options) {
                     guard !Task.isCancelled else { resetStream(); return }
                     if firstToken == nil { firstToken = CFAbsoluteTimeGetCurrent() - started }
                     // A small model can fall into repeating itself until the token ceiling: the
@@ -360,7 +474,9 @@ final class AskAIConversation: ObservableObject {
                         AskAIEngine.cloudFailedThisLaunch = true
                         kind = .onDevice
                         profile = .onDevice
-                        sources = Array(sources.prefix(profile.sourceLimit))
+                        // Fitted again: the notes were sized for the cloud's window.
+                        sources = AskAIPrompt.fit(question: question, sources: Array(sources.prefix(profile.sourceLimit)),
+                                                  history: turns, profile: profile)
                         let reason = AskAIEngine.message(for: failure) ?? String(localized: "Private Cloud Compute could not answer.")
                         updateReply { $0.sources = sources; $0.text = ""; $0.refreshCitations()
                             $0.note = String(localized: "\(reason) This answer was written on your device instead.") }
@@ -374,7 +490,11 @@ final class AskAIConversation: ObservableObject {
                 // lean - the question with fewer sources and no history - rather than dead-end.
                 if case .contextOverflow = failure, !retriedForContext {
                     retriedForContext = true
-                    sources = Array(sources.prefix(max(3, sources.count / 2)))
+                    sources = sources.prefix(max(3, sources.count / 2)).map { source in
+                        var bare = source
+                        bare.notes = []
+                        return bare
+                    }
                     turns = []
                     resetStream()
                     updateReply { $0.sources = sources; $0.text = ""; $0.refreshCitations() }
@@ -476,7 +596,7 @@ final class AskAIConversation: ObservableObject {
         var cleaned = AskAIText.stripMarkdown(streamedText)
         cleaned = AskAIText.droppingSourceEchoes(cleaned, sources: messages.last?.sources ?? [])
         let count = messages.last?.sources.count ?? 0
-        cleaned = AskAIText.normalizeMarkers(cleaned, sourceCount: count).text
+        cleaned = AskAIText.normalizeMarkers(cleaned, sourceCount: count, sources: messages.last?.sources ?? []).text
         // Same rule as `finishReply`: a stream the guard would blank entirely is shown as it is.
         let unechoed = echoGuard.filter(cleaned)
         cleaned = AskAIText.capitalizing(AskAIText.replacingDashes(
@@ -521,7 +641,7 @@ final class AskAIConversation: ObservableObject {
                 let policedEcho = echoGuard.filter(unechoed)
                 var text = AskAIText.collapsingRepetition(
                     policedEcho.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? unechoed : policedEcho)
-                let markers = AskAIText.normalizeMarkers(text, sourceCount: reply.sources.count)
+                let markers = AskAIText.normalizeMarkers(text, sourceCount: reply.sources.count, sources: reply.sources)
                 text = markers.text
                 let policed = AskAIText.policeCitations(text, sources: reply.sources)
                 let quoted = AskAIText.policeQuotations(policed.text, sources: reply.sources)
@@ -573,6 +693,7 @@ final class AskAIConversation: ObservableObject {
         INTENT: \(reply.intent?.rawValue ?? "?") followUp=\(reply.isFollowUp) engine=\(reply.engine?.rawValue ?? "?") \(timing)
         RETRIEVAL: \(lastRetrievalLog)
         SOURCES: \(reply.sources.enumerated().map { "[\($0.offset + 1)] \($0.element.reference)\($0.element.isSubject ? " (SUBJECT)" : "")" }.joined(separator: " | "))
+        NOTES: \(reply.sources.enumerated().filter { !$0.element.notes.isEmpty }.map { entry in "[\(entry.offset + 1)] " + entry.element.notes.map { "\($0.kind.rawValue)\($0.title.isEmpty ? "" : " " + $0.title) \($0.text.count)" }.joined(separator: ", ") }.joined(separator: " | ")) (\(reply.sources.reduce(0) { $0 + $1.notesCost }) characters)
         CITED: \(reply.citedReferences.joined(separator: " | "))
         REMOVED: \(reply.removedCitations) FLAGGED: \(reply.flaggedQuotations) FAILED: \(failed)
         NOTE: \(reply.note ?? "")
@@ -631,12 +752,14 @@ final class AskAIConversation: ObservableObject {
     }
     #endif
 
+    /// Deletes the open conversation (History keeps its own).
     func reset() {
         cancel(saving: false)
         messages = []
         topic = nil
         topicDisplay = nil
         currentQuestion = nil
+        chatID = UUID()
         save()
     }
 
@@ -654,10 +777,18 @@ final class AskAIConversation: ObservableObject {
     private struct Store: Codable {
         var messages: [Message]
         var topic: String?
+        /// The open conversation's identity and last activity, and the conversations before it
+        /// (absent from a transcript saved before History existed).
+        var id: UUID?
+        var updated: Date?
+        var recent: [SavedChat]
 
-        init(messages: [Message], topic: String?) {
+        init(messages: [Message], topic: String?, id: UUID?, updated: Date?, recent: [SavedChat]) {
             self.messages = messages
             self.topic = topic
+            self.id = id
+            self.updated = updated
+            self.recent = recent
         }
 
         /// Lenient: a message that no longer decodes is dropped, not the whole transcript.
@@ -665,11 +796,14 @@ final class AskAIConversation: ObservableObject {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             messages = (try container.decodeIfPresent([Lossy<Message>].self, forKey: .messages) ?? []).compactMap(\.value)
             topic = try container.decodeIfPresent(String.self, forKey: .topic)
+            id = try? container.decodeIfPresent(UUID.self, forKey: .id)
+            updated = try? container.decodeIfPresent(Date.self, forKey: .updated)
+            recent = ((try? container.decodeIfPresent([Lossy<SavedChat>].self, forKey: .recent)) ?? []).compactMap(\.value)
         }
     }
 
     /// One element of a list that decodes to nil instead of failing the list.
-    private struct Lossy<Value: Decodable>: Decodable {
+    struct Lossy<Value: Decodable>: Decodable {
         let value: Value?
         init(from decoder: Decoder) throws {
             value = try? Value(from: decoder)
@@ -698,13 +832,23 @@ final class AskAIConversation: ObservableObject {
             return
         }
         // A turn that was mid-stream when the app quit settles as it stood.
-        messages = store.messages.map { message in
-            var settled = message
-            settled.isStreaming = false
-            if settled.role == .assistant, settled.text.isEmpty { settled.failed = true; settled.text = String(localized: "The answer was interrupted.") }
-            return settled
+        func settled(_ messages: [Message]) -> [Message] {
+            messages.map { message in
+                var settled = message
+                settled.isStreaming = false
+                if settled.role == .assistant, settled.text.isEmpty { settled.failed = true; settled.text = String(localized: "The answer was interrupted.") }
+                return settled
+            }
         }
+        messages = settled(store.messages)
         topic = store.topic
+        chatID = store.id ?? UUID()
+        lastActivity = store.updated ?? Date()
+        recentChats = store.recent.prefix(Self.recentChatLimit).compactMap { chat in
+            var kept = chat
+            kept.messages = settled(chat.messages)
+            return kept.messages.isEmpty ? nil : kept
+        }
     }
 
     /// Saves run one at a time, in the order they were asked for: as separate detached tasks, the
@@ -712,22 +856,23 @@ final class AskAIConversation: ObservableObject {
     private static let saveQueue = DispatchQueue(label: "AskAIConversation.save", qos: .utility)
 
     private func save() {
-        let kept = messages.filter { !$0.isStreaming }.suffix(Self.keptMessages).map { message -> Message in
-            var clipped = message
-            clipped.sources = message.sources.map { source in
-                guard source.text.count > Self.savedSourceCharacters else { return source }
-                return AskAISource(kind: source.kind, reference: source.reference, title: source.title,
-                                   text: AskAISource.clip(source.text, to: Self.savedSourceCharacters),
-                                   arabic: source.arabic, transliteration: source.transliteration,
-                                   provenance: source.provenance, aliases: source.aliases,
-                                   maxCharacters: source.maxCharacters, isSubject: source.isSubject)
+        /// The most recent settled messages, their sources' text clipped.
+        func kept(_ messages: [Message]) -> [Message] {
+            messages.filter { !$0.isStreaming }.suffix(Self.keptMessages).map { message -> Message in
+                var clipped = message
+                clipped.sources = message.sources.map { $0.clippingText(to: Self.savedSourceCharacters) }
+                return clipped
             }
-            return clipped
         }
-        let store = Store(messages: Array(kept), topic: topic)
+        let recent = recentChats.map { chat -> SavedChat in
+            var saved = chat
+            saved.messages = kept(chat.messages)
+            return saved
+        }
+        let store = Store(messages: kept(messages), topic: topic, id: chatID, updated: lastActivity, recent: recent)
         let url = Self.storeURL
         Self.saveQueue.async {
-            if store.messages.isEmpty {
+            if store.messages.isEmpty, store.recent.isEmpty {
                 try? FileManager.default.removeItem(at: url)
             } else if let data = try? JSONEncoder().encode(store) {
                 try? data.write(to: url, options: .atomic)

@@ -601,7 +601,7 @@ struct TashkeelLettersView: View {
         .padding(.vertical, 5)
         .contentShape(Rectangle())
         // Only the shaddah tiles are actionable (they open the three readings), so only they are filled.
-        .conditionalGlassEffect(clear: !isShaddah, rectangle: true, inRow: true)
+        .contentSurface(clear: !isShaddah, rectangle: true, inRow: true)
         #if os(iOS)
         .onTapGesture {
             guard isShaddah else { return }
@@ -1709,8 +1709,10 @@ struct ArabicLetterPage: View {
         .onChange(of: settings.useFontArabic) { _ in settings.hapticFeedback() }
         #else
         IslamArabicFontPicker()
-            // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
-            .conditionalGlassEffect(interactive: false)
+            // A content surface since 2026-11-22, so no glass here. `interactive: false` stays for the one
+            // place a surface is glass (the Adhan tab's sky): interactive Liquid Glass steals per-segment taps
+            // on real iOS 26 hardware.
+            .contentSurface(interactive: false)
         #endif
     }
 
@@ -2377,7 +2379,7 @@ struct TashkeelRow: View {
                                     .foregroundColor(appearance.accent)
                                     .frame(width: 28, height: 28)
                                     .contentShape(Rectangle())
-                                    .conditionalGlassEffect(circle: true, inRow: true)
+                                    .contentSurface(circle: true, inRow: true)
                             }
                             .buttonStyle(.plain)
                             .environment(\.layoutDirection, .leftToRight)
@@ -3305,7 +3307,7 @@ struct ArabicLetterRow: View, Equatable {
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .frame(width: 42, height: 38)
-                .conditionalGlassEffect(
+                .contentSurface(
                     clear: !isFavorite,
                     rectangle: true,
                     useColor: isFavorite ? 0.25 : nil,
@@ -3557,7 +3559,7 @@ struct ArabicNumberGridTile: View {
             .padding(.vertical, 4)
             .padding(.horizontal, 8)
             .contentShape(Rectangle())
-            .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
+            .contentSurface(clear: true, rectangle: true, inRow: true)
         }
     }
 }
@@ -4055,7 +4057,7 @@ struct ArabicLetterGridTile: View, Equatable {
             .padding(.horizontal, 8)
             .contentShape(Rectangle())
             // Clear unless it's a favorite - same as the 99 Names and surah grids.
-            .conditionalGlassEffect(
+            .contentSurface(
                 clear: !isFavorite,
                 rectangle: true,
                 useColor: isFavorite ? 0.25 : nil,

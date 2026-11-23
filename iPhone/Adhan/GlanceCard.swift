@@ -581,7 +581,7 @@ private struct GlanceTile: View, Equatable {
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
         .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .conditionalGlassEffect(rectangle: true, useColor: 0.15, flat: true)
+        .contentSurface(rectangle: true, useColor: 0.15, flat: true)
     }
 
     /// The headline in semibold primary; the detail (when present) as a caption-secondary second

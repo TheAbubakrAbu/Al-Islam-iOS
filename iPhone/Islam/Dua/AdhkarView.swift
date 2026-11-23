@@ -542,7 +542,7 @@ struct AdhkarView: View {
             .foregroundColor(settings.accentColor.color)
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentSurface(clear: true, rectangle: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

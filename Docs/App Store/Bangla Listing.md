@@ -152,7 +152,7 @@ Al-Islam ইসলাম পালনে আপনার পূর্ণাঙ�
 - ধাপে ধাপে নির্দেশিকা, ইসলাম ও ঈমানের রুকন, যাকাত ও উত্তরাধিকার ক্যালকুলেটর, হিজরি ক্যালেন্ডার, মসজিদ ও হালাল খাবার সন্ধান।
 
 আপনার মতো করে
-- ইন্টারফেস বাংলা, ইংরেজি ও আরবিসহ 12টি ভাষায়: iOS সেটিংসে এই অ্যাপের জন্য ভাষা বেছে নিন। ইসলাম ট্যাবের বিস্তারিত প্রবন্ধগুলো এখনো ইংরেজিতে।
+- ইন্টারফেস বাংলা, ইংরেজি ও আরবিসহ 15টি ভাষায়: iOS সেটিংসে এই অ্যাপের জন্য ভাষা বেছে নিন। ইসলাম ট্যাবের বিস্তারিত প্রবন্ধগুলো এখনো ইংরেজিতে।
 - সহজ মোড শুধু প্রয়োজনীয় জিনিসগুলো সামনে রাখে। যেকোনো সময় পূর্ণ মোডে যেতে পারেন।
 - নাম দেওয়া প্রোফাইল আপনার নিজের iCloud-এ ব্যাকআপ করুন এবং যেকোনো ডিভাইসে ফিরিয়ে আনুন।
 - লেখার আকার, আরবি ফন্ট, অ্যাকসেন্ট ও আকাশের রং, আর প্রতিটি সেটিংস পৃষ্ঠায় অনুসন্ধান।
@@ -168,11 +168,11 @@ Al-Islam সম্পূর্ণ বিনামূল্যে। কোনো
 
 ## 5. What's New
 
-The release that adds the Bangla interface; all nine new languages ship in one release. Only the interface
+The release that adds the Bangla interface; all twelve new languages ship in one release. Only the interface
 notes are here so far. The Urdu text's right-to-left and digit lines have no Bangla counterpart and are left
 out; in their place are the Latin surah names with their Bangla meanings, the Bangla prayer names (the
 catalog's ফজর, যোহর, আসর, মাগরিব, এশা), and a line saying the translations are English. The language line
-names the other eight new languages, then all twelve interface languages.
+names the other eleven new languages, then all fifteen interface languages.
 
 ```
 Al-Islam-এর ইন্টারফেস এখন বাংলায়: আযান, কুরআন ও হাদীস থেকে ইসলাম ও সেটিংস পর্যন্ত।
@@ -186,7 +186,7 @@ Al-Islam-এর ইন্টারফেস এখন বাংলায়: আ
 - কুরআন ও হাদীসের অনুবাদ আপাতত ইংরেজিতে, আরবি লেখার পাশে।
 
 নতুন ভাষা:
-- Al-Islam এখন ইন্দোনেশীয়, মালয়, তুর্কি, ফরাসি, রুশ, হিন্দি, জার্মান ও স্প্যানিশ ভাষাতেও পাওয়া যায়। সব মিলিয়ে 12টি ভাষা: ইংরেজি, আরবি, উর্দু, ইন্দোনেশীয়, মালয়, তুর্কি, ফরাসি, বাংলা, রুশ, হিন্দি, জার্মান ও স্প্যানিশ।
+- Al-Islam এখন ইন্দোনেশীয়, মালয়, তুর্কি, ফরাসি, রুশ, হিন্দি, জার্মান, স্প্যানিশ, মালয়ালম, তামিল ও ডাচ ভাষাতেও পাওয়া যায়। সব মিলিয়ে 15টি ভাষা: ইংরেজি, আরবি, উর্দু, ইন্দোনেশীয়, মালয়, তুর্কি, ফরাসি, বাংলা, রুশ, হিন্দি, জার্মান, স্প্যানিশ, মালয়ালম, তামিল ও ডাচ।
 
 ভাষা বেছে নেওয়া:
 - iOS সেটিংসে এই অ্যাপের জন্য আপনি যে ভাষা বেছে নেন, অ্যাপটি সেই ভাষাই অনুসরণ করে, আর অ্যাপের সেটিংসের "ভাষা" সারি আপনাকে সেখানে নিয়ে যায়।
@@ -195,7 +195,7 @@ Al-Islam-এর ইন্টারফেস এখন বাংলায়: আ
 - ইসলাম ট্যাবের বিস্তারিত প্রবন্ধ এবং অর্থ দিয়ে অনুসন্ধান আপাতত ইংরেজিতে।
 ```
 
-**1,040 / 4,000 characters.**
+**1,084 / 4,000 characters.**
 
 **To finish this release:** when the English notes for this version are written in `Whats New.md`, translate
 the rest of them and append them below the last line of the block above, under the same headings the English

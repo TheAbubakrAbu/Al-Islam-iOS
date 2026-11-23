@@ -118,8 +118,8 @@ the listings: the bullets drop articles where Apple's French feature lists do, a
 sabr gloss, "in depth" on the 99 Names, "named" on the profiles, and the closing's "deeper understanding of
 Islam"); the last header says GRATUIT ET CONFIDENTIEL, and its paragraph still says there are no ads. Three
 changes from the English: the translation is called "traduction anglaise"; the language line in À VOTRE FAÇON
-says the interface comes in 12 languages, naming French, English and Arabic as the other listings now name
-theirs (the twelve: English, Arabic, Urdu, Indonesian, Malay, Turkish, French, Bangla, Russian, Hindi, German, Spanish), chosen per app
+says the interface comes in 15 languages, naming French, English and Arabic as the other listings now name
+theirs (the fifteen: English, Arabic, Urdu, Indonesian, Malay, Turkish, French, Bangla, Russian, Hindi, German, Spanish, Malayalam, Tamil, Dutch), chosen per app
 in iOS Settings, and says the translations and the articles are English; and the Pillars of Islam and Faith
 and Hadith & Its Sciences take the app's labels, Piliers et croyances and Les sciences du hadith.
 
@@ -163,7 +163,7 @@ PRATIQUE ET APPRENTISSAGE
 - Guides pratiques, Piliers et croyances, calculateurs de zakat et d’héritage, Calendrier hégirien, « Trouver une mosquée » et « Trouver de la nourriture halal ».
 
 À VOTRE FAÇON
-- Interface en 12 langues, dont le français, l’anglais et l’arabe, au choix pour l’app dans Réglages. Les traductions (Coran, hadiths, invocations) et les articles de l’onglet Islam sont en anglais.
+- Interface en 15 langues, dont le français, l’anglais et l’arabe, au choix pour l’app dans Réglages. Les traductions (Coran, hadiths, invocations) et les articles de l’onglet Islam sont en anglais.
 - Le Mode simplifié garde l’essentiel ; passez au mode Complet à tout moment.
 - Profils sauvegardés dans votre iCloud, restaurables partout.
 - Tailles du texte, polices arabes, couleurs d’accentuation et du ciel, recherche dans les réglages.
@@ -179,11 +179,11 @@ Le Coran, la prière et les hadiths du Prophète Muhammad (paix et bénédiction
 
 ## 5. What's New
 
-The release that adds the French interface; the opening line names the other eight new languages, since
-all nine ship in one release. Only the new interface is here so far.
+The release that adds the French interface; the opening line names the other eleven new languages, since
+all twelve ship in one release. Only the new interface is here so far.
 
 ```
-Toute l’app est désormais en français : Adhan, Coran, Hadith, Islam et Réglages. Les interfaces en indonésien, en malais, en turc, en bengali, en russe, en hindi, en allemand et en espagnol arrivent aussi avec cette version.
+Toute l’app est désormais en français : Adhan, Coran, Hadith, Islam et Réglages. Les interfaces en indonésien, en malais, en turc, en bengali, en russe, en hindi, en allemand, en espagnol, en malayalam, en tamoul et en néerlandais arrivent aussi avec cette version.
 
 Interface en français :
 - Tous les écrans, menus, réglages, notifications et widgets sont en français, sur iPhone, iPad, Mac et Apple Watch.
@@ -199,7 +199,7 @@ Choix de la langue :
 - Les articles approfondis de l’onglet Islam sont pour l’instant en anglais. La recherche par le sens fonctionne avec des expressions en anglais ; les traductions du Coran, des hadiths et des invocations sont en anglais.
 ```
 
-**1,342 / 4,000 characters.**
+**1,383 / 4,000 characters.**
 
 **To finish this release:** when the English notes for this version are written in `Whats New.md`, translate
 the rest of them and append them below the last line of the block above, under the same headings the English

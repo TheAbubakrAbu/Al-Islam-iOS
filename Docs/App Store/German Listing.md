@@ -133,10 +133,10 @@ Names, "named" on the profiles, "side by side" in the Qiraat Explorer line, and 
 "deeper understanding of Islam"); the last header says KOSTENLOS UND PRIVAT, and its paragraph still says there
 are no ads. Changes from the English:
 - **Translation:** called "englische Übersetzung", because the app's Quran and hadith translations are English.
-- **Languages:** the line in NACH DEINEN WÜNSCHEN says the interface comes in 12 languages, naming German,
-  English and Arabic as the other listings name theirs (the twelve: English, Arabic, Urdu, Indonesian, Malay,
-  Turkish, French, Bangla, Russian, Hindi, German, Spanish), chosen per app in the iOS Settings, and says the
-  translations and the articles are English, where the English line lists the twelve and follows the
+- **Languages:** the line in NACH DEINEN WÜNSCHEN says the interface comes in 15 languages, naming German,
+  English and Arabic as the other listings name theirs (the fifteen: English, Arabic, Urdu, Indonesian, Malay,
+  Turkish, French, Bangla, Russian, Hindi, German, Spanish, Malayalam, Tamil, Dutch), chosen per app in the iOS Settings, and says the
+  translations and the articles are English, where the English line lists the fifteen and follows the
   iPhone's language.
 - **Labels:** the Pillars of Islam and Faith and Hadith & Its Sciences take the app's labels, Säulen & Glaube
   and die Hadithwissenschaften; the Revision plan is a Wiederholungsplan, after the label Wiederholung, and
@@ -182,7 +182,7 @@ GLAUBENSPRAXIS UND LERNEN
 - Anleitungen, Säulen & Glaube, Zakat- und Erbschaftsrechner, Hidschri-Kalender, „Moscheen finden“ und „Halal-Essen finden“.
 
 NACH DEINEN WÜNSCHEN
-- Oberfläche in 12 Sprachen, darunter Deutsch, Englisch und Arabisch, für die App wählbar in den iOS-Einstellungen. Die Übersetzungen (Koran, Hadithe, Duas) und die Artikel im Tab „Islam“ sind auf Englisch.
+- Oberfläche in 15 Sprachen, darunter Deutsch, Englisch und Arabisch, für die App wählbar in den iOS-Einstellungen. Die Übersetzungen (Koran, Hadithe, Duas) und die Artikel im Tab „Islam“ sind auf Englisch.
 - Einfacher Modus: nur das Wesentliche auf dem Bildschirm; wechsle jederzeit zu „Vollständig“.
 - Sichere Profile in deiner iCloud und stelle sie auf jedem Gerät wieder her.
 - Textgrößen, arabische Schriftarten, Akzent- und Himmelsfarben, eine Suche in den Einstellungen.
@@ -198,12 +198,12 @@ Der Koran, das Gebet und die Hadithe des Propheten Muhammad (Allahs Segen und Fr
 
 ## 5. What's New
 
-The release that adds the German interface; the opening line names the other eight new languages, since
-all nine ship in one release. Only the new
+The release that adds the German interface; the opening line names the other eleven new languages, since
+all twelve ship in one release. Only the new
 interface is here so far.
 
 ```
-Die ganze App gibt es jetzt auf Deutsch: Adhan, Koran, Hadith, Islam und Einstellungen. Mit diesem Update kommen auch Indonesisch, Malaiisch, Türkisch, Französisch, Bengalisch, Russisch, Hindi und Spanisch dazu.
+Die ganze App gibt es jetzt auf Deutsch: Adhan, Koran, Hadith, Islam und Einstellungen. Mit diesem Update kommen auch Indonesisch, Malaiisch, Türkisch, Französisch, Bengalisch, Russisch, Hindi, Spanisch, Malayalam, Tamil und Niederländisch dazu.
 
 Deutsche Oberfläche:
 - Alle Bildschirme, Menüs, Einstellungen, Mitteilungen und Widgets sind auf Deutsch, auf iPhone, iPad, Mac und Apple Watch.
@@ -219,7 +219,7 @@ Sprache wählen:
 - Die ausführlichen Artikel im Tab „Islam“ sind vorerst auf Englisch. Die Suche nach Bedeutung funktioniert mit englischen Begriffen; die Übersetzungen von Koran, Hadithen und Duas sind auf Englisch.
 ```
 
-**1,339 / 4,000 characters.**
+**1,373 / 4,000 characters.**
 
 **To finish this release:** when the English notes for this version are written in `Whats New.md`, translate
 the rest of them and append them below the last line of the block above, under the same headings the English

@@ -227,6 +227,7 @@
    "customAccentColorHex",
    "customBackgroundColorHex",
    "defaultView",
+   "liquidGlassEverywhere",
    "showAccentGlow",
    "userBackgroundRaw"
   ],
@@ -239,6 +240,7 @@
    "customAccentColorHex",
    "customBackgroundColorHex",
    "defaultView",
+   "liquidGlassEverywhere",
    "showAccentGlow",
    "userBackground"
   ]

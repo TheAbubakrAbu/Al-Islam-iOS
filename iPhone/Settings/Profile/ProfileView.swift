@@ -723,7 +723,7 @@ struct ProfileView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
-        .conditionalGlassEffect(rectangle: true, interactive: false)
+        .contentSurface(rectangle: true, interactive: false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spoken)
         .accessibilityValue(value)
@@ -829,7 +829,7 @@ private struct RingHero: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
-        .conditionalGlassEffect(rectangle: true, interactive: false)
+        .contentSurface(rectangle: true, interactive: false)
     }
 
     private struct Ring: View {
@@ -895,7 +895,7 @@ private struct ProfileCard<Content: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .conditionalGlassEffect(rectangle: true, interactive: false)
+        .contentSurface(rectangle: true, interactive: false)
     }
 }
 

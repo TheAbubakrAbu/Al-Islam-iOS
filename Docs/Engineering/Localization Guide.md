@@ -1,7 +1,8 @@
 # Localization Guide
 
 The app speaks English, Arabic (since 2026-10-24), Urdu (since 2026-10-26), Indonesian, Malay and Turkish
-(since 2026-11-19), and French, Bangla, Russian, Hindi, German and Spanish (since 2026-11-20). Everything is translated, the Islam tab included, except the Islam tab's ARTICLES: Faith &
+(since 2026-11-19), French, Bangla, Russian, Hindi, German and Spanish (since 2026-11-20), and Malayalam,
+Tamil and Dutch (since 2026-11-21). Everything is translated, the Islam tab included, except the Islam tab's ARTICLES: Faith &
 Proofs (the pillars, beliefs, How-To Guides, miracles, prophecies, the prophets' miracles, the Sunnahs of the
 Prophet, Proving Islam), Hadith & Its Sciences and the riwayat differences page. Those stay English, and read
 left to right inside the Arabic and Urdu interfaces.
@@ -10,11 +11,13 @@ left to right inside the Arabic and Urdu interfaces.
 
 | What | Where |
 | --- | --- |
-| Interface strings and every translation | `Resources/Localizable.xcstrings` (iPhone, Widget, Watch, Complication) |
+| Interface strings and every translation | `Resources/Localizable.xcstrings` (iPhone, Widget, Watch, Complication; the two watch targets ship only their share, see "The watch's share") |
 | Permission prompts, the home-screen name | `Resources/InfoPlist.xcstrings` (iPhone, Watch) |
-| Siri and Shortcuts phrases | `Resources/<ar, ms, tr, fr, ru, de, es>.lproj/AppShortcuts.strings` (iPhone), `Resources/Watch/<same>.lproj/AppShortcuts.strings` (Watch); none for Urdu, Indonesian, Bangla or Hindi (Siri has none of them) |
+| Siri and Shortcuts phrases | `Resources/<ar, ms, tr, fr, ru, de, es, nl>.lproj/AppShortcuts.strings` (iPhone), `Resources/Watch/<same>.lproj/AppShortcuts.strings` (Watch); none for Urdu, Indonesian, Bangla, Hindi, Malayalam or Tamil (Siri has none of them) |
 | Helpers | `iPhone/Helpers/System/Localization.swift` (every target) |
 | Catalog tool | `Scripts/localize_catalog.py` |
+| Next languages, the runbook | `Docs/Engineering/Localization Roadmap.md` |
+| Translation kit (brief, glossaries, labels, scripts, agent prompts) | `Scripts/Localization/` (copy it to a scratchpad to run a round) |
 
 The language is the per-app choice iOS keeps in Settings > Al-Islam > Language. The app's own Settings has a
 Language row (APPEARANCE) that opens that page. There is no in-app language switch: `String(localized:)`,
@@ -44,7 +47,8 @@ notifications and widgets would not follow one.
    Warsh and Qalun, where the prophets are İdris and İshak). A dotted key needs its English written into the
    catalog too.
 6. **English-only forms ask `AppLanguage.isEnglish`, never `!isArabicScript`.** Every left-to-right language
-   after English (Indonesian, Malay, Turkish, French, Bangla, Russian, Hindi, German, Spanish) takes the English LAYOUT (every `isArabicScript` branch's Latin side), but not its English text: a Hijri
+   after English (Indonesian, Malay, Turkish, French, Bangla, Russian, Hindi, German, Spanish, Malayalam, Tamil,
+   Dutch) takes the English LAYOUT (every `isArabicScript` branch's Latin side), but not its English text: a Hijri
    date pinned to `Locale(identifier: "en")`, a list joined with " and ", a meaning read straight from
    English data. Those switch on `isEnglish` and otherwise use the locale (`.current`) or the catalog.
 7. **The model, saved data and backups get English.** Ask AI's sources, the semantic corpora, saved
@@ -69,7 +73,8 @@ Traps:
   hinzufügen"), and Turkish lowercases İ to i, which only the locale knows.
 - Letter spacing goes through `AppLanguage.letterSpacing(_:)` (`.tracking(AppLanguage.letterSpacing(0.8))`), never
   a bare number: it is zero in Arabic, Urdu, Hindi and Bangla, whose letters join or hang from one headline
-  stroke, where any tracking pulls each word apart into loose letters (all 34 sites, 2026-11-20).
+  stroke, where any tracking pulls each word apart into loose letters (all 34 sites, 2026-11-20), and in
+  Malayalam and Tamil, whose vowel signs and conjuncts are shaped as one cluster with their consonant.
 - `.uppercased()` ignores the locale: Turkish capitals are İ for i ("İKİNDİ"). Display text is
   `.localizedUppercase` (89 sites changed 2026-11-19); search keys, identifiers and ENGLISH content (the
   articles, hadith chapter titles, a book's `englishTitle`) keep `.uppercased()`: under a Turkish locale
@@ -113,12 +118,13 @@ Test `-AppleLocale ur_PK` and `-AppleLocale "ur_PK@numbers=arabext"`.
 - In Urdu the app is الاسلام (الاذان، القرآن، الحدیث), and in a sentence "%@ ایپ", the name first, with
   feminine verbs (ایپ ... استعمال کرتی ہے).
 
-- **Indonesian, Malay, Turkish, French, Bangla, Russian, Hindi, German and Spanish keep the Latin names**: the app is Al-Islam (Al-Adhan, Al-Quran) in a
+- **Indonesian, Malay, Turkish, French, Bangla, Russian, Hindi, German, Spanish, Malayalam, Tamil and Dutch keep
+  the Latin names**: the app is Al-Islam (Al-Adhan, Al-Quran) in a
   sentence and on the home screen, surahs keep the app's transliteration (Al-Baqarah), and only the surah's
   MEANING is translated, through one catalog key per surah: `Surah.localizedMeaning` reads
   `surah.meaning.<id>` ("Sapi Betina", "İnek"), and the surah search matches it too. `nameEnglish` stays for
-  search, the model and the English share cards. Bangla, Russian and Hindi write people, books and riwayat in
-  their own script (Сахих аль-Бухари, হাফস, इब्ने कसीर) but keep the Latin surah names and letter-card names in sentences, so a
+  search, the model and the English share cards. Bangla, Russian, Hindi, Malayalam and Tamil write people, books
+  and riwayat in their own script (Сахих аль-Бухари, হাফস, इब्ने कसीर, ഇബ്നു കസീർ, இப்னு கஸீர்) but keep the Latin surah names and letter-card names in sentences, so a
   reader can find them in the surah list and on the letter cards.
 
 ## Right to left
@@ -150,10 +156,11 @@ intents are iPhone only); a build warning "This phrase is not used in any App Sh
 drifted apart. Never write a non-English phrase into the code: to Siri it would be one more English phrase.
 The surah a phrase names is matched against Arabic names too (`Surah.spokenName`, `normalizedSearchNames`).
 
-Malay and Turkish have their own (2026-11-19), French, Russian, German and Spanish too (2026-11-20). Indonesian,
-Bangla and Hindi have none, like Urdu: Siri has none of them (Apple's feature availability lists Malaysia
-(Malay), Türkiye, France, Russia, Germany and Spain, not Indonesia or Bangladesh, and India with English only).
-`AppLanguage.siriSpeaksInterfaceLanguage` is false for all four, and the two tips that quote Siri phrases then
+Malay and Turkish have their own (2026-11-19), French, Russian, German and Spanish too (2026-11-20), and Dutch
+(2026-11-21). Indonesian, Bangla, Hindi, Malayalam and Tamil have none, like Urdu: Siri has none of them (Apple's
+feature availability lists Malaysia (Malay), Türkiye, France, Russia, Germany, Spain and the Netherlands, not
+Indonesia or Bangladesh, and India with English only). `AppLanguage.siriSpeaksInterfaceLanguage` is false for
+all six, and the two tips that quote Siri phrases then
 quote the English ones with the name Siri hears.
 
 Urdu has no AppShortcuts.strings: Siri cannot be set to Urdu (iOS 26 brought Urdu to the interface, not to
@@ -176,8 +183,8 @@ DD=<the build's -derivedDataPath>
 ./Scripts/localize_catalog.py sibling SIBLING_DD [--add]  # keys only Al-Adhan's or Al-Quran's code has
 ```
 
-`todo`, `validate`, `merge`, `check` and `sibling` take `--lang ar|ur|id|ms|tr|fr|bn|ru|hi|de|es` (Arabic is the
-default). An Urdu batch carries each key's Arabic as `arabic`, the reference for its sense and for the Islamic
+`todo`, `validate`, `merge`, `check` and `sibling` take `--lang ar|ur|id|ms|tr|fr|bn|ru|hi|de|es|ml|ta|nl` (Arabic
+is the default). An Urdu batch carries each key's Arabic as `arabic`, the reference for its sense and for the Islamic
 term chosen; a batch in any other language carries it for keys of six words or fewer, where the sense can be in
 doubt. A new language's first pass is `todo DD OUTDIR --like-ar --words 8000`: exactly the keys Arabic has,
 in batches of about 8,000 English words, each key with the files that show it.
@@ -205,16 +212,21 @@ the key has it too and it is a letter or two or quoted (the alphabet lessons com
 words: «مثل حرف b في “book”»). Keys whose every source is an article file (`ARTICLE_SOURCES`) are never offered
 for translation, nor a key marked `shouldTranslate: false` (an email address).
 
-French, German and Spanish use the same English check (`NOT_ENGLISH` adds German "will", "was", "also", "her"
-and Spanish "has", words of those languages; German „…“ counts as a quote). Bangla, Russian and Hindi run it
-too, then `script_problems`: a value with no
+French, German, Spanish and Dutch use the same English check (`NOT_ENGLISH` adds German "will", "was", "also",
+"her", Spanish "has" and Dutch "is", "of", "over", "was", "been", words of those languages, and a value identical
+to its key is judged by the same list; German „…“ counts as a quote). Bangla, Russian, Hindi, Malayalam and Tamil
+run it too, then `script_problems`: a value with no
 Bengali or Cyrillic letter while the key holds an English dictionary word (`/usr/share/dict/words`, so a
 lesson's transliteration, "kufuwan", may stay Latin), a Latin look-alike letter inside a Cyrillic word,
 Bengali digits (the app writes 0-9; Apple's Bangla formats numbers in them too), and a Latin full stop where
-Bangla and Hindi write the danda (Devanagari digits are rejected like Bengali ones). In Russian, French, German,
-Spanish and Hindi a plain string that puts a count before an agreeing noun ("%lld аятов", "%lld versets", "%lld
-Verse", "%lld aleyas", "%lld आयतें") is rejected: it needs plural forms (Russian one, few, many, other; the
-others one, other). Every
+Bangla and Hindi write the danda (Devanagari, Malayalam and Tamil digits are rejected like Bengali ones;
+Malayalam and Tamil end a sentence with the Latin full stop), and, since 2026-11-21, an Arabic run of the key
+that is not in the value byte for byte (the Latin-script check always had it; the script languages had
+skipped it). In Russian, French, German, Spanish, Hindi, Dutch, Malayalam and Tamil a plain string that puts a
+count before an agreeing noun ("%lld аятов", "%lld versets", "%lld Verse", "%lld aleyas", "%lld आयतें", "%lld
+verzen", "%lld ആയത്തുകൾ", "%lld வசனங்கள்") is rejected: it needs plural forms (Russian one, few, many, other;
+the others one, other). Dutch lets a count stand before a unit that stays singular (keer, uur, jaar, procent)
+and before a verb or "een". Every
 language: arguments of different types that change order must be numbered (%1$@, %2$lld), and a lone "%"
 the key does not have is rejected (a format string writes %%).
 
@@ -233,6 +245,39 @@ is a manual key, so rebuilding that pack with different English needs those keys
 
 Tilawa (the sister React Native app) carries Arabic for much of the same content (its tajweed course, its UI
 dictionary): align by position or by identical English before translating from scratch.
+
+## The watch's share
+
+App Store Connect refuses a watch app over 75 MB after thinning (ITMS-90389). Xcode compiles every key of a
+catalog into every target that carries it, so with one catalog for the whole app each language cost the watch
+about 3 MB twice (Watch.app and Complication.appex): build 271 (4.6.7, 11 languages) came to 95 MB and was
+refused on 2026-11-23. Each new language would have added about 6 MB more.
+
+The Watch and Complication targets therefore end with a Run Script phase, "Trim Watch Strings"
+(`Scripts/trim_watch_strings.py`), that compiles a copy of the catalog holding only the keys the target can
+reach and puts its Localizable.strings and Localizable.stringsdict in place of the full ones. A key is kept
+when the compiler extracted it from that target's own Swift files, when one of them (or the Adhan package)
+holds it as a plain string literal (a prayer name, an enum's raw value shown through `.localizedDisplay`), when
+it matches an interpolated literal there (`"surah.meaning.\(id)"`), and, for the Watch app only, when it is a
+manual key: the Watch ships the tajweed course, surah info, the Names and the hadith quotes and shows their
+text through `.localizedDisplay`. The catalog itself is never changed, and translating needs no extra step:
+the next build trims the new translations too. Literals inside branches the watch does not compile
+(`#if os(iOS)`, a compilation condition the target lacks) are left out of the scan; a condition the script
+cannot decide (`canImport`) counts as compiled.
+
+Measured 2026-11-23 with 14 languages: the Watch app keeps 8,885 of 14,195 keys (32.5 MB of tables instead of
+44.4 MB), the Complication 1,230 (2.1 MB), and the thinned watch app comes to about 61 MB of the 75. Every
+string the watch code extracts keeps all its translations. The tajweed course is most of what is left (its
+lesson text is about 20 MB of the Watch's tables); each new language adds about 2.3 MB.
+
+What this means when writing watch code:
+- A literal the watch shows is kept automatically, wherever its key came from.
+- A key built at runtime from pieces with no literal behind it ("\(prefix).\(suffix)") is not: give it a
+  literal pattern in a watch-compiled file, or register it as a manual key.
+- `./Scripts/trim_watch_strings.py --report --objects <the target's Objects-normal> [--with-data-keys]` prints
+  what a build would keep. The phase needs `SWIFT_EMIT_LOC_STRINGS = YES` (it reads the compiler's
+  `.stringsdata`) and script sandboxing off in the two watch targets (it reads the sources); it fails the
+  build, rather than ship the full tables, when it finds no `.stringsdata`.
 
 ## Indonesian, Malay and Turkish
 
@@ -338,6 +383,48 @@ the English layout.
   per language), with the term choices that settled mid-run last time fixed in each glossary up front.
   Machine translation: each language needs a fluent reviewer before release.
 
+## Malayalam, Tamil and Dutch
+
+Since 2026-11-21, the same coverage (`--lang ml|ta|nl`, 13,623 keys each). All three read left to right and take
+the English layout.
+
+| English | Malayalam | Tamil | Dutch |
+| --- | --- | --- | --- |
+| Settings (tab) | ക്രമീകരണം | அமைப்புகள் | Instellingen |
+| Quran / Hadith / Adhan / Islam (tabs) | ഖുർആൻ / ഹദീസ് / ബാങ്കുവിളി / ഇസ്ലാം | குர்ஆன் / ஹதீஸ் / பாங்கு / இஸ்லாம் | Koran / Hadith / Adhan / Islam |
+| prayer | നിസ്കാരം | தொழுகை | gebed |
+| Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha | സുബ്ഹ്, ഉദയം, ളുഹ്ർ, അസ്ർ, മഗ്രിബ്, ഇശാ | ஃபஜ்ர், சூரிய உதயம், லுஹர், அஸர், மஃரிப், இஷா | Fajr, Zonsopkomst, Dhuhr, Asr, Maghrib, Isha |
+| surah, ayah, juz | സൂറത്ത്, ആയത്ത്, ജുസ്അ് | சூரா, வசனம், ஜுஸ்உ | soera, vers, juz |
+| tajweed, qibla, dua | തജ്വീദ്, ഖിബ്ല, ദുആ | தஜ்வீத், கிப்லா, துஆ | tajweed, qibla, dua |
+
+- Malayalam is written as Kerala's Muslims write it (Samastha usage: നിസ്കാരം, സുബ്ഹ്, ض and ظ as ള in
+  ളുഹ്ർ and വുളൂഅ്), in Apple's polite -ൂ imperative (ടാപ്പ് ചെയ്യൂ). The Adhan tab is ബാങ്കുവിളി, because a
+  bare ബാങ്ക് also spells "bank"; sentences say ബാങ്ക്. Chillu letters are the atomic code points and the text
+  has no zero-width joiners. A settings screen is the singular ക്രമീകരണം.
+- Tamil is written as Tamil Muslims write it (தொழுகை, பாங்கு, வசனம்; Grantha letters ஜ ஷ ஸ ஹ and the aytham
+  for f and z sounds; ض ظ as ள in லுஹர்), in Apple's -வும் form for instructions (தட்டவும்). Khatm is கத்ம்,
+  never கத்தம், which Tamil Muslims use for recitation for the dead; the madd of compensation is always
+  மத்துல் இவள், since a bare இவள் reads "she".
+- Both name people, books and riwayat in their own script ("Hafs an Asim" is "Hafs from Asim": ആസ്വിമിൽ
+  നിന്നുള്ള ഹഫ്സ്, ஆஸிமிடமிருந்து ஹஃப்ஸ்), keep surah and letter-card names Latin, write a letter named in
+  lesson prose from a fixed list with the Arabic letter beside it where the script cannot tell two apart (ഹാ
+  (ه) and ഹാ (ح), காஃப் (ق) and காஃப் (ك)), end a sentence with the Latin full stop and write digits 0-9. A
+  case ending is never glued to `%@` or to a bare Arabic letter: a noun carries it ("%@ എന്ന സൂറത്തിൽ").
+- Dutch follows Apple's Dutch: "je", sentence case, the imperative on verb-led buttons ("Voeg notitie toe",
+  "Stel alle instellingen opnieuw in"), “…” quotes. Arabic terms keep the key's transliteration (wudu, sunnah,
+  sukoon, tajweed); only established Dutch words replace it (Koran, soera, vers, profeet, hadj, djinn).
+  Nagging Mode is Zeurmodus.
+- Plurals: all three take one / other on a count beside an agreeing noun (Dutch verzen, Malayalam -കൾ, Tamil
+  -கள்); a unit that stays singular after a number takes a plain string.
+- Siri: Dutch has phrase files; Malayalam and Tamil have none (India's Siri is English), so their tips quote
+  the English phrases and say to say them in English.
+- The tip-search hints ('"adhan", "qibla" or "widget"' and its siblings) are written in the interface
+  language in every language: the tips search reads the displayed text, so an English example finds nothing
+  in a translated interface (Hindi, German and Dutch were corrected 2026-11-21).
+- How they were made: as Hindi, German and Spanish (a glossary per language first, then labels, 19 batches per
+  language and a consistency review per language). Machine translation: each language needs a fluent reviewer
+  before release.
+
 ## Al-Adhan and Al-Quran
 
 The siblings get their languages from the sync (`~/Downloads/Islam/sync_from_islam.sh`, Docs/Engineering/Sibling
@@ -348,7 +435,7 @@ rest is `../sync_localization.py`'s, a pass of the sync that can also run alone:
 | --- | --- |
 | `Resources/Localizable.xcstrings` | Al-Islam's, copied whole on every sync (`L10N_MIRROR`): all translation happens here |
 | `Resources/InfoPlist.xcstrings` | written per app (`L10N_DERIVED`): the keys its Info.plist declares, its own English, this catalog's translations with the app's name swapped (الأذان، القرآن, "تطبيق %@" in an Arabic sentence; الاذان، القرآن, "%@ ایپ" in Urdu; Al-Adhan, Al-Quran as they are in the Latin-name languages) |
-| `Resources/<lang>.lproj/AppShortcuts.strings`, `Resources/Watch/<lang>.lproj/AppShortcuts.strings` (ar, ms, tr, fr, ru, de, es) | written per app and target: only the phrases its `AppShortcutsRoot` compiles under its flags (Al-Adhan the prayer phrases, Al-Quran the surah ones), since an unused phrase is a build warning |
+| `Resources/<lang>.lproj/AppShortcuts.strings`, `Resources/Watch/<lang>.lproj/AppShortcuts.strings` (ar, ms, tr, fr, ru, de, es, nl) | written per app and target: only the phrases its `AppShortcutsRoot` compiles under its flags (Al-Adhan the prayer phrases, Al-Quran the surah ones), since an unused phrase is a build warning |
 | the project | Al-Islam's languages in knownRegions, `STRING_CATALOG_GENERATE_SYMBOLS = NO` (Al-Quran's Widget overrides it too), and the files above registered in the targets Al-Islam's are in |
 
 Never translate inside a sibling: its catalog is replaced on the next sync. A key only a sibling's code has
@@ -436,8 +523,8 @@ Urdu.
 - The App Store listing in Urdu is drafted in `Docs/App Store/Urdu Listing.md`; the siblings' Urdu listings
   wait in `~/Downloads/Islam/sibling-staging/<App>-iOS/Docs/Urdu Listing.md`. Indonesian, Malay and Turkish
   likewise: `Docs/App Store/<Language> Listing.md` and the siblings' in sibling-staging.
-- Indonesian, Malay and Turkish (2026-11-19) and French, Bangla, Russian, Hindi, German and Spanish (2026-11-20)
-  are machine-translated and need fluent reviewers too. Their store listings: `Docs/App Store/<Language>
+- Indonesian, Malay and Turkish (2026-11-19), French, Bangla, Russian, Hindi, German and Spanish (2026-11-20)
+  and Malayalam, Tamil and Dutch (2026-11-21) are machine-translated and need fluent reviewers too. Their store listings: `Docs/App Store/<Language>
   Listing.md`, the siblings' in sibling-staging. Search
   keeps English in two places, and the help text says so: search by meaning reads English phrases, and the
   Quran search's typed keywords ("page 5", "juz 30", "makki") are English words.

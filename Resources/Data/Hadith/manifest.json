@@ -4,33 +4,33 @@
   "books" : [
     {
       "blocks" : 46,
-      "bytes" : 4718186,
+      "bytes" : 4718246,
       "chapters" : 97,
       "dailyCandidates" : 1535,
       "hadiths" : 7277,
-      "sha256" : "f91f2372ca69aa3426d0eeb7f0e673ec5eaa6df9ffeb787b21b82b19c4d44c20",
+      "sha256" : "cae329f1fee85af17273b63fd539e83ccbac1e598cf4033ae5cc0e15df191726",
       "slug" : "bukhari",
-      "sourceBytes" : 13005201
+      "sourceBytes" : 13005192
     },
     {
       "blocks" : 41,
-      "bytes" : 3763198,
+      "bytes" : 3762654,
       "chapters" : 57,
       "dailyCandidates" : 2188,
       "hadiths" : 7459,
-      "sha256" : "d54cc3dc372e4cfd178eb186ae4f567566cb0cf9e12190fa1b7bcc18d3fe63c2",
+      "sha256" : "ef5f380d0166c146b76c99cf4084ff32ddbc0a497ad2ebd75ec68c809ac9d2d2",
       "slug" : "muslim",
-      "sourceBytes" : 11732648
+      "sourceBytes" : 11732588
     },
     {
       "blocks" : 22,
-      "bytes" : 1908802,
+      "bytes" : 1908826,
       "chapters" : 38,
       "dailyCandidates" : 1399,
       "hadiths" : 4345,
-      "sha256" : "3824bc166dd928e1c3f2ffa1a6f2bd38b0c499b6aaba2ce3fb0b11ee41195e3d",
+      "sha256" : "c45ea9163bb81b113fb2df1a651b8382fceb25e33a51d439f586a7c1330690eb",
       "slug" : "ibnmajah",
-      "sourceBytes" : 6885841
+      "sourceBytes" : 6885840
     },
     {
       "blocks" : 30,
@@ -38,49 +38,49 @@
       "chapters" : 43,
       "dailyCandidates" : 1441,
       "hadiths" : 5276,
-      "sha256" : "967de7a0af894cb2654de0570af8170c6a7b0a5de906050f03ffbb95b5b98316",
+      "sha256" : "1085d247b66d709b5f97b26d2588d4d4023458ee391986f21a9a1edeb3ae9ff5",
       "slug" : "abudawud",
       "sourceBytes" : 8975717
     },
     {
       "blocks" : 30,
-      "bytes" : 2506454,
+      "bytes" : 2506437,
       "chapters" : 49,
       "dailyCandidates" : 311,
       "hadiths" : 4053,
-      "sha256" : "3c7806d617615f05ab4c29541cf8e909c63163cfc8d2915a3edaee1351cb5d59",
+      "sha256" : "d4d480004437b29ac85131b2e38ade27c9da781cbeb2bc3a96438b2a7fffbeb5",
       "slug" : "tirmidhi",
-      "sourceBytes" : 8710384
+      "sourceBytes" : 8710382
     },
     {
       "blocks" : 30,
-      "bytes" : 2376996,
+      "bytes" : 2376984,
       "chapters" : 52,
       "dailyCandidates" : 1703,
       "hadiths" : 5768,
-      "sha256" : "abae798418c1669e013c28adcf4974eab9aec339f3c704055b971430c1c25994",
+      "sha256" : "2d672fa714425fee317a5e76c668b0f77e1516107f28a802ee7d6433246e7398",
       "slug" : "nasai",
       "sourceBytes" : 9175659
     },
     {
       "blocks" : 12,
-      "bytes" : 1169676,
+      "bytes" : 1169684,
       "chapters" : 61,
       "dailyCandidates" : 303,
       "hadiths" : 1985,
-      "sha256" : "765f034531a25875b23f88bbd71330bda5bdb3cfb792e846199e81a0d75d6aa4",
+      "sha256" : "7c348e4ce04d2f636724d529840d22c54ba9eab6f753924cb53d607866ba5253",
       "slug" : "malik",
-      "sourceBytes" : 3404961
+      "sourceBytes" : 3404959
     },
     {
       "blocks" : 99,
-      "bytes" : 6666959,
+      "bytes" : 6666869,
       "chapters" : 22,
       "dailyCandidates" : 321,
       "hadiths" : 27529,
-      "sha256" : "b4789c69e5719002b75d8c80a9bad13dbb2925f4d79b3e5482380ab93a06abbc",
+      "sha256" : "11344267e41ad9760f0b86a841561c0fd2dd63e487490f846e85b904862f9e35",
       "slug" : "ahmed",
-      "sourceBytes" : 29394936
+      "sourceBytes" : 29394935
     },
     {
       "blocks" : 11,
@@ -124,53 +124,53 @@
     },
     {
       "blocks" : 7,
-      "bytes" : 610592,
+      "bytes" : 610556,
       "chapters" : 57,
       "dailyCandidates" : 400,
       "hadiths" : 1326,
-      "sha256" : "85f4a747b2fe5e5d21673871ad020de49dd8d48a8bd95a8873e76ec65823009d",
+      "sha256" : "58a9427450cf47b68245bc4c9fda5033bba8faf5eb0780a3cda15bfcd6d5a81a",
       "slug" : "aladab_almufrad",
       "sourceBytes" : 1797006
     },
     {
       "blocks" : 2,
-      "bytes" : 182118,
+      "bytes" : 182134,
       "chapters" : 57,
       "dailyCandidates" : 153,
       "hadiths" : 402,
-      "sha256" : "dcc77445165a1c212bcb8cfe59ffd008dd8b33b3513db794ca5fceeb01b662b5",
+      "sha256" : "8a4638f1d24a0f97a029dc27b699d988dc807b6ad0a09d8d315efa5057c0c396",
       "slug" : "shamail_muhammadiyah",
       "sourceBytes" : 578217
     },
     {
       "blocks" : 8,
-      "bytes" : 996902,
+      "bytes" : 996898,
       "chapters" : 20,
       "dailyCandidates" : 538,
       "hadiths" : 1896,
-      "sha256" : "e3d72da5bd8beff6c8469df478d782c6e657903d6190b4e687006c29c3796499",
+      "sha256" : "016ef446e7d04d46f4d4074a7492bdaa093cdf1d2d05fc3a174c00e28e1c4b52",
       "slug" : "riyad_assalihin",
       "sourceBytes" : 2333775
     },
     {
       "blocks" : 19,
-      "bytes" : 1981688,
+      "bytes" : 1981655,
       "chapters" : 25,
       "dailyCandidates" : 1232,
       "hadiths" : 4428,
-      "sha256" : "587b763f53a948af1722d705d8ab13a20098d11537f2e719b7d5558b43011c3c",
+      "sha256" : "c165aeefaa9a3333665448dc2227219a0990c86e89b1fbb87adadaef9abefc5f",
       "slug" : "mishkat_almasabih",
-      "sourceBytes" : 5389253
+      "sourceBytes" : 5389249
     },
     {
       "blocks" : 8,
-      "bytes" : 824639,
+      "bytes" : 824623,
       "chapters" : 16,
       "dailyCandidates" : 477,
       "hadiths" : 1767,
-      "sha256" : "6d7822b5b24bf5ab45afa951e346781fd9e7e416a0a74be20fef2c5865c3396b",
+      "sha256" : "039e9992cc94b36e6ae2d8a9e0df96824f35c556d6264b44fce27ed4ccc539ad",
       "slug" : "bulugh_almaram",
-      "sourceBytes" : 2125362
+      "sourceBytes" : 2125361
     }
   ],
   "foldFingerprint" : "1da8eec3c7bb6498",
@@ -179,5 +179,5 @@
   "textCodec" : "lzma",
   "totalChapters" : 621,
   "totalHadiths" : 77039,
-  "totalPackBytes" : 31341793
+  "totalPackBytes" : 31341149
 }

@@ -1116,7 +1116,7 @@ struct HadithView: View {
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(settings.accentColor.color)
                     .frame(width: SectionPillHeader.pillHeight, height: SectionPillHeader.pillHeight)
-                    .conditionalGlassEffect(circle: true)
+                    .contentSurface(circle: true)
                     .onTapGesture {
                         settings.hapticFeedback()
                         Task { await store.shuffleDailyHadith() }
@@ -1373,7 +1373,7 @@ struct HadithView: View {
             // all the slack as dead space under the English line.
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
-            .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
+            .contentSurface(clear: true, rectangle: true, inRow: true)
             .contentShape(Rectangle())
     }
 
@@ -1923,7 +1923,7 @@ struct HadithView: View {
             .foregroundColor(settings.accentColor.color)
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentSurface(clear: true, rectangle: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -2719,7 +2719,7 @@ struct HadithView: View {
                 .foregroundColor(settings.accentColor.color)
                 .frame(width: bookBadgeWidth)
                 .frame(maxHeight: .infinity)
-                .conditionalGlassEffect(
+                .contentSurface(
                     useColor: favorite ? 0.3 : nil,
                     customTint: favorite ? settings.accentColor.color : nil,
                     inRow: true
@@ -2912,7 +2912,7 @@ struct HadithView: View {
                 if usesColumnNavigation { HadithReadingRing(slug: book.slug) }
             }
         }
-        .conditionalGlassEffect(
+        .contentSurface(
             clear: !store.isFavorite(book.slug),
             rectangle: true,
             useColor: store.isFavorite(book.slug) ? 0.25 : nil,

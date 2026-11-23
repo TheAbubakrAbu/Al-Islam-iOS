@@ -349,7 +349,7 @@ struct DuaSessionView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity)
-        .conditionalGlassEffect(rectangle: true, interactive: false)
+        .contentSurface(rectangle: true, interactive: false)
         // The session card is the one dua surface that ISN'T a List row, so the plain modifier gives
         // real drag-selection here - the Arabic, the transliteration and the translation all.
         .textSelection(.enabled)

@@ -134,7 +134,7 @@ IBADAH HARIAN DAN BELAJAR
 - Panduan Praktis, Rukun Islam dan Iman, kalkulator zakat dan waris, Kalender Hijriah, serta pencari masjid dan makanan halal.
 
 SESUAI CARA ANDA
-- Antarmuka dalam 12 bahasa, termasuk Indonesia, Inggris, dan Arab, sesuai pilihan Anda untuk app ini di Pengaturan iOS. Artikel mendalam di tab Islam masih berbahasa Inggris.
+- Antarmuka dalam 15 bahasa, termasuk Indonesia, Inggris, dan Arab, sesuai pilihan Anda untuk app ini di Pengaturan iOS. Artikel mendalam di tab Islam masih berbahasa Inggris.
 - Mode Sederhana menampilkan yang pokok saja. Beralih ke mode Lengkap kapan saja.
 - Cadangkan profil bernama ke iCloud Anda dan pulihkan di perangkat mana pun.
 - Ukuran teks, font Arab, warna aksen dan langit, serta pencarian di setiap halaman pengaturan.
@@ -150,8 +150,8 @@ Baik Anda mencari waktu salat, Al-Qur'an, hadis Nabi Muhammad (shallallahu 'alai
 
 ## 5. What's New
 
-The release that adds the Indonesian interface; all nine new languages ship in one release, so the
-section Bahasa baru lainnya names the other eight. Only the
+The release that adds the Indonesian interface; all twelve new languages ship in one release, so the
+section Bahasa baru lainnya names the other eleven. Only the
 interface notes are here so far. The Urdu text's right-to-left and digit lines have no Indonesian counterpart
 and are left out; in their place are the Latin surah names with their Indonesian meanings, the Indonesian
 prayer names (the catalog's Subuh, Zuhur, Asar, Magrib, Isya), and a line saying the translations are English.
@@ -168,7 +168,7 @@ Antarmuka bahasa Indonesia:
 - Terjemahan Al-Qur'an dan hadis saat ini tersedia dalam bahasa Inggris, di samping teks Arabnya.
 
 Bahasa baru lainnya:
-- Al-Islam kini juga tersedia dalam bahasa Melayu, Turki, Prancis, Bengali, Rusia, Hindi, Jerman, dan Spanyol, di samping bahasa Inggris, Arab, dan Urdu.
+- Al-Islam kini juga tersedia dalam bahasa Melayu, Turki, Prancis, Bengali, Rusia, Hindi, Jerman, Spanyol, Malayalam, Tamil, dan Belanda, di samping bahasa Inggris, Arab, dan Urdu.
 
 Memilih bahasa:
 - App ini mengikuti bahasa yang Anda pilih untuknya di Pengaturan iOS, dan baris Bahasa di pengaturan app membawa Anda ke sana.
@@ -177,7 +177,7 @@ Memilih bahasa:
 - Artikel mendalam di tab Islam dan pencarian berdasarkan makna saat ini masih menggunakan bahasa Inggris.
 ```
 
-**1,260 / 4,000 characters.**
+**1,287 / 4,000 characters.**
 
 **To finish this release:** when the English notes for this version are written in `Whats New.md`, translate
 the rest of them and append them below the last line of the block above, under the same headings the English

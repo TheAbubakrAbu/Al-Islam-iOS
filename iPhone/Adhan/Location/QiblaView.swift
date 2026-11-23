@@ -260,7 +260,7 @@ struct QiblaView: View {
             // the Qibla was to the right ("Turn right 28°" under a needle leaning left), and East sat on
             // the left (found 2026-10-28 when the N/E/S/W letters arrived). The dial never mirrors.
             .environment(\.layoutDirection, .leftToRight)
-            .conditionalGlassEffect()
+            .contentSurface()
             // A rotating needle says nothing to VoiceOver, so the turn instruction is the label and
             // updates as the user turns. `.updatesFrequently` lets VoiceOver re-announce it while
             // the element stays focused, which is the whole point: the user is turning on the spot.
@@ -426,7 +426,7 @@ struct QiblaView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
-        .conditionalGlassEffect()
+        .contentSurface()
         .softShadow(color: .primary.opacity(0.08), radius: 8, y: 2)
     }
 

@@ -1,0 +1,112 @@
+===== Q: Explain Ayat al-Kursi
+INTENT: scripture followUp=false engine=onDevice first token 2.7s, total 9.0s
+RETRIEVAL: 2182 ms; lanes articles=4 hadithRanked=6 quranKeyword=2 quranTopics=3 subject=3; ranking 2:255 13.29 | Surah 2 Al-Baqarah 6.00 | Tafsir Ibn Kathir on 2:255 8.00 | Who is Allah? › Ayat Al-Kursi 0.55 | 38:34 0.49 | Jami` at-Tirmidhi 2884 0.45 | Belief in Allah › Quranic Evidence 0.37 | 7:54 0.36 | Jami` at-Tirmidhi 2878 0.30 | How to Do Ruqyah › Protection Before Affliction 0.28 | 9:129 0.27 | Jami` at-Tirmidhi 2879 0.23; window=4096 instructions=1026
+SOURCES: [1] 2:255 (SUBJECT) | [2] Surah 2 Al-Baqarah (SUBJECT) | [3] Tafsir Ibn Kathir on 2:255 | [4] Who is Allah? › Ayat Al-Kursi | [5] 38:34 | [6] Jami` at-Tirmidhi 2884 | [7] Belief in Allah › Quranic Evidence | [8] 7:54
+NOTES: [1] translation Clear Quran (Mustafa Khattab) 265, tafsir Maarif Ul Quran 261 (713 characters)
+CITED: 2:255 | Surah 2 Al-Baqarah | Tafsir Ibn Kathir on 2:255 | Jami` at-Tirmidhi 2884
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about this? | Explain Al-Baqarah 2:255 in more detail | Which verses of the Quran speak about this?
+A: The Quran presents Ayat al-Kursi as a declaration of divine sovereignty and the limits of human agency. Allah is described as the Ever-Living, the Sustainer of all existence, and nothing can intervene with Him except by His permission [1]. The verse also states that Allah knows everything that is present and everything that will come, and nothing exists beyond His will [1].
+
+The Prophet is reported to have said that this verse is the greatest Ayah in the Book of Allah [3]. Another account mentions that when someone asked the Prophet about the greatest Ayah, he named Ayat al-Kursi [3]. These teachings highlight the extraordinary value and protection the verse holds for believers.
+
+The Prophet is also recorded as saying that Allah's Speech is greater than the heavens and the earth [6]. This reflects the idea that the divine word itself surpasses all creation. The emphasis on this truth is tied to the broader theme of guidance found in the Surah [2].
+
+These sources show that the verse is central to faith, serving as a source of merit and a reminder of divine authority. The Prophet's statements reinforce its special status within the Quran [1] [3].
+===== Q: What does 1:4 mean?
+INTENT: reference followUp=false engine=onDevice first token 3.0s, total 5.7s
+RETRIEVAL: 293 ms; lanes hadithRanked=6 subject=2; ranking 1:4 12.00 | Tafsir Ibn Kathir on 1:4 8.00 | Sahih Muslim 2339 0.25 | Sahih al-Bukhari 854 0.17 | Sunan Ibn Majah 4100 0.12 | Sahih al-Bukhari 2208 0.10 | Sahih Muslim 1536r 0.08 | Sahih Muslim 1555a 0.07; window=4096 instructions=1026
+SOURCES: [1] 1:4 (SUBJECT) | [2] Tafsir Ibn Kathir on 1:4 | [3] Sahih Muslim 2339 | [4] Sahih al-Bukhari 854 | [5] Sunan Ibn Majah 4100 | [6] Sahih al-Bukhari 2208 | [7] Sahih Muslim 1536r | [8] Sahih Muslim 1555a
+NOTES: [1] translation Clear Quran (Mustafa Khattab) 30, tafsir Maarif Ul Quran 311 | [3] narrations 106 (688 characters)
+CITED: 1:4 | Tafsir Ibn Kathir on 1:4
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What comes before and after 1:4? | What does Ibn Kathir say about 1:4? | Are there similar verses to 1:4?
+A: The verse you're asking about is 1:4 from Surah Al-Fatihah, written in Makki style [1]. It says: “Sovereign of the Day of Recompense” [1]. The Clear Quran translation adds: “Master of the Day of Judgment” [1].
+
+The tafsir explains that this mention of sovereignty on the Day of Judgment doesn’t strip away Allah’s authority over everything else. Instead, it highlights that on that Day, no one will claim ownership of anything except Him, and no one will speak without His permission [2].
+===== Q: What does the Quran say about patience?
+INTENT: scripture followUp=false engine=onDevice first token 2.5s, total 14.2s
+RETRIEVAL: 480 ms; lanes articles=4 hadithRanked=3 hadithSemantic=6 quranKeyword=6 quranSemantic=7 quranTopics=5; ranking 2:153 1.44 | 16:127 1.01 | 70:5 0.94 | 18:67 0.76 | Yaqub › His Story 0.55 | 2:45 0.55 | Sahih al-Bukhari 923 0.45 | Sahih al-Bukhari 4750 0.45 | Answering Buddhism › 2. Suffering Has Meaning 0.37 | 18:68 0.31 | Sahih al-Bukhari 1283 0.30 | Sahih al-Bukhari 4141 0.30; window=4096 instructions=1026
+SOURCES: [1] 2:153 | [2] 16:127 | [3] 70:5 | [4] 18:67 | [5] Yaqub › His Story | [6] 2:45 | [7] Sahih al-Bukhari 923 | [8] Sahih al-Bukhari 4750
+NOTES: [1] tafsir Ibn Kathir 279 | [2] tafsir Ibn Kathir 420 | [3] tafsir Ibn Kathir 418 | [4] tafsir Ibn Kathir 418 (1927 characters)
+CITED: 2:153 | 16:127 | 70:5 | 18:67 | Sahih al-Bukhari 923 | Sahih al-Bukhari 4750
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about patience? | Explain Al-Baqarah 2:153 in more detail | Which surah speaks most about patience?
+A: The Quran speaks about patience in ways that center on trust and resilience. It says, “O you who have believed, seek help through patience and prayer. Indeed, Allah is with the patient” [1]. Elsewhere, it instructs, “And be patient, [O Muhammad], and your patience is not but through Allah. And do not grieve over them and do not be in distress over what they conspire” [2]. The text also commands, “So be patient with gracious patience” [3], and in another instance, “He said, 'Indeed, with me you will never be able to have patience’” [4]. Together, these verses present patience as a path to security and a response to life’s challenges.
+
+The Prophet’s words reinforce this message. A report from `Amr bin Taghlib, recorded by Imam al-Bukhari, notes that he gives to those who lack patience but leaves those who are patient and content [7]. Another account from Aisha, also in al-Bukhari, highlights that patience is fitting against accusations and that true help comes from Allah alone [8]. These teachings show that patience is not just a personal virtue but a response shaped by faith and reliance on God.
+===== Q: Explain Bukhari 1
+INTENT: reference followUp=false engine=onDevice first token 2.8s, total 7.5s
+RETRIEVAL: 254 ms; lanes articles=4 hadithRanked=5 hadithTopics=3 quranKeyword=6 subject=1; ranking Sahih al-Bukhari 1 12.28 | How to Do Ruqyah › The Prophet's Supplications For Healing 0.30 | Sahih al-Bukhari 4485 0.30 | 44:54 0.26 | Answering the Shia › 2. Ali Himself On Abu Bakr And Umar 0.20 | Sahih al-Bukhari 4929 0.20 | Sahih al-Bukhari 13 0.19 | 52:20 0.17 | How the Hadith Were Preserved › Al-Bukhari's Method 0.15 | Sahih al-Bukhari 5044 0.15 | Sahih al-Bukhari 39 0.14 | 2:106 0.13; window=4096 instructions=1026
+SOURCES: [1] Sahih al-Bukhari 1 (SUBJECT) | [2] How to Do Ruqyah › The Prophet's Supplications For Healing | [3] Sahih al-Bukhari 4485 | [4] 44:54 | [5] Answering the Shia › 2. Ali Himself On Abu Bakr And Umar | [6] Sahih al-Bukhari 4929 | [7] Sahih al-Bukhari 13 | [8] 52:20
+NOTES: [1] explanation Hadith Encyclopedia 487, narrations 97, wording Sunan Abi Dawud 2201 340, benefits Hadith Encyclopedia 307 (1581 characters)
+CITED: Sahih al-Bukhari 1
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: Who narrated Sahih al-Bukhari 1? | What lessons does Sahih al-Bukhari 1 teach? | Is there a Quran verse on the same point?
+A: The hadith you asked about is narrated by 'Umar bin Al-Khattab [1]. It is recorded in Sahih al-Bukhari, compiled by Imam Muhammad ibn Ismail al-Bukhari (d. 256 AH / 870 CE), under the chapter on Revelation [1].
+
+In plain words, the Prophet said that the reward for actions depends on the intent behind them: if someone leaves their home for worldly gain or a woman to marry, that is what they gain, and if they do so for closeness to God, they are rewarded even for that purpose. The explanation from the Hadith Encyclopedia adds that this ruling applies to all deeds, including worship and daily acts, and stresses sincerity, deeds done for God alone are honored [1].
+
+The hadith is also found in Sunan Abi Dawud 2201, Sunan an-Nasa'i 75, and Musnad Ahmad 168 [1].
+===== Q: What did the Prophet say about kindness to parents?
+INTENT: hadith followUp=false engine=onDevice first token 3.0s, total 7.4s
+RETRIEVAL: 899 ms; lanes articles=4 hadithRanked=5 hadithSemantic=6 hadithTopics=3 quranKeyword=2 quranSemantic=7 quranTopics=5; ranking Sahih al-Bukhari 4750 1.35 | Sahih al-Bukhari 4141 0.90 | Sahih al-Bukhari 2661 0.68 | Sahih Muslim 2564a 0.64 | The Wives › Overview 0.55 | 12:100 0.54 | Sahih Muslim 2770a 0.54 | Riyad as-Salihin 21 0.45 | Sahih Muslim 2565c 0.42 | 4:36 0.39 | 19:14 0.38 | Answering the Shia › 5. Aisha, The Mother Of The Believers 0.37; window=4096 instructions=1026
+SOURCES: [1] Sahih al-Bukhari 4750 | [2] Sahih al-Bukhari 4141 | [3] Sahih al-Bukhari 2661 | [4] Sahih Muslim 2564a | [5] The Wives › Overview | [6] 12:100 | [7] Sahih Muslim 2770a | [8] 4:36
+NOTES: [1] narrations 99 | [2] narrations 98 | [3] narrations 100 | [4] explanation Hadith Encyclopedia 309, narrations 101 (1039 characters)
+CITED: Sahih Muslim 2564a | 4:36
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: Explain An-Nisa 4:36 in more detail | Which surah speaks most about kindness?
+A: The Prophet said: “Don't nurse grudge and don't bid him out for raising the price and don't nurse aversion or enmity and don't enter into a transaction when the others have entered into that transaction and be as fellow-brothers and servants of Allah. A Muslim is the brother of a Muslim. He neither oppresses him nor humiliates him nor looks down upon him. The piety is here, (and while saying so) he pointed towards his chest thrice.” [4]
+
+This comes from Sahih Muslim, compiled by Imam Muslim ibn al-Hajjaj (d. 261 AH / 875 CE), and is graded sahih [4]. It is also recorded in Sunan Abi Dawud 4882, Sunan Ibn Majah 3933 and Muwatta Malik 1443 [4].
+
+The Quran says: “To parents do good, and to relatives, orphans, the needy, the near neighbor, the neighbor farther away, the companion at your side, the traveler, and those whom your right hands possess. Indeed, Allah does not like those who are self-deluding and boastful.” [8]
+===== Q: Why do we fast in Ramadan?
+INTENT: general followUp=false engine=onDevice first token 3.2s, total 5.3s
+RETRIEVAL: 438 ms; lanes articles=4 hadithRanked=6 hadithSemantic=6 hadithTopics=3 quranKeyword=2 quranSemantic=3 quranTopics=5; ranking 2:184 1.21 | Sawm › Rewards Of Fasting 0.55 | 2:185 0.49 | Sahih al-Bukhari 1141 0.45 | Sunan Abi Dawud 1342 0.45 | 2:187 0.45 | Sahih al-Bukhari 1915 0.42 | How to Fast Voluntary Fasts › Days Not To Fast 0.37 | 2:183 0.35 | Sahih al-Bukhari 1592 0.30 | Sunan Abi Dawud 2428 0.30 | Sahih al-Bukhari 1920 0.28; window=4096 instructions=1026
+SOURCES: [1] 2:184 | [2] Sawm › Rewards Of Fasting | [3] 2:185 | [4] Sahih al-Bukhari 1141 | [5] Sunan Abi Dawud 1342 | [6] 2:187 | [7] Sahih al-Bukhari 1915 | [8] How to Fast Voluntary Fasts › Days Not To Fast
+NOTES: [1] tafsir Ibn Kathir 307, translation Clear Quran (Mustafa Khattab) 260 | [3] tafsir Ibn Kathir 362 | [4] explanation Hadith Encyclopedia 353, narrations 85 | [5] narrations 104 (1975 characters)
+CITED: Sawm › Rewards Of Fasting | 2:185
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: Is there a dua for fasting? | What do the hadith say about fasting? | Explain Al-Baqarah 2:185 in more detail
+A: Fasting in Ramadan is an act of worship that purifies the heart and brings immense spiritual rewards from Allah [2]. The month is described as a time when Allah intends for ease and does not intend for hardship, and it is a period for glorifying Allah and perhaps becoming grateful [3]. The Prophet Muhammad (peace and blessings be upon him) said that whoever observes fasting during Ramadan out of sincere faith and hopes for Allah’s rewards, all past sins will be forgiven [2].
+===== Q: What is tawakkul?
+INTENT: define followUp=false engine=onDevice first token 2.2s, total 9.0s
+RETRIEVAL: 380 ms; lanes articles=4 hadithRanked=6 hadithSemantic=1 quranKeyword=2 quranSemantic=7 quranTopics=5; ranking Tawhid: The Oneness of Allah › Key Terms 0.88 | Ibrahim › The Idols And The Fire 0.59 | 7:89 0.50 | 3:49 0.47 | Sunan Ibn Majah 3542 0.45 | Sahih Muslim 1929b 0.45 | The Evil Eye › Key Terms 0.44 | Sawm › Spiritual Benefits 0.35 | 2:283 0.35 | 9:129 0.33 | 5:110 0.32 | Sahih Muslim 1802c 0.30; window=4096 instructions=1026
+SOURCES: [1] Tawhid: The Oneness of Allah › Key Terms | [2] Ibrahim › The Idols And The Fire | [3] 7:89 | [4] 3:49 | [5] Sunan Ibn Majah 3542 | [6] Sahih Muslim 1929b | [7] The Evil Eye › Key Terms | [8] Sawm › Spiritual Benefits
+NOTES:  (0 characters)
+CITED: 7:89 | 3:49 | Sunan Ibn Majah 3542 | Sahih Muslim 1929b | The Evil Eye › Key Terms | Sawm › Spiritual Benefits
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What does the Quran say about trust? | What did the Prophet say about trust?
+A: Tawakkul is trusting in Allah while using lawful actions. The scholars say this trust is shown when someone takes steps in life but leans on Allah’s guidance above all else.
+
+The Quran makes this clear: in Surah Al-A'raf, Allah says the faithful rely on Him and that His knowledge covers everything [3]. In Surah Ali 'Imran, the Prophet confirms that relying on Allah is a foundation for knowing right from wrong, even when signs appear [4]. These verses show that true reliance is not about giving up effort but about knowing that outcomes rest with the Most High.
+
+The Prophet’s words reinforce this same idea. In a report from Jabir bin ‘Abdullah, he told a leper to eat with trust in Allah and reliance upon Him [5]. Another account from 'Adi b. Hatim explains that when hunting, one must use lawful means but not eat game if a dog has eaten it, because that would imply control over the hunt rather than trust in Allah [6]. The articles note that tawakkul means taking responsibility with the heart while leaving the rest to God [7] [8].
+===== Q: What does the Quran say about backbiting?
+INTENT: scripture followUp=false engine=onDevice first token 2.1s, total 5.5s
+RETRIEVAL: 388 ms; lanes articles=3 hadithRanked=6 hadithSemantic=6 quranKeyword=3 quranSemantic=7 quranTopics=1; ranking 2:213 0.78 | 90:14 0.74 | How to Fast › 3. Fast Through The Day 0.55 | 49:11 0.55 | 48:15 0.52 | 27:75 0.49 | Sahih Muslim 2589 0.45 | Jami` at-Tirmidhi 2906 0.45 | 4:172 0.39 | 72:26 0.37 | The Sciences of Hadith › Weighing The Narrators 0.37 | 40:60 0.31; window=4096 instructions=1026
+SOURCES: [1] 2:213 | [2] 90:14 | [3] How to Fast › 3. Fast Through The Day | [4] 49:11 | [5] 48:15 | [6] 27:75 | [7] Sahih Muslim 2589 | [8] Jami` at-Tirmidhi 2906
+NOTES:  (0 characters)
+CITED: Sahih Muslim 2589 | 49:11 | 27:75 | 48:15
+REMOVED: 0 FLAGGED: 0 FAILED: false
+NOTE: 
+ERROR: 
+SUGGESTIONS: What do the hadith say about backbiting? | Explain Al-Hujurat 49:11 in more detail | Which surah speaks most about backbiting?
+A: The Quran warns that backbiting is something that harms the bonds between people. The Prophet said it happens when someone talks about a brother in a way he does not like [7]. The verses also say that insulting one another is wrong and that names of disobedience after faith are harsh [4].
+
+The Quran further notes that nothing hidden in the heavens or earth is left out of a clear record [6]. It also speaks of people wishing to change words from Allah and warns that those who do not understand are only a little [5].

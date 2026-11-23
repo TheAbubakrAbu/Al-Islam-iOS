@@ -503,7 +503,7 @@ def latin_problems(reference, value):
         if lead or trail:
             out.append("leading or trailing space differs from the key")
     if value == reference and reference not in IDENTICAL_OK and \
-            {w.lower() for w in re.findall(r"[A-Za-z]+", reference)} & ENGLISH_WORDS:
+            {w.lower() for w in re.findall(r"[A-Za-z]+", reference)} & (ENGLISH_WORDS - NOT_ENGLISH[LANG]):
         return ["untranslated: the value is the English key"]
     text = PARAM_TOKEN.sub(" ", SPEC.sub(" ", value))
     # A domain or repository the key names the same way (miracles-of-quran.com) is a name, not English.
@@ -592,6 +592,12 @@ def script_problems(reference, value):
             out.append("a Latin full stop after Hindi: write \u0964")
     if LANG in NATIVE_DIGIT and NATIVE_DIGIT[LANG].search(text) and not NATIVE_DIGIT[LANG].search(reference):
         out.append(f"{SCRIPT_NAME[LANG]} digits: write 0-9 (the app follows the locale)")
+    # Arabic in the key is quoted, never retyped, here as in the Latin-script languages (`latin_problems`).
+    from collections import Counter
+    runs, have = Counter(ARABIC_RUN.findall(reference)), Counter(ARABIC_RUN.findall(value))
+    lost = [r for r, n in runs.items() if have[r] < n and r not in value]
+    if lost:
+        out.append(f"Arabic {lost[0]!r} from the key is not in the value as written")
     return out
 
 
@@ -612,9 +618,10 @@ COUNT_NOUN = {"ru": re.compile(r"%(?:\d+\$)?l{0,2}[du]\s+(?!(?:из|в|во|на
               "ml": re.compile("%(?:\\d+\\$)?l{0,2}[du]\\s+[\u0D00-\u0D7F]*(?:\u0D15|\u0D19\u0D4D\u0D19)(?:\u0D7E|\u0D33)"),
               "ta": re.compile("%(?:\\d+\\$)?l{0,2}[du]\\s+[\u0B80-\u0BFF]*\u0B95\u0BB3"),
               # Dutch plurals end in -en or -s ('s): "1 vers", "2 verzen", "1 pagina", "2 pagina's". A unit that
-              # stays singular after a number (keer, uur, jaar, procent) needs no forms.
+              # stays singular after a number (keer, uur, jaar, procent) needs no forms, nor does a count before a
+              # verb or "een" ("De eerste %lld worden getoond", "alle %lld een voor een").
               "nl": re.compile(r"%(?:\d+\$)?l{0,2}[du]\s+(?!(?:keer|maal|uur|jaar|procent|graden|meter|kilometer|"
-                               r"juz|hizb|tekens|van|voor|na|op|in|uit|per|en|of|om)\b)\w+(?:en|'s|’s)\b")}
+                               r"juz|hizb|tekens|van|voor|na|op|in|uit|per|en|of|om|een|worden|zijn|hebben|geleden)\b)\w+(?:en|'s|’s)\b")}
 
 
 def needs_plural_forms(key, value):

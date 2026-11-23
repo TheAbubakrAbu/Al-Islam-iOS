@@ -78,12 +78,33 @@ def main() -> None:
                 # must cover the surah end to end.
                 if len(entry.get("sections", [])) != 1 or (start, end) != (1, counts[surah]):
                     problems.append(f"surah {surah}: whole-surah row is not the surah's one passage")
+            if len(row) > 4 and row[4] not in (1, _builder.ADDED_ROW, _builder.WIDENED_ROW):
+                problems.append(f"surah {surah}: unknown row marker {row[4]} at {start}-{end}")
+            if len(row) > 4 and row[4] == _builder.WIDENED_ROW:
+                # A widened row carries the range the source gave it (the outline prints that one):
+                # a real range, inside the widened one and narrower than it.
+                source = row[5:]
+                if not (len(source) == 2 and all(isinstance(n, int) for n in source)
+                        and start <= source[0] <= source[1] <= end and tuple(source) != (start, end)):
+                    problems.append(f"surah {surah}: widened row {start}-{end} has no source range inside it")
+            elif len(row) > 5:
+                problems.append(f"surah {surah}: row {start}-{end} has elements nothing reads")
 
     # Every surah is washed by "Highlight Every Passage": al-Fatihah once had no passage at all,
     # because its only source row is an overview and overviews were dropped.
     for surah in sorted(counts):
         if not sections.get(str(surah), {}).get("sections"):
             problems.append(f"surah {surah}: no passage, so thematic highlighting skips it")
+
+    # And every AYAH: the wash is by passage, and an ayah in none stayed bare between two washed
+    # ones (76:4, and 19 more the outline skipped; see GAP_FILLS in the builder).
+    for surah in sorted(counts):
+        covered: set[int] = set()
+        for row in sections.get(str(surah), {}).get("sections", []):
+            covered.update(range(row[0], row[1] + 1))
+        for ayah in range(1, counts[surah] + 1):
+            if ayah not in covered:
+                problems.append(f"{surah}:{ayah} is in no passage, so thematic highlighting leaves it bare")
 
     tilawa = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else _builder.DEFAULT_TILAWA
     if (tilawa / "assets" / "quran" / "thematic-topics.json").exists():

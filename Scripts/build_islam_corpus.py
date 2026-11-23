@@ -90,6 +90,8 @@ ISNAD_RE = re.compile(r"(?:(?<![\w.])ArticleIsnadCard\(|(?<!\w)\.isnad\()\s*(" +
 CHECKLIST_RE = re.compile(r"(?:(?<![\w.])ArticleChecklist\(|(?<!\w)\.checklist\()\s*\[(.*?)\]\s*,\s*title:\s*(" + STR + r")", re.S)
 SIDE_RE = re.compile(r"ArticleVersus\.Side\(\s*(" + STR + r")(?:\s*,\s*arabic:\s*(" + STR + r"))?\s*,\s*caption:\s*(" + STR + r")\s*\)", re.S)
 LADDER_RE = re.compile(r"HadithGradeLadder\(\)|(?<!\w)\.gradeLadder\b")
+# The classes of report by how many carried it (`HadithCountLadder`, its own card since 2026-11-22).
+COUNT_LADDER_RE = re.compile(r"HadithCountLadder\(\)|(?<!\w)\.countLadder\b")
 # The riwayat page's cards (RiwayatDifferencesView.swift): each spelling ("Warsh (يُومِنُونَ): note"), each
 # bar of the tilt chart, and the at-a-glance table, read from its `RiwayahTraits.all` literals.
 SPELLING_CARD_RE = re.compile(r"RiwayahSpellingCard\(\s*title:\s*(" + STR + r")", re.S)
@@ -119,8 +121,12 @@ HADITH_RE = re.compile(r"(?:ScriptureQuote\(\s*hadith:|(?<!\w)\.hadith\(|DuaItem
 HADITH_ARG_RE = re.compile(r"(arabic|english|text|arabicText):\s*(" + STR + r"|\d+\s*\.\.\.\s*\d+|\[[^\]]*\])", re.S)
 RANGE_RE = re.compile(r"(\d+)\s*\.\.\.\s*(\d+)")
 # An article's title may be wrapped in `AppLanguage.article(...)`, which keeps it English inside the Arabic
-# interface while the articles stay untranslated.
-TITLE_RE = re.compile(r"\.navigationTitle\((?:AppLanguage\.article\()?(" + STR + r")\)?\)", re.S)
+# interface while the articles stay untranslated. Or it carries a catalog key of its own beside the English,
+# `String(localized: "prophet.idris", defaultValue: "Idris")` (the prophet is spelled apart from the qiraat
+# narrator of the same name in Turkish): the default value is the title. Until 2026-11-22 that spelling was
+# not read, so the next rebuild of the pack would have dropped Idris and Ishaq from it without a word.
+TITLE_RE = re.compile(r"\.navigationTitle\((?:AppLanguage\.article\(|String\(localized:\s*(?:" + STR
+                      + r")\s*,\s*defaultValue:\s*)?(" + STR + r")\)?\)", re.S)
 QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine/sources/Quran.json"
 REFERENCE_RE = re.compile(r"^(\d+):(\d+)(?:-(\d+))?((?:,\s*\d+(?:-\d+)?)*)$")
 
@@ -273,9 +279,10 @@ def unquote(literal: str) -> str:
 _ladder_cache = None
 
 
-def grade_ladder_text() -> str:
-    """The scale of hadith grades as the card draws it, read from `HadithGrade.all` and
-    `HadithGrade.byNumber` in ArticleDesign.swift (the one copy of those definitions)."""
+def _read_ladders():
+    """The two cards' words, read from `HadithGrade.all` and `HadithGrade.byNumber` in
+    ArticleDesign.swift (the one copy of those definitions): (the scale of grades, the classes by
+    how many carried a report)."""
     global _ladder_cache
     if _ladder_cache is None:
         src = DESIGN_KIT.read_text(encoding="utf-8")
@@ -286,10 +293,20 @@ def grade_ladder_text() -> str:
         numbers = re.findall(r"\(\s*(" + STR + r")\s*,\s*(" + STR + r")\s*,\s*(" + STR + r")\s*\)", block, re.S)
         if len(grades) != 4 or not numbers:
             raise SystemExit("ERROR: could not read the hadith grade scale from ArticleDesign.swift")
-        lines = [f"{unquote(n)} ({unquote(a)}), {unquote(e)}: {unquote(d)} {unquote(v)}." for n, a, e, d, v in grades]
-        lines += [f"{unquote(n)} ({unquote(a)}): {unquote(m)}." for n, a, m in numbers]
-        _ladder_cache = " ".join(lines)
+        scale = [f"{unquote(n)} ({unquote(a)}), {unquote(e)}: {unquote(d)} {unquote(v)}." for n, a, e, d, v in grades]
+        counted = [f"{unquote(n)} ({unquote(a)}): {unquote(m)}." for n, a, m in numbers]
+        _ladder_cache = (" ".join(scale), "Counted at the narrowest point of the chain: " + " ".join(counted))
     return _ladder_cache
+
+
+def grade_ladder_text() -> str:
+    """The scale of hadith grades as `HadithGradeLadder` draws it."""
+    return _read_ladders()[0]
+
+
+def count_ladder_text() -> str:
+    """The classes of report by how many carried it, as `HadithCountLadder` draws them."""
+    return _read_ladders()[1]
 
 
 _traits_cache = None
@@ -359,6 +376,8 @@ def articles():
                 hits.append((m.start(1), "computed", f"{unquote(m.group(1))}{arabic}: {unquote(m.group(3))}"))
             for m in LADDER_RE.finditer(body):
                 hits.append((m.start(), "computed", grade_ladder_text()))
+            for m in COUNT_LADDER_RE.finditer(body):
+                hits.append((m.start(), "computed", count_ladder_text()))
             for m in SPELLING_CARD_RE.finditer(body):
                 hits.append((m.start(1), "computed", f"{unquote(m.group(1))}:"))
             for m in SPELLING_RE.finditer(body):

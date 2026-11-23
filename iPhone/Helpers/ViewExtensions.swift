@@ -64,6 +64,10 @@ struct AppearanceEnvironment: Equatable {
     /// (`PerformanceProfile.shouldPlainRowGlass`), where those shapes draw the Classic Look's fill and
     /// everything else keeps its glass. `conditionalGlassEffect(inRow: true)` is what reads it.
     var rowLiquidGlass: Bool
+    /// `Settings.liquidGlassEverywhere` (or the DEBUG `-contentGlass` argument): content surfaces
+    /// (`contentSurface(...)`) are glass too while `liquidGlass` is on, as before 2026-11-22. Off by
+    /// default; `ConditionalGlassEffect` reads it.
+    var glassEverywhere: Bool
     /// The Islam tab's Arabic face (`Settings.nonQuranArabicFontName`) and whether it is a bundled face
     /// rather than "Basic". Carried here so the article pages (Pillars, Beliefs, How-to guides, and
     /// every `ScriptureQuote` in them) read their accent and faces from this one snapshot instead of
@@ -119,6 +123,16 @@ struct AppearanceEnvironment: Equatable {
         liquidGlass(Settings.shared, profile: PerformanceProfile.shared)
     }
 
+    /// The resolved `glassEverywhere` flag.
+    static func glassEverywhere(_ settings: Settings) -> Bool {
+        #if DEBUG
+        // "-contentGlass": content surfaces in glass without touching the stored toggle, so one build
+        // can shoot both sides of a comparison.
+        if ProcessInfo.processInfo.arguments.contains("-contentGlass") { return true }
+        #endif
+        return settings.liquidGlassEverywhere
+    }
+
     static func snapshot(_ settings: Settings, profile: PerformanceProfile) -> AppearanceEnvironment {
         let custom = settings.hasCustomThemeColors
         let glass = liquidGlass(settings, profile: profile)
@@ -138,6 +152,7 @@ struct AppearanceEnvironment: Equatable {
             isReducedTier: profile.tier == .reduced,
             liquidGlass: glass,
             rowLiquidGlass: glass && !profile.shouldPlainRowGlass,
+            glassEverywhere: glassEverywhere(settings),
             islamArabicFontName: settings.nonQuranArabicFontName,
             islamUsesCustomArabicFace: settings.islamUsesCustomArabicFace,
             highlightAllahIslam: settings.highlightAllahNamesIslam,
@@ -977,7 +992,9 @@ struct SheetBottomBarPlayer<Bar: View>: View {
 /// scrolled every screen back to the top; the Adhan tab, with no bottom bar, was the one screen
 /// that kept its place. A constant modifier chain keeps the List's identity, so a look change is
 /// now a restyle, not a reset. The bar's pills still follow the Classic Look through
-/// `conditionalGlassEffect`; only the scroll-edge treatment under them stays the system's.
+/// `conditionalGlassEffect`; the scroll-edge treatment under a BOTTOM bar is the hard style in both
+/// looks since 2026-11-22 (`groundsBar`, and the reason in `placed`), and a top bar's stays the
+/// system's choice.
 ///
 /// `spacing` is the pre-26 `safeAreaInset` spacing between the bar and what sits above it. Its
 /// default there is 8pt, while `safeAreaBar` adds none, so a screen that stacks a second bar above
@@ -990,6 +1007,10 @@ struct SheetBottomBarPlayer<Bar: View>: View {
 struct AdaptiveSafeArea<InsetContent: View>: ViewModifier {
     let edge: VerticalEdge
     var spacing: CGFloat? = nil
+    /// iOS 26, a BOTTOM bar only: the rows end in the system's blurred ground behind the bar (the
+    /// hard scroll-edge style, see `placed`). False for a bar that is one large card the page should
+    /// keep showing around (the Tasbih counter).
+    var groundsBar: Bool = true
     let inset: InsetContent
 
     #if os(iOS)
@@ -1032,7 +1053,24 @@ struct AdaptiveSafeArea<InsetContent: View>: ViewModifier {
     @ViewBuilder
     private func placed<Base: View, Bar: View>(_ base: Base, _ bar: Bar) -> some View {
         if #available(iOS 26.0, *) {
-            base.safeAreaBar(edge: edge) { bar }
+            if edge == .bottom, groundsBar {
+                // The HARD scroll-edge style under a bottom bar: the rows end in a blurred ground
+                // behind the bar instead of showing through it. Left to `.automatic`, the system
+                // draws that ground only when a bar holds text outside glass, which is the Classic
+                // Look and never Liquid Glass. So with glass on, the Quran tab's surah tiles stood in
+                // full ink behind the search field ("Al-Fatihah The Opener" under "Search") and
+                // between it and the tab bar, while the Classic Look's bar on the same screen was
+                // clean (Abu, 2026-11-22: "I kind of like how it looks like with classic mode"; that
+                // the bars were part of it is the session's reading, not his words). `.soft` was tried
+                // too: it fades the rows only near the screen's edge, and the sort row and the search
+                // field of a three-row stack still had text behind them. Both looks take this now;
+                // `edge` and `groundsBar` are constants per call site, so the branch never swaps
+                // under a mounted screen.
+                base.safeAreaBar(edge: edge) { bar }
+                    .scrollEdgeEffectStyle(.hard, for: .bottom)
+            } else {
+                base.safeAreaBar(edge: edge) { bar }
+            }
         } else {
             base.safeAreaInset(edge: edge, spacing: spacing) { bar }
         }
@@ -1085,9 +1123,10 @@ extension View {
     func adaptiveSafeArea<InsetContent: View>(
         edge: VerticalEdge,
         spacing: CGFloat? = nil,
+        groundsBar: Bool = true,
         @ViewBuilder content: () -> InsetContent
     ) -> some View {
-        modifier(AdaptiveSafeArea(edge: edge, spacing: spacing, inset: content()))
+        modifier(AdaptiveSafeArea(edge: edge, spacing: spacing, groundsBar: groundsBar, inset: content()))
     }
 
     /// `readingWidth`: a reading list (the ayah list, a hadith chapter, an article) keeps its rows
@@ -3387,8 +3426,8 @@ extension Color {
 
 // MARK: - Section header accessories (count pill / collapse / shuffle)
 
-/// The small numeric badge the Quran tab's section headers wear - caption-semibold, monospaced digits,
-/// on glass. One view so every counted section in the app shows the identical pill. Counts are details
+/// The small numeric badge the Quran tab's section headers wear: caption-semibold, monospaced digits,
+/// on the content surface (glass until 2026-11-22: it is a read-out, not a control). One view so every counted section in the app shows the identical pill. Counts are details
 /// (Simple Mode spec rule 8), so the pill hides itself in Simple Mode and every caller is covered; the
 /// rule's exceptions do not use this view.
 struct CountPill: View {
@@ -3407,7 +3446,7 @@ struct CountPill: View {
             .foregroundStyle(appearance.accent)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .conditionalGlassEffect()
+            .contentSurface()
             .hiddenInSimple(.sectionCounts)
     }
 }
@@ -3613,7 +3652,7 @@ struct SectionPillHeader: View {
                 .font(.caption2.weight(.semibold))
                 .foregroundColor(appearance.accent)
                 .frame(width: Self.pillHeight, height: Self.pillHeight)
-                .conditionalGlassEffect(circle: true)
+                .contentSurface(circle: true)
                 .onTapGesture {
                     Settings.shared.hapticFeedback()
                     onSearch()
@@ -3631,7 +3670,7 @@ struct SectionPillHeader: View {
                 .font(.caption2.weight(.semibold))
                 .foregroundColor(appearance.accent)
                 .frame(width: Self.pillHeight, height: Self.pillHeight)
-                .conditionalGlassEffect(circle: true)
+                .contentSurface(circle: true)
                 .onTapGesture {
                     Settings.shared.hapticFeedback()
                     onShuffle()
@@ -3669,7 +3708,7 @@ struct SectionFoldControls: View {
                 .font(.caption2.weight(.semibold))
                 .foregroundColor(appearance.accent)
                 .frame(width: SectionPillHeader.pillHeight, height: SectionPillHeader.pillHeight)
-                .conditionalGlassEffect(circle: true)
+                .contentSurface(circle: true)
                 .onTapGesture {
                     Settings.shared.hapticFeedback()
                     onRemove()
@@ -3682,7 +3721,7 @@ struct SectionFoldControls: View {
         Image(systemName: isExpanded.wrappedValue ? "chevron.down.circle" : "chevron.up.circle")
             .foregroundColor(appearance.accent)
             .padding(4)
-            .conditionalGlassEffect()
+            .contentSurface()
             .onTapGesture {
                 Settings.shared.hapticFeedback()
                 withAnimation { isExpanded.wrappedValue.toggle() }

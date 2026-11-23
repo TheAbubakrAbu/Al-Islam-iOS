@@ -260,7 +260,7 @@ private struct LettersHeader: View {
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(appearance.accent)
                     .frame(width: SectionPillHeader.pillHeight, height: SectionPillHeader.pillHeight)
-                    .conditionalGlassEffect(circle: true)
+                    .contentSurface(circle: true)
                     .onTapGesture {
                         Settings.shared.hapticFeedback()
                         if speech.isSpeakingQueue { speech.stop() } else { speech.speakAll(names) }
@@ -1266,7 +1266,7 @@ struct SoundAlikeLettersView: View {
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(appearance.accent)
                         .frame(width: SectionPillHeader.pillHeight, height: SectionPillHeader.pillHeight)
-                        .conditionalGlassEffect(circle: true)
+                        .contentSurface(circle: true)
                         .onTapGesture {
                             Settings.shared.hapticFeedback()
                             if playing { speech.stop() } else { speech.speakAll(texts, rate: 0.3) }

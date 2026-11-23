@@ -39,10 +39,15 @@ struct HadithNarratorRef: Hashable {
     enum Role: Int {
         /// Somewhere along the chain.
         case link = 0
-        /// The top of the chain: the one who narrates from the Prophet ﷺ when the chain reaches him.
+        /// The top of a chain that names the Prophet ﷺ above it: the one who narrates from him.
         case top = 1
         /// The foot of the chain: the compiler's own teacher.
         case teacher = 2
+        /// The top of a chain that does not name the Prophet ﷺ: the chain as written goes no higher
+        /// than this narrator, so the narration is his own words or his own account. Its own place
+        /// since 2026-11-22; until then such a row read `top`, and the page badged it "From the
+        /// Prophet ﷺ" (815 of 'Ali's rows for the 590 that reach the Prophet ﷺ).
+        case end = 3
     }
 
     let slug: String
@@ -98,6 +103,8 @@ struct HadithNarratorProfile: Identifiable {
     let fromProphet: Int
     /// The narrations in which he is the compiler's own teacher (the foot of the chain).
     let teacher: Int
+    /// The narrations whose chain, as written, stops at him and names no one above (`Role.end`).
+    let ends: Int
     /// By grade, in `HadithGradeCategory` order.
     let grades: [Int]
     /// By book, in the pack's book order, the books with none left out.
@@ -188,6 +195,7 @@ final class HadithNarratorsPack: @unchecked Sendable {
         let narrations = reader.u32()
         let fromProphet = reader.u32()
         let teacher = reader.u32()
+        let ends = reader.u32()
         let grades = (0..<HadithGradeCategory.allCases.count).map { _ in reader.u32() }
         let books = reader.u8()
         guard !name.isEmpty, books == slugs.count else { return nil }
@@ -210,8 +218,8 @@ final class HadithNarratorsPack: @unchecked Sendable {
         }
         guard reader.remaining == 0 else { return nil }
         return HadithNarratorProfile(id: id, name: name, english: english, key: key, generation: generation, forms: forms,
-                                     narrations: narrations, fromProphet: fromProphet, teacher: teacher, grades: grades,
-                                     books: byBook)
+                                     narrations: narrations, fromProphet: fromProphet, teacher: teacher, ends: ends,
+                                     grades: grades, books: byBook)
     }
 
     /// Every narration naming the narrator, in the shelf's order (book, then row).
@@ -280,6 +288,8 @@ final class HadithNarratorStore: @unchecked Sendable {
     private let lock = NSLock()
     private var opened = false
     private var openedPack: HadithNarratorsPack?
+    /// Every profile, kept once read (`allProfiles`); let go under memory pressure.
+    private var profiles: [HadithNarratorProfile]?
 
     /// The pack, opened once; nil for good when it is missing or does not parse (no profile opens).
     var pack: HadithNarratorsPack? {
@@ -294,8 +304,23 @@ final class HadithNarratorStore: @unchecked Sendable {
 
     func profile(id: Int) -> HadithNarratorProfile? { pack?.profile(id: id) }
 
-    /// Every narrator, for the index page; empty when the pack is missing.
-    func allProfiles() -> [HadithNarratorProfile] { pack?.allProfiles() ?? [] }
+    /// Every narrator, for the index page; empty when the pack is missing. The first ask walks
+    /// the profiles block (ten thousand short decodes, tens of milliseconds) and the answer is
+    /// kept, so the Hadith tab reads them off the main thread as its door appears
+    /// (`HadithNarratorsDoor`) and the index opens on its first frame with nothing to wait for.
+    func allProfiles() -> [HadithNarratorProfile] {
+        lock.lock()
+        if let profiles {
+            lock.unlock()
+            return profiles
+        }
+        lock.unlock()
+        let read = pack?.allProfiles() ?? []
+        lock.lock()
+        if profiles == nil, !read.isEmpty { profiles = read }
+        lock.unlock()
+        return read
+    }
 
     /// How many narrators the pack holds, for the door that opens the index (0 without the pack).
     var narratorCount: Int { pack?.narratorCount ?? 0 }
@@ -308,6 +333,7 @@ final class HadithNarratorStore: @unchecked Sendable {
     func purge() {
         lock.lock()
         let loaded = openedPack
+        profiles = nil
         lock.unlock()
         loaded?.purge()
     }

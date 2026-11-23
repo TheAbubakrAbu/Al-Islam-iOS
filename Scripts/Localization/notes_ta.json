@@ -1,0 +1,7 @@
+{
+ "010": "This batch is large: write it in parts if that helps.",
+ "016": "This batch is large: write it in parts if that helps.",
+ "017": "This batch holds the adhan sound picker: translate its tone names (Echo, Takbir, Chime, Ring, Alarm, Serene and the rest) once, as the picker's own labels, and use them the same way in any tip or caption here. This batch is large: write it in parts if that helps.",
+ "019": "Two tips here quote Siri phrases (“Play surah Yaseen in %@” ..., “When is Asr in %@” ...): Siri does not speak your language, so keep each quoted phrase in English exactly as the key writes it, with its %@, and say briefly that they are said in English (brief, Siri).",
+ "labels": "recitation \"Play\" is கேள் (சூராவைக் கேள், இந்த வசனத்தைக் கேள்), the adhan's and the app's playback controls பிளே செய்; Arabic அரபி (அரபி உரை), English ஆங்கிலம் / ஆங்கில; Mode பயன்முறை (எளிய பயன்முறை); Custom பிரத்தியேக, Range வரம்பு; Random ஏதேனும் ஒரு (never சீரற்ற); Calendar நாட்காட்டி; Tracker டிராக்கர்; Legend நிற விளக்கம்; the qiraat masters and riwayat exactly as labels.json spells them (ஆஸிமிடமிருந்து ஹஃப்ஸ், இப்னு கஸீர், அபூ அம்ர்); \"Read on\" சேர்த்து ஓதும்போது; \"Do this\" / \"Instead of\" pills as labels.json gives them."
+}

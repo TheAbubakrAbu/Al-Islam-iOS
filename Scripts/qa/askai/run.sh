@@ -40,8 +40,13 @@ rm -f "$LOG" "$PROMPT"
 echo "run.sh: $COUNT questions on $UDID"
 # THEfirstLaunch=0 skips the welcome walk on a fresh simulator. Run the harness on a simulator of
 # its own: running the unit tests reinstalls the app and kills a replay in progress.
+# "Show Riwayah / Qiraah" is seeded OFF, the app's default, so a replay does not depend on what
+# the simulator was last left with: off, no verse is read with its readings (qiraat)
+# (AskAIDepth.readsQiraat). SEED adds raw boolean settings to that one -seedBool (the app reads
+# only the first; a later pair wins): SEED=showOtherQiraatReciters=1 replays with the readings on.
 xcrun simctl launch "$UDID" $BID -launchTabIslam -islamDestination askAI -askAILog -askAIReset \
-  -skipNotificationPrompt -travelingMode 0 -seedBool THEfirstLaunch=0 "$@" -askAI "$QUEUE" >/dev/null || exit 1
+  -skipNotificationPrompt -travelingMode 0 \
+  -seedBool "THEfirstLaunch=0,showOtherQiraatReciters=0${SEED:+,$SEED}" "$@" -askAI "$QUEUE" >/dev/null || exit 1
 
 start=$(date +%s)
 while true; do

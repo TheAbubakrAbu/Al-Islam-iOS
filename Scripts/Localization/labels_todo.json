@@ -1,0 +1,3781 @@
+[
+ {
+  "key": "99 Names of Allah",
+  "files": [
+   "iPhone/Islam/IslamView.swift",
+   "iPhone/Islam/Names/NamesView.swift"
+  ],
+  "examples": [
+   "“Dua & Supplications” holds Morning & Evening and all of Hisn al-Muslim. “Dhikr & Remembrances”, the “Tasbih Counter” and the “99 Names of Allah” sit beside it.",
+   "The Arabic face used by the duas, the dhikr and remembrances, the 99 Names of Allah, and the Arabic alphabet. %@"
+  ],
+  "arabic": "أسماء الله الحسنى"
+ },
+ {
+  "key": "AI Results",
+  "files": [
+   "iPhone/Hadith/Search/HadithSearchFilters.swift",
+   "iPhone/Hadith/Views/HadithBookView.swift",
+   "iPhone/Hadith/Views/HadithView.swift",
+   "iPhone/Islam/Arabic/ArabicView.swift",
+   "iPhone/Islam/Dua/AdhkarView.swift",
+   "iPhone/Islam/Dua/DuaView.swift",
+   "iPhone/Islam/Names/NamesView.swift",
+   "iPhone/Quran/QuranView.swift",
+   "iPhone/Quran/Search/QuranSearchFilters.swift"
+  ],
+  "examples": [
+   "Ayah search also matches by meaning, on your device, so a phrase like “being patient in hardship” finds ayahs that never use those words. When both kinds of result exist, a switch chooses between Keyword Results and AI Results, and the search filters choose which one opens first."
+  ],
+  "arabic": "نتائج الذكاء الاصطناعي"
+ },
+ {
+  "key": "AT A GLANCE",
+  "files": [
+   "iPhone/Settings/Pages/TabSections.swift",
+   "iPhone/Settings/Profile/ProfileDashboard.swift"
+  ],
+  "examples": [
+   "The AT A GLANCE tiles all open something. Qibla opens a large compass, Daylight and Fasting Window open the Prayer Calendar, Moon opens the Hijri Calendar, and Prayer Calculation and Distance From Home open their settings."
+  ],
+  "arabic": "نظرة سريعة"
+ },
+ {
+  "key": "About You",
+  "files": [
+   "iPhone/AboutYouView.swift",
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/Pages/TabTutorials.swift",
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "About You remembers whether you grew up Muslim, embraced Islam, are just getting started, or are learning about Islam, and tailors the Start Here guide on the Islam tab. It never leaves your iPhone. Replay the Welcome Tutorial, on the same page, walks the welcome again.",
+   "If you told About You you are new to Islam or learning about it, Start Here leads the tab with steps chosen for you. Each step is checked once you open it. “Hide” puts the guide away, and “Show the Start Here Guide” in About You brings it back."
+  ],
+  "arabic": "عنك"
+ },
+ {
+  "key": "Abu Amr",
+  "files": [
+   "iPhone/Islam/Qiraat/QiraatTextAnalysis.swift"
+  ],
+  "examples": [
+   "This is the same Hafs ibn Umar ad-Duri who narrates Abu Amr's reading. Under al-Kisai he read directly on the imam rather than through an intermediary, so his two narrations sit at different distances from their sources.",
+   "Ya'qub al-Hadrami succeeded to the leadership of recitation in Basra after Abu Amr's circle, and held it for the rest of his life. He was known for his command of Arabic dialects and of the variant readings, and was consulted on both."
+  ],
+  "arabic": "أبو عمرو"
+ },
+ {
+  "key": "Abu Ja'far",
+  "files": [
+   "iPhone/Islam/Qiraat/QiraatTextAnalysis.swift"
+  ],
+  "examples": [
+   "The differences between the two narrators of Abu Ja'far are relatively few.",
+   "Ibn al-Jazari. The three readings beyond the seven, Abu Ja'far, Ya'qub and Khalaf al-Ashir, recorded as their differences from ash-Shatibiyyah."
+  ],
+  "arabic": "أبو جعفر"
+ },
+ {
+  "key": "Abu Jafar",
+  "files": [
+   "(data shown via .localizedDisplay)"
+  ],
+  "examples": [
+   "Selectable text for Ibn Amir, Hamzah, al-Kisai, Abu Jafar, Yaqub and Khalaf al-Ashir. Their printed mushafs are exact and always available in page mode; only this machine-extracted text is beta.",
+   "Hamzatul wasl, the silent alef a joined reading slides over, is marked two ways: a small circle over a bare alef in Nafi, Abu Amr, Abu Jafar and Yaqub; a ص on the alef in Asim, Ibn Kathir, Ibn Amir, Hamzah, al-Kisai and Khalaf al-Ashir."
+  ],
+  "arabic": "أبو جعفر"
+ },
+ {
+  "key": "Add Note",
+  "files": [
+   "iPhone/Hadith/Views/HadithComponents.swift",
+   "iPhone/Quran/Reader/AyahRow.swift",
+   "iPhone/Quran/Reader/ContextMenu.swift",
+   "iPhone/Quran/Sheets/AyahSheets.swift"
+  ],
+  "examples": [
+   "Touch and hold a hadith, or tap its ellipsis, for Bookmark Hadith, Add Note, Copy Hadith, and Share Hadith. Your notes show under the hadith and gather in the Islamic Journal.",
+   "Tap a hadith's number, or swipe it right, to bookmark it; “Add Note” in its menu saves a note and bookmarks it too. Bookmarks gather on the Hadith tab. Tap the number beside a book, or swipe it, to make it a favorite."
+  ],
+  "arabic": "إضافة ملاحظة"
+ },
+ {
+  "key": "Add to Queue",
+  "files": [
+   "iPhone/Quran/Reader/ContextMenu.swift"
+  ],
+  "examples": [
+   "Swipe a surah right to favorite it and left to play it. Touch and hold for View Fullscreen, Share Surah, Play Random Ayah, and Add to Queue."
+  ],
+  "arabic": "إضافة إلى قائمة الانتظار"
+ },
+ {
+  "key": "Adhan Sound",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "Tap a prayer's bell to switch between “Notification”, “Prenotification” and “No Notification”, or hold it to choose one. In the Grid and Split layouts, open the prayer first. “Adhan Sound” and everything else is in Notifications."
+  ],
+  "arabic": "صوت الأذان"
+ },
+ {
+  "key": "After Surah Recitation Ends",
+  "files": [
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "After Surah Recitation Ends chooses between going on to the next surah, going back to the previous one, and stopping."
+  ],
+  "arabic": "بعد انتهاء تلاوة السورة"
+ },
+ {
+  "key": "Al-Hujurat 49:11",
+  "files": [
+   "(data shown via .localizedDisplay)"
+  ],
+  "examples": [
+   "‎النقل, in بِئۡسَ ٱلِٱسۡمُ at Al-Hujurat 49:11, one place. The hamza of ٱسۡم is dropped and its kasra is carried back onto the lam of ٱل, so you read bi'sa-lismu rather than bi'sa al-ismu. The page shows you exactly this: the lam carries a kasra and the hamza written after it carries nothing at all."
+  ],
+  "arabic": "الحجرات ٤٩:١١"
+ },
+ {
+  "key": "Al-Islam Glow",
+  "files": [
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "Top Accent Glow washes the top of each screen in your accent color. Al-Islam Glow paints it yellow and green instead, and turning it off gives a flat background."
+  ],
+  "arabic": "توهّج تطبيق الإسلام"
+ },
+ {
+  "key": "Alert Tone",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "The Alert Tone plays for everything that is not a call to prayer: prenotifications, Shurooq, the optional times, and prayers whose adhan is off. Echo and Takbir are soft; Chime, Ring, and Alarm are made to carry through noise."
+  ],
+  "arabic": "نغمة التنبيه"
+ },
+ {
+  "key": "All Surahs",
+  "files": [
+   "iPhone/Quran/Qiraat/QiraatExplorer.swift"
+  ],
+  "examples": [
+   "No place in this surah, or the places are still being found. Pick another surah under All Surahs."
+  ],
+  "arabic": "كل السور"
+ },
+ {
+  "key": "All Words",
+  "files": [
+   "iPhone/Hadith/Search/HadithSearchFilters.swift",
+   "iPhone/Quran/Search/QuranSearchFilterModel.swift"
+  ],
+  "examples": [
+   "A short row of buttons appears above the results while you search. Choose the collections (or tap Bukhari & Muslim), keep only Sahih, Hasan, or Da'if narrations, and order the hadiths by Best Match. Tap More for Six Books, All Words or Any Word, and which kinds of result to show. The first button opens every filter on one page. The same row, without the collections, sits over the search inside a book and inside a chapter.",
+   "A short row of buttons appears above the results while you search: your Bookmarks and Favorites, Makki or Madani, and Best Match. Tap More for the rest, several at once: Whole Word, All Words or Any Word, chosen juz or surahs, translation or transliteration only, Go To a page or hizb, and which kinds of result to show. The first button opens every filter on one page, including words to leave out."
+  ],
+  "arabic": "كل الكلمات"
+ },
+ {
+  "key": "Allah",
+  "files": [
+   "iPhone/Islam/Names/NamesView.swift"
+  ],
+  "examples": [
+   "“Dua & Supplications” holds Morning & Evening and all of Hisn al-Muslim. “Dhikr & Remembrances”, the “Tasbih Counter” and the “99 Names of Allah” sit beside it.",
+   "Highlight Allah colors His name in both the Arabic and the English."
+  ],
+  "arabic": "الله"
+ },
+ {
+  "key": "Allow Notifications",
+  "files": [
+   "iPhone/Adhan/Location/PermissionsSheet.swift",
+   "iPhone/Settings/Pages/SettingsAdhanView.swift",
+   "iPhone/WelcomePages.swift"
+  ],
+  "examples": [
+   "Allow Notifications is off in Notification Settings, so these reminders cannot arrive until it is on.",
+   "Allow Notifications is off in Notification Settings, so this reminder cannot arrive until it is on."
+  ],
+  "arabic": "السماح بالإشعارات"
+ },
+ {
+  "key": "Any Word",
+  "files": [
+   "iPhone/Hadith/Search/HadithSearchFilters.swift",
+   "iPhone/Quran/Search/QuranSearchFilterModel.swift"
+  ],
+  "examples": [
+   "A short row of buttons appears above the results while you search. Choose the collections (or tap Bukhari & Muslim), keep only Sahih, Hasan, or Da'if narrations, and order the hadiths by Best Match. Tap More for Six Books, All Words or Any Word, and which kinds of result to show. The first button opens every filter on one page. The same row, without the collections, sits over the search inside a book and inside a chapter.",
+   "A short row of buttons appears above the results while you search: your Bookmarks and Favorites, Makki or Madani, and Best Match. Tap More for the rest, several at once: Whole Word, All Words or Any Word, chosen juz or surahs, translation or transliteration only, Go To a page or hizb, and which kinds of result to show. The first button opens every filter on one page, including words to leave out."
+  ],
+  "arabic": "أي كلمة"
+ },
+ {
+  "key": "Apple Watch",
+  "files": [
+   "iPhone/Settings/Pages/TipsAndTricks.swift"
+  ],
+  "examples": [
+   "Custom Prayer Names renames any prayer everywhere at once: the app, its notifications, the widgets, and the Apple Watch.",
+   "The Apple Watch app has a sky strip of its own that you can drag through the day, complications with the current prayer and a live countdown, and settings that stay in step with the iPhone."
+  ],
+  "arabic": "Apple Watch"
+ },
+ {
+  "key": "Apply Settings",
+  "files": [
+   "iPhone/Quran/Reader/AyahRow.swift",
+   "iPhone/Quran/Sheets/AyahSheets.swift"
+  ],
+  "examples": [
+   "Apply Settings, in an ayah's actions, changes how that one ayah is shown: beginner spacing, tajweed, tashkeel, dots, word by word. Reset to App Settings puts it back.",
+   "Enable Arabic Beginner Mode, on Arabic Text, puts a space between each Arabic letter, so a learner can tell the letters apart while reading the Quran. Apply Settings on an ayah, or on several selected at once, turns Beginner Mode on for just those."
+  ],
+  "arabic": "تطبيق الإعدادات"
+ },
+ {
+  "key": "Arabic Alphabet",
+  "files": [
+   "iPhone/Islam/Arabic/ArabicView.swift",
+   "iPhone/Islam/IslamView.swift",
+   "iPhone/Settings/Pages/SettingsIslamView.swift",
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "“Arabic Alphabet” teaches every letter and mark, and “Tajweed Foundations” gives each rule of recitation a page.",
+   "“Arabic Alphabet” teaches every letter and mark, “Tajweed Foundations” gives each rule a page, and the “Tajweed Course” goes lesson by lesson, with a “Check Yourself” quiz in each."
+  ],
+  "arabic": "الأبجدية العربية"
+ },
+ {
+  "key": "Arabic Beginner Mode",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/Pages/TipsAndTricks.swift"
+  ],
+  "examples": [
+   "“Enable Arabic Beginner Mode” puts a space between each Arabic letter, so the Quran is easier to read while you learn.",
+   "Enable Arabic Beginner Mode, on Arabic Text, puts a space between each Arabic letter, so a learner can tell the letters apart while reading the Quran. Apply Settings on an ayah, or on several selected at once, turns Beginner Mode on for just those."
+  ],
+  "arabic": "وضع المبتدئ في العربية"
+ },
+ {
+  "key": "Arabic Font",
+  "files": [
+   "iPhone/Hadith/Views/HadithComponents.swift",
+   "iPhone/Helpers/ViewExtensions.swift",
+   "iPhone/Islam/Arabic/ArabicLetterViews.swift",
+   "iPhone/Islam/Arabic/ArabicView.swift",
+   "iPhone/Islam/Names/ShareName.swift",
+   "iPhone/Quran/Reader/ContextMenu.swift",
+   "iPhone/Quran/Sharing/ShareAyah.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "“Arabic Font” and “Arabic Font Size” are on Arabic Text, with “Show Riwayah / Qiraah” for the other readings. Tips & Tricks has everything else the Quran can do, each with where to find it.",
+   "“Text Size” sizes everything on the Islam tab. “Arabic Font” sets the face for the duas, the dhikr, the 99 Names and the alphabet; the Quran and the hadith books keep their own. The gear at the top of the tab opens Islam Settings."
+  ],
+  "arabic": "الخط العربي"
+ },
+ {
+  "key": "Arabic Font Size",
+  "files": [
+   "iPhone/Settings/Pages/SettingsHadithView.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "“Arabic Font” and “Arabic Font Size” are on Arabic Text, with “Show Riwayah / Qiraah” for the other readings. Tips & Tricks has everything else the Quran can do, each with where to find it."
+  ],
+  "arabic": "حجم الخط العربي"
+ },
+ {
+  "key": "Arabic Text",
+  "files": [
+   "iPhone/Settings/Pages/SettingsHadithView.swift",
+   "iPhone/Settings/Pages/SettingsIslamView.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift",
+   "iPhone/Settings/Pages/TabTutorials.swift",
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "“Arabic Font” and “Arabic Font Size” are on Arabic Text, with “Show Riwayah / Qiraah” for the other readings. Tips & Tricks has everything else the Quran can do, each with where to find it.",
+   "Enable Arabic Beginner Mode, on Arabic Text, puts a space between each Arabic letter, so a learner can tell the letters apart while reading the Quran. Apply Settings on an ayah, or on several selected at once, turns Beginner Mode on for just those."
+  ],
+  "arabic": "النص العربي"
+ },
+ {
+  "key": "Arabic and English",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift"
+  ],
+  "examples": [
+   "The button beside the alphabet's search regroups the letters by where they are made, by a quality such as whistling (safeer) or breath (hams), or by the rule they trigger after a noon sakinah. Every family is named in Arabic and English, and a chip above the letters narrows the alphabet to one family.",
+   "Every letter by makhraj, sifaat and rule, in Arabic and English"
+  ],
+  "arabic": "العربية والإنجليزية"
+ },
+ {
+  "key": "Articulation Points",
+  "files": [
+   "(data shown via .localizedDisplay)"
+  ],
+  "examples": [
+   "‎مستحق الحرف is what the letter is owed because of where it happens to sit. The noon of مِن is an ordinary noon said in isolation; put ب after it and it becomes a mim hidden behind a hum. The alif of مَا is two counts alone; put a hamzah after it at the head of the next word and Hafs holds it four or five. Nothing about the letter itself changed, only its neighbourhood. Every rule from the Nun Sakin chapter onward lives in this second category; the two chapters before it, Articulation Points and Letter Qualities, are the haqq half of the same pair. That is exactly why none of the neighbour rules appear in an alphabet chart and all of them appear the moment letters stand next to each other."
+  ],
+  "arabic": "مخارج الحروف"
+ },
+ {
+  "key": "Ask AI",
+  "files": [
+   "iPhone/Helpers/AskAI/AskAIChat.swift",
+   "iPhone/Helpers/ViewExtensions.swift",
+   "iPhone/Islam/IslamView.swift"
+  ],
+  "examples": [
+   "A hadith's menu offers Summarize with AI, and search offers Ask AI about what you typed. Both run on the iPhone itself.",
+   "Ask AI answers from %@, on your device. Every citation opens its source, and wording it could not verify is marked as such."
+  ],
+  "arabic": "اسأل الذكاء الاصطناعي"
+ },
+ {
+  "key": "At a Glance",
+  "files": [
+   "iPhone/Settings/Pages/TabSections.swift"
+  ],
+  "examples": [
+   "Turn on Weather and the sky clouds over, rains and fogs with the real weather outside. The temperature sits at the top of the card (tap it for the UV index, humidity, wind and more, and for Try Another Sky, which dresses the sky in any condition while you look), At a Glance gains a Weather group, and the sky widgets show the temperature beside the city. It uses Apple Weather, so your location is sent to Apple while it is on.",
+   "extras like Need a Hand? and At a Glance step aside"
+  ],
+  "arabic": "نظرة سريعة"
+ },
+ {
+  "key": "Automatic Traveling Mode",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "More than 48 mi from home, with “Automatic Traveling Mode” on, Traveling Mode turns on and asks you to “Keep On” or “Turn Off” (which also stops the automatic switch). Prayers then show shortened and combined, and “Show Full Prayers” on its page brings each back to its own time."
+  ],
+  "arabic": "وضع السفر التلقائي"
+ },
+ {
+  "key": "Ayah of the Day",
+  "files": [
+   "Widget/Quran/QuranProvider.swift",
+   "Widget/Quran/RandomAyahWidget.swift",
+   "iPhone/Quran/QuranView.swift"
+  ],
+  "examples": [
+   "Your Summary comes first, with the “Last Read Ayah” and the “Ayah of the Day”, then every surah: tap one to read it. Hold a surah for “Favorite Surah” to keep it under Favorites. Ayahs you bookmark gather under Bookmarks.",
+   "The shuffle beside today's Ayah of the Day picks a different one, and the Today pill gathers the ayah, word, hadith, dua, and reminder of the day on one screen."
+  ],
+  "arabic": "آية اليوم"
+ },
+ {
+  "key": "Back to Today",
+  "files": [
+   "iPhone/Adhan/Prayers/PrayerList.swift"
+  ],
+  "examples": [
+   "The date picker under the prayer list shows any day's times, and its arrows step a day at a time. Compare Today sets that day beside today's, and Back to Today returns."
+  ],
+  "arabic": "العودة إلى اليوم"
+ },
+ {
+  "key": "Basic Harf",
+  "files": [
+   "iPhone/Islam/Arabic/ArabicGrammarViews.swift"
+  ],
+  "examples": [
+   "NaSb (manSoob) is a fatha, or fathatayn with no ٱلۡ. It marks the object of a verb, the noun after inna and its sisters (see Basic Harf), and a few more jobs, like saying when or how."
+  ],
+  "arabic": "أساسيات الحرف"
+ },
+ {
+  "key": "Beginner Features",
+  "files": [
+   "iPhone/Settings/Pages/TipsAndTricks.swift"
+  ],
+  "examples": [
+   "The Tips & Tricks, Unique Features and Beginner Features rows on each settings page"
+  ],
+  "arabic": "ميزات للمبتدئين"
+ },
+ {
+  "key": "Beginner Mode",
+  "files": [
+   "iPhone/Quran/Reader/SurahHeaders.swift",
+   "iPhone/Quran/Reader/SurahView.swift"
+  ],
+  "examples": [
+   "“Enable Arabic Beginner Mode” puts a space between each Arabic letter, so the Quran is easier to read while you learn.",
+   "Enable Arabic Beginner Mode, on Arabic Text, puts a space between each Arabic letter, so a learner can tell the letters apart while reading the Quran. Apply Settings on an ayah, or on several selected at once, turns Beginner Mode on for just those."
+  ],
+  "arabic": "وضع المبتدئ"
+ },
+ {
+  "key": "Best Match",
+  "files": [
+   "iPhone/Hadith/Search/HadithSearchFilters.swift",
+   "iPhone/Quran/Search/QuranSearchFilterModel.swift",
+   "iPhone/Quran/Search/QuranSearchFilters.swift"
+  ],
+  "examples": [
+   "A short row of buttons appears above the results while you search. Choose the collections (or tap Bukhari & Muslim), keep only Sahih, Hasan, or Da'if narrations, and order the hadiths by Best Match. Tap More for Six Books, All Words or Any Word, and which kinds of result to show. The first button opens every filter on one page. The same row, without the collections, sits over the search inside a book and inside a chapter.",
+   "A short row of buttons appears above the results while you search: your Bookmarks and Favorites, Makki or Madani, and Best Match. Tap More for the rest, several at once: Whole Word, All Words or Any Word, chosen juz or surahs, translation or transliteration only, Go To a page or hizb, and which kinds of result to show. The first button opens every filter on one page, including words to leave out."
+  ],
+  "arabic": "أفضل تطابق"
+ },
+ {
+  "key": "Bookmark Hadith",
+  "files": [
+   "iPhone/Hadith/Views/HadithComponents.swift",
+   "iPhone/Hadith/Views/HadithResolvedList.swift",
+   "iPhone/Hadith/Views/HadithView.swift"
+  ],
+  "examples": [
+   "Touch and hold a hadith, or tap its ellipsis, for Bookmark Hadith, Add Note, Copy Hadith, and Share Hadith. Your notes show under the hadith and gather in the Islamic Journal.",
+   "Touch and hold a hadith, or tap its ⋯, for “Bookmark Hadith”, “Add Note”, “Select Text”, “Copy Hadith” and “Share Hadith”, which makes an image or text. Where Apple Intelligence is available, “Summarize with AI” is there too."
+  ],
+  "arabic": "وضع علامة على الحديث"
+ },
+ {
+  "key": "Browse by Theme",
+  "files": [
+   "iPhone/Quran/QuranView.swift",
+   "iPhone/Quran/Themes/QuranThemes.swift",
+   "iPhone/Quran/Themes/ThemeHighlightsView.swift"
+  ],
+  "examples": [
+   "Wash passages in the color of what they speak about, in both readers, or light one subject across the whole Quran with Browse by Theme.",
+   "Credit for the Browse by Theme topics goes to the Quran Semantic Annotation Corpus (QSAC) by Ahmad Bilal, used under CC BY 4.0"
+  ],
+  "arabic": "تصفّح حسب الموضوع"
+ },
+ {
+  "key": "Bukhari & Muslim",
+  "files": [
+   "iPhone/Hadith/Search/HadithSearchFilters.swift"
+  ],
+  "examples": [
+   "A short row of buttons appears above the results while you search. Choose the collections (or tap Bukhari & Muslim), keep only Sahih, Hasan, or Da'if narrations, and order the hadiths by Best Match. Tap More for Six Books, All Words or Any Word, and which kinds of result to show. The first button opens every filter on one page. The same row, without the collections, sits over the search inside a book and inside a chapter."
+  ],
+  "arabic": "البخاري ومسلم"
+ },
+ {
+  "key": "Call upon Me; I will respond to you.",
+  "files": [
+   "iPhone/Islam/Dua/DuaView.swift"
+  ],
+  "examples": [
+   "And your Lord says, \"Call upon Me; I will respond to you.\" (Quran 40:60)",
+   "Short, daily supplications that keep your heart connected to Allah in every situation. \"Call upon Me; I will respond to you.\" (Quran 40:60)"
+  ]
+ },
+ {
+  "key": "Chain of Narrators",
+  "files": [
+   "iPhone/Hadith/Views/HadithChainSheet.swift",
+   "iPhone/Hadith/Views/HadithComponents.swift",
+   "iPhone/Hadith/Views/HadithResolvedList.swift"
+  ],
+  "examples": [
+   "Many hadiths have “Chain of Narrators” in their menu: the isnad, narrator by narrator. Tap a narrator to see every narration that names them, with “Same Chain of Narrators” and “Tree of Narrators” under the chain where they exist. “Similar Hadiths”, in the same menu, finds narrations close to this one.",
+   "Where a hadith has been graded, the “Grade:” line gives each scholar's verdict word for word, with the scholar's name. Sahih al-Bukhari and Sahih Muslim carry no grade line. Where a chain icon follows the grade, tap the grade for the Chain of Narrators."
+  ],
+  "arabic": "سلسلة الرواة"
+ },
+ {
+  "key": "Check Yourself",
+  "files": [
+   "iPhone/Islam/Tajweed/TajweedLessons.swift",
+   "iPhone/Islam/Tajweed/TajweedTest.swift"
+  ],
+  "examples": [
+   "“Arabic Alphabet” teaches every letter and mark, “Tajweed Foundations” gives each rule a page, and the “Tajweed Course” goes lesson by lesson, with a “Check Yourself” quiz in each.",
+   "The Tajweed Course runs from reading the letters to reading the mushaf. Each lesson gives the rule, its letters (tap one for its page), words to read aloud, example ayahs played in your own reciter, and a Check Yourself quiz. Mark lessons done, step through with the arrows at the top, and Continue picks up where you left off. Tajweed Foundations, beside it, keeps every rule on a page of its own to look up."
+  ],
+  "arabic": "اختبر نفسك"
+ },
+ {
+  "key": "Choose Automatically",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "With Choose Automatically on, the calculation method changes to the one customary where you are, then tells you, so you can keep the one you had. The list of methods is searchable.",
+   "With “Choose Automatically” on, the app switches to the method used in your country and tells you, so you can keep the one you had. Choosing a method yourself turns it off. “Hanafi Calculation for Asr” is there too."
+  ],
+  "arabic": "الاختيار تلقائيًا"
+ },
+ {
+  "key": "Choose Chapter",
+  "files": [
+   "iPhone/Hadith/Views/HadithBookView.swift"
+  ],
+  "examples": [
+   "In a chapter, tap the title for Choose Chapter and for Select Hadiths, which copies, shares, or bookmarks several at once. While selecting, hold a hadith to add every hadith from the last one you picked through it.",
+   "Each hadith shows its number and book, the Arabic, the narrator and the English, then its grade. “Previous” and “Next” move between chapters. Tap the chapter title for “Choose Chapter”."
+  ],
+  "arabic": "اختيار الباب"
+ },
+ {
+  "key": "Choose Reciter",
+  "files": [
+   "iPhone/Helpers/ViewExtensions.swift",
+   "iPhone/Islam/Qiraat/RiwayatColorCode.swift",
+   "iPhone/Quran/Mushaf/MushafReader.swift",
+   "iPhone/Quran/QuranView.swift",
+   "iPhone/Quran/Reader/SurahView.swift",
+   "iPhone/Quran/Sheets/AyahSheets.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift",
+   "iPhone/Settings/Pages/TabTutorials.swift"
+  ],
+  "examples": [
+   "Double tap an ayah's text, anywhere off a word, to play just that ayah. Tap its play button for Choose Reciter, Repeat Ayah, Play From Ayah and Play This Ayah, or hold it for a custom range. Hold its ellipsis to share. The reader's own play button at the bottom opens its menu on a tap; hold it for a custom range (Choose Reciter, in a riwayah other than Hafs). Hadith ellipsis buttons share on a hold too. Every menu opens the moment you tap it. With VoiceOver, use the named actions or the menu.",
+   "Tap play for Choose Reciter and Play Ayah by Ayah, and under Other Options a custom range, a random ayah, a random reciter, and Repeat Surah up to 20 times."
+  ],
+  "arabic": "اختيار القارئ"
+ },
+ {
+  "key": "Choose Surah",
+  "files": [
+   "iPhone/Quran/Mushaf/MushafReader.swift",
+   "iPhone/Quran/QuranView.swift",
+   "iPhone/Quran/Reader/SurahView.swift"
+  ],
+  "examples": [
+   "In the reader, touch and hold the title at the top to go straight to Choose Surah. In page mode, holding the pill at the foot of the page does the same. A plain tap on the title opens its whole menu.",
+   "Hold the surah title for “Choose Surah”; a tap opens its full menu. On pages, swipe to turn, and tap the page or juz number on the pill at the foot to jump. In the list, “Previous” and “Next” at the end move between surahs."
+  ],
+  "arabic": "اختيار سورة"
+ },
+ {
+  "key": "Chosen Ayah",
+  "files": [
+   "Widget/Quran/ChosenAyahIntent.swift",
+   "Widget/Quran/ChosenAyahWidget.swift",
+   "Widget/Quran/QuranProvider.swift"
+  ],
+  "examples": [
+   "Add the Chosen Ayah widget to your Home Screen or Lock Screen, then hold it and choose Edit Widget. Show one ayah, a list of ayahs that take turns, a random bookmark or a random ayah, changing every 15 minutes, every hour or every day. Pick from your bookmarks, or type a reference such as 2:255 or Yaseen 9.",
+   "Widgets for the Ayah of the Day, the Reminder of the Day, a Name of Allah, your Last Read Ayah, your Last Listened Surah, and a Chosen Ayah you pick yourself. Tapping an ayah widget opens that ayah."
+  ],
+  "arabic": "الآية المختارة"
+ },
+ {
+  "key": "City Prayer Times",
+  "files": [
+   "iPhone/Adhan/Location/PrayerMapView.swift"
+  ],
+  "examples": [
+   "Tap the city pill for City Prayer Times. Star the cities you check often, compare one with your own location, and read its times in its clock or yours. It never changes your own times."
+  ],
+  "arabic": "مواقيت صلاة المدن"
+ },
+ {
+  "key": "City Time",
+  "files": [
+   "iPhone/Adhan/Location/PrayerMapView.swift"
+  ],
+  "examples": [
+   "“City Time” shows each prayer on %@’s local clock, the time you’d see if you were there. “My Time” converts those same moments to your current time zone."
+  ],
+  "arabic": "توقيت المدينة"
+ },
+ {
+  "key": "Clear Quran (Mustafa Khattab)",
+  "files": [
+   "iPhone/Quran/Sheets/CustomRangeAyahsSheet.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "In Hafs, the translation is Saheeh International at first, and English Text can add the Clear Quran (Mustafa Khattab) or show it instead. “Show Transliteration” there puts Latin letters under the Arabic."
+  ],
+  "arabic": "القرآن الواضح (مصطفى خطاب)"
+ },
+ {
+  "key": "Compare Ayah",
+  "files": [
+   "iPhone/Quran/Sheets/AyahSheets.swift"
+  ],
+  "examples": [
+   "With Comparison mode on, a riwayah picker sits above the reader's search bar, and an ayah's Compare Ayah sets the readings side by side. The Qiraat Explorer steps through every place the riwayat differ."
+  ],
+  "arabic": "مقارنة الآية"
+ },
+ {
+  "key": "Compare Today",
+  "files": [
+   "iPhone/Adhan/Prayers/PrayerList.swift"
+  ],
+  "examples": [
+   "The date picker under the prayer list shows any day's times, and its arrows step a day at a time. Compare Today sets that day beside today's, and Back to Today returns.",
+   "The Showing prayers for date stepper, with Compare Today"
+  ],
+  "arabic": "مقارنة باليوم"
+ },
+ {
+  "key": "Continue Revising",
+  "files": [
+   "iPhone/Quran/Reader/QuranPlannerView.swift"
+  ],
+  "examples": [
+   "The Quran Planner, under Explore in the ⋯ menu at the top of the Quran tab, holds two plans. Khatm sets a finish of one, two, or three months and recomputes each day's amount from what is left, so a missed day is absorbed. Revision keeps a juz range or chosen surahs in rotation, revised in full every week, two weeks, or month, with Continue Revising and Mark as Revised. One Daily Reminder covers both."
+  ],
+  "arabic": "متابعة المراجعة"
+ },
+ {
+  "key": "Copy Hadith",
+  "files": [
+   "iPhone/Hadith/Views/HadeethEncView.swift",
+   "iPhone/Hadith/Views/HadithComponents.swift",
+   "iPhone/Hadith/Views/HadithResolvedList.swift"
+  ],
+  "examples": [
+   "Touch and hold a hadith, or tap its ellipsis, for Bookmark Hadith, Add Note, Copy Hadith, and Share Hadith. Your notes show under the hadith and gather in the Islamic Journal.",
+   "Touch and hold a hadith, or tap its ⋯, for “Bookmark Hadith”, “Add Note”, “Select Text”, “Copy Hadith” and “Share Hadith”, which makes an image or text. Where Apple Intelligence is available, “Summarize with AI” is there too."
+  ],
+  "arabic": "نسخ الحديث"
+ },
+ {
+  "key": "Copy Image",
+  "files": [
+   "iPhone/Hadith/Views/HadithComponents.swift",
+   "iPhone/Islam/Daily/WallpaperView.swift",
+   "iPhone/Islam/Names/ShareName.swift",
+   "iPhone/Quran/Sharing/ShareAyah.swift"
+  ],
+  "examples": [
+   "Touch and hold a wallpaper for Save to Photos and Copy Image."
+  ],
+  "arabic": "نسخ الصورة"
+ },
+ {
+  "key": "Custom Color",
+  "files": [
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "Beyond light and dark there are Gray and Sepia themes, and under Custom Colors a background color of your own, with any accent color to match."
+  ],
+  "arabic": "لون مخصّص"
+ },
+ {
+  "key": "Custom Colors",
+  "files": [
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "Beyond light and dark there are Gray and Sepia themes, and under Custom Colors a background color of your own, with any accent color to match."
+  ],
+  "arabic": "ألوان مخصّصة"
+ },
+ {
+  "key": "Custom Prayer Names",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/Pages/SettingsAdhanView.swift",
+   "iPhone/Settings/Pages/TipsAndTricks.swift",
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "Custom Prayer Names renames any prayer everywhere at once: the app, its notifications, the widgets, and the Apple Watch."
+  ],
+  "arabic": "أسماء مخصّصة للصلوات"
+ },
+ {
+  "key": "Custom Range",
+  "files": [
+   "iPhone/Quran/Sheets/CustomRangeSheet.swift"
+  ],
+  "examples": [
+   "Play Custom Range takes a range of ayahs or of pages, with Whole Page and Whole Surah a tap away, repeats Each Ayah and the Whole Range as many times as you set (or forever), and lists every ayah of the range before you press Play Range. While it plays, the range line under the reciter on the Now Playing bar opens the same list, with the ayah being recited marked and kept in view. Tap any ayah there to jump to it.",
+   "Play This Ayah and Repeat Ayah in an ayah's actions leave the sheet up so you can keep reading. Play From Ayah and Play Custom Range still close it."
+  ],
+  "arabic": "نطاق مخصّص"
+ },
+ {
+  "key": "Customize Tajweed Colors",
+  "files": [
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "Open the tajweed guide from the reader's Legend pill, or from Customize Tajweed Colors in Quran Settings. Under More Detail, tap a rule's card to show or hide that rule, and use the color well on the card to recolor it.",
+   "This riwayah colors words the way its printed mushaf does (differences from Hafs, idgham, imalah, ...). See its legend in Customize Tajweed Colors."
+  ],
+  "arabic": "تخصيص ألوان التجويد"
+ },
+ {
+  "key": "Da'if",
+  "files": [
+   "iPhone/Hadith/Models/HadithNarrators.swift",
+   "iPhone/Hadith/Search/HadithSearchFilters.swift"
+  ],
+  "examples": [
+   "A short row of buttons appears above the results while you search. Choose the collections (or tap Bukhari & Muslim), keep only Sahih, Hasan, or Da'if narrations, and order the hadiths by Best Match. Tap More for Six Books, All Words or Any Word, and which kinds of result to show. The first button opens every filter on one page. The same row, without the collections, sits over the search inside a book and inside a chapter.",
+   "Search every collection in Arabic or English, or type a reference such as bukhari 5103. While you search, the buttons above the results keep only “Sahih”, “Hasan” or “Da'if” narrations."
+  ],
+  "arabic": "ضعيف"
+ },
+ {
+  "key": "Daily Reminder",
+  "files": [
+   "iPhone/Quran/Reader/QuranPlannerView.swift"
+  ],
+  "examples": [
+   "The Quran Planner, under Explore in the ⋯ menu at the top of the Quran tab, holds two plans. Khatm sets a finish of one, two, or three months and recomputes each day's amount from what is left, so a missed day is absorbed. Revision keeps a juz range or chosen surahs in rotation, revised in full every week, two weeks, or month, with Continue Revising and Mark as Revised. One Daily Reminder covers both."
+  ],
+  "arabic": "تذكير يومي"
+ },
+ {
+  "key": "Day & Night",
+  "files": [
+   "Widget/Adhan/SolarMoonWidgets.swift"
+  ],
+  "examples": [
+   "Skyline draws pyramids and a mosque along the horizon, in the app and on the Solar Arc and Day & Night widgets. Choose the pair, only pyramids, or only mosques."
+  ],
+  "arabic": "الليل والنهار"
+ },
+ {
+  "key": "Day of Arafah",
+  "files": [
+   "iPhone/Settings/Model/Settings.swift"
+  ],
+  "examples": [
+   "The day the pilgrims stand at Arafah, the heart of Hajj. For those not on Hajj, fasting it expiates the sins of the past year and the year to come; the pilgrims themselves do not fast. The best supplication is that of the Day of Arafah."
+  ],
+  "arabic": "يوم عرفة"
+ },
+ {
+  "key": "Day of Ashura",
+  "files": [
+   "iPhone/Settings/Model/Settings.swift"
+  ],
+  "examples": [
+   "A sacred month. The Day of Ashura falls on the 10th."
+  ],
+  "arabic": "يوم عاشوراء"
+ },
+ {
+  "key": "Dhikr & Remembrances",
+  "files": [
+   "iPhone/Islam/Dua/AdhkarView.swift",
+   "iPhone/Islam/IslamView.swift"
+  ],
+  "examples": [
+   "“Dua & Supplications” holds Morning & Evening and all of Hisn al-Muslim. “Dhikr & Remembrances”, the “Tasbih Counter” and the “99 Names of Allah” sit beside it."
+  ],
+  "arabic": "الذكر والأذكار"
+ },
+ {
+  "key": "Distance From Home",
+  "files": [
+   "iPhone/Adhan/GlanceCard.swift"
+  ],
+  "examples": [
+   "The AT A GLANCE tiles all open something. Qibla opens a large compass, Daylight and Fasting Window open the Prayer Calendar, Moon opens the Hijri Calendar, and Prayer Calculation and Distance From Home open their settings."
+  ],
+  "arabic": "المسافة من المنزل"
+ },
+ {
+  "key": "Dot Vowels",
+  "files": [
+   "iPhone/Settings/Model/Settings.swift"
+  ],
+  "examples": [
+   "Same letters, different vowel marks. Light and Bold are the usual marks at two weights; Dot Vowels is the earliest vocalised mushafs' way: a dot above is fatha, below is kasra, in front is damma, doubled is tanween."
+  ],
+  "arabic": "حركات بالنقط"
+ },
+ {
+  "key": "Dua & Supplications",
+  "files": [
+   "iPhone/Islam/Dua/DuaView.swift",
+   "iPhone/Islam/IslamView.swift"
+  ],
+  "examples": [
+   "“Dua & Supplications” holds Morning & Evening and all of Hisn al-Muslim. “Dhikr & Remembrances”, the “Tasbih Counter” and the “99 Names of Allah” sit beside it."
+  ],
+  "arabic": "الأدعية والابتهالات"
+ },
+ {
+  "key": "Each Ayah",
+  "files": [
+   "iPhone/Quran/Sheets/CustomRangeSheet.swift"
+  ],
+  "examples": [
+   "Play Custom Range takes a range of ayahs or of pages, with Whole Page and Whole Surah a tap away, repeats Each Ayah and the Whole Range as many times as you set (or forever), and lists every ayah of the range before you press Play Range. While it plays, the range line under the reciter on the Now Playing bar opens the same list, with the ayah being recited marked and kept in view. Tap any ayah there to jump to it."
+  ],
+  "arabic": "كل آية"
+ },
+ {
+  "key": "Enable Arabic Beginner Mode",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "“Enable Arabic Beginner Mode” puts a space between each Arabic letter, so the Quran is easier to read while you learn.",
+   "Enable Arabic Beginner Mode, on Arabic Text, puts a space between each Arabic letter, so a learner can tell the letters apart while reading the Quran. Apply Settings on an ayah, or on several selected at once, turns Beginner Mode on for just those."
+  ],
+  "arabic": "تفعيل وضع المبتدئ في العربية"
+ },
+ {
+  "key": "Ending Madd",
+  "files": [
+   "iPhone/Quran/Tajweed/TajweedRules.swift"
+  ],
+  "examples": [
+   "The reader's colour legend calls madd arid and madd leen together Ending Madd."
+  ],
+  "arabic": "مد الوقف"
+ },
+ {
+  "key": "English Text",
+  "files": [
+   "iPhone/Settings/Pages/SettingsHadithView.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift",
+   "iPhone/Settings/Pages/TabTutorials.swift",
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "Show Transliteration, on English Text, writes each ayah in Latin letters beneath the Arabic, so it can be read aloud before the script is familiar. Hafs only, with Include English on.",
+   "In Hafs, the translation is Saheeh International at first, and English Text can add the Clear Quran (Mustafa Khattab) or show it instead. “Show Transliteration” there puts Latin letters under the Arabic."
+  ],
+  "arabic": "النص الإنجليزي"
+ },
+ {
+  "key": "Every Difference",
+  "files": [
+   "iPhone/Quran/Qiraat/QiraatExplorerView.swift",
+   "iPhone/Quran/Sheets/ComparisonSheets.swift"
+  ],
+  "examples": [
+   "The Qiraat Explorer, under the rows, steps to the nearest ayah where one does. Every Difference (in the options) counts single dots and vowels too.",
+   "Use the arrows to step to the nearest place where one does. Every Difference (in the options) counts single dots and vowels too."
+  ],
+  "arabic": "كل اختلاف"
+ },
+ {
+  "key": "Export a Backup File",
+  "files": [
+   "iPhone/Settings/Cloud/CloudBackupViews.swift"
+  ],
+  "examples": [
+   "Export a Backup File writes the same backup to a file you keep yourself: AirDrop it to a family member's iPhone or save it in Files. Restore from a File reads one back. No iCloud needed on either side."
+  ],
+  "arabic": "تصدير ملف نسخة احتياطية"
+ },
+ {
+  "key": "Fasting Window",
+  "files": [
+   "iPhone/Adhan/GlanceCard.swift"
+  ],
+  "examples": [
+   "The AT A GLANCE tiles all open something. Qibla opens a large compass, Daylight and Fasting Window open the Prayer Calendar, Moon opens the Hijri Calendar, and Prayer Calculation and Distance From Home open their settings."
+  ],
+  "arabic": "مدة الصيام"
+ },
+ {
+  "key": "Favorite",
+  "files": [
+   "iPhone/Islam/IslamView.swift",
+   "iPhone/Islam/Names/NamesView.swift",
+   "iPhone/Quran/Reader/SurahRows.swift"
+  ],
+  "examples": [
+   "Your Summary comes first, with the “Last Read Ayah” and the “Ayah of the Day”, then every surah: tap one to read it. Hold a surah for “Favorite Surah” to keep it under Favorites. Ayahs you bookmark gather under Bookmarks.",
+   "A short row of buttons appears above the results while you search: your Bookmarks and Favorites, Makki or Madani, and Best Match. Tap More for the rest, several at once: Whole Word, All Words or Any Word, chosen juz or surahs, translation or transliteration only, Go To a page or hizb, and which kinds of result to show. The first button opens every filter on one page, including words to leave out."
+  ],
+  "arabic": "إضافة إلى المفضّلة"
+ },
+ {
+  "key": "Favorite Surah",
+  "files": [
+   "iPhone/Quran/Playback/NowPlayingView.swift",
+   "iPhone/Quran/Reader/ContextMenu.swift"
+  ],
+  "examples": [
+   "Your Summary comes first, with the “Last Read Ayah” and the “Ayah of the Day”, then every surah: tap one to read it. Hold a surah for “Favorite Surah” to keep it under Favorites. Ayahs you bookmark gather under Bookmarks."
+  ],
+  "arabic": "إضافة السورة إلى المفضّلة"
+ },
+ {
+  "key": "Find It in the Ayah",
+  "files": [
+   "iPhone/Islam/Tajweed/TajweedTest.swift"
+  ],
+  "examples": [
+   "Practice rounds are not scored against the chapter. Find It in the Ayah is graded against the reader's tajweed colours, so it is only offered while the chapter's rules are switched on in the Quran settings."
+  ],
+  "arabic": "اعثر عليه في الآية"
+ },
+ {
+  "key": "Find My Level",
+  "files": [
+   "iPhone/Islam/Arabic/ArabicReadingTestViews.swift",
+   "iPhone/Islam/Tajweed/TajweedTestViews.swift"
+  ],
+  "examples": [
+   "Reading Test, under Explore at the top of the alphabet, climbs 21 tiers in the order a qaa'idah teaches reading: single letters, short vowels, long vowels, sukoon and shaddah, the marks of the mushaf, and last of all words printed with no tashkeel. Each tier tests reading, spelling and listening. The hint spaces a word out letter by letter, and Find My Level picks the tier to start on."
+  ],
+  "arabic": "حدّد مستواي"
+ },
+ {
+  "key": "Fit Page to Screen",
+  "files": [
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "Fit Page to Screen sets each page the way the printed mushaf sets it, the same lines broken at the same words, at the largest size that fits your screen, in your own font and colors."
+  ],
+  "arabic": "ملاءمة الصفحة للشاشة"
+ },
+ {
+  "key": "Following the Sunnah",
+  "files": [
+   "(data shown via .localizedDisplay)"
+  ],
+  "examples": [
+   "4. **Following the Sunnah:** The Prophet Muhammad ﷺ encouraged reciting the Quran beautifully. By learning Tajweed, you honor his teachings and example."
+  ],
+  "arabic": "اتّباع السنة"
+ },
+ {
+  "key": "Fortress of the Muslim",
+  "files": [
+   "iPhone/Islam/Dua/DuaView.swift"
+  ],
+  "examples": [
+   "%@: %lld supplications from the Fortress of the Muslim, with the reference each is narrated from. Tap the play pill under a dua to hear it recited.",
+   "%@: one supplication from the Fortress of the Muslim, with the reference each is narrated from. Tap the play pill under a dua to hear it recited."
+  ],
+  "arabic": "حصن المسلم"
+ },
+ {
+  "key": "Full Light",
+  "files": [
+   "iPhone/Adhan/Sky/MoonViewer.swift"
+  ],
+  "examples": [
+   "Tap the moon at the foot of the sky card (or, with the skyline on, the one riding the arc at night) and it fills the screen as a globe, lit the way it is that night. Drag to turn it, pinch to zoom, double-tap to face Earth, and slide through the month to watch the phases move. Full Light shows the whole face at once."
+  ],
+  "arabic": "إضاءة كاملة"
+ },
+ {
+  "key": "Fussilat 41:44",
+  "files": [
+   "(data shown via .localizedDisplay)"
+  ],
+  "examples": [
+   "‎التسهيل, in ءَا۬عۡجَمِيّٞ at Fussilat 41:44, also one place. Two hamzas meet here, the questioning hamza and the hamza of أَعۡجَمِيّ. Hafs eases the second into a sound between a hamza and an alif: neither a clean glottal stop nor a plain long vowel. A full second hamza is transmitted by other routes; ash-Shatibiyyah, which is the tariq this app follows, reads tasheel."
+  ],
+  "arabic": "فصّلت ٤١:٤٤"
+ },
+ {
+  "key": "Go To",
+  "files": [
+   "iPhone/Quran/Search/QuranSearchFilters.swift"
+  ],
+  "examples": [
+   "A short row of buttons appears above the results while you search: your Bookmarks and Favorites, Makki or Madani, and Best Match. Tap More for the rest, several at once: Whole Word, All Words or Any Word, chosen juz or surahs, translation or transliteration only, Go To a page or hizb, and which kinds of result to show. The first button opens every filter on one page, including words to leave out."
+  ],
+  "arabic": "الانتقال إلى"
+ },
+ {
+  "key": "Hadith Encyclopedia",
+  "files": [
+   "iPhone/Hadith/Views/HadeethEncView.swift"
+  ],
+  "examples": [
+   "Credit for the Hadith Encyclopedia's 2,328 narrations with their explanations, lessons, gradings and sources goes to hadeethenc.com, prepared under the supervision of the Dawah and Guidance Association and the Association for Serving Islamic Content in Languages, reproduced without modification of the narrations; the pack was assembled from Tilawa's capture, by my friend Jamil Hammoudeh, with his permission",
+   "The Hadith Encyclopedia has no page for this narration."
+  ],
+  "arabic": "موسوعة الأحاديث النبوية"
+ },
+ {
+  "key": "Hadith Settings",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/Pages/SettingsHadithView.swift",
+   "iPhone/Settings/Pages/TipsAndTricks.swift",
+   "iPhone/Settings/SettingsSearch.swift",
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "Hadith Settings › On the Hadith Tab › Narrators",
+   "The Quran and the hadith books have their own switches, in Quran Settings and Hadith Settings."
+  ],
+  "arabic": "إعدادات الحديث"
+ },
+ {
+  "key": "Hadith of the Day",
+  "files": [
+   "iPhone/Hadith/Views/HadithView.swift"
+  ],
+  "examples": [
+   "Your Summary keeps the “Hadith of the Day” and the “Last Read Hadith”. Below it, %lld collections sit in four groups, from The Six Books to Other Books. Tap a book for its chapters.",
+   "The Hadith of the Day and the hadith you last read, at the top of the tab. Turned off, History in the More menu still lists what you read."
+  ],
+  "arabic": "حديث اليوم"
+ },
+ {
+  "key": "Hafs an Asim",
+  "files": [
+   "iPhone/Islam/Tajweed/TajweedFoundations.swift"
+  ],
+  "examples": [
+   "Every riwayah picker ends in Sort By. Default keeps one submenu per qiraah, the imams in alphabetical order. Alphabetical and Most Common list every riwayah in one list, by the narrator's name or by how widely it is recited. Date orders the qiraat by the year each imam died, and 7 + 3 does the same with the Seven before the Three. Hafs an Asim stays the first row in every order.",
+   "This page is not a work of scholarship. It is the output of a program that read the printed mushaf of each riwayah, letter by letter, and compared it against Hafs an Asim. It may not be one hundred percent accurate."
+  ],
+  "arabic": "حفص عن عاصم"
+ },
+ {
+  "key": "Halal Food Locator",
+  "files": [
+   "iPhone/Islam/Content/MasjidView.swift",
+   "iPhone/Islam/IslamView.swift"
+  ],
+  "examples": [
+   "Islam tab, Masjid Locator and Halal Food Locator",
+   "The Masjid Locator and the Halal Food Locator search near you, or wherever you move the map with Search This Area. Tap a result for directions in Maps, and touch and hold it to copy its name or address."
+  ],
+  "arabic": "دليل الطعام الحلال"
+ },
+ {
+  "key": "Hamzatul WaSl",
+  "files": [
+   "iPhone/Islam/Arabic/ArabicTopics.swift",
+   "iPhone/Islam/Arabic/HamzatulWaslView.swift"
+  ],
+  "examples": [
+   "A tanween is a short vowel followed by a noon with sukoon: said, never written. The \"an\" tanween's alif is only a seat for the mark, sounded only when you stop on the word. Before hamzatul waSl that hidden noon is what joins the words: see the Hamzatul WaSl page.",
+   "Take the present, drop its first letter and end on a sukoon. If what is left starts on a sukoon, hamzatul waSl is added to start on (its vowel is on the Hamzatul WaSl page). To say do not, put لَا before the present and end it the same way."
+  ],
+  "arabic": "همزة الوصل"
+ },
+ {
+  "key": "Hanafi Calculation for Asr",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "With “Choose Automatically” on, the app switches to the method used in your country and tells you, so you can keep the one you had. Choosing a method yourself turns it off. “Hanafi Calculation for Asr” is there too."
+  ],
+  "arabic": "الحساب الحنفي للعصر"
+ },
+ {
+  "key": "Hasan",
+  "files": [
+   "iPhone/Hadith/Models/HadithNarrators.swift",
+   "iPhone/Hadith/Search/HadithSearchFilters.swift"
+  ],
+  "examples": [
+   "A short row of buttons appears above the results while you search. Choose the collections (or tap Bukhari & Muslim), keep only Sahih, Hasan, or Da'if narrations, and order the hadiths by Best Match. Tap More for Six Books, All Words or Any Word, and which kinds of result to show. The first button opens every filter on one page. The same row, without the collections, sits over the search inside a book and inside a chapter.",
+   "3. **Waqf Hasan (Good):** The wording makes sense, but the meaning is incomplete. Allowed only for breath, not preferred."
+  ],
+  "arabic": "حسن"
+ },
+ {
+  "key": "Hide",
+  "files": [
+   "iPhone/Islam/IslamView.swift",
+   "iPhone/Quran/Tajweed/TajweedLegendView.swift"
+  ],
+  "examples": [
+   "Hide Arabic Tashkeel and Hide Arabic Dots show the words the way the earliest mushafs were written, across every riwayah.",
+   "Hide the Arabic or the English to read only the other. A search still shows the hidden language wherever it matched."
+  ],
+  "arabic": "إخفاء"
+ },
+ {
+  "key": "Hide All",
+  "files": [
+   "iPhone/Quran/Tajweed/TajweedLegendView.swift"
+  ],
+  "examples": [
+   "Test Mode, in the reader's play menu, hides the Quran's text in both readers until you tap an ayah, so you can recite from memory and check yourself. Its settings choose whether the Arabic alone or everything hides, whether a tap shows one ayah or everything before it too, and whether Reveal as It's Recited uncovers each ayah as the reciter reaches it. Hide All Again, in the same menu, starts over.",
+   "Tap the ayah that is showing to hide it again. \"Hide All Again\" in the play menu starts over."
+  ],
+  "arabic": "إخفاء الكل"
+ },
+ {
+  "key": "Hide All Again",
+  "files": [
+   "iPhone/Quran/Reader/QuranTestMode.swift"
+  ],
+  "examples": [
+   "Test Mode, in the reader's play menu, hides the Quran's text in both readers until you tap an ayah, so you can recite from memory and check yourself. Its settings choose whether the Arabic alone or everything hides, whether a tap shows one ayah or everything before it too, and whether Reveal as It's Recited uncovers each ayah as the reciter reaches it. Hide All Again, in the same menu, starts over.",
+   "Tap the ayah that is showing to hide it again. \"Hide All Again\" in the play menu starts over."
+  ],
+  "arabic": "إخفاء الكل مجددًا"
+ },
+ {
+  "key": "Hide Arabic Dots",
+  "files": [
+   "iPhone/Quran/Sharing/ShareAyah.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "Hide Arabic Tashkeel and Hide Arabic Dots show the words the way the earliest mushafs were written, across every riwayah."
+  ],
+  "arabic": "إخفاء نقاط الحروف"
+ },
+ {
+  "key": "Highlight Allah",
+  "files": [
+   "iPhone/Quran/Reader/SurahView.swift",
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/Pages/SettingsHadithView.swift",
+   "iPhone/Settings/Pages/SettingsIslamView.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "Highlight Allah colors His name in both the Arabic and the English.",
+   "The face for duas, dhikr, names, letters; Highlight Allah"
+  ],
+  "arabic": "تمييز لفظ الجلالة"
+ },
+ {
+  "key": "Highlight Themes",
+  "files": [
+   "iPhone/Quran/Themes/QuranThemes.swift",
+   "iPhone/Quran/Themes/ThemeHighlightsView.swift",
+   "iPhone/Settings/Pages/TipsAndTricks.swift",
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "Quran Settings › Arabic Text for tajweed, Highlight Themes for themes",
+   "Up to %lld themes can be lit at once, each in the color of what it speaks about, in the list and page readers. Put them out here, at the top of Browse by Theme, or under Highlight Themes, which also says what every color means."
+  ],
+  "arabic": "تمييز الموضوعات"
+ },
+ {
+  "key": "Hijri Calendar",
+  "files": [
+   "iPhone/Adhan/AdhanView.swift",
+   "iPhone/Adhan/Calendar/CalendarView.swift"
+  ],
+  "examples": [
+   "The AT A GLANCE tiles all open something. Qibla opens a large compass, Daylight and Fasting Window open the Prayer Calendar, Moon opens the Hijri Calendar, and Prayer Calculation and Distance From Home open their settings.",
+   "The Hijri Calendar's toolbar button switches between a month grid and the list of Islamic dates. Tap a day for its details, and touch and hold an Islamic date to copy it."
+  ],
+  "arabic": "التقويم الهجري"
+ },
+ {
+  "key": "Hijri Date",
+  "files": [
+   "Widget/Adhan/DateLockWidgets.swift"
+  ],
+  "examples": [
+   "In the Hijri Date Converter, touch and hold either date to copy it.",
+   "Switch Hijri Date at Maghrib turns the Hijri date over at Maghrib instead of midnight, the way the Islamic day runs."
+  ],
+  "arabic": "التاريخ الهجري"
+ },
+ {
+  "key": "Hijri Date Converter",
+  "files": [
+   "iPhone/Islam/IslamView.swift"
+  ],
+  "examples": [
+   "In the Hijri Date Converter, touch and hold either date to copy it."
+  ],
+  "arabic": "محوّل التاريخ الهجري"
+ },
+ {
+  "key": "Hijri Offset",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "Tap the compass beside your city to make it larger and show your coordinates. Tap the date for the “Hijri Calendar”, or hold it to copy. If your local date differs, “Hijri Offset” moves it by up to three days."
+  ],
+  "arabic": "تعديل التاريخ الهجري"
+ },
+ {
+  "key": "Hisham and Ibn Dhakwan",
+  "files": [
+   "iPhone/Islam/Qiraat/QiraatTextAnalysis.swift"
+  ],
+  "examples": [
+   "Both of his canonical narrators, Hisham and Ibn Dhakwan, came generations later and received the reading through intermediate teachers."
+  ],
+  "arabic": "هشام وابن ذكوان"
+ },
+ {
+  "key": "History & Insights",
+  "files": [
+   "iPhone/Adhan/Prayers/PrayerTrackerCard.swift",
+   "iPhone/Settings/Pages/TipsAndTricks.swift"
+  ],
+  "examples": [
+   "A prayer can be marked only once its time has come in, so today's row shows what is still left to pray. Past days can always be filled in, from the seven days under the card or from History & Insights.",
+   "Under the tracker, History & Insights shows how often each of the five is prayed on time, how the last 7 days, 30 days or year compare with the span before, and your days, weeks, months, and years. Tap a day in the month, or a month in the year, to open it."
+  ],
+  "arabic": "السجل والتحليلات"
+ },
+ {
+  "key": "Honoring the Quran",
+  "files": [
+   "(data shown via .localizedDisplay)"
+  ],
+  "examples": [
+   "1. **Honoring the Quran:** The Quran is the final revelation from Allah. Reciting it with care and precision is a form of respect and reverence for the sacred text. By learning Tajweed, you follow the Prophet ﷺ who recited with the utmost clarity and eloquence."
+  ],
+  "arabic": "تعظيم القرآن"
+ },
+ {
+  "key": "How-To Guides",
+  "files": [
+   "iPhone/Islam/Fiqh/HowToGuides.swift",
+   "iPhone/Islam/IslamView.swift"
+  ],
+  "examples": [
+   "“Pillars & Beliefs” holds the Five Pillars of Islam and the Six Pillars of Iman. “How-To Guides” walks you through wudu, salah, Jumuah and more.",
+   "The search bar at the foot of the tab finds resources by name, and the titles and text of the articles in Pillars & Beliefs, the How-To Guides and Proving Islam."
+  ],
+  "arabic": "الأدلة العملية"
+ },
+ {
+  "key": "Hud 11:41",
+  "files": [
+   "(data shown via .localizedDisplay)"
+  ],
+  "examples": [
+   "Exactly one: مَجۡر۪ىٰهَا in Hud 11:41. Hafs by ash-Shatibiyyah has no other imalah and no taqleel, which is why the mushaf can mark it as a one-off.",
+   "‎الإمالة, in مَجۡر۪ىٰهَا at Hud 11:41, and nowhere else. The fatha on the ر and the alif after it lean toward a kasra and a ya, so the syllable lands between raa and ree without arriving at either. Hafs by ash-Shatibiyyah has this one imalah and no taqleel anywhere, which is why the mushaf can afford to mark it with a small sign under the ر: it only has to do the job once."
+  ],
+  "arabic": "هود ١١:٤١"
+ },
+ {
+  "key": "IMPORTANT ISLAMIC DATES",
+  "files": [
+   "iPhone/Adhan/Calendar/CalendarView.swift"
+  ],
+  "examples": [
+   "the stepper at the top of IMPORTANT ISLAMIC DATES"
+  ],
+  "arabic": "المناسبات الإسلامية المهمة"
+ },
+ {
+  "key": "Ibn Amir",
+  "files": [
+   "iPhone/Islam/Qiraat/QiraatTextAnalysis.swift"
+  ],
+  "examples": [
+   "The two narrators of Ibn Amir differ from one another in a number of places, so the Damascene reading is normally studied as the pair rather than as one.",
+   "Hisham ibn Ammar was the khatib of Damascus and its mufti, as well as a hadith scholar of standing from whom al-Bukhari narrates. He received the Damascene reading through the chain from Ibn Amir and taught it in the Umayyad Mosque."
+  ],
+  "arabic": "ابن عامر"
+ },
+ {
+  "key": "Ibn Dhakwan",
+  "files": [
+   "iPhone/Islam/Qiraat/QiraatTextAnalysis.swift"
+  ],
+  "examples": [
+   "Both of his canonical narrators, Hisham and Ibn Dhakwan, came generations later and received the reading through intermediate teachers.",
+   "Every hamzah in full for Ibn Dhakwan. Hisham softens a final hamzah at a stop, and may slip an alef between two hamzahs in one word, ءَٰا۬نتَ."
+  ],
+  "arabic": "ابن ذكوان"
+ },
+ {
+  "key": "Ibn Jammaz",
+  "files": [
+   "iPhone/Islam/Qiraat/QiraatTextAnalysis.swift"
+  ],
+  "examples": [
+   "Ibn Jammaz read on Abu Ja'far and, like Ibn Wardan, also on Nafi. He taught in Madinah and is the second of the two narrators through whom Abu Ja'far's reading reaches us."
+  ],
+  "arabic": "ابن جماز"
+ },
+ {
+  "key": "Ibn Kathir",
+  "files": [
+   "iPhone/Islam/Beliefs/ScholarsViews.swift",
+   "iPhone/Islam/Qiraat/QiraatTextAnalysis.swift"
+  ],
+  "examples": [
+   "The plural mim is joined with a waw before a vowel, قُلُوبِهِمُۥ, رَزَقۡنَٰهُمُۥ, as Ibn Kathir reads it.",
+   "Hafs and Shu'ba, both from Asim, read مَٰلِكِ with the alif. Nafi, Ibn Kathir and Abu Amr read مَلِكِ. A different transmitted reading is not a mistake, which is why certainty comes before correction."
+  ],
+  "arabic": "ابن كثير"
+ },
+ {
+  "key": "Ibn Wardan",
+  "files": [
+   "iPhone/Islam/Qiraat/QiraatTextAnalysis.swift"
+  ],
+  "examples": [
+   "Set against Hafs, the different-word bucket runs from 136 words (Shu'bah, who studied under the same teacher) to 1,561 (Ibn Wardan). Even the largest is two percent of the text, and every one of those words was transmitted, not chosen.",
+   "The percentage is not a measure of how much of the Quran a riwayah shares with Hafs: it is a measure of how much of it is spelled identically in print. Ibn Wardan sits lowest at 63.86 percent because the Madani print writes almost every definite article differently, not because a third of his reading is different."
+  ],
+  "arabic": "ابن وردان"
+ },
+ {
+  "key": "Idgham Shafawi",
+  "files": [
+   "iPhone/Islam/Tajweed/TajweedTopics.swift"
+  ],
+  "examples": [
+   "2. Idgham Shafawi: مۡ‎ + م, merge the two meems with ghunnah. Example: لَهُم مَّا",
+   "Idgham Shafawi occurs when Meem Sakinah (مْ) is followed by another Meem (م)."
+  ],
+  "arabic": "الإدغام الشفوي"
+ },
+ {
+  "key": "Idhaar Shafawi",
+  "files": [
+   "iPhone/Islam/Tajweed/TajweedTopics.swift"
+  ],
+  "examples": [
+   "3. Idhaar Shafawi: مۡ‎ + any letter except ب or م, pronounce the meem clearly. Example: لَكُمۡ فِيهَا",
+   "Idhaar Shafawi occurs when Meem Sakinah (مْ) is followed by any letter other than Ba (ب) or Meem (م)."
+  ],
+  "arabic": "الإظهار الشفوي"
+ },
+ {
+  "key": "Ikhfaa Shafawi",
+  "files": [
+   "iPhone/Islam/Tajweed/TajweedTopics.swift"
+  ],
+  "examples": [
+   "1. Ikhfaa Shafawi: مۡ‎ + ب, hide the meem with ghunnah. Example: أَم بِهِۦ",
+   "Ikhfaa Shafawi occurs when Meem Sakinah (مْ) is followed by the letter Ba (ب)."
+  ],
+  "arabic": "الإخفاء الشفوي"
+ },
+ {
+  "key": "In Congregation",
+  "files": [
+   "iPhone/Adhan/Prayers/PrayerTrackerCard.swift",
+   "iPhone/Adhan/Prayers/PrayerTrackerPages.swift"
+  ],
+  "examples": [
+   "Also Track adds an In Congregation choice to a prayed prayer, and a row for the twelve regular rak'at, Witr, Duha and the night prayer. Both are off until you turn them on, and a Sunnah prayer left is never counted as missed."
+  ],
+  "arabic": "في جماعة"
+ },
+ {
+  "key": "In the Quran",
+  "files": [
+   "iPhone/Settings/Model/Settings.swift"
+  ],
+  "examples": [
+   "In the Quran it usually carries a small dagger alif above it (ىٰ), as in عَلَىٰ and مُوسَىٰ. That tiny mark IS the alif sound, written small. The examples below practise it.",
+   "In the Quran the alif maqSoorah very often carries a small dagger alif (ىٰ). That tiny mark IS the alif: it writes the 2-count \"aa\" the letter stands for. So it is left off exactly where the \"aa\" is not said: before a word that opens with hamzatul waSl, where the long vowel would run into a sukoon, and after a tanween (هُدٗى)."
+  ],
+  "arabic": "في القرآن"
+ },
+ {
+  "key": "Include English",
+  "files": [
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "Show Transliteration, on English Text, writes each ayah in Latin letters beneath the Arabic, so it can be read aloud before the script is familiar. Hafs only, with Include English on."
+  ],
+  "arabic": "تضمين الإنجليزية"
+ },
+ {
+  "key": "Inheritance Calculator",
+  "files": [
+   "iPhone/Islam/Fiqh/InheritanceView.swift",
+   "iPhone/Islam/IslamView.swift"
+  ],
+  "examples": [
+   "The Inheritance Calculator works in exact fractions, applies ‘awl and radd where the shares call for them, and names each relative who is present but does not inherit, with the reason."
+  ],
+  "arabic": "حاسبة المواريث"
+ },
+ {
+  "key": "Instead of",
+  "files": [
+   "iPhone/Islam/Tajweed/TajweedFoundations.swift",
+   "iPhone/Islam/Tajweed/TajweedLessons.swift"
+  ],
+  "examples": [
+   "Iqlab is the exception that proves the system, because it does not use a shape at all. Instead of leaving you to infer the sound, the script deletes one of the two strokes and prints a small meem where the nun would have been. صُمُّۢ بُكۡمٌ shows both conventions in five letters: a small meem on the first word, and a plain stacked dammatayn on the second."
+  ],
+  "arabic": "بدل أن"
+ },
+ {
+  "key": "Ishaq and Idris",
+  "files": [
+   "iPhone/Islam/Qiraat/QiraatTextAnalysis.swift"
+  ],
+  "examples": [
+   "This is why his name appears twice in the guide: Khalaf an Hamzah is a riwayah of the sixth reading, while Khalaf al-Ashir (Khalaf the Tenth) is a reading of its own, with its own two narrators, Ishaq and Idris.",
+   "Khalaf al-Ashir is the clearest case. Ishaq and Idris come out of this comparison as one identical text, 77,432 words with not a single difference, and that is genuinely what the printed mushafs say. It does not mean the two transmissions are the same recitation. What separates them, and much of what separates Khalaf al-Ashir from Hamzah whose riwayah he himself narrated, lives in sakt, in stopping, and in the other recitation-level matters listed above. Ibn al-Jazari's al-Durrah records Khalaf al-Ashir's usul as differences from ash-Shatibiyyah for the same reason: the reading is defined by how it is recited, not only by how it is written."
+  ],
+  "arabic": "إسحاق وإدريس"
+ },
+ {
+  "key": "Islam Settings",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/Pages/SettingsIslamView.swift",
+   "iPhone/Settings/SettingsSearch.swift",
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "“Text Size” sizes everything on the Islam tab. “Arabic Font” sets the face for the duas, the dhikr, the 99 Names and the alphabet; the Quran and the hadith books keep their own. The gear at the top of the tab opens Islam Settings."
+  ],
+  "arabic": "إعدادات الإسلام"
+ },
+ {
+  "key": "Islamic Journal",
+  "files": [
+   "iPhone/Islam/Daily/JournalView.swift",
+   "iPhone/Islam/IslamView.swift"
+  ],
+  "examples": [
+   "Give any ayah a note or a highlight color. Either one bookmarks it, and your notes also gather in the Islamic Journal.",
+   "The Islamic Journal collects the notes you leave on ayahs and hadiths beside your own entries. %@"
+  ],
+  "arabic": "اليوميات الإسلامية"
+ },
+ {
+  "key": "Islamic Midnight",
+  "files": [
+   "iPhone/Adhan/Location/PrayerMapView.swift",
+   "iPhone/Adhan/Prayers/PrayerList.swift",
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "The Optional Times pill under the prayer list turns on Duhaa, Islamic Midnight, and the Last Third of the Night right there. They show in the app only, never in widgets.",
+   "Islamic Midnight is halfway between Maghrib and the next Fajr. It marks the end of Isha and is used for calculating parts of the night.\n\nFormula: Islamic Midnight = Maghrib + ((Fajr - Maghrib) / 2)\n\n\"When you pray Isha, its time is until half of the night has passed\" (Muslim 612a)."
+  ],
+  "arabic": "منتصف الليل الشرعي"
+ },
+ {
+  "key": "Keep On",
+  "files": [
+   "iPhone/Settings/Model/SettingsAdhan.swift"
+  ],
+  "examples": [
+   "More than 48 mi from home, with “Automatic Traveling Mode” on, Traveling Mode turns on and asks you to “Keep On” or “Turn Off” (which also stops the automatic switch). Prayers then show shortened and combined, and “Show Full Prayers” on its page brings each back to its own time."
+  ],
+  "arabic": "إبقاؤه مفعّلًا"
+ },
+ {
+  "key": "Keep Screen On",
+  "files": [
+   "iPhone/Quran/Sheets/AyahSheets.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift",
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "With Keep Sheet Open on, tafsir and the other tools open on top of an ayah's actions instead of replacing them, so you come back to where you were. Keep Sheet Open While Playing, in the actions themselves, leaves them up while Play This Ayah or Repeat Ayah recites (Play From Ayah still closes them), and Keep Screen On stops the screen from sleeping while they are open.",
+   "The screen stays awake while an ayah's actions sheet is open. To keep it awake whenever a surah is open, use Keep Screen On in Appearance, Look and Feel."
+  ],
+  "arabic": "إبقاء الشاشة مضاءة"
+ },
+ {
+  "key": "Keep Sheet Open",
+  "files": [
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "With Keep Sheet Open on, tafsir and the other tools open on top of an ayah's actions instead of replacing them, so you come back to where you were. Keep Sheet Open While Playing, in the actions themselves, leaves them up while Play This Ayah or Repeat Ayah recites (Play From Ayah still closes them), and Keep Screen On stops the screen from sleeping while they are open."
+  ],
+  "arabic": "إبقاء النافذة مفتوحة"
+ },
+ {
+  "key": "Keep Sheet Open While Playing",
+  "files": [
+   "iPhone/Quran/Sheets/AyahSheets.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "With Keep Sheet Open on, tafsir and the other tools open on top of an ayah's actions instead of replacing them, so you come back to where you were. Keep Sheet Open While Playing, in the actions themselves, leaves them up while Play This Ayah or Repeat Ayah recites (Play From Ayah still closes them), and Keep Screen On stops the screen from sleeping while they are open."
+  ],
+  "arabic": "إبقاء النافذة مفتوحة أثناء التشغيل"
+ },
+ {
+  "key": "Keyword Results",
+  "files": [
+   "iPhone/Hadith/Search/HadithSearchFilters.swift",
+   "iPhone/Hadith/Views/HadithBookView.swift",
+   "iPhone/Hadith/Views/HadithView.swift",
+   "iPhone/Islam/Arabic/ArabicView.swift",
+   "iPhone/Islam/Dua/AdhkarView.swift",
+   "iPhone/Islam/Dua/DuaView.swift",
+   "iPhone/Islam/Names/NamesView.swift",
+   "iPhone/Quran/QuranView.swift",
+   "iPhone/Quran/Search/QuranSearchFilters.swift"
+  ],
+  "examples": [
+   "Ayah search also matches by meaning, on your device, so a phrase like “being patient in hardship” finds ayahs that never use those words. When both kinds of result exist, a switch chooses between Keyword Results and AI Results, and the search filters choose which one opens first."
+  ],
+  "arabic": "نتائج الكلمات المفتاحية"
+ },
+ {
+  "key": "Khalaf and Khallad",
+  "files": [
+   "iPhone/Islam/Qiraat/QiraatTextAnalysis.swift"
+  ],
+  "examples": [
+   "The differences between Khalaf and Khallad are few, and the best known is the sakt, the short pause without breath before a hamzah. Khalaf pauses on the consonant before it in أل, in شَيۡء and at the end of a detached word (قَدۡ أَفۡلَحَ); Khallad never pauses on the detached word, and on أل and شَيۡء both ways are transmitted from him, with the pause and without. At a stop he eases the hamzah exactly as Khalaf does, so his recordings also end each ayah without it while the mushaf keeps it."
+  ],
+  "arabic": "خلف وخلاد"
+ },
+ {
+  "key": "Last Listened",
+  "files": [
+   "iPhone/Quran/Reader/QuranHistoryRows.swift"
+  ],
+  "examples": [
+   "Widgets for the Ayah of the Day, the Reminder of the Day, a Name of Allah, your Last Read Ayah, your Last Listened Surah, and a Chosen Ayah you pick yourself. Tapping an ayah widget opens that ayah."
+  ],
+  "arabic": "آخر استماع"
+ },
+ {
+  "key": "Last Listened Surah",
+  "files": [
+   "Widget/Quran/LastListenedSurahWidget.swift",
+   "Widget/Quran/QuranProvider.swift",
+   "iPhone/Quran/QuranView.swift"
+  ],
+  "examples": [
+   "Widgets for the Ayah of the Day, the Reminder of the Day, a Name of Allah, your Last Read Ayah, your Last Listened Surah, and a Chosen Ayah you pick yourself. Tapping an ayah widget opens that ayah."
+  ],
+  "arabic": "آخر سورة استمعت إليها"
+ },
+ {
+  "key": "Last Read Ayah",
+  "files": [
+   "Widget/Quran/LastReadAyahWidget.swift",
+   "Widget/Quran/QuranProvider.swift",
+   "iPhone/Quran/QuranView.swift"
+  ],
+  "examples": [
+   "Your Summary comes first, with the “Last Read Ayah” and the “Ayah of the Day”, then every surah: tap one to read it. Hold a surah for “Favorite Surah” to keep it under Favorites. Ayahs you bookmark gather under Bookmarks.",
+   "Widgets for the Ayah of the Day, the Reminder of the Day, a Name of Allah, your Last Read Ayah, your Last Listened Surah, and a Chosen Ayah you pick yourself. Tapping an ayah widget opens that ayah."
+  ],
+  "arabic": "آخر آية قرأتها"
+ },
+ {
+  "key": "Last Read Hadith",
+  "files": [
+   "iPhone/Hadith/Views/HadithView.swift"
+  ],
+  "examples": [
+   "Your Summary keeps the “Hadith of the Day” and the “Last Read Hadith”. Below it, %lld collections sit in four groups, from The Six Books to Other Books. Tap a book for its chapters."
+  ],
+  "arabic": "آخر حديث مقروء"
+ },
+ {
+  "key": "Last Third",
+  "files": [
+   "(data shown via .localizedDisplay)"
+  ],
+  "examples": [
+   "The Optional Times pill under the prayer list turns on Duhaa, Islamic Midnight, and the Last Third of the Night right there. They show in the app only, never in widgets."
+  ],
+  "arabic": "الثلث الأخير"
+ },
+ {
+  "key": "Last Third of the Night",
+  "files": [
+   "iPhone/Adhan/Location/PrayerMapView.swift",
+   "iPhone/Adhan/Prayers/PrayerList.swift"
+  ],
+  "examples": [
+   "The Optional Times pill under the prayer list turns on Duhaa, Islamic Midnight, and the Last Third of the Night right there. They show in the app only, never in widgets."
+  ],
+  "arabic": "الثلث الأخير من الليل"
+ },
+ {
+  "key": "Legend",
+  "files": [
+   "iPhone/Quran/Reader/SurahView.swift",
+   "iPhone/Quran/Tajweed/TajweedLegendView.swift"
+  ],
+  "examples": [
+   "“Show Tajweed Colors” is on from the start. Tap the “Legend” pill in the reader for the full guide to the colors, or hold it for a quick look.",
+   "Open a rule in the Legend, in the basic list or on its full card, and an example ayah follows its note: one ayah in the Quran face with only that rule's letters colored. A riwayah's rules show the earliest short ayah its printed mushaf colors with them, and how many words of its text the rule colors; the comparison of all riwayat carries the same counts."
+  ],
+  "arabic": "مفتاح الألوان"
+ },
+ {
+  "key": "Letter Qualities",
+  "files": [
+   "(data shown via .localizedDisplay)"
+  ],
+  "examples": [
+   "‎مستحق الحرف is what the letter is owed because of where it happens to sit. The noon of مِن is an ordinary noon said in isolation; put ب after it and it becomes a mim hidden behind a hum. The alif of مَا is two counts alone; put a hamzah after it at the head of the next word and Hafs holds it four or five. Nothing about the letter itself changed, only its neighbourhood. Every rule from the Nun Sakin chapter onward lives in this second category; the two chapters before it, Articulation Points and Letter Qualities, are the haqq half of the same pair. That is exactly why none of the neighbour rules appear in an alphabet chart and all of them appear the moment letters stand next to each other."
+  ],
+  "arabic": "صفات الحروف"
+ },
+ {
+  "key": "Listen All",
+  "files": [
+   "iPhone/Helpers/System/ArabicSpeech.swift",
+   "iPhone/Settings/Pages/TipsAndTricks.swift"
+  ],
+  "examples": [
+   "In the duas and the dhikr, Listen All reads a whole section aloud in Arabic and highlights the line being read. For a better voice, download an Enhanced Arabic voice under Accessibility, Spoken Content, Voices in the iPhone's Settings."
+  ],
+  "arabic": "الاستماع إلى الكل"
+ },
+ {
+  "key": "Listen for",
+  "files": [
+   "iPhone/Islam/Tajweed/TajweedLessons.swift"
+  ],
+  "examples": [
+   "There is a classical way to find a letter's makhraj yourself, and it takes about five seconds. Put the letter in sukoon, prefix a hamza carrying a fatha, and say it slowly: أَقْ، أَبْ، أَسْ. Listen for the point where the sound is cut off. That point is the exit. For letters whose sound trails away instead of stopping cleanly, double the letter instead and feel where the friction sits: أَسّ، أَشّ. Ibn al-Jazari gives exactly this method, and it beats any diagram, because it is your own mouth reporting rather than someone else's description.",
+   "Two mims become one doubled mim. Listen for a single held sound, not two closures."
+  ],
+  "arabic": "انتبه إلى"
+ },
+ {
+  "key": "Lock Screen",
+  "files": [
+   "iPhone/Settings/Pages/TipsAndTricks.swift"
+  ],
+  "examples": [
+   "Add the Chosen Ayah widget to your Home Screen or Lock Screen, then hold it and choose Edit Widget. Show one ayah, a list of ayahs that take turns, a random bookmark or a random ayah, changing every 15 minutes, every hour or every day. Pick from your bookmarks, or type a reference such as 2:255 or Yaseen 9.",
+   "Add the Resume Recitation control to Control Center, the Lock Screen, or the Action button, and it plays the last surah you were listening to, from where you left off, without opening the app."
+  ],
+  "arabic": "شاشة القفل"
+ },
+ {
+  "key": "Look and Feel",
+  "files": [
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "Hold a question for a quick switch, tap the arrow beside the header to fold them away, and use each tab's settings page (or Show on Every Tab, in Look and Feel) to hide them.",
+   "The screen stays awake while an ayah's actions sheet is open. To keep it awake whenever a surah is open, use Keep Screen On in Appearance, Look and Feel."
+  ],
+  "arabic": "الشكل والطابع"
+ },
+ {
+  "key": "Madd Lazim",
+  "files": [
+   "iPhone/Quran/Tajweed/TajweedRules.swift"
+  ],
+  "examples": [
+   "In the Quran, this Madd can fall under 3 main long-Madd cases from Tajweed: Madd Muttassil, Madd Munfasil, and Madd Lazim.",
+   "Madd Lazim (مَدّ لَازِم) means \"necessary Madd.\" Lazim means necessary or required because the Madd letter is followed by a permanent sukoon or shaddah, so it is lengthened 6 counts."
+  ],
+  "arabic": "المد اللازم"
+ },
+ {
+  "key": "Madd Leen",
+  "files": [
+   "iPhone/Islam/Tajweed/TajweedTopics.swift"
+  ],
+  "examples": [
+   "Ending madd applies when you stop on a word and the ending sound changes because of waqf. It includes Madd Aarid lis-Sukoon and Madd Leen.",
+   "Length: 2, 4, or 6 counts. Madd Leen should follow the stopping style you choose for Madd Aarid lis-Sukoon, and should not be longer than it."
+  ],
+  "arabic": "مدّ اللين"
+ },
+ {
+  "key": "Madd Munfasil",
+  "files": [
+   "iPhone/Quran/Tajweed/TajweedRules.swift"
+  ],
+  "examples": [
+   "A special, “ruled” (hukmi) form of Madd Munfasil. The madd letter and the hamzah are written inside one word, so it looks like Madd Muttasil, but it is recited as a separated madd.",
+   "Length: 2, 4, or 5 counts (treated exactly like Madd Munfasil; be consistent)"
+  ],
+  "arabic": "المد المنفصل"
+ },
+ {
+  "key": "Madd Munfasil Hukmi",
+  "files": [
+   "iPhone/Islam/Tajweed/TajweedTopics.swift"
+  ],
+  "examples": [
+   "Because the hamzah is in the following word, scholars classify this separately from muttasil. Allowed lengths vary by riwayah, so learners should follow one taught pattern and avoid switching counts randomly in the same recitation. This color also marks Madd Munfasil Hukmi (\"ruled\" separated). In a handful of words, the vocative يَٰٓ (\"O…\") and demonstrative هَٰٓ (\"these…\") particles are written joined to a following hamzah, such as يَٰٓأَيُّهَا and هَٰٓؤُلَآءِ; there, only that superscript-particle sequence is treated as separated even though it sits inside one written word.",
+   "Since both elements occur inside one word, this is treated as a stronger extension than natural madd. Keep the elongation measured and stable according to your riwayah so the hamzah after it remains clear and not swallowed. Note one exception: in the يَٰٓ/هَٰٓ particle words (e.g. يَٰٓأَيُّهَا, هَٰٓؤُلَآءِ) the superscript madd before the hamzah is recited as Madd Munfasil Hukmi instead, but any real madd letter + hamzah elsewhere in those same words (e.g. لَآءِ in هَٰٓؤُلَآءِ) stays muttasil."
+  ],
+  "arabic": "المدّ المنفصل الحكمي"
+ },
+ {
+  "key": "Madd Muttasil",
+  "files": [
+   "iPhone/Quran/Tajweed/TajweedRules.swift"
+  ],
+  "examples": [
+   "A special, “ruled” (hukmi) form of Madd Munfasil. The madd letter and the hamzah are written inside one word, so it looks like Madd Muttasil, but it is recited as a separated madd.",
+   "Not every dagger alif + hamzah is hukmi. When both sit inside one true word (no joined يَا/هَا particle), it is ordinary Madd Muttasil, for example أُوْلَٰٓئِكَ, مَلَٰٓئِكَة, and إِسۡرَٰٓءِيل."
+  ],
+  "arabic": "المد المتصل"
+ },
+ {
+  "key": "Makki and Madani",
+  "files": [
+   "iPhone/Quran/Search/QuranSearchFilters.swift"
+  ],
+  "examples": [
+   "Off, the row keeps to your collections, Makki and Madani, and Best Match, plus any filter set here. The More button in the row does the same. For the Hadith search too."
+  ],
+  "arabic": "المكية والمدنية"
+ },
+ {
+  "key": "Manual Offsets",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift",
+   "iPhone/Settings/Pages/TabTutorials.swift",
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "Manual Offsets move any prayer by up to 190 minutes either way, and the Hijri date by up to three days."
+  ],
+  "arabic": "تعديلات يدوية"
+ },
+ {
+  "key": "Mark the Whole Day",
+  "files": [
+   "iPhone/Adhan/Prayers/PrayerTrackerView.swift"
+  ],
+  "examples": [
+   "In the Day view, Mark the Whole Day answers every prayer still open at once and leaves the answers already given. Touch and hold a day of the month for the same choices.",
+   "Mark the Whole Day, in the Day view or by holding a day of the month, answers every prayer still open at once and leaves the answers already given."
+  ],
+  "arabic": "تسجيل اليوم كله"
+ },
+ {
+  "key": "Masjid Locator",
+  "files": [
+   "iPhone/Islam/Content/MasjidView.swift",
+   "iPhone/Islam/IslamView.swift"
+  ],
+  "examples": [
+   "Islam tab, Masjid Locator and Halal Food Locator",
+   "The Masjid Locator and the Halal Food Locator search near you, or wherever you move the map with Search This Area. Tap a result for directions in Maps, and touch and hold it to copy its name or address."
+  ],
+  "arabic": "دليل المساجد"
+ },
+ {
+  "key": "Meem Sakinah",
+  "files": [
+   "iPhone/Islam/Arabic/ArabicLetterTraits.swift",
+   "iPhone/Islam/Tajweed/TajweedFoundations.swift",
+   "iPhone/Islam/Tajweed/TajweedTopics.swift"
+  ],
+  "examples": [
+   "Idgham Shafawi occurs when Meem Sakinah (مْ) is followed by another Meem (م).",
+   "Idhaar Shafawi occurs when Meem Sakinah (مْ) is followed by any letter other than Ba (ب) or Meem (م)."
+  ],
+  "arabic": "الميم الساكنة"
+ },
+ {
+  "key": "Miracles of the Quran",
+  "files": [
+   "iPhone/Islam/IslamView.swift",
+   "iPhone/Islam/Proofs/MiraclesView.swift"
+  ],
+  "examples": [
+   "Credit for the Miracles of the Quran articles goes to miracles-of-quran.com, whose author waived rights on the site's own prose; the illustrations stream from Tilawa's copy, by my friend Jamil Hammoudeh, with his permission, and third-party excerpts are kept short and attributed to their sources",
+   "Miracles of the Quran: miracles-of-quran.com and Tilawa"
+  ],
+  "arabic": "معجزات القرآن"
+ },
+ {
+  "key": "More Actions…",
+  "files": [
+   "iPhone/Quran/Reader/AyahRow.swift"
+  ],
+  "examples": [
+   "five actions plus More Actions…, which opens the full actions sheet",
+   "the ayah ⋯ menu's Play This Ayah; More Actions… for the rest; a double tap on the ayah's text still plays it"
+  ],
+  "arabic": "إجراءات أخرى…"
+ },
+ {
+  "key": "More Detail",
+  "files": [
+   "iPhone/Quran/Tajweed/TajweedLegendView.swift"
+  ],
+  "examples": [
+   "Open the tajweed guide from the reader's Legend pill, or from Customize Tajweed Colors in Quran Settings. Under More Detail, tap a rule's card to show or hide that rule, and use the color well on the card to recolor it."
+  ],
+  "arabic": "مزيد من التفاصيل"
+ },
+ {
+  "key": "More Resources",
+  "files": [
+   "iPhone/Islam/IslamView.swift"
+  ],
+  "examples": [
+   "The ⋯ menu shows the resources as a grid or a list, grouped by subject (Learn, Remembrance, Faith & Proofs and more) or in one section. In Simple Mode, the Tools wait under “More Resources”."
+  ],
+  "arabic": "المزيد من الموارد"
+ },
+ {
+  "key": "Morning & Evening",
+  "files": [
+   "(data shown via .localizedDisplay)"
+  ],
+  "examples": [
+   "“Dua & Supplications” holds Morning & Evening and all of Hisn al-Muslim. “Dhikr & Remembrances”, the “Tasbih Counter” and the “99 Names of Allah” sit beside it."
+  ],
+  "arabic": "الصباح والمساء"
+ },
+ {
+  "key": "Most Common",
+  "files": [
+   "iPhone/Settings/Model/SettingsQuran.swift"
+  ],
+  "examples": [
+   "Every riwayah picker ends in Sort By. Default keeps one submenu per qiraah, the imams in alphabetical order. Alphabetical and Most Common list every riwayah in one list, by the narrator's name or by how widely it is recited. Date orders the qiraat by the year each imam died, and 7 + 3 does the same with the Seven before the Three. Hafs an Asim stays the first row in every order."
+  ],
+  "arabic": "الأكثر شيوعًا"
+ },
+ {
+  "key": "My Time",
+  "files": [
+   "iPhone/Adhan/Location/PrayerMapView.swift"
+  ],
+  "examples": [
+   "“City Time” shows each prayer on %@’s local clock, the time you’d see if you were there. “My Time” converts those same moments to your current time zone."
+  ],
+  "arabic": "توقيتي"
+ },
+ {
+  "key": "NEED A HAND?",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "A few questions %@, each opening what answers it: a setting, or the tab's tutorial. The arrow beside NEED A HAND? on the tab folds them away."
+  ],
+  "arabic": "هل تحتاج إلى مساعدة؟"
+ },
+ {
+  "key": "Nagging Mode",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/Pages/NaggingModeView.swift",
+   "iPhone/Settings/Pages/SettingsAdhanView.swift",
+   "iPhone/Settings/Pages/TabTutorials.swift",
+   "iPhone/Settings/Pages/TipsAndTricks.swift",
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "“Nagging Mode” asks “Did you pray?” until you answer, to help you pray on time. Tips & Tricks has everything else the prayer times can do, each with where to find it.",
+   "Need Help Praying? on the prayer times opens Nagging Mode, Need Help Reading? on the Quran answers with Arabic Beginner Mode, and Reading in One Language? on the hadith picks the Arabic, the English or both."
+  ],
+  "arabic": "وضع التذكير المتكرر"
+ },
+ {
+  "key": "Name of Allah",
+  "files": [
+   "Widget/Quran/DailyWidgets.swift",
+   "iPhone/Helpers/AskAI/AskAISources.swift",
+   "iPhone/Islam/Daily/DailyReminders.swift"
+  ],
+  "examples": [
+   "Tap a Name of Allah in the grid, or choose View Fullscreen from any row's menu, to fill the screen with it. Tap a name's number badge to favorite it, and the shuffle in the header to land on one at random.",
+   "Widgets for the Ayah of the Day, the Reminder of the Day, a Name of Allah, your Last Read Ayah, your Last Listened Surah, and a Chosen Ayah you pick yourself. Tapping an ayah widget opens that ayah."
+  ],
+  "arabic": "اسم من أسماء الله"
+ },
+ {
+  "key": "Need Help Praying?",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift"
+  ],
+  "examples": [
+   "Need Help Praying? on the prayer times opens Nagging Mode, Need Help Reading? on the Quran answers with Arabic Beginner Mode, and Reading in One Language? on the hadith picks the Arabic, the English or both.",
+   "Need Help Praying? on the prayer times opens Nagging Mode."
+  ],
+  "arabic": "هل تحتاج إلى عون على الصلاة؟"
+ },
+ {
+  "key": "Need Help Reading?",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift"
+  ],
+  "examples": [
+   "Need Help Praying? on the prayer times opens Nagging Mode, Need Help Reading? on the Quran answers with Arabic Beginner Mode, and Reading in One Language? on the hadith picks the Arabic, the English or both.",
+   "Need Help Reading? on the Quran answers with Arabic Beginner Mode."
+  ],
+  "arabic": "هل تحتاج إلى مساعدة في القراءة؟"
+ },
+ {
+  "key": "Next",
+  "files": [
+   "iPhone/Hadith/Views/HadithBookView.swift",
+   "iPhone/Islam/Arabic/ArabicReadingTestViews.swift",
+   "iPhone/Islam/Arabic/QuranWordsViews.swift",
+   "iPhone/Islam/Dua/DuaSessionView.swift",
+   "iPhone/Islam/Tajweed/TajweedLessons.swift",
+   "iPhone/Islam/Tajweed/TajweedTestViews.swift",
+   "iPhone/Quran/Reader/SurahView.swift",
+   "iPhone/Settings/Pages/TipsAndTricks.swift"
+  ],
+  "examples": [
+   "“When is Asr in %@”, “Current prayer in %@”, and “Next prayer in %@” are answered aloud without opening the app.",
+   "Each hadith shows its number and book, the Arabic, the narrator and the English, then its grade. “Previous” and “Next” move between chapters. Tap the chapter title for “Choose Chapter”."
+  ],
+  "arabic": "التالي"
+ },
+ {
+  "key": "No Notification",
+  "files": [
+   "iPhone/Adhan/Prayers/PrayerList.swift"
+  ],
+  "examples": [
+   "Tap a prayer's bell to switch between “Notification”, “Prenotification” and “No Notification”, or hold it to choose one. In the Grid and Split layouts, open the prayer first. “Adhan Sound” and everything else is in Notifications."
+  ],
+  "arabic": "بلا إشعار"
+ },
+ {
+  "key": "Notification",
+  "files": [
+   "iPhone/Adhan/Prayers/PrayerList.swift",
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "Tap a prayer under Prayer Notifications to choose between the adhan, a short excerpt of it, and an ordinary tone: a full adhan at Maghrib and a quiet tone at Fajr, if that suits your house.",
+   "The app reads Silent Mode before it starts an adhan: silenced, it offers a Play button rather than playing to no one. Play in Silent Mode lets the in-app adhan sound anyway. Notifications outside the app always follow the iPhone's own sound settings."
+  ],
+  "arabic": "إشعار"
+ },
+ {
+  "key": "Notification Settings",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift",
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "Allow Notifications is off in Notification Settings, so these reminders cannot arrive until it is on.",
+   "Allow Notifications is off in Notification Settings, so this reminder cannot arrive until it is on."
+  ],
+  "arabic": "إعدادات الإشعارات"
+ },
+ {
+  "key": "Now Playing",
+  "files": [
+   "iPhone/Quran/Sheets/CustomRangeAyahsSheet.swift"
+  ],
+  "examples": [
+   "Play Custom Range takes a range of ayahs or of pages, with Whole Page and Whole Surah a tap away, repeats Each Ayah and the Whole Range as many times as you set (or forever), and lists every ayah of the range before you press Play Range. While it plays, the range line under the reciter on the Now Playing bar opens the same list, with the ayah being recited marked and kept in view. Tap any ayah there to jump to it.",
+   "Tap the reader's play button for “Play Surah” and “Choose Reciter”; in Hafs, hold it for “Play Custom Range”. While a recitation plays, the Now Playing bar stays at the foot of every tab."
+  ],
+  "arabic": "قيد التشغيل"
+ },
+ {
+  "key": "Open Settings",
+  "files": [
+   "iPhone/Adhan/AdhanView.swift",
+   "iPhone/Adhan/Location/MapView.swift",
+   "iPhone/Adhan/Location/PermissionsSheet.swift",
+   "iPhone/Quran/Reader/QuranPlannerView.swift",
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "Notifications are turned off. Open Settings to enable them."
+  ],
+  "arabic": "فتح الإعدادات"
+ },
+ {
+  "key": "Open the App On",
+  "files": [
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "Open the App On picks where the app lands: Adhan, Quran, Hadith, or Islam. A notification or a reminder you tap still opens where it points."
+  ],
+  "arabic": "فتح التطبيق على"
+ },
+ {
+  "key": "Optional Times",
+  "files": [
+   "iPhone/Adhan/Prayers/PrayerList.swift"
+  ],
+  "examples": [
+   "The Optional Times pill under the prayer list turns on Duhaa, Islamic Midnight, and the Last Third of the Night right there. They show in the app only, never in widgets."
+  ],
+  "arabic": "أوقات اختيارية"
+ },
+ {
+  "key": "Other Options",
+  "files": [
+   "iPhone/Quran/Mushaf/MushafReader.swift",
+   "iPhone/Quran/Reader/SurahView.swift"
+  ],
+  "examples": [
+   "Tap play for Choose Reciter and Play Ayah by Ayah, and under Other Options a custom range, a random ayah, a random reciter, and Repeat Surah up to 20 times."
+  ],
+  "arabic": "خيارات أخرى"
+ },
+ {
+  "key": "PRAYER TRACKER",
+  "files": [
+   "iPhone/Adhan/Prayers/PrayerTrackerCard.swift",
+   "iPhone/Settings/Pages/TabSections.swift"
+  ],
+  "examples": [
+   "PRAYER TRACKER until a prayer is marked within 14 days, or it is turned on"
+  ],
+  "arabic": "متتبّع الصلاة"
+ },
+ {
+  "key": "Page Text",
+  "files": [
+   "iPhone/Quran/Reader/SurahView.swift"
+  ],
+  "examples": [
+   "Page Text is set to %@ in the reader's title menu, so the Arabic font, tajweed colors and marks set here do not change your pages. They still apply to ayah sheets, search results and the List layout.",
+   "You are reading in Pages, and a page always shows its Page Text (in the reader's title menu). This switch is for ayah sheets, search results and the List layout."
+  ],
+  "arabic": "نص الصفحة"
+ },
+ {
+  "key": "Persian, Urdu, Kurdish and Pashto",
+  "files": [
+   "(data shown via .localizedDisplay)"
+  ],
+  "examples": [
+   "Not Arabic letters: other languages added them to the Arabic script for sounds Arabic does not have. پ, چ, گ and ژ come from Persian, Urdu, Kurdish and Pashto (p, ch, g, zh); ڤ from Kurdish and Arabic dialect writing (v); ڭ from Uyghur, Kazakh and Ottoman Turkish (ng). Open a letter for where it is used."
+  ],
+  "arabic": "الفارسية والأردية والكردية والبشتوية"
+ },
+ {
+  "key": "Pillars & Beliefs",
+  "files": [
+   "iPhone/Islam/Beliefs/PillarsView.swift",
+   "iPhone/Islam/IslamView.swift"
+  ],
+  "examples": [
+   "“Pillars & Beliefs” holds the Five Pillars of Islam and the Six Pillars of Iman. “How-To Guides” walks you through wudu, salah, Jumuah and more.",
+   "The search bar at the foot of the tab finds resources by name, and the titles and text of the articles in Pillars & Beliefs, the How-To Guides and Proving Islam."
+  ],
+  "arabic": "الأركان والعقائد"
+ },
+ {
+  "key": "Play Automatically",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "While the adhan sounds inside the app, a capsule that reads “Tap to stop” sits at the foot of the sky card, and a banner with a Stop button shows on every tab. When an adhan is waiting instead (a silenced phone, or Play Automatically off), the same capsule and banner offer Play.",
+   "iOS lets a notification play 30 seconds at most. With the app open at prayer time, or opened within five minutes of it, the adhan plays in full. On a silenced phone, or with Play Automatically off, a Play button appears instead, on the prayer card and in a banner on every tab."
+  ],
+  "arabic": "التشغيل تلقائيًا"
+ },
+ {
+  "key": "Play Ayah",
+  "files": [
+   "iPhone/Quran/Reader/AyahRow.swift",
+   "iPhone/Quran/Reader/SurahHeaders.swift"
+  ],
+  "examples": [
+   "Tap play for Choose Reciter and Play Ayah by Ayah, and under Other Options a custom range, a random ayah, a random reciter, and Repeat Surah up to 20 times.",
+   "All reciters below are available only for full surahs. Play Ayahs is unsupported for other qiraat."
+  ],
+  "arabic": "تشغيل الآية"
+ },
+ {
+  "key": "Play Ayah by Ayah",
+  "files": [
+   "iPhone/Quran/Mushaf/MushafReader.swift",
+   "iPhone/Quran/Reader/SurahView.swift"
+  ],
+  "examples": [
+   "Tap play for Choose Reciter and Play Ayah by Ayah, and under Other Options a custom range, a random ayah, a random reciter, and Repeat Surah up to 20 times."
+  ],
+  "arabic": "تشغيل آية آية"
+ },
+ {
+  "key": "Play Custom Range",
+  "files": [
+   "iPhone/Quran/Mushaf/MushafReader.swift",
+   "iPhone/Quran/Reader/AyahRow.swift",
+   "iPhone/Quran/Reader/ContextMenu.swift",
+   "iPhone/Quran/Reader/SurahView.swift",
+   "iPhone/Quran/Sheets/AyahSheets.swift"
+  ],
+  "examples": [
+   "Play Custom Range takes a range of ayahs or of pages, with Whole Page and Whole Surah a tap away, repeats Each Ayah and the Whole Range as many times as you set (or forever), and lists every ayah of the range before you press Play Range. While it plays, the range line under the reciter on the Now Playing bar opens the same list, with the ayah being recited marked and kept in view. Tap any ayah there to jump to it.",
+   "Play This Ayah and Repeat Ayah in an ayah's actions leave the sheet up so you can keep reading. Play From Ayah and Play Custom Range still close it."
+  ],
+  "arabic": "تشغيل نطاق مخصّص"
+ },
+ {
+  "key": "Play From Ayah",
+  "files": [
+   "iPhone/Quran/Reader/AyahRow.swift",
+   "iPhone/Quran/Reader/ContextMenu.swift",
+   "iPhone/Quran/Reader/QuranHistoryRows.swift",
+   "iPhone/Quran/Sheets/AyahSheets.swift"
+  ],
+  "examples": [
+   "Double tap an ayah's text, anywhere off a word, to play just that ayah. Tap its play button for Choose Reciter, Repeat Ayah, Play From Ayah and Play This Ayah, or hold it for a custom range. Hold its ellipsis to share. The reader's own play button at the bottom opens its menu on a tap; hold it for a custom range (Choose Reciter, in a riwayah other than Hafs). Hadith ellipsis buttons share on a hold too. Every menu opens the moment you tap it. With VoiceOver, use the named actions or the menu.",
+   "With Keep Sheet Open on, tafsir and the other tools open on top of an ayah's actions instead of replacing them, so you come back to where you were. Keep Sheet Open While Playing, in the actions themselves, leaves them up while Play This Ayah or Repeat Ayah recites (Play From Ayah still closes them), and Keep Screen On stops the screen from sleeping while they are open."
+  ],
+  "arabic": "التشغيل من الآية"
+ },
+ {
+  "key": "Play Random Ayah",
+  "files": [
+   "iPhone/Quran/Mushaf/MushafReader.swift",
+   "iPhone/Quran/QuranView.swift",
+   "iPhone/Quran/Reader/ContextMenu.swift",
+   "iPhone/Quran/Reader/SurahView.swift"
+  ],
+  "examples": [
+   "Swipe a surah right to favorite it and left to play it. Touch and hold for View Fullscreen, Share Surah, Play Random Ayah, and Add to Queue."
+  ],
+  "arabic": "تشغيل آية عشوائية"
+ },
+ {
+  "key": "Play Range",
+  "files": [
+   "iPhone/Quran/Sheets/CustomRangeSheet.swift"
+  ],
+  "examples": [
+   "Play Custom Range takes a range of ayahs or of pages, with Whole Page and Whole Surah a tap away, repeats Each Ayah and the Whole Range as many times as you set (or forever), and lists every ayah of the range before you press Play Range. While it plays, the range line under the reciter on the Now Playing bar opens the same list, with the ayah being recited marked and kept in view. Tap any ayah there to jump to it."
+  ],
+  "arabic": "تشغيل النطاق"
+ },
+ {
+  "key": "Play Surah",
+  "files": [
+   "iPhone/Quran/Models/QuranShortcuts.swift",
+   "iPhone/Quran/Mushaf/MushafReader.swift",
+   "iPhone/Quran/Reader/ContextMenu.swift",
+   "iPhone/Quran/Reader/SurahView.swift",
+   "iPhone/Quran/Sheets/TafsirSheets.swift"
+  ],
+  "examples": [
+   "Tap the reader's play button for “Play Surah” and “Choose Reciter”; in Hafs, hold it for “Play Custom Range”. While a recitation plays, the Now Playing bar stays at the foot of every tab."
+  ],
+  "arabic": "تشغيل السورة"
+ },
+ {
+  "key": "Play This Ayah",
+  "files": [
+   "iPhone/Quran/Reader/AyahRow.swift",
+   "iPhone/Quran/Reader/ContextMenu.swift",
+   "iPhone/Quran/Reader/QuranHistoryRows.swift",
+   "iPhone/Quran/Sheets/AyahSheets.swift"
+  ],
+  "examples": [
+   "Double tap an ayah's text, anywhere off a word, to play just that ayah. Tap its play button for Choose Reciter, Repeat Ayah, Play From Ayah and Play This Ayah, or hold it for a custom range. Hold its ellipsis to share. The reader's own play button at the bottom opens its menu on a tap; hold it for a custom range (Choose Reciter, in a riwayah other than Hafs). Hadith ellipsis buttons share on a hold too. Every menu opens the moment you tap it. With VoiceOver, use the named actions or the menu.",
+   "With Keep Sheet Open on, tafsir and the other tools open on top of an ayah's actions instead of replacing them, so you come back to where you were. Keep Sheet Open While Playing, in the actions themselves, leaves them up while Play This Ayah or Repeat Ayah recites (Play From Ayah still closes them), and Keep Screen On stops the screen from sleeping while they are open."
+  ],
+  "arabic": "تشغيل هذه الآية"
+ },
+ {
+  "key": "Play in Silent Mode",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "The app reads Silent Mode before it starts an adhan: silenced, it offers a Play button rather than playing to no one. Play in Silent Mode lets the in-app adhan sound anyway. Notifications outside the app always follow the iPhone's own sound settings."
+  ],
+  "arabic": "التشغيل في الوضع الصامت"
+ },
+ {
+  "key": "Practice Missed Questions",
+  "files": [
+   "iPhone/Islam/Tajweed/TajweedTestViews.swift"
+  ],
+  "examples": [
+   "These questions are kept under Practice Missed Questions on the ladder until you answer them right."
+  ],
+  "arabic": "تدرّب على الأسئلة التي أخطأت فيها"
+ },
+ {
+  "key": "Practice Missed Words",
+  "files": [
+   "iPhone/Islam/Arabic/ArabicReadingTestViews.swift",
+   "iPhone/Islam/Arabic/QuranWordsViews.swift"
+  ],
+  "examples": [
+   "These words are kept under Practice Missed Words on the ladder until you read them right.",
+   "These words are kept under Practice Missed Words until you answer them right."
+  ],
+  "arabic": "تدرّب على الكلمات التي أخطأت فيها"
+ },
+ {
+  "key": "Prayed It Later",
+  "files": [
+   "iPhone/Adhan/Prayers/PrayerTrackerPages.swift"
+  ],
+  "examples": [
+   "Prayers marked missed are gathered under To Make Up. Prayed It Later records one as prayed late and takes it off the list."
+  ],
+  "arabic": "صلّيتها لاحقًا"
+ },
+ {
+  "key": "Prayer Calculation",
+  "files": [
+   "iPhone/Adhan/GlanceCard.swift",
+   "iPhone/Settings/Pages/SettingsAdhanView.swift",
+   "iPhone/Settings/Pages/TabTutorials.swift",
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "The AT A GLANCE tiles all open something. Qibla opens a large compass, Daylight and Fasting Window open the Prayer Calendar, Moon opens the Hijri Calendar, and Prayer Calculation and Distance From Home open their settings.",
+   "Two settings screens keep their fine-tuning behind Show Advanced Settings, at their foot: Prayer Calculation (custom angles, the high latitude rule) and Nagging Mode (how often it repeats, the last calls, its tone). Each has its own switch; every other screen shows everything it has. A search result or a tip marked Advanced turns the switch on for you."
+  ],
+  "arabic": "حساب المواقيت"
+ },
+ {
+  "key": "Prayer Calculation and Nagging Mode",
+  "files": [
+   "iPhone/Settings/Pages/TipsAndTricks.swift"
+  ],
+  "examples": [
+   "Turning Simple Mode on also turns off Show Advanced Settings on Prayer Calculation and Nagging Mode; each screen's ADVANCED switch brings its options back. Sheets, press-and-hold menus, search, play, the gear, the prayer bells and everything you made never change."
+  ],
+  "arabic": "حساب المواقيت ووضع التذكير المتكرر"
+ },
+ {
+  "key": "Prayer Calendar",
+  "files": [
+   "iPhone/Adhan/AdhanView.swift",
+   "iPhone/Adhan/Calendar/PrayerCalendarView.swift"
+  ],
+  "examples": [
+   "The AT A GLANCE tiles all open something. Qibla opens a large compass, Daylight and Fasting Window open the Prayer Calendar, Moon opens the Hijri Calendar, and Prayer Calculation and Distance From Home open their settings.",
+   "The Prayer Calendar covers this month and the year ahead. Its share button exports them as a PDF or a CSV, under your own prayer names."
+  ],
+  "arabic": "تقويم الصلاة"
+ },
+ {
+  "key": "Prayer Grid",
+  "files": [
+   "Widget/Adhan/PrayersSplitWidget.swift"
+  ],
+  "examples": [
+   "The ⋯ menu at the top of the Adhan tab switches between Prayer Tiles, Prayer Centered Tiles, Prayer Grid, Prayer List, and Prayer Split. Prayer Settings offers the same choice."
+  ],
+  "arabic": "شبكة الصلوات"
+ },
+ {
+  "key": "Prayer List",
+  "files": [
+   "Widget/Adhan/PrayerProgressWidgets.swift"
+  ],
+  "examples": [
+   "The ⋯ menu at the top of the Adhan tab switches between Prayer Tiles, Prayer Centered Tiles, Prayer Grid, Prayer List, and Prayer Split. Prayer Settings offers the same choice."
+  ],
+  "arabic": "قائمة الصلوات"
+ },
+ {
+  "key": "Prayer Notifications",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift",
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "Tap a prayer under Prayer Notifications to choose between the adhan, a short excerpt of it, and an ordinary tone: a full adhan at Maghrib and a quiet tone at Fajr, if that suits your house."
+  ],
+  "arabic": "إشعارات الصلاة"
+ },
+ {
+  "key": "Prayer Ring",
+  "files": [
+   "Widget/Adhan/PrayerProgressWidgets.swift"
+  ],
+  "examples": [
+   "The Prayer Ring over the current prayer's sky gradient"
+  ],
+  "arabic": "حلقة الصلاة"
+ },
+ {
+  "key": "Prayer Settings",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/Pages/SettingsAdhanView.swift",
+   "iPhone/Settings/SettingsSearch.swift",
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "The ⋯ menu at the top of the Adhan tab switches between Prayer Tiles, Prayer Centered Tiles, Prayer Grid, Prayer List, and Prayer Split. Prayer Settings offers the same choice.",
+   "Settings › Prayer Settings › Prayer Calculation"
+  ],
+  "arabic": "إعدادات الصلاة"
+ },
+ {
+  "key": "Prayer Split",
+  "files": [
+   "Widget/Adhan/PrayersGridWidget.swift"
+  ],
+  "examples": [
+   "The ⋯ menu at the top of the Adhan tab switches between Prayer Tiles, Prayer Centered Tiles, Prayer Grid, Prayer List, and Prayer Split. Prayer Settings offers the same choice."
+  ],
+  "arabic": "الصلوات في عمودين"
+ },
+ {
+  "key": "Prayer Tiles",
+  "files": [
+   "Widget/Adhan/PrayersSplitWidget.swift"
+  ],
+  "examples": [
+   "The ⋯ menu at the top of the Adhan tab switches between Prayer Tiles, Prayer Centered Tiles, Prayer Grid, Prayer List, and Prayer Split. Prayer Settings offers the same choice."
+  ],
+  "arabic": "مربعات الصلوات"
+ },
+ {
+  "key": "Prayer Times",
+  "files": [
+   "Widget/ControlWidgets.swift",
+   "iPhone/Settings/Pages/TipsAndTricks.swift"
+  ],
+  "examples": [
+   "Tap the city pill for City Prayer Times. Star the cities you check often, compare one with your own location, and read its times in its clock or yours. It never changes your own times.",
+   "Two controls for Control Center, the Lock Screen, and the Action button: Prayer Times shows the next prayer and its time on the control itself and opens today's times, and Qibla opens the compass."
+  ],
+  "arabic": "مواقيت الصلاة"
+ },
+ {
+  "key": "Prayer Times Layout",
+  "files": [
+   "iPhone/Adhan/AdhanView.swift",
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "Allow location and the tab shows today's prayers, the current and the upcoming one, and the time left. Tap a prayer for its details, or pull down for a fresh location. The ⋯ menu holds the “Prayer Calendar”, the “Hijri Calendar” and the “Prayer Times Layout”."
+  ],
+  "arabic": "تخطيط مواقيت الصلاة"
+ },
+ {
+  "key": "Prayer Tracker",
+  "files": [
+   "Widget/Adhan/PrayerTrackerWidget.swift",
+   "iPhone/Adhan/Prayers/PrayerTrackerView.swift",
+   "iPhone/Settings/Model/ContentCategories.swift",
+   "iPhone/Settings/Pages/SettingsAdhanView.swift",
+   "iPhone/Settings/Pages/TabSections.swift",
+   "iPhone/Settings/Pages/TabTutorials.swift",
+   "iPhone/Settings/Pages/TipsAndTricks.swift"
+  ],
+  "examples": [
+   "The Prayer Tracker widget shows the day's ring on the Home Screen or the Lock Screen. On iOS 17 and later, tapping a prayer on the Home Screen widget marks it prayed, and a second tap marks it late.",
+   "Only the “Did you pray?” reminders are held. For menstruation or postpartum, pause tracking in the Prayer Tracker instead."
+  ],
+  "arabic": "متتبّع الصلاة"
+ },
+ {
+  "key": "Prenotification",
+  "files": [
+   "iPhone/Adhan/Prayers/PrayerList.swift"
+  ],
+  "examples": [
+   "Tap a prayer's bell to switch between “Notification”, “Prenotification” and “No Notification”, or hold it to choose one. In the Grid and Split layouts, open the prayer first. “Adhan Sound” and everything else is in Notifications."
+  ],
+  "arabic": "إشعار مسبق"
+ },
+ {
+  "key": "Preview Sound",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "Preview Sound plays the chosen adhan from beginning to end, not the 30 seconds a notification carries."
+  ],
+  "arabic": "معاينة الصوت"
+ },
+ {
+  "key": "Previous",
+  "files": [
+   "iPhone/Hadith/Views/HadithBookView.swift",
+   "iPhone/Islam/Tajweed/TajweedLessons.swift",
+   "iPhone/Quran/Reader/SurahView.swift"
+  ],
+  "examples": [
+   "Each hadith shows its number and book, the Arabic, the narrator and the English, then its grade. “Previous” and “Next” move between chapters. Tap the chapter title for “Choose Chapter”.",
+   "Hold the surah title for “Choose Surah”; a tap opens its full menu. On pages, swipe to turn, and tap the page or juz number on the pill at the foot to jump. In the list, “Previous” and “Next” at the end move between surahs."
+  ],
+  "arabic": "السابق"
+ },
+ {
+  "key": "Printed Mushaf",
+  "files": [
+   "iPhone/Quran/Reader/SurahView.swift",
+   "iPhone/Settings/Model/Globals.swift"
+  ],
+  "examples": [
+   "In page mode the title's menu offers Read Pages as Printed Mushaf (PDF) wherever that riwayah's mushaf is included, with Automatic, Light, and Night lighting."
+  ],
+  "arabic": "المصحف المطبوع"
+ },
+ {
+  "key": "Private Cloud",
+  "files": [
+   "iPhone/Helpers/AskAI/AskAIEngine.swift"
+  ],
+  "examples": [
+   "What it finds goes to Apple Intelligence on your device, or to Apple’s Private Cloud Compute if you choose it in the menu, which answers in its own words and cites each source by number, saying where it comes from.",
+   "Private Cloud Compute is not available right now"
+  ],
+  "arabic": "السحابة الخاصة"
+ },
+ {
+  "key": "Private Cloud Compute",
+  "files": [
+   "iPhone/Helpers/AskAI/AskAIEngine.swift"
+  ],
+  "examples": [
+   "What it finds goes to Apple Intelligence on your device, or to Apple’s Private Cloud Compute if you choose it in the menu, which answers in its own words and cites each source by number, saying where it comes from.",
+   "Private Cloud Compute is not available right now"
+  ],
+  "arabic": "الحوسبة السحابية الخاصة"
+ },
+ {
+  "key": "Proving Islam",
+  "files": [
+   "iPhone/Islam/IslamView.swift",
+   "iPhone/Islam/Proofs/ProvingIslamView.swift"
+  ],
+  "examples": [
+   "The search bar at the foot of the tab finds resources by name, and the titles and text of the articles in Pillars & Beliefs, the How-To Guides and Proving Islam."
+  ],
+  "arabic": "إثبات الإسلام"
+ },
+ {
+  "key": "Qalun and Warsh",
+  "files": [
+   "iPhone/Islam/Qiraat/QiraatTextAnalysis.swift"
+  ],
+  "examples": [
+   "He is the teacher of Nafi al-Madani, which places him a generation above most of the ten: the Madinan reading that later spread through Qalun and Warsh was shaped by what Abu Ja'far taught. His own reading was added to the canonical ten by Ibn al-Jazari alongside Ya'qub and Khalaf."
+  ],
+  "arabic": "قالون وورش"
+ },
+ {
+  "key": "Qiraah Comparison",
+  "files": [
+   "iPhone/Quran/Reader/AyahRow.swift",
+   "iPhone/Quran/Reader/ContextMenu.swift",
+   "iPhone/Quran/Sheets/AyahSheets.swift",
+   "iPhone/Quran/Sheets/TafsirSheets.swift"
+  ],
+  "examples": [
+   "Readings of the Ten and their meanings from the Quran.com qiraat reference (Quran Foundation). The app's Qiraah Comparison shows the full text of every riwayah from its printed mushaf."
+  ],
+  "arabic": "مقارنة القراءات"
+ },
+ {
+  "key": "Qiraat Explorer",
+  "files": [
+   "iPhone/Quran/Qiraat/QiraatExplorerView.swift",
+   "iPhone/Quran/QuranView.swift",
+   "iPhone/Quran/Sheets/ComparisonSheets.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "With Comparison mode on, a riwayah picker sits above the reader's search bar, and an ayah's Compare Ayah sets the readings side by side. The Qiraat Explorer steps through every place the riwayat differ.",
+   "Credit for the Qiraat Explorer's idea (every place the riwayat differ, by ayah and by surah) and for the worked examples on each narrator's page (where he differs from Hafs, with a recording where one exists) goes to Tilawa, by my friend Jamil Hammoudeh; the place index is computed from this app's own riwayah texts, and the readings' meanings draw on Quran.com's qiraat reference"
+  ],
+  "arabic": "مستكشف القراءات"
+ },
+ {
+  "key": "Quick Search Help",
+  "files": [
+   "iPhone/Hadith/Views/HadithView.swift",
+   "iPhone/Quran/QuranView.swift",
+   "iPhone/Settings/Pages/HelpDoors.swift"
+  ],
+  "examples": [
+   "Tap the search field while it is empty for Quick Search Help and your recent searches. The minus folds the help away and keeps the searches.",
+   "Quick Search Help's examples on the Quran and Hadith tabs"
+  ],
+  "arabic": "مساعدة البحث السريع"
+ },
+ {
+  "key": "Quran 13:28",
+  "files": [
+   "iPhone/Islam/Dua/AdhkarView.swift"
+  ],
+  "examples": [
+   "\"Unquestionably, by the remembrance of Allah hearts are assured.\" (Quran 13:28)",
+   "Unquestionably, by the remembrance of Allah hearts are assured. (Quran 13:28)"
+  ],
+  "arabic": "القرآن ١٣:٢٨"
+ },
+ {
+  "key": "Quran 2:152",
+  "files": [
+   "Widget/Quran/DailyWidgets.swift"
+  ],
+  "examples": [
+   "So remember Me; I will remember you. And be grateful to Me and do not deny Me. (Quran 2:152)"
+  ],
+  "arabic": "القرآن ٢:١٥٢"
+ },
+ {
+  "key": "Quran 33:41",
+  "files": [
+   "iPhone/Islam/Dua/TasbihView.swift"
+  ],
+  "examples": [
+   "O you who have believed, remember Allah with much remembrance. (Quran 33:41)"
+  ],
+  "arabic": "القرآن ٣٣:٤١"
+ },
+ {
+  "key": "Quran 40:60",
+  "files": [
+   "iPhone/Islam/Dua/DuaView.swift"
+  ],
+  "examples": [
+   "And your Lord says, \"Call upon Me; I will respond to you.\" (Quran 40:60)",
+   "Short, daily supplications that keep your heart connected to Allah in every situation. \"Call upon Me; I will respond to you.\" (Quran 40:60)"
+  ],
+  "arabic": "القرآن ٤٠:٦٠"
+ },
+ {
+  "key": "Quran Planner",
+  "files": [
+   "iPhone/Quran/QuranView.swift",
+   "iPhone/Quran/Reader/QuranPlannerView.swift"
+  ],
+  "examples": [
+   "The Quran Planner, under Explore in the ⋯ menu at the top of the Quran tab, holds two plans. Khatm sets a finish of one, two, or three months and recomputes each day's amount from what is left, so a missed day is absorbed. Revision keeps a juz range or chosen surahs in rotation, revised in full every week, two weeks, or month, with Continue Revising and Mark as Revised. One Daily Reminder covers both.",
+   "Reminders repeat on their own, even when the app has not been opened for a while. The Quran Planner on the Quran tab has its own daily reminder for a paced reading plan."
+  ],
+  "arabic": "مخطِّط القرآن"
+ },
+ {
+  "key": "Quran Settings",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift",
+   "iPhone/Settings/Pages/TabTutorials.swift",
+   "iPhone/Settings/SettingsSearch.swift",
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "Open the tajweed guide from the reader's Legend pill, or from Customize Tajweed Colors in Quran Settings. Under More Detail, tap a rule's card to show or hide that rule, and use the color well on the card to recolor it.",
+   "The Quran and the hadith books have their own switches, in Quran Settings and Hadith Settings."
+  ],
+  "arabic": "إعدادات القرآن"
+ },
+ {
+  "key": "Rakaah Guide",
+  "files": [
+   "iPhone/Adhan/Prayers/PrayerList.swift"
+  ],
+  "examples": [
+   "The Rakaah Guide pill unfolds the fard and sunnah rakahs of every prayer, with what changes on Friday and while traveling."
+  ],
+  "arabic": "دليل الركعات"
+ },
+ {
+  "key": "Random Ayah",
+  "files": [
+   "Widget/Quran/ChosenAyahIntent.swift"
+  ],
+  "examples": [
+   "Swipe a surah right to favorite it and left to play it. Touch and hold for View Fullscreen, Share Surah, Play Random Ayah, and Add to Queue."
+  ],
+  "arabic": "آية عشوائية"
+ },
+ {
+  "key": "Range Ayahs",
+  "files": [
+   "iPhone/Quran/Playback/NowPlayingView.swift"
+  ],
+  "examples": [
+   "Touch and hold the player for Stop Playing, Play from Beginning, the queue, and favoriting the surah or bookmarking the ayah. While a custom range plays it adds Range Ayahs. Inside the reader, tapping the player jumps to the ayah being recited."
+  ],
+  "arabic": "آيات النطاق"
+ },
+ {
+  "key": "Read as List",
+  "files": [
+   "iPhone/Quran/QuranView.swift",
+   "iPhone/Quran/Reader/SurahView.swift"
+  ],
+  "examples": [
+   "Read as Pages and Read as List, in the title's menu, switch the reader and keep you on the same ayah.",
+   "The list shows ayah by ayah with the translation; pages show the mushaf. Switch with “Read as Pages” or “Read as List” in the reader's title menu or the tab's ⋯ menu."
+  ],
+  "arabic": "القراءة كقائمة"
+ },
+ {
+  "key": "Read as Pages",
+  "files": [
+   "iPhone/Quran/QuranView.swift",
+   "iPhone/Quran/Reader/SurahView.swift"
+  ],
+  "examples": [
+   "Read as Pages and Read as List, in the title's menu, switch the reader and keep you on the same ayah.",
+   "The list shows ayah by ayah with the translation; pages show the mushaf. Switch with “Read as Pages” or “Read as List” in the reader's title menu or the tab's ⋯ menu."
+  ],
+  "arabic": "القراءة كصفحات"
+ },
+ {
+  "key": "Read on",
+  "files": [
+   "(data shown via .localizedDisplay)"
+  ],
+  "examples": [
+   "Both are created by the stop itself: arid by the sukoon your pause puts on the final letter, iwad by the noon of the tanween that your pause removes. Read on and neither exists.",
+   "Dammatan at the end of an ayah. Read on and a noon appears; stop here and the word is simply أَحَدۡ."
+  ],
+  "arabic": "مع الوصل"
+ },
+ {
+  "key": "Reading Test",
+  "files": [
+   "iPhone/Islam/Arabic/ArabicReadingTestViews.swift",
+   "iPhone/Islam/Arabic/ArabicTopics.swift",
+   "iPhone/Islam/Arabic/ArabicView.swift"
+  ],
+  "examples": [
+   "Reading Test, under Explore at the top of the alphabet, climbs 21 tiers in the order a qaa'idah teaches reading: single letters, short vowels, long vowels, sukoon and shaddah, the marks of the mushaf, and last of all words printed with no tashkeel. Each tier tests reading, spelling and listening. The hint spaces a word out letter by letter, and Find My Level picks the tier to start on."
+  ],
+  "arabic": "اختبار القراءة"
+ },
+ {
+  "key": "Reading in One Language?",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift"
+  ],
+  "examples": [
+   "Need Help Praying? on the prayer times opens Nagging Mode, Need Help Reading? on the Quran answers with Arabic Beginner Mode, and Reading in One Language? on the hadith picks the Arabic, the English or both."
+  ],
+  "arabic": "تقرأ بلغة واحدة؟"
+ },
+ {
+  "key": "Reading on",
+  "files": [
+   "(data shown via .localizedDisplay)"
+  ],
+  "examples": [
+   "What a listener hears is not always what the page writes. Reading on, Hamzah pronounces every hamzah in full. When he stops on a word, a hamzah in its middle or at its end is eased, following the written form: turned into a long vowel, moved onto the letter before it, or softened. Every recording stops at the end of each ayah, so the last word of every ayah is heard without its hamzah (قَدۡ أَفۡلَحَ ٱلۡمُؤۡمِنُونَ ends in al-muuminoon), while a mushaf prints the continuous form and keeps it. The test is the same word mid-ayah, where the reciter keeps going: in 4:92 Khalaf reads li-mu'minin and mu'minan with the hamzah in full.",
+   "Leen, not madd: sakin و and ي after a fatha. Reading on, neither is stretched."
+  ],
+  "arabic": "في الوصل"
+ },
+ {
+  "key": "Recitation End",
+  "files": [
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "After Surah Recitation Ends chooses between going on to the next surah, going back to the previous one, and stopping."
+  ],
+  "arabic": "نهاية التلاوة"
+ },
+ {
+  "key": "Reciter Filter",
+  "files": [
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "The cloud button on a reciter downloads every surah for listening without a connection, and Reciter Filter shows only the ones you have downloaded."
+  ],
+  "arabic": "تصفية القرّاء"
+ },
+ {
+  "key": "Remind a Day Before",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "Remind a Day Before sends a heads-up the evening before each Islamic date, so Ramadan, Eid, and the days of fasting do not arrive unannounced."
+  ],
+  "arabic": "التذكير قبلها بيوم"
+ },
+ {
+  "key": "Reminder of the Day",
+  "files": [
+   "Widget/Quran/DailyWidgets.swift"
+  ],
+  "examples": [
+   "“Today” in the ⋯ menu gathers the day's picks, and the Reminder of the Day sits near the foot of the tab. Tips & Tricks has everything else, each with where to find it.",
+   "Save keeps a Reminder of the Day, with its source, in Saved Reflections. The Today pill gathers the ayah, word, hadith, dua, and reminder of the day on one screen."
+  ],
+  "arabic": "تذكرة اليوم"
+ },
+ {
+  "key": "Repeat Ayah",
+  "files": [
+   "iPhone/Quran/Reader/AyahRow.swift",
+   "iPhone/Quran/Reader/ContextMenu.swift",
+   "iPhone/Quran/Sheets/AyahSheets.swift"
+  ],
+  "examples": [
+   "Double tap an ayah's text, anywhere off a word, to play just that ayah. Tap its play button for Choose Reciter, Repeat Ayah, Play From Ayah and Play This Ayah, or hold it for a custom range. Hold its ellipsis to share. The reader's own play button at the bottom opens its menu on a tap; hold it for a custom range (Choose Reciter, in a riwayah other than Hafs). Hadith ellipsis buttons share on a hold too. Every menu opens the moment you tap it. With VoiceOver, use the named actions or the menu.",
+   "With Keep Sheet Open on, tafsir and the other tools open on top of an ayah's actions instead of replacing them, so you come back to where you were. Keep Sheet Open While Playing, in the actions themselves, leaves them up while Play This Ayah or Repeat Ayah recites (Play From Ayah still closes them), and Keep Screen On stops the screen from sleeping while they are open."
+  ],
+  "arabic": "تكرار الآية"
+ },
+ {
+  "key": "Repeat Surah",
+  "files": [
+   "iPhone/Quran/Mushaf/MushafReader.swift",
+   "iPhone/Quran/Reader/SurahView.swift"
+  ],
+  "examples": [
+   "Tap play for Choose Reciter and Play Ayah by Ayah, and under Other Options a custom range, a random ayah, a random reciter, and Repeat Surah up to 20 times."
+  ],
+  "arabic": "تكرار السورة"
+ },
+ {
+  "key": "Replay the Welcome Tutorial",
+  "files": [
+   "iPhone/AboutYouView.swift"
+  ],
+  "examples": [
+   "About You remembers whether you grew up Muslim, embraced Islam, are just getting started, or are learning about Islam, and tailors the Start Here guide on the Islam tab. It never leaves your iPhone. Replay the Welcome Tutorial, on the same page, walks the welcome again."
+  ],
+  "arabic": "إعادة عرض الجولة التعريفية"
+ },
+ {
+  "key": "Reset All Settings",
+  "files": [
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "Reset All Settings offers two choices: put every option back and keep your bookmarks, favorites, progress and this iPhone's iCloud Backup, or erase everything. Both say exactly what they keep and what they remove.",
+   "Reset All Settings offers two choices: put every option back and keep your bookmarks, favorites and progress, or erase everything. Both say exactly what they keep and what they remove."
+  ],
+  "arabic": "إعادة تعيين كل الإعدادات"
+ },
+ {
+  "key": "Reset to App Settings",
+  "files": [
+   "iPhone/Quran/Reader/ContextMenu.swift"
+  ],
+  "examples": [
+   "Apply Settings, in an ayah's actions, changes how that one ayah is shown: beginner spacing, tajweed, tashkeel, dots, word by word. Reset to App Settings puts it back."
+  ],
+  "arabic": "إعادة التعيين إلى إعدادات التطبيق"
+ },
+ {
+  "key": "Restore Default Colors",
+  "files": [
+   "iPhone/Adhan/Sky/SkyColorsView.swift"
+  ],
+  "examples": [
+   "Sky Colors gives every prayer two colors of its own. Tap a prayer's row to preview it, and Restore Default Colors brings the originals back."
+  ],
+  "arabic": "استعادة الألوان الافتراضية"
+ },
+ {
+  "key": "Resume Recitation",
+  "files": [
+   "Widget/ControlWidgets.swift"
+  ],
+  "examples": [
+   "Add the Resume Recitation control to Control Center, the Lock Screen, or the Action button, and it plays the last surah you were listening to, from where you left off, without opening the app."
+  ],
+  "arabic": "استئناف التلاوة"
+ },
+ {
+  "key": "Ruways and Rawh",
+  "files": [
+   "iPhone/Islam/Qiraat/QiraatTextAnalysis.swift"
+  ],
+  "examples": [
+   "His two narrators, Ruways and Rawh, were both Basrans who read directly on him."
+  ],
+  "arabic": "رويس وروح"
+ },
+ {
+  "key": "Saheeh International",
+  "files": [
+   "iPhone/Quran/Sheets/CustomRangeAyahsSheet.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "Credit for the English Saheeh International translation of the Quran data goes to Global Quran",
+   "Saheeh International translation: Global Quran"
+  ],
+  "arabic": "صحيح إنترناشونال"
+ },
+ {
+  "key": "Sahih",
+  "files": [
+   "iPhone/Hadith/Models/HadithNarrators.swift",
+   "iPhone/Hadith/Search/HadithSearchFilters.swift"
+  ],
+  "examples": [
+   "A short row of buttons appears above the results while you search. Choose the collections (or tap Bukhari & Muslim), keep only Sahih, Hasan, or Da'if narrations, and order the hadiths by Best Match. Tap More for Six Books, All Words or Any Word, and which kinds of result to show. The first button opens every filter on one page. The same row, without the collections, sits over the search inside a book and inside a chapter.",
+   "As a result, some rules explained in this guide may not apply identically to other riwayat. These variations in tajweed application and pronunciation reflect the dialects of the Arabs in which Allah revealed the Quran: the Prophet ﷺ recited and taught them, saying of two different readings, \"It was revealed in this way\" (Sahih al-Bukhari 2419), and have been preserved exactly through continuous transmission. They highlight the richness, flexibility, and authenticity of the Quranic recitation tradition."
+  ],
+  "arabic": "صحيح"
+ },
+ {
+  "key": "Same Chain",
+  "files": [
+   "iPhone/Hadith/Views/HadithNarratorViews.swift"
+  ],
+  "examples": [
+   "Many hadiths have “Chain of Narrators” in their menu: the isnad, narrator by narrator. Tap a narrator to see every narration that names them, with “Same Chain of Narrators” and “Tree of Narrators” under the chain where they exist. “Similar Hadiths”, in the same menu, finds narrations close to this one."
+  ],
+  "arabic": "السند نفسه"
+ },
+ {
+  "key": "Same Chain of Narrators",
+  "files": [
+   "iPhone/Hadith/Views/SimilarHadithsSheet.swift"
+  ],
+  "examples": [
+   "Many hadiths have “Chain of Narrators” in their menu: the isnad, narrator by narrator. Tap a narrator to see every narration that names them, with “Same Chain of Narrators” and “Tree of Narrators” under the chain where they exist. “Similar Hadiths”, in the same menu, finds narrations close to this one."
+  ],
+  "arabic": "سلسلة الرواة نفسها"
+ },
+ {
+  "key": "Save to Photos",
+  "files": [
+   "iPhone/Islam/Daily/WallpaperView.swift"
+  ],
+  "examples": [
+   "Touch and hold a wallpaper for Save to Photos and Copy Image."
+  ],
+  "arabic": "حفظ في الصور"
+ },
+ {
+  "key": "Saved Reflections",
+  "files": [
+   "iPhone/Islam/Daily/DailyReminders.swift",
+   "iPhone/Settings/Model/ContentCategories.swift"
+  ],
+  "examples": [
+   "Save keeps a Reminder of the Day, with its source, in Saved Reflections. The Today pill gathers the ayah, word, hadith, dua, and reminder of the day on one screen."
+  ],
+  "arabic": "التأملات المحفوظة"
+ },
+ {
+  "key": "Search",
+  "files": [
+   "iPhone/Helpers/UI/SearchBar.swift",
+   "iPhone/Islam/Arabic/ArabicLetterFamilies.swift",
+   "iPhone/Islam/Arabic/ArabicView.swift",
+   "iPhone/Islam/Content/MasjidView.swift",
+   "iPhone/Islam/Qiraat/RiwayatColorCode.swift",
+   "iPhone/Islam/Tajweed/TajweedFoundations.swift",
+   "iPhone/Quran/QuranView.swift",
+   "iPhone/Quran/Reader/SurahView.swift",
+   "iPhone/Settings/Pages/TabTutorials.swift"
+  ],
+  "examples": [
+   "In page mode, Search opens a find bar for the page or the whole surah, with arrows to step through the matches. Type a reference there, such as 2:255, to jump to it.",
+   "Search also matches by meaning across all 17 collections, on your device, so “controlling anger” finds narrations that never say those words."
+  ],
+  "arabic": "بحث"
+ },
+ {
+  "key": "Search This Area",
+  "files": [
+   "iPhone/Islam/Content/MasjidView.swift"
+  ],
+  "examples": [
+   "The Masjid Locator and the Halal Food Locator search near you, or wherever you move the map with Search This Area. Tap a result for directions in Maps, and touch and hold it to copy its name or address."
+  ],
+  "arabic": "البحث في هذه المنطقة"
+ },
+ {
+  "key": "Select Ayahs",
+  "files": [
+   "iPhone/Quran/Reader/AyahRow.swift",
+   "iPhone/Quran/Reader/SurahView.swift",
+   "iPhone/Quran/Sheets/AyahSheets.swift"
+  ],
+  "examples": [
+   "Select Ayahs, in the title's menu or an ayah's actions, lets you tap as many ayahs as you like and then copy, share, bookmark, highlight, or annotate them together. Hold an ayah to add every ayah from the last one you picked through it."
+  ],
+  "arabic": "تحديد الآيات"
+ },
+ {
+  "key": "Select Hadiths",
+  "files": [
+   "iPhone/Hadith/Views/HadithBookView.swift"
+  ],
+  "examples": [
+   "In a chapter, tap the title for Choose Chapter and for Select Hadiths, which copies, shares, or bookmarks several at once. While selecting, hold a hadith to add every hadith from the last one you picked through it."
+  ],
+  "arabic": "تحديد الأحاديث"
+ },
+ {
+  "key": "Select Text",
+  "files": [
+   "iPhone/Hadith/Views/HadithComponents.swift",
+   "iPhone/Quran/Reader/AyahRow.swift",
+   "iPhone/Quran/Reader/ContextMenu.swift",
+   "iPhone/Quran/Sheets/AyahSheets.swift"
+  ],
+  "examples": [
+   "Touch and hold a hadith, or tap its ⋯, for “Bookmark Hadith”, “Add Note”, “Select Text”, “Copy Hadith” and “Share Hadith”, which makes an image or text. Where Apple Intelligence is available, “Summarize with AI” is there too."
+  ],
+  "arabic": "تحديد النص"
+ },
+ {
+  "key": "Share Ayah",
+  "files": [
+   "iPhone/Quran/Reader/AyahRow.swift",
+   "iPhone/Quran/Reader/ContextMenu.swift",
+   "iPhone/Quran/Sheets/AyahSheets.swift"
+  ],
+  "examples": [
+   "Share Ayah makes an image or plain text, with your choice of font and backdrop, tajweed colors, your note, and the ayah's details.",
+   "Tap an ayah to mark it, and hold it for its actions, like “Add Note” and “Share Ayah”. In the list, tap its number to bookmark it, and in Hafs, double tap its text to hear it. On pages, a double tap on a word opens Word Study."
+  ],
+  "arabic": "مشاركة الآية"
+ },
+ {
+  "key": "Share Hadith",
+  "files": [
+   "iPhone/Hadith/Views/HadeethEncView.swift",
+   "iPhone/Hadith/Views/HadithComponents.swift",
+   "iPhone/Hadith/Views/HadithResolvedList.swift"
+  ],
+  "examples": [
+   "Share Hadith builds an image or plain text, and lets you choose which of the reference, the Arabic, and the English go in.",
+   "Touch and hold a hadith, or tap its ellipsis, for Bookmark Hadith, Add Note, Copy Hadith, and Share Hadith. Your notes show under the hadith and gather in the Islamic Journal."
+  ],
+  "arabic": "مشاركة الحديث"
+ },
+ {
+  "key": "Share Surah",
+  "files": [
+   "iPhone/Quran/Reader/ContextMenu.swift"
+  ],
+  "examples": [
+   "Swipe a surah right to favorite it and left to play it. Touch and hold for View Fullscreen, Share Surah, Play Random Ayah, and Add to Queue."
+  ],
+  "arabic": "مشاركة السورة"
+ },
+ {
+  "key": "Show Advanced Settings",
+  "files": [
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "Two settings screens keep their fine-tuning behind Show Advanced Settings, at their foot: Prayer Calculation (custom angles, the high latitude rule) and Nagging Mode (how often it repeats, the last calls, its tone). Each has its own switch; every other screen shows everything it has. A search result or a tip marked Advanced turns the switch on for you.",
+   "Turning Simple Mode on also turns off Show Advanced Settings on Prayer Calculation and Nagging Mode; each screen's ADVANCED switch brings its options back. Sheets, press-and-hold menus, search, play, the gear, the prayer bells and everything you made never change."
+  ],
+  "arabic": "إظهار الإعدادات المتقدّمة"
+ },
+ {
+  "key": "Show Arabic",
+  "files": [
+   "iPhone/Settings/Pages/SettingsHadithView.swift"
+  ],
+  "examples": [
+   "Turn off “Show Arabic” or “Show English” to read in one language; the two are never both off. The narrator line goes with the English."
+  ],
+  "arabic": "إظهار العربية"
+ },
+ {
+  "key": "Show English",
+  "files": [
+   "iPhone/Islam/Arabic/ArabicLetterViews.swift",
+   "iPhone/Settings/Pages/SettingsHadithView.swift"
+  ],
+  "examples": [
+   "Show English Meanings words a notification as “Time for Maghrib (sunset)”.",
+   "Turn off “Show Arabic” or “Show English” to read in one language; the two are never both off. The narrator line goes with the English."
+  ],
+  "arabic": "إظهار الإنجليزية"
+ },
+ {
+  "key": "Show English Meanings",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "Show English Meanings words a notification as “Time for Maghrib (sunset)”."
+  ],
+  "arabic": "إظهار المعاني بالإنجليزية"
+ },
+ {
+  "key": "Show Full Prayers",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "More than 48 mi from home, with “Automatic Traveling Mode” on, Traveling Mode turns on and asks you to “Keep On” or “Turn Off” (which also stops the automatic switch). Prayers then show shortened and combined, and “Show Full Prayers” on its page brings each back to its own time."
+  ],
+  "arabic": "إظهار الصلوات كاملة"
+ },
+ {
+  "key": "Show Liquid Glass",
+  "files": [
+   "iPhone/Settings/Pages/TipsAndTricks.swift",
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "Turn Show Liquid Glass off for the Classic Look: a faster app that is easier on the battery, and it can turn itself off in Low Power Mode. The tab bar, navigation bars, sheets, and the search field are drawn by iOS and keep their glass either way."
+  ],
+  "arabic": "إظهار الزجاج السائل"
+ },
+ {
+  "key": "Show Riwayah / Qiraah",
+  "files": [
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "“Arabic Font” and “Arabic Font Size” are on Arabic Text, with “Show Riwayah / Qiraah” for the other readings. Tips & Tricks has everything else the Quran can do, each with where to find it."
+  ],
+  "arabic": "إظهار الرواية / القراءة"
+ },
+ {
+  "key": "Show Tajweed",
+  "files": [
+   "iPhone/Quran/Sharing/ShareAyah.swift",
+   "iPhone/Quran/Sheets/ComparisonSheets.swift"
+  ],
+  "examples": [
+   "“Show Tajweed Colors” is on from the start. Tap the “Legend” pill in the reader for the full guide to the colors, or hold it for a quick look."
+  ],
+  "arabic": "إظهار التجويد"
+ },
+ {
+  "key": "Show Tajweed Colors",
+  "files": [
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "“Show Tajweed Colors” is on from the start. Tap the “Legend” pill in the reader for the full guide to the colors, or hold it for a quick look."
+  ],
+  "arabic": "إظهار ألوان التجويد"
+ },
+ {
+  "key": "Show Transliteration",
+  "files": [
+   "iPhone/Quran/Sheets/CustomRangeAyahsSheet.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "Show Transliteration, on English Text, writes each ayah in Latin letters beneath the Arabic, so it can be read aloud before the script is familiar. Hafs only, with Include English on.",
+   "In Hafs, the translation is Saheeh International at first, and English Text can add the Clear Quran (Mustafa Khattab) or show it instead. “Show Transliteration” there puts Latin letters under the Arabic."
+  ],
+  "arabic": "إظهار الكتابة اللاتينية"
+ },
+ {
+  "key": "Show on Every Tab",
+  "files": [
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "Hold a question for a quick switch, tap the arrow beside the header to fold them away, and use each tab's settings page (or Show on Every Tab, in Look and Feel) to hide them."
+  ],
+  "arabic": "إظهار في كل تبويب"
+ },
+ {
+  "key": "Show the Start Here Guide",
+  "files": [
+   "iPhone/AboutYouView.swift"
+  ],
+  "examples": [
+   "If you told About You you are new to Islam or learning about it, Start Here leads the tab with steps chosen for you. Each step is checked once you open it. “Hide” puts the guide away, and “Show the Start Here Guide” in About You brings it back."
+  ],
+  "arabic": "إظهار دليل «ابدأ من هنا»"
+ },
+ {
+  "key": "Similar Ayahs",
+  "files": [
+   "iPhone/Quran/Reader/AyahRow.swift",
+   "iPhone/Quran/Reader/ContextMenu.swift",
+   "iPhone/Quran/Search/SimilarAyahs.swift",
+   "iPhone/Quran/Sheets/AyahSheets.swift"
+  ],
+  "examples": [
+   "Similar Ayahs and Mutashabihat, in an ayah's actions, list the ayahs that resemble it and the phrases it shares with others: a help in memorizing.",
+   "Credit for the verified Similar Ayahs matches goes to qurani.ai's similar-ayah corpus; the phrase-overlap matches come from Tilawa's generator, built on the Quranic Arabic Corpus morphology by Kais Dukes; the tinted shared words and further pairs come from the similar-ayah table of the Quranic Universal Library"
+  ],
+  "arabic": "الآيات المتشابهة"
+ },
+ {
+  "key": "Similar Hadiths",
+  "files": [
+   "iPhone/Hadith/Views/HadithComponents.swift"
+  ],
+  "examples": [
+   "Many hadiths have “Chain of Narrators” in their menu: the isnad, narrator by narrator. Tap a narrator to see every narration that names them, with “Same Chain of Narrators” and “Tree of Narrators” under the chain where they exist. “Similar Hadiths”, in the same menu, finds narrations close to this one."
+  ],
+  "arabic": "الأحاديث المتشابهة"
+ },
+ {
+  "key": "Simple Juz",
+  "files": [
+   "iPhone/Settings/Model/SettingsQuran.swift"
+  ],
+  "examples": [
+   "the Juz and Simple Juz sorts, under the ⋯ menu's Sort"
+  ],
+  "arabic": "الجزء المبسّط"
+ },
+ {
+  "key": "Simple Mode",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "Simple Mode keeps each tab to its essentials. Shortcuts move into a ⋯ menu at the top of the tab or into Settings, and %@. Nothing is turned off, and turning it back off brings everything back. What Moves Where, on the Simple Mode page, lists every shortcut and where it went.",
+   "Simple Mode leaves out %@ until it is turned on here."
+  ],
+  "arabic": "الوضع المبسّط"
+ },
+ {
+  "key": "Six Books",
+  "files": [
+   "iPhone/Hadith/Search/HadithSearchFilters.swift"
+  ],
+  "examples": [
+   "Your Summary keeps the “Hadith of the Day” and the “Last Read Hadith”. Below it, %lld collections sit in four groups, from The Six Books to Other Books. Tap a book for its chapters.",
+   "A short row of buttons appears above the results while you search. Choose the collections (or tap Bukhari & Muslim), keep only Sahih, Hasan, or Da'if narrations, and order the hadiths by Best Match. Tap More for Six Books, All Words or Any Word, and which kinds of result to show. The first button opens every filter on one page. The same row, without the collections, sits over the search inside a book and inside a chapter."
+  ],
+  "arabic": "الكتب الستة"
+ },
+ {
+  "key": "Sky Colors",
+  "files": [
+   "iPhone/Adhan/Sky/SkyColorsView.swift",
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/Pages/SettingsAdhanView.swift",
+   "iPhone/Settings/Pages/TipsAndTricks.swift",
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "Sky Colors gives every prayer two colors of its own. Tap a prayer's row to preview it, and Restore Default Colors brings the originals back.",
+   "Drag the sun across the sky to see any moment of the day; let go to come back to now. Tap the moon to see it up close. Sky settings hold “Skyline”, “Sky Colors” and “Weather”, which is off until you turn it on."
+  ],
+  "arabic": "ألوان السماء"
+ },
+ {
+  "key": "Sky Fills the Screen",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "Sky Fills the Screen paints the Adhan tab's whole background with the sky: its colors, its stars at night and its weather, behind the prayer times and everything under them.",
+   "Sky Fills the Screen paints the Adhan tab's whole background with the sky: its colors and its stars at night, behind the prayer times and everything under them."
+  ],
+  "arabic": "السماء تملأ الشاشة"
+ },
+ {
+  "key": "Skyline",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "Skyline draws pyramids and a mosque along the horizon, in the app and on the Solar Arc and Day & Night widgets. Choose the pair, only pyramids, or only mosques.",
+   "Drag the sun across the sky to see any moment of the day; let go to come back to now. Tap the moon to see it up close. Sky settings hold “Skyline”, “Sky Colors” and “Weather”, which is off until you turn it on."
+  ],
+  "arabic": "خط الأفق"
+ },
+ {
+  "key": "Smart Ayah Matching",
+  "files": [
+   "iPhone/Quran/Reader/ContextMenu.swift",
+   "iPhone/Quran/Sharing/ShareAyah.swift"
+  ],
+  "examples": [
+   "Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat). With Smart Ayah Matching off, the exact tapped number is shown as-is.",
+   "Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently. Smart Ayah Matching follows the words, so the matching ayah is shown even where numbering differs."
+  ],
+  "arabic": "المطابقة الذكية للآيات"
+ },
+ {
+  "key": "Smart Comparison",
+  "files": [
+   "iPhone/Quran/Sheets/ComparisonSheets.swift"
+  ],
+  "examples": [
+   "Smart Comparison is off: each row shows that riwayah's ayah under this exact number, so rows may show different words where the numbering differs."
+  ],
+  "arabic": "المقارنة الذكية"
+ },
+ {
+  "key": "Solar Arc",
+  "files": [
+   "Widget/Adhan/SolarMoonWidgets.swift"
+  ],
+  "examples": [
+   "Skyline draws pyramids and a mosque along the horizon, in the app and on the Solar Arc and Day & Night widgets. Choose the pair, only pyramids, or only mosques."
+  ],
+  "arabic": "مسار الشمس"
+ },
+ {
+  "key": "Sort By",
+  "files": [
+   "iPhone/Hadith/Views/HadithNarratorViews.swift",
+   "iPhone/Hadith/Views/HadithResolvedList.swift",
+   "iPhone/Quran/Reader/SurahView.swift"
+  ],
+  "examples": [
+   "Every riwayah picker ends in Sort By. Default keeps one submenu per qiraah, the imams in alphabetical order. Alphabetical and Most Common list every riwayah in one list, by the narrator's name or by how widely it is recited. Date orders the qiraat by the year each imam died, and 7 + 3 does the same with the Seven before the Three. Hafs an Asim stays the first row in every order."
+  ],
+  "arabic": "الترتيب حسب"
+ },
+ {
+  "key": "Start Here",
+  "files": [
+   "iPhone/Settings/Pages/TabTutorials.swift"
+  ],
+  "examples": [
+   "About You remembers whether you grew up Muslim, embraced Islam, are just getting started, or are learning about Islam, and tailors the Start Here guide on the Islam tab. It never leaves your iPhone. Replay the Welcome Tutorial, on the same page, walks the welcome again.",
+   "If you told About You you are new to Islam or learning about it, Start Here leads the tab with steps chosen for you. Each step is checked once you open it. “Hide” puts the guide away, and “Show the Start Here Guide” in About You brings it back."
+  ],
+  "arabic": "ابدأ من هنا"
+ },
+ {
+  "key": "Start Session",
+  "files": [
+   "iPhone/Islam/Dua/DuaSessionView.swift"
+  ],
+  "examples": [
+   "Start Session, at the top of a dua collection, walks its duas one at a time, full screen, with a ring you tap to count repetitions. It moves on when you reach your target and remembers where you stopped."
+  ],
+  "arabic": "بدء الجلسة"
+ },
+ {
+  "key": "Stop Playing",
+  "files": [
+   "iPhone/Quran/Playback/NowPlayingView.swift",
+   "iPhone/Quran/Sheets/TafsirSheets.swift"
+  ],
+  "examples": [
+   "Touch and hold the player for Stop Playing, Play from Beginning, the queue, and favoriting the surah or bookmarking the ayah. While a custom range plays it adds Range Ayahs. Inside the reader, tapping the player jumps to the ayah being recited."
+  ],
+  "arabic": "إيقاف التشغيل"
+ },
+ {
+  "key": "Summarize with AI",
+  "files": [
+   "iPhone/Hadith/Views/HadithComponents.swift",
+   "iPhone/Helpers/AskAI/SummarizeSheet.swift",
+   "iPhone/Quran/Reader/AyahRow.swift",
+   "iPhone/Quran/Reader/ContextMenu.swift",
+   "iPhone/Quran/Sheets/AyahSheets.swift"
+  ],
+  "examples": [
+   "A hadith's menu offers Summarize with AI, and search offers Ask AI about what you typed. Both run on the iPhone itself.",
+   "Touch and hold a hadith, or tap its ⋯, for “Bookmark Hadith”, “Add Note”, “Select Text”, “Copy Hadith” and “Share Hadith”, which makes an image or text. Where Apple Intelligence is available, “Summarize with AI” is there too."
+  ],
+  "arabic": "تلخيص بالذكاء الاصطناعي"
+ },
+ {
+  "key": "Surah Info",
+  "files": [
+   "iPhone/Quran/Reader/SurahView.swift"
+  ],
+  "examples": [
+   "Tap a surah's heading on a page, or Surah Info in the title's menu, for its background from several sources.",
+   "Credit for the Surah Info goes to Quran.com (Quran Foundation)"
+  ],
+  "arabic": "معلومات السورة"
+ },
+ {
+  "key": "Switch Hijri Date at Maghrib",
+  "files": [
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "Switch Hijri Date at Maghrib turns the Hijri date over at Maghrib instead of midnight, the way the Islamic day runs."
+  ],
+  "arabic": "تغيير التاريخ الهجري عند المغرب"
+ },
+ {
+  "key": "Tajweed Colors",
+  "files": [
+   "iPhone/Quran/Reader/SurahView.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "“Show Tajweed Colors” is on from the start. Tap the “Legend” pill in the reader for the full guide to the colors, or hold it for a quick look.",
+   "Open the tajweed guide from the reader's Legend pill, or from Customize Tajweed Colors in Quran Settings. Under More Detail, tap a rule's card to show or hide that rule, and use the color well on the card to recolor it."
+  ],
+  "arabic": "ألوان التجويد"
+ },
+ {
+  "key": "Tajweed Course",
+  "files": [
+   "iPhone/Islam/IslamView.swift",
+   "iPhone/Islam/Tajweed/TajweedFoundations.swift",
+   "iPhone/Islam/Tajweed/TajweedView.swift"
+  ],
+  "examples": [
+   "“Arabic Alphabet” teaches every letter and mark, “Tajweed Foundations” gives each rule a page, and the “Tajweed Course” goes lesson by lesson, with a “Check Yourself” quiz in each.",
+   "The Tajweed Course runs from reading the letters to reading the mushaf. Each lesson gives the rule, its letters (tap one for its page), words to read aloud, example ayahs played in your own reciter, and a Check Yourself quiz. Mark lessons done, step through with the arrows at the top, and Continue picks up where you left off. Tajweed Foundations, beside it, keeps every rule on a page of its own to look up."
+  ],
+  "arabic": "دورة التجويد"
+ },
+ {
+  "key": "Tajweed Foundations",
+  "files": [
+   "iPhone/Islam/IslamView.swift",
+   "iPhone/Islam/Tajweed/TajweedFoundations.swift",
+   "iPhone/Islam/Tajweed/TajweedView.swift"
+  ],
+  "examples": [
+   "“Arabic Alphabet” teaches every letter and mark, and “Tajweed Foundations” gives each rule of recitation a page.",
+   "“Arabic Alphabet” teaches every letter and mark, “Tajweed Foundations” gives each rule a page, and the “Tajweed Course” goes lesson by lesson, with a “Check Yourself” quiz in each."
+  ],
+  "arabic": "أساسيات التجويد"
+ },
+ {
+  "key": "Tasbih Counter",
+  "files": [
+   "iPhone/Islam/Dua/TasbihView.swift",
+   "iPhone/Islam/IslamView.swift"
+  ],
+  "examples": [
+   "“Dua & Supplications” holds Morning & Evening and all of Hisn al-Muslim. “Dhikr & Remembrances”, the “Tasbih Counter” and the “99 Names of Allah” sit beside it.",
+   "In the Tasbih Counter, tap anywhere on the counter card to count. Tap a dhikr in the list to count that one, and set the ring to complete every 33, 99, 100, 500, or 1,000."
+  ],
+  "arabic": "عدّاد التسبيح"
+ },
+ {
+  "key": "Test Mode",
+  "files": [
+   "iPhone/Quran/Reader/QuranTestMode.swift",
+   "iPhone/Settings/Pages/SettingsQuranView.swift",
+   "iPhone/Settings/Pages/TipsAndTricks.swift",
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "Test Mode, in the reader's play menu, hides the Quran's text in both readers until you tap an ayah, so you can recite from memory and check yourself. Its settings choose whether the Arabic alone or everything hides, whether a tap shows one ayah or everything before it too, and whether Reveal as It's Recited uncovers each ayah as the reciter reaches it. Hide All Again, in the same menu, starts over.",
+   "On, closing the surah you are reading turns Test Mode off, so the Quran never opens with its text hidden. Off, it stays on, across launches too, until you turn it off."
+  ],
+  "arabic": "وضع الاختبار"
+ },
+ {
+  "key": "Text Size",
+  "files": [
+   "iPhone/Quran/Qiraat/QiraatExplorerView.swift",
+   "iPhone/Quran/Sheets/ComparisonSheets.swift",
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/Pages/SettingsIslamView.swift",
+   "iPhone/Settings/Pages/TabTutorials.swift",
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "“Text Size” sizes everything on the Islam tab. “Arabic Font” sets the face for the duas, the dhikr, the 99 Names and the alphabet; the Quran and the hadith books keep their own. The gear at the top of the tab opens Islam Settings."
+  ],
+  "arabic": "حجم النص"
+ },
+ {
+  "key": "The App",
+  "files": [
+   "iPhone/Settings/Pages/TipsAndTricks.swift"
+  ],
+  "examples": [
+   "The Apple Watch app has a sky strip of its own that you can drag through the day, complications with the current prayer and a live countdown, and settings that stay in step with the iPhone."
+  ],
+  "arabic": "التطبيق"
+ },
+ {
+  "key": "The Six Books",
+  "files": [
+   "iPhone/Hadith/Search/HadithSearchFilters.swift"
+  ],
+  "examples": [
+   "Your Summary keeps the “Hadith of the Day” and the “Last Read Hadith”. Below it, %lld collections sit in four groups, from The Six Books to Other Books. Tap a book for its chapters."
+  ],
+  "arabic": "الكتب الستة"
+ },
+ {
+  "key": "Tips & Tricks",
+  "files": [
+   "iPhone/Settings/Pages/TabTutorials.swift",
+   "iPhone/Settings/Pages/TipsAndTricks.swift"
+  ],
+  "examples": [
+   "“Arabic Font” and “Arabic Font Size” are on Arabic Text, with “Show Riwayah / Qiraah” for the other readings. Tips & Tricks has everything else the Quran can do, each with where to find it.",
+   "“Nagging Mode” asks “Did you pray?” until you answer, to help you pray on time. Tips & Tricks has everything else the prayer times can do, each with where to find it."
+  ],
+  "arabic": "نصائح وحيل"
+ },
+ {
+  "key": "Today",
+  "files": [
+   "Widget/Adhan/PrayerTrackerWidget.swift",
+   "iPhone/Adhan/Calendar/CalendarView.swift",
+   "iPhone/Adhan/GlanceCard.swift",
+   "iPhone/Adhan/IslamicEventBanner.swift",
+   "iPhone/Adhan/Prayers/PrayerTrackerCard.swift",
+   "iPhone/Adhan/Sky/MoonViewer.swift",
+   "iPhone/CarPlay/CarPlayContent.swift",
+   "iPhone/Hadith/Views/HadithView.swift",
+   "iPhone/Islam/Daily/DailyHub.swift",
+   "iPhone/Islam/Dua/TasbihView.swift",
+   "iPhone/Islam/IslamView.swift",
+   "iPhone/Quran/QuranView.swift",
+   "iPhone/Settings/Profile/ProfileView.swift"
+  ],
+  "examples": [
+   "“Today” in the ⋯ menu gathers the day's picks, and the Reminder of the Day sits near the foot of the tab. Tips & Tricks has everything else, each with where to find it.",
+   "Save keeps a Reminder of the Day, with its source, in Saved Reflections. The Today pill gathers the ayah, word, hadith, dua, and reminder of the day on one screen."
+  ],
+  "arabic": "اليوم"
+ },
+ {
+  "key": "Top Accent Glow",
+  "files": [
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "Top Accent Glow washes the top of each screen in your accent color. Al-Islam Glow paints it yellow and green instead, and turning it off gives a flat background."
+  ],
+  "arabic": "توهّج لون التمييز في الأعلى"
+ },
+ {
+  "key": "Transliteration, on English Text",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift"
+  ],
+  "examples": [
+   "Show Transliteration, on English Text, writes each ayah in Latin letters beneath the Arabic, so it can be read aloud before the script is familiar. Hafs only, with Include English on."
+  ],
+  "arabic": "الكتابة اللاتينية، في النص الإنجليزي"
+ },
+ {
+  "key": "Travel Settings",
+  "files": [
+   "iPhone/Adhan/Prayers/PrayerList.swift"
+  ],
+  "examples": [
+   "the traveling banner, which opens Travel Settings",
+   "You can set your home city by tapping Travel Settings below."
+  ],
+  "arabic": "إعدادات السفر"
+ },
+ {
+  "key": "Traveling Mode",
+  "files": [
+   "iPhone/Adhan/AdhanView.swift",
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/Pages/SettingsAdhanView.swift",
+   "iPhone/Settings/Pages/TabTutorials.swift",
+   "iPhone/Settings/SettingsSearch.swift"
+  ],
+  "examples": [
+   "More than 48 mi from home, with “Automatic Traveling Mode” on, Traveling Mode turns on and asks you to “Keep On” or “Turn Off” (which also stops the automatic switch). Prayers then show shortened and combined, and “Show Full Prayers” on its page brings each back to its own time.",
+   "The first place the app finds you is saved as your home city, and Traveling Mode measures how far you are from it. If that is not where you live, change it."
+  ],
+  "arabic": "وضع السفر"
+ },
+ {
+  "key": "Tree of Narrators",
+  "files": [
+   "iPhone/Hadith/Views/HadithIsnadTreeView.swift"
+  ],
+  "examples": [
+   "Many hadiths have “Chain of Narrators” in their menu: the isnad, narrator by narrator. Tap a narrator to see every narration that names them, with “Same Chain of Narrators” and “Tree of Narrators” under the chain where they exist. “Similar Hadiths”, in the same menu, finds narrations close to this one."
+  ],
+  "arabic": "شجرة الرواة"
+ },
+ {
+  "key": "Turn Off",
+  "files": [
+   "iPhone/Settings/Model/SettingsAdhan.swift"
+  ],
+  "examples": [
+   "More than 48 mi from home, with “Automatic Traveling Mode” on, Traveling Mode turns on and asks you to “Keep On” or “Turn Off” (which also stops the automatic switch). Prayers then show shortened and combined, and “Show Full Prayers” on its page brings each back to its own time."
+  ],
+  "arabic": "إيقاف"
+ },
+ {
+  "key": "Turn Over at Fajr",
+  "files": [
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/Pages/SettingsIslamView.swift"
+  ],
+  "examples": [
+   "Turn Over at Fajr changes every daily feature at Fajr rather than at midnight, so the day begins with the prayer."
+  ],
+  "arabic": "بدء اليوم عند الفجر"
+ },
+ {
+  "key": "Umm Al-Qura",
+  "files": [
+   "(data shown via .localizedDisplay)"
+  ],
+  "examples": [
+   "Umm Al-Qura and Qatar use a fixed interval after Maghrib for Isha instead of an angle, because at their latitude the twilight is consistent enough for a clock to be reliable."
+  ],
+  "arabic": "أم القرى"
+ },
+ {
+  "key": "Unique Features",
+  "files": [
+   "iPhone/Settings/Pages/TipsAndTricks.swift"
+  ],
+  "examples": [
+   "The Tips & Tricks, Unique Features and Beginner Features rows on each settings page"
+  ],
+  "arabic": "ميزات فريدة"
+ },
+ {
+  "key": "Uthmani Script",
+  "files": [
+   "iPhone/Settings/Pages/SettingsQuranView.swift"
+  ],
+  "examples": [
+   "This app supports all 20 riwayat, 12 of them in beta.\n\nThe riwayat printed in the Maghribi script use the official King Fahd Complex Warsh typeface; the others share the Uthmani (Madani) script typeface. You can override this under Arabic Text → Uthmani Script.\n\nPlay Ayahs is unsupported for other qiraat. For full surahs, you can choose reciters by riwayah. If you play a surah while viewing a different qiraah on screen, the reciter may be in another riwayah, so the audio may not match the text you see. For beginners, staying with Hafs an Asim for both reading and listening is recommended."
+  ],
+  "arabic": "الخط العثماني"
+ },
+ {
+  "key": "View Fullscreen",
+  "files": [
+   "iPhone/Hadith/Views/HadithBookView.swift",
+   "iPhone/Hadith/Views/HadithView.swift",
+   "iPhone/Islam/Arabic/ArabicLetterViews.swift",
+   "iPhone/Islam/Names/NamesView.swift",
+   "iPhone/Quran/Reader/ContextMenu.swift"
+  ],
+  "examples": [
+   "Most rows, cards, tiles, and images answer a touch and hold with a menu: Copy, Share, Favorite, View Fullscreen, or Scroll To.",
+   "Swipe a surah right to favorite it and left to play it. Touch and hold for View Fullscreen, Share Surah, Play Random Ayah, and Add to Queue."
+  ],
+  "arabic": "عرض بملء الشاشة"
+ },
+ {
+  "key": "Vowel Letters",
+  "files": [
+   "iPhone/Islam/Arabic/ArabicTopics.swift",
+   "iPhone/Islam/Arabic/VowelLettersView.swift"
+  ],
+  "examples": [
+   "Read the rules on the Vowel Letters page once more, then come back for another round."
+  ],
+  "arabic": "حروف العلة"
+ },
+ {
+  "key": "Weather",
+  "files": [
+   "iPhone/Adhan/GlanceCard.swift",
+   "iPhone/Adhan/Sky/WeatherDetailSheet.swift",
+   "iPhone/Settings/Pages/HelpDoors.swift",
+   "iPhone/Settings/Pages/SettingsAdhanView.swift"
+  ],
+  "examples": [
+   "Turn on Weather and the sky clouds over, rains and fogs with the real weather outside. The temperature sits at the top of the card (tap it for the UV index, humidity, wind and more, and for Try Another Sky, which dresses the sky in any condition while you look), At a Glance gains a Weather group, and the sky widgets show the temperature beside the city. It uses Apple Weather, so your location is sent to Apple while it is on.",
+   "Clouds, rain, snow and fog on the sky; temperature, UV, humidity and wind on the card and the widgets. Sends your location to Apple Weather about twice an hour while the tab is open; off, it never leaves your device."
+  ],
+  "arabic": "الطقس"
+ },
+ {
+  "key": "What Moves Where",
+  "files": [
+   "iPhone/Settings/SettingsView.swift"
+  ],
+  "examples": [
+   "Simple Mode keeps each tab to its essentials. Shortcuts move into a ⋯ menu at the top of the tab or into Settings, and %@. Nothing is turned off, and turning it back off brings everything back. What Moves Where, on the Simple Mode page, lists every shortcut and where it went.",
+   "Each tab keeps to its essentials. Nothing is turned off; What Moves Where says where everything went."
+  ],
+  "arabic": "ماذا ينتقل وإلى أين"
+ },
+ {
+  "key": "What's Included",
+  "files": [
+   "iPhone/Settings/Cloud/CloudBackupViews.swift"
+  ],
+  "examples": [
+   "What's Included, on the iCloud Backup page, lists every kind of thing a backup of this iPhone carries right now, with counts and the size, and everything a backup never includes. Every restore shows the same categories side by side, here against the backup, before you choose Replace or Merge."
+  ],
+  "arabic": "ما الذي يتضمّنه"
+ },
+ {
+  "key": "Whole Page",
+  "files": [
+   "iPhone/Quran/Sheets/CustomRangeSheet.swift"
+  ],
+  "examples": [
+   "Play Custom Range takes a range of ayahs or of pages, with Whole Page and Whole Surah a tap away, repeats Each Ayah and the Whole Range as many times as you set (or forever), and lists every ayah of the range before you press Play Range. While it plays, the range line under the reciter on the Now Playing bar opens the same list, with the ayah being recited marked and kept in view. Tap any ayah there to jump to it."
+  ],
+  "arabic": "الصفحة كاملة"
+ },
+ {
+  "key": "Whole Range",
+  "files": [
+   "iPhone/Quran/Sheets/CustomRangeSheet.swift"
+  ],
+  "examples": [
+   "Play Custom Range takes a range of ayahs or of pages, with Whole Page and Whole Surah a tap away, repeats Each Ayah and the Whole Range as many times as you set (or forever), and lists every ayah of the range before you press Play Range. While it plays, the range line under the reciter on the Now Playing bar opens the same list, with the ayah being recited marked and kept in view. Tap any ayah there to jump to it."
+  ],
+  "arabic": "النطاق كاملًا"
+ },
+ {
+  "key": "Whole Surah",
+  "files": [
+   "iPhone/Quran/Sheets/CustomRangeSheet.swift"
+  ],
+  "examples": [
+   "Play Custom Range takes a range of ayahs or of pages, with Whole Page and Whole Surah a tap away, repeats Each Ayah and the Whole Range as many times as you set (or forever), and lists every ayah of the range before you press Play Range. While it plays, the range line under the reciter on the Now Playing bar opens the same list, with the ayah being recited marked and kept in view. Tap any ayah there to jump to it."
+  ],
+  "arabic": "السورة كاملة"
+ },
+ {
+  "key": "Whole Word",
+  "files": [
+   "iPhone/Hadith/Search/HadithSearchFilters.swift",
+   "iPhone/Quran/Search/QuranSearchFilterModel.swift"
+  ],
+  "examples": [
+   "A short row of buttons appears above the results while you search: your Bookmarks and Favorites, Makki or Madani, and Best Match. Tap More for the rest, several at once: Whole Word, All Words or Any Word, chosen juz or surahs, translation or transliteration only, Go To a page or hizb, and which kinds of result to show. The first button opens every filter on one page, including words to leave out."
+  ],
+  "arabic": "كلمة كاملة"
+ },
+ {
+  "key": "Word Study",
+  "files": [
+   "iPhone/Quran/Words/WordByWord.swift",
+   "iPhone/Settings/Pages/TipsAndTricks.swift"
+  ],
+  "examples": [
+   "Two taps on a word open Word Study: its meaning, its grammar with each part of the word lit in turn (prefix, stem, suffix), its root with every word built on it, the ayah's themes, and its tajweed. Switch to any other word of the ayah from the strip, or tap a word of the same root to study it there. A single tap still marks the ayah. It works offline, on Hafs.",
+   "Credit for the root, dictionary form and grammar of every word (its prefixes, stem and suffixes, part of speech and analysis), on the Word Study card and behind the root search, goes to the Quranic Arabic Corpus morphology by Kais Dukes, via the Quranic Universal Library and Tilawa; Word Study itself follows Tilawa's, by my friend Jamil Hammoudeh"
+  ],
+  "arabic": "دراسة الكلمة"
+ },
+ {
+  "key": "Word of the Day",
+  "files": [
+   "iPhone/Quran/Words/WordOfDay.swift",
+   "iPhone/Settings/Pages/SettingsIslamView.swift"
+  ],
+  "examples": [
+   "Credit for the Word of the Day curation (149 words, their themes interleaved) goes to my friend Jamil Hammoudeh, who chose them for Tilawa and gave his permission to bring them here; each word's gloss is Quran.com's word-by-word English, and every occurrence is located in this app's own Hafs text"
+  ],
+  "arabic": "كلمة اليوم"
+ },
+ {
+  "key": "YOUR SUMMARY",
+  "files": [
+   "iPhone/Quran/QuranView.swift",
+   "iPhone/Settings/Pages/TabSections.swift",
+   "iPhone/Settings/Pages/TipsAndTricks.swift"
+  ],
+  "examples": [
+   "The shuffle beside today's hadith picks a different one, and the plus in YOUR SUMMARY unfolds the days before.",
+   "The Today pill on the Hadith tab's YOUR SUMMARY"
+  ],
+  "arabic": "ملخّصك"
+ },
+ {
+  "key": "Yes, but late",
+  "files": [
+   "iPhone/Adhan/Prayers/PrayerTrackerCard.swift",
+   "iPhone/AppDelegate.swift",
+   "iPhone/Settings/Model/SettingsAdhan.swift"
+  ],
+  "examples": [
+   "Touch and hold a “Did you pray?” reminder for “Yes, on time” and “Yes, but late”. Either one marks the prayer tracker and cancels the rest of that prayer's reminders, without opening the app.",
+   "Touch and hold a reminder on the Lock Screen for “Yes, on time” and “Yes, but late”. Either one marks the prayer tracker and cancels the rest of that prayer's reminders."
+  ],
+  "arabic": "نعم، لكن متأخرًا"
+ },
+ {
+  "key": "Yes, on time",
+  "files": [
+   "iPhone/Adhan/Prayers/PrayerTrackerCard.swift",
+   "iPhone/AppDelegate.swift",
+   "iPhone/Settings/Model/SettingsAdhan.swift"
+  ],
+  "examples": [
+   "Touch and hold a “Did you pray?” reminder for “Yes, on time” and “Yes, but late”. Either one marks the prayer tracker and cancels the rest of that prayer's reminders, without opening the app.",
+   "Touch and hold a reminder on the Lock Screen for “Yes, on time” and “Yes, but late”. Either one marks the prayer tracker and cancels the rest of that prayer's reminders."
+  ],
+  "arabic": "نعم، في وقتها"
+ },
+ {
+  "key": "Your Summary",
+  "files": [
+   "iPhone/Settings/Pages/TabSections.swift"
+  ],
+  "examples": [
+   "Your Summary comes first, with the “Last Read Ayah” and the “Ayah of the Day”, then every surah: tap one to read it. Hold a surah for “Favorite Surah” to keep it under Favorites. Ayahs you bookmark gather under Bookmarks.",
+   "Your Summary keeps the “Hadith of the Day” and the “Last Read Hadith”. Below it, %lld collections sit in four groups, from The Six Books to Other Books. Tap a book for its chapters."
+  ],
+  "arabic": "ملخّصك"
+ },
+ {
+  "key": "Yusuf 12:11",
+  "files": [
+   "(data shown via .localizedDisplay)"
+  ],
+  "examples": [
+   "‎الإشمام, in تَأۡمَ۬نَّا at Yusuf 12:11. The word underneath is تَأۡمَنُنَا, two noons that merged. Hafs is read with two accepted wajhs here. In the first you make the merge fully, and while saying the doubled noon you round your lips toward the damma that was dropped: a gesture with no sound in it, meant to be seen rather than heard. In the second, الاختلاس, you sound most of the dropped damma, about two thirds of it, on the first noon, so the merge is only partial and the ear catches a trace of it. This is not the الرَّوم of the previous lesson: الرَّوم is a way of stopping and sounds about a third of the vowel, while الاختلاس belongs to a joined reading. Both are read; a teacher will tell you which one is being taught. Note that this is a different thing from the ishmam that may be used at any stop, which the previous lessons mentioned."
+  ],
+  "arabic": "يوسف ١٢:١١"
+ },
+ {
+  "key": "Zakah Calculator",
+  "files": [
+   "iPhone/Islam/Fiqh/ZakahView.swift",
+   "iPhone/Islam/IslamView.swift"
+  ],
+  "examples": [
+   "The Zakah Calculator works on a lunar year at 2.5% or a solar year at 2.577%. The small information buttons beside its fields open the scholarly detail behind each rule, and a touch and hold on the result copies it."
+  ],
+  "arabic": "حاسبة الزكاة"
+ },
+ {
+  "key": "day",
+  "files": [
+   "iPhone/Quran/Reader/QuranPlannerView.swift"
+  ],
+  "examples": [
+   "“Today” in the ⋯ menu gathers the day's picks, and the Reminder of the Day sits near the foot of the tab. Tips & Tricks has everything else, each with where to find it.",
+   "A prayer can be marked only once its time has come in, so today's row shows what is still left to pray. Past days can always be filled in, from the seven days under the card or from History & Insights."
+  ],
+  "arabic": "يوم"
+ },
+ {
+  "key": "red",
+  "files": [
+   "iPhone/Quran/Themes/ThemeHighlights.swift"
+  ],
+  "examples": [
+   "In the reciter list, tap the colored dot beside a name to learn what that reciter offers: ayah by ayah in their own voice, offline, or full surahs only. A purple dot means the recording is incomplete, and tapping it says which surahs exist.",
+   "Open a rule in the Legend, in the basic list or on its full card, and an example ayah follows its note: one ayah in the Quran face with only that rule's letters colored. A riwayah's rules show the earliest short ayah its printed mushaf colors with them, and how many words of its text the rule colors; the comparison of all riwayat carries the same counts."
+  ],
+  "arabic": "أحمر"
+ },
+ {
+  "key": "said as",
+  "files": [
+   "iPhone/Islam/Arabic/HamzatulWaslView.swift"
+  ],
+  "examples": [
+   "Under each phrase, “said as” writes out what you hear in one breath: the tanween turned into a noon with a kasra, and the alif gone. It is not how the mushaf spells it. Select a row for the steps in between, and for how it would sound with a plain vowel instead.",
+   "ث puts the tongue between the teeth; س and ش hiss and hush behind them. A ث said as a س changes the word."
+  ],
+  "arabic": "تُنطق"
+ },
+ {
+  "key": "the",
+  "files": [
+   "iPhone/Quran/Models/WordGrammar.swift"
+  ],
+  "examples": [
+   "Your Summary comes first, with the “Last Read Ayah” and the “Ayah of the Day”, then every surah: tap one to read it. Hold a surah for “Favorite Surah” to keep it under Favorites. Ayahs you bookmark gather under Bookmarks.",
+   "Your Summary keeps the “Hadith of the Day” and the “Last Read Hadith”. Below it, %lld collections sit in four groups, from The Six Books to Other Books. Tap a book for its chapters."
+  ],
+  "arabic": "للتعريف"
+ },
+ {
+  "key": "the joining hamza",
+  "files": [
+   "iPhone/Islam/Arabic/HamzatulWaslView.swift"
+  ],
+  "examples": [],
+  "arabic": "الهمزة الواصلة"
+ }
+]

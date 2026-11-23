@@ -318,8 +318,19 @@ struct NowPlayingView: View {
             let safeElapsed = scrubFraction.map { $0 * total } ?? playedElapsed
 
             VStack(spacing: 6) {
+                // The bar's slot stays while the item has no duration yet (an ayah still loading, the
+                // hand-off between two), as the bar's empty track. Dropping it made the card 9 pt
+                // shorter on a value no view observes (it is polled from the item here), and the page
+                // reader freezes the card's band at the height it first measures: frozen without the
+                // bar, the bar's return squeezed the title and reciter to half their size (2026-11-21).
                 if total > 0 {
                     scrubber(elapsed: playedElapsed, total: total)
+                } else {
+                    Capsule()
+                        .fill(settings.accentColor.color.opacity(0.22))
+                        .frame(height: 3)
+                        .frame(maxWidth: .infinity)
+                        .accessibilityHidden(true)
                 }
 
                 // This row must never be wider than the card it sits in. Two rigid 40 pt time labels,
@@ -410,7 +421,9 @@ struct NowPlayingView: View {
 
     /// Whether the range repeats at all: each ayah more than once, or the section more than once
     /// (forever included). Without repeats the counts line says nothing ("Ayah 1/1 · Section 1/1").
-    private var customRangeRepeats: Bool {
+    private var customRangeRepeats: Bool { Self.rangeRepeats(nowPlaying) }
+
+    private static func rangeRepeats(_ nowPlaying: NowPlayingState) -> Bool {
         nowPlaying.customRangeRepeatPerAyah > 1 || nowPlaying.customRangeRepeatSection > 1
     }
 
@@ -435,6 +448,35 @@ struct NowPlayingView: View {
         let sectionProgress = nowPlaying.customRangeRepeatSectionIndex ?? 1
         let sectionTotal = customRangeLoops ? "\u{221E}" : "\(max(1, nowPlaying.customRangeRepeatSection))"
         return String(localized: "Ayah \(ayahProgress)/\(ayahTotal) · Section \(sectionProgress)/\(sectionTotal.localizedDigits)")
+    }
+
+    /// The lines the title block stacks, which are what set the card's height: the title, the reciter,
+    /// a custom range's range line, and (the small card only) that range's repeat counts.
+    ///
+    /// The page reader holds the card's band at the height it measured (`MushafReader.playerBand`) and
+    /// measures again when this changes. Until 2026-11-21 nothing did: a range started over a recitation
+    /// already playing (cached audio, so the bar never went down in between) put four lines into the
+    /// two-line card's height, and every line allowed to shrink did, the title to half its size.
+    struct TitleLines: Equatable {
+        var title = false
+        var reciter = false
+        var range = false
+        /// The range repeats: its own line on the small card, folded into the range line on the big one.
+        var repeats = false
+    }
+
+    /// `TitleLines` for the state the card draws. The title mirrors `displayTitle`.
+    static func titleLines(_ nowPlaying: NowPlayingState) -> TitleLines {
+        let range = nowPlaying.isPlayingCustomRange
+            && nowPlaying.customRangeStartAyah != nil && nowPlaying.customRangeEndAyah != nil
+        let rangeTitle = nowPlaying.isPlayingCustomRange
+            && nowPlaying.currentSurahNumber != nil && nowPlaying.currentAyahNumber != nil
+        return TitleLines(
+            title: rangeTitle || nowPlaying.nowPlayingTitle != nil,
+            reciter: nowPlaying.nowPlayingReciter != nil,
+            range: range,
+            repeats: range && rangeRepeats(nowPlaying)
+        )
     }
 
     /// For a custom range, keep the top title short (just "Name S:A") since the per-ayah/section detail
@@ -729,15 +771,16 @@ struct NowPlayingView: View {
 
         // Custom range: the "Ayahs 1–10 · 3/30" line under the reciter in BOTH sizes, opening the range
         // sheet. The big player folds the repeat counts into it (it has the width); the small player
-        // keeps them on their own line, and only while something repeats.
-        if nowPlaying.isPlayingCustomRange,
+        // keeps them on their own line, and only while something repeats. Drawn from `titleLines`,
+        // the account the page reader sizes the card's band by, so the two cannot disagree.
+        let lines = Self.titleLines(nowPlaying)
+        if lines.range,
            let start = nowPlaying.customRangeStartAyah,
            let end = nowPlaying.customRangeEndAyah {
-            let repeats = customRangeRepeats
             let lineOne = customRangeLineOne(start: start, end: end)
-            rangeLine(expanded && repeats ? lineOne + " \u{00B7} " + customRangeLineTwo() : lineOne)
+            rangeLine(expanded && lines.repeats ? lineOne + " \u{00B7} " + customRangeLineTwo() : lineOne)
 
-            if !expanded, repeats {
+            if !expanded, lines.repeats {
                 Text(customRangeLineTwo())
                     .font(.caption2)
                     .foregroundColor(.secondary)

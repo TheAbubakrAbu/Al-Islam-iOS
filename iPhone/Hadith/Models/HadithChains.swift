@@ -629,6 +629,7 @@ struct HadithIsnadEnglish {
         "انبانا": "told us", "انباني": "told me", "نبانا": "told us",
         "سمعت": "I heard", "سمع": "heard", "سمعنا": "we heard", "سمعا": "the two heard",
         "سمعته": "I heard him", "سمعاه": "the two heard him",
+        "سمعه": "heard it", "سمعها": "heard it", "سمعهم": "heard them", "سمعهما": "heard the two of them",
         "قرات": "I read to", "قرئ": "it was read to", "قراه": "he read it to", "قرانا": "we read to",
         "عن": "from", "ان": "that", "انه": "that he", "انها": "that she", "انهم": "that they", "انهما": "that the two",
         "قال": "said", "قالت": "she said", "قالا": "the two said", "قالوا": "they said", "يقول": "says",
@@ -646,6 +647,23 @@ struct HadithIsnadEnglish {
         "ابنه": "his son", "ابنته": "his daughter", "ابويه": "his parents",
         "مولاه": "his mawla", "مولاته": "her mawla", "زوجها": "her husband", "زوجته": "his wife",
         "امراته": "his wife", "امراه": "a woman",
+        // The same relations in the speaker's own voice and in the accusative ("حدثني أخي", "سمعت عمي",
+        // "أن أباه"). Until 2026-11-22 the script gave each of these a narrator's page (every man's
+        // brother on one page, named "Akhi"); they are relations, and their English is here.
+        "اباه": "his father", "اباها": "her father", "ابيهما": "their father",
+        "جدي": "my grandfather", "جدتي": "my grandmother", "عمي": "my paternal uncle", "عمتي": "my paternal aunt",
+        "اخي": "my brother",
+    ]
+
+    /// Someone the narration leaves unnamed, as the text writes him (the script's UNNAMED: no
+    /// narrator's page). Only the forms that say nothing more; a longer description ("شيخ من بني
+    /// تميم") has no English and its chain's English line is left out, as for any unknown name.
+    private static let unnamed: [String: String] = [
+        "غير واحد": "more than one", "غيره": "another", "غيرهما": "others", "غيرهم": "others",
+        "شيخ": "a shaykh", "شيخا": "a shaykh", "الثقه": "the trustworthy one", "فلان": "so-and-so",
+        "رجلان": "two men", "بعضهم": "one of them", "احدهما": "one of the two", "الاخر": "the other",
+        "ناس": "some people", "الناس": "the people", "قوما": "some people", "الانصار": "the Ansar",
+        "اعرابي": "a Bedouin", "اعرابيا": "a Bedouin", "الاعرابي": "the Bedouin",
     ]
 
     let compiler: String
@@ -694,7 +712,7 @@ struct HadithIsnadEnglish {
     }
 
     /// A narrator's English: his indexed name when he has a profile, his relation when he is named
-    /// by one, else nothing.
+    /// by one, what the text calls him when it leaves him unnamed ("more than one"), else nothing.
     func narrator(arabic: String, id: Int?) -> String {
         if let id, let profile = HadithNarratorStore.shared.profile(id: id), !profile.english.isEmpty {
             return profile.english
@@ -708,7 +726,7 @@ struct HadithIsnadEnglish {
             if marks.contains(where: { $0.value == 0x064F }) { return "Ubayy" }
             return marks.isEmpty ? "" : "my father"
         }
-        return Self.relations[key] ?? ""
+        return Self.relations[key] ?? Self.unnamed[key] ?? ""
     }
 
     // MARK: The chain as a sentence

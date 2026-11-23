@@ -55,7 +55,7 @@ final class AppearanceSettings: ObservableObject, SettingsSlice {
     static let keys: Set<String> = [
         "accentColor", "alIslamGlow", "classicLook", "classicLookInLowPower",
         "colorSchemeString", "customAccentColorHex", "customBackgroundColorHex", "defaultView",
-        "showAccentGlow", "userBackground",
+        "liquidGlassEverywhere", "showAccentGlow", "userBackground",
     ]
 
     private init() { ObjectPublishCounter.attach(self, label: Self.label) }
@@ -102,6 +102,11 @@ final class AppearanceSettings: ObservableObject, SettingsSlice {
     var defaultView: Bool {
         get { Settings.shared.defaultView }
         set { Settings.shared.defaultView = newValue }
+    }
+
+    var liquidGlassEverywhere: Bool {
+        get { Settings.shared.liquidGlassEverywhere }
+        set { Settings.shared.liquidGlassEverywhere = newValue }
     }
 
     var showAccentGlow: Bool {

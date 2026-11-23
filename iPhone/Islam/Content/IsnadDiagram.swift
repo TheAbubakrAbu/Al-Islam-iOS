@@ -24,8 +24,19 @@ struct IsnadNode: Identifiable, Hashable {
     /// A hadith narrator's row in the shelf's narrator index (HadithNarrators.swift): the chip opens
     /// his profile when the diagram is given `onNarratorTap`. Nil everywhere else.
     var narratorID: Int? = nil
+    /// How many narrators stand at this level of the chain ("1"), badged at the chip's far side in
+    /// the compact look: the count a hadith is named by at its narrowest point (gharib, 'aziz,
+    /// mashhur). Nil everywhere else.
+    var count: String? = nil
 
     var id: String { name + "|" + arabic }
+}
+
+/// What a chain opens into at its foot when the roads below it are too many to draw: rays down to
+/// a row of dots, and a line saying who they are ("a great many narrators").
+struct IsnadFan {
+    let rays: Int
+    let caption: String
 }
 
 struct IsnadLayer: Identifiable {
@@ -51,6 +62,8 @@ struct IsnadChain {
     let top: [IsnadLayer]
     let branches: [IsnadBranch]
     var bottom: [IsnadLayer] = []
+    /// The spread below the last narrator drawn (`IsnadFan`), in the compact look.
+    var fan: IsnadFan? = nil
 
     var isEmpty: Bool { top.isEmpty && branches.isEmpty && bottom.isEmpty }
 }
@@ -74,10 +87,18 @@ struct IsnadDiagram: View {
     /// each one be smaller"): the Arabic a size up and the links between generations half as tall.
     /// The article chains keep their measure.
     var hadith = false
+    /// The short look (Abu, 2026-11-22, of a chain drawn as slim capsules: "make the thing each one
+    /// short like that instead of so big"): every narrator one capsule about a finger tall, his name
+    /// and its English on two tight lines; the word of transmission a line of text on the link, not
+    /// a box of its own; a node's `count` badged at its far side; the chain's `fan` at its foot. A
+    /// hadith chain is always drawn so (its cards stood 108 points apiece, three and a half to a
+    /// screen); an article's chain asks for it (`ArticleIsnad.compact`).
+    var compact = false
 
     private var accent: Color { appearance.accent }
+    private var isCompact: Bool { hadith || compact }
     /// The straight part of a link above and below its chevron.
-    private var linkHeight: CGFloat { hadith ? 6 : 14 }
+    private var linkHeight: CGFloat { isCompact ? 5 : 14 }
 
     /// The gap between the branch columns; `IsnadBranchSplit` aims its legs at their centres.
     private static let columnSpacing: CGFloat = 10
@@ -88,7 +109,7 @@ struct IsnadDiagram: View {
             // in the chain of tirmidhi:1081, Ibrahim ibn Sa'd from his father and 'Umar ibn Abi Salamah
             // from his), and a chain never reorders under the diagram.
             ForEach(Array(chain.top.enumerated()), id: \.offset) { index, layer in
-                layerBlock(layer)
+                layerBlock(layer, leads: index == 0)
                 if index < chain.top.count - 1 {
                     connector
                 }
@@ -130,30 +151,70 @@ struct IsnadDiagram: View {
                     }
                 }
             }
+
+            if let fan = chain.fan {
+                fanFoot(fan)
+            }
         }
-        .padding(.vertical, 6)
+        // Its own height, never one handed down: in a List row the stack was offered the row's
+        // height to share out, and every name with a `minimumScaleFactor` shrank to fit its share
+        // instead of taking its line (a chain stood in a row 50 points taller than it drew, with
+        // "Umar" a size smaller than "ibn al-Khattab" beside it).
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.vertical, isCompact ? 2 : 6)
+    }
+
+    /// The chain's spread at its foot: rays from the last narrator down to a row of dots, and the
+    /// line that names them.
+    private func fanFoot(_ fan: IsnadFan) -> some View {
+        VStack(spacing: 6) {
+            IsnadFanRays(rays: fan.rays)
+                .stroke(accent.opacity(0.45), style: StrokeStyle(lineWidth: 1, lineCap: .round))
+                .frame(height: 30)
+                .overlay(alignment: .bottom) {
+                    HStack(spacing: 0) {
+                        ForEach(0..<max(fan.rays, 1), id: \.self) { index in
+                            Circle()
+                                .fill(accent.opacity(0.85))
+                                .frame(width: 7, height: 7)
+                            if index < fan.rays - 1 { Spacer(minLength: 0) }
+                        }
+                    }
+                    .offset(y: 3.5)
+                }
+                .padding(.horizontal, 4)
+                .padding(.top, 2)
+
+            Text(fan.caption)
+                .font(.caption.weight(.medium))
+                .foregroundColor(forImage ? Color.black.opacity(0.55) : Color.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.top, 4)
+        }
+        .frame(maxWidth: 320)
+        .accessibilityElement(children: .combine)
     }
 
     /// A generation's title: the article chains' small capitals, or a hadith chain's Arabic word of
     /// transmission (حدثنا, عن) in the Arabic face, never tracked (spacing letters breaks their joins),
-    /// with its English under it when the chain carries one.
+    /// with its English beside it when the chain carries one.
     @ViewBuilder
-    private func layerTitle(_ title: String, subtitle: String? = nil, tracking: CGFloat) -> some View {
+    private func layerTitle(_ title: String, subtitle: String? = nil, tracking: CGFloat, narrow: Bool = false) -> some View {
         if title.isEmpty {
             EmptyView()
         } else if Self.isArabic(title) {
             let word = Text(verbatim: title)
-                .font(appearance.islamArabicFont(base: hadith ? 18 : 15, relativeTo: .caption))
+                .font(appearance.islamArabicFont(base: hadith ? 16 : 15, relativeTo: .caption))
                 .foregroundColor(forImage ? Color.black.opacity(hadith ? 0.7 : 0.55) : (hadith ? Color.primary.opacity(0.75) : Color.secondary))
             let meaning = Text(subtitle ?? "")
-                .font(hadith ? .caption2.weight(.medium) : .caption2)
+                .font(hadith ? .caption.weight(.medium) : .caption2)
                 .foregroundColor(forImage ? Color.black.opacity(0.5) : Color.secondary)
             if hadith {
-                // The word of transmission as the label of its link (Abu, 2026-11-15: "Make chain of
-                // narrators ... look prettier"): a capsule the line runs into and out of, the word and
-                // its meaning on one line where the column is wide enough, stacked where it is not
-                // (two or three roads side by side). It was loose grey text between two cards.
-                transmissionCapsule(word: word, meaning: (subtitle ?? "").isEmpty ? nil : meaning)
+                // The word of transmission is the label of its link: a line of text the link runs
+                // into and the arrow runs on from, the word and its meaning side by side in the
+                // chain's one column and stacked in a road's (two or three side by side). It was
+                // a bordered capsule of its own between every two narrators until 2026-11-22.
+                transmissionLabel(word: word, meaning: (subtitle ?? "").isEmpty ? nil : meaning, stacked: narrow)
             } else {
                 VStack(spacing: 1) {
                     word
@@ -181,71 +242,78 @@ struct IsnadDiagram: View {
         text.unicodeScalars.contains(where: { (0x0600...0x06FF).contains($0.value) })
     }
 
-    private func transmissionCapsule(word: Text, meaning: Text?) -> some View {
+    /// `stacked` is told, never measured: a `ViewThatFits` here answered the stacked height when the
+    /// List sized the row and drew the one line, so the chain stood in 46 points of empty row.
+    private func transmissionLabel(word: Text, meaning: Text?, stacked: Bool) -> some View {
         let arabic = word
             .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
             .lineLimit(1)
             .fixedSize()
         return Group {
-            if let meaning {
-                if #available(iOS 16.0, *) {
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .firstTextBaseline, spacing: 7) {
-                            arabic
-                            meaning.lineLimit(1).fixedSize()
-                        }
-                        VStack(spacing: 0) {
-                            arabic
-                            meaning.lineLimit(1).minimumScaleFactor(0.8)
-                        }
-                    }
-                } else {
-                    VStack(spacing: 0) {
-                        arabic
-                        meaning.lineLimit(1).minimumScaleFactor(0.8)
-                    }
+            if let meaning, stacked {
+                VStack(spacing: 0) {
+                    arabic
+                        .frame(height: 20)
+                    meaning.lineLimit(1).minimumScaleFactor(0.8)
                 }
+            } else if let meaning {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    arabic
+                    meaning.lineLimit(1).minimumScaleFactor(0.8)
+                }
+                // The Arabic face's line is half again as tall as its letters: the label keeps
+                // the height of its English, and the word's marks draw past it.
+                .frame(height: 20)
             } else {
                 arabic
+                    .frame(height: 20)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 3)
-        .background(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(accent.opacity(0.07)))
-        .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).strokeBorder(accent.opacity(0.3), lineWidth: 1))
+        .padding(.horizontal, 6)
     }
 
     /// A generation: its title, then its people. A hadith chain's word of transmission sits on the
-    /// link itself, so a short stem runs on from its capsule to the narrator who received by it;
-    /// every other title stands `gap` above its people, as it always has.
-    private func generation<People: View>(_ layer: IsnadLayer, tracking: CGFloat, gap: CGFloat,
-                                          @ViewBuilder people: () -> People) -> some View {
+    /// link itself, so the arrow runs on from it to the narrator who received by it; every other
+    /// title stands `gap` above its people, as it always has.
+    private func generation<People: View>(_ layer: IsnadLayer, tracking: CGFloat, gap: CGFloat, leads: Bool = false,
+                                          narrow: Bool = false, @ViewBuilder people: () -> People) -> some View {
         VStack(spacing: 0) {
             if !layer.title.isEmpty {
-                layerTitle(layer.title, subtitle: layer.subtitle, tracking: tracking)
+                layerTitle(layer.title, subtitle: layer.subtitle, tracking: tracking, narrow: narrow)
                 if hadith, Self.isArabic(layer.title) {
-                    Rectangle()
-                        .fill(accent.opacity(0.45))
-                        .frame(width: 2, height: 8)
+                    arrowHead
+                        .padding(.bottom, 2)
                 } else {
                     Color.clear.frame(height: gap)
                 }
+            } else if isCompact, !leads {
+                // A compact chain with no word on this link: the arrow alone. Nothing over the
+                // generation the diagram opens with (`leads`).
+                arrowHead
+                    .padding(.bottom, 2)
             }
             people()
         }
+    }
+
+    private var arrowHead: some View {
+        Image(systemName: "chevron.down")
+            .font(.system(size: isCompact ? 9 : 11, weight: .bold))
+            .foregroundColor(accent.opacity(0.7))
     }
 
     /// One road, top-down: a chevron from the split, then each layer stacked (a column is too narrow to
     /// set two people side by side).
     private func branchColumn(_ branch: IsnadBranch) -> some View {
         VStack(spacing: 0) {
-            Image(systemName: "chevron.down")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(accent.opacity(0.7))
-                .padding(.bottom, 4)
+            if !isCompact {
+                arrowHead
+                    .padding(.bottom, 4)
+            }
 
             ForEach(Array(branch.layers.enumerated()), id: \.offset) { index, layer in
-                generation(layer, tracking: 0.6, gap: 6) {
+                generation(layer, tracking: 0.6, gap: 6, leads: index == 0 && chain.top.isEmpty && chain.branches.count == 1,
+                           narrow: chain.branches.count > 1) {
                     VStack(spacing: 6) {
                         ForEach(layer.nodes) { node in
                             nodeChip(node)
@@ -261,39 +329,41 @@ struct IsnadDiagram: View {
         .opacity(branch.highlighted ? 1 : 0.8)
     }
 
+    /// The link from one generation down to the next. The compact look draws only the line here:
+    /// the next generation brings its own label and arrow (`generation`).
+    @ViewBuilder
     private var connector: some View {
-        VStack(spacing: 0) {
+        if isCompact {
             Rectangle()
                 .fill(accent.opacity(0.45))
                 .frame(width: 2, height: linkHeight)
-            Image(systemName: "chevron.down")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(accent.opacity(0.7))
-            Rectangle()
-                .fill(accent.opacity(0.45))
-                .frame(width: 2, height: linkHeight)
+                .padding(.top, 2)
+        } else {
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(accent.opacity(0.45))
+                    .frame(width: 2, height: linkHeight)
+                arrowHead
+                Rectangle()
+                    .fill(accent.opacity(0.45))
+                    .frame(width: 2, height: linkHeight)
+            }
+            .padding(.vertical, 2)
         }
-        .padding(.vertical, hadith ? 1 : 2)
     }
 
-    private func layerBlock(_ layer: IsnadLayer) -> some View {
-        generation(layer, tracking: 0.8, gap: hadith ? 6 : 8) {
+    private func layerBlock(_ layer: IsnadLayer, leads: Bool = false) -> some View {
+        generation(layer, tracking: 0.8, gap: 8, leads: leads) {
             if layer.nodes.count == 1, let node = layer.nodes.first {
                 nodeChip(node)
-                    .frame(maxWidth: 300)
-            } else if #available(iOS 16.0, *) {
+                    .frame(maxWidth: isCompact ? 320 : 300)
+            } else {
                 // Centered rows (Abu, 2026-09-25: "some arent centered"): an adaptive grid filled its
                 // columns from the leading edge, so a pair sat at the left of a wide row on iPad and Mac.
                 IsnadCenteredRows(spacing: 8) {
                     ForEach(layer.nodes) { node in
                         nodeChip(node)
                             .frame(maxHeight: .infinity)
-                    }
-                }
-            } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 132, maximum: 200), spacing: 8)], spacing: 8) {
-                    ForEach(layer.nodes) { node in
-                        nodeChip(node)
                     }
                 }
             }
@@ -307,13 +377,106 @@ struct IsnadDiagram: View {
             Button {
                 onNarratorTap(narratorID)
             } label: {
-                chipBody(node, tappable: true)
+                chip(node, tappable: true)
             }
             .buttonStyle(.plain)
             .accessibilityHint(Text("Opens every narration naming this narrator"))
         } else {
-            chipBody(node, tappable: false)
+            chip(node, tappable: false)
         }
+    }
+
+    @ViewBuilder
+    private func chip(_ node: IsnadNode, tappable: Bool) -> some View {
+        if isCompact {
+            compactChip(node, tappable: tappable)
+        } else {
+            chipBody(node, tappable: tappable)
+        }
+    }
+
+    /// One narrator as a short capsule: the name as the narration writes it and its English on two
+    /// tight lines (a hadith chain), or the one name an article gives. An aside in Arabic ("على
+    /// المنبر") runs on after the Arabic name, any other detail after the English. The chevron of a
+    /// narrator who opens his page, or the node's count, sits at the far side, and the text keeps
+    /// the same room on both sides so it stays centred.
+    private func compactChip(_ node: IsnadNode, tappable: Bool) -> some View {
+        let filled = node.role == .prophet || node.role == .narrator || node.role == .source
+        let outlined = node.role == .imam || node.role == .companion
+        let primaryText: Color = forImage ? .black : .primary
+        let secondaryText: Color = forImage ? Color.black.opacity(0.6) : .secondary
+        let large = node.role == .prophet || node.role == .source
+        let arabicDetail = node.detail.flatMap { Self.isArabic($0) ? $0 : nil }
+        let latinDetail = node.detail.flatMap { Self.isArabic($0) ? nil : $0 }
+        let hasAccessory = tappable || node.count != nil
+        let shape = RoundedRectangle(cornerRadius: 23, style: .continuous)
+
+        let arabicLine = Group {
+            if !node.arabic.isEmpty {
+                (Text(node.arabic)
+                    .foregroundColor(filled ? .white : accent)
+                 + Text(arabicDetail.map { "  \($0)" } ?? "")
+                    .font(appearance.islamArabicFont(base: 14, relativeTo: .footnote))
+                    .foregroundColor(filled ? Color.white.opacity(0.85) : secondaryText))
+                    .font(appearance.islamArabicFont(base: large ? 20 : 18, relativeTo: .body))
+                    .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.75)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        let nameLine = Group {
+            if !node.name.isEmpty {
+                (Text(node.name)
+                    .fontWeight(.semibold)
+                    .foregroundColor(filled ? .white : primaryText)
+                 + Text(latinDetail.map { " · \($0)" } ?? "")
+                    .foregroundColor(filled ? Color.white.opacity(0.85) : secondaryText))
+                    // The one line of an article's node reads a size up; under an Arabic name it
+                    // is the caption it always was.
+                    .font(node.arabic.isEmpty ? .subheadline : .caption)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                    .multilineTextAlignment(.center)
+            }
+        }
+
+        return VStack(spacing: 0) {
+            // The Arabic face's line stands half again as tall as its letters; the capsule
+            // keeps the letters' share of it.
+            arabicLine
+                .padding(.vertical, -3)
+            nameLine
+        }
+        .padding(.horizontal, hasAccessory ? 30 : 16)
+        .padding(.vertical, 5)
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .overlay(alignment: .trailing) {
+            if let count = node.count {
+                Text(count)
+                    .font(.caption.weight(.bold))
+                    .monospacedDigit()
+                    .foregroundColor(filled ? .white : accent)
+                    .frame(minWidth: 22, minHeight: 22)
+                    .overlay(Circle().strokeBorder(filled ? Color.white.opacity(0.7) : accent.opacity(0.6), lineWidth: 1))
+                    .padding(.trailing, 9)
+            } else if tappable {
+                Image(systemName: "chevron.forward")
+                    .font(.caption2.weight(.bold))
+                    .foregroundColor(filled ? Color.white.opacity(0.8) : accent.opacity(0.55))
+                    .padding(.trailing, 12)
+            }
+        }
+        .contentShape(shape)
+        .background(
+            shape
+                .fill(filled
+                      ? AnyShapeStyle(LinearGradient(colors: [accent, accent.opacity(0.75)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                      : AnyShapeStyle(accent.opacity(node.role == .student ? 0.06 : 0.1)))
+        )
+        .overlay(
+            shape.strokeBorder(accent.opacity(outlined ? 0.55 : (filled ? 0 : 0.2)), lineWidth: outlined ? 1.5 : 1)
+        )
     }
 
     private func chipBody(_ node: IsnadNode, tappable: Bool) -> some View {
@@ -325,7 +488,7 @@ struct IsnadDiagram: View {
         let large = node.role == .prophet || node.role == .source
         return VStack(spacing: 3) {
             Text(node.arabic)
-                .font(appearance.islamArabicFont(base: hadith ? (large ? 25 : 21) : (large ? 22 : 17), relativeTo: .body))
+                .font(appearance.islamArabicFont(base: large ? 22 : 17, relativeTo: .body))
                 .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
                 .foregroundColor(filled ? .white : accent)
                 .lineLimit(2)
@@ -351,33 +514,39 @@ struct IsnadDiagram: View {
             }
 
         }
-        // A chip that opens its narrator keeps room at its far side for the chevron that says so
-        // (it was a small card glyph under the name, a line of its own in every chip).
-        .padding(.horizontal, tappable ? 22 : 10)
-        .padding(.vertical, hadith ? 9 : 8)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity)
-        .overlay(alignment: .trailing) {
-            if tappable {
-                Image(systemName: "chevron.forward")
-                    .font(.caption2.weight(.bold))
-                    .foregroundColor(filled ? Color.white.opacity(0.8) : accent.opacity(0.55))
-                    .padding(.trailing, 9)
-            }
-        }
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(filled
                       ? AnyShapeStyle(LinearGradient(colors: [accent, accent.opacity(0.75)], startPoint: .topLeading, endPoint: .bottomTrailing))
                       : AnyShapeStyle(accent.opacity(node.role == .student ? 0.06 : 0.1)))
-                // The two ends of a hadith chain, the Prophet ﷺ and the collector, stand a little
-                // off the page.
-                .shadow(color: hadith && filled ? accent.opacity(0.28) : .clear, radius: 6, x: 0, y: 3)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(accent.opacity(outlined ? 0.55 : (hadith && !filled ? 0.16 : 0)), lineWidth: outlined ? 1.5 : 1)
+                .strokeBorder(accent.opacity(outlined ? 0.55 : 0), lineWidth: 1.5)
         )
+    }
+}
+
+/// The rays of a chain's spread (`IsnadFan`): from the top centre down to `rays` points set evenly
+/// along the bottom edge, where the dots sit.
+struct IsnadFanRays: Shape {
+    let rays: Int
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        guard rays > 0 else { return path }
+        let inset: CGFloat = 3.5
+        let span = rect.width - inset * 2
+        for index in 0..<rays {
+            let x = rays == 1 ? rect.midX : rect.minX + inset + span * CGFloat(index) / CGFloat(rays - 1)
+            path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+            path.addLine(to: CGPoint(x: x, y: rect.maxY))
+        }
+        return path
     }
 }
 
@@ -472,6 +641,8 @@ struct IsnadShareCard: View {
     let chain: IsnadChain
     /// A hadith chain's measure (`IsnadDiagram.hadith`).
     var hadith = false
+    /// The short look (`IsnadDiagram.compact`).
+    var compact = false
 
     var body: some View {
         VStack(spacing: 14) {
@@ -487,7 +658,7 @@ struct IsnadShareCard: View {
             }
             .multilineTextAlignment(.center)
 
-            IsnadDiagram(chain: chain, forImage: true, hadith: hadith)
+            IsnadDiagram(chain: chain, forImage: true, hadith: hadith, compact: compact)
 
             Text(verbatim: footer.isEmpty ? AppIdentifiers.displayName : footer)
                 .font(.caption2.weight(.semibold))
@@ -638,9 +809,10 @@ struct IsnadShareButton<Card: View>: View {
 extension IsnadShareButton where Card == IsnadShareCard {
     /// A chain's card: the title, the chain, the app's name at the foot, 560 points wide at 2x. A
     /// hadith chain's `salt` tells its English look from its Arabic one in the session's cache.
-    init(label: String, title: String, subtitle: String, footer: String = "", chain: IsnadChain, hadith: Bool = false, salt: String = "") {
+    init(label: String, title: String, subtitle: String, footer: String = "", chain: IsnadChain, hadith: Bool = false,
+         compact: Bool = false, salt: String = "") {
         self.init(label: label, title: title, salt: subtitle + salt, width: IsnadShareCard.width) {
-            IsnadShareCard(title: title, subtitle: subtitle, footer: footer, chain: chain, hadith: hadith)
+            IsnadShareCard(title: title, subtitle: subtitle, footer: footer, chain: chain, hadith: hadith, compact: compact)
         }
     }
 }
@@ -654,6 +826,8 @@ struct ArticleIsnad {
     let title: String
     let subtitle: String
     let chain: IsnadChain
+    /// Drawn in the short look (`IsnadDiagram.compact`): one capsule a narrator, counts and a fan.
+    var compact = false
 }
 
 /// One chain inside an article: the caption that names its people in order (the words the corpus
@@ -676,12 +850,10 @@ struct ArticleIsnadCard: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             #if os(iOS)
-            IsnadDiagram(chain: isnad.chain)
-            if #available(iOS 16.0, *) {
-                IsnadShareButton(label: AppLanguage.article("Share the Chain as an Image"),
-                                 title: isnad.title, subtitle: isnad.subtitle, chain: isnad.chain)
-                    .padding(.top, 2)
-            }
+            IsnadDiagram(chain: isnad.chain, compact: isnad.compact)
+            IsnadShareButton(label: AppLanguage.article("Share the Chain as an Image"),
+                             title: isnad.title, subtitle: isnad.subtitle, chain: isnad.chain, compact: isnad.compact)
+                .padding(.top, isnad.compact ? 8 : 2)
             #else
             IsnadPlainList(chain: isnad.chain)
             #endif
@@ -701,14 +873,20 @@ private struct IsnadPlainList: View {
             ForEach(chain.branches) { branch in
                 ForEach(branch.layers) { layer in rows(layer) }
             }
+            if let fan = chain.fan {
+                Text(fan.caption).font(.footnote).foregroundColor(.secondary)
+            }
         }
     }
 
     private func rows(_ layer: IsnadLayer) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(layer.title).font(.caption2.weight(.bold)).foregroundColor(.secondary)
+            if !layer.title.isEmpty {
+                Text(layer.title).font(.caption2.weight(.bold)).foregroundColor(.secondary)
+            }
             ForEach(layer.nodes) { node in
-                Text(node.name.isEmpty ? node.arabic : node.name).font(.footnote)
+                // A counted level reads "1 · ‘Umar ibn al-Khattab".
+                Text((node.count.map { "\($0) · " } ?? "") + (node.name.isEmpty ? node.arabic : node.name)).font(.footnote)
             }
         }
     }
@@ -752,6 +930,25 @@ extension ArticleIsnad {
                     layer("THE COLLECTOR", node("Muslim", "مُسلِمُ بنُ الحَجَّاجِ", "d. 261 AH", .narrator)),
                 ]),
             ]))
+
+    /// The hadith of intentions counted at each level (Sahih al-Bukhari 1, Sahih Muslim 1907): one
+    /// narrator at each of its first four links, then the many who took it from Yahya ibn Sa‘id. The
+    /// narrowest point is one, so the scholars of hadith call it gharib; the same five men head
+    /// `bukhariFirst` above, which gives their dates.
+    static let intentionsNarrowing = ArticleIsnad(
+        title: "Named by Its Narrowest Point",
+        subtitle: "The hadith of intentions, counted at each level",
+        chain: IsnadChain(
+            top: [
+                IsnadLayer(title: "", nodes: [IsnadNode(name: "The Prophet ﷺ", arabic: "", role: .prophet)]),
+                IsnadLayer(title: "", nodes: [IsnadNode(name: "‘Umar ibn al-Khattab", arabic: "", role: .companion, count: "1")]),
+                IsnadLayer(title: "", nodes: [IsnadNode(name: "‘Alqamah ibn Waqqas", arabic: "", role: .link, count: "1")]),
+                IsnadLayer(title: "", nodes: [IsnadNode(name: "Muhammad ibn Ibrahim at-Taymi", arabic: "", role: .link, count: "1")]),
+                IsnadLayer(title: "", nodes: [IsnadNode(name: "Yahya ibn Sa‘id al-Ansari", arabic: "", role: .link, count: "1")]),
+            ],
+            branches: [],
+            fan: IsnadFan(rays: 9, caption: "then a great many narrators from Yahya")),
+        compact: true)
 
     /// The Sahifah of Hammam ibn Munabbih, which both Sahihs take from ‘Abd ar-Razzaq: Sahih al-Bukhari
     /// 2073 through Yahya ibn Musa, Sahih Muslim 225 through Muhammad ibn Rafi‘ (read from both rows).

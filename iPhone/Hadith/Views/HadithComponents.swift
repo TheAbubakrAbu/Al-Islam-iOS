@@ -731,7 +731,7 @@ struct HadithRow: View, Equatable {
                 .minimumScaleFactor(0.6)
                 .padding(.horizontal, compact ? 6 : 8)
                 .frame(height: compact ? 22 : 28)
-                .conditionalGlassEffect(
+                .contentSurface(
                     useColor: isBookmarked ? 0.3 : nil,
                     customTint: isBookmarked ? settings.accentColor.color : nil,
                     interactive: false,
@@ -794,7 +794,7 @@ struct HadithRow: View, Equatable {
                             // The glass is the pill's height (22 / 28), not the glyph's: see AyahRow's
                             // `headerControlIcon` (2026-11-16).
                             .frame(width: compact ? 22 : 28, height: compact ? 22 : 28)
-                            .conditionalGlassEffect(inRow: true)
+                            .contentSurface(inRow: true)
                             .contentShape(Rectangle())
                     }
                     .accessibilityLabel("Hadith Actions")
@@ -1963,7 +1963,7 @@ struct HadithBookmarkRow: View, Equatable {
                             .frame(minWidth: 44)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
-                            .conditionalGlassEffect(
+                            .contentSurface(
                                 useColor: 0.3,
                                 customTint: settings.accentColor.color,
                                 interactive: false,
@@ -2180,7 +2180,7 @@ struct HadithBookmarkGridTile: View, Equatable {
             // preview ran short.
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
-            .conditionalGlassEffect(clear: true, rectangle: true, inRow: true)
+            .contentSurface(clear: true, rectangle: true, inRow: true)
             .overlay {
                 if ringsReading { HadithReadingRing(slug: bookmark.slug, hadithID: bookmark.idInBook) }
             }

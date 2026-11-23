@@ -1032,18 +1032,22 @@ struct HadithGrade: Identifiable, Hashable {
     ]
 
     /// Counted by how many carried it rather than by how strong they were: the second axis every
-    /// grading also has.
+    /// grading also has, from the fewest to the most (`HadithCountLadder` draws it; the corpus
+    /// builder reads these literals, three strings a row).
     static let byNumber: [(name: String, arabic: String, meaning: String)] = [
-        ("Mutawatir", "مُتَوَاتِر", "So many at every level that a shared lie is impossible: certain knowledge"),
-        ("Mashhur", "مَشهُور", "Three or more at every level"),
-        ("'Aziz", "عَزِيز", "At least two at every level"),
-        ("Gharib", "غَرِيب", "One narrator at some level, and still sahih when he is reliable"),
+        ("Gharib", "غَرِيب", "One narrator at its narrowest level"),
+        ("'Aziz", "عَزِيز", "Two narrators at its narrowest level"),
+        ("Mashhur", "مَشهُور", "Three or more at its narrowest level"),
+        ("Mutawatir", "مُتَوَاتِر", "Too many, at every level, to agree on a lie"),
     ]
+
+    /// The count each of those is named by, in `byNumber`'s order: what its medallion shows.
+    static let byNumberMarks = ["1", "2", "3+", "∞"]
 }
 
 /// The scale of hadith grades, strongest at the top: each rung's colour, its Arabic set large, what it
-/// means and what it is worth. Under it, the second axis (how many carried it), because "ahad" is not
-/// a grade of weakness and readers often think it is.
+/// means and what it is worth. The second axis, how many carried it, is its own card
+/// (`HadithCountLadder`).
 struct HadithGradeLadder: View {
     @Environment(\.appearance) private var appearance
 
@@ -1069,31 +1073,6 @@ struct HadithGradeLadder: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                ArticleEyebrow(text: "BY HOW MANY CARRIED IT", systemImage: "person.3.fill", accent: accent)
-                    .padding(.top, 4)
-
-                ForEach(HadithGrade.byNumber, id: \.name) { item in
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(item.name)
-                            .font(.subheadline.weight(.semibold))
-                        Text.islamArabic(item.arabic, highlightAllah: false)
-                            .font(appearance.islamArabicFont(base: 17, relativeTo: .subheadline))
-                            .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
-                            .foregroundColor(accent)
-                        Text(item.meaning)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(nil)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .accessibilityElement(children: .combine)
-                }
-
-                ArticleParagraph(verbatim: "Everything short of mutawatir is called ahad. Ahad is a count, not a weakness: most of the Sunnah is ahad and sahih, and it is binding.",
-                                 textStyle: .caption, secondary: true)
-                    .padding(.top, 2)
-            }
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 14)
@@ -1142,6 +1121,79 @@ struct HadithGradeLadder: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(grade.color.opacity(0.07))
         )
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// The second axis of every grading: a hadith named by how many carried it, counted where its chain
+/// is narrowest (Abu, 2026-11-22, of a card that set the four out as numbered rows: "include those
+/// things for hadith science"). One row a class, its count in a medallion, its Arabic at the far
+/// edge, from one narrator up to mass transmission. It was four lines of small text at the foot of
+/// the scale of authenticity until then, where "ahad" was easy to read as a grade of weakness.
+struct HadithCountLadder: View {
+    @Environment(\.appearance) private var appearance
+
+    init() {}
+
+    var body: some View {
+        let accent = appearance.accent
+        VStack(alignment: .leading, spacing: 10) {
+            ArticleEyebrow(text: "COUNTED AT THE NARROWEST POINT", systemImage: "person.3.fill", accent: accent)
+
+            VStack(spacing: 6) {
+                ForEach(Array(HadithGrade.byNumber.enumerated()), id: \.element.name) { index, item in
+                    row(item, mark: HadithGrade.byNumberMarks.indices.contains(index) ? HadithGrade.byNumberMarks[index] : "",
+                        accent: accent)
+                }
+            }
+
+            ArticleParagraph(verbatim: "Everything short of mutawatir is called ahad. Ahad is a count, not a weakness: most of the Sunnah is ahad and sahih, and it is binding.",
+                             textStyle: .caption, secondary: true)
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ArticleCardGround(accent: accent, strength: 0.5))
+        .padding(.vertical, 3)
+    }
+
+    private func row(_ item: (name: String, arabic: String, meaning: String), mark: String, accent: Color) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            Text(mark)
+                .font(.system(.subheadline, design: .rounded).weight(.bold))
+                .monospacedDigit()
+                .foregroundColor(accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(width: 34, height: 34)
+                .background(Circle().fill(accent.opacity(0.12)))
+                .overlay(Circle().strokeBorder(accent.opacity(0.5), lineWidth: 1))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(item.name)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Text(item.meaning)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            Text.islamArabic(item.arabic, highlightAllah: false)
+                .font(appearance.islamArabicFont(base: 24, relativeTo: .title2))
+                .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                .foregroundColor(accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.primary.opacity(0.05)))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(accent.opacity(0.18), lineWidth: 1))
         .accessibilityElement(children: .combine)
     }
 }

@@ -2868,7 +2868,7 @@ struct QuranView: View {
                                 .font(.caption2.weight(.semibold))
                                 .foregroundColor(settings.accentColor.color)
                                 .frame(width: SectionPillHeader.pillHeight, height: SectionPillHeader.pillHeight)
-                                .conditionalGlassEffect(circle: true)
+                                .contentSurface(circle: true)
                                 .onTapGesture {
                                     settings.hapticFeedback()
                                     withAnimation(.easeInOut) { settings.shuffleAyahOfTheDay() }
@@ -3364,7 +3364,7 @@ struct QuranView: View {
                         .minimumScaleFactor(0.5)
                         .padding(.vertical, 12)
                         .frame(maxWidth: .infinity)
-                        .conditionalGlassEffect(
+                        .contentSurface(
                             useColor: 0.3,
                             customTint: settings.accentColor.color,
                             interactive: false,
@@ -3507,7 +3507,7 @@ struct QuranView: View {
                         .minimumScaleFactor(0.5)
                         .padding(.vertical, 10)
                         .frame(maxWidth: .infinity)
-                        .conditionalGlassEffect(
+                        .contentSurface(
                             useColor: 0.3,
                             customTint: settings.accentColor.color,
                             interactive: false,
@@ -3735,7 +3735,7 @@ struct QuranView: View {
                 .foregroundStyle(settings.accentColor.color)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .conditionalGlassEffect()
+                .contentSurface()
                 .padding(.vertical, -16)
         }
     }
@@ -3762,7 +3762,7 @@ struct QuranView: View {
                 .foregroundStyle(settings.accentColor.color)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .conditionalGlassEffect()
+                .contentSurface()
                 .padding(.vertical, -16)
         }
     }
@@ -3859,7 +3859,7 @@ struct QuranView: View {
                 .foregroundStyle(settings.accentColor.color)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .conditionalGlassEffect()
+                .contentSurface()
                 .padding(.vertical, -16)
         }
     }
@@ -5448,7 +5448,7 @@ struct QuranView: View {
             .foregroundColor(settings.accentColor.color)
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentSurface(clear: true, rectangle: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -5467,7 +5467,7 @@ struct QuranView: View {
                 .foregroundStyle(settings.accentColor.color)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .conditionalGlassEffect()
+                .contentSurface()
                 .padding(.vertical, -16)
         }
     }
@@ -5656,7 +5656,7 @@ struct QuranView: View {
                 .foregroundStyle(settings.accentColor.color)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .conditionalGlassEffect()
+                .contentSurface()
                 .padding(.vertical, -16)
         }
     }

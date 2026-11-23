@@ -170,7 +170,7 @@ struct AboutSignsSection: View {
                         }
                         .padding(.vertical, 8)
                         .padding(.horizontal, 12)
-                        .conditionalGlassEffect(clear: true, rectangle: true)
+                        .contentSurface(clear: true, rectangle: true)
                         .contentShape(Rectangle())
                         .padding(.horizontal, -2)
                     }

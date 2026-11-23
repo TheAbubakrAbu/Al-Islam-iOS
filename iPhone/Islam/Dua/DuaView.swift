@@ -398,7 +398,7 @@ struct DuaView: View {
             .foregroundColor(settings.accentColor.color)
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentSurface(clear: true, rectangle: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -628,7 +628,7 @@ struct DuaView: View {
                             .foregroundStyle(settings.accentColor.color)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
-                            .conditionalGlassEffect()
+                            .contentSurface()
                             .padding(.vertical, -16)
                             .hiddenInSimple(.sectionCounts)
                     }

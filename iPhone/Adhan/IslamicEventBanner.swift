@@ -250,7 +250,7 @@ struct IslamicEventBanner: View {
             .padding(.vertical, 11)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(shape)
-            .conditionalGlassEffect(rectangle: true, useColor: 0.15, flat: true)
+            .contentSurface(rectangle: true, useColor: 0.15, flat: true)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)

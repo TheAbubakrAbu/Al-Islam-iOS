@@ -49,8 +49,8 @@ uses the same words.
   a Malay translation, and the listing never promises one.
 - **Siri speaks Malay.** The app's Siri phrases have Malay versions, so the listing invites Malay requests
   (unlike the Urdu listing, which has to send Urdu readers to English or Arabic).
-- **The interface languages:** twelve since 2026-11-20 (Malay, English, Arabic, Urdu, Indonesian, Turkish,
-  French, Bangla, Russian, Hindi, German and Spanish), chosen per app in iOS Settings; the description names three and the count. The Malay interface keeps the Latin surah names (Al-Baqarah) with their meaning in Malay, and the
+- **The interface languages:** fifteen since 2026-11-21 (Malay, English, Arabic, Urdu, Indonesian, Turkish,
+  French, Bangla, Russian, Hindi, German, Spanish, Malayalam, Tamil and Dutch), chosen per app in iOS Settings; the description names three and the count. The Malay interface keeps the Latin surah names (Al-Baqarah) with their meaning in Malay, and the
   58-lesson Tajweed Course is in Malay too.
 - Keep in sync with the English docs (`App Store Description.md`, `Keywords.md`, `Promotional Text.md`,
   `Whats New.md`) and with `Arabic Listing.md` and `Urdu Listing.md`: when a field changes for a feature,
@@ -100,7 +100,7 @@ A Malay rendering of `App Store Description.md`, section for section, with the E
 Malay. Four differences from the English, three of them shared with the Urdu listing:
 - **Translations:** the Quran line says terjemahan bahasa Inggeris, because the app's Quran translations are
   English.
-- **Languages:** the first line of MENGIKUT CITA RASA ANDA gives the count of 12 interface languages (naming Malay, English and Arabic), and
+- **Languages:** the first line of MENGIKUT CITA RASA ANDA gives the count of 15 interface languages (naming Malay, English and Arabic), and
   says the Islam tab's in-depth articles are still English.
 - **Tajweed Course:** called dalam bahasa Melayu, since its 58 lessons are translated.
 - **JAKIM:** the calculation line names JAKIM as the method suggested in Malaysia (the app's automatic choice
@@ -150,7 +150,7 @@ IBADAH HARIAN DAN PEMBELAJARAN
 - Panduan Amali, Rukun Islam dan Iman, kalkulator zakat dan faraid, Kalendar Hijrah, serta pencari masjid dan makanan halal.
 
 MENGIKUT CITA RASA ANDA
-- Antara muka dalam 12 bahasa, termasuk Melayu, Inggeris dan Arab, mengikut pilihan bahasa aplikasi ini dalam Seting iOS. Artikel mendalam tab Islam masih dalam bahasa Inggeris.
+- Antara muka dalam 15 bahasa, termasuk Melayu, Inggeris dan Arab, mengikut pilihan bahasa aplikasi ini dalam Seting iOS. Artikel mendalam tab Islam masih dalam bahasa Inggeris.
 - Mod Ringkas mengekalkan perkara asas sahaja. Tukar ke Penuh pada bila-bila masa.
 - Sandarkan profil ke iCloud anda dan pulihkan pada mana-mana peranti.
 - Saiz teks, fon Arab, warna aksen dan langit, serta carian pada setiap halaman seting.
@@ -166,12 +166,12 @@ Sama ada anda mencari waktu solat, al-Quran, hadis Nabi Muhammad sallallahu 'ala
 
 ## 5. What's New
 
-The release that adds the Malay interface, with the other eight new languages beside it. Only the interface is here
+The release that adds the Malay interface, with the other eleven new languages beside it. Only the interface is here
 so far: the Urdu listing's "Urdu interface" and "Choosing the language" sections, adapted. The right-to-left
 and digit lines have no Malay counterpart and are gone; the surah-name line says the names stay Latin with a
 Malay meaning; and Siri, which the Urdu could only send to English or Arabic, takes Malay requests here, as the
-Arabic listing's Siri line does in Arabic. The language section names the other eight new languages, since all
-nine ship in one release, and says what is still English.
+Arabic listing's Siri line does in Arabic. The language section names the other eleven new languages, since all
+twelve ship in one release, and says what is still English.
 
 ```
 Seluruh aplikasi kini dalam bahasa Melayu, daripada Al-Quran, Azan dan Hadis hingga ke Seting.
@@ -186,13 +186,13 @@ Antara muka bahasa Melayu:
 Pilihan bahasa:
 - Aplikasi mengikut bahasa yang anda pilih untuknya dalam Seting iOS, dan baris Bahasa dalam Seting aplikasi membawa anda ke sana.
 - Apabila anda menukar bahasa, pemberitahuan anda dijadualkan semula dalam bahasa baharu.
-- Bahasa Indonesia, Turki, Perancis, Bengali, Rusia, Hindi, Jerman dan Sepanyol turut tiba dalam versi ini, menyertai bahasa Inggeris, Arab dan Urdu.
+- Bahasa Indonesia, Turki, Perancis, Bengali, Rusia, Hindi, Jerman, Sepanyol, Malayalam, Tamil dan Belanda turut tiba dalam versi ini, menyertai bahasa Inggeris, Arab dan Urdu.
 - Terjemahan al-Quran, hadis dan doa kekal dalam bahasa Inggeris, bersama teks Arab.
 - Buat masa ini, carian mengikut makna menggunakan frasa bahasa Inggeris.
 - Artikel mendalam dalam tab Islam masih dalam bahasa Inggeris buat masa ini.
 ```
 
-**1,207 / 4,000 characters.**
+**1,234 / 4,000 characters.**
 
 **To finish this release:** when the English notes for this version are written in `Whats New.md`, translate
 the rest of them and append them below the last line of the block above, under the same headings the English

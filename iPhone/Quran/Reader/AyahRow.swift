@@ -939,7 +939,7 @@ struct AyahRow: View, Equatable {
             // glyph, the button read 3pt shorter than the pill beside it (Abu, 2026-11-16: "make sure
             // the ellipses button height" matches, in every ayah and hadith row).
             .frame(width: 28, height: 28)
-            .conditionalGlassEffect(inRow: true)
+            .contentSurface(inRow: true)
             .padding(slop)
             .contentShape(Rectangle())
     }
@@ -1103,7 +1103,7 @@ struct AyahRow: View, Equatable {
                         .frame(width: 60, height: 28)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
-                        .conditionalGlassEffect(
+                        .contentSurface(
                             useColor: isBookmarked ? 0.3 : nil,
                             customTint: isBookmarked ? bookmarkTint : nil,
                             interactive: false,
@@ -1170,7 +1170,7 @@ struct AyahRow: View, Equatable {
                                     .aspectRatio(contentMode: .fit)
                                     .frame(width: 25, height: 25)
                                     .foregroundColor(settings.accentColor.color)
-                                    .conditionalGlassEffect(inRow: true)
+                                    .contentSurface(inRow: true)
                                     .frame(width: 28, height: 28)
                             }
                             .buttonStyle(.plain)
@@ -1183,7 +1183,7 @@ struct AyahRow: View, Equatable {
                                 .aspectRatio(contentMode: .fit)
                                 .frame(width: 25, height: 25)
                                 .foregroundColor(settings.accentColor.color)
-                                .conditionalGlassEffect(inRow: true)
+                                .contentSurface(inRow: true)
                                 .frame(width: 28, height: 28)
                         }
 
@@ -1512,7 +1512,7 @@ struct AyahRow: View, Equatable {
                     RoundedRectangle(cornerRadius: 24)
                         .stroke(settings.accentColor.color.opacity(0.25), lineWidth: 1)
                 )
-                .conditionalGlassEffect(rectangle: true, inRow: true)
+                .contentSurface(rectangle: true, inRow: true)
                 .frame(maxWidth: .infinity, alignment: .center)
                 #if os(iOS)
                 .onTapGesture {

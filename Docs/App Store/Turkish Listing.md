@@ -101,7 +101,7 @@ A Turkish rendering of `App Store Description.md`, section for section, with the
 short Turkish ALL-CAPS headers on their own lines. Turkish runs longer than English, so a few words are
 trimmed to fit (the opening leaves "on-device" to the CİHAZINIZDA YAPAY ZEKÂ header). Three changes from the
 English: the translation is called "İngilizce meal"; the language line in DİLEDİĞİNİZ GİBİ gives the count of
-12 interface languages (naming Turkish, English and Arabic), chosen per app in iOS Settings, and says the translations and the articles are English;
+15 interface languages (naming Turkish, English and Arabic), chosen per app in iOS Settings, and says the translations and the articles are English;
 and the books and scholars take their Turkish names (see the guidelines).
 
 ```
@@ -144,7 +144,7 @@ GÜNLÜK İBADET VE ÖĞRENME
 - Nasıl Yapılır Rehberleri, İslam'ın ve imanın şartları, Zekât Hesaplayıcı, Miras Hesaplayıcı, Hicri Takvim, Cami Bulucu ve Helal Yemek Bulucu.
 
 DİLEDİĞİNİZ GİBİ
-- Arayüz Türkçe, İngilizce, Arapça dahil 12 dilde: iOS Ayarlar'da uygulama için seçtiğiniz dil. Meal, hadis ve dua çevirileri ile İslam sekmesindeki makaleler İngilizcedir.
+- Arayüz Türkçe, İngilizce, Arapça dahil 15 dilde: iOS Ayarlar'da uygulama için seçtiğiniz dil. Meal, hadis ve dua çevirileri ile İslam sekmesindeki makaleler İngilizcedir.
 - Basit Mod yalnızca temel özellikleri gösterir; dilediğiniz zaman Tam moda geçin.
 - Adlandırdığınız profilleri iCloud'unuza yedekleyin, her cihazda geri yükleyin.
 - Metin boyutları, Arapça yazı tipleri, vurgu ve gökyüzü renkleri, her ayarlar sayfasında da arama.
@@ -160,12 +160,12 @@ Namaz vakitleri, Kur'an-ı Kerim, Peygamberimiz Hz. Muhammed'in (sallallahu aley
 
 ## 5. What's New
 
-The release that adds the Turkish interface; the opening line names the other eight new languages, since
-all nine ship in one release. Only the new interface is here
+The release that adds the Turkish interface; the opening line names the other eleven new languages, since
+all twelve ship in one release. Only the new interface is here
 so far.
 
 ```
-Uygulamanın tamamı artık Türkçe: Ezan, Kur'an, Hadis, İslam ve Ayarlar. Endonezce, Malayca, Fransızca, Bengalce, Rusça, Hintçe, Almanca ve İspanyolca arayüz de bu sürümle geldi.
+Uygulamanın tamamı artık Türkçe: Ezan, Kur'an, Hadis, İslam ve Ayarlar. Endonezce, Malayca, Fransızca, Bengalce, Rusça, Hintçe, Almanca, İspanyolca, Malayalamca, Tamilce ve Felemenkçe arayüz de bu sürümle geldi.
 
 Türkçe arayüz:
 - Tüm ekranlar, menüler, ayarlar, bildirimler ve araç takımları Türkçe; iPhone, iPad, Mac ve Apple Watch'ta.
@@ -181,7 +181,7 @@ Dil seçimi:
 - İslam sekmesindeki ayrıntılı makaleler şimdilik İngilizcedir. Anlama göre arama İngilizce ifadelerle çalışır; Kur'an meali ile hadis ve dua çevirileri İngilizcedir.
 ```
 
-**1,102 / 4,000 characters.**
+**1,136 / 4,000 characters.**
 
 **To finish this release:** when the English notes for this version are written in `Whats New.md`, translate
 the rest of them and append them below the last line of the block above, under the same headings the English

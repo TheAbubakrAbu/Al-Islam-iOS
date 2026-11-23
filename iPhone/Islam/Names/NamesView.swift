@@ -579,7 +579,7 @@ struct NamesView: View {
             .foregroundColor(settings.accentColor.color)
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentSurface(clear: true, rectangle: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -1464,7 +1464,7 @@ private struct NameRow: View, Equatable {
                 .foregroundColor(accentColor.color)
                 .frame(minWidth: 40)
                 .frame(maxHeight: .infinity)
-                .conditionalGlassEffect(
+                .contentSurface(
                     useColor: isFavorite ? 0.3 : nil,
                     customTint: isFavorite ? accentColor.color : nil,
                     inRow: true
@@ -1751,7 +1751,7 @@ private struct NameGridTile: View, Equatable {
         .padding(.horizontal, 4)
         // Only a favorite is tinted; every other tile is clear. A grid where all 99 boxes are filled is just a
         // wall of color, and the favorites disappear into it.
-        .conditionalGlassEffect(
+        .contentSurface(
             clear: !isFavorite,
             rectangle: true,
             useColor: isFavorite ? 0.25 : nil,

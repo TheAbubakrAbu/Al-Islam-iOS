@@ -415,7 +415,7 @@ struct DailyHubView: View {
             .font(.caption2.weight(.semibold))
             .foregroundColor(accent)
             .frame(width: SectionPillHeader.pillHeight, height: SectionPillHeader.pillHeight)
-            .conditionalGlassEffect(circle: true)
+            .contentSurface(circle: true)
             .onTapGesture {
                 settings.hapticFeedback()
                 action()

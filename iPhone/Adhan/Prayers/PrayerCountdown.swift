@@ -246,7 +246,7 @@ struct PrayerCountdown: View {
                     .tint(settings.accentColor.color)
             }
         }
-        .conditionalGlassEffect()
+        .contentSurface()
         // VoiceOver read a bare "36%".
         .accessibilityLabel("Progress until \(countdownDisplayName(for: next))")
         // Symmetric, and only a point: this pads BOTH sides of the bar, and the stack it sits in

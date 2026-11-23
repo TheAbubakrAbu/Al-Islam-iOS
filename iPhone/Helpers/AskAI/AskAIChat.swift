@@ -16,6 +16,9 @@ import Foundation
 //
 // Reached from the ASK AI row of the Quran and Hadith searches (which open it with the typed query
 // as the first question), the other searching Islam screens, and the Islam tab's "Ask AI" resource.
+//
+// Every visit opens on a NEW conversation; the two before it are listed under HISTORY on the welcome
+// and in the menu, and open again with a tap (`AskAIConversation.beginVisit`, `recentChats`).
 
 #if os(iOS)
 
@@ -26,6 +29,8 @@ struct AskAIChatView: View {
     private let settings = Settings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @ObservedObject private var systemSettings = SystemSettings.shared
+    /// "Show Riwayah / Qiraah": whether the welcome says the readings are read with a verse.
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     @ObservedObject private var chat = AskAIConversation.shared
     @Environment(\.dismiss) private var dismiss
 
@@ -49,8 +54,9 @@ struct AskAIChatView: View {
     /// Whether the transcript keeps pinning its bottom as text streams. A reader who scrolls up to
     /// re-read stops being dragged back down; reaching the bottom again (or a new turn) re-arms it.
     @State private var followsStream = true
-    /// "New Conversation" clears the whole transcript, so it asks first.
-    @State private var confirmReset = false
+    /// "Delete Conversation" clears the open transcript for good, so it asks first ("New
+    /// Conversation" only sets it aside under History, and does not).
+    @State private var confirmDelete = false
     #if DEBUG
     /// `-askAI "q1||q2||q3"`: the remaining questions, asked one at a time as each answer settles.
     @State private var debugQueue: [String] = []
@@ -94,7 +100,8 @@ struct AskAIChatView: View {
                 Menu {
                     Button {
                         settings.hapticFeedback()
-                        confirmReset = true
+                        // Set aside under History, not cleared: nothing to confirm.
+                        withAnimation(.easeInOut(duration: 0.2)) { chat.startNewChat() }
                     } label: {
                         Label("New Conversation", systemImage: "square.and.pencil")
                     }
@@ -105,6 +112,30 @@ struct AskAIChatView: View {
                         UIPasteboard.general.string = transcriptText
                     } label: {
                         Label("Copy Conversation", systemImage: "doc.on.doc")
+                    }
+                    .disabled(chat.messages.isEmpty)
+
+                    if !chat.recentChats.isEmpty {
+                        Section("History") {
+                            ForEach(chat.recentChats) { recent in
+                                Button {
+                                    settings.hapticFeedback()
+                                    askedAboutArticle = false
+                                    withAnimation(.easeInOut(duration: 0.2)) { chat.openRecent(recent.id) }
+                                } label: {
+                                    Label(AskAISource.clip(recent.title, to: 44), systemImage: "clock.arrow.circlepath")
+                                }
+                            }
+                        }
+                    }
+
+                    Divider()
+
+                    Button(role: .destructive) {
+                        settings.hapticFeedback()
+                        confirmDelete = true
+                    } label: {
+                        Label("Delete Conversation", systemImage: "trash")
                     }
                     .disabled(chat.messages.isEmpty)
 
@@ -126,8 +157,8 @@ struct AskAIChatView: View {
                 .accessibilityLabel("Conversation options")
             }
         }
-        .confirmationDialog("Start a new conversation?", isPresented: $confirmReset, titleVisibility: .visible) {
-            Button("New Conversation", role: .destructive) {
+        .confirmationDialog("Delete this conversation?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete Conversation", role: .destructive) {
                 settings.hapticFeedback()
                 // The transcript is cleared (an answer still streaming stops first); a
                 // typed-but-unsent draft is the reader's, and stays.
@@ -162,6 +193,9 @@ struct AskAIChatView: View {
             guard !askedInitial else { return }
             askedInitial = true
             var question = initialQuestion?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            // A visit starts on a new conversation, the last one set aside under History (once per
+            // presentation, like the question below: a popped reader is not a new visit).
+            chat.beginVisit(asking: question)
             #if DEBUG
             // Headless verification: `-askAI "<question>"` asks it the moment the screen appears (pair
             // with `-launchTabIslam -islamDestination askAI`); "q1||q2" asks the rest one by one as
@@ -260,6 +294,19 @@ struct AskAIChatView: View {
                 )
             }
 
+            // The conversations before this one: a visit always opens a new one, and these are a
+            // tap away. Above the starters: a reader with a history has seen those, and their own
+            // conversations should not sit under the fold.
+            if !chat.recentChats.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    welcomeLabel(String(localized: "HISTORY"))
+
+                    ForEach(chat.recentChats) { recent in
+                        recentChatButton(recent)
+                    }
+                }
+            }
+
             VStack(alignment: .leading, spacing: 8) {
                 welcomeLabel(String(localized: "TRY ASKING"))
 
@@ -275,6 +322,11 @@ struct AskAIChatView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     howItWorksRow(icon: "magnifyingglass", text: AskAICopy.searchedAcross)
+                    // The readings are named only while they are read: "Show Riwayah / Qiraah" on
+                    // (`AskAIDepth.readsQiraat`).
+                    if let readWith = quranDisplay.showOtherQiraatReciters ? AskAICopy.readWith : AskAICopy.readWithoutReadings {
+                        howItWorksRow(icon: "books.vertical", text: readWith)
+                    }
                     howItWorksRow(icon: cloudOffered ? "icloud" : "iphone", text: cloudOffered
                                   ? String(localized: "What it finds goes to Apple Intelligence on your device, or to Apple\u{2019}s Private Cloud Compute if you choose it in the menu, which answers in its own words and cites each source by number, saying where it comes from.")
                                   : String(localized: "What it finds goes to Apple Intelligence on your device, which answers in its own words and cites each source by number, saying where it comes from. Nothing leaves your phone."))
@@ -282,7 +334,7 @@ struct AskAIChatView: View {
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .conditionalGlassEffect(rectangle: true, interactive: false)
+                .contentSurface(rectangle: true, interactive: false)
             }
 
             Label("This is a machine, not a scholar. It is here for quick, simple, general questions, and it can be confidently wrong. It does not give rulings, it is never the final answer, and anything that actually matters belongs with a knowledgeable scholar of Ahl as-Sunnah wa al-Jama\u{2018}ah.", systemImage: "exclamationmark.triangle")
@@ -313,10 +365,62 @@ struct AskAIChatView: View {
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
-            .conditionalGlassEffect(rectangle: true)
+            .contentSurface(rectangle: true)
         }
         .buttonStyle(.plain)
     }
+
+    /// One earlier conversation: its first question and when it was last added to. A tap makes it
+    /// the conversation again; a hold offers to delete it.
+    private func recentChatButton(_ recent: AskAIConversation.SavedChat) -> some View {
+        Button {
+            settings.hapticFeedback()
+            askedAboutArticle = false
+            withAnimation(.easeInOut(duration: 0.2)) { chat.openRecent(recent.id) }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(settings.accentColor.color)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(recent.title)
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    Text(Self.relativeFormatter.localizedString(for: recent.updated, relativeTo: Date()))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.forward")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .contentSurface(rectangle: true)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button(role: .destructive) {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut(duration: 0.2)) { chat.deleteRecent(recent.id) }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+
+    /// "5 minutes ago", "yesterday", in the interface's language.
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.dateTimeStyle = .named
+        formatter.unitsStyle = .full
+        return formatter
+    }()
 
     /// Opened on an article over a conversation that was already going: the article's questions
     /// under the last answer, where the eye is, instead of the welcome's place at the top.
@@ -481,11 +585,15 @@ private enum AskAICopy {
     static let searchedAcross = String(localized: "Your question is understood first (a greeting, a verse, a how-to, a question about the app), then searched across this app\u{2019}s own Quran, hadith collections, tafsir, articles, duas, Names of Allah and tips.")
     static let composerPrompt = String(localized: "Ask about the Quran, hadith, or Islam")
     static let lookingThrough = String(localized: "Looking through the Quran, hadith and articles\u{2026}")
+    static let readWith: String? = String(localized: "The verses and hadiths that lead an answer are not read alone: each verse comes with its tafsir, the app\u{2019}s other translation and the readings (qiraat) that differ in it, and each hadith with its explanation and the other collections that record it. Each source beneath an answer lists what was read with it.")
+    static let readWithoutReadings: String? = String(localized: "The verses and hadiths that lead an answer are not read alone: each verse comes with its tafsir and the app\u{2019}s other translation, and each hadith with its explanation and the other collections that record it. Each source beneath an answer lists what was read with it.")
     #elseif HAS_QURAN
     static let heroMessage = String(localized: "A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own Quran, tafsir, articles and duas, with every source quoted beneath the reply and a line saying where it comes from.")
     static let searchedAcross = String(localized: "Your question is understood first (a greeting, a verse, a how-to, a question about the app), then searched across this app\u{2019}s own Quran, tafsir, articles, duas, Names of Allah and tips.")
     static let composerPrompt = String(localized: "Ask about the Quran or Islam")
     static let lookingThrough = String(localized: "Looking through the Quran and articles\u{2026}")
+    static let readWith: String? = String(localized: "The verses that lead an answer are not read alone: each comes with its tafsir, the app\u{2019}s other translation and the readings (qiraat) that differ in it. Each source beneath an answer lists what was read with it.")
+    static let readWithoutReadings: String? = String(localized: "The verses that lead an answer are not read alone: each comes with its tafsir and the app\u{2019}s other translation. Each source beneath an answer lists what was read with it.")
     #else
     // No Quran and no hadith shelf (Al-Adhan): the prayer times, the articles, the duas, the Names
     // and the tips are what AskAIRetrieval.swift searches here.
@@ -493,6 +601,8 @@ private enum AskAICopy {
     static let searchedAcross = String(localized: "Your question is understood first (a greeting, a how-to, a question about the app), then searched across this app\u{2019}s own prayer times, articles, duas, Names of Allah and tips.")
     static let composerPrompt = String(localized: "Ask about prayer or Islam")
     static let lookingThrough = String(localized: "Looking through the app\u{2019}s articles\u{2026}")
+    static let readWith: String? = nil
+    static let readWithoutReadings: String? = nil
     #endif
 }
 
@@ -655,7 +765,7 @@ private struct AskAIAnswerCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         // Regular glass, not clear: clear glass on a dark ground is invisible, and the answer
         // read as loose text floating in the transcript instead of a card.
-        .conditionalGlassEffect(rectangle: true, interactive: false)
+        .contentSurface(rectangle: true, interactive: false)
         .contextMenu {
             if !message.isStreaming, !message.text.isEmpty {
                 Button {
@@ -746,7 +856,7 @@ private struct AskAIAnswerCard: View {
                             .lineLimit(1)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 7)
-                            .conditionalGlassEffect()
+                            .contentSurface()
                     }
                     .buttonStyle(.plain)
                 }
@@ -793,7 +903,14 @@ private struct AskAISourceCard: View {
     let source: AskAISource
     var dimmed = false
 
-    @State private var expanded = false
+    /// `-askAIExpandSources` (DEBUG) opens every card, to see the notes headlessly.
+    @State private var expanded: Bool = {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("-askAIExpandSources")
+        #else
+        return false
+        #endif
+    }()
 
     var body: some View {
         if !opensAScreen {
@@ -819,7 +936,8 @@ private struct AskAISourceCard: View {
         }
     }
 
-    private var isLong: Bool { source.text.count > 280 || (source.arabic?.count ?? 0) > 120 }
+    /// A card with notes always opens: closed it only names what was read with the source.
+    private var isLong: Bool { source.text.count > 280 || (source.arabic?.count ?? 0) > 120 || !source.notes.isEmpty }
 
     /// The title line in the interface's language: in Arabic an ayah or a surah is named in Arabic.
     /// `source.title` itself stays as written: the model read it and the transcript stores it.
@@ -965,6 +1083,10 @@ private struct AskAISourceCard: View {
                         .leftToRightContent()
                 }
 
+                if !source.notes.isEmpty {
+                    notesBlock
+                }
+
                 if isLong {
                     Button {
                         settings.hapticFeedback()
@@ -996,6 +1118,42 @@ private struct AskAISourceCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(cardBackground)
         .contentShape(Rectangle())
+    }
+
+    /// What was read WITH the source (`AskAISource.notes`): closed, one line naming each note (the
+    /// other translation, the tafsir, the readings, the explanation, the parallel narrations);
+    /// open, each note under its name, exactly as the model was shown it.
+    @ViewBuilder
+    private var notesBlock: some View {
+        if expanded {
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(source.notes) { note in
+                    VStack(alignment: .leading, spacing: 3) {
+                        Label(note.displayLabel.localizedUppercase, systemImage: note.systemImage)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(accent)
+                        Text(note.isQuotable ? "\u{201C}\(note.text)\u{201D}" : note.text)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            // The notes are English (what the model read), left to right in every interface.
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .leftToRightContent(!note.text.isMostlyArabicScript)
+                    }
+                }
+            }
+            .padding(.top, 2)
+        } else {
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                Image(systemName: "plus.rectangle.on.rectangle")
+                    .font(.caption2.weight(.semibold))
+                Text(source.notes.map(\.displayLabel).joined(separator: " \u{2022} ").localizedUppercase)
+                    .font(.caption2.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(accent)
+            .padding(.top, 1)
+        }
     }
 
     /// The scripture card's ground (the article libraries' `ScriptureQuoteBody`), lighter: the

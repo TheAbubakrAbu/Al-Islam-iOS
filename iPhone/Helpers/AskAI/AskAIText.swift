@@ -269,6 +269,8 @@ enum AskAIText {
             if listed >= 2 { continue }
             let lines = paragraph.components(separatedBy: "\n").filter { line in
                 let trimmed = line.trimmingCharacters(in: .whitespaces).lowercased()
+                // A copied note line: "With [2], the tafsir Ibn Kathir on this verse: ...".
+                if copiedNoteLine(trimmed, sources: sources) { return false }
                 guard let close = trimmed.firstIndex(of: "]"), trimmed.hasPrefix("[") else { return true }
                 let number = trimmed[trimmed.index(after: trimmed.startIndex)..<close]
                 guard let n = Int(number) else { return true }
@@ -278,6 +280,18 @@ enum AskAIText {
             if !joined.isEmpty { kept.append(joined) }
         }
         return kept.joined(separator: "\n\n")
+    }
+
+    private static let noteLineRegex = try! NSRegularExpression(pattern: #"^with \[(\d{1,2})\],\s*"#)
+
+    /// Whether a (lowercased) answer line is one of the prompt's note lines copied out: it opens
+    /// "with [n]," and goes on with the label of a note that source carries.
+    private static func copiedNoteLine(_ line: String, sources: [AskAISource]) -> Bool {
+        let ns = line as NSString
+        guard let match = noteLineRegex.firstMatch(in: line, range: NSRange(location: 0, length: ns.length)),
+              let n = Int(ns.substring(with: match.range(at: 1))), n > 0, sources.indices.contains(n - 1) else { return false }
+        let rest = ns.substring(from: match.range.length)
+        return sources[n - 1].notes.contains { rest.hasPrefix($0.promptLabel.lowercased()) }
     }
 
     /// A trailing "References:" / "Sources:" list is the model restating its citations; the cards
@@ -317,13 +331,48 @@ enum AskAIText {
     private static let parenMarkerRegex = try! NSRegularExpression(
         pattern: #"\(\s*sources?\s+\d{1,2}(?:\s*(?:,|and|&)\s*\d{1,2})*\s*\)"#, options: [.caseInsensitive])
     private static let digitsRegex = try! NSRegularExpression(pattern: #"\d{1,2}"#)
+    /// "[2:83]", "[3:14]": a verse-shaped reference written where a marker belongs.
+    private static let referenceMarkerRegex = try! NSRegularExpression(pattern: #"\[\s*(\d{1,3})\s*:\s*(\d{1,4})\s*\]"#)
+
+    /// The source a verse-shaped bracket means, as its number: the source whose reference it is
+    /// ("[2:83]" where a source IS 2:83), else the source of that number when the second figure is
+    /// its own ayah or hadith number ("[3:14]" for source 3, Luqman 31:14: the model had glued the
+    /// marker to the verse). Nil when it names nothing the model was given.
+    private static func sourceNumber(forReference first: Int, _ second: Int, sources: [AskAISource]) -> Int? {
+        if let index = sources.firstIndex(where: { $0.reference == "\(first):\(second)" }) { return index + 1 }
+        guard first >= 1, first <= sources.count else { return nil }
+        switch sources[first - 1].kind {
+        case .ayah(_, let ayah), .tafsir(_, let ayah, _):
+            return ayah == second ? first : nil
+        case .hadith:
+            return sources[first - 1].reference.hasSuffix(" \(second)") ? first : nil
+        default:
+            return nil
+        }
+    }
 
     /// Every marker group rewritten to the canonical "[n]" form, one bracket per number, with the
     /// numbers that name no source removed; the count of those removed is disclosed to the reader.
-    /// A marker glued to a word gets its space back ("patience[1]" -> "patience [1]").
-    static func normalizeMarkers(_ text: String, sourceCount: Int) -> (text: String, removed: Int) {
+    /// A marker glued to a word gets its space back ("patience[1]" -> "patience [1]"). With the
+    /// turn's `sources`, a verse-shaped bracket ("[2:83]", seen once the prompt carried note lines)
+    /// becomes the marker of the source it means, or goes like any reference recalled from memory.
+    static func normalizeMarkers(_ text: String, sourceCount: Int, sources: [AskAISource] = []) -> (text: String, removed: Int) {
         guard !text.isEmpty else { return (text, 0) }
         var removed = 0
+        var text = text
+        if !sources.isEmpty {
+            let ns = text as NSString
+            for match in referenceMarkerRegex.matches(in: text, range: NSRange(location: 0, length: ns.length)).reversed() {
+                guard let first = Int(ns.substring(with: match.range(at: 1))), let second = Int(ns.substring(with: match.range(at: 2))),
+                      let range = Range(match.range, in: text) else { continue }
+                if let number = sourceNumber(forReference: first, second, sources: sources) {
+                    text.replaceSubrange(range, with: "[\(number)]")
+                } else {
+                    // Left as an out-of-range marker for the pass below to remove and count.
+                    text.replaceSubrange(range, with: "[99]")
+                }
+            }
+        }
         func rewrite(_ input: String, regex: NSRegularExpression) -> String {
             let ns = input as NSString
             var result = input
@@ -469,7 +518,9 @@ enum AskAIText {
     /// time of day ("Asr (4:45 PM)") is not a verse.
     static func policeCitations(_ text: String, sources: [AskAISource]) -> (text: String, removed: Int) {
         guard !text.isEmpty else { return (text, 0) }
-        let verified = sources.flatMap { [$0.reference] + $0.aliases }.map(citationKey).filter { $0.count >= 3 }
+        // A hadith a note names (where else the report is recorded) was given to the model too.
+        let verified = sources.flatMap { [$0.reference] + $0.aliases + $0.notes.flatMap(\.references) }
+            .map(citationKey).filter { $0.count >= 3 }
         let ns = text as NSString
         // The clock times blanked with the whole text as context (a prayer's name in the sentence
         // makes "4:45" a time); the mask keeps the UTF-16 length, so the ranges below index both.
@@ -513,13 +564,32 @@ enum AskAIText {
 
     /// Every quotation of five or more words that is not the wording of a source the model was
     /// given is scripture recalled from memory: the quote marks come off and the span is flagged
-    /// "(wording not verified)"; the count is disclosed.
+    /// "(wording not verified)"; the count is disclosed. A quotation that is the wording of a
+    /// COMMENTARY read with a source (a tafsir, a hadith's explanation: `AskAISourceNote`) keeps
+    /// its marks and is followed by where it is from, so it cannot pass for the verse or the hadith.
     static func policeQuotations(_ text: String, sources: [AskAISource]) -> (text: String, flagged: Int) {
         guard !text.isEmpty else { return (text, 0) }
         func fold(_ s: String) -> String {
             s.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty }.joined(separator: " ")
         }
-        let corpus = sources.map { fold($0.text + " " + ($0.transliteration ?? "")) }
+        // The scripture's own wording: each source's text, and the notes that are wording too (the
+        // other translation, another collection's wording). Then the commentary read with it (a
+        // tafsir, an explanation), which is wording the model was given but not the scripture's.
+        let corpus = sources.map { source in
+            fold(([source.text, source.transliteration ?? ""] + source.notes.filter { $0.quotedAttribution == nil }.map(\.text))
+                .joined(separator: " "))
+        }
+        let commentary: [(text: String, attribution: String)] = sources.flatMap { source in
+            source.notes.compactMap { note in note.quotedAttribution.map { (fold(note.text), $0) } }
+        }
+        func holds(_ haystack: String, _ pieces: [String]) -> Bool {
+            var cursor = haystack.startIndex
+            for piece in pieces {
+                guard let range = haystack.range(of: piece, range: cursor..<haystack.endIndex) else { return false }
+                cursor = range.upperBound
+            }
+            return true
+        }
         let ns = text as NSString
         var result = text
         var flagged = 0
@@ -531,16 +601,15 @@ enum AskAIText {
                 .map(fold).filter { !$0.isEmpty }
             let words = pieces.reduce(0) { $0 + $1.split(separator: " ").count }
             guard words >= 5, !pieces.isEmpty else { continue }
-            let verified = corpus.contains { source in
-                var cursor = source.startIndex
-                for piece in pieces {
-                    guard let range = source.range(of: piece, range: cursor..<source.endIndex) else { return false }
-                    cursor = range.upperBound
-                }
-                return true
-            }
-            if verified { continue }
+            if corpus.contains(where: { holds($0, pieces) }) { continue }
             guard let range = Range(match.range, in: result) else { continue }
+            // A commentary's words, quoted: real wording, but never the verse's or the hadith's
+            // own. Whatever the sentence around it claims ("He also explained this as: ..."), the
+            // quotation says where it is from.
+            if let note = commentary.first(where: { holds($0.text, pieces) }) {
+                result.insert(contentsOf: " " + note.attribution, at: range.upperBound)
+                continue
+            }
             result.replaceSubrange(range, with: quoted + " (wording not verified)")
             flagged += 1
         }

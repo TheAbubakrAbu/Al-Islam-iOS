@@ -41,11 +41,15 @@ enum AskAIRetriever {
         var elapsed: TimeInterval = 0
     }
 
-    /// The budget for one turn: how many sources, how much of each, how much of a subject text.
+    /// The budget for one turn: how many sources, how much of each, how much of a subject text, and
+    /// how much is read WITH the verses and hadiths (their notes, AskAIDepth.swift): the characters
+    /// all the notes may take together, and how many sources besides the subject carry any.
     struct Budget {
         var limit: Int
         var sourceCharacters: Int
         var subjectCharacters: Int
+        var noteCharacters: Int = 0
+        var notedSources: Int = 0
     }
 
     // MARK: - Lane weights
@@ -376,6 +380,9 @@ enum AskAIRetriever {
             focused.focusTerms = focus
             return focused
         }
+        // The verses and hadiths that lead the turn are read with what else the app holds on them:
+        // the other translation, the tafsir, the readings, the explanation, the other narrations.
+        outcome.sources = await AskAIDepth.attach(to: outcome.sources, question: question, budget: budget)
         outcome.elapsed = CFAbsoluteTimeGetCurrent() - started
         return outcome
     }
@@ -584,8 +591,9 @@ enum AskAIRetriever {
         #endif
 
         #if HAS_HADITH
-        // A hadith by number: "bukhari 6114", "sahih muslim 8a", "nawawi 40 hadith 1".
-        if let reference = HadithReferenceParser.parse(text), let data = HadithStore.shared.book(reference.book) {
+        // A hadith by number: "bukhari 6114", "sahih muslim 8a", "nawawi 40 hadith 1", and the same
+        // inside a sentence ("Explain Bukhari 1").
+        if let reference = hadithReference(in: text), let data = HadithStore.shared.book(reference.book) {
             let hadith: HadithBookData.Hadith? = reference.chapter.map { data.hadith(chapterPosition: $0, position: reference.hadith) }
                 ?? data.hadith(referenced: reference.hadith, suffix: reference.suffix, introduction: reference.introduction)
             if let hadith { await prewarmHadithText([(data, hadith.row)]) }
@@ -605,6 +613,30 @@ enum AskAIRetriever {
         }
         return (out, support)
     }
+
+    #if HAS_HADITH
+    /// The hadith a question names by collection and number. `HadithReferenceParser` reads a whole
+    /// search field ("bukhari 6114"), so a sentence around the reference defeated it: "Explain
+    /// Bukhari 1" named no subject, and the turn opened on Bukhari 4485 with Bukhari 1 second among
+    /// eight guesses. The question is tried whole first, then as the few words that END at each
+    /// number ("Bukhari 1", "Sahih Muslim 2564a", "Abu Dawud 3:12"), longest first: the words right
+    /// before the number must name exactly one collection, so "pray 5 times" names none. The
+    /// intent reads it too (`AskAIQuestion.classify`): a question that names a hadith is a reference.
+    nonisolated static func hadithReference(in text: String) -> HadithReferenceParser.Reference? {
+        if let whole = HadithReferenceParser.parse(text) { return whole }
+        let edges = CharacterSet(charactersIn: "?!.,;()[]\"\u{201C}\u{201D}")
+        let words = text.split(whereSeparator: { $0.isWhitespace })
+            .map { String($0).trimmingCharacters(in: edges) }
+            .filter { !$0.isEmpty }
+        for (index, word) in words.enumerated() where index > 0 && word.first?.isNumber == true {
+            for count in stride(from: min(4, index), through: 1, by: -1) {
+                let candidate = words[(index - count)...index].joined(separator: " ")
+                if let reference = HadithReferenceParser.parse(candidate) { return reference }
+            }
+        }
+        return nil
+    }
+    #endif
 
     private static let nameArticles: Set<String> = ["al", "ar", "as", "an", "ad", "at", "ash", "az", "adh", "ath"]
     /// Words that say the question is about a Name: "the name salam", "asma ul husna". Not "asma"
@@ -658,6 +690,17 @@ enum AskAIRetriever {
             _ = await HadithSemanticCorpus.probeDisk(engine: engine)
             #endif
             _ = engine
+        }
+        // What a verse or a hadith is read with (AskAIDepth.swift): the readings table parses from
+        // its pack and the explanations and parallel narrations open theirs, off the main thread.
+        DispatchQueue.global(qos: .utility).async {
+            #if HAS_QURAN
+            if QiraatVariantsStore.isBundled { QiraatVariantsStore.shared.prewarm() }
+            #endif
+            #if HAS_HADITH
+            _ = HadithExplanationStore.shared.pack
+            _ = SimilarHadithsStore.shared.pack
+            #endif
         }
     }
 
@@ -837,7 +880,7 @@ enum AskAIRetriever {
     /// Inflates the text blocks behind these hadiths off the main actor (about 130 ms a block on
     /// the simulator, several times that on an older phone), so building their sources afterwards,
     /// on the main actor, reads the cache ("HADITH BLOCK ... MAIN" no longer fires for Ask AI).
-    private static func prewarmHadithText(_ items: [(HadithBookData, Int)]) async {
+    static func prewarmHadithText(_ items: [(HadithBookData, Int)]) async {
         let cold = items.filter { $0.1 >= 0 && !$0.0.hasText(rows: $0.1..<($0.1 + 1)) }
         guard !cold.isEmpty else { return }
         await withTaskGroup(of: Void.self) { group in

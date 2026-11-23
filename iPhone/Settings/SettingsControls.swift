@@ -363,7 +363,7 @@ private struct PreviewHeaderIcon: View {
             .aspectRatio(contentMode: .fit)
             .frame(width: 25, height: 25)
             .foregroundColor(Settings.shared.accentColor.color)
-            .conditionalGlassEffect(interactive: false)
+            .contentSurface(interactive: false)
             .frame(width: 28, height: 28)
             .accessibilityHidden(true)
     }
@@ -403,7 +403,7 @@ struct QuranReadingPreview: View {
                         .lineLimit(1)
                         .padding(.horizontal, 8)
                         .frame(height: 28)
-                        .conditionalGlassEffect(interactive: false)
+                        .contentSurface(interactive: false)
 
                     Text(surah.displayName)
                         .font(.caption)
@@ -495,7 +495,7 @@ struct HadithReadingPreview: View {
                 .lineLimit(1)
                 .padding(.horizontal, 8)
                 .frame(height: 28)
-                .conditionalGlassEffect(interactive: false)
+                .contentSurface(interactive: false)
 
                 Spacer(minLength: 4)
 
@@ -588,7 +588,7 @@ struct IslamReadingPreview: View {
             }
             .fixedSize(horizontal: false, vertical: true)
             .padding(12)
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentSurface(clear: true, rectangle: true)
         }
         .dynamicTypeSize(size ?? inherited)
         .padding(.vertical, 4)
@@ -625,7 +625,7 @@ struct AlphabetReadingPreview: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                         .frame(width: 42, height: 38)
-                        .conditionalGlassEffect(clear: true, rectangle: true)
+                        .contentSurface(clear: true, rectangle: true)
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text(letter.name)

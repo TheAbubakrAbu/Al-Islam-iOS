@@ -1555,6 +1555,10 @@ extension SettingsSearchEntry {
         .init(title: "Open the App On", path: "Appearance → Look and Feel", keywords: "launch start first tab open adhan quran hadith islam default home landing", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Default List View", path: "Appearance → Look and Feel", keywords: "list style plain grouped inset layout", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Classic Look (No Liquid Glass)", path: "Appearance → Look and Feel", keywords: "liquid glass classic look performance faster battery low power mode ios 26 old design", destination: .appearancePage(.lookAndFeel)),
+        .init(title: "Liquid Glass Everywhere", path: "Appearance → Look and Feel", keywords: "liquid glass everywhere more glass glassy shiny tiles cards buttons pills old look before", destination: .appearancePage(.lookAndFeel), isAvailable: {
+            if #available(iOS 26.0, *) { return true }
+            return false
+        }),
         .init(title: "Show Side Numbers", path: "Appearance → Look and Feel", keywords: "side numbers right edge index rail jump scrub scrubber juz 1 30 ayah hadith chapter names list overwhelming busy hide", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Haptic Feedback", path: "Appearance → Look and Feel", keywords: "vibration taptic buzz feedback toggle", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Keep Screen On", path: "Appearance → Look and Feel", keywords: "screen display awake on sleep dim lock auto-lock autolock idle timer turn off stay always quran reading battery", destination: .appearancePage(.lookAndFeel)),
@@ -1816,6 +1820,11 @@ struct AppearancePageView: View {
 
                     if settings.showLiquidGlass {
                         SettingsToggle(String(localized: "Automatically in Low Power Mode"), caption: String(localized: "Turns Liquid Glass off while Low Power Mode is on and brings it back when Low Power Mode is off."), isOn: $appearanceSettings.classicLookInLowPower)
+                        .settingsDependent()
+
+                        // The look before 2026-11-22: glass on the content too, not only on what
+                        // floats (`Settings.liquidGlassEverywhere`, `contentSurface`). Off by default.
+                        SettingsToggle(String(localized: "Liquid Glass Everywhere"), caption: String(localized: "Also draws the tiles, cards and small buttons on each screen in Liquid Glass, as the app did before. Off keeps it to the bars and the main buttons."), isOn: $appearanceSettings.liquidGlassEverywhere)
                         .settingsDependent()
                     }
                 }
@@ -2083,7 +2092,7 @@ struct SettingsGridTile: View {
             .padding(.vertical, 8)
             .padding(.horizontal, 6)
             .contentShape(Rectangle())
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentSurface(clear: true, rectangle: true)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
@@ -2126,7 +2135,7 @@ struct SettingsGridBanner: View {
             .padding(.vertical, 10)
             .padding(.horizontal, 12)
             .contentShape(Rectangle())
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentSurface(clear: true, rectangle: true)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)

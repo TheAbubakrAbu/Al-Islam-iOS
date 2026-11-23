@@ -653,7 +653,7 @@ private struct HelpDoorCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
         // Clear glass, the tiles' own surface; nothing is tinted, so the pill alone says what is on.
-        .conditionalGlassEffect(clear: true, rectangle: true)
+        .contentSurface(clear: true, rectangle: true)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(door.title)
         .accessibilityValue(door.value ?? "")

@@ -1501,7 +1501,7 @@ struct SurahView: View {
                     .foregroundColor(settings.accentColor.color)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .conditionalGlassEffect(inRow: true)
+                    .contentSurface(inRow: true)
 
                 Text(settings.showEnglishMustafa && !settings.showEnglishSaheeh ? ayah.textEnglishMustafa : ayah.textEnglishSaheeh)
                     .font(.footnote)
@@ -2801,7 +2801,7 @@ struct SurahView: View {
                                 .foregroundStyle(settings.accentColor.color)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
-                                .conditionalGlassEffect()
+                                .contentSurface()
                         }
                         .animation(.easeInOut, value: searchText)
                         .transition(.opacity)
@@ -4072,7 +4072,7 @@ struct SurahView: View {
             // isn't enough, it is the one that shrinks, scaling its label down first.
             if flanks.legend {
                 ReaderLegendMenu(tajweedApplies: flanks.tajweedApplies, themesApply: flanks.themesApply,
-                                 tajweedPossible: flanks.tajweedPossible)
+                                 tajweedPossible: flanks.tajweedPossible, onOpenAyah: openFromLegend)
                     .layoutPriority(1)
             }
 
@@ -4150,7 +4150,7 @@ struct SurahView: View {
                 // fills the leftover and is the first to shrink when the row runs tight.
                 if legendVisible {
                     ReaderLegendMenu(tajweedApplies: tajweedCanRenderNow, themesApply: themesApply,
-                                     tajweedPossible: tajweedPossible)
+                                     tajweedPossible: tajweedPossible, onOpenAyah: openFromLegend)
                         .layoutPriority(1)
                 }
 
@@ -5077,6 +5077,14 @@ struct SurahView: View {
         }
     }
 
+    /// An ayah the Legend sheet's Themes page asked to read, once that sheet has gone
+    /// (`ReaderLegendMenu.pendingAyah`): the same in-place landing as a Choose Surah pick that names
+    /// an ayah, in this surah or another, clamped into the surah as a link's ayah is.
+    private func openFromLegend(surahID: Int, ayahID: Int) {
+        guard let target = quranData.surah(surahID) else { return }
+        goTo(surah: target, ayah: min(max(ayahID, 1), max(1, target.numberOfAyahs)))
+    }
+
     /// Runs when the Choose Surah sheet has finished dismissing: the surah swap and everything it
     /// republishes happens with no presentation in flight. Nothing picked (the sheet was swiped away,
     /// or the pick was the surah already on screen) means nothing to do.
@@ -5565,6 +5573,9 @@ private struct ReaderLegendMenu: View {
     let themesApply: Bool
     /// The page could show tajweed if it were on: it carries Arabic the tajweed painter can color.
     var tajweedPossible: Bool = true
+    /// Turns the reader this button belongs to, to an ayah the Themes page asked to read (surah,
+    /// ayah). Called once the sheet has gone; see `pendingAyah`.
+    var onOpenAyah: (Int, Int) -> Void = { _, _ in }
 
     /// Whether the reader shows the button: always, but under Simple Mode only while it has a color
     /// code to explain.
@@ -5576,6 +5587,16 @@ private struct ReaderLegendMenu: View {
     private var colorsOff: Bool { !tajweedApplies && !themesApply }
 
     @State private var showingSheet = false
+    /// The ayah the Themes page asked to read (a passage's "Read from Ayah", an ayah under Browse by
+    /// Theme), opened from the sheet's `onDismiss` and not from the tap: the rule the Choose Surah
+    /// sheet follows (`SurahView.pendingPicked`).
+    ///
+    /// The tap used to close the sheet and hand the ayah to `AppNavigation` in the same instant.
+    /// That route pops this reader and pushes another 0.35 s later, so the sheet's dismissal, the
+    /// pop and the push all ran at once, and the new reader came up blank under an empty title pill
+    /// (iOS 27 simulator, every time). The reader is right under the sheet: it turns to the ayah in
+    /// place once the sheet has gone, with no pop and no push.
+    @State private var pendingAyah: (surahID: Int, ayahID: Int)?
     /// The long-press quick peek: the first few legend entries in a small popover, so a color can be
     /// checked without opening (and then dismissing) the full legend sheet.
     @State private var showingQuickPeek = false
@@ -5751,14 +5772,24 @@ private struct ReaderLegendMenu: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showingSheet = true }
         }
         #endif
-        .sheet(isPresented: $showingSheet) {
+        .sheet(isPresented: $showingSheet, onDismiss: openPendingAyah) {
             // The tajweed and Signs pages are one screen of tiles each (2026-11-17): the sheet opens
             // at full height so the whole grid is up at once, where the medium detent would cut it in
             // half. On every page since 2026-11-18: opened on Themes it stood at half height, and the
             // picker then led to the two tile pages squeezed into that half.
-            ReaderLegendSheet(initialPage: openingPage)
-                .smallMediumSheetPresentation(startLarge: true)
+            ReaderLegendSheet(initialPage: openingPage) { surahID, ayahID in
+                pendingAyah = (surahID, ayahID)
+            }
+            .smallMediumSheetPresentation(startLarge: true)
         }
+    }
+
+    /// Runs when the sheet has finished dismissing: nothing asked for (the sheet was closed or
+    /// swiped away) means nothing to do.
+    private func openPendingAyah() {
+        guard let target = pendingAyah else { return }
+        pendingAyah = nil
+        onOpenAyah(target.surahID, target.ayahID)
     }
 }
 
@@ -5782,9 +5813,13 @@ private struct ReaderLegendSheet: View {
     /// left when the picker returns to it; every open of the sheet starts both on their tiles.
     @State private var tajweedDetailed = false
     @State private var signsDetailed = false
+    /// Records an ayah the Themes page asked to read (surah, ayah). The presenter opens it once this
+    /// sheet has gone (`ReaderLegendMenu.pendingAyah`).
+    private let onOpenAyah: (Int, Int) -> Void
 
-    init(initialPage: ReaderLegendPage) {
+    init(initialPage: ReaderLegendPage, onOpenAyah: @escaping (Int, Int) -> Void) {
         _page = State(initialValue: initialPage)
+        self.onOpenAyah = onOpenAyah
     }
 
     /// The switch of the page on screen; nil on Themes, which has one form.
@@ -5804,9 +5839,10 @@ private struct ReaderLegendSheet: View {
                     TajweedLegendView(showsDismissButton: false, detailed: $tajweedDetailed)
                 case .themes:
                     ThemeHighlightsView { surahID, ayahID in
-                        // The reader is under this sheet: close it first, so the ayah opens in view.
+                        // The reader is under this sheet: the ayah is recorded, the sheet closes, and
+                        // the reader turns to it once the sheet has gone.
+                        onOpenAyah(surahID, ayahID)
                         presentationMode.wrappedValue.dismiss()
-                        AppNavigation.shared.open(.ayah(surahID, ayahID))
                     }
                 case .signs:
                     QuranStopSignsLegendView(detailed: $signsDetailed)

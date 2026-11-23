@@ -891,6 +891,9 @@ struct HadithPillarView: View {
                     // builder reads too.
                     HadithGradeLadder()
 
+                    // The second question, how many carried it, as its own card (2026-11-22).
+                    HadithCountLadder()
+
                     ArticleParagraph(articleMarkdown: "The highest rank of authentic hadith is known as **Muttafaqun Alayh (مُتَّفَق عَلَيه)**, meaning “agreed upon.” These are hadiths narrated by both Imam Bukhari and Imam Muslim in their Sahih collections, indicating the highest level of authenticity.")
 
                     ArticleParagraph(verbatim: "This detailed grading system ensures that Muslims can confidently rely on the Hadiths as a source of guidance without the risk of fabricated or unreliable narrations.")

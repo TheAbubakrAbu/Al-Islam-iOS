@@ -58,22 +58,59 @@ struct ConditionalGlassEffect: ViewModifier {
     /// hot or 3 GB-class phone these draw the Classic Look's fill while bars, cards, buttons and
     /// sheets keep their glass (`AppearanceEnvironment.rowLiquidGlass`): each glass shape costs 2.5 to
     /// 4 ms when its row is built, and a scroll builds rows without pause.
+    ///
+    /// Since 2026-11-22 nearly every such shape is a `contentSurface`, which draws that fill on every
+    /// phone, so this flag now decides only what is still glass in a row: the buttons that act (the
+    /// ayah actions sheet's tiles, a name row's View First Found), and a surface under the Adhan
+    /// tab's sky.
     var inRow: Bool = false
     /// A rounded rectangle at a radius of the caller's own, for a shape `GlassCorner.rectangle` is
     /// too round for: a 62 pt action tile at 24 pt is most of the way to a capsule. Setting it
     /// implies `rectangle`. A border drawn on such a shape must use the same number.
     var cornerRadius: CGFloat? = nil
+    /// A shape in the CONTENT layer, set by `contentSurface(...)`: a card, a tile, a banner, a
+    /// read-only badge, anything that repeats down a scrolling list. It draws the Classic Look's
+    /// fill and hairline with Liquid Glass on as well (unless the Liquid Glass Everywhere setting,
+    /// off by default, asks for the old look), and the glass is left to what floats over the
+    /// page (bars, floating headers, overlays) and to the buttons that act
+    /// (Abu, 2026-11-22: "maybe make it a little less. I kind of like how it looks like with classic
+    /// mode").
+    ///
+    /// Why a tile is not glass: inside a list card it has nothing to refract, so all that is left of
+    /// the material is its lighting. Measured on the iPhone 17 Pro in Dark, a glass tile is a lit
+    /// pillow (fill 58 on a card of 28, a rim at 110, a shadow under it) where the Classic tile is a
+    /// quiet 42 with a hairline, and a screen of them (four summary tiles, six prayer tiles, a grid of
+    /// surahs) outshouts its own text. It is Apple's rule too ("Don't use Liquid Glass in the content
+    /// layer"), and the cheap one: a glass shape costs 2.5 to 4 ms when its row is built, the fill
+    /// nothing measurable (Performance Guide, section 19).
+    ///
+    /// Under the Adhan tab's whole-tab sky a surface is still glass, the clear style: there the page
+    /// behind it is a picture, which is what clear glass is for (`skyPageFill`). The watch keeps its
+    /// glass: nothing was looked at there, and its ground is plain black.
+    var surface: Bool = false
 
     /// A 24pt radius reads right on iPhone-sized cards; on the watch's small tiles it rounds them into
     /// near-stadiums that look chopped, so the watch uses a gentler curve.
     private var rectangleCornerRadius: CGFloat { cornerRadius ?? GlassCorner.rectangle }
     private var drawsRectangle: Bool { rectangle || cornerRadius != nil }
 
+    /// Whether this shape is glass at all while Liquid Glass is on (see `surface`). A content surface
+    /// is glass again with Liquid Glass Everywhere on (`AppearanceEnvironment.glassEverywhere`, off by
+    /// default; the DEBUG `-contentGlass` argument sets it too), the look before 2026-11-22.
+    private var drawsGlassWhenOn: Bool {
+        #if os(watchOS)
+        true
+        #else
+        !surface || skyPageFill || appearance.glassEverywhere
+        #endif
+    }
+
     func body(content: Content) -> some View {
         // `appearance.liquidGlass` is false on every pre-26 system and under the Classic Look (manual,
-        // or automatic in Low Power Mode), so one flag routes all ~207 sites to the fallback. The
-        // shapes inside scrolling rows read their own flag, which a hot or 3 GB-class phone also clears.
-        let liquidGlass = inRow ? appearance.rowLiquidGlass : appearance.liquidGlass
+        // or automatic in Low Power Mode), so one flag routes every site to the fallback. The shapes
+        // inside scrolling rows read their own flag, which a hot or 3 GB-class phone also clears, and
+        // a content surface takes the fallback unless Liquid Glass Everywhere is on.
+        let liquidGlass = drawsGlassWhenOn && (inRow ? appearance.rowLiquidGlass : appearance.liquidGlass)
         if #available(iOS 26.0, watchOS 26.0, *), liquidGlass || systemGlass {
             modernGlass(content: content)
         } else {
@@ -438,6 +475,31 @@ extension View {
         cornerRadius: CGFloat? = nil
     ) -> some View {
         modifier(ConditionalGlassEffect(clear: clear, rectangle: rectangle, circle: circle, useColor: useColor, customTint: customTint, interactive: interactive, themeTint: themeTint, flat: flat, systemGlass: systemGlass, inRow: inRow, cornerRadius: cornerRadius))
+    }
+
+    /// The shape of something in the CONTENT layer: a card, a tile, a banner, a read-only badge or
+    /// count, a button that repeats down a scrolling list. The Classic Look's fill and hairline on
+    /// every system and in both looks; glass only under the Adhan tab's whole-tab sky, or everywhere
+    /// with the Liquid Glass Everywhere setting on (see `ConditionalGlassEffect.surface`).
+    ///
+    /// Which one a new shape takes: `conditionalGlassEffect` if it FLOATS over the page (a bar, a
+    /// pinned or floating header, an overlay, a control in one of those) or if it is a button that
+    /// acts and stands alone (a call to action, an action tile, the location pill); `contentSurface`
+    /// for everything else. The parameters mean what they mean there, and still shape the fallback
+    /// (`clear` is the thinner fill, `flat` skips the material) and the sky's glass.
+    func contentSurface(
+        clear: Bool = false,
+        rectangle: Bool = false,
+        circle: Bool = false,
+        useColor: Double? = nil,
+        customTint: Color? = nil,
+        interactive: Bool = true,
+        themeTint: Bool = true,
+        flat: Bool = false,
+        inRow: Bool = false,
+        cornerRadius: CGFloat? = nil
+    ) -> some View {
+        modifier(ConditionalGlassEffect(clear: clear, rectangle: rectangle, circle: circle, useColor: useColor, customTint: customTint, interactive: interactive, themeTint: themeTint, flat: flat, inRow: inRow, cornerRadius: cornerRadius, surface: true))
     }
 
     /// Presents a `Menu`'s items in DECLARED order, top to bottom, wherever the menu pops up from.

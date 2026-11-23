@@ -136,7 +136,8 @@ struct MapView: View {
                         cityIconName: cityIconName(for:)
                     )
                 }
-                .adaptiveSafeArea(edge: .bottom) {
+                // Over a map the bar floats: no scroll-edge ground behind it.
+                .adaptiveSafeArea(edge: .bottom, groundsBar: false) {
                     bottomInsetContent
                 }
                 .navigationTitle(onSelectCity != nil ? "Choose City" : "Select Location")

@@ -105,6 +105,8 @@ enum AdhanWidgetDateFormatting {
         let day: String
         let month: String
         let year: String
+        /// The year without its era ("1448" / "١٤٤٨"), for a line too tight for "AH".
+        let yearNumber: String
 
         /// "23 Rabi al-Awwal" / "٢٣ ربيع الأول"
         var dayMonth: String { "\(day) \(month)" }
@@ -162,7 +164,8 @@ enum AdhanWidgetDateFormatting {
                 // English keeps the app's own spellings ("Rabi al-Awwal"); another language its formatter's.
                 month: latinLocale.identifier == "en" ? hijriMonths.first { $0.number == month }?.english ?? ""
                     : latinMonthFormatter.string(from: date),
-                year: latinLocale.identifier == "en" ? "\(year) AH" : latinYearFormatter.string(from: date)
+                year: latinLocale.identifier == "en" ? "\(year) AH" : latinYearFormatter.string(from: date),
+                yearNumber: String(year)
             )
         case .arabic:
             return HijriDateParts(
@@ -170,7 +173,8 @@ enum AdhanWidgetDateFormatting {
                 weekday: arabicWeekdayFormatter.string(from: weekdayDate),
                 day: arabicNumberString(from: day),
                 month: arabicMonthFormatter.string(from: date),
-                year: "\(arabicNumberString(from: year)) هـ"
+                year: "\(arabicNumberString(from: year)) هـ",
+                yearNumber: arabicNumberString(from: year)
             )
         }
     }
@@ -585,7 +589,8 @@ struct PrayersProvider: TimelineProvider {
             hijriOffset: 0,
             switchHijriDateAtMaghrib: false,
             skyPeriod: current?.nameTransliteration,
-            skyColors: settings.skyGradientColors(forPrayer: current?.nameTransliteration)
+            skyColors: settings.skyGradientColors(forPrayer: current?.nameTransliteration),
+            isPreview: true
         )
     }
 
@@ -625,4 +630,7 @@ struct PrayersEntry: TimelineEntry {
     /// layouts draw its clouds or rain and print its temperature beside the city. Nil paints the
     /// plain sky, exactly as before the weather existed.
     var weather: SkyWeather? = nil
+    /// The widget gallery's sample (`sampleEntry`): the inline date shows on its own there, with none of
+    /// the lock screen's own date beside it to join (`HijriInlineDate`).
+    var isPreview: Bool = false
 }

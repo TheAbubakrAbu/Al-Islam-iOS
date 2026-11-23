@@ -552,21 +552,27 @@ final class QuranPlayer: ObservableObject {
         // `-playCustomRange s:a:b[:perAyah[:section[:endSurah]]]`: ayah-by-ayah range playback, for
         // verifying the reader's playback-driven page turns headlessly (pick a range that crosses a page
         // boundary), and repeats: `112:1:4:2:inf` plays each ayah twice and the range forever;
-        // `113:1:3:1:1:114` runs from 113:1 to 114:3, across the surah end.
+        // `113:1:3:1:1:114` runs from 113:1 to 114:3, across the surah end. `-playCustomRangeDelay <s>`
+        // starts it that many seconds late, so with `-playAyah` it replaces a recitation already up:
+        // the Now Playing card gaining lines under a band that is already up (2026-11-21).
         if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-playCustomRange"),
            ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
             let fields = ProcessInfo.processInfo.arguments[idx + 1].split(separator: ":").map(String.init)
             let parts = fields.map { $0 == "inf" ? QuranPlayer.infiniteRepeat : (Int($0) ?? 0) }
+            let delay = ProcessInfo.processInfo.arguments.firstIndex(of: "-playCustomRangeDelay")
+                .flatMap { ProcessInfo.processInfo.arguments.indices.contains($0 + 1) ? Double(ProcessInfo.processInfo.arguments[$0 + 1]) : nil } ?? 0
             if parts.count >= 3, parts.allSatisfy({ $0 > 0 }) {
                 debugStartWhenDataReady {
-                    let name = QuranData.shared.quran.first(where: { $0.id == parts[0] })?.nameTransliteration ?? "Surah \(parts[0])"
-                    QuranPlayer.shared.playCustomRange(
-                        surahNumber: parts[0], surahName: name,
-                        startAyah: parts[1], endAyah: parts[2],
-                        endSurahNumber: parts.count > 5 ? parts[5] : nil,
-                        repeatPerAyah: parts.count > 3 ? parts[3] : 1,
-                        repeatSection: parts.count > 4 ? parts[4] : 1
-                    )
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        let name = QuranData.shared.quran.first(where: { $0.id == parts[0] })?.nameTransliteration ?? "Surah \(parts[0])"
+                        QuranPlayer.shared.playCustomRange(
+                            surahNumber: parts[0], surahName: name,
+                            startAyah: parts[1], endAyah: parts[2],
+                            endSurahNumber: parts.count > 5 ? parts[5] : nil,
+                            repeatPerAyah: parts.count > 3 ? parts[3] : 1,
+                            repeatSection: parts.count > 4 ? parts[4] : 1
+                        )
+                    }
                 }
             }
         }

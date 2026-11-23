@@ -1,0 +1,7 @@
+{
+ "010": "This batch is large: write it in parts if that helps.",
+ "016": "This batch is large: write it in parts if that helps.",
+ "017": "This batch holds the adhan sound picker: translate its tone names (Echo, Takbir, Chime, Ring, Alarm, Serene and the rest) once, as the picker's own labels, and use them the same way in any tip or caption here. This batch is large: write it in parts if that helps.",
+ "019": "Two tips here quote Siri phrases (“Play surah Yaseen in %@” ..., “When is Asr in %@” ...): Siri does not speak your language, so keep each quoted phrase in English exactly as the key writes it, with its %@, and say briefly that they are said in English (brief, Siri).",
+ "labels": "a settings screen is ക്രമീകരണം in the singular (ഖുർആൻ ക്രമീകരണം, ക്രമീകരണം തുറക്കൂ), plural only in actions (എല്ലാ ക്രമീകരണങ്ങളും റീസെറ്റ് ചെയ്യൂ); recitation \"Play\" is കേൾക്കൂ (സൂറത്ത് കേൾക്കൂ, ഈ ആയത്ത് മുതൽ കേൾക്കൂ), the adhan's and the app's playback controls പ്ലേ (സ്വയമേവ പ്ലേ ചെയ്യൂ, ഇപ്പോൾ പ്ലേ ചെയ്യുന്നത്); Range ശ്രേണി, Custom കസ്റ്റം, Random ഏതെങ്കിലും; Mode മോഡ് (ലളിത മോഡ്, പരീക്ഷാ മോഡ്, തുടർ ഓർമ്മപ്പെടുത്തൽ മോഡ്); chain of narrators നിവേദക പരമ്പര; Legend നിറസൂചിക; the qiraat masters and riwayat exactly as labels.json spells them (ആസ്വിമിൽ നിന്നുള്ള ഹഫ്സ്, ഇബ്നു ആമിർ, അബൂ അംർ); \"Read on\" ചേർത്ത് ഓതുമ്പോൾ; \"Instead of\" ഇങ്ങനെയല്ല; a label quoted in a sentence sits in ‘ ’ as Apple's Malayalam quotes a button; traditional spellings ഓർമ്മ, പൂർണ്ണ, അർത്ഥം."
+}

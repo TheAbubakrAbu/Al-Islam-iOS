@@ -754,32 +754,27 @@ struct HadithIsnadTreeView: View {
 /// The narrations one road of the tree reaches in a compiler's book.
 struct HadithIsnadLeafView: View {
     let slug: String
-    let ids: [Int]
 
-    @State private var entries: [HadithListEntry]?
+    /// The rows by their keys, made with the page: nothing to wait for (`HadithListEntry.make`).
+    @StateObject private var list: HadithListModel
+
+    init(slug: String, ids: [Int]) {
+        self.slug = slug
+        _list = StateObject(wrappedValue: HadithListModel(requests: ids.map { HadithListEntry.Request(slug: slug, idInBook: $0) }))
+    }
 
     private var title: String { HadithCatalogBook.bySlug[slug]?.displayTitle ?? slug }
 
     var body: some View {
-        Group {
-            if let entries {
-                HadithResolvedList(
-                    entries: entries,
-                    emptyText: String(localized: "No narration of this road could be read."),
-                    footnote: String(localized: "The narrations this road of the tree reaches in \(title).")
-                ) {
-                    EmptyView()
-                }
-            } else {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
+        HadithResolvedList(
+            model: list,
+            emptyText: String(localized: "No narration of this road could be read."),
+            footnote: String(localized: "The narrations this road of the tree reaches in \(title).")
+        ) {
+            EmptyView()
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            entries = await HadithListEntry.resolve(ids.map { HadithListEntry.Request(slug: slug, idInBook: $0) })
-        }
     }
 }
 #endif

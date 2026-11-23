@@ -852,7 +852,7 @@ struct PrayerList: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         // Only the CURRENT prayer's tile is tinted. The rest are clear, so the one that matters reads
         // at a glance instead of competing with five other filled boxes.
-        .conditionalGlassEffect(
+        .contentSurface(
             clear: !isCurrent,
             rectangle: true,
             useColor: isCurrent ? 0.25 : nil,
@@ -1679,7 +1679,7 @@ private struct PrayerGlassTile<Bell: View>: View {
         }
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .conditionalGlassEffect(
+        .contentSurface(
             clear: !isCurrent,
             rectangle: true,
             useColor: isCurrent ? 0.25 : nil,

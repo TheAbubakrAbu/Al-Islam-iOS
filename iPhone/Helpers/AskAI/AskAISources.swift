@@ -73,11 +73,23 @@ struct AskAISource: Identifiable, Equatable, Codable {
     /// The words the retrieval matched this source on (folded), for this turn's prompt only: a
     /// long hadith is clipped around the sentence that holds them instead of from its opening.
     var focusTerms: [String] = []
+    /// What else the app holds on this verse or hadith, read with it (AskAIDepth.swift): another
+    /// translation, a tafsir, how the readings differ, the hadith's explanation, its other
+    /// narrations. Set under the source's line in the prompt, cited by its number, listed on its card.
+    var notes: [AskAISourceNote] = []
 
     var id: String { reference }
 
+    /// A verse or a hadith: the sources that are read in depth.
+    var isScripture: Bool {
+        switch kind {
+        case .ayah, .hadith: return true
+        default: return false
+        }
+    }
+
     private enum CodingKeys: String, CodingKey {
-        case kind, reference, title, text, arabic, transliteration, provenance, aliases, maxCharacters, isSubject
+        case kind, reference, title, text, arabic, transliteration, provenance, aliases, maxCharacters, isSubject, notes
     }
 
     init(kind: Kind, reference: String, title: String, text: String, arabic: String? = nil,
@@ -109,6 +121,20 @@ struct AskAISource: Identifiable, Equatable, Codable {
         aliases = try container.decodeIfPresent([String].self, forKey: .aliases) ?? []
         maxCharacters = try container.decodeIfPresent(Int.self, forKey: .maxCharacters) ?? 500
         isSubject = try container.decodeIfPresent(Bool.self, forKey: .isSubject) ?? false
+        // A kind of note a later build added drops the notes, never the source.
+        notes = (try? container.decodeIfPresent([AskAISourceNote].self, forKey: .notes)) ?? []
+    }
+
+    /// This source with its text cut to `limit` (the saved transcript's form), everything else kept.
+    func clippingText(to limit: Int) -> AskAISource {
+        guard text.count > limit else { return self }
+        var clipped = AskAISource(kind: kind, reference: reference, title: title,
+                                  text: AskAISource.clip(text, to: limit),
+                                  arabic: arabic, transliteration: transliteration,
+                                  provenance: provenance, aliases: aliases,
+                                  maxCharacters: maxCharacters, isSubject: isSubject)
+        clipped.notes = notes
+        return clipped
     }
 
     /// Scripture-like sources are quoted in the prompt in quotation marks so the model reads them
@@ -164,7 +190,7 @@ struct AskAISource: Identifiable, Equatable, Codable {
     }
 
     /// The line the model is given: number, an optional SUBJECT mark, the reference, where it comes
-    /// from, then the text clipped to the turn's budget.
+    /// from, then the text clipped to the turn's budget; under it, a line for each note read with it.
     func promptLine(number: Int, characters: Int) -> String {
         let limit = min(maxCharacters, characters)
         let clipped = focusTerms.isEmpty ? Self.clip(text, to: limit) : Self.clip(text, to: limit, around: focusTerms)
@@ -172,8 +198,12 @@ struct AskAISource: Identifiable, Equatable, Codable {
         let subject = isSubject ? " SUBJECT OF THE QUESTION:" : ""
         let quoted = wasQuotedBefore ? " (you already quoted this in your previous answer: build on it, do not quote it again)" : ""
         let body = isQuotable ? "\u{201C}\(clipped)\u{201D}" : clipped
-        return "[\(number)]\(subject) \(reference)\(origin)\(quoted): \(body)"
+        let line = "[\(number)]\(subject) \(reference)\(origin)\(quoted): \(body)"
+        return ([line] + notes.map { $0.promptLine(number: number) }).joined(separator: "\n")
     }
+
+    /// What the notes cost the window, in characters.
+    var notesCost: Int { notes.reduce(0) { $0 + $1.promptCost } }
 
     /// Clipped at a sentence end when one falls in the last two fifths of the window (so a
     /// source never hands the model a cut-off sentence to copy), else at a word boundary with an

@@ -22,6 +22,8 @@ import WidgetKit
 struct HijriDateLockView: View {
     @Environment(\.widgetFamily) private var systemWidgetFamily
     @Environment(\.previewWidgetFamily) private var previewWidgetFamily
+    /// The direction around the widget: the lock screen's, which the inline line has to follow.
+    @Environment(\.layoutDirection) private var surroundingDirection
     /// The gallery's override first (see `previewWidgetFamily`), else WidgetKit's.
     private var widgetFamily: WidgetFamily { previewWidgetFamily ?? systemWidgetFamily }
 
@@ -36,18 +38,19 @@ struct HijriDateLockView: View {
             case .accessoryCircular:
                 circular(parts)
             case .accessoryInline:
-                // Day, month and year, with no weekday and no symbol: the lock screen's own date line
-                // sits beside this slot and already names the weekday, so repeating it ("Wed" +
-                // "Wednesday, ...") spent the width that then clipped the month (Abu, 2026-10-07). The
-                // year is what earns the room instead - it is the piece the system line never shows.
-                Text(parts.dayMonthYear)
+                // Day, month and year, with no weekday: the lock screen's own date line sits beside
+                // this slot and already names the weekday, so repeating it ("Wed" + "Wednesday, ...")
+                // spent the width that then clipped the month (Abu, 2026-10-07). The year is what
+                // earns the room instead: it is the piece the system line never shows.
+                HijriInlineDate(parts: parts, joinsSystemDate: !entry.isPreview)
             default:
                 rectangular(parts)
             }
         }
-        // The Arabic tiles lay out right to left, so a stack's leading edge is its right edge and the
-        // inline symbol sits at the start of the reading direction.
-        .environment(\.layoutDirection, language == .arabic ? .rightToLeft : .leftToRight)
+        // The Arabic tiles lay out right to left, so a stack's leading edge is its right edge. Not the
+        // inline line: it continues the lock screen's own, in that line's direction.
+        .environment(\.layoutDirection, widgetFamily == .accessoryInline ? surroundingDirection
+                     : language == .arabic ? .rightToLeft : .leftToRight)
     }
 
     private func circular(_ parts: AdhanWidgetDateFormatting.HijriDateParts) -> some View {
@@ -114,6 +117,62 @@ struct HijriDateArabicLockWidget: Widget {
     }
 }
 
+// MARK: - The inline line
+
+/// The inline slot's text, set out like the lock screen's own Calendar line ("Thu Nov 19 · 8 جمادى
+/// الآخرة، 1448 هـ"; Abu, 2026-11-23: "i want the lock screen widget for english and arabic to look like
+/// calendar"). iOS draws its own date ("Thu 19") just before this slot and joins the two with a gap
+/// only, so the line read "Thu 19  10 Jumada al-Thani 1448 AH", two numbers running together. The slot
+/// now opens on the middle dot Calendar puts there, and the Arabic takes Calendar's comma after the
+/// month ("١٠ جمادى الآخرة، ١٤٤٨ هـ").
+///
+/// The dot belongs beside the system's date, wherever that sits: it comes first, in a line laid out in
+/// the lock screen's direction (a strong mark for that direction opens it), and the date follows inside
+/// a first-strong isolate, so an Arabic date keeps its own order in an English line and the reverse.
+/// The widget gallery shows the slot on its own, with no date to join, so the preview drops the dot.
+///
+/// The English line is the one that runs out of room: "Thu 19  10 Jumada al-Thani 1448 AH" already
+/// filled a 17 Pro's line, so where the dot does not fit beside the era, the era goes ("Thu 19 · 10
+/// Jumada al-Thani 1448"; the month's name already says which calendar), and only a line too tight even
+/// for that drops the dot (`ViewThatFits` takes the first text the inline slot can hold, else the last).
+@available(iOS 16.0, *)
+struct HijriInlineDate: View {
+    @Environment(\.layoutDirection) private var lineDirection
+
+    let parts: AdhanWidgetDateFormatting.HijriDateParts
+    let joinsSystemDate: Bool
+
+    /// "10 Jumada al-Thani 1448 AH" / "١٠ جمادى الآخرة، ١٤٤٨ هـ"
+    private var date: String { written(year: parts.year) }
+    /// "10 Jumada al-Thani 1448" / "١٠ جمادى الآخرة، ١٤٤٨"
+    private var dateWithoutEra: String { written(year: parts.yearNumber) }
+
+    private func written(year: String) -> String {
+        parts.language == .arabic ? "\(parts.dayMonth)، \(year)" : "\(parts.dayMonth) \(year)"
+    }
+
+    var body: some View {
+        if joinsSystemDate {
+            ViewThatFits(in: .horizontal) {
+                Text(verbatim: joined(date))
+                Text(verbatim: joined(dateWithoutEra))
+                Text(verbatim: dateWithoutEra)
+            }
+        } else {
+            Text(verbatim: date)
+                .environment(\.layoutDirection, parts.language == .arabic ? .rightToLeft : .leftToRight)
+        }
+    }
+
+    /// The dot after a strong mark for the line's direction, then the date in a first-strong isolate.
+    /// An en space (U+2002) after the dot, not a word space: the gap iOS leaves before the slot is about
+    /// half the font size, and Calendar's dot sits evenly between its two dates.
+    private func joined(_ date: String) -> String {
+        let mark = lineDirection == .rightToLeft ? "\u{200F}" : "\u{200E}"
+        return "\(mark)·\u{2002}\u{2068}\(date)\u{2069}"
+    }
+}
+
 // MARK: - Hijri and Gregorian together
 
 /// Rectangular: the clock's weekday, the Hijri date, the Gregorian date. Inline: the Hijri date alone
@@ -138,7 +197,8 @@ struct DualCalendarLockView: View {
             // the leading edge, so the duplicate pushed the part worth reading off the screen. The Hijri
             // date is the only thing in this widget the system line cannot say, so it gets the whole slot;
             // a symbol would spend 1-2 characters of that width restating "date" next to a visible date.
-            Text(hijri.dayMonthYear)
+            // The two calendars still read as a pair: the slot opens on Calendar's middle dot.
+            HijriInlineDate(parts: hijri, joinsSystemDate: !entry.isPreview)
         } else {
             VStack(alignment: .leading, spacing: 1) {
                 // The weekday the clock is on (`entry.date`): the Hijri day may already have turned at

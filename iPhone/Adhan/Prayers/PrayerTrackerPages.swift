@@ -231,7 +231,7 @@ struct TrackerInsightsSection: View {
             }
         }
         .padding(12)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
     }
 
     /// Whole sentences, one per span, so a translation can order them its own way.
@@ -300,7 +300,7 @@ struct TrackerInsightsSection: View {
             }
         }
         .padding(12)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
     }
 
     // MARK: The week
@@ -349,7 +349,7 @@ struct TrackerInsightsSection: View {
             }
         }
         .padding(12)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
     }
 
     private func weekdayName(_ weekday: Int) -> String {
@@ -439,7 +439,7 @@ struct TrackerInsightsSection: View {
                 .foregroundColor(.secondary)
         }
         .padding(12)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
     }
 
     // MARK: Sunnah prayers
@@ -484,7 +484,7 @@ struct TrackerInsightsSection: View {
                 .foregroundColor(.secondary)
         }
         .padding(12)
-        .conditionalGlassEffect(rectangle: true)
+        .contentSurface(rectangle: true)
     }
 }
 

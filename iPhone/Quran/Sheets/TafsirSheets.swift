@@ -1032,7 +1032,7 @@ struct SurahInfoSheet: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .conditionalGlassEffect(rectangle: true, useColor: 0.08)
+            .contentSurface(rectangle: true, useColor: 0.08)
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .stroke(settings.accentColor.color.opacity(0.18), lineWidth: 1)

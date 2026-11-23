@@ -1508,7 +1508,7 @@ private struct QiraahGroupSectionHeader: View {
                 .foregroundStyle(settings.accentColor.color)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .conditionalGlassEffect()
+                .contentSurface()
         }
     }
 }
@@ -2330,7 +2330,7 @@ struct ReciterListView: View {
                 .foregroundStyle(settings.accentColor.color)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .conditionalGlassEffect()
+                .contentSurface()
                 .padding(.vertical, -16)
         }
         .font(.subheadline.weight(.semibold))

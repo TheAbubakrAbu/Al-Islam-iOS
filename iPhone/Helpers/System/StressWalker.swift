@@ -256,12 +256,16 @@ enum StressWalker {
             case "scroll":
                 // "scroll:bottom", "scroll:top", or "scroll:900" for that many points down. A number
                 // scrolls the TOPMOST tall list (a sheet's, over the page it covers); the words keep
-                // the first one, as they always have.
+                // the first one, as they always have. "scroll:+900" moves that far on from where the
+                // list stands: a lazy list only guesses the heights of the rows it has not drawn, so
+                // an offset from the top lands nowhere in particular once the page has jumped to a
+                // section (an article opened with `-articleSection`).
                 let scrollers = walk.allViews(of: UIScrollView.self, in: walk.keyWindow())
                     .filter { $0.contentSize.height > $0.bounds.height }
                 if let scroller = Double(arg) == nil ? scrollers.first : scrollers.last(where: { $0.bounds.height > 300 }) {
                     let bottom = scroller.contentSize.height - scroller.bounds.height
-                    let y = arg == "bottom" ? bottom : min(bottom, CGFloat(Double(arg) ?? 0))
+                    let from = arg.hasPrefix("+") ? scroller.contentOffset.y : 0
+                    let y = arg == "bottom" ? bottom : min(bottom, from + CGFloat(Double(arg) ?? 0))
                     scroller.setContentOffset(CGPoint(x: 0, y: y), animated: Double(arg) == nil)
                     text += "scrolled \(arg)"
                 }

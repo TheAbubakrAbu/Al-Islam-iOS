@@ -285,7 +285,8 @@ struct PlaceLocatorView: View {
                 searchOverlay
             }
             .sheetNowPlayingBar()
-            .adaptiveSafeArea(edge: .bottom) {
+            // Over a map the bar floats: no scroll-edge ground behind it.
+            .adaptiveSafeArea(edge: .bottom, groundsBar: false) {
                 actionInset
             }
             .navigationTitle(profile.title)

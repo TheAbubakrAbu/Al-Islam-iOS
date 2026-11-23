@@ -2,8 +2,10 @@ import XCTest
 @testable import iPhone
 
 /// `DailyRollover` across the 2026 US daylight-saving changes (Los Angeles: clocks go forward at
-/// 02:00 on Sunday 8 March, back at 02:00 on Sunday 1 November). The Fajr table is keyed by
-/// `Settings.dayKey`, which reads the process time zone, so the process zone is pinned too.
+/// 02:00 on Sunday 8 March, back at 02:00 on Sunday 1 November). The process zone is pinned too,
+/// for the code that reads `Calendar.current`. `Settings.dayKey`, which keys the Fajr table, reads
+/// the device's zone instead (see `testDayKeyUsesTheDeviceZone`), so the test table is keyed through
+/// it too and the file passes in whatever zone the Mac is in.
 final class DailyRolloverTests: XCTestCase {
 
     private let zone = TimeZone(identifier: "America/Los_Angeles")!
@@ -36,22 +38,41 @@ final class DailyRolloverTests: XCTestCase {
     }
 
     /// Plausible Fajr times around both changes; the tests only need them to fall after the 02:00 change.
+    /// Keyed as `DailyRollover` looks them up (`Settings.dayKey` of the start of that Los Angeles day),
+    /// not by literal date: the key is in the device's zone, and west of Los Angeles its midnight is
+    /// still the day before there (Honolulu failed nine checks on literal keys).
     private var fajrTable: [String: TimeInterval] {
-        [
-            "2026-03-07": la(2026, 3, 7, 5, 29).timeIntervalSince1970,
-            "2026-03-08": la(2026, 3, 8, 6, 27).timeIntervalSince1970,   // first day of PDT
-            "2026-03-09": la(2026, 3, 9, 6, 26).timeIntervalSince1970,
-            "2026-10-31": la(2026, 10, 31, 6, 2).timeIntervalSince1970,
-            "2026-11-01": la(2026, 11, 1, 5, 3).timeIntervalSince1970,   // first day of PST
-            "2026-11-02": la(2026, 11, 2, 5, 4).timeIntervalSince1970,
+        let fajrs = [
+            la(2026, 3, 7, 5, 29),
+            la(2026, 3, 8, 6, 27),     // first day of PDT
+            la(2026, 3, 9, 6, 26),
+            la(2026, 10, 31, 6, 2),
+            la(2026, 11, 1, 5, 3),     // first day of PST
+            la(2026, 11, 2, 5, 4),
         ]
+        return Dictionary(uniqueKeysWithValues: fajrs.map {
+            (Settings.dayKey(calendar.startOfDay(for: $0)), $0.timeIntervalSince1970)
+        })
     }
 
-    /// Daily rollover: the day key the Fajr table uses follows the pinned zone (a precondition for the rest).
-    func testDayKeyUsesThePinnedZone() {
-        // 20:00 on 8 March in Los Angeles is already 9 March in UTC.
-        XCTAssertEqual(Settings.dayKey(la(2026, 3, 8, 20)), "2026-03-08")
-        XCTAssertEqual(Settings.dayKey(la(2026, 11, 1, 23, 30)), "2026-11-01")
+    /// Daily rollover: the day key follows the time zone the device is in, whatever it is: a date's
+    /// first and last minutes stay on that date, wherever UTC is.
+    ///
+    /// Built in the device's own zone, not the Los Angeles pin: `Settings.dayKey` reads
+    /// `TimeZone.autoupdatingCurrent` (so a trip moves the key with the phone), and on iOS 26 that
+    /// zone ignores `NSTimeZone.default`; the pin reaches `Calendar.current` and date formatters only.
+    /// Pinned, this failed wherever 23:30 in Los Angeles is already the next day (a Mac on Costa Rica
+    /// time, 2026-11-22).
+    func testDayKeyUsesTheDeviceZone() {
+        var local = Calendar(identifier: .gregorian)
+        local.timeZone = .autoupdatingCurrent
+        func at(_ month: Int, _ day: Int, _ hour: Int, _ minute: Int) -> Date {
+            local.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour, minute: minute))!
+        }
+        XCTAssertEqual(Settings.dayKey(at(3, 8, 0, 1)), "2026-03-08")
+        XCTAssertEqual(Settings.dayKey(at(3, 8, 23, 59)), "2026-03-08")
+        XCTAssertEqual(Settings.dayKey(at(11, 1, 0, 1)), "2026-11-01")
+        XCTAssertEqual(Settings.dayKey(at(11, 1, 23, 59)), "2026-11-01")
     }
 
     /// Daily rollover: the day index advances by exactly one per calendar day through spring forward.
