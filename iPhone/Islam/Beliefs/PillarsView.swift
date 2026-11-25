@@ -23,6 +23,8 @@ struct PillarsView: View {
     /// The index row a result asked to scroll to ("Scroll To Article"), consumed once the search clears.
     @State private var scrollTarget: String?
     @StateObject private var search = IslamArticleSearchModel()
+    /// The filter row over the results (`IslamSearchFilterBar`): Topics, Match, Words, Without, Best Match.
+    @State private var searchFilters = IslamSearchFilters.remembered()
     /// The pillar the hero's building opened (a catalog id).
     @State private var heroArticle: String?
     #endif
@@ -41,7 +43,9 @@ struct PillarsView: View {
 
                         IslamArticleIndexSections(groups: IslamArticleCatalog.pillarsGroups, unfolded: $unfoldedGroups)
                     } else {
-                        AskAISearchSection(query: query)
+                        if searchFilters.shows(.askAI) {
+                            AskAISearchSection(query: query)
+                        }
 
                         IslamArticleSearchSections(
                             query: query,
@@ -54,7 +58,9 @@ struct PillarsView: View {
                                 // row is there to scroll to.
                                 unfoldedGroups.insert("\(entry.home.rawValue)/\(entry.group)")
                                 scrollTarget = entry.listID
-                            }
+                            },
+                            filters: searchFilters,
+                            reference: search.reference
                         )
                     }
                 }
@@ -71,6 +77,8 @@ struct PillarsView: View {
             )) {
                 if let heroArticle { IslamArticleCatalog.destination(id: heroArticle) }
             }
+            .islamSearchFilterChrome($searchFilters, isSearching: !query.isEmpty, homes: [.pillars],
+                                     kinds: [.scripture, .articles, .passages, .askAI])
             .islamArticleIndexSearch(searchText: $searchText, barsCollapsed: $barsCollapsed,
                                      scrollTarget: scrollTarget, proxy: proxy)
         }
@@ -84,8 +92,11 @@ struct PillarsView: View {
             #endif
         }
         .onChange(of: searchText) { text in
-            search.update(query: text, homes: [.pillars])
+            search.update(query: text, homes: [.pillars], filters: searchFilters)
             if !text.isEmpty { scrollTarget = nil }
+        }
+        .onChange(of: searchFilters) { filters in
+            search.update(query: searchText, homes: [.pillars], filters: filters)
         }
         #else
         List {
@@ -137,12 +148,7 @@ struct ArticleAutoOpen: ViewModifier {
     static func launchRequest(for home: IslamArticleHome) -> IslamArticleOpenRequest? {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
-        let argument: String
-        switch home {
-        case .pillars: argument = "-pillarsArticle"
-        case .guides: argument = "-guidesArticle"
-        case .proving: argument = "-provingArticle"
-        }
+        let argument = home.debugArticleArgument
         guard let idx = arguments.firstIndex(of: argument), arguments.indices.contains(idx + 1),
               let entry = IslamArticleCatalog.groups(for: home).flatMap(\.entries)
                 .first(where: { $0.debugKey == arguments[idx + 1] }) else { return nil }
@@ -263,7 +269,7 @@ private struct HadithQuoteView: View {
             : row.map { "\u{201C}\(WordRange.words($0.text, english))\u{201D}" } ?? ""
         let arabicText: String? = arabic.map { range in row.map { WordRange.words($0.arabic, range) } } ?? literalArabic
         ScriptureQuoteBody(text: englishText.isEmpty ? "(\(cite))" : "\(englishText) (\(cite))",
-                           arabic: arabicText, dimmed: true)
+                           arabic: arabicText, dimmed: true, opens: .hadith(reference))
             .equatable()
             .task(id: reference) {
                 if row == nil { late = await HadithQuoteSource.resolve(reference) }
@@ -285,10 +291,10 @@ private struct QuranQuoteView: View {
         let resolved = late ?? QuranQuoteSource.resolve(reference)
         if let resolved {
             ScriptureQuoteBody(text: "\u{201C}\(resolved.english)\u{201D} (\(reference.citation))",
-                               arabic: resolved.arabic, dimmed: false, emphasis: words)
+                               arabic: resolved.arabic, dimmed: false, emphasis: words, opens: .quran(reference))
                 .equatable()
         } else {
-            ScriptureQuoteBody(text: "(\(reference.citation))", arabic: nil, dimmed: false)
+            ScriptureQuoteBody(text: "(\(reference.citation))", arabic: nil, dimmed: false, opens: .quran(reference))
                 .equatable()
                 .task {
                     await QuranQuoteSource.waitUntilReady()
@@ -312,9 +318,14 @@ private struct ScriptureQuoteBody: View, Equatable {
     /// The words the article is about, as a token range of `arabic`: those keep the full accent and
     /// the rest of the ayah steps back. Nil quotes the whole text evenly.
     var emphasis: ClosedRange<Int>? = nil
+    /// What the quote opens in its tab (Abu, 2026-11-24: "for each Quran verse or ayah to have an
+    /// option to open it and then it opens it in the Quran or Hadith tab"): a referenced quote's own
+    /// reference; a literal quote's citation is read for one instead (`ScriptureCitations`).
+    var opens: ScriptureQuoteTarget? = nil
 
     static func == (lhs: ScriptureQuoteBody, rhs: ScriptureQuoteBody) -> Bool {
         lhs.text == rhs.text && lhs.arabic == rhs.arabic && lhs.dimmed == rhs.dimmed && lhs.emphasis == rhs.emphasis
+            && lhs.opens == rhs.opens
     }
 
     /// The Arabic as one `Text`: plain, or with the tokens outside `emphasis` lightened.
@@ -347,8 +358,10 @@ private struct ScriptureQuoteBody: View, Equatable {
     }
 
     private var copyText: String {
-        if let arabic, !arabic.isEmpty { return arabic + "\n\n" + text }
-        return text
+        var pieces: [String] = []
+        if let arabic, !arabic.isEmpty { pieces.append(arabic) }
+        pieces.append(text)
+        return pieces.joined(separator: "\n\n")
     }
 
     /// `text` with its closing citation lifted out: "“...” (Quran 7:180)" reads as the quote and,
@@ -356,8 +369,11 @@ private struct ScriptureQuoteBody: View, Equatable {
     /// aside such as "(peace be upon him)" stays in the sentence. `text` itself is untouched: it is
     /// what the copy menu hands over, citation included.
     private var quoteAndCitation: (quote: String, citation: String?) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.hasSuffix(")") else { return (trimmed, nil) }
+        let whole = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        // A sentence's full stop after the citation ("... (Quran 2:255)." on the Miracles pages)
+        // goes with it into the footer; anything else keeps its own.
+        let trimmed = whole.hasSuffix(").") ? String(whole.dropLast()) : whole
+        guard trimmed.hasSuffix(")") else { return (whole, nil) }
         var depth = 0
         var open: String.Index?
         var index = trimmed.endIndex
@@ -370,9 +386,9 @@ private struct ScriptureQuoteBody: View, Equatable {
                 if depth == 0 { open = index; break }
             }
         }
-        guard let open else { return (trimmed, nil) }
+        guard let open else { return (whole, nil) }
         let citation = String(trimmed[trimmed.index(after: open)..<trimmed.index(before: trimmed.endIndex)])
-        guard citation.contains(where: \.isNumber) else { return (trimmed, nil) }
+        guard citation.contains(where: \.isNumber) else { return (whole, nil) }
         let quote = trimmed[..<open].trimmingCharacters(in: .whitespacesAndNewlines)
         return (quote, citation)
     }
@@ -382,7 +398,9 @@ private struct ScriptureQuoteBody: View, Equatable {
     /// the far corner that says which kind of text this is, a book for the Quran and a quotation
     /// mark for a narration. Plain shapes on purpose: an article carries dozens of these, and the
     /// watch compiles this file.
-    private var cardBackground: some View {
+    /// `glyph` is off under a surah footer, whose own book disc says it, and whose Arabic name sits
+    /// in that corner.
+    private func cardBackground(glyph: Bool) -> some View {
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
         return shape
             .fill(
@@ -392,7 +410,7 @@ private struct ScriptureQuoteBody: View, Equatable {
             .overlay(
                 Image(systemName: dimmed ? "quote.closing" : "book.closed.fill")
                     .font(.system(size: 64, weight: .bold))
-                    .foregroundColor(accent.opacity(0.07))
+                    .foregroundColor(accent.opacity(glyph ? 0.07 : 0))
                     .rotationEffect(.degrees(dimmed ? 0 : -12))
                     .offset(x: 10, y: 14),
                 alignment: .bottomTrailing
@@ -437,22 +455,14 @@ private struct ScriptureQuoteBody: View, Equatable {
             }
 
             if let citation = parts.citation {
-                HStack(alignment: .firstTextBaseline, spacing: 5) {
-                    Image(systemName: dimmed ? "text.book.closed.fill" : "book.closed.fill")
-                        .font(.caption2)
-                    Text(citation)
-                        .font(.caption.weight(.semibold))
-                        .lineLimit(nil)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .foregroundColor(accent)
+                citationLine(citation)
             }
         }
         .padding(.vertical, 12)
         .padding(.leading, 15)
         .padding(.trailing, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBackground)
+        .background(cardBackground(glyph: dimmed || parts.citation.flatMap(QuranSurahNames.cited) == nil))
         .padding(.vertical, 3)
         // An English rendering (scripture stays English) reads left to right on a translated page too,
         // card and all, the Arabic original still on the right; inside an article it already does.
@@ -474,11 +484,190 @@ private struct ScriptureQuoteBody: View, Equatable {
                 } label: {
                     Label("Copy Quote", systemImage: "doc.on.doc")
                 }
+
+                if let link = openLink(citation: parts.citation) {
+                    Button {
+                        Settings.shared.hapticFeedback()
+                        AppLinkRouter.open(link)
+                    } label: {
+                        Label(link.openTitle, systemImage: link.openSystemImage)
+                    }
+
+                    Button {
+                        AppLinkShare.share(link, title: parts.citation ?? link.citationTitle)
+                    } label: {
+                        Label("Share Link", systemImage: "link")
+                    }
+                }
             }
         #else
         quote
         #endif
     }
+
+    /// The citation under the quote. On the phone it is a button when the quote cites something the
+    /// app carries: a tap opens the ayah in the Quran tab or the narration in the Hadith tab, where
+    /// it can be read in full, played, bookmarked and shared.
+    @ViewBuilder
+    private func citationLine(_ citation: String) -> some View {
+        if !dimmed, let cited = QuranSurahNames.cited(citation) {
+            surahFooter(cited.reference, cited.names, citation: citation)
+        } else {
+            plainCitationLine(citation)
+        }
+    }
+
+    /// A Quran quote's citation with its surah named (Abu, 2026-11-24: "I want to hear the surha name
+    /// like Quran Maidah 5:3 but make it pretty"): "Quran Al-Ma'idah 5:3" over the surah's meaning,
+    /// its Arabic name set large on the far side, under a hairline that sets it apart from the words,
+    /// the way the Share Ayah card heads each block with the surah. On the phone the whole line opens
+    /// the ayah in the Quran tab.
+    @ViewBuilder
+    private func surahFooter(_ reference: QuranQuoteReference, _ names: QuranSurahNames, citation: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Rectangle()
+                .fill(accent.opacity(0.18))
+                .frame(height: 1)
+            #if os(iOS)
+            if let link = openLink(citation: citation) {
+                Button {
+                    Settings.shared.hapticFeedback()
+                    AppLinkRouter.open(link)
+                } label: {
+                    surahRow(reference, names, opens: true)
+                        .contentShape(Rectangle())
+                }
+                // Only the footer takes the tap: the rest of the card stays text to select.
+                .buttonStyle(.borderless)
+                .accessibilityHint(link.openTitle)
+            } else {
+                surahRow(reference, names, opens: false)
+            }
+            #else
+            surahRow(reference, names, opens: false)
+            #endif
+        }
+        .padding(.top, 2)
+    }
+
+    /// The footer's one line (see `surahFooter`); `opens` adds the arrow of a line that opens.
+    private func surahRow(_ reference: QuranQuoteReference, _ names: QuranSurahNames, opens: Bool) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: "book.closed.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundColor(accent)
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(accent.opacity(0.14)))
+
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    (Text(verbatim: "Quran ").foregroundColor(accent.opacity(0.75))
+                        + Text(verbatim: "\(names.transliteration) \(reference.text)").foregroundColor(accent))
+                        .font(.caption.weight(.bold))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if opens {
+                        Image(systemName: "arrow.up.forward")
+                            .font(.caption2.weight(.bold))
+                            .foregroundColor(accent.opacity(0.8))
+                    }
+                }
+                Text(verbatim: names.english)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+
+            Spacer(minLength: 8)
+
+            Text(verbatim: names.arabic)
+                .font(appearance.quranArabicFont(size: 22, relativeTo: .title3))
+                .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
+                .foregroundColor(accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .accessibilityHidden(true)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: "Quran, \(names.transliteration), \(names.english), \(reference.text)"))
+    }
+
+    @ViewBuilder
+    private func plainCitationLine(_ citation: String) -> some View {
+        let line = HStack(alignment: .firstTextBaseline, spacing: 5) {
+            Image(systemName: dimmed ? "text.book.closed.fill" : "book.closed.fill")
+                .font(.caption2)
+            Text(citation)
+                .font(.caption.weight(.semibold))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundColor(accent)
+        #if os(iOS)
+        if let link = openLink(citation: citation) {
+            Button {
+                Settings.shared.hapticFeedback()
+                AppLinkRouter.open(link)
+            } label: {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    line
+                    Image(systemName: "arrow.up.forward")
+                        .font(.caption2.weight(.bold))
+                        .foregroundColor(accent.opacity(0.8))
+                }
+                .contentShape(Rectangle())
+            }
+            // Only the line takes the tap: the rest of the card stays text to select.
+            .buttonStyle(.borderless)
+            .accessibilityHint(link.openTitle)
+        } else {
+            line
+        }
+        #else
+        line
+        #endif
+    }
+
+    #if os(iOS)
+    /// The link the quote opens: its reference, or the first ayah or hadith its citation names. None
+    /// in an app without that tab (`AppLink.opensInThisApp`): the citation is then words, as before.
+    private func openLink(citation: String?) -> AppLink? {
+        guard let link = citedLink(citation: citation), link.opensInThisApp else { return nil }
+        return link
+    }
+
+    private func citedLink(citation: String?) -> AppLink? {
+        switch opens {
+        case .quran(let reference):
+            return AppLink(key: "quran", value: "\(reference.surah):\(reference.runs.first?.lowerBound ?? 1)")
+        case .hadith(let reference):
+            let cited = reference.numbered.map { "id-\($0)" } ?? reference.citation.lowercased()
+            return AppLink(key: "hadith", value: "\(reference.slug):\(cited)")
+        case nil:
+            return ScriptureCitations.firstLink(in: citation ?? text)
+        }
+    }
+    #endif
+}
+
+/// What a quote card opens (see `ScriptureQuoteBody.opens`).
+enum ScriptureQuoteTarget: Equatable {
+    case quran(QuranQuoteReference)
+    case hadith(HadithQuoteReference)
+}
+
+/// The words and the symbol of "open this in its tab", one pair wherever an ayah or a hadith is
+/// shown outside its own reader (Abu, 2026-11-24: "add consistency for what opening an ayah or
+/// Hadith looks like in all tabs"): a reminder, the Daily hub, a tajweed lesson's example, the
+/// Tajweed Test, the Qiraat Explorer, a hadith study sheet, a quote's menu, an Ask AI source. The
+/// words name the tab it lands on and the symbol is that tab's own (MainTabView's), so the button
+/// says where it goes before it is tapped. `OpenInTabButton` (AppLink.swift) draws it as a button.
+enum OpenInTab {
+    static var quranTitle: String { String(localized: "Open in Quran") }
+    static var hadithTitle: String { String(localized: "Open in Hadith") }
+    static let quranSymbol = "character.book.closed.ar"
+    static let hadithSymbol = "books.vertical"
 }
 
 #if os(iOS)

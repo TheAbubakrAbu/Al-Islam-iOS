@@ -14,11 +14,39 @@ import Foundation
 /// implementation rather than this reference.
 final class IslamArticlesFoldEquivalenceTests: XCTestCase {
 
-    /// The pre-optimization `IslamArticles.fold`, copied exactly.
+    /// The pre-optimization `IslamArticles.fold`, copied exactly, after the Arabic rule added on
+    /// 2026-11-24 (Abu: "Searching up Arabic ... in Islam shows nothing"): the harakat, the Quranic
+    /// signs, the dagger alif, the tatweel and the bare hamza drop; the alif and hamza seats, alif
+    /// maqsurah, teh marbuta and the Persian kaf and yaa fold to plain letters; Arabic-Indic digits are
+    /// digits. Written out here on its own, so the fold's table is checked against a second spelling.
     private func referenceFold(_ text: String) -> String {
-        String(text.foldingLatinDiacritics.lowercased().unicodeScalars.map { scalar in
+        String(referenceArabic(text).foldingLatinDiacritics.lowercased().unicodeScalars.map { scalar in
             CharacterSet.alphanumerics.contains(scalar) ? Character(scalar) : " "
         })
+    }
+
+    private func referenceArabic(_ text: String) -> String {
+        var out = String.UnicodeScalarView()
+        for scalar in text.unicodeScalars {
+            let v = scalar.value
+            if (0x064B...0x065F).contains(v) || (0x06D6...0x06ED).contains(v) || (0x08D3...0x08FF).contains(v)
+                || [0x0670, 0x0640, 0x0621, 0x0674].contains(v) {
+                continue
+            }
+            let mapped: UInt32
+            switch v {
+            case 0x0622, 0x0623, 0x0625, 0x0671, 0x0672, 0x0673, 0x0675, 0x0649: mapped = 0x0627
+            case 0x0624, 0x0676, 0x0677: mapped = 0x0648
+            case 0x0626, 0x0678, 0x06CC: mapped = 0x064A
+            case 0x06A9: mapped = 0x0643
+            case 0x0629: mapped = 0x0647
+            case 0x0660...0x0669: mapped = v - 0x0660 + 0x30
+            case 0x06F0...0x06F9: mapped = v - 0x06F0 + 0x30
+            default: mapped = v
+            }
+            out.append(Unicode.Scalar(mapped)!)
+        }
+        return String(out)
     }
 
     private func assertSame(_ sample: String, _ label: String, file: StaticString = #filePath, line: UInt = #line) {
@@ -42,6 +70,17 @@ final class IslamArticlesFoldEquivalenceTests: XCTestCase {
         }
         print("ISLAM FOLD EQUIVALENCE compared \(strings) strings over \(articles.count) articles")
         XCTAssertGreaterThan(strings, 100, "the corpus should be far larger than this")
+    }
+
+    /// The Arabic rule on the words people type and the pages write.
+    func testArabicFoldsWithoutHarakat() {
+        XCTAssertEqual(IslamArticles.fold("تَوحِيد"), IslamArticles.fold("توحيد"))
+        XCTAssertEqual(IslamArticles.fold("ٱلِاستِوَاءُ"), IslamArticles.fold("الاستواء"))
+        XCTAssertEqual(IslamArticles.fold("لَيۡسَ كَمِثۡلِهِۦ شَيۡءٞۖ"), IslamArticles.fold("ليس كمثله شيء"))
+        XCTAssertEqual(IslamArticles.fold("ذَٰلِكَ"), IslamArticles.fold("ذلك"))
+        XCTAssertEqual(IslamArticles.fold("صَلَاة"), IslamArticles.fold("صلاه"))
+        XCTAssertEqual(IslamArticles.fold("٢:٢٥٥"), "2 255")
+        XCTAssertEqual(IslamArticles.fold("Ṣaḥīḥ al-Bukhārī 1"), "sahih al bukhari 1")
     }
 
     /// The stored folds really are what the fold produces now (what `load()` wrote must still match).

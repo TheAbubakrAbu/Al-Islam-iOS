@@ -36,7 +36,11 @@ struct WallpaperView: View {
                     headline: String(localized: "Let your lock screen remind you of Allah."),
                     message: String(localized: "Islamic art and calligraphy for your phone. Press and hold any wallpaper to copy it or save it to Photos."),
                     stats: [ResourceHeroStat(wallpapers.count.formatted(), String(localized: "wallpapers"))]
-                ))
+                ) {
+                    WallpaperFormatsArt(phones: wallpapers.filter {
+                        !$0.imageName.hasPrefix("Laptop") && !$0.imageName.hasPrefix("Desktop")
+                    }.count)
+                })
                 #endif
                 wallpaperSections
             }

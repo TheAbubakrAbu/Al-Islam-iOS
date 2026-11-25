@@ -161,6 +161,33 @@ fresh = watch_pack.build()
 check(watch_pack.OUT.exists() and watch_pack.OUT.read_bytes() == fresh,
       f"{watch_pack.OUT.relative_to(ROOT)} is stale - run ./Scripts/build_hadith_quotes_pack.py")
 
+# 11: the two versions (Short and Full, 2026-11-25; iPhone/Islam/Content/ArticleLength.swift). The reading-time
+# table is what the marks produce, every view-based page written twice draws the switch first, right above its
+# SUMMARY (data-backed pages get it from `ArticleSectionsView`), and `ArticleOnly` holds whole Sections (a branch
+# round a row costs the List every row of the page).
+import article_zones  # noqa: E402
+fresh_items = builder.articles()
+check(builder.LENGTHS_OUT.read_text() == builder.lengths_text(fresh_items),
+      f"{builder.LENGTHS_OUT.relative_to(ROOT)} is stale - run ./Scripts/build_islam_corpus.py")
+written = {a["id"] for a in fresh_items if "_minutes" in a}
+for path in builder.SOURCES:
+    src = path.read_text()
+    bounds = [(m.group(1), m.start()) for m in builder.STRUCT_RE.finditer(src)] + [("", len(src))]
+    marks = article_zones.zones(src)
+    for (name, start), (_, end) in zip(bounds, bounds[1:]):
+        body = src[start:end]
+        if name in written and "ArticleSectionsView(" not in body:
+            check(re.search(r'ArticleLengthSection\(\)\s*Section\(header: ArticleHeader\("SUMMARY"\)\)', body) is not None,
+                  f"{path.name}: {name} is written twice but has no ArticleLengthSection() right above its SUMMARY")
+        for z0, z1, only in marks:
+            if start <= z0 < end and src.startswith("ArticleOnly", z0):
+                inner = re.sub(r"//[^\n]*", "", src[src.index("{", z0) + 1:z1 - 1]).strip()
+                check(inner.startswith("Section("), f"{path.name}: {name}: ArticleOnly(.{only}) must hold whole Sections")
+        lead = re.search(r'(?:ArticleSection\(|ArticleHeader\()\s*"SUMMARY"', body)
+        if lead:
+            check(article_zones.zone_at(marks, start + lead.start()) is None,
+                  f"{path.name}: {name}: SUMMARY must be in both versions")
+
 if failures:
     for f in failures:
         print(f"FAIL {f}")

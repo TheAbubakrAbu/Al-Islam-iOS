@@ -115,7 +115,9 @@ Old build: `after.png` shows page 31 and no sheet. New build: page 31 with the a
 still up; the same for `-openPageSheet tafsir` and `-openPageSheet word -wordIndex 3`. The real
 gestures were checked with idb (`~/Library/Python/3.9/bin/idb ui tap --udid $UDID x y`): a tap on the
 Al-Baqarah heading of page 2 (`-lastRead 2:1`, tap 330 179) opens the surah info sheet, and See Tafsir
-inside the page's actions sheet with `-seedBool keepAyahSheetOpen=1` stacks the tafsir sheet.
+inside the page's actions sheet with `-seedBool keepAyahSheetOpen=1` stacks the tafsir sheet. (The
+setting is stored as `THEkeepAyahSheetOpen` since 2026-11-23, when it was reset to off for everyone:
+seed that key now.)
 
 ---
 

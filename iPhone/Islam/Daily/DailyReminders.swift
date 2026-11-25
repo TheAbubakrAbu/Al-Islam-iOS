@@ -68,6 +68,12 @@ struct DailyReminderEntry: Identifiable, Equatable {
             let parts = self.parts
             return data.hadith(referenced: parts.number, suffix: parts.suffix)
         }
+
+        /// The narration as a link: "Open in Hadith" lands it in its book on the Hadith tab, the way
+        /// a verse's card lands its ayah in the Quran tab (`OpenInTab`).
+        var appLink: AppLink {
+            .hadith(slug: slug, reference: citation.hasPrefix("#") ? "id-\(citation.dropFirst())" : citation.lowercased())
+        }
         #endif
     }
 
@@ -159,7 +165,7 @@ enum DailyReminderTarget: Equatable {
     var buttonLabel: String {
         switch self {
         #if HAS_QURAN
-        case .ayah: return String(localized: "Read in the Quran")
+        case .ayah: return OpenInTab.quranTitle
         #endif
         #if HAS_QURAN || HAS_HADITH
         case .hadithTab: return String(localized: "Open Hadith")
@@ -167,6 +173,21 @@ enum DailyReminderTarget: Equatable {
         case .duas: return String(localized: "Open Duas")
         case .adhkar: return String(localized: "Open Dhikr")
         case .names: return String(localized: "Open the 99 Names")
+        }
+    }
+
+    /// The door's symbol: the tab's own for a verse or the Hadith tab (`OpenInTab`), an arrow for a
+    /// resource of the Islam tab.
+    var buttonSymbol: String {
+        switch self {
+        #if HAS_QURAN
+        case .ayah: return OpenInTab.quranSymbol
+        #endif
+        #if HAS_HADITH
+        case .hadithTab: return OpenInTab.hadithSymbol
+        #endif
+        // Al-Quran's "Open Hadith" is a page of its Islam tab, not a tab: the arrow it always had.
+        default: return "arrow.up.right.square"
         }
     }
 
@@ -670,6 +691,10 @@ enum IslamLinkedPage: Hashable {
     case prophetMiracle(String)
     /// A Miracles of the Quran article, by its slug.
     case miracle(String)
+    /// A page of Tajweed Foundations, by its `TajweedTopic` raw value.
+    case tajweed(String)
+    /// A lesson of the Tajweed Course, by its id.
+    case lesson(String)
 }
 
 /// A narration to open in its book on the Hadith tab: a study sheet's "Open in Book".
@@ -1181,10 +1206,6 @@ struct ReminderOfTheDayCard: View {
     /// Reflections or Today screen by itself (Quality Guide G2).
     @Binding var openDoor: HeaderDoor?
 
-    #if HAS_HADITH
-    @State private var hadithLink: DailyReminderEntry.HadithLink?
-    #endif
-
     /// Which header pill was tapped. One piece of state driving ONE destination - see the note in
     /// the header above.
     enum HeaderDoor: String, Identifiable, Hashable {
@@ -1264,11 +1285,14 @@ struct ReminderOfTheDayCard: View {
             HStack(spacing: 16) {
                 #if HAS_HADITH
                 if let link = entry.hadith {
+                    // In its book on the Hadith tab, as a verse's card opens its ayah in the Quran
+                    // tab (Abu, 2026-11-24: "consistency for what opening an ayah or Hadith looks
+                    // like"); it used to open in a sheet over the card.
                     Button {
                         Settings.shared.hapticFeedback()
-                        hadithLink = link
+                        AppLinkRouter.open(link.appLink)
                     } label: {
-                        Label("Read the hadith", systemImage: "text.book.closed")
+                        Label(OpenInTab.hadithTitle, systemImage: OpenInTab.hadithSymbol)
                     }
                     .buttonStyle(.plain)
                 } else if let target {
@@ -1276,7 +1300,7 @@ struct ReminderOfTheDayCard: View {
                         Settings.shared.hapticFeedback()
                         target.open()
                     } label: {
-                        Label(target.buttonLabel, systemImage: "arrow.up.right.square")
+                        Label(target.buttonLabel, systemImage: target.buttonSymbol)
                     }
                     .buttonStyle(.plain)
                 }
@@ -1286,7 +1310,7 @@ struct ReminderOfTheDayCard: View {
                         Settings.shared.hapticFeedback()
                         target.open()
                     } label: {
-                        Label(target.buttonLabel, systemImage: "arrow.up.right.square")
+                        Label(target.buttonLabel, systemImage: target.buttonSymbol)
                     }
                     .buttonStyle(.plain)
                 }
@@ -1307,11 +1331,6 @@ struct ReminderOfTheDayCard: View {
             .padding(.top, 2)
         }
         .padding(.vertical, 6)
-        #if HAS_HADITH
-        .sheet(item: $hadithLink) { link in
-            ReminderHadithSheet(link: link)
-        }
-        #endif
         #if !HAS_QURAN
         .task {
             guard entry.kind == .ayah, !quotesRead else { return }
@@ -1464,10 +1483,6 @@ struct SavedReflectionsView: View {
     @ObservedObject private var reflections = SavedReflectionsStore.shared
     @State private var searchText = ""
     @State private var barsCollapsed = false
-    #if HAS_HADITH
-    /// The one sheet host for the rows' "Read the hadith" doors (one host per List, the app's rule).
-    @State private var hadithLink: DailyReminderEntry.HadithLink?
-    #endif
 
     private var query: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -1533,11 +1548,6 @@ struct SavedReflectionsView: View {
         .applyConditionalListStyle()
         .navigationTitle("Saved Reflections")
         .navigationBarTitleDisplayMode(.inline)
-        #if HAS_HADITH
-        .sheet(item: $hadithLink) { link in
-            ReminderHadithSheet(link: link)
-        }
-        #endif
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             // No bar over "Nothing kept yet": there is nothing to search.
@@ -1567,7 +1577,7 @@ struct SavedReflectionsView: View {
 
     private func savedRow(_ item: SavedReflection) -> SavedReflectionRow {
         #if HAS_HADITH
-        SavedReflectionRow(item: item) { link in hadithLink = link }
+        SavedReflectionRow(item: item) { link in AppLinkRouter.open(link.appLink) }
         #else
         SavedReflectionRow(item: item)
         #endif
@@ -1578,7 +1588,7 @@ private struct SavedReflectionRow: View {
     @Environment(\.appearance) private var appearance
     let item: SavedReflection
     #if HAS_HADITH
-    /// Opens the narration a kept hadith card cites, in the List's sheet host.
+    /// Opens the narration a kept hadith card cites, in its book on the Hadith tab.
     let onOpenHadith: (DailyReminderEntry.HadithLink) -> Void
     #endif
 
@@ -1628,7 +1638,7 @@ private struct SavedReflectionRow: View {
                     Settings.shared.hapticFeedback()
                     onOpenHadith(link)
                 } label: {
-                    Label("Read the hadith", systemImage: "text.book.closed")
+                    Label(OpenInTab.hadithTitle, systemImage: OpenInTab.hadithSymbol)
                         .font(.caption.weight(.semibold))
                         .foregroundColor(appearance.accent)
                 }
@@ -1638,7 +1648,7 @@ private struct SavedReflectionRow: View {
                     Settings.shared.hapticFeedback()
                     target.open()
                 } label: {
-                    Label(target.buttonLabel, systemImage: "arrow.up.right.square")
+                    Label(target.buttonLabel, systemImage: target.buttonSymbol)
                         .font(.caption.weight(.semibold))
                         .foregroundColor(appearance.accent)
                 }
@@ -1650,7 +1660,7 @@ private struct SavedReflectionRow: View {
                     Settings.shared.hapticFeedback()
                     target.open()
                 } label: {
-                    Label(target.buttonLabel, systemImage: "arrow.up.right.square")
+                    Label(target.buttonLabel, systemImage: target.buttonSymbol)
                         .font(.caption.weight(.semibold))
                         .foregroundColor(appearance.accent)
                 }
@@ -1662,59 +1672,6 @@ private struct SavedReflectionRow: View {
     }
 }
 
-// MARK: - The hadith behind a card
-
-#if HAS_HADITH
-/// The narration a hadith card cites, in the Hadith tab's own row, so the reader sees the grading
-/// and can bookmark or share it from here.
-struct ReminderHadithSheet: View {
-    let link: DailyReminderEntry.HadithLink
-
-    @State private var book: HadithCatalogBook?
-    @State private var hadith: HadithBookData.Hadith?
-    @State private var failed = false
-
-    var body: some View {
-        SheetNavigationContainer {
-            List {
-                if let book, let hadith {
-                    Section {
-                        HadithRow(book: book, hadith: hadith)
-                    }
-                } else if failed {
-                    Text("This hadith could not be opened.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                } else {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
-                    }
-                }
-            }
-            .applyConditionalListStyle()
-            .navigationTitle(book?.displayTitle ?? String(localized: "Hadith"))
-            .navigationBarTitleDisplayMode(.inline)
-            .sheetDismissToolbar()
-        }
-        .smallMediumSheetPresentation()
-        .task {
-            guard let found = HadithCatalogBook.all.first(where: { $0.slug == link.slug }) else {
-                failed = true
-                return
-            }
-            book = found
-            guard let data = await HadithStore.shared.openOffMain(found),
-                  let resolved = link.resolve(in: data) else {
-                failed = true
-                return
-            }
-            hadith = resolved
-        }
-    }
-}
-#endif
 #endif
 
 extension Settings {

@@ -19,6 +19,11 @@ final class AppLinkTests: XCTestCase {
         .sunnah("waking-praise"), .prophecy("byzantines"), .prophetMiracle("nuh-ark"), .miracle("big_bang_crunch"),
         .name(1), .name(99),
         .resource("zakahCalculator"),
+        .tajweed("sukoon"), .tajweed("hamzatul-wasl"),
+        .lesson("sukoon"), .lesson("madd-letters"),
+        .tafsir(surah: 2, ayah: 255), .translations(surah: 1, ayah: 5), .qiraah(surah: 112, ayah: 1),
+        .explanation(slug: "bukhari", reference: "1"), .explanation(slug: "muslim", reference: "8a"),
+        .encyclopedia("5907"),
     ]
 
     // MARK: The grammar
@@ -96,6 +101,9 @@ final class AppLinkTests: XCTestCase {
             // Arabic-Indic digits, percent-encoded as a browser would send them: a link is Western digits.
             base + "?hadith=bukhari:%D9%A1%D9%A5", base + "?quran=%D9%A2:%D9%A2%D9%A5%D9%A5", base + "?name=%D9%A5",
             base + "?tab=admin", base + "?unknown=1", base + "?islam=" + String(repeating: "a", count: 200),
+            base + "?tafsir=2", base + "?tafsir=115:1", base + "?qiraah=2:287", base + "?translations=two:1",
+            base + "?explanation=bukhari:", base + "?explanation=59a7", base + "?explanation=1234567890",
+            base + "?lesson=a%20b",
             "https://example.com/alislam/?quran=2:255",
             "https://\(AppIdentifiers.linkHost)/other/?quran=2:255",
             "https://\(AppIdentifiers.linkHost)/?quran=2:255",
@@ -185,6 +193,234 @@ final class AppLinkTests: XCTestCase {
             XCTAssertEqual(AppLink(key: "miracle", value: article.slug), .miracle(article.slug), article.slug)
         }
         XCTAssertNil(AppLink.articlePage(id: "NoSuchView"))
+    }
+
+    /// Every Tajweed Foundations page has a key of its own (2026-11-23), its page id leads to that key,
+    /// and a key read back in any case names the same page.
+    func testEveryTajweedPageHasALink() {
+        var seen = Set<String>()
+        for topic in TajweedTopic.allCases {
+            XCTAssertTrue(seen.insert(topic.linkKey).inserted, "\(topic) shares \(topic.linkKey)")
+            XCTAssertEqual(AppLink(key: "tajweed", value: topic.linkKey), .tajweed(topic.linkKey), topic.linkKey)
+            XCTAssertEqual(TajweedTopic(linkKey: topic.linkKey), topic)
+            XCTAssertEqual(TajweedTopic(linkKey: topic.linkKey.uppercased()), topic)
+            XCTAssertEqual(TajweedTopic(linkKey: topic.rawValue), topic)
+            XCTAssertEqual(AppLink.articlePage(id: topic.pageID)?.link, .tajweed(topic.linkKey), topic.pageID)
+        }
+        XCTAssertNil(TajweedTopic(linkKey: "no-such-page"))
+        XCTAssertEqual(AppLink.tajweed("hamzatul-wasl").url.absoluteString,
+                       "https://\(AppIdentifiers.linkHost)\(AppIdentifiers.linkPath)?tajweed=hamzatul-wasl")
+    }
+
+    /// Every Tajweed Foundations page the corpus reads is in the shipped pack with prose, and a cited
+    /// one reopens (the Ask AI chat's citations, Summarize with AI).
+    func testEveryTajweedPageIsInTheArticleCorpus() {
+        for topic in TajweedTopic.allCases {
+            guard let id = topic.articleID else { continue }
+            let article = IslamArticles.all.first { $0.id == id }
+            XCTAssertNotNil(article, id)
+            XCTAssertFalse(article?.sections.isEmpty ?? true, id)
+            XCTAssertNotNil(IslamArticles.destination(for: id), id)
+        }
+    }
+
+    /// Every lesson of the Tajweed Course has a link of its own that leads back to it.
+    func testEveryTajweedLessonHasALink() throws {
+        let course = try XCTUnwrap(TajweedLessonsStore.shared.course())
+        XCTAssertFalse(course.lessons.isEmpty)
+        for lesson in course.lessons {
+            let page = try XCTUnwrap(AppLink.articlePage(id: IslamArticle.lessonPrefix + lesson.id), lesson.id)
+            XCTAssertEqual(page.link, .lesson(lesson.id))
+            XCTAssertEqual(AppLink(url: page.link.url), .lesson(lesson.id), lesson.id)
+            // The AI reads the lesson's words, not an empty page.
+            XCTAssertFalse(lesson.aiArticle.sections.isEmpty, lesson.id)
+        }
+    }
+
+    // MARK: Citations in the prose
+
+    /// The house style of the articles' citations reads as links to what they cite.
+    func testCitationsInProseOpenWhatTheyCite() {
+        func links(_ text: String) -> [AppLink] { ScriptureCitations.hits(in: text).map(\.link) }
+        XCTAssertEqual(links("whoever is ill or on a journey (Quran 2:185)."), [.ayah(surah: 2, ayah: 185)])
+        XCTAssertEqual(links("(Quran 52:35-36)"), [.ayah(surah: 52, ayah: 35)])
+        XCTAssertEqual(links("(Quran 2:43, 110)"), [.ayah(surah: 2, ayah: 43), .ayah(surah: 2, ayah: 110)])
+        XCTAssertEqual(links("(Quran 2:255; 3:18)"), [.ayah(surah: 2, ayah: 255), .ayah(surah: 3, ayah: 18)])
+        XCTAssertEqual(links("(Quran 16:43, quoted above)"), [.ayah(surah: 16, ayah: 43)])
+        XCTAssertEqual(links("(Quran 17:23, 24 times)"), [.ayah(surah: 17, ayah: 23)])
+        XCTAssertEqual(links("(Sahih Muslim 379; Sunan Abi Dawud 499, graded hasan sahih by al-Albani)"),
+                       [.hadith(slug: "muslim", reference: "379"), .hadith(slug: "abudawud", reference: "499")])
+        XCTAssertEqual(links("prayer (Sahih al-Bukhari 831) and of the testimony after wudhu (Sahih Muslim 234)."),
+                       [.hadith(slug: "bukhari", reference: "831"), .hadith(slug: "muslim", reference: "234")])
+        XCTAssertEqual(links("(Jami` at-Tirmidhi 2516)"), [.hadith(slug: "tirmidhi", reference: "2516")])
+        XCTAssertEqual(links("(Sahih Muslim 8a)"), [.hadith(slug: "muslim", reference: "8a")])
+        XCTAssertEqual(links("(Sahih Muslim Introduction 9)"), [.hadith(slug: "muslim", reference: "intro-9")])
+        XCTAssertEqual(links("(Sahih al-Bukhari 6306, Sahih Muslim 2705)"),
+                       [.hadith(slug: "bukhari", reference: "6306"), .hadith(slug: "muslim", reference: "2705")])
+        // Not citations: a year, a count, a name that is only a name.
+        XCTAssertEqual(links("Imam al-Bukhari died in 870, and Ahmad 241 years before"), [])
+        XCTAssertEqual(links("Muslims pray five times a day"), [])
+        XCTAssertEqual(links("peace be upon him"), [])
+    }
+
+    /// A citation's link carries exactly the words that cite, so the tap target is the citation.
+    func testACitationsRangeIsItsWords() {
+        let text = "the tashahhud (Sahih al-Bukhari 831) and"
+        let hit = ScriptureCitations.hits(in: text).first
+        XCTAssertEqual(hit.map { (text as NSString).substring(with: $0.range) }, "Sahih al-Bukhari 831")
+        let quran = "(Quran 2:43, 110)"
+        XCTAssertEqual(ScriptureCitations.hits(in: quran).map { (quran as NSString).substring(with: $0.range) },
+                       ["Quran 2:43", "110"])
+    }
+
+    /// A tafsir's bare references open their ayahs; a bracket that names another book, or numbers
+    /// that are no surah and ayah, stay text.
+    func testATafsirsReferencesOpenTheirAyahs() {
+        let text = "stirred to life (41:39). As in [ 2:255] and (39:47,48); see (see 2:43). (Genesis 1:3) (Al-Kubra 5:12) (1:554) (115:1) (the Most Great, the Most High) 13:9. Read on"
+        XCTAssertEqual(ScriptureCitations.tafsirHits(in: text).map(\.link),
+                       [.ayah(surah: 41, ayah: 39), .ayah(surah: 2, ayah: 255), .ayah(surah: 39, ayah: 47),
+                        .ayah(surah: 39, ayah: 48), .ayah(surah: 2, ayah: 43), .ayah(surah: 13, ayah: 9)])
+    }
+
+    // MARK: Opening an ayah or a hadith in its tab
+
+    /// Every way into an ayah or a hadith from outside its reader says the same words and shows the
+    /// tab's own symbol (`OpenInTab`), whatever kind of link it is.
+    func testEveryOpenNamesTheTabItLandsOn() {
+        for link in [AppLink.ayah(surah: 2, ayah: 255), .surah(18), .tafsir(surah: 2, ayah: 255),
+                     .translations(surah: 1, ayah: 5), .qiraah(surah: 112, ayah: 1)] {
+            XCTAssertEqual(link.openTitle, OpenInTab.quranTitle, "\(link)")
+            XCTAssertEqual(link.openSystemImage, "character.book.closed.ar", "\(link)")
+        }
+        for link in [AppLink.hadith(slug: "bukhari", reference: "1"), .hadithBook(slug: "muslim"),
+                     .explanation(slug: "bukhari", reference: "1"), .encyclopedia("5907")] {
+            XCTAssertEqual(link.openTitle, OpenInTab.hadithTitle, "\(link)")
+            XCTAssertEqual(link.openSystemImage, "books.vertical", "\(link)")
+        }
+    }
+
+    /// Al-Islam carries both tabs, so every door is drawn here; Al-Quran (no HAS_HADITH) and
+    /// Al-Adhan (neither flag) hide the doors whose tab they lack (`opensInThisApp`).
+    func testEveryDoorOpensInAnAppWithBothTabs() {
+        for link in [AppLink.ayah(surah: 2, ayah: 255), .surah(18), .tafsir(surah: 2, ayah: 255),
+                     .hadith(slug: "bukhari", reference: "1"), .hadithBook(slug: "muslim"),
+                     .explanation(slug: "bukhari", reference: "1"), .encyclopedia("5907"),
+                     .article("pillars.salah"), .miracle("pharaoh"), .lesson("sukoon")] {
+            XCTAssertTrue(link.opensInThisApp, "\(link)")
+        }
+    }
+
+    // MARK: A quote names its surah
+
+    /// "Quran 5:3" reads with its surah, in the interface's script; anything that is not a single
+    /// real ayah is left as it was.
+    func testAQuranCitationNamesItsSurah() async throws {
+        await QuranData.shared.waitUntilLoaded()
+        let name = try XCTUnwrap(QuranData.shared.surah(13)).nameTransliteration
+        XCTAssertEqual(QuranSurahNames.naming("Quran 13:28"), "Quran \(name) 13:28")
+        XCTAssertEqual(QuranSurahNames.naming("Quran 21:87; Tirmidhi 3505, sahih"),
+                       "Quran \(try XCTUnwrap(QuranData.shared.surah(21)).nameTransliteration) 21:87; Tirmidhi 3505, sahih")
+        // Arabic-Indic digits are digits too.
+        XCTAssertTrue(QuranSurahNames.naming("القرآن ١٣:٢٨").contains("١٣:٢٨"))
+        XCTAssertNotEqual(QuranSurahNames.naming("القرآن ١٣:٢٨"), "القرآن ١٣:٢٨")
+        // A hadith, an ayah that does not exist, and a line already named stay as they are.
+        XCTAssertEqual(QuranSurahNames.naming("Bukhari 6306"), "Bukhari 6306")
+        XCTAssertEqual(QuranSurahNames.naming("Quran 1:8"), "Quran 1:8")
+        XCTAssertEqual(QuranSurahNames.naming("Quran \(name) 13:28"), "Quran \(name) 13:28")
+
+        let cited = try XCTUnwrap(QuranSurahNames.cited("Quran 2:43, 110"))
+        XCTAssertEqual(cited.reference.surah, 2)
+        XCTAssertEqual(cited.names.number, 2)
+        XCTAssertNil(QuranSurahNames.cited("Sahih al-Bukhari 1"))
+    }
+
+    // MARK: The remembrances
+
+    /// The Tasbih Counter keeps each preset's count by its index in the list, so the first nine
+    /// never move; every dhikr has its own id and names where it comes from.
+    func testTheDhikrListKeepsItsOrderAndCitesEachOne() {
+        XCTAssertEqual(Array(commonDhikrItems.prefix(9)).map(\.transliteration), [
+            "SubhanAllah", "Alhamdulillah", "Allahu Akbar", "La ilaha illallah", "Astaghfirullah",
+            "La hawla wala quwwata illa billah", "SubhanAllahi wa bihamdihi, SubhanAllahil Adheem",
+            "Allahumma salli 'ala Muhammad wa 'ala ali Muhammad",
+            "La ilaha illallah wahdahu la sharika lah, lahul-mulk wa lahul-hamd, wa huwa 'ala kulli shayin qadir",
+        ])
+        XCTAssertGreaterThan(commonDhikrItems.count, 20)
+        XCTAssertEqual(Set(commonDhikrItems.map(\.id)).count, commonDhikrItems.count)
+        XCTAssertEqual(Set(commonDhikrItems.map(\.arabicText)).count, commonDhikrItems.count)
+        for dhikr in commonDhikrItems {
+            XCTAssertFalse((dhikr.source ?? "").isEmpty, dhikr.transliteration)
+        }
+    }
+
+    /// A reminder's hadith opens in its book on the Hadith tab by the same link a shared hadith
+    /// uses: a row link by its row, a citation by the citation.
+    func testAReminderHadithOpensByItsLink() {
+        XCTAssertEqual(DailyReminderEntry.HadithLink(slug: "tirmidhi", citation: "#3033").appLink,
+                       .hadith(slug: "tirmidhi", reference: "id-3033"))
+        XCTAssertEqual(DailyReminderEntry.HadithLink(slug: "muslim", citation: "8A").appLink,
+                       .hadith(slug: "muslim", reference: "8a"))
+    }
+
+    // MARK: A page's own search
+
+    /// A page built at runtime is found by its words and by its headings, and each match lands on
+    /// the anchor the page put where the passage begins, heading or none.
+    func testAPageSearchLandsOnItsAnchors() {
+        let page = IslamArticle.searchable(id: "Test-page", title: "Test", passages: [
+            .init(heading: "", anchor: "top", text: "A sukoon is the absence of a vowel."),
+            .init(heading: "Common Mistakes", anchor: "mistakes", text: "Bouncing a letter that has no qalqalah."),
+            .init(heading: "Empty", anchor: "empty", text: "  "),
+        ])
+        XCTAssertEqual(page.sections.count, 2, "an empty passage is left out")
+        func landings(_ query: String) -> [String] {
+            IslamArticleSearch.sectionHits(query, articleID: "Test-page", page: page).map(\.section.landing)
+        }
+        XCTAssertEqual(landings("vowel"), ["top"])
+        XCTAssertEqual(landings("qalqalah"), ["mistakes"])
+        XCTAssertEqual(landings("mistakes"), ["mistakes"], "a heading is searched with its words")
+        XCTAssertEqual(landings("nowhere"), [])
+    }
+
+    /// The page's own text wins over the corpus's copy of the same page: a translated Tajweed
+    /// Foundations page searches what the reader sees.
+    func testAPagesOwnTextWinsOverTheCorpus() throws {
+        let id = try XCTUnwrap(TajweedTopic.sukoon.articleID)
+        let page = IslamArticle.searchable(id: id, title: "x", passages: [.init(heading: "H", anchor: "a", text: "zzqx")])
+        XCTAssertEqual(IslamArticleSearch.sectionHits("zzqx", articleID: id, page: page).count, 1)
+        XCTAssertFalse(IslamArticleSearch.sectionHits("sukoon", articleID: id).isEmpty)
+        XCTAssertTrue(IslamArticleSearch.sectionHits("sukoon", articleID: id, page: page).isEmpty)
+    }
+
+    /// In English, a Tajweed Foundations page read for its search keeps the corpus's headings, save
+    /// the apostrophe the corpus straightens, which comes back as the page's own ’ so the heading is
+    /// the anchor its `ArticleHeader(String(localized:))` draws.
+    func testATajweedPageReadForSearchKeepsItsHeadings() throws {
+        for topic in TajweedTopic.allCases {
+            guard let id = topic.articleID, let article = IslamArticles.all.first(where: { $0.id == id }) else { continue }
+            let translated = article.translatedForSearch()
+            XCTAssertEqual(translated.sections.map { $0.landing.replacingOccurrences(of: "\u{2019}", with: "'") },
+                           article.sections.map(\.heading), id)
+        }
+        let sukoon = try XCTUnwrap(IslamArticles.all.first { $0.id == TajweedTopic.sukoon.articleID })
+        XCTAssertTrue(sukoon.translatedForSearch().sections.contains {
+            $0.landing == String(localized: "The 4 Types of Sukoon Marks in the Qur\u{2019}an")
+        })
+    }
+
+    /// Every lesson reads for its search, and every passage lands on one of the cards' anchors.
+    func testEveryLessonsSearchLandsOnItsCards() throws {
+        let course = try XCTUnwrap(TajweedLessonsStore.shared.course())
+        let cards = Set(["hero", "videos", "rule", "definition", "images", "letters", "explanation", "words",
+                         "keypoints", "table", "mistakes", "drills", "examples"].map(TajweedLesson.anchor))
+        for lesson in course.lessons {
+            let page = lesson.searchPage(quranData: QuranData.shared)
+            XCTAssertEqual(page.id, IslamArticle.lessonPrefix + lesson.id)
+            XCTAssertFalse(page.sections.isEmpty, lesson.id)
+            for section in page.sections {
+                XCTAssertTrue(cards.contains(section.landing), "\(lesson.id): \(section.landing)")
+            }
+        }
     }
 
     // MARK: The host, in the three places that must agree

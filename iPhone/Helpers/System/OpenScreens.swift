@@ -79,6 +79,10 @@ enum OpenScreen: String, Hashable, CaseIterable {
     /// Proving Islam's index: its chapters door into the pillar articles, and those articles door
     /// back into the index.
     case provingIslamLibrary
+    /// One of the six reading libraries of 2026-11-24 (`IslamLibraryView`), by its home's raw value
+    /// (always used with `id:`): their chapters door into each other and into Pillars & Beliefs pages
+    /// that the libraries list too.
+    case articleLibrary
     /// A tab's tutorial, by tab (TabTutorials.swift): a card's "Show me" opens that tab's settings page,
     /// whose Tips & Tricks section starts with the door back into the same tutorial.
     case tabTutorial
@@ -117,6 +121,7 @@ enum OpenScreen: String, Hashable, CaseIterable {
         case .prophetMiraclesLibrary: return String(localized: "You came here from Miracles of the Prophets")
         case .sunnahLibrary:          return String(localized: "You came here from Sunnahs of the Prophet")
         case .provingIslamLibrary:    return String(localized: "You came here from Proving Islam")
+        case .articleLibrary:         return String(localized: "You came here from this library")
         case .tabTutorial:            return String(localized: "You came here from this tutorial")
         case .quranWords:             return String(localized: "You came here from Quran Words")
         case .tajweedRuleFrequency:   return String(localized: "You came here from the rule counts")

@@ -206,14 +206,14 @@ enum SettingsIslamPage: String, CaseIterable, Hashable {
         case .textSize: return String(localized: "How large the Islam tab's text reads")
         case .alphabet: return String(localized: "Arabic size, English readings, sukoon")
         #if HAS_ADHAN && HAS_QURAN
-        case .libraries: return String(localized: "Grid or rows, Word of the Day, Fajr")
+        case .libraries: return String(localized: "Article length, grid or rows, Word of the Day, Fajr")
         #elseif HAS_ADHAN
         // Word of the Day is a Quran feature (its switch on the page is HAS_QURAN), so without the
         // Quran the page holds the layout and the Fajr turnover.
-        case .libraries: return String(localized: "Grid or rows, the Fajr turnover")
+        case .libraries: return String(localized: "Article length, grid or rows, the Fajr turnover")
         #else
         // The Fajr turnover is a prayer-times switch, on this page only where prayer times ship.
-        case .libraries: return String(localized: "Grid or rows, Word of the Day")
+        case .libraries: return String(localized: "Article length, grid or rows, Word of the Day")
         #endif
         #if HAS_QURAN
         // The same words the Quran and Notifications rows carry: it is the same screen, reached

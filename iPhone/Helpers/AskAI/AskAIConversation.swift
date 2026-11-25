@@ -20,6 +20,122 @@ import Foundation
 import FoundationModels
 #endif
 
+/// What an answer may be built from, chosen above the composer (Abu, 2026-11-24: "add specific filters
+/// like hey I want u to specifically look at Quran or Hadith or whatever"). Everything is the app's whole
+/// library, as before; any other choice keeps only that library's sources (`admits`), searches it deeper,
+/// and tells the model to answer from it alone (`promptLine`). Kept between visits.
+enum AskAIScope: String, CaseIterable, Identifiable, Codable {
+    case everything, quran, hadith, articles, duas, prayerTimes
+
+    var id: String { rawValue }
+
+    /// The choices this app can answer from: each library only where it ships.
+    static var available: [AskAIScope] {
+        allCases.filter { $0.ships }
+    }
+
+    private var ships: Bool {
+        switch self {
+        case .quran:
+            #if HAS_QURAN
+            return true
+            #else
+            return false
+            #endif
+        case .hadith:
+            #if HAS_HADITH
+            return true
+            #else
+            return false
+            #endif
+        case .prayerTimes:
+            #if HAS_ADHAN
+            return true
+            #else
+            return false
+            #endif
+        case .everything, .articles, .duas:
+            return true
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .everything: return String(localized: "Everything")
+        case .quran: return String(localized: "Quran")
+        case .hadith: return String(localized: "Hadith")
+        case .articles: return String(localized: "Articles")
+        case .duas: return String(localized: "Duas & Dhikr")
+        case .prayerTimes: return String(localized: "Prayer Times")
+        }
+    }
+
+    /// What the choice searches, in a line.
+    var detail: String {
+        switch self {
+        case .everything: return String(localized: "The whole library, in one answer")
+        case .quran: return String(localized: "Verses, with their tafsir")
+        case .hadith: return String(localized: "The collections, with explanations")
+        case .articles: return String(localized: "Guides, beliefs and how-tos")
+        case .duas: return String(localized: "Supplications and the 99 Names")
+        case .prayerTimes: return String(localized: "Any city, any day")
+        }
+    }
+
+    /// The tabs' own symbols for the two libraries (`OpenInTab`), so the choice reads as that tab.
+    var systemImage: String {
+        switch self {
+        case .everything: return "sparkles"
+        case .quran: return "character.book.closed.ar"
+        case .hadith: return "books.vertical"
+        case .articles: return "doc.text"
+        case .duas: return "hands.and.sparkles"
+        case .prayerTimes: return "clock"
+        }
+    }
+
+    /// Whether a source of this kind may stand behind the answer.
+    func admits(_ kind: AskAISource.Kind) -> Bool {
+        switch (self, kind) {
+        case (.everything, _): return true
+        case (.quran, .ayah), (.quran, .tafsir), (.quran, .surah): return true
+        case (.hadith, .hadith): return true
+        case (.articles, .article): return true
+        case (.duas, .dua), (.duas, .hisnDua), (.duas, .name): return true
+        case (.prayerTimes, .prayer), (.prayerTimes, .cityPrayer): return true
+        default: return false
+        }
+    }
+
+    /// What the model is told about the choice, after its task.
+    var promptLine: String? {
+        switch self {
+        case .everything, .prayerTimes: return nil
+        case .quran: return "The reader chose to search the Quran only: answer from the Quran and tafsir sources alone. If they do not answer the question, say that the verses found do not address it; do not draw on anything else."
+        case .hadith: return "The reader chose to search the hadith only: answer from the hadith sources alone. If they do not answer the question, say that the hadiths found do not address it; do not draw on anything else."
+        case .articles: return "The reader chose to search this app\u{2019}s articles only: answer from the article sources alone. If they do not answer the question, say so; do not draw on anything else."
+        case .duas: return "The reader chose to search the duas and the Names of Allah only: answer from those sources alone, giving the words of a dua as its source has them. If they do not answer the question, say so."
+        }
+    }
+
+    /// Four questions to start with, in the choice's own library (English keys, shown through the catalog).
+    var starters: [String] {
+        switch self {
+        case .everything: return AskAIStarters.today()
+        case .quran: return ["What does the Quran say about patience in hardship?", "Explain Ayat al-Kursi",
+                             "Why is Surah Al-Kahf read on Fridays?", "What does the Quran say about parents?"]
+        case .hadith: return ["What did the Prophet say about kindness to parents?", "What is the hadith of Jibril about?",
+                              "What did the Prophet say about anger?", "What are the virtues of Friday in the hadith?"]
+        case .articles: return ["How do I perform wudu?", "What is the difference between zakat and sadaqah?",
+                                "What are the six pillars of iman?", "How do I make up a missed prayer?"]
+        case .duas: return ["Is there a dua for anxiety?", "What should I say before sleeping?",
+                            "What is the dua for leaving home?", "What does Al-Wadud mean?"]
+        case .prayerTimes: return ["What time is Fajr tomorrow?", "When is Maghrib in Makkah today?",
+                                   "What are the prayer times in London on Friday?", "How long until Asr?"]
+        }
+    }
+}
+
 @MainActor
 final class AskAIConversation: ObservableObject {
     static let shared = AskAIConversation()
@@ -45,6 +161,8 @@ final class AskAIConversation: ObservableObject {
         var flaggedQuotations = 0
         /// The question asked for a ruling: the reply carries the sterner caution.
         var asksForRuling = false
+        /// What the turn was asked to answer from (`AskAIScope`); nil for everything.
+        var scope: AskAIScope? = nil
         var intent: AskAIIntent? = nil
         var engine: AskAIEngineKind? = nil
         var isFollowUp = false
@@ -125,6 +243,12 @@ final class AskAIConversation: ObservableObject {
     @Published var engineKind: AskAIEngineKind {
         didSet { UserDefaults.standard.set(engineKind.rawValue, forKey: "askAIEngine") }
     }
+    /// What the next question is answered from (`AskAIScope`), kept between visits.
+    @Published var scope: AskAIScope {
+        didSet { UserDefaults.standard.set(scope.rawValue, forKey: "askAIScope") }
+    }
+    /// The scope of the turn in flight, for its prompt.
+    private var turnScope: AskAIScope = .everything
 
     /// The conversation's current subject (the last standalone question's content words): what a
     /// bare follow-up searches with.
@@ -142,6 +266,8 @@ final class AskAIConversation: ObservableObject {
 
     private init() {
         engineKind = AskAIEngineKind(rawValue: UserDefaults.standard.string(forKey: "askAIEngine") ?? "") ?? .onDevice
+        let savedScope = AskAIScope(rawValue: UserDefaults.standard.string(forKey: "askAIScope") ?? "") ?? .everything
+        scope = AskAIScope.available.contains(savedScope) ? savedScope : .everything
         #if DEBUG
         // "-askAIReset": start from an empty transcript (the headless batches must not inherit an
         // earlier run's conversation as history).
@@ -285,7 +411,14 @@ final class AskAIConversation: ObservableObject {
         let history = completedTurns()
         let focus = focusArticle
         let previousReply = Self.previousReply(in: messages)
-        let question = AskAIQuestion.analyze(trimmed, previousTopic: topic, hasHistory: !history.isEmpty)
+        var question = AskAIQuestion.analyze(trimmed, previousTopic: topic, hasHistory: !history.isEmpty)
+        let scope = AskAIScope.available.contains(self.scope) ? self.scope : .everything
+        turnScope = scope
+        // Prayer Times chosen: every question that searches is a question about the times ("and in
+        // Paris?" included), answered from the timetable alone.
+        if scope == .prayerTimes, question.intent.retrieves, question.intent != .appHelp {
+            question = question.with(intent: .prayerTimes)
+        }
         if !question.isFollowUp, question.intent.retrieves, !question.contentWords.isEmpty {
             topic = question.topic
             topicDisplay = question.topicDisplay
@@ -312,8 +445,11 @@ final class AskAIConversation: ObservableObject {
         }
         #endif
 
-        messages.append(Message(role: .user, text: trimmed))
+        var asked = Message(role: .user, text: trimmed)
+        asked.scope = scope == .everything ? nil : scope
+        messages.append(asked)
         var reply = Message(role: .assistant, text: "", isStreaming: true)
+        reply.scope = asked.scope
         reply.asksForRuling = question.asksForRuling
         reply.intent = question.intent
         reply.isFollowUp = question.isFollowUp
@@ -355,7 +491,7 @@ final class AskAIConversation: ObservableObject {
                 let outcome = await AskAIRetriever.retrieve(question, budget: profile.retrievalBudget,
                                                             carried: previousReply?.sources ?? [],
                                                             carriedCited: previousReply?.citedSources ?? [],
-                                                            focus: focus)
+                                                            focus: focus, scope: scope)
                 sources = outcome.sources
                 retrievalLog = String(format: "%.0f ms; lanes ", outcome.elapsed * 1000)
                     + outcome.laneCounts.map { "\($0.key.rawValue)=\($0.value)" }.sorted().joined(separator: " ")
@@ -446,7 +582,8 @@ final class AskAIConversation: ObservableObject {
             do {
                 resetStream()
                 updateReply { $0.engine = kind }
-                let prompt = AskAIPrompt.build(question: question, sources: sources, history: turns, profile: profile)
+                let prompt = AskAIPrompt.build(question: question, sources: sources, history: turns, profile: profile,
+                                               scope: turnScope)
                 lastPrompt = prompt
                 let options = GenerationOptions(temperature: question.intent.temperature,
                                                 maximumResponseTokens: min(question.intent.maxResponseTokens, profile.responseTokenCap))

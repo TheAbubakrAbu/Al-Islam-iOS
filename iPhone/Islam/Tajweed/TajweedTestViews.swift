@@ -1006,20 +1006,9 @@ private struct TajweedTestPaintedAyah: View {
                     }.value
                 }
 
-                Button {
-                    Settings.shared.hapticFeedback()
-                    AppNavigation.shared.open(.ayah(surah, ayah))
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "book")
-                        Text("Open in the Quran")
-                            .font(.caption.weight(.semibold))
-                        Spacer(minLength: 0)
-                    }
-                    .foregroundColor(appearance.accent)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+                // The app's one "open this in its tab" (`OpenInTab`).
+                OpenInTabButton(link: .ayah(surah: surah, ayah: ayah))
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(12)
             .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.secondary.opacity(0.08)))

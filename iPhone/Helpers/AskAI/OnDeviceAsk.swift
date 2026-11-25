@@ -377,7 +377,25 @@ enum OnDeviceAsk {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    let session = LanguageModelSession(instructions: instructions)
+                    // The Ask AI chat's model, with the permissive guardrail setting Apple gives for
+                    // transforming text the app hands it (2026-11-23): the default setting declines
+                    // ordinary religious passages (see `AskAIEngine.onDeviceModel`), and its safety
+                    // model failing to load failed every summary outright (ModelManagerError 1001,
+                    // met on the iOS 26.5 simulator while Ask AI, already permissive, answered).
+                    let session = LanguageModelSession(model: AskAIEngine.onDeviceModel, instructions: instructions)
+                    #if DEBUG
+                    // `-summaryProbe`: what the prompt really costs against the model's window.
+                    if ProcessInfo.processInfo.arguments.contains("-summaryProbe") {
+                        var counted = "n/a"
+                        if #available(iOS 26.4, *) {
+                            let promptTokens = try? await AskAIEngine.onDeviceModel.tokenCount(for: prompt)
+                            let ruleTokens = try? await AskAIEngine.onDeviceModel.tokenCount(for: Instructions(instructions))
+                            counted = "prompt \(promptTokens ?? -1) + instructions \(ruleTokens ?? -1)"
+                        }
+                        NSLog("SUMMARYPROBE prompt chars=%d tokens=%@ window=%d", prompt.count, counted,
+                              AskAIEngine.onDeviceModel.contextSize)
+                    }
+                    #endif
                     let stream = session.streamResponse(to: prompt, options: options)
                     for try await partial in stream {
                         if Task.isCancelled { break }

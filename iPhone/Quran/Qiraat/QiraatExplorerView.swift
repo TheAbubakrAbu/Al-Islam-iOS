@@ -713,7 +713,7 @@ struct QiraatExplorerView: View {
                     Settings.shared.hapticFeedback()
                     AppNavigation.shared.open(.ayah(surahID, readerAyahObject?.id ?? hafsAyah))
                 } label: {
-                    SettingsRowLabel(title: String(localized: "Read in the Quran Tab"), systemImage: "book",
+                    SettingsRowLabel(title: OpenInTab.quranTitle, systemImage: OpenInTab.quranSymbol,
                                      subtitle: String(localized: "Open \(ayahSheetTitle(surahNumber: surahID, ayahNumber: hafsAyah)) in the reader"))
                         .contentShape(Rectangle())
                 }

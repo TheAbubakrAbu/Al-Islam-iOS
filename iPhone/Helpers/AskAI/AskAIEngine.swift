@@ -510,7 +510,7 @@ enum AskAIPrompt {
     /// The prompt for a turn: the numbered sources with their origins, the recent conversation
     /// clipped to the profile's budget (the most recent turn fullest), the task line, the question.
     static func build(question: AskAIQuestion, sources: [AskAISource], history: [Turn],
-                      profile: AskAIProfile) -> String {
+                      profile: AskAIProfile, scope: AskAIScope = .everything) -> String {
         var prompt = ""
         if !sources.isEmpty {
             let lines = sources.enumerated().map { index, source in
@@ -550,6 +550,8 @@ enum AskAIPrompt {
         if question.isFollowUp, !history.isEmpty {
             task += " This is a follow-up to the conversation above: \u{201C}that\u{201D}, \u{201C}it\u{201D} and \u{201C}he\u{201D} refer to what was just discussed. Add new material (the reasoning, a source not yet used, the context); do not repeat the earlier answer or its quotations."
         }
+        // The reader's choice of library (`AskAIScope`), for any question that searched.
+        if question.intent.retrieves, let line = scope.promptLine { task += " " + line }
         prompt += "TASK: \(task)\n\n"
         prompt += "User: \(question.raw)"
         return prompt

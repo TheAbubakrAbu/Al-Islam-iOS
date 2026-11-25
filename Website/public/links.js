@@ -28,7 +28,17 @@
     miraclesofprophets: "Miracles of the Prophets", propheciesofprophet: "Prophecies of the Prophet",
     sunnahsofprophet: "Sunnahs of the Prophet", provingislam: "Proving Islam", askai: "Ask AI"
   };
-  var KINDS = ["quran", "hadith", "article", "sunnah", "prophecy", "sign", "miracle", "name", "islam", "tab"];
+  // The pages of Tajweed Foundations, by the key a link carries (`TajweedTopic.linkKey` in the app).
+  var TAJWEED = {
+    overview: "Tajweed Overview", improving: "Improving Your Recitation", lips: "Lip Movement",
+    makharij: "Makhaarij (Articulation)", sifaat: "Sifaat (Letter Qualities)", "heavy-light": "Heavy and Light",
+    "shams-qamar": "Shams and Qamar", madd: "Madd (Elongation)", qalqalah: "Qalqalah",
+    "noon-sakinah": "Noon Sakinah and Tanween", "meem-sakinah": "Meem Sakinah",
+    "mushaf-hints": "Tajweed Hints in the Mushaf", sukoon: "The 4 Sukoon", "hamzatul-wasl": "Hamzatul Wasl",
+    waqf: "Waqf (Stopping)"
+  };
+  var KINDS = ["quran", "hadith", "article", "sunnah", "prophecy", "sign", "miracle", "name", "islam", "tajweed",
+               "lesson", "tafsir", "translations", "qiraah", "explanation", "tab"];
   var SAFE = /^[A-Za-z0-9._:\-]{1,96}$/;
 
   // The link is one key=value pair. An older or hand-made link may carry it as a path
@@ -70,6 +80,23 @@
     if (kind === "prophecy") return ["A prophecy of the Prophet ﷺ", "From Prophecies of the Prophet."];
     if (kind === "sign") return ["A sign given to the prophets", "From Miracles of the Prophets."];
     if (kind === "miracle") return ["A miracle of the Quran", "From Miracles of the Quran."];
+    if (kind === "tajweed") return [TAJWEED[lower] || "Tajweed Foundations", "A page of Tajweed Foundations."];
+    if (kind === "lesson") return ["A tajweed lesson", "A lesson of the Tajweed Course."];
+    if (kind === "tafsir" || kind === "translations" || kind === "qiraah") {
+      var a = value.split(/[:.\-]/);
+      var where = "Quran " + a[0] + ":" + (a[1] || "");
+      if (kind === "tafsir") return ["Tafsir of " + where, "The tafsir of an ayah."];
+      if (kind === "translations") return ["Translation Comparison of " + where, "An ayah in every translation."];
+      return ["Qiraah Comparison of " + where, "An ayah in every riwayah."];
+    }
+    if (kind === "explanation") {
+      var at = lower.indexOf(":");
+      if (at < 0) return ["A hadith explained", "From the Hadith Encyclopedia."];
+      var explained = BOOKS[lower.slice(0, at)];
+      var number = lower.slice(at + 1);
+      return [explained && number.indexOf("id-") !== 0 ? "Explanation of " + explained + " " + number : "A hadith explained",
+              "A hadith and its explanation."];
+    }
     return ["Open in " + APP, ""];
   }
 

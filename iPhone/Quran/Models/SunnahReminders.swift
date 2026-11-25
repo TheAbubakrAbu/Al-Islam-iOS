@@ -70,6 +70,10 @@ enum IslamLinkedPage: Hashable {
     case prophetMiracle(String)
     /// A Miracles of the Quran article, by its slug.
     case miracle(String)
+    /// A page of Tajweed Foundations, by its `TajweedTopic` raw value.
+    case tajweed(String)
+    /// A lesson of the Tajweed Course, by its id.
+    case lesson(String)
 }
 
 /// Cross-tab navigation requests. A notification tap arrives in the AppDelegate with no view in
@@ -162,7 +166,7 @@ struct SunnahReminderPreset: Identifiable {
     var openLabel: String {
         switch target {
         case .tab: return String(localized: "Open the Quran")
-        case .surah, .ayah: return String(localized: "Open in Quran")
+        case .surah, .ayah: return OpenInTab.quranTitle
         }
     }
 
@@ -736,7 +740,8 @@ private struct SunnahReminderRow: View {
                             Settings.shared.hapticFeedback()
                             AppNavigation.shared.open(preset.target)
                         } label: {
-                            Label(preset.openLabel, systemImage: "book")
+                            // The Quran tab's own symbol, as on every "Open in Quran" (`OpenInTab`).
+                            Label(preset.openLabel, systemImage: OpenInTab.quranSymbol)
                         }
                         .buttonStyle(.plain)
 

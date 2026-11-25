@@ -339,7 +339,7 @@ Not done: D3 (the altitude row prints feet and metres from one stored reading; n
 Checked by the audits and clean on 2026-09-28:
 
 - No crash-level force unwrap, `try!` on non-literal input, reachable `precondition` or unguarded closed range beyond the items above; every stored raw value has a default; no launch-argument read outside `#if DEBUG`.
-- Pack readers: version gates match the shipped files (QRPK v1, HDPK v4 for all 17 books, TFPK v1, SEM4, the JSON packs); every reader bounds-checks and returns nil on bad data; resident pack memory is bounded and trimmed on memory warnings.
+- Pack readers: version gates match the shipped files (QRPK v1, HDPK v4 for all 17 books, TFPK v1, SEM5, the JSON packs); every reader bounds-checks and returns nil on bad data; resident pack memory is bounded and trimmed on memory warnings.
 - The Chosen Ayah widget's memory (6 to 7 MB ceiling), its `containingAppBundle` walk, its 114-surah catalog (6,236 ayahs), the deep-link parser's rejects, `refreshChosenAyahWidgets` (no reload loop), `ModalPresence` (main thread; it also counts popovers and dialogs, which only stops the mushaf re-open), the Need a Hand? parsing, the pinned-switcher bands (no layout loop), and the iOS 17 `#available` in the widget bundle at the iOS 15 target.
 - The faraid shares (four textbook cases by hand), the prophecies and miracles references (`verify_prophecies.py`: 222 hadith, 87 Quran), the sajdah list (15), the tajweed lesson ids, the 17 hadith packs (no duplicate ids, no empty chapters).
 - Notification sound cuts are at most 29.47 s (IMA4); triggers carry a time zone; widget and complication timer ranges are guarded; the sky card ticks once a minute and its stars pause off screen.

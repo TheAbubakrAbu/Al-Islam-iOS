@@ -111,9 +111,11 @@ enum AskAIRetriever {
     /// `focus` is the article the chat was opened from: its sections that answer the question (its
     /// opening ones when none scores) join every turn, so "what breaks it?" asked from the wudhu
     /// guide answers from the guide.
+    /// `scope` is the library the reader chose (`AskAIScope`): only its sources enter the pool, its
+    /// own lanes reach deeper, and the other libraries' lanes are not run at all.
     static func retrieve(_ question: AskAIQuestion, budget: Budget,
                          carried: [AskAISource] = [], carriedCited: [AskAISource] = [],
-                         focus: IslamArticle? = nil) async -> Outcome {
+                         focus: IslamArticle? = nil, scope: AskAIScope = .everything) async -> Outcome {
         let started = CFAbsoluteTimeGetCurrent()
         var outcome = Outcome()
         outcome.searchText = question.searchText
@@ -124,7 +126,11 @@ enum AskAIRetriever {
         await quranData.waitUntilCoreLoaded()
         #endif
         let weights = weights(for: question)
-        var pool = Pool(weights: weights)
+        // An app question is answered from the tips and the settings whatever library was chosen.
+        var pool = Pool(weights: weights, scope: question.intent == .appHelp ? .everything : scope)
+        let wantsQuran = scope == .everything || scope == .quran
+        let wantsHadith = scope == .everything || scope == .hadith
+        let narrowed = scope != .everything
 
         // Lane 0: what the question NAMES, always first; a surah named only by a bare word
         // ("tell me about yusuf") is support, not the subject.
@@ -144,7 +150,7 @@ enum AskAIRetriever {
             // their subject mark: a subject belongs to the question that named it.
             func carriedForm(_ source: AskAISource, quotedBefore: Bool) -> AskAISource? {
                 switch source.kind {
-                case .prayer: return nil
+                case .prayer, .cityPrayer: return nil
                 case .tip, .setting: return question.mentionsApp ? source : nil
                 default:
                     var copy = source
@@ -157,11 +163,25 @@ enum AskAIRetriever {
             for (rank, source) in carried.compactMap({ carriedForm($0, quotedBefore: false) }).prefix(6).enumerated() { pool.add(source, lane: .carried, rank: rank) }
         }
         #if HAS_ADHAN
-        if question.intent == .prayerTimes, let prayer = AskAISourceFactory.prayerTimes() {
-            pool.add(prayer, lane: .prayer, rank: 0)
+        if question.intent == .prayerTimes {
+            // Another place or another day (`AskAIPrayerRequest`) is computed the way City Prayer
+            // Times computes it; "today, here" is the Adhan tab's own timetable.
+            let request = AskAIPrayerRequest.parse(question.raw)
+            if let asked = await AskAISourceFactory.prayerTimes(for: request) {
+                pool.add(asked, lane: .prayer, rank: 0)
+            } else if let prayer = AskAISourceFactory.prayerTimes() {
+                pool.add(prayer, lane: .prayer, rank: 0)
+            }
         }
         #endif
         if Task.isCancelled { return outcome }
+        // Prayer Times chosen: the timetable is the whole answer.
+        if scope == .prayerTimes, question.intent != .appHelp {
+            outcome.laneCounts = pool.counts
+            (outcome.sources, outcome.ranking) = pool.select(limit: budget.limit)
+            outcome.elapsed = CFAbsoluteTimeGetCurrent() - started
+            return outcome
+        }
 
         // An app question is answered from the settings index and the tips alone: no verse can say
         // where a setting is.
@@ -190,45 +210,50 @@ enum AskAIRetriever {
         // rather than answer a Quran question with no Quran (which is what happened when the lanes
         // were skipped the moment they were not ready).
         #if HAS_QURAN
-        quranData.ensureVerseSearchIndex()
-        if semantic { QuranSemanticCorpus.prepare(quranData: quranData, engine: engine) }
+        if wantsQuran {
+            quranData.ensureVerseSearchIndex()
+            if semantic { QuranSemanticCorpus.prepare(quranData: quranData, engine: engine) }
+        }
         #endif
         #if HAS_HADITH
         let store = HadithStore.shared
         var hadithReady = false
-        if semantic {
+        if semantic, wantsHadith {
             hadithReady = await HadithSemanticCorpus.probeDisk(engine: engine)
             if !hadithReady { Task { await HadithSemanticCorpus.prepare(engine: engine, store: store) } }
         }
         #endif
 
         // The detached scans run concurrently; each is pure work on immutable data.
+        let articleLimit = scope == .articles ? 8 : 4
         async let articleHits = Task.detached(priority: .userInitiated) {
-            IslamArticles.search(articleQuery, limit: 4)
+            IslamArticles.search(articleQuery, limit: articleLimit)
         }.value
         #if HAS_HADITH
         let books = keywordBookOrder.compactMap { slug -> (HadithCatalogBook, HadithBookData)? in
             guard let book = HadithCatalogBook.bySlug[slug], let data = store.book(book) else { return nil }
             return (book, data)
         }
+        let hadithLimit = scope == .hadith ? 10 : (wantsHadith ? 6 : 0)
         async let rankedHadiths = Task.detached(priority: .userInitiated) { () -> [(bookIndex: Int, row: Int)] in
-            Self.rankHadiths(query: searchText, books: books, limit: 6)
+            hadithLimit == 0 ? [] : Self.rankHadiths(query: searchText, books: books, limit: hadithLimit)
         }.value
         async let topicHadiths = Task.detached(priority: .userInitiated) { () -> [HadithTopicEntry] in
-            Self.topicHadiths(words: contentWords, limit: 3)
+            hadithLimit == 0 ? [] : Self.topicHadiths(words: contentWords, limit: scope == .hadith ? 5 : 3)
         }.value
         #endif
         #if HAS_QURAN
+        let quranLimit = scope == .quran ? 10 : 6
         async let topicAyahs = Task.detached(priority: .userInitiated) { () -> [(surah: Int, ayah: Int)] in
-            Self.topicAyahs(terms: question.searchTerms, limit: 5)
+            wantsQuran ? Self.topicAyahs(terms: question.searchTerms, limit: scope == .quran ? 8 : 5) : []
         }.value
 
         // Lane: the Quran's ranked keyword search (the only Quran lane an Arabic question has).
-        await waitUntilVerseIndexReady(quranData, timeout: 4)
-        if !Task.isCancelled, let snapshot = quranData.verseSearchSnapshot() {
+        if wantsQuran { await waitUntilVerseIndexReady(quranData, timeout: 4) }
+        if wantsQuran, !Task.isCancelled, let snapshot = quranData.verseSearchSnapshot() {
             let keywordQuery = question.isArabic ? question.raw : keywordQueryText(for: question)
             let scan = Task.detached(priority: .userInitiated) {
-                QuranRankedSearch.search(keywordQuery, snapshot: snapshot, limit: 6).hits
+                QuranRankedSearch.search(keywordQuery, snapshot: snapshot, limit: quranLimit).hits
             }
             let hits = await withTaskCancellationHandler { await scan.value } onCancel: { scan.cancel() }
             for (rank, hit) in hits.enumerated() {
@@ -241,10 +266,10 @@ enum AskAIRetriever {
         if Task.isCancelled { return outcome }
 
         // Lane: the Quran's meaning search.
-        if semantic {
+        if semantic, wantsQuran {
             await engine.awaitDiskLoad(QuranSemanticCorpus.id)
             if engine.isReady(QuranSemanticCorpus.id) {
-                let hits = await engine.search(corpusID: QuranSemanticCorpus.id, query: semanticQuery, limit: 7)
+                let hits = await engine.search(corpusID: QuranSemanticCorpus.id, query: semanticQuery, limit: scope == .quran ? 10 : 7)
                 for (rank, hit) in hits.enumerated() where QuranSemanticCorpus.ayahMap.indices.contains(hit.index) {
                     let ref = QuranSemanticCorpus.ayahMap[hit.index]
                     if let source = AskAISourceFactory.ayah(surah: ref.surah, ayah: ref.ayah, quranData: quranData,
@@ -259,9 +284,9 @@ enum AskAIRetriever {
 
         #if HAS_HADITH
         // Lane: the all-books hadith meaning search (only when a persisted build answers now).
-        if semantic, !nameOnly, hadithReady || engine.isReady(HadithSemanticCorpus.id),
+        if semantic, wantsHadith, !nameOnly, hadithReady || engine.isReady(HadithSemanticCorpus.id),
            let keys = engine.corpus(HadithSemanticCorpus.id)?.itemKeys {
-            let hits = await engine.search(corpusID: HadithSemanticCorpus.id, query: semanticQuery, limit: 6)
+            let hits = await engine.search(corpusID: HadithSemanticCorpus.id, query: semanticQuery, limit: scope == .hadith ? 10 : 6)
             var found: [(rank: Int, book: HadithCatalogBook, data: HadithBookData, hadith: HadithBookData.Hadith)] = []
             for (rank, hit) in hits.enumerated() where keys.indices.contains(hit.index) {
                 let parts = keys[hit.index].split(separator: "|")
@@ -348,13 +373,14 @@ enum AskAIRetriever {
         if Task.isCancelled { return outcome }
 
         // Lanes with small, in-memory data.
-        for (rank, source) in nameSources(for: question, limit: 2).enumerated() { pool.add(source, lane: .names, rank: rank) }
-        if question.intent == .dua || question.contentWords.contains(where: { ["dua", "duas", "dhikr", "adhkar", "supplication"].contains($0) }) {
+        for (rank, source) in nameSources(for: question, limit: scope == .duas ? 4 : 2).enumerated() { pool.add(source, lane: .names, rank: rank) }
+        if scope == .duas || question.intent == .dua
+            || question.contentWords.contains(where: { ["dua", "duas", "dhikr", "adhkar", "supplication"].contains($0) }) {
             // Hisn al-Muslim parses from its xz pack on first use: off the main actor.
             let hisn = HisnDuasStore.shared.libraryIfLoaded == nil
                 ? await Task.detached(priority: .userInitiated) { HisnDuasStore.shared.loaded() }.value
                 : HisnDuasStore.shared.libraryIfLoaded
-            for (rank, source) in duaSources(for: question, limit: 4, hisn: hisn).enumerated() { pool.add(source, lane: .duas, rank: rank) }
+            for (rank, source) in duaSources(for: question, limit: scope == .duas ? 8 : 4, hisn: hisn).enumerated() { pool.add(source, lane: .duas, rank: rank) }
         }
         if question.mentionsApp {
             for (rank, source) in settingSources(for: question, limit: 2).enumerated() { pool.add(source, lane: .settings, rank: rank) }
@@ -367,7 +393,7 @@ enum AskAIRetriever {
             pool.add(prayer, lane: .prayer, rank: 0)
         }
         #endif
-        _ = (semantic, engine, semanticQuery, nameOnly)
+        _ = (semantic, engine, semanticQuery, nameOnly, wantsQuran, wantsHadith, narrowed)
 
         outcome.laneCounts = pool.counts
         (outcome.sources, outcome.ranking) = pool.select(limit: budget.limit)
@@ -391,14 +417,20 @@ enum AskAIRetriever {
 
     private struct Pool {
         let weights: [Lane: Double]
+        /// The reader's chosen library: a source outside it never enters.
+        let scope: AskAIScope
         private var scores: [String: Double] = [:]
         private var sources: [String: AskAISource] = [:]
         private var order: [String] = []
         private(set) var counts: [Lane: Int] = [:]
 
-        init(weights: [Lane: Double]) { self.weights = weights }
+        init(weights: [Lane: Double], scope: AskAIScope = .everything) {
+            self.weights = weights
+            self.scope = scope
+        }
 
         mutating func add(_ source: AskAISource, lane: Lane, rank: Int, boost: Double = 0) {
+            guard scope.admits(source.kind) else { return }
             let weight = weights[lane] ?? 0
             guard weight > 0 else { return }
             counts[lane, default: 0] += 1

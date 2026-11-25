@@ -664,13 +664,15 @@ struct HadithView: View {
                     // thread's 1MB stack in QuranView (the simulator's 8MB stack hid it). See `boxed`.
                     if searchText.isEmpty {
                         // Summary tiles are the only form now (the old full-row sections went with the
-                        // removed Summary Mode setting). The three doors (topics, the encyclopedia,
-                        // history) hung off the bottom of this section from 2026-09-07 to 2026-10-11;
-                        // they are items of the ⋯ More menu now, in both modes, so with no tile to show
-                        // there is nothing left in the section. Its arrow folds it and its trash puts it away
-                        // (TabSections.swift).
-                        if showSummaryTiles && settings.showsTabSection(.hadithSummary) {
+                        // removed Summary Mode setting). The doors (Topics, the Encyclopedia, History)
+                        // are capsules at the foot of the section (Abu, 2026-11-24; items of the ⋯ menu
+                        // from 2026-10-11 until then). Its arrow folds it, doors and all, and its trash
+                        // puts it away (TabSections.swift); with no section on screen the capsules keep
+                        // the top of the tab on their own.
+                        if summaryShown {
                             boxed(summaryTilesSection)
+                        } else if !summaryDoorCapsules.isEmpty {
+                            boxed(Section { TabDoorCapsules(doors: summaryDoorCapsules) })
                         }
                         // Need a Hand?: the tab's tutorial, one language or both, and the name of Allah in
                         // red, right under the summary. Simple Mode has no Need a Hand?, so there the
@@ -971,6 +973,10 @@ struct HadithView: View {
                 if ProcessInfo.processInfo.arguments.contains("-launchHadithNarrators") {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { openDoor = .narrators }
                 }
+                // `-launchHadithMostChains`: the hadiths with the most chains, through its door.
+                if ProcessInfo.processInfo.arguments.contains("-launchHadithMostChains") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { openDoor = .mostChains }
+                }
                 // `-launchHadithBook bukhari`: the book's chapter list itself, no chapter pushed.
                 if #available(iOS 16.0, *), bookPath.isEmpty,
                    let flagIndex = ProcessInfo.processInfo.arguments.firstIndex(of: "-launchHadithBook"),
@@ -1248,12 +1254,44 @@ struct HadithView: View {
                     }
                 }
             }
+
+            // The tab's doors, under everything else in the section (Abu, 2026-11-24: "put it in
+            // summary underneath the bottom as a bunch of capsule buttons").
+            if expanded, !summaryDoorCapsules.isEmpty {
+                TabDoorCapsules(doors: summaryDoorCapsules, underTiles: true)
+            }
         }
     }
 
     /// Whether there is anything to put in the tile grid at all; the section renders only then.
     private var showSummaryTiles: Bool {
         dailyHadith != nil || store.lastRead != nil
+    }
+
+    /// Whether YOUR SUMMARY, and so its Today pill, is on the tab.
+    private var summaryShown: Bool {
+        showSummaryTiles && settings.showsTabSection(.hadithSummary)
+    }
+
+    /// The summary's doors in their order: Topics and the Encyclopedia where their packs ship, then
+    /// History. Each raises its door through the one guard.
+    private var summaryDoorCapsules: [TabDoorCapsule] {
+        var doors: [TabDoorCapsule] = []
+        if HadithTopicsStore.isBundled {
+            doors.append(capsuleDoor(.topics, title: String(localized: "Topics"), systemImage: "tag.fill"))
+        }
+        if HadeethEncStore.isBundled {
+            doors.append(capsuleDoor(.encyclopedia, title: String(localized: "Encyclopedia"), systemImage: "books.vertical.fill"))
+        }
+        doors.append(capsuleDoor(.history, title: String(localized: "History"), systemImage: "clock.arrow.circlepath"))
+        return doors
+    }
+
+    private func capsuleDoor(_ door: SummaryDoor, title: String, systemImage: String) -> TabDoorCapsule {
+        TabDoorCapsule(title, systemImage: systemImage) {
+            guard !bookPushInFlight else { return }
+            openDoor = door
+        }
     }
 
     private func summaryTile(title: String, icon: String, reference: String, arabic: String, english: String,
@@ -1396,6 +1434,8 @@ struct HadithView: View {
         case sunnah, hadithPillar, hadithSciences, hadithPreservation, hadithRejectors
         /// The index of every narrator (HadithNarratorViews.swift), from the NARRATORS section.
         case narrators
+        /// The hadiths with the most chains (HadithIsnadTreeView.swift), the section's second door.
+        case mostChains
         var id: String { rawValue }
     }
 
@@ -1419,19 +1459,16 @@ struct HadithView: View {
         .buttonStyle(.plain)
     }
 
-    /// The tab's ⋯ More menu (Docs/Product/Simple Mode Guide.md), the same in both modes: the Today pill, then
-    /// Topics, the Encyclopedia and History (this menu is their only door since 2026-10-11), then the
-    /// grid. Each item raises its door through the one guard.
+    /// The tab's ⋯ More menu (Docs/Product/Simple Mode Guide.md): the tutorial and the grid. Topics, the
+    /// Encyclopedia and History left it on 2026-11-24 for the capsules under the summary
+    /// (`summaryDoorCapsules`; Abu: "so the top left ellipses has as little options as possible").
+    /// Today stays only while no Today pill is on the tab (Simple Mode, or no summary to carry it), so
+    /// the day's screen is never more than a tap away and never offered twice.
     @ViewBuilder
     var moreMenuItems: some View {
-        menuDoor(.daily, title: String(localized: "Today"), systemImage: "sun.horizon.fill")
-        if HadithTopicsStore.isBundled {
-            menuDoor(.topics, title: String(localized: "Topics"), systemImage: "tag.fill")
+        if settings.hides(.hadithTodayPill) || !summaryShown {
+            menuDoor(.daily, title: String(localized: "Today"), systemImage: "sun.horizon.fill")
         }
-        if HadeethEncStore.isBundled {
-            menuDoor(.encyclopedia, title: String(localized: "Encyclopedia"), systemImage: "books.vertical.fill")
-        }
-        menuDoor(.history, title: String(localized: "History"), systemImage: "clock.arrow.circlepath")
         TutorialMenuItem(tab: .hadith)
 
         Divider()
@@ -1468,6 +1505,7 @@ struct HadithView: View {
         case .hadithPreservation: HadithPreservationView()
         case .hadithRejectors:    HadithRejectorsView()
         case .narrators:    HadithNarratorsIndexView()
+        case .mostChains:   HadithMostChainsView()
         case .none:         EmptyView()
         }
     }
@@ -1483,6 +1521,16 @@ struct HadithView: View {
                 HadithNarratorsDoor {
                     guard !bookPushInFlight else { return }
                     openDoor = .narrators
+                }
+
+                // The hadiths that come down by the most chains (Abu, 2026-11-23): the pack's own
+                // list, so the door is offered only where the pack has one.
+                let ranked = HadithIsnadTreeStore.shared.mostChainsCount
+                if ranked > 0 {
+                    HadithMostChainsDoor(book: nil, count: ranked) {
+                        guard !bookPushInFlight else { return }
+                        openDoor = .mostChains
+                    }
                 }
             }
         } header: {
@@ -1516,7 +1564,13 @@ struct HadithView: View {
             TabSectionHeader(.hadithAbout)
         } footer: {
             if expanded {
-                Text("Learn more under Al-Islam → Pillars and Beliefs.")
+                VStack(alignment: .leading, spacing: 6) {
+                    // The five pages are Islam-tab articles, English in every language (`EnglishOnly`).
+                    if EnglishOnly.isShown {
+                        Label("These pages are available in English only.", systemImage: "globe")
+                    }
+                    Text("Learn more under Al-Islam → Pillars and Beliefs.")
+                }
             }
         }
     }

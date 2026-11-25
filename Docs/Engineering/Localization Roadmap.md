@@ -140,9 +140,10 @@ killed agent (usage limit, network drop) resumes by SendMessage to its id; it ca
 - Upkeep grows with every language: each new English string needs 14 translations now. Plan a small pass per
   release over every language, glossaries and labels binding.
 - The watch app has a size ceiling: App Store Connect refuses one over 75 MB after thinning (ITMS-90389 on
-  build 271, 2026-11-23, at 95 MB). The watch now ships only its share of the catalog (Localization Guide,
-  "The watch's share"): about 61 MB with 14 languages, about 2.3 MB more per language. Measure it after each
-  round (a Release build of the WatchOnly scheme, binaries stripped and thinned to one architecture).
+  build 271, 2026-11-23, at 95 MB). The extensions now ship only their share of the catalog (Localization
+  Guide, "Each extension's share"): the watch about 54 MB with 14 languages, about 1.9 MB more per language.
+  Measure it after each round (a Release build of the WatchOnly scheme, binaries stripped and thinned to one
+  architecture).
 
 ## Before release
 

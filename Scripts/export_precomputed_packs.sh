@@ -41,5 +41,8 @@ for f in quran-search.qsp CrossLanguageLexicon.bin; do
   [[ -s "$OUT/$f" ]] || { echo "export did not produce $f"; exit 1 }
   cp "$OUT/$f" "$ROOT/Resources/Data/Quran/$f"
 done
-ls -la "$ROOT/Resources/Data/Quran/quran-search.qsp" "$ROOT/Resources/Data/Quran/CrossLanguageLexicon.bin"
+# Both ship compressed (2026-11-23: the index as .xz, the lexicon as .lzfse); the app unpacks them
+# (ShippedFile in QuranPack.swift).
+python3 "$ROOT/Scripts/compress_shipped.py" "$ROOT/Resources/Data/Quran/quran-search.qsp" \
+  "$ROOT/Resources/Data/Quran/CrossLanguageLexicon.bin" || exit 1
 echo "copied; now rebuild and run the UnitTests target so PrecomputedPackTests confirms the files"

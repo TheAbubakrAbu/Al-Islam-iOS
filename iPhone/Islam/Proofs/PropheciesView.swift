@@ -133,7 +133,9 @@ struct PropheciesView: View {
                             ResourceHeroStat("\(grouped.count)", "groups"),
                             ResourceHeroStat("\(Self.strongest.count)", "strongest"),
                         ]
-                    ))
+                    ) {
+                        PropheciesTimelineArt()
+                    })
 
                     StrongestSection(
                         items: Self.strongest,

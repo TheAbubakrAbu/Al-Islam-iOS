@@ -108,9 +108,13 @@ enum VerseSearchPack {
             }
         }
 
-        init?(url: URL) {
-            guard let mapped = try? Data(contentsOf: url, options: [.mappedIfSafe]),
-                  mapped.count >= VerseSearchPack.headerLength else { return nil }
+        convenience init?(url: URL) {
+            guard let mapped = try? Data(contentsOf: url, options: [.mappedIfSafe]) else { return nil }
+            self.init(data: mapped)
+        }
+
+        init?(data mapped: Data) {
+            guard mapped.count >= VerseSearchPack.headerLength else { return nil }
             let count = mapped.count
             var header = QuranPackReader(data: mapped, cursor: 0)
             guard header.u32() == Int(VerseSearchPack.magic), header.u32() == Int(VerseSearchPack.format) else { return nil }
@@ -268,15 +272,18 @@ enum VerseSearchPack {
     /// The shipped Hafs pack, when it was built from the quran.qpk this app carries. Nil on the Watch and
     /// in the extensions (the file ships with the phone app alone) and whenever the fingerprints differ.
     static let bundled: Pack? = {
-        guard let url = bundledURL(), let pack = Pack(url: url), pack.qiraahKey.isEmpty,
+        guard let pack = bundledPack(), pack.qiraahKey.isEmpty,
               let fingerprint = quranFingerprint, pack.quranFingerprint == fingerprint else { return nil }
         return pack
     }()
 
-    private static func bundledURL() -> URL? {
-        Bundle.main.url(forResource: "quran-search", withExtension: "qsp", subdirectory: "Quran")
-            ?? Bundle.main.url(forResource: "quran-search", withExtension: "qsp", subdirectory: "Data/Quran")
-            ?? Bundle.main.url(forResource: "quran-search", withExtension: "qsp")
+    /// Ships as quran-search.qsp.xz since 2026-11-23 (11.6 MB -> 1.6 MB of install size): unpacked once
+    /// per build of the app into Caches (55 ms on a Mac) and mapped from there, so lookups read clean mapped
+    /// pages as they did from the bundle. In memory only when that copy cannot be written.
+    private static func bundledPack() -> Pack? {
+        guard let shipped = ShippedFile.url("quran-search", "qsp", subdirectories: ["Quran", "Data/Quran", nil]) else { return nil }
+        if let plain = ShippedFile.mappableURL(for: shipped), let pack = Pack(url: plain) { return pack }
+        return ShippedFile.data(at: shipped).flatMap { Pack(data: $0) }
     }
 
     /// The pack for the texts the index is built from: the shipped one for Hafs, else the one this

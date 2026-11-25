@@ -35,11 +35,16 @@ struct SelectableTextView: UIViewRepresentable {
     /// With a handler the string's own colour and underline draw the link (`linkTextAttributes` is
     /// cleared), the way the `Text` it replaced drew them.
     var onLink: ((URL) -> Void)? = nil
+    /// The menu a long press on a link run shows (iOS 17+), in place of the system's preview of the
+    /// address: an article's citations offer Open, Share Link and Copy Link. Nil keeps the default.
+    var linkMenu: ((URL) -> UIMenu?)? = nil
 
-    init(attributed: NSAttributedString, scrollTarget: NSRange? = nil, onLink: ((URL) -> Void)? = nil) {
+    init(attributed: NSAttributedString, scrollTarget: NSRange? = nil, onLink: ((URL) -> Void)? = nil,
+         linkMenu: ((URL) -> UIMenu?)? = nil) {
         self.attributed = attributed
         self.scrollTarget = scrollTarget
         self.onLink = onLink
+        self.linkMenu = linkMenu
     }
 
     init(
@@ -121,14 +126,25 @@ struct SelectableTextView: UIViewRepresentable {
         DispatchQueue.main.async { Self.scroll(textView, to: scrollTarget) }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator(onLink: onLink) }
+    func makeCoordinator() -> Coordinator { Coordinator(onLink: onLink, linkMenu: linkMenu) }
 
     final class Coordinator: NSObject, UITextViewDelegate {
         var lastScrollTarget: NSRange?
         let onLink: ((URL) -> Void)?
+        let linkMenu: ((URL) -> UIMenu?)?
 
-        init(onLink: ((URL) -> Void)?) {
+        init(onLink: ((URL) -> Void)?, linkMenu: ((URL) -> UIMenu?)? = nil) {
             self.onLink = onLink
+            self.linkMenu = linkMenu
+        }
+
+        @available(iOS 17.0, *)
+        func textView(_ textView: UITextView, menuConfigurationFor textItem: UITextItem,
+                      defaultMenu: UIMenu) -> UITextItem.MenuConfiguration? {
+            guard let linkMenu, case .link(let url) = textItem.content, let menu = linkMenu(url) else {
+                return UITextItem.MenuConfiguration(menu: defaultMenu)
+            }
+            return UITextItem.MenuConfiguration(menu: menu)
         }
 
         // iOS 17+ asks for the link's primary action; the deprecated form below is what iOS 16 calls.
@@ -264,6 +280,8 @@ struct SelectableAttributedProse: View {
     var alignment: NSTextAlignment = .natural
     /// Where a tap on a link run goes; see `SelectableTextView.onLink`.
     var onLink: ((URL) -> Void)? = nil
+    /// A long press on a link run; see `SelectableTextView.linkMenu`.
+    var linkMenu: ((URL) -> UIMenu?)? = nil
 
     @Environment(\.sizeCategory) private var sizeCategory
 
@@ -280,7 +298,8 @@ struct SelectableAttributedProse: View {
                 baseColor: color.map(UIColor.init) ?? (secondary ? .secondaryLabel : .label),
                 paragraph: paragraph
             ),
-            onLink: onLink
+            onLink: onLink,
+            linkMenu: linkMenu
         )
         // See `SelectableProse` - the text view opts out of automatic content-size tracking, so the
         // font is rebuilt from this instead.

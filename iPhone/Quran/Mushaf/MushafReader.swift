@@ -294,6 +294,20 @@ enum MushafPagination {
         return (surah, ayah)
     }
 
+    /// The ayah to select when a surah is opened from its top: its first ayah, when the page it opens
+    /// on holds another surah as well (Abu, 2026-11-23: "If I open a Surah in page mode and there are
+    /// multiple surahs on that page select the first ayah of that surah"). Al-Ma'idah opens under the
+    /// last ayah of an-Nisa on page 106 and al-Falaq between two surahs on page 604: the title named
+    /// the surah, and nothing on the page said where it begins. Nil on a page that holds one surah,
+    /// and on a page that does not hold the surah's opening (a surah opened where it was last read).
+    /// Pure and static, like `readingPosition`, so the tests can run it over every surah.
+    static func openingSelection(on page: MushafPage, surahID: Int) -> (surahID: Int, ayahID: Int)? {
+        guard page.segments.contains(where: { $0.surah.id != surahID }),
+              let segment = page.segments.first(where: { $0.surah.id == surahID }),
+              let first = segment.ayahs.first, first.id == 1 else { return nil }
+        return (surahID, first.id)
+    }
+
     /// Memo for `juzRanges`: it sits in the page footer, which re-renders on every page turn, and walking all
     /// ~604 pages each time added a full sweep per swipe. Keyed by the qiraah, the same thing that keys the
     /// pagination itself - two qiraat could coincidentally paginate to the same page count and endpoints while
@@ -386,6 +400,11 @@ private struct MushafPageLanding {
     let pageIndex: Int
     let surahID: Int
     let ayahID: Int?
+    /// The navigation asked for the surah and named no ayah (a row of the surah list, Choose Surah,
+    /// Previous / Next): where the page it lands on holds another surah too, the reader selects the
+    /// surah's first ayah (`MushafPagination.openingSelection`). False for a landing on a named ayah
+    /// and for a repagination, which keep whatever was selected.
+    var opensSurah = false
 }
 
 /// DEBUG-ONLY seed for the folded state, used by the `#Preview`s and the headless screenshot runs.
@@ -1153,7 +1172,20 @@ struct SurahPageReader<Controls: View>: View {
     private func startingLanding(in pages: [MushafPage], surahID: Int, ayahID: Int?) -> MushafPageLanding {
         MushafPageLanding(pageIndex: startingPageIndex(in: pages, surahID: surahID, ayahID: ayahID),
                           surahID: surahID,
-                          ayahID: landingAyah(surahID: surahID, ayahID: ayahID))
+                          ayahID: landingAyah(surahID: surahID, ayahID: ayahID),
+                          opensSurah: ayahID == nil)
+    }
+
+    /// Selects the first ayah of a surah that was opened from its top onto a page it shares with
+    /// another surah (`MushafPagination.openingSelection`); nothing for any other landing, and nothing
+    /// unless `index` is the page the landing was bound for. The selection is the reader's ordinary
+    /// one: a tap on it, a tap elsewhere or a page turn clears it.
+    private func selectSurahOpening(_ landing: MushafPageLanding?, on index: Int, in pages: [MushafPage]) {
+        guard let landing, landing.opensSurah, landing.pageIndex == index, pages.indices.contains(index),
+              let opening = MushafPagination.openingSelection(on: pages[index], surahID: landing.surahID) else { return }
+        let mark = HighlightedAyahRef(surahID: opening.surahID, ayahID: opening.ayahID)
+        // Only when it changes: the mark is the parent's state (see the page-turn clear below).
+        if highlightedAyah != mark { highlightedAyah = mark }
     }
 
     // MARK: Two-page spread
@@ -2003,6 +2035,7 @@ struct SurahPageReader<Controls: View>: View {
             pagerBand.openingIndex = target
             seedPageIndex(target)
             reportPosition(on: pageIndex, in: pages, landing: landing)
+            selectSurahOpening(landing, on: pageIndex, in: pages)
             MushafPageRenderCache.prewarm(pages: pages, around: pageIndex, includeCenter: true)
             // The other surahs' opening pages, for the settings this reader has (a no-op once swept;
             // a launch onto the Quran tab never reaches the launch prewarm's own call). After this
@@ -2081,6 +2114,9 @@ struct SurahPageReader<Controls: View>: View {
                !visiblePageIndices(around: index, in: pages).contains(where: { pages[$0].ayahRefs.contains(mark) }) {
                 highlightedAyah = nil
             }
+            // A surah opened from its top onto a page it shares: its first ayah is selected, so the
+            // page says where the surah asked for begins.
+            selectSurahOpening(landing, on: index, in: pages)
             // Page-scoped matches are per-page, so turning the page re-runs the find against the new one. A
             // surah-wide find already holds every match and turning pages is how you STEP through it -
             // resyncing there would throw the position back to the first match on every step.
@@ -2351,8 +2387,10 @@ struct SurahPageReader<Controls: View>: View {
             // `.onChange(of: pageIndex)` reports (from the landing) + prewarms + saves.
         } else {
             // The same page (al-Falaq picked while on the page al-Ikhlas opens): nothing turns, and the
-            // position moves onto the picked surah - title, header, anchor and last read alike.
+            // position moves onto the picked surah: title, header, anchor and last read alike. Its
+            // first ayah is selected, as it is when the pick turns the page.
             reportPosition(on: target, in: pages, landing: landing)
+            selectSurahOpening(landing, on: target, in: pages)
             if let position = readingPosition(on: target, in: pages, landing: landing) {
                 saveLastRead(surahID: position.surah.id, ayahID: position.ayah.id)
             }

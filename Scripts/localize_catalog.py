@@ -70,7 +70,9 @@ TARGET_BUILDS = ("iPhone.build", "Widget.build", "Watch.build", "Complication.bu
 ARTICLE_SOURCES = ("iPhone/Islam/Beliefs/", "iPhone/Islam/Proofs/", "iPhone/Islam/Fiqh/HowToGuides.swift",
                    "iPhone/Islam/Fiqh/SunnahView.swift", "iPhone/Islam/Fiqh/SunnahContent.swift",
                    "iPhone/Islam/Content/HadithSciencesViews.swift", "iPhone/Islam/Content/IslamArticles.swift",
-                   "iPhone/Islam/Qiraat/RiwayatDifferencesView.swift")
+                   "iPhone/Islam/Qiraat/RiwayatDifferencesView.swift",
+                   # The six reading libraries and their index (2026-11-24) read English like Proving Islam.
+                   "iPhone/Islam/Library/")
 
 # printf conversions as Foundation writes them into catalog keys: %@ %lld %d %f %.1f %1$@ %%.
 # The space flag is left out on purpose: "80% coverage" is prose, not a "% c" conversion.

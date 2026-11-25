@@ -5,8 +5,48 @@ import CoreLocation
 import UIKit
 import Contacts
 
-/// Everything that distinguishes one place locator from another - the Masjid Locator and the Halal Food
-/// Locator are the same map, search, cache, and result UI over different queries and filters.
+// The Masjid Locator and the Halal Food Locator: one map, one search and one results panel over two
+// profiles. Redesigned 2026-11-24 (Abu: "revamp ... the two locators they look chopped horrible ui
+// horrible experience and too cramped", "add more functionality more filters more search more
+// specification"): the search bar with the profile's KINDS as chips under it (Islamic Centers, Prayer
+// Rooms; Restaurants, Markets & Butchers), the map with tappable pins and a "Search This Area" that
+// appears once the map has moved, and a results panel at the foot. Folded, the panel is the chosen
+// place's card (the nearest, until one is picked): its kind, distance and address, and Directions,
+// Call, Website and Share. Unfolded, it is the whole list, sorted nearest first or by name, held to a
+// distance, with the dishes to search for on the halal side, and a way to look a typed city up and
+// search there instead. The old panel was a 150 pt strip that showed two results at a time.
+
+/// One narrowing of a locator's search, a chip under the search bar.
+struct PlaceLocatorKind: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let systemImage: String
+    /// What an empty search bar looks for under this chip.
+    let baseQueries: [String]
+    /// How the reader's own words are expanded into queries under this chip.
+    let queries: (String) -> [String]
+    /// Post-filter on result names/titles. Empty trusts MapKit's relevance ranking: right for a query
+    /// like "halal", where most matching restaurants don't carry the word in their name.
+    let nameKeywords: [String]
+    /// Category filter handed to MKLocalSearch. Nil means all point-of-interest kinds.
+    let poiCategories: [MKPointOfInterestCategory]?
+
+    var poiFilter: MKPointOfInterestFilter? {
+        poiCategories.map { MKPointOfInterestFilter(including: $0) }
+    }
+
+    static func == (lhs: PlaceLocatorKind, rhs: PlaceLocatorKind) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+/// A search the halal side offers in one tap ("Shawarma"): its label, and the words MapKit is given.
+struct PlaceLocatorQuickSearch: Identifiable, Hashable {
+    let title: String
+    let query: String
+    var id: String { query }
+}
+
+/// Everything that distinguishes one place locator from another.
 struct PlaceLocatorProfile {
     let title: String
     /// Shown next to the spinner in the results header.
@@ -17,21 +57,20 @@ struct PlaceLocatorProfile {
     /// Stands in for a result whose POI has no name.
     let fallbackName: String
     let contextMenuTitle: String
-    /// What an empty search bar looks for.
-    let baseQueries: [String]
-    /// How the user's own search text is expanded into queries.
-    let queries: (String) -> [String]
-    /// Post-filter on result names/titles. Empty means "trust MapKit's relevance ranking" - right for a
-    /// query like "halal", where most matching restaurants don't carry the word in their name.
-    let nameKeywords: [String]
-    /// Category filter handed to MKLocalSearch. Nil means all point-of-interest kinds.
-    let poiFilter: MKPointOfInterestFilter?
-    /// Where the home-area results are cached, so each locator remembers its own neighbourhood.
+    let searchPrompt: String
+    /// The pin's symbol.
+    let markerSymbol: String
+    /// The chips; the first is the whole search ("All").
+    let kinds: [PlaceLocatorKind]
+    /// One-tap searches under the list's header.
+    let quickSearches: [PlaceLocatorQuickSearch]
+    /// Where the home-area results are cached, so each locator remembers its own neighbourhood; the
+    /// distance and sort choices are kept under keys made from it too.
     let homeCacheKey: String
 
-    /// Mosques have no MKPointOfInterestCategory, so the masjid profile filters by name instead - including
-    /// the Arabic spellings, which used to be dropped: a masjid named only مسجد… never matched the
-    /// Latin-only keyword list even when MapKit returned it.
+    /// Mosques have no MKPointOfInterestCategory, so the masjid profile filters by name instead,
+    /// including the Arabic spellings: a masjid named only مسجد… never matched the Latin-only keyword
+    /// list even when MapKit returned it.
     static let masjid = PlaceLocatorProfile(
         title: String(localized: "Masjid Locator"),
         loadingText: String(localized: "Loading masaajid…"),
@@ -39,27 +78,52 @@ struct PlaceLocatorProfile {
         emptyText: String(localized: "No masaajid found in this area"),
         fallbackName: String(localized: "Masjid"),
         contextMenuTitle: String(localized: "Masjid Info"),
-        baseQueries: ["mosque", "masjid", "islamic center", "muslim", "rahma", "مسجد"],
-        queries: { trimmed in
-            var seen = Set<String>()
-            return [
-                trimmed,
-                "\(trimmed) mosque",
-                "\(trimmed) masjid",
-                "\(trimmed) islamic",
-                "\(trimmed) islamic center",
-                "\(trimmed) muslim",
-                "\(trimmed) rahma"
-            ].filter { seen.insert($0).inserted }
-        },
-        nameKeywords: ["masjid", "mosque", "islam", "islamic", "muslim", "rahma", "مسجد", "جامع"],
-        poiFilter: nil,
+        searchPrompt: String(localized: "Search masaajid, or a city"),
+        markerSymbol: "moon.stars.fill",
+        kinds: [
+            PlaceLocatorKind(
+                id: "all", title: String(localized: "All"), systemImage: "square.grid.2x2",
+                baseQueries: ["mosque", "masjid", "islamic center", "muslim", "rahma", "مسجد"],
+                queries: { text in
+                    unique([text, "\(text) mosque", "\(text) masjid", "\(text) islamic", "\(text) islamic center",
+                            "\(text) muslim", "\(text) rahma"])
+                },
+                nameKeywords: ["masjid", "mosque", "islam", "islamic", "muslim", "rahma", "musalla", "مسجد", "جامع"],
+                poiCategories: nil),
+            PlaceLocatorKind(
+                id: "masjids", title: String(localized: "Masaajid"), systemImage: "moon.stars",
+                baseQueries: ["mosque", "masjid", "jamia masjid", "مسجد", "جامع"],
+                queries: { text in unique(["\(text) mosque", "\(text) masjid", text]) },
+                nameKeywords: ["masjid", "mosque", "jamia", "jame", "مسجد", "جامع"],
+                poiCategories: nil),
+            PlaceLocatorKind(
+                id: "centers", title: String(localized: "Islamic Centers"), systemImage: "building.2",
+                baseQueries: ["islamic center", "islamic society", "muslim community center", "islamic association"],
+                queries: { text in unique(["\(text) islamic center", "\(text) islamic society", "\(text) muslim"]) },
+                nameKeywords: ["islamic", "muslim", "islam"],
+                poiCategories: nil),
+            PlaceLocatorKind(
+                id: "prayerRooms", title: String(localized: "Prayer Rooms"), systemImage: "house",
+                baseQueries: ["musalla", "musallah", "muslim prayer room", "prayer room", "jamatkhana"],
+                queries: { text in unique(["\(text) musalla", "\(text) prayer room", text]) },
+                nameKeywords: ["musalla", "musallah", "prayer room", "prayer space", "jamatkhana", "jamaat khana", "مصلى"],
+                poiCategories: nil),
+            PlaceLocatorKind(
+                id: "schools", title: String(localized: "Islamic Schools"), systemImage: "graduationcap",
+                baseQueries: ["islamic school", "quran school", "madrasa", "hifz school", "islamic academy"],
+                queries: { text in unique(["\(text) islamic school", "\(text) quran school", "\(text) madrasa"]) },
+                nameKeywords: ["islamic", "quran", "madrasa", "madrassa", "madrasah", "hifz", "muslim", "مدرسة"],
+                poiCategories: nil),
+        ],
+        quickSearches: [],
         homeCacheKey: "masjidLocatorHomeCacheData"
     )
 
-    /// Food is the opposite shape from mosques: the category filter does the narrowing (restaurants, cafes,
-    /// markets - not hotels and gas stations), and the "halal" relevance comes from the query itself, because
-    /// most halal restaurants don't have "halal" in their NAME and a name filter would throw them away.
+    /// Food is the opposite shape from mosques: the category filter does the narrowing (restaurants,
+    /// cafes, markets, not hotels and gas stations), and the "halal" relevance comes from the query
+    /// itself, because most halal restaurants don't have "halal" in their NAME and a name filter would
+    /// throw them away. `.store` stays out: it let any supermarket that ranked near a "halal X" query
+    /// through, and with no name filter there was nothing downstream to catch it.
     static let halalFood = PlaceLocatorProfile(
         title: String(localized: "Halal Food Locator"),
         loadingText: String(localized: "Loading halal places…"),
@@ -67,22 +131,61 @@ struct PlaceLocatorProfile {
         emptyText: String(localized: "No halal places found in this area"),
         fallbackName: String(localized: "Halal Place"),
         contextMenuTitle: String(localized: "Place Info"),
-        baseQueries: ["halal restaurant", "halal food", "halal market", "halal butcher", "حلال"],
-        queries: { trimmed in
-            var seen = Set<String>()
-            return [
-                "\(trimmed) halal",
-                "halal \(trimmed)",
-                trimmed
-            ].filter { seen.insert($0).inserted }
-        },
-        // Food categories only - `.store` let any supermarket that ranked near a "halal X" query through,
-        // and with no name filter there was nothing downstream to catch it. Halal butchers and groceries
-        // are `.foodMarket`.
-        nameKeywords: [],
-        poiFilter: MKPointOfInterestFilter(including: [.restaurant, .cafe, .bakery, .foodMarket]),
+        searchPrompt: String(localized: "Search a dish, a place, or a city"),
+        markerSymbol: "fork.knife",
+        kinds: [
+            PlaceLocatorKind(
+                id: "all", title: String(localized: "All"), systemImage: "square.grid.2x2",
+                baseQueries: ["halal restaurant", "halal food", "halal market", "halal butcher", "حلال"],
+                queries: halalQueries,
+                nameKeywords: [],
+                poiCategories: [.restaurant, .cafe, .bakery, .foodMarket]),
+            PlaceLocatorKind(
+                id: "restaurants", title: String(localized: "Restaurants"), systemImage: "fork.knife",
+                baseQueries: ["halal restaurant", "halal food", "halal grill"],
+                queries: halalQueries,
+                nameKeywords: [],
+                poiCategories: [.restaurant]),
+            PlaceLocatorKind(
+                id: "quick", title: String(localized: "Quick Bites"), systemImage: "takeoutbag.and.cup.and.straw",
+                baseQueries: ["halal cart", "halal fast food", "halal shawarma", "halal burger", "halal fried chicken"],
+                queries: halalQueries,
+                nameKeywords: [],
+                poiCategories: [.restaurant, .cafe]),
+            PlaceLocatorKind(
+                id: "cafes", title: String(localized: "Cafés & Sweets"), systemImage: "cup.and.saucer",
+                baseQueries: ["halal cafe", "halal bakery", "halal desserts"],
+                queries: halalQueries,
+                nameKeywords: [],
+                poiCategories: [.cafe, .bakery]),
+            PlaceLocatorKind(
+                id: "markets", title: String(localized: "Markets & Butchers"), systemImage: "cart",
+                baseQueries: ["halal market", "halal butcher", "halal meat", "halal grocery"],
+                queries: halalQueries,
+                nameKeywords: [],
+                poiCategories: [.foodMarket]),
+        ],
+        quickSearches: [
+            PlaceLocatorQuickSearch(title: String(localized: "Shawarma"), query: "shawarma"),
+            PlaceLocatorQuickSearch(title: String(localized: "Burgers"), query: "burger"),
+            PlaceLocatorQuickSearch(title: String(localized: "Fried Chicken"), query: "fried chicken"),
+            PlaceLocatorQuickSearch(title: String(localized: "Pizza"), query: "pizza"),
+            PlaceLocatorQuickSearch(title: String(localized: "Kebab"), query: "kebab"),
+            PlaceLocatorQuickSearch(title: String(localized: "Biryani"), query: "biryani"),
+            PlaceLocatorQuickSearch(title: String(localized: "Mandi"), query: "mandi"),
+            PlaceLocatorQuickSearch(title: String(localized: "Desserts"), query: "desserts"),
+        ],
         homeCacheKey: "halalLocatorHomeCacheData"
     )
+
+    private static func halalQueries(_ text: String) -> [String] {
+        unique(["\(text) halal", "halal \(text)", text])
+    }
+
+    private static func unique(_ queries: [String]) -> [String] {
+        var seen = Set<String>()
+        return queries.filter { seen.insert($0).inserted }
+    }
 }
 
 struct PlaceLocatorView: View {
@@ -94,16 +197,30 @@ struct PlaceLocatorView: View {
     @ObservedObject private var live = LiveState.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var sysScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let profile: PlaceLocatorProfile
 
     @AppStorage private var homeCacheData: Data
+    /// The distance the list is held to, as an index into `radiusSteps` (0: any distance).
+    @AppStorage private var radiusIndex: Int
+    /// "distance" or "name".
+    @AppStorage private var sortRaw: String
 
     @State private var searchText = ""
+    @State private var kind: PlaceLocatorKind
     @State private var results = [MKMapItem]()
     @State private var selectedItem: MKMapItem?
     @State private var isSearching = false
     @State private var searchTask: Task<Void, Never>?
+    /// The panel shows the whole list, rather than the chosen place's card.
+    @State private var panelExpanded = false
+    /// Where the last search looked: "Search This Area" appears once the map has moved off it.
+    @State private var lastSearchCenter: CLLocationCoordinate2D?
+    /// A typed city being looked up on the map, and the one that could not be found.
+    @State private var lookingUpPlace = false
+    @State private var placeNotFound: String?
+    @State private var containerHeight: CGFloat = 800
     /// The map opened without a fix (fresh install, or permission granted just now); when the first real
     /// location arrives, recenter on it once and re-search - without this, a first-time user stared at the
     /// Kaaba fallback with no nearby results and no way to know why.
@@ -118,6 +235,7 @@ struct PlaceLocatorView: View {
     private static let homeRefreshRadiusMeters: CLLocationDistance = 10_000
 
     private var scheme: ColorScheme { settings.colorScheme ?? sysScheme }
+    private var accent: Color { settings.accentColor.color }
 
     private var homeCoordinate: CLLocationCoordinate2D? {
         settings.homeLocation?.coordinate
@@ -126,6 +244,9 @@ struct PlaceLocatorView: View {
     init(profile: PlaceLocatorProfile) {
         self.profile = profile
         _homeCacheData = AppStorage(wrappedValue: Data(), profile.homeCacheKey)
+        _radiusIndex = AppStorage(wrappedValue: 0, profile.homeCacheKey + ".radius")
+        _sortRaw = AppStorage(wrappedValue: SortOrder.distance.rawValue, profile.homeCacheKey + ".sort")
+        _kind = State(initialValue: profile.kinds[0])
 
         let coord: CLLocationCoordinate2D = {
             let s = Settings.shared
@@ -149,11 +270,78 @@ struct PlaceLocatorView: View {
         return false
     }
 
+    // MARK: Sorting and distance
+
+    private enum SortOrder: String, CaseIterable {
+        case distance, name
+
+        var title: String {
+            switch self {
+            case .distance: return String(localized: "Nearest First")
+            case .name: return String(localized: "By Name")
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .distance: return "location.north.line"
+            case .name: return "textformat"
+            }
+        }
+    }
+
+    private var sortOrder: SortOrder { SortOrder(rawValue: sortRaw) ?? .distance }
+
+    /// Miles where the reader's region measures in them (the US, the UK), kilometres elsewhere.
+    private var usesMiles: Bool { Locale.current.measurementSystem != .metric }
+
+    /// The distances the list can be held to, in the reader's unit; 0 is any distance.
+    private static let radiusSteps: [Double] = [0, 1, 3, 5, 10, 25]
+
+    private var radius: Double { Self.radiusSteps.indices.contains(radiusIndex) ? Self.radiusSteps[radiusIndex] : 0 }
+
+    private var radiusMeters: CLLocationDistance? {
+        radius == 0 ? nil : radius * (usesMiles ? 1_609.344 : 1_000)
+    }
+
+    private func distanceText(_ meters: CLLocationDistance) -> String {
+        let unit: UnitLength = usesMiles ? .miles : .kilometers
+        let value = Measurement(value: meters, unit: UnitLength.meters).converted(to: unit)
+        let formatter = MeasurementFormatter()
+        formatter.unitOptions = .providedUnit
+        formatter.unitStyle = .medium
+        formatter.numberFormatter.maximumFractionDigits = value.value < 10 ? 1 : 0
+        return formatter.string(from: value)
+    }
+
+    private func radiusTitle(_ step: Double) -> String {
+        step == 0 ? String(localized: "Any Distance")
+            : String(localized: "Within \(distanceText(step * (usesMiles ? 1_609.344 : 1_000)))")
+    }
+
+    /// Where distances are measured from: the reader, when the app has a fix; nil otherwise.
+    private var origin: CLLocation? {
+        guard let cur = live.currentLocation, cur.latitude != 1000, cur.longitude != 1000 else { return nil }
+        return CLLocation(latitude: cur.latitude, longitude: cur.longitude)
+    }
+
+    private func distance(to item: MKMapItem) -> CLLocationDistance? {
+        guard let origin else { return nil }
+        let coordinate = item.placemark.coordinate
+        return origin.distance(from: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude))
+    }
+
+    // MARK: Markers
+
     private struct MarkerItem: Identifiable {
         let id: String
         let coordinate: CLLocationCoordinate2D
         let tint: Color
         let systemImage: String
+        var title: String? = nil
+        var isSelected = false
+        /// The result this pin stands for, by its index in `results`.
+        var resultIndex: Int? = nil
     }
 
     private struct CachedPlaceItem: Codable, Equatable {
@@ -209,32 +397,40 @@ struct PlaceLocatorView: View {
     private struct AnimatedMarkerBubble: View {
         let tint: Color
         let systemImage: String
+        var title: String? = nil
+        var isSelected = false
 
         @State private var isVisible = false
 
         var body: some View {
-            Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.white)
-                .padding(9)
-                .background(Circle().fill(tint))
-                .overlay(
-                    Circle()
-                        .stroke(Color.white.opacity(0.9), lineWidth: 2)
-                )
-                .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
-                .scaleEffect(isVisible ? 1 : 0.72)
-                .opacity(isVisible ? 1 : 0)
-                .onAppear {
-                    // Annotation views are built inside the Map's own update, where this onAppear
-                    // fires synchronously; a state write there is "Modifying state during view
-                    // update". One turn later the pop-in animates the same.
-                    DispatchQueue.main.async {
-                        withAnimation(.spring(response: 0.24, dampingFraction: 0.82)) {
-                            isVisible = true
-                        }
+            VStack(spacing: 3) {
+                Image(systemName: systemImage)
+                    .font(.system(size: isSelected ? 17 : 13, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: isSelected ? 40 : 30, height: isSelected ? 40 : 30)
+                    .background(Circle().fill(tint))
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.9), lineWidth: isSelected ? 2.5 : 2)
+                    )
+                    .shadow(color: .black.opacity(0.22), radius: isSelected ? 8 : 5, y: 2)
+            }
+            // No name under the chosen pin: MapKit gives annotations no stacking order, so its
+            // neighbours drew over the label. The panel's card names the place.
+            .accessibilityLabel(Text(title ?? ""))
+            .scaleEffect(isVisible ? 1 : 0.72)
+            .opacity(isVisible ? 1 : 0)
+            .animation(.spring(response: 0.28, dampingFraction: 0.8), value: isSelected)
+            .onAppear {
+                // Annotation views are built inside the Map's own update, where this onAppear
+                // fires synchronously; a state write there is "Modifying state during view
+                // update". One turn later the pop-in animates the same.
+                DispatchQueue.main.async {
+                    withAnimation(.spring(response: 0.24, dampingFraction: 0.82)) {
+                        isVisible = true
                     }
                 }
+            }
         }
     }
 
@@ -254,40 +450,44 @@ struct PlaceLocatorView: View {
             )
         }
 
-        items += results.enumerated().map { index, item in
+        // The chosen pin last, so it draws above its neighbours.
+        let pins = results.enumerated().map { index, item in
             MarkerItem(
                 id: "result-\(index)-\(item.placemark.coordinate.latitude)-\(item.placemark.coordinate.longitude)",
                 coordinate: item.placemark.coordinate,
-                tint: settings.accentColor.color,
-                systemImage: "mappin.circle.fill"
+                tint: isSameItem(item, selectedItem) ? .green : accent,
+                systemImage: profile.markerSymbol,
+                title: item.name ?? profile.fallbackName,
+                isSelected: isSameItem(item, selectedItem),
+                resultIndex: index
             )
         }
-
-        if let selectedItem {
-            items.insert(
-                MarkerItem(
-                    id: "selected",
-                    coordinate: selectedItem.placemark.coordinate,
-                    tint: .green,
-                    systemImage: "mappin.circle.fill"
-                ),
-                at: 0
-            )
-        }
-
+        items += pins.filter { !$0.isSelected } + pins.filter(\.isSelected)
         return items
     }
+
+    // MARK: Body
 
     var body: some View {
         mapContent
             .edgesIgnoringSafeArea(.all)
+            .background(
+                // The whole screen's height, not the safe area's: the panel is itself the bottom
+                // inset, so a safe-area reading shrank as the panel grew and held the list to a row.
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear { containerHeight = geo.size.height }
+                        .onChange(of: geo.size.height) { containerHeight = $0 }
+                }
+                .ignoresSafeArea()
+            )
             .overlay(alignment: .top) {
-                searchOverlay
+                topControls
             }
             .sheetNowPlayingBar()
             // Over a map the bar floats: no scroll-edge ground behind it.
             .adaptiveSafeArea(edge: .bottom, groundsBar: false) {
-                actionInset
+                bottomStack
             }
             .navigationTitle(profile.title)
             .navigationBarTitleDisplayMode(.inline)
@@ -308,7 +508,17 @@ struct PlaceLocatorView: View {
                 }
             }
             .onChange(of: searchText) { newValue in
+                placeNotFound = nil
                 scheduleSearch(for: newValue, force: false)
+            }
+            .onChange(of: kind) { _ in scheduleSearch(for: searchText, force: true) }
+            .onChange(of: radiusIndex) { _ in
+                // A wider circle needs a wider search, not only a looser filter.
+                if let radiusMeters { fitRegion(toRadius: radiusMeters) }
+                scheduleSearch(for: searchText, force: true)
+            }
+            .onChange(of: sortRaw) { _ in
+                withAnimation(.easeInOut(duration: 0.2)) { results = arranged(results) }
             }
             // A fan-out of ~6 concurrent MKLocalSearch requests started just before leaving would run to
             // completion for a screen nobody is looking at - cancel it with the screen.
@@ -321,18 +531,26 @@ struct PlaceLocatorView: View {
                 scheduleSearch(for: searchText, force: true)
             }
             .preferredColorScheme(scheme)
-            .accentColor(settings.accentColor.color)
-            .tint(settings.accentColor.color)
+            .accentColor(accent)
+            .tint(accent)
     }
 
     @ViewBuilder
     private var mapContent: some View {
         if #available(iOS 17.0, *) {
-            CameraMap(region: $region, markers: markers)
+            CameraMap(region: $region, markers: markers) { index in
+                guard results.indices.contains(index) else { return }
+                select(results[index])
+            }
         } else {
             Map(coordinateRegion: $region, annotationItems: markers) { item in
                 MapAnnotation(coordinate: item.coordinate) {
-                    markerBubble(for: item)
+                    AnimatedMarkerBubble(tint: item.tint, systemImage: item.systemImage, title: item.title,
+                                         isSelected: item.isSelected)
+                        .onTapGesture {
+                            guard let index = item.resultIndex, results.indices.contains(index) else { return }
+                            select(results[index])
+                        }
                 }
             }
         }
@@ -363,14 +581,16 @@ struct PlaceLocatorView: View {
     private struct CameraMap: View {
         @Binding var region: MKCoordinateRegion
         let markers: [MarkerItem]
+        let onSelect: (Int) -> Void
 
         @State private var position: MapCameraPosition
         /// The last region the camera reported, so echoing it back into `region` does not re-move the camera.
         @State private var reported: RegionKey?
 
-        init(region: Binding<MKCoordinateRegion>, markers: [MarkerItem]) {
+        init(region: Binding<MKCoordinateRegion>, markers: [MarkerItem], onSelect: @escaping (Int) -> Void) {
             _region = region
             self.markers = markers
+            self.onSelect = onSelect
             _position = State(initialValue: .region(region.wrappedValue))
         }
 
@@ -378,14 +598,26 @@ struct PlaceLocatorView: View {
             Map(position: $position) {
                 ForEach(markers) { item in
                     Annotation("", coordinate: item.coordinate, anchor: .center) {
-                        AnimatedMarkerBubble(tint: item.tint, systemImage: item.systemImage)
+                        AnimatedMarkerBubble(tint: item.tint, systemImage: item.systemImage, title: item.title,
+                                             isSelected: item.isSelected)
+                            .onTapGesture {
+                                if let index = item.resultIndex { onSelect(index) }
+                            }
+                            .accessibilityLabel(Text(item.title ?? String(localized: "Your location")))
+                            .accessibilityAddTraits(item.resultIndex == nil ? [] : .isButton)
                     }
                     .annotationTitles(.hidden)
                 }
             }
+            // The map's own points of interest step back so the results read as the map's subject.
+            .mapStyle(.standard(pointsOfInterest: .excludingAll))
+            .mapControls {
+                MapCompass()
+                MapScaleView()
+            }
             .onChange(of: RegionKey(region)) { _, key in
                 guard key != reported else { return }
-                position = .region(region)
+                withAnimation(.easeInOut(duration: 0.35)) { position = .region(region) }
             }
             .onMapCameraChange(frequency: .onEnd) { context in
                 let key = RegionKey(context.region)
@@ -397,200 +629,621 @@ struct PlaceLocatorView: View {
         }
     }
 
-    private var searchOverlay: some View {
+    // MARK: Top: search and kinds
+
+    private var topControls: some View {
         VStack(alignment: .leading, spacing: 10) {
-            searchPanel
-            if shouldShowResultsPanel {
-                resultsPanel
-            }
-        }
-        .conditionalGlassEffect(rectangle: true)
-        .padding(.horizontal)
-    }
+            SearchBar(text: $searchText.animation(.easeInOut), placeholder: profile.searchPrompt)
+                .padding(.horizontal, 16)
 
-    private var searchPanel: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            SearchBar(text: $searchText.animation(.easeInOut), placeholder: String(localized: "Search"))
-
-            if shouldShowResultsPanel {
-                HStack {
-                    if isSearching {
-                        Text(profile.loadingText)
-                    } else {
-                        Text(results.count == 1 ? String(localized: "\(results.count) match found") : String(localized: "\(results.count) matches found"))
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(profile.kinds) { option in
+                        kindChip(option)
                     }
-
-                    Spacer()
                 }
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(settings.accentColor.color)
-                .padding(.horizontal, 6)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 2)
             }
-        }
-        .padding(8)
-        .padding(.bottom, -8)
-    }
-
-    private var actionInset: some View {
-        VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-            actionButtonsRow
-        }
-        .lineLimit(1)
-        .minimumScaleFactor(0.5)
-        .padding(.horizontal)
-        .padding(.bottom, 26)
-    }
-
-    private var actionButtonsRow: some View {
-        HStack {
-            Button {
-                settings.hapticFeedback()
-                scheduleSearch(for: searchText, force: true)
-            } label: {
-                Label("Search This Area", systemImage: "magnifyingglass")
-                    .frame(maxWidth: .infinity)
-            }
-            .font(.headline)
-            .foregroundColor(settings.accentColor.color)
-            .padding()
-            .conditionalGlassEffect()
-
-            Button {
-                settings.hapticFeedback()
-                if hasRealLocation {
-                    centerOnCurrentLocation()
-                    scheduleSearch(for: searchText, force: true)
-                } else {
-                    // Nothing to center on: ask (again) rather than silently doing nothing, and let the
-                    // first-fix hook above finish the job when a location arrives.
-                    settings.requestLocationAuthorization()
-                    awaitingFirstFix = true
+            // The row fades at its far edge, so the chip past it reads as more to scroll to, not cut off.
+            .mask(
+                HStack(spacing: 0) {
+                    Color.black
+                    LinearGradient(colors: [.black, .black.opacity(0)], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: 28)
                 }
-            } label: {
-                Label("Near Me", systemImage: "location.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .font(.headline)
-            .foregroundColor(settings.accentColor.color)
-            .padding()
-            .conditionalGlassEffect()
+            )
         }
+        .padding(.top, 6)
+        .padding(.bottom, 14)
+        // A scrim from the top edge down behind the bar and the chips: over a busy map the glass let
+        // the streets and the pins show through the prompt.
+        .background(
+            LinearGradient(stops: [
+                .init(color: Color(.systemBackground).opacity(0.85), location: 0),
+                .init(color: Color(.systemBackground).opacity(0.6), location: 0.6),
+                .init(color: Color(.systemBackground).opacity(0), location: 1),
+            ], startPoint: .top, endPoint: .bottom)
+                .padding(.top, -140)
+                .allowsHitTesting(false)
+        )
     }
 
-    private var shouldShowResultsPanel: Bool {
-        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSearching || !results.isEmpty
+    private func kindChip(_ option: PlaceLocatorKind) -> some View {
+        let selected = option == kind
+        return Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut(duration: 0.2)) { kind = option }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: option.systemImage)
+                    .font(.caption.weight(.semibold))
+                Text(option.title)
+                    .font(.footnote.weight(.semibold))
+                    .lineLimit(1)
+            }
+            .foregroundColor(selected ? .white : .primary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                Capsule().fill(selected ? accent : Color.clear)
+            )
+            .conditionalGlassEffect(clear: selected)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    private func markerBubble(for item: MarkerItem) -> some View {
-        AnimatedMarkerBubble(tint: item.tint, systemImage: item.systemImage)
+    // MARK: Bottom: the map's buttons and the panel
+
+    /// "Search This Area" once the map has moved off the last search, Near Me beside it, the panel under.
+    private var bottomStack: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                if showsSearchHere {
+                    Button {
+                        settings.hapticFeedback()
+                        scheduleSearch(for: searchText, force: true)
+                    } label: {
+                        Label("Search This Area", systemImage: "arrow.clockwise")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(accent)
+                            .padding(.horizontal, 16)
+                            .frame(height: 44)
+                            .conditionalGlassEffect()
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.scale.combined(with: .opacity))
+                }
+
+                Spacer(minLength: 0)
+
+                Button {
+                    settings.hapticFeedback()
+                    if hasRealLocation {
+                        centerOnCurrentLocation()
+                        scheduleSearch(for: searchText, force: true)
+                    } else {
+                        // Nothing to center on: ask (again) rather than silently doing nothing, and let the
+                        // first-fix hook above finish the job when a location arrives.
+                        settings.requestLocationAuthorization()
+                        awaitingFirstFix = true
+                    }
+                } label: {
+                    Image(systemName: hasRealLocation ? "location.fill" : "location.slash")
+                        .font(.body.weight(.semibold))
+                        .foregroundColor(accent)
+                        .frame(width: 44, height: 44)
+                        .conditionalGlassEffect(circle: true)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Near Me")
+            }
+            .animation(.easeInOut(duration: 0.2), value: showsSearchHere)
+
+            resultsPanel
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, BottomBarCushion.standard)
+    }
+
+    private var showsSearchHere: Bool {
+        guard !isSearching, let lastSearchCenter else { return false }
+        let moved = CLLocation(latitude: lastSearchCenter.latitude, longitude: lastSearchCenter.longitude)
+            .distance(from: CLLocation(latitude: region.center.latitude, longitude: region.center.longitude))
+        // A quarter of the visible span (a degree of latitude is ~111 km).
+        return moved > region.span.latitudeDelta * 111_000 * 0.25
     }
 
     private var resultsPanel: some View {
-        Group {
-            if isSearching && results.isEmpty {
-                HStack(spacing: 10) {
-                    ProgressView()
-                    Text(profile.searchingText)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 0) {
+            // The grabber and the header fold and unfold the panel, by a tap or a drag.
+            VStack(spacing: 0) {
+                Capsule()
+                    .fill(Color.secondary.opacity(0.45))
+                    .frame(width: 36, height: 5)
+                    .padding(.top, 8)
+                    .padding(.bottom, 6)
+                panelHeader
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { togglePanel() }
+            .gesture(
+                DragGesture(minimumDistance: 12).onEnded { value in
+                    if value.translation.height < -24, !panelExpanded { togglePanel() }
+                    if value.translation.height > 24, panelExpanded { togglePanel() }
                 }
-                .padding()
-            } else if results.isEmpty {
-                Text(profile.emptyText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .font(.subheadline)
-                    .padding()
+            )
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint(Text(panelExpanded ? "Shows the chosen place" : "Shows every result"))
+
+            if panelExpanded {
+                if !profile.quickSearches.isEmpty {
+                    quickSearchRow
+                }
+                Divider().opacity(0.5)
+                resultsList
+                    .frame(height: max(160, min(containerHeight * 0.42, 460)))
             } else {
-                ScrollView {
-                    VStack(spacing: 0) {
-                        // Identity by object, not position: when a new search replaces `results`, rows are
-                        // replaced rather than morphing one place's text into another's in place. By the
-                        // object's identity, never `\.self`: MapKit can return one place twice (a category
-                        // search and a text search both finding it), two map items that compare equal, and
-                        // SwiftUI traps on duplicate ForEach keys ("Duplicate keys of type 'MKMapItem'",
-                        // the 2026-10-12 stress walk, Halal Food Locator).
-                        ForEach(results, id: \.rowIdentity) { item in
-                            HStack(alignment: .top, spacing: 10) {
-                                HStack(alignment: .top, spacing: 10) {
-                                    Image(systemName: "mappin.and.ellipse")
-                                        .foregroundColor(settings.accentColor.color)
+                Divider().opacity(0.5)
+                collapsedContent
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .conditionalGlassEffect(rectangle: true)
+        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: panelExpanded)
+    }
 
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        HighlightedSnippet(
-                                            source: item.name ?? profile.fallbackName,
-                                            term: searchText,
-                                            font: .subheadline.weight(.semibold),
-                                            accent: settings.accentColor.color,
-                                            fg: .primary
-                                        )
-                                            .multilineTextAlignment(.leading)
+    private func togglePanel() {
+        settings.hapticFeedback()
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) { panelExpanded.toggle() }
+    }
 
-                                        HighlightedSnippet(
-                                            source: formattedAddress(for: item),
-                                            term: searchText,
-                                            font: .caption,
-                                            accent: settings.accentColor.color,
-                                            fg: .secondary
-                                        )
-                                            .multilineTextAlignment(.leading)
-
-                                        if let distance = distanceFromCurrentLocation(to: item) {
-                                            Label(distance, systemImage: "location")
-                                                .font(.caption2)
-                                                .foregroundColor(settings.accentColor.color)
-                                        }
-                                    }
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    select(item)
-                                }
-
-                                Button {
-                                    settings.hapticFeedback()
-                                    openInMaps(item)
-                                } label: {
-                                    Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
-                                        .font(.headline)
-                                        .foregroundColor(settings.accentColor.color)
-                                        .frame(width: 36, height: 36)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            .padding()
-                            .contextMenu {
-                                Text(profile.contextMenuTitle)
-                                    .foregroundStyle(.secondary)
-
-                                Button {
-                                    settings.hapticFeedback()
-                                    UIPasteboard.general.string = item.name ?? profile.fallbackName
-                                } label: {
-                                    Label("Copy Name", systemImage: "doc.on.doc")
-                                }
-
-                                Button {
-                                    settings.hapticFeedback()
-                                    UIPasteboard.general.string = formattedAddress(for: item)
-                                } label: {
-                                    Label("Copy Address", systemImage: "doc.on.doc")
-                                }
-
-                                Button {
-                                    settings.hapticFeedback()
-                                    UIPasteboard.general.string = fullAddress(for: item)
-                                } label: {
-                                    Label("Copy Full Address", systemImage: "doc.on.doc")
-                                }
-                            }
-                        }
+    private var panelHeader: some View {
+        HStack(alignment: .center, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    if isSearching {
+                        ProgressView().controlSize(.small)
                     }
+                    Text(headerTitle)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
                 }
-                .frame(height: min(CGFloat(results.count) * 76, 150))
+                Text(headerSubtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 4)
+
+            Menu {
+                Picker(selection: $radiusIndex) {
+                    ForEach(Self.radiusSteps.indices, id: \.self) { index in
+                        Text(radiusTitle(Self.radiusSteps[index])).tag(index)
+                    }
+                } label: {
+                    Text("Distance")
+                }
+                .pickerStyle(.inline)
+
+                Picker(selection: $sortRaw) {
+                    ForEach(SortOrder.allCases, id: \.rawValue) { order in
+                        Label(order.title, systemImage: order.systemImage).tag(order.rawValue)
+                    }
+                } label: {
+                    Text("Sort")
+                }
+                .pickerStyle(.inline)
+            } label: {
+                Image(systemName: "line.3.horizontal.decrease")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(radius == 0 && sortOrder == .distance ? accent : .white)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(radius == 0 && sortOrder == .distance ? accent.opacity(0.15) : accent))
+            }
+            .accessibilityLabel("Filter and sort")
+
+            Image(systemName: "chevron.up")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+                .rotationEffect(.degrees(panelExpanded ? 180 : 0))
+                .frame(width: 24, height: 34)
+                .accessibilityHidden(true)
+        }
+        .padding(.horizontal, 14)
+        .padding(.bottom, 10)
+    }
+
+    private var headerTitle: String {
+        if isSearching && results.isEmpty { return profile.loadingText }
+        if results.isEmpty { return profile.emptyText }
+        return results.count == 1 ? String(localized: "\(results.count) match found") : String(localized: "\(results.count) matches found")
+    }
+
+    /// What the list is: its kind, its distance, its order.
+    private var headerSubtitle: String {
+        var parts: [String] = [kind.title]
+        if radius > 0 { parts.append(radiusTitle(radius)) }
+        parts.append(sortOrder.title)
+        if !hasRealLocation { parts.append(String(localized: "Around the map")) }
+        return parts.joined(separator: JoinSeparator.dot)
+    }
+
+    private var quickSearchRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(profile.quickSearches) { quick in
+                    let selected = searchText.trimmingCharacters(in: .whitespaces).lowercased() == quick.query
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) { searchText = selected ? "" : quick.query }
+                    } label: {
+                        Text(quick.title)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(selected ? .white : accent)
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(selected ? accent : accent.opacity(0.13)))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.bottom, 10)
+        }
+        .mask(
+            HStack(spacing: 0) {
+                Color.black
+                LinearGradient(colors: [.black, .black.opacity(0)], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: 28)
+            }
+        )
+    }
+
+    /// Folded: the chosen place's card, or what the search is doing.
+    @ViewBuilder
+    private var collapsedContent: some View {
+        if let selectedItem, results.contains(where: { $0 === selectedItem }) {
+            placeCard(selectedItem)
+                .padding(14)
+        } else {
+            statusContent
+                .padding(14)
+        }
+    }
+
+    @ViewBuilder
+    private var statusContent: some View {
+        if isSearching {
+            HStack(spacing: 10) {
+                ProgressView()
+                Text(profile.searchingText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(placeNotFound.map { String(localized: "Couldn’t find “\($0)” on the map.") } ?? profile.emptyText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                lookUpPlaceButton
             }
         }
     }
+
+    /// "Look for “Brooklyn” on the map": the typed words as a PLACE, the map moved there and searched.
+    @ViewBuilder
+    private var lookUpPlaceButton: some View {
+        let typed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !typed.isEmpty {
+            Button {
+                settings.hapticFeedback()
+                lookUpPlace(typed)
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: lookingUpPlace ? "hourglass" : "map")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(accent)
+                        .frame(width: 30, height: 30)
+                        .background(Circle().fill(accent.opacity(0.15)))
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Search in “\(typed)”")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                        Text("Move the map to that city or address")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(lookingUpPlace)
+        }
+    }
+
+    private var resultsList: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        lookUpPlaceButton
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                        Divider().padding(.leading, 14)
+                    }
+                    if results.isEmpty {
+                        statusContent
+                            .padding(14)
+                    }
+                    // Identity by object, not position: when a new search replaces `results`, rows are
+                    // replaced rather than morphing one place's text into another's in place. By the
+                    // object's identity, never `\.self`: MapKit can return one place twice (a category
+                    // search and a text search both finding it), two map items that compare equal, and
+                    // SwiftUI traps on duplicate ForEach keys ("Duplicate keys of type 'MKMapItem'",
+                    // the 2026-10-12 stress walk, Halal Food Locator).
+                    ForEach(results, id: \.rowIdentity) { item in
+                        placeRow(item)
+                            .id(item.rowIdentity)
+                        Divider().padding(.leading, 60)
+                    }
+                }
+            }
+            .onAppear {
+                if let selectedItem { proxy.scrollTo(selectedItem.rowIdentity, anchor: .center) }
+            }
+        }
+    }
+
+    // MARK: A place
+
+    private func categoryTitle(_ item: MKMapItem) -> String? {
+        switch item.pointOfInterestCategory {
+        case .restaurant?: return String(localized: "Restaurant")
+        case .cafe?: return String(localized: "Café")
+        case .bakery?: return String(localized: "Bakery")
+        case .foodMarket?: return String(localized: "Market")
+        default: return nil
+        }
+    }
+
+    /// "Restaurant · 0.3 mi", "1.2 km": what kind of place and how far.
+    private func detailLine(_ item: MKMapItem) -> String {
+        [categoryTitle(item), distance(to: item).map(distanceText)].compactMap { $0 }.joined(separator: JoinSeparator.dot)
+    }
+
+    private func placeIcon(selected: Bool, size: CGFloat) -> some View {
+        Image(systemName: profile.markerSymbol)
+            .font(.system(size: size * 0.42, weight: .semibold))
+            .foregroundColor(selected ? .white : accent)
+            .frame(width: size, height: size)
+            .background(Circle().fill(selected ? accent : accent.opacity(0.15)))
+    }
+
+    /// One row of the list: the place, its kind and distance, its address, and its actions.
+    private func placeRow(_ item: MKMapItem) -> some View {
+        let selected = isSameItem(item, selectedItem)
+        return HStack(alignment: .top, spacing: 12) {
+            placeIcon(selected: selected, size: 34)
+
+            VStack(alignment: .leading, spacing: 4) {
+                HighlightedSnippet(
+                    source: item.name ?? profile.fallbackName,
+                    term: searchText,
+                    font: .subheadline.weight(.semibold),
+                    accent: accent,
+                    fg: .primary
+                )
+                .multilineTextAlignment(.leading)
+
+                let detail = detailLine(item)
+                if !detail.isEmpty {
+                    Text(detail)
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(accent)
+                }
+
+                HighlightedSnippet(
+                    source: formattedAddress(for: item),
+                    term: searchText,
+                    font: .caption,
+                    accent: accent,
+                    fg: .secondary
+                )
+                .multilineTextAlignment(.leading)
+                .lineLimit(2)
+
+                actionRow(item, prominent: false)
+                    .padding(.top, 4)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(selected ? accent.opacity(0.1) : Color.clear)
+        .contentShape(Rectangle())
+        .onTapGesture { select(item) }
+        .contextMenu { placeMenu(item) }
+    }
+
+    /// The folded panel's card: the chosen place, larger, with Directions first.
+    private func placeCard(_ item: MKMapItem) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                placeIcon(selected: true, size: 42)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(item.name ?? profile.fallbackName)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    let detail = detailLine(item)
+                    if !detail.isEmpty {
+                        Text(detail)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(accent)
+                    }
+                    Text(formattedAddress(for: item))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                Spacer(minLength: 0)
+                // The neighbours, without opening the list.
+                if results.count > 1 {
+                    HStack(spacing: 0) {
+                        stepButton(by: -1, systemImage: "chevron.left", label: "Previous place")
+                        stepButton(by: 1, systemImage: "chevron.right", label: "Next place")
+                    }
+                }
+            }
+            actionRow(item, prominent: true)
+        }
+        .contextMenu { placeMenu(item) }
+    }
+
+    private func stepButton(by step: Int, systemImage: String, label: LocalizedStringKey) -> some View {
+        Button {
+            guard let index = results.firstIndex(where: { isSameItem($0, selectedItem) }) else { return }
+            let next = (index + step + results.count) % results.count
+            select(results[next])
+        } label: {
+            Image(systemName: systemImage)
+                .font(.footnote.weight(.bold))
+                .foregroundColor(accent)
+                .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+
+    /// Directions, Call, Website and Share: Directions filled when it is the card's.
+    private func actionRow(_ item: MKMapItem, prominent: Bool) -> some View {
+        HStack(spacing: 8) {
+            Menu {
+                Button { openInMaps(item, mode: MKLaunchOptionsDirectionsModeDriving) } label: {
+                    Label("Driving", systemImage: "car.fill")
+                }
+                Button { openInMaps(item, mode: MKLaunchOptionsDirectionsModeWalking) } label: {
+                    Label("Walking", systemImage: "figure.walk")
+                }
+                Button { openInMaps(item, mode: MKLaunchOptionsDirectionsModeTransit) } label: {
+                    Label("Transit", systemImage: "tram.fill")
+                }
+            } label: {
+                actionLabel(String(localized: "Directions"), systemImage: "arrow.triangle.turn.up.right.diamond.fill",
+                            filled: prominent, grows: prominent)
+            } primaryAction: {
+                settings.hapticFeedback()
+                openInMaps(item, mode: MKLaunchOptionsDirectionsModeDriving)
+            }
+
+            // In a row, Call and Website are their symbols alone: with the words, "Directions" was cut
+            // to "Directio..." beside them. The card has the room for all three.
+            if let phone = item.phoneNumber, let url = Self.phoneURL(phone) {
+                Link(destination: url) {
+                    actionLabel(prominent ? String(localized: "Call") : nil, systemImage: "phone.fill", filled: false, grows: prominent)
+                }
+                .accessibilityLabel(Text("Call"))
+            }
+
+            if let website = item.url {
+                Link(destination: website) {
+                    actionLabel(prominent ? String(localized: "Website") : nil, systemImage: "safari.fill", filled: false, grows: prominent)
+                }
+                .accessibilityLabel(Text("Website"))
+            }
+
+            ShareLink(item: Self.mapsURL(for: item, fallbackName: profile.fallbackName),
+                      subject: Text(item.name ?? profile.fallbackName),
+                      message: Text(formattedAddress(for: item))) {
+                actionLabel(nil, systemImage: "square.and.arrow.up", filled: false, grows: false)
+            }
+            .accessibilityLabel("Share")
+
+            if !prominent { Spacer(minLength: 0) }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func actionLabel(_ title: String?, systemImage: String, filled: Bool, grows: Bool) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: systemImage)
+                .font(.caption.weight(.semibold))
+            if let title {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+        }
+        .foregroundColor(filled ? .white : accent)
+        .padding(.horizontal, title == nil ? 9 : 11)
+        .frame(maxWidth: grows ? .infinity : nil)
+        .frame(height: grows ? 36 : 30)
+        .background(Capsule().fill(filled ? accent : accent.opacity(0.13)))
+        .contentShape(Capsule())
+    }
+
+    @ViewBuilder
+    private func placeMenu(_ item: MKMapItem) -> some View {
+        Text(profile.contextMenuTitle)
+            .foregroundStyle(.secondary)
+
+        Button {
+            settings.hapticFeedback()
+            UIPasteboard.general.string = item.name ?? profile.fallbackName
+        } label: {
+            Label("Copy Name", systemImage: "doc.on.doc")
+        }
+
+        Button {
+            settings.hapticFeedback()
+            UIPasteboard.general.string = formattedAddress(for: item)
+        } label: {
+            Label("Copy Address", systemImage: "doc.on.doc")
+        }
+
+        Button {
+            settings.hapticFeedback()
+            UIPasteboard.general.string = fullAddress(for: item)
+        } label: {
+            Label("Copy Full Address", systemImage: "doc.on.doc")
+        }
+
+        if let phone = item.phoneNumber {
+            Button {
+                settings.hapticFeedback()
+                UIPasteboard.general.string = phone
+            } label: {
+                Label("Copy Phone Number", systemImage: "phone")
+            }
+        }
+    }
+
+    private static func phoneURL(_ phone: String) -> URL? {
+        let digits = phone.filter { $0.isNumber || $0 == "+" }
+        return digits.isEmpty ? nil : URL(string: "tel:\(digits)")
+    }
+
+    /// An Apple Maps link to the place, for Share.
+    private static func mapsURL(for item: MKMapItem, fallbackName: String) -> URL {
+        let coordinate = item.placemark.coordinate
+        var components = URLComponents(string: "https://maps.apple.com/")!
+        components.queryItems = [
+            URLQueryItem(name: "q", value: item.name ?? fallbackName),
+            URLQueryItem(name: "ll", value: "\(coordinate.latitude),\(coordinate.longitude)"),
+        ]
+        return components.url ?? URL(string: "https://maps.apple.com/")!
+    }
+
+    // MARK: Actions
 
     private func centerOnCurrentLocation() {
         if let cur = live.currentLocation, cur.latitude != 1000, cur.longitude != 1000 {
@@ -600,18 +1253,43 @@ struct PlaceLocatorView: View {
         }
     }
 
+    /// A pin or a row chosen: the panel folds to that place's card, and the map centres on it.
     private func select(_ item: MKMapItem) {
         settings.hapticFeedback()
-        withAnimation {
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
             selectedItem = item
-            updateRegion(to: item.placemark.coordinate)
+            panelExpanded = false
         }
+        updateRegion(to: item.placemark.coordinate, keepingSpan: true)
     }
 
-    private func openInMaps(_ item: MKMapItem) {
-        item.openInMaps(launchOptions: [
-            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
-        ])
+    private func openInMaps(_ item: MKMapItem, mode: String) {
+        item.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: mode])
+    }
+
+    /// Looks the typed words up as a place (a city, a neighbourhood, an address), moves the map there,
+    /// and searches it, the search bar cleared.
+    private func lookUpPlace(_ text: String) {
+        lookingUpPlace = true
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = text
+        request.resultTypes = .address
+        Task {
+            let response = try? await MKLocalSearch(request: request).start()
+            await MainActor.run {
+                lookingUpPlace = false
+                guard let place = response?.mapItems.first else {
+                    placeNotFound = text
+                    return
+                }
+                settings.hapticFeedback()
+                updateRegion(to: place.placemark.coordinate)
+                awaitingFirstFix = false
+                placeNotFound = nil
+                withAnimation(.easeInOut) { searchText = "" }
+                scheduleSearch(for: "", force: true)
+            }
+        }
     }
 
     private func formattedAddress(for item: MKMapItem) -> String {
@@ -666,38 +1344,50 @@ struct PlaceLocatorView: View {
         return Array(NSOrderedSet(array: parts)).compactMap { $0 as? String }.joined(separator: ", ")
     }
 
-    private func distanceFromCurrentLocation(to item: MKMapItem) -> String? {
-        guard let cur = live.currentLocation,
-              cur.latitude != 1000,
-              cur.longitude != 1000 else { return nil }
-
-        let here = CLLocation(latitude: cur.latitude, longitude: cur.longitude)
-        let there = CLLocation(
-            latitude: item.placemark.coordinate.latitude,
-            longitude: item.placemark.coordinate.longitude
-        )
-
-        let miles = here.distance(from: there) / 1_609.344
-        let figure = miles.formatted(.number.precision(.fractionLength(1)))
-        return String(localized: "\(figure) miles away")
+    private func updateRegion(to coord: CLLocationCoordinate2D, keepingSpan: Bool = false) {
+        let span = keepingSpan && region.span.latitudeDelta < 0.5
+            ? region.span
+            : MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
+        region = .init(center: coord, span: span)
     }
 
-    private func updateRegion(to coord: CLLocationCoordinate2D) {
-        region = .init(center: coord, span: .init(latitudeDelta: 0.08, longitudeDelta: 0.08))
+    /// The map opened out (or in) to show a circle of `meters` around the reader, or the map's centre.
+    private func fitRegion(toRadius meters: CLLocationDistance) {
+        let center = origin?.coordinate ?? region.center
+        let degrees = min(meters * 2.2 / 111_000, 2)
+        region = .init(center: center, span: .init(latitudeDelta: degrees, longitudeDelta: degrees))
     }
 
     private func configureInitialRegion() {
         centerOnCurrentLocation()
+        if let radiusMeters { fitRegion(toRadius: radiusMeters) }
+    }
+
+    /// The results held to the chosen distance and put in the chosen order.
+    private func arranged(_ items: [MKMapItem]) -> [MKMapItem] {
+        var kept = items
+        if let radiusMeters, origin != nil {
+            kept = kept.filter { (distance(to: $0) ?? 0) <= radiusMeters }
+        }
+        switch sortOrder {
+        case .distance:
+            guard origin != nil else { return kept }
+            return kept.sorted { (distance(to: $0) ?? .greatestFiniteMagnitude) < (distance(to: $1) ?? .greatestFiniteMagnitude) }
+        case .name:
+            return kept.sorted {
+                ($0.name ?? "").localizedStandardCompare($1.name ?? "") == .orderedAscending
+            }
+        }
     }
 
     private func search(for text: String) async {
         let searchRegion = region
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let kind = kind
 
         // Read main-actor state (settings, region) before hopping off; the fan-out, filtering, and
         // distance sort all run in `performPlaceSearch`, off the main actor.
         let sortOrigin: CLLocationCoordinate2D? = {
-            guard trimmed.isEmpty else { return nil }
             if let cur = live.currentLocation, cur.latitude != 1000, cur.longitude != 1000 {
                 return cur.coordinate
             }
@@ -708,24 +1398,30 @@ struct PlaceLocatorView: View {
         }()
 
         let items = await performPlaceSearch(
-            queries: trimmed.isEmpty ? profile.baseQueries : profile.queries(trimmed),
-            nameKeywords: profile.nameKeywords,
-            poiFilter: profile.poiFilter,
+            queries: trimmed.isEmpty ? kind.baseQueries : kind.queries(trimmed),
+            nameKeywords: kind.nameKeywords,
+            poiFilter: kind.poiFilter,
             in: searchRegion,
-            sortOrigin: sortOrigin
+            sortOrigin: sortOrigin,
+            limit: 25
         )
 
         guard !Task.isCancelled else { return }
 
+        let shown = arranged(items.withoutDuplicatePlaces())
         withAnimation {
-            results = items.withoutDuplicatePlaces()
+            results = shown
             isSearching = false
-            if selectedItem == nil || !items.contains(where: { isSameItem($0, selectedItem) }) {
-                selectedItem = items.first
+            lastSearchCenter = searchRegion.center
+            if selectedItem == nil || !shown.contains(where: { isSameItem($0, selectedItem) }) {
+                selectedItem = shown.first
             }
         }
-        // The encode + UserDefaults write has no business inside an animation transaction.
-        persistHomeCacheIfNeeded(items: items, query: text, region: searchRegion)
+        // The encode + UserDefaults write has no business inside an animation transaction. Only the
+        // plain search is the home cache: a kind or a distance is a narrowing of it.
+        if kind == profile.kinds[0] {
+            persistHomeCacheIfNeeded(items: items, query: text, region: searchRegion)
+        }
     }
 
     private func scheduleSearch(for text: String, force: Bool) {
@@ -743,14 +1439,15 @@ struct PlaceLocatorView: View {
     private func loadCachedHomeResultsIfPossible() {
         guard searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               results.isEmpty,
+              kind == profile.kinds[0],
               isRegionNearHome(region),
               let cache = decodeHomeCache(),
               isSameHome(cache.homeLocation, settings.homeLocation) else { return }
 
-        let cachedItems = cache.items.map { $0.mapItem() }
+        let cachedItems = arranged(cache.items.map { $0.mapItem() }.withoutDuplicatePlaces())
         guard !cachedItems.isEmpty else { return }
 
-        results = cachedItems.withoutDuplicatePlaces()
+        results = cachedItems
         if selectedItem == nil {
             selectedItem = cachedItems.first
         }
@@ -766,18 +1463,19 @@ struct PlaceLocatorView: View {
         // map opened somewhere else, so the cache is still fresh for the next open at home.
         guard !isRegionNearHome(region) else { return }
 
-        let profile = profile
+        let base = profile.kinds[0]
         Task(priority: .utility) {
             let homeRegion = MKCoordinateRegion(
                 center: home.coordinate,
                 span: .init(latitudeDelta: 0.15, longitudeDelta: 0.15)
             )
             let items = await performPlaceSearch(
-                queries: profile.baseQueries,
-                nameKeywords: profile.nameKeywords,
-                poiFilter: profile.poiFilter,
+                queries: base.baseQueries,
+                nameKeywords: base.nameKeywords,
+                poiFilter: base.poiFilter,
                 in: homeRegion,
-                sortOrigin: nil
+                sortOrigin: nil,
+                limit: 25
             )
             guard !items.isEmpty else { return }
 

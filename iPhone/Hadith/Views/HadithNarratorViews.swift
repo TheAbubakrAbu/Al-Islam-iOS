@@ -25,7 +25,10 @@ final class HadithNarratorPage: ObservableObject {
     let profile: HadithNarratorProfile?
     let list: HadithListModel
 
-    init(narratorID: Int) {
+    /// `scope`: the book or the chapter whose narrators he was opened from. His list then opens
+    /// held to it, his narrations there and no others, one tap from all of them: the book through
+    /// its own chip in BOOKS, a chapter through the row that says so (`HadithListModel.held`).
+    init(narratorID: Int, scope: HadithNarratorScope? = nil) {
         let store = HadithNarratorStore.shared
         let profile = store.profile(id: narratorID)
         self.profile = profile
@@ -37,6 +40,14 @@ final class HadithNarratorPage: ObservableObject {
                                     secondaryBadge: ref.role == .link ? nil : badges[ref.role],
                                     role: ref.role, category: ref.grade)
         }, narrator: true)
+        guard let scope else { return }
+        let slug = scope.book.slug
+        if let chapter = scope.chapter {
+            list.held = (Set(chapter.rows.map { "\(slug)-\($0)" }),
+                         String(localized: "This chapter of \(scope.book.displayTitle)"))
+        } else if list.books.count > 1, list.books.contains(where: { $0.book.slug == slug }) {
+            list.hiddenBooks = Set(list.books.map(\.book.slug)).subtracting([slug])
+        }
     }
 }
 
@@ -48,9 +59,9 @@ struct HadithNarratorView: View {
 
     @StateObject private var page: HadithNarratorPage
 
-    init(narratorID: Int) {
+    init(narratorID: Int, scope: HadithNarratorScope? = nil) {
         self.narratorID = narratorID
-        _page = StateObject(wrappedValue: HadithNarratorPage(narratorID: narratorID))
+        _page = StateObject(wrappedValue: HadithNarratorPage(narratorID: narratorID, scope: scope))
     }
 
     var body: some View {
@@ -267,6 +278,86 @@ private struct HadithNarratorContent: View {
     }
 }
 
+// MARK: - The narrators of one book, or of one chapter
+
+/// The narrators named in the chains of one book, or of one of its chapters (Abu, 2026-11-23:
+/// "Within each book at the bottom have narrators but only include if in the book ... would be nice
+/// to have the same thing with each chapter"): who is named there, how often, and at which place of
+/// the chain, counted inside that book or chapter alone (`HadithNarratorBookIndex`). The index of
+/// narrators opens held to it (`HadithNarratorsIndexView(scope:)`), and a narrator opened from there
+/// shows his narrations in it first (`HadithNarratorPage`).
+struct HadithNarratorScope {
+    struct Chapter {
+        /// The chapter's id in its book.
+        let id: Int
+        /// The chapter's title as the reader sees it.
+        let title: String
+        /// The numbers (`idInBook`) of its narrations.
+        let rows: [Int]
+    }
+
+    let book: HadithCatalogBook
+    /// The chapter the scope is held to; nil for the whole book.
+    let chapter: Chapter?
+    /// By narrator id: everyone with a narration here, and no one else.
+    let tallies: [Int: HadithNarratorTally]
+
+    var count: Int { tallies.count }
+    var isEmpty: Bool { tallies.isEmpty }
+
+    /// The door's title, and the page's headline behind it.
+    var title: String {
+        chapter == nil ? String(localized: "Narrators in This Book") : String(localized: "Narrators in This Chapter")
+    }
+
+    /// How many narrators it holds, as the door's caption and the page's opening line.
+    var caption: String { String(localized: "\(count) narrators named in its chains") }
+
+    /// The scope counted, the book's index made first when it is not in hand: off the main thread
+    /// (`HadithNarratorStore.bookIndex`). Also reads every profile once, so the page behind the
+    /// door opens whole on its first frame (`HadithNarratorStore.allProfiles` keeps them). Empty
+    /// for a book whose rows carry no chain the app reads.
+    static func make(book: HadithCatalogBook, chapter: Chapter? = nil) -> HadithNarratorScope {
+        let index = HadithNarratorStore.shared.bookIndex(slug: book.slug)
+        _ = HadithNarratorStore.shared.allProfiles()
+        return HadithNarratorScope(book: book, chapter: chapter, index: index)
+    }
+
+    /// The scope when the book's index is already made (a chapter opened from its book, a book
+    /// come back to), else nil: nothing is walked, so the main thread may ask.
+    static func ready(book: HadithCatalogBook, chapter: Chapter? = nil) -> HadithNarratorScope? {
+        HadithNarratorStore.shared.cachedBookIndex(slug: book.slug).map {
+            HadithNarratorScope(book: book, chapter: chapter, index: $0)
+        }
+    }
+
+    private init(book: HadithCatalogBook, chapter: Chapter?, index: HadithNarratorBookIndex?) {
+        self.book = book
+        self.chapter = chapter
+        tallies = chapter.map { index?.narrators(rows: $0.rows) ?? [:] } ?? index?.narrators ?? [:]
+    }
+}
+
+/// The door to a book's or a chapter's narrators, at the foot of its page: the app's door row.
+struct HadithScopedNarratorsDoor: View {
+    private let settings = Settings.shared
+
+    let scope: HadithNarratorScope
+    let open: () -> Void
+
+    var body: some View {
+        Button {
+            settings.hapticFeedback()
+            open()
+        } label: {
+            SettingsRowLabel(title: scope.title, systemImage: "person.text.rectangle.fill",
+                             subtitle: scope.caption, showsChevron: true)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Every narrator
 
 /// What shapes the index of narrators, and the index as shaped: the search, the place in the chain,
@@ -334,6 +425,9 @@ final class HadithNarratorsIndexModel: ObservableObject {
     let profiles: [HadithNarratorProfile]
     /// The generations the index holds, the Companions first and the unplaced last, with their counts.
     let generations: [(generation: Int, count: Int)]
+    /// The book or chapter the index is held to: its narrators alone, each counted inside it. Nil
+    /// for the whole shelf.
+    let scope: HadithNarratorScope?
 
     @Published var query = "" { didSet { if query != oldValue { rebuild() } } }
     @Published var place: Place { didSet { if place != oldValue { rebuild() } } }
@@ -353,9 +447,11 @@ final class HadithNarratorsIndexModel: ObservableObject {
          Self.latinFold(profile.english))
     }
 
-    init(place: Place = .all) {
-        let profiles = HadithNarratorStore.shared.allProfiles()
+    init(place: Place = .all, scope: HadithNarratorScope? = nil) {
+        let everyone = HadithNarratorStore.shared.allProfiles()
+        let profiles = scope.map { scope in everyone.filter { scope.tallies[$0.id] != nil } } ?? everyone
         self.profiles = profiles
+        self.scope = scope
         self.place = place
         var counts: [Int: Int] = [:]
         for profile in profiles { counts[profile.generation, default: 0] += 1 }
@@ -380,6 +476,19 @@ final class HadithNarratorsIndexModel: ObservableObject {
         return lhs < rhs
     }
 
+    /// How many of a narrator's narrations stand at a place: on the whole shelf (his profile's own
+    /// counts), or inside the book or chapter the index is held to.
+    func count(_ profile: HadithNarratorProfile, at place: Place) -> Int {
+        guard let scope else { return place.count(profile) }
+        guard let tally = scope.tallies[profile.id] else { return 0 }
+        switch place {
+        case .all: return tally.narrations
+        case .first: return tally.fromProphet
+        case .last: return tally.teacher
+        case .middle: return tally.links
+        }
+    }
+
     /// Lower-case, the apostrophes of the hamza and 'ayn out, so "aishah" finds "A'ishah".
     static func latinFold(_ text: String) -> String {
         text.lowercased().filter { $0 != "'" && $0 != "\u{2019}" && $0 != "\u{2018}" && $0 != "-" }
@@ -401,12 +510,16 @@ final class HadithNarratorsIndexModel: ObservableObject {
                 (arabic ? haystacks[index].arabic : haystacks[index].latin).contains(needle) ? profiles[index] : nil
             }
         }
-        if place != .all { rows = rows.filter { place.count($0) > 0 } }
-        if let generation { rows = rows.filter { $0.generation == generation } }
         let place = place
+        if place != .all { rows = rows.filter { count($0, at: place) > 0 } }
+        if let generation { rows = rows.filter { $0.generation == generation } }
         switch sort {
-        case .narrations: rows.sort { (place.count($0), $1.id) > (place.count($1), $0.id) }
-        case .name: rows.sort { ($0.key, $0.id) < ($1.key, $1.id) }
+        case .narrations:
+            // Counted once each, not once a comparison.
+            let counts = Dictionary(uniqueKeysWithValues: rows.map { ($0.id, count($0, at: place)) })
+            rows.sort { (counts[$0.id] ?? 0, $1.id) > (counts[$1.id] ?? 0, $0.id) }
+        case .name:
+            rows.sort { ($0.key, $0.id) < ($1.key, $1.id) }
         }
         shown = rows.count
         guard grouping == .generation else {
@@ -437,8 +550,9 @@ struct HadithNarratorsIndexView: View {
     @State private var pushedNarrator: Int?
 
     /// `initialPlace`: where the page lands, a place in the chain to open on, or anywhere.
-    init(initialPlace: Place = .all) {
-        _model = StateObject(wrappedValue: HadithNarratorsIndexModel(place: initialPlace))
+    /// `scope`: the book or chapter whose narrators these are; nil lists the whole shelf's.
+    init(initialPlace: Place = .all, scope: HadithNarratorScope? = nil) {
+        _model = StateObject(wrappedValue: HadithNarratorsIndexModel(place: initialPlace, scope: scope))
     }
 
     var body: some View {
@@ -485,20 +599,25 @@ struct HadithNarratorsIndexView: View {
             .background(Color.white.opacity(0.00001))
         }
         .pushDestination(item: $pushedNarrator) { narratorID in
-            HadithNarratorView(narratorID: narratorID)
+            HadithNarratorView(narratorID: narratorID, scope: model.scope)
         }
         .navigationTitle(String(localized: "Narrators"))
         .navigationBarTitleDisplayMode(.inline)
     }
 
     /// What the page is, how many it holds, and the generations as the chips that hold the list to
-    /// one of them.
+    /// one of them. Held to a book or a chapter, it says which: the book's title (and the
+    /// chapter's) over the door's own words.
     private var hero: some View {
-        ResourceHeroSection(ResourceHero(
-            eyebrow: String(localized: "Narrators of the Hadith").localizedUppercase,
+        let scope = model.scope
+        let eyebrow = scope.map { [$0.book.displayTitle, $0.chapter?.title].compactMap { $0 }.joined(separator: " · ") }
+            ?? String(localized: "Narrators of the Hadith")
+        return ResourceHeroSection(ResourceHero(
+            eyebrow: eyebrow.localizedUppercase,
             systemImage: "person.text.rectangle.fill",
-            headline: String(localized: "Everyone the chains name"),
-            message: String(localized: "\(model.profiles.count) narrators of the chains the app can read, from the Companions down to the compilers' own teachers, each with every narration that names him.")
+            headline: scope?.title ?? String(localized: "Everyone the chains name"),
+            message: scope?.caption
+                ?? String(localized: "\(model.profiles.count) narrators of the chains the app can read, from the Companions down to the compilers' own teachers, each with every narration that names him.")
         ) {
             FlowLayout(spacing: 6) {
                 ForEach(model.generations, id: \.generation) { entry in
@@ -563,7 +682,8 @@ struct HadithNarratorsIndexView: View {
                         Spacer(minLength: 8)
 
                         // Grouped digits: Abu Hurairah's 6,922 read "6922" in the pill's own format.
-                        CountPill(count: model.place.count(profile), countText: model.place.count(profile).formatted())
+                        let count = model.count(profile, at: model.place)
+                        CountPill(count: count, countText: count.formatted())
                     }
 
                     HStack(alignment: .firstTextBaseline) {

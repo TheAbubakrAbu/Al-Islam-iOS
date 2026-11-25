@@ -413,7 +413,7 @@ enum TutorialCatalog {
                                .setting(.islamPage(.arabicText), label: InterfaceText("Arabic Text"))]),
         TutorialStep(id: "islam.further", tab: .islam, systemImage: "lightbulb.fill",
                      title: InterfaceText("Go further"),
-                     detail: InterfaceText("“Today” in the ⋯ menu gathers the day's picks, and the Reminder of the Day sits near the foot of the tab. Tips & Tricks has everything else, each with where to find it."),
+                     detail: InterfaceText("“Today” gathers the day's picks. It is on the Reminder of the Day near the foot of the tab, or in the ⋯ menu in Simple Mode. Tips & Tricks has everything else, each with where to find it."),
                      place: InterfaceText("Islam tab"),
                      actions: [.tips(.islam)]),
     ]

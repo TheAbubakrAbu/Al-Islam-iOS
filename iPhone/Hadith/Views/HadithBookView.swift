@@ -14,6 +14,17 @@ fileprivate extension HadithBookData.Hadith {
     }
 }
 
+fileprivate extension HadithCatalogBook {
+    /// The book's story as its card draws it: paragraph by paragraph, in the interface's digits,
+    /// without the compiler's Arabic name the card has already written (`droppingAuthorInBrackets`).
+    var storyParagraphs: [String] {
+        Self.droppingAuthorInBrackets(longDescription.localizedDigits, authorArabic: authorArabic)
+            .components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+}
+
 // MARK: - The book's opening card
 
 /// A collection's opening card, the hero every Islam resource opens on (Abu, 2026-10-03: "make it
@@ -105,10 +116,7 @@ private struct HadithBookHero: View {
                                        "Shows the book's full name and description.")
 
                     if showMore {
-                        HadithBookNameBlock(name: book.name)
-                        SelectableProse(text: book.longDescription.localizedDigits,
-                                        textStyle: .subheadline,
-                                        secondary: true)
+                        HadithBookAbout(book: book)
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                 }
@@ -118,68 +126,91 @@ private struct HadithBookHero: View {
     }
 }
 
-/// What the book's name says: the short title in English, then the full title its compiler gave it,
-/// in Arabic, transliterated, and translated. Part of the story, so it folds away with it in a search.
-private struct HadithBookNameBlock: View {
+/// What Show More opens: what the book's name says, the title its compiler gave it, and its story,
+/// each on a tile of its own in the hero's grammar (the figures' tiles above them). The story stays
+/// selectable, as every line here is: it is what a reader would quote.
+///
+/// Abu, 2026-11-23: "Show more for Hadith book looks so chopped a lot of repeatability colors are
+/// off fonts are off". Until then it was loose lines under the button: two grey labels, then white,
+/// green, white, grey and grey text, set by two text engines whose lines stood two points apart (a
+/// `Text` at 21.3 points a line over a text view at 19.7). Now there is one label (the hero's own
+/// eyebrow, in the accent), one English face and pitch (`ArticleParagraph`, the articles' selectable
+/// paragraph), ink for what is said and grey for the transliteration alone. And nothing is said
+/// twice: the outer quotation marks are gone (a meaning that itself quotes a word ended in two
+/// closing marks), a full title that is the short title over again is left out
+/// (`HadithCatalogBook.hasOwnFullTitle`), and the story no longer repeats the compiler's Arabic
+/// name, which the card writes two lines above (`storyParagraphs`).
+private struct HadithBookAbout: View {
     @Environment(\.appearance) private var appearance
 
-    let name: HadithCatalogBook.Name
+    let book: HadithCatalogBook
 
     var body: some View {
-        // The Arabic interface keeps only the full title in Arabic: the meaning, the transliteration
-        // and the translation are English, written for a reader who cannot read the Arabic.
-        VStack(alignment: .leading, spacing: 10) {
+        let name = book.name
+        VStack(alignment: .leading, spacing: 8) {
+            // The meaning, the transliteration and the translation are English, written for a reader
+            // who cannot read the Arabic: the Arabic interface keeps the full title alone.
             if !AppLanguage.isArabicScript {
-                VStack(alignment: .leading, spacing: 3) {
-                    label(String(localized: "THE NAME MEANS"))
-                    Text("“\(name.meaning)”")
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        // The title's English meaning and its transliteration (below) are English
-                        // content: left to right in the Arabic interface too.
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .leftToRightContent()
+                tile(String(localized: "THE NAME MEANS")) {
+                    english(name.meaning)
                 }
             }
 
-            VStack(alignment: .leading, spacing: 3) {
-                label(String(localized: "FULL TITLE"))
-                Text(name.fullArabic)
-                    .font(appearance.islamArabicFont(base: 19, relativeTo: .subheadline))
-                    .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
-                    .foregroundColor(appearance.accent)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .fixedSize(horizontal: false, vertical: true)
-                    // The right edge in the Arabic interface too (`.trailing` is right only left to right).
-                    .environment(\.layoutDirection, .leftToRight)
-                if !AppLanguage.isArabicScript {
-                    Text(name.fullTransliteration)
-                        .font(.subheadline.italic())
-                        .foregroundColor(.primary)
+            if book.hasOwnFullTitle {
+                tile(String(localized: "FULL TITLE")) {
+                    Text.islamArabic(name.fullArabic, highlightAllah: appearance.highlightAllahIslam)
+                        .font(appearance.islamArabicFont(base: 21, relativeTo: .title3))
+                        .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                        .foregroundColor(appearance.accent)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                         .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .leftToRightContent()
-                    Text("“\(name.fullMeaning)”")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .leftToRightContent()
+                        .textSelection(.enabled)
+                        // The right edge in the Arabic interface too (`.trailing` is right only left to right).
+                        .environment(\.layoutDirection, .leftToRight)
+
+                    if !AppLanguage.isArabicScript {
+                        english(name.fullTransliteration, secondary: true)
+                        english(name.fullMeaning)
+                    }
+                }
+            }
+
+            tile(String(localized: "ABOUT THE BOOK")) {
+                ForEach(Array(book.storyParagraphs.enumerated()), id: \.offset) { _, paragraph in
+                    ArticleParagraph(verbatim: paragraph, textStyle: .subheadline)
                 }
             }
         }
-        .textSelection(.enabled)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func label(_ text: String) -> some View {
-        Text(text)
-            .font(.caption2.weight(.bold))
-            .tracking(AppLanguage.letterSpacing(1.1))
-            .foregroundColor(.secondary)
-            .accessibilityAddTraits(.isHeader)
+    /// One tile: its label in the eyebrow's capitals, then what it holds.
+    private func tile<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.caption2.weight(.bold))
+                .tracking(AppLanguage.letterSpacing(1.1))
+                .foregroundColor(appearance.accent)
+                .accessibilityAddTraits(.isHeader)
+
+            // A paragraph's own lines stand 4 points apart: 10 between two of them reads as a break.
+            VStack(alignment: .leading, spacing: 10) {
+                content()
+            }
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // The figures' tile above (`ResourceHeroStats`): one ground for everything set into the card.
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.05)))
+    }
+
+    /// A line of the catalog's English (a meaning, a transliteration): left to right in every
+    /// interface, as English content is.
+    private func english(_ text: String, secondary: Bool = false) -> some View {
+        ArticleParagraph(verbatim: text, textStyle: .subheadline, secondary: secondary)
+            .leftToRightContent()
     }
 }
 
@@ -229,6 +260,18 @@ struct HadithBookView: View {
     @State private var pushedChapter: HadithBookData.Chapter?
     /// "Scroll to chapter": clears the search, then lands the list on this chapter.
     @State private var pendingScrollToChapterId: Int? = nil
+    /// Everyone this book's chains name, for the NARRATORS door at the foot of the chapters (Abu,
+    /// 2026-11-23: "Within each book at the bottom have narrators but only include if in the
+    /// book"). Counted off the main thread once the book is on screen (`loadNarratorScope`); nil
+    /// until then, and empty for a book whose rows carry no chain, which shows no door.
+    @State private var narratorScope: HadithNarratorScope?
+    /// The door's push: the scope it opens, flag and target in one (`PushItemDestination`).
+    @State private var pushedNarrators: HadithNarratorScope?
+    /// How many of this book's hadiths the pack lists among those with the most chains, for the
+    /// door under the narrators' (Abu, 2026-11-23: "see/filter Hadiths with the most amount of
+    /// chains"); read off the main thread (`loadMostChains`), with the book it was read for.
+    @State private var mostChains: (slug: String, count: Int)?
+    @State private var pushedMostChains = false
     @State private var showHadithSettings = false
     /// The Quran search's page size: matches show 5 at a time until Load More asks for more.
     @State private var chapterMatchLimit = 5
@@ -671,6 +714,16 @@ struct HadithBookView: View {
                 HadithChapterView(book: book, bookData: data, chapter: autoOpenTarget, scrollToHadithId: autoOpenHadithID)
             }
         }
+        // The NARRATORS door at the foot of the chapters. Out here for the same reason as the two
+        // pushes above.
+        .pushDestination(item: $pushedNarrators) { scope in
+            HadithNarratorsIndexView(scope: scope)
+        }
+        .pushDestination(isPresented: $pushedMostChains) {
+            HadithMostChainsView(book: book)
+        }
+        .task(id: book.slug) { await loadNarratorScope() }
+        .task(id: book.slug) { await loadMostChains() }
         .navigationTitle(book.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
         // The chapter grid toggle and the gear, top right. (The tab root moved its grid switch into
@@ -694,6 +747,50 @@ struct HadithBookView: View {
             HadithSearchFilterSheet(filters: $searchFilters, scope: .oneBook)
                 .smallMediumSheetPresentation()
         }
+    }
+
+    /// Counts the book's narrators for the door at the foot of its chapters, off the main thread and
+    /// a beat after the push: the foot of a list of ninety chapters is not the first thing read.
+    /// At once when the book's index is in hand already (a book come back to). The chapters opened
+    /// from here find the index made and count their own narrators as they appear.
+    private func loadNarratorScope() async {
+        let book = book
+        if let ready = HadithNarratorScope.ready(book: book) {
+            narratorScope = ready
+        } else {
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+            let scope = await Task.detached(priority: .utility) { HadithNarratorScope.make(book: book) }.value
+            guard !Task.isCancelled else { return }
+            narratorScope = scope
+        }
+        #if DEBUG
+        // `-openBookNarrators` (with `-launchHadithBook <slug>`): the book's narrators, pushed.
+        // Headless verification only.
+        if ProcessInfo.processInfo.arguments.contains("-openBookNarrators"), let scope = narratorScope, !scope.isEmpty {
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            if pushedNarrators == nil { pushedNarrators = scope }
+        }
+        #endif
+    }
+
+    /// Reads how many of the book's hadiths stand in its list of the most chains, off the main
+    /// thread: the door is at the foot of the chapters, and the list is one small block of the pack.
+    private func loadMostChains() async {
+        let slug = book.slug
+        let count = await Task.detached(priority: .utility) {
+            HadithIsnadTreeStore.shared.mostChains(slug: slug).count
+        }.value
+        guard !Task.isCancelled else { return }
+        mostChains = (slug, count)
+        #if DEBUG
+        // `-openBookMostChains` (with `-launchHadithBook <slug>`): the book's list, pushed.
+        // Headless verification only.
+        if ProcessInfo.processInfo.arguments.contains("-openBookMostChains"), count > 0 {
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            pushedMostChains = true
+        }
+        #endif
     }
 
     /// Decode, while the reader is choosing a chapter, the text each chapter opens on: this book's
@@ -885,6 +982,31 @@ struct HadithBookView: View {
                         ForEach(shownChapters) { chapter in
                             Section {
                                 chapterRowLink(chapter, data: data)
+                            }
+                        }
+                    }
+
+                    // The book's narrators, at its foot: everyone its chains name and no one else.
+                    // (The slug is checked because the split view's content column keeps one view
+                    // identity across books: a count of the book before must not show under this one.)
+                    // Under it, the book's hadiths that come down by the most chains.
+                    let namedScope = narratorScope.flatMap { $0.book.slug == book.slug && !$0.isEmpty ? $0 : nil }
+                    let rankedCount = mostChains.flatMap { $0.slug == book.slug && $0.count > 0 ? $0.count : nil }
+                    if namedScope != nil || rankedCount != nil {
+                        Section(header: Text("NARRATORS")) {
+                            if let namedScope {
+                                HadithScopedNarratorsDoor(scope: namedScope) {
+                                    // One push at a time: not while a tile's chapter is on its way.
+                                    guard pushedChapter == nil, autoOpenTarget == nil else { return }
+                                    pushedNarrators = namedScope
+                                }
+                            }
+
+                            if let rankedCount {
+                                HadithMostChainsDoor(book: book, count: rankedCount) {
+                                    guard pushedChapter == nil, autoOpenTarget == nil else { return }
+                                    pushedMostChains = true
+                                }
                             }
                         }
                     }
@@ -2522,6 +2644,12 @@ struct HadithChapterView: View {
     /// menu or Hadith Settings). Same key, same default, as the chapters screen declares.
     /// The title menu's chapter picker sheet.
     @State private var showChapterPicker = false
+    /// Everyone this chapter's chains name, for the NARRATORS door at its foot (Abu, 2026-11-23:
+    /// "would be nice to have the same thing with each chapter"): counted as the chapter appears
+    /// and again when Previous or Next swaps it (`loadNarratorScope`). A scope of another chapter,
+    /// or an empty one (no chain here the app reads), shows no door.
+    @State private var narratorScope: HadithNarratorScope?
+    @State private var pushedNarrators: HadithNarratorScope?
     // Multi-select (list mode): pick several hadiths, then copy/share/bookmark them all at once - the
     // surah reader's select mode, for hadiths.
     @State private var isSelectingHadiths = false
@@ -2809,7 +2937,53 @@ struct HadithChapterView: View {
         .onChange(of: chapterIndex) { index in
             syncChapterFromIndex(index)
         }
+        // The NARRATORS door at the chapter's foot: counted for the chapter on screen, pushed from
+        // out here, where the list's own re-diffing cannot reach the push.
+        .onAppear { loadNarratorScope() }
+        .onChange(of: chapter.id) { _ in loadNarratorScope() }
+        .pushDestination(item: $pushedNarrators) { scope in
+            HadithNarratorsIndexView(scope: scope)
+        }
     }
+
+    /// Counts this chapter's narrators for the door at its foot. At once, in the pass the chapter
+    /// appears in, when the book's index is in hand (the chapter was opened from its book, which
+    /// makes it); otherwise off the main thread (a chapter opened from a search result or a
+    /// reference), the door arriving under the last hadith a moment later.
+    private func loadNarratorScope() {
+        let chapterID = chapter.id
+        guard narratorScope?.chapter?.id != chapterID else { return }
+        let book = book
+        let target = HadithNarratorScope.Chapter(id: chapterID, title: chapter.displayTitle(in: book),
+                                                 rows: allChapterHadiths.map(\.idInBook))
+        if let ready = HadithNarratorScope.ready(book: book, chapter: target) {
+            narratorScope = ready
+            debugOpenNarrators()
+            return
+        }
+        Task {
+            let scope = await Task.detached(priority: .utility) { HadithNarratorScope.make(book: book, chapter: target) }.value
+            // Still this chapter: Previous or Next may have swapped it meanwhile.
+            guard chapter.id == chapterID else { return }
+            narratorScope = scope
+            debugOpenNarrators()
+        }
+    }
+
+    /// `-openChapterNarrators` (with `-launchHadithOpen <slug>:<id>`): the chapter's narrators,
+    /// pushed once. Headless verification only.
+    private func debugOpenNarrators() {
+        #if DEBUG
+        guard ProcessInfo.processInfo.arguments.contains("-openChapterNarrators"), !Self.debugNarratorsOpened,
+              let scope = narratorScope, !scope.isEmpty else { return }
+        Self.debugNarratorsOpened = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { pushedNarrators = scope }
+        #endif
+    }
+
+    #if DEBUG
+    private static var debugNarratorsOpened = false
+    #endif
 
     /// Rebuild the derived chapter state when the INDEX moved without `navigateToChapter` (the paged
     /// footer's chevrons). No-op when already in sync.
@@ -3063,6 +3237,15 @@ struct HadithChapterView: View {
                                 .id("chapter-hadith-\(hadith.idInBook)")
                                 .onAppear { visibility.visibleIDs.insert(hadith.idInBook) }
                                 .onDisappear { visibility.visibleIDs.remove(hadith.idInBook) }
+                        }
+                    }
+
+                    // The chapter's narrators, under its last hadith: everyone its chains name. (In
+                    // a long chapter read a part at a time, the whole chapter's, at each part's foot.)
+                    if textReady, !isSelectingHadiths,
+                       let narratorScope, narratorScope.chapter?.id == chapter.id, !narratorScope.isEmpty {
+                        Section(header: Text("NARRATORS")) {
+                            HadithScopedNarratorsDoor(scope: narratorScope) { pushedNarrators = narratorScope }
                         }
                     }
 

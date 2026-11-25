@@ -57,6 +57,9 @@ struct AskAIChatView: View {
     /// "Delete Conversation" clears the open transcript for good, so it asks first ("New
     /// Conversation" only sets it aside under History, and does not).
     @State private var confirmDelete = false
+    /// HOW IT WORKS, folded until asked for: the welcome led with four paragraphs of it.
+    @State private var showsHowItWorks = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     #if DEBUG
     /// `-askAI "q1||q2||q3"`: the remaining questions, asked one at a time as each answer settles.
     @State private var debugQueue: [String] = []
@@ -66,7 +69,7 @@ struct AskAIChatView: View {
     /// article, that article's own questions.
     private var starters: [String] {
         if let focusArticle { return Self.articleQuestions(focusArticle) }
-        return AskAIStarters.today()
+        return chat.scope.starters
     }
 
     /// The questions an article's Ask AI offers. English, like every question the model reads, and
@@ -92,6 +95,9 @@ struct AskAIChatView: View {
         // The reading themes' ground (Sepia and Gray rendered this screen white): the app's plain
         // ScrollView screens all carry it explicitly.
         .accentWashedBackground()
+        // Opened from an English article (its Ask AI button), the chat is still a translated screen:
+        // its card must not say "Available in English only" (`englishArticle()`).
+        .environment(\.isEnglishArticle, false)
         .navigationTitle("Ask AI")
         .navigationBarTitleDisplayMode(.inline)
         .sheetDismissToolbarIf(presentedAsSheet)
@@ -112,6 +118,12 @@ struct AskAIChatView: View {
                         UIPasteboard.general.string = transcriptText
                     } label: {
                         Label("Copy Conversation", systemImage: "doc.on.doc")
+                    }
+                    .disabled(chat.messages.isEmpty)
+
+                    // Abu, 2026-11-24: "allow me to share ... ask ai".
+                    ShareLink(item: transcriptText) {
+                        Label("Share Conversation", systemImage: "square.and.arrow.up")
                     }
                     .disabled(chat.messages.isEmpty)
 
@@ -231,7 +243,7 @@ struct AskAIChatView: View {
     private var conversation: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 14) {
+                LazyVStack(alignment: .leading, spacing: 20) {
                     if chat.messages.isEmpty {
                         welcome
                     }
@@ -249,6 +261,7 @@ struct AskAIChatView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
+                .padding(.bottom, 8)
             }
             .scrollDismissesKeyboard(.immediately)
             // A deliberate drag means the reader is reading: stop pinning the bottom until they
@@ -273,10 +286,12 @@ struct AskAIChatView: View {
 
     // MARK: Welcome
 
-    /// The empty transcript: a hero card, the starter questions, a three-row "how it works" card and
-    /// the caution, set the way the rest of the app sets it - glass cards, section labels, glyph rows.
+    /// The empty transcript (redesigned 2026-11-24, Abu: "revamp ask ai ... chopped horrible ui horrible
+    /// experience and too cramped"): the hero, then WHAT TO ASK FROM as a grid of the libraries (the
+    /// filter, in the open, where a reader sees it before typing), the questions to start with in the
+    /// chosen library, the conversations before this one, how it works folded away, and the caution.
     private var welcome: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 26) {
             // The card every Islam resource opens on (`ResourceHero`).
             if let focusArticle {
                 ResourceHero(
@@ -294,11 +309,43 @@ struct AskAIChatView: View {
                 )
             }
 
+            if focusArticle == nil, AskAIScope.available.count > 1 {
+                VStack(alignment: .leading, spacing: 10) {
+                    welcomeLabel(String(localized: "ANSWER FROM"))
+
+                    // A Grid, not a lazy one: the two tiles of a row take the taller one's height (French
+                    // and German names run to two lines).
+                    let columns = dynamicTypeSize.isAccessibilitySize ? 1 : 2
+                    let scopes = AskAIScope.available
+                    Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+                        ForEach(Array(stride(from: 0, to: scopes.count, by: columns)), id: \.self) { start in
+                            GridRow {
+                                ForEach(scopes[start..<min(start + columns, scopes.count)]) { scope in
+                                    scopeTile(scope)
+                                }
+                                if columns == 2, start + 1 >= scopes.count {
+                                    Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                welcomeLabel(focusArticle == nil && chat.scope != .everything
+                             ? String(localized: "TRY ASKING \u{00B7} \(chat.scope.title.uppercased())")
+                             : String(localized: "TRY ASKING"))
+
+                ForEach(starters, id: \.self) { question in
+                    starterButton(question)
+                }
+            }
+
             // The conversations before this one: a visit always opens a new one, and these are a
-            // tap away. Above the starters: a reader with a history has seen those, and their own
-            // conversations should not sit under the fold.
+            // tap away.
             if !chat.recentChats.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 10) {
                     welcomeLabel(String(localized: "HISTORY"))
 
                     ForEach(chat.recentChats) { recent in
@@ -307,41 +354,105 @@ struct AskAIChatView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                welcomeLabel(String(localized: "TRY ASKING"))
-
-                ForEach(starters, id: \.self) { question in
-                    starterButton(question)
-                }
-            }
-
             // How it works, in the app itself: a reader who knows where the quotes come from and
-            // what the model is not allowed to do can judge what they are reading.
-            VStack(alignment: .leading, spacing: 8) {
-                welcomeLabel(String(localized: "HOW IT WORKS"))
-
-                VStack(alignment: .leading, spacing: 12) {
-                    howItWorksRow(icon: "magnifyingglass", text: AskAICopy.searchedAcross)
-                    // The readings are named only while they are read: "Show Riwayah / Qiraah" on
-                    // (`AskAIDepth.readsQiraat`).
-                    if let readWith = quranDisplay.showOtherQiraatReciters ? AskAICopy.readWith : AskAICopy.readWithoutReadings {
-                        howItWorksRow(icon: "books.vertical", text: readWith)
+            // what the model is not allowed to do can judge what they are reading. Folded: it is
+            // there for the reader who wants it, not in the way of the one who came to ask.
+            VStack(alignment: .leading, spacing: 0) {
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut(duration: 0.2)) { showsHowItWorks.toggle() }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "info.circle")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(settings.accentColor.color)
+                            .frame(width: 22)
+                        Text("How Ask AI works")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.down")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+                            .rotationEffect(.degrees(showsHowItWorks ? 180 : 0))
                     }
-                    howItWorksRow(icon: cloudOffered ? "icloud" : "iphone", text: cloudOffered
-                                  ? String(localized: "What it finds goes to Apple Intelligence on your device, or to Apple\u{2019}s Private Cloud Compute if you choose it in the menu, which answers in its own words and cites each source by number, saying where it comes from.")
-                                  : String(localized: "What it finds goes to Apple Intelligence on your device, which answers in its own words and cites each source by number, saying where it comes from. Nothing leaves your phone."))
-                    howItWorksRow(icon: "checkmark.shield", text: String(localized: "Every quote beneath an answer is this app\u{2019}s own text, never the model\u{2019}s memory. A citation it invents is removed, a quotation that matches nothing is marked \u{201C}wording not verified\u{201D}, and every source opens the real passage so you can check it yourself."))
+                    .padding(14)
+                    .contentShape(Rectangle())
                 }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentSurface(rectangle: true, interactive: false)
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(showsHowItWorks ? .isSelected : [])
+
+                if showsHowItWorks {
+                    VStack(alignment: .leading, spacing: 14) {
+                        howItWorksRow(icon: "magnifyingglass", text: AskAICopy.searchedAcross)
+                        howItWorksRow(icon: "line.3.horizontal.decrease.circle", text: AskAICopy.scopes)
+                        // The readings are named only while they are read: "Show Riwayah / Qiraah" on
+                        // (`AskAIDepth.readsQiraat`).
+                        if let readWith = quranDisplay.showOtherQiraatReciters ? AskAICopy.readWith : AskAICopy.readWithoutReadings {
+                            howItWorksRow(icon: "books.vertical", text: readWith)
+                        }
+                        howItWorksRow(icon: cloudOffered ? "icloud" : "iphone", text: cloudOffered
+                                      ? String(localized: "What it finds goes to Apple Intelligence on your device, or to Apple\u{2019}s Private Cloud Compute if you choose it in the menu, which answers in its own words and cites each source by number, saying where it comes from.")
+                                      : String(localized: "What it finds goes to Apple Intelligence on your device, which answers in its own words and cites each source by number, saying where it comes from. Nothing leaves your phone."))
+                        howItWorksRow(icon: "checkmark.shield", text: String(localized: "Every quote beneath an answer is this app\u{2019}s own text, never the model\u{2019}s memory. A citation it invents is removed, a quotation that matches nothing is marked \u{201C}wording not verified\u{201D}, and every source opens the real passage so you can check it yourself."))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 14)
+                    .transition(.opacity)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentSurface(rectangle: true, interactive: false)
 
             Label("This is a machine, not a scholar. It is here for quick, simple, general questions, and it can be confidently wrong. It does not give rulings, it is never the final answer, and anything that actually matters belongs with a knowledgeable scholar of Ahl as-Sunnah wa al-Jama\u{2018}ah.", systemImage: "exclamationmark.triangle")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .padding(.horizontal, 4)
         }
-        .padding(.bottom, 4)
+        .padding(.bottom, 8)
+    }
+
+    /// One library to answer from: its symbol in a disc, its name and what it holds. The chosen one
+    /// is filled with the accent; a tap chooses it, and the questions under the grid follow.
+    private func scopeTile(_ scope: AskAIScope) -> some View {
+        let selected = chat.scope == scope
+        let accent = settings.accentColor.color
+        return Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut(duration: 0.2)) { chat.scope = scope }
+        } label: {
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: scope.systemImage)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(selected ? Color.white : accent)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(selected ? accent : accent.opacity(0.15)))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(scope.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(scope.detail)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: 64, maxHeight: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .contentSurface(rectangle: true, useColor: selected ? 0.22 : nil, customTint: selected ? accent : nil)
+            .overlay(
+                RoundedRectangle(cornerRadius: GlassCorner.rectangle, style: .continuous)
+                    .strokeBorder(selected ? accent.opacity(0.7) : Color.clear, lineWidth: 1.5)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     /// One question to tap: asks it at once.
@@ -351,18 +462,19 @@ struct AskAIChatView: View {
             askedAboutArticle = true
             chat.ask(question)
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 12) {
                 Text(question.localizedDisplay)
                     .font(.subheadline)
                     .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 Image(systemName: "arrow.up.right")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(settings.accentColor.color)
             }
             .foregroundColor(.primary)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .contentSurface(rectangle: true)
@@ -457,6 +569,7 @@ struct AskAIChatView: View {
             Text(text)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -466,19 +579,26 @@ struct AskAIChatView: View {
     private func messageView(_ message: AskAIConversation.Message) -> some View {
         switch message.role {
         case .user:
-            HStack {
-                Spacer(minLength: 48)
-                Text(message.text)
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(settings.accentColor.color.opacity(0.2))
-                    )
-                    .textSelection(.enabled)
+            VStack(alignment: .trailing, spacing: 6) {
+                HStack {
+                    Spacer(minLength: 48)
+                    Text(message.text)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 11)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(settings.accentColor.color.opacity(0.2))
+                        )
+                        .textSelection(.enabled)
+                }
+                // The library it was asked of, when not everything.
+                if let scope = message.scope {
+                    AskAIScopeBadge(scope: scope)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .trailing)
         case .assistant:
             AskAIAnswerCard(message: message, isLast: message.id == chat.messages.last?.id) { suggestion in
                 settings.hapticFeedback()
@@ -493,62 +613,117 @@ struct AskAIChatView: View {
 
     // MARK: Composer
 
-    /// The composer: the app's 50pt glass field with a sparkles glyph where the search bars carry
-    /// their magnifier, and the circle-glass send (or stop) button beside it.
+    /// The composer (2026-11-24): one glass card, the field across its whole width (the prompt was cut
+    /// to "Ask about the Quran, hadith,..." beside a separate send circle), and under it the library
+    /// the answer comes from, as a menu, with send (or stop) at the far end.
     private var inputBar: some View {
         let canSend = !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return HStack(alignment: .bottom, spacing: 8) {
-            HStack(alignment: .center, spacing: 8) {
-                Image(systemName: "sparkles")
+        let accent = settings.accentColor.color
+        return VStack(alignment: .leading, spacing: 6) {
+            // The prompt drawn here, not as the field's placeholder: a placeholder is one line, and the
+            // longer languages' prompts were cut ("Posez une question sur le Coran, les hadith...").
+            ZStack(alignment: .topLeading) {
+                if draft.isEmpty {
+                    Text(AskAICopy.composerPrompt(for: chat.scope))
+                        .font(.body)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+                TextField("", text: $draft, axis: .vertical)
                     .font(.body)
-                    .foregroundStyle(settings.accentColor.color)
-
-                TextField(AskAICopy.composerPrompt, text: $draft, axis: .vertical)
-                    .lineLimit(1...5)
+                    .lineLimit(1...6)
                     .focused($inputFocused)
                     .textFieldStyle(.plain)
                     .onSubmit { send() }
+                    .accessibilityLabel(Text(AskAICopy.composerPrompt(for: chat.scope)))
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .frame(minHeight: 50)
-            .conditionalGlassEffect()
+            .padding(.top, 14)
 
-            if chat.isAnswering {
-                Button {
-                    settings.hapticFeedback()
-                    chat.cancel()
-                } label: {
-                    Image(systemName: "stop.fill")
-                        .font(.body.weight(.semibold))
-                        .foregroundColor(.primary)
-                        .frame(width: 50, height: 50)
-                        .contentShape(Circle())
-                        .conditionalGlassEffect(circle: true)
+            HStack(spacing: 8) {
+                scopeMenu
+
+                Spacer(minLength: 8)
+
+                if chat.isAnswering {
+                    Button {
+                        settings.hapticFeedback()
+                        chat.cancel()
+                    } label: {
+                        Image(systemName: "stop.fill")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundColor(.primary)
+                            .frame(width: 36, height: 36)
+                            .background(Circle().fill(Color.primary.opacity(0.12)))
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Stop answering")
+                } else {
+                    Button {
+                        send()
+                    } label: {
+                        Image(systemName: "arrow.up")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundColor(canSend ? .white : .secondary)
+                            .frame(width: 36, height: 36)
+                            .background(Circle().fill(canSend ? accent : Color.primary.opacity(0.1)))
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canSend)
+                    .accessibilityLabel("Send")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Stop answering")
-            } else {
-                Button {
-                    send()
-                } label: {
-                    Image(systemName: "arrow.up")
-                        .font(.body.weight(.bold))
-                        .foregroundColor(canSend ? .white : .secondary)
-                        .frame(width: 50, height: 50)
-                        .contentShape(Circle())
-                        .conditionalGlassEffect(circle: true, useColor: canSend ? 0.9 : nil)
-                }
-                .buttonStyle(.plain)
-                .disabled(!canSend)
-                .accessibilityLabel("Send")
             }
+            .padding(.leading, 10)
+            .padding(.trailing, 8)
+            .padding(.bottom, 8)
         }
-        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture { inputFocused = true }
+        .conditionalGlassEffect(rectangle: true)
+        .padding(.horizontal, 16)
         .padding(.bottom, BottomBarCushion.standard)
         .background(Color.white.opacity(0.00001))
         .animation(.easeInOut(duration: 0.2), value: canSend)
         .animation(.easeInOut(duration: 0.2), value: chat.isAnswering)
+    }
+
+    /// The library menu under the field: the chosen one as a tinted capsule, every one inside.
+    private var scopeMenu: some View {
+        let accent = settings.accentColor.color
+        return Menu {
+            Picker(selection: $chat.scope) {
+                ForEach(AskAIScope.available) { scope in
+                    Label(scope.title, systemImage: scope.systemImage).tag(scope)
+                }
+            } label: {
+                Text("Answer from")
+            }
+            .pickerStyle(.inline)
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: chat.scope.systemImage)
+                    .font(.caption.weight(.semibold))
+                Text(chat.scope.title)
+                    .font(.footnote.weight(.semibold))
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2.weight(.bold))
+                    .opacity(0.7)
+            }
+            .foregroundStyle(accent)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(accent.opacity(chat.scope == .everything ? 0.1 : 0.2)))
+            .contentShape(Capsule())
+        }
+        .accessibilityLabel(Text("Answer from \(chat.scope.title)"))
+        .onChange(of: chat.scope) { _ in settings.hapticFeedback() }
     }
 
     private func send() {
@@ -584,6 +759,7 @@ private enum AskAICopy {
     static let heroMessage = String(localized: "A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own Quran, hadith, tafsir, articles and duas, with every source quoted beneath the reply and a line saying where it comes from.")
     static let searchedAcross = String(localized: "Your question is understood first (a greeting, a verse, a how-to, a question about the app), then searched across this app\u{2019}s own Quran, hadith collections, tafsir, articles, duas, Names of Allah and tips.")
     static let composerPrompt = String(localized: "Ask about the Quran, hadith, or Islam")
+    static let scopes = String(localized: "Choose what to answer from, above your question or under ANSWER FROM: everything, or only the Quran, the hadith, the articles, the duas, or the prayer times of any city on any day.")
     static let lookingThrough = String(localized: "Looking through the Quran, hadith and articles\u{2026}")
     static let readWith: String? = String(localized: "The verses and hadiths that lead an answer are not read alone: each verse comes with its tafsir, the app\u{2019}s other translation and the readings (qiraat) that differ in it, and each hadith with its explanation and the other collections that record it. Each source beneath an answer lists what was read with it.")
     static let readWithoutReadings: String? = String(localized: "The verses and hadiths that lead an answer are not read alone: each verse comes with its tafsir and the app\u{2019}s other translation, and each hadith with its explanation and the other collections that record it. Each source beneath an answer lists what was read with it.")
@@ -591,6 +767,7 @@ private enum AskAICopy {
     static let heroMessage = String(localized: "A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own Quran, tafsir, articles and duas, with every source quoted beneath the reply and a line saying where it comes from.")
     static let searchedAcross = String(localized: "Your question is understood first (a greeting, a verse, a how-to, a question about the app), then searched across this app\u{2019}s own Quran, tafsir, articles, duas, Names of Allah and tips.")
     static let composerPrompt = String(localized: "Ask about the Quran or Islam")
+    static let scopes = String(localized: "Choose what to answer from, above your question or under ANSWER FROM: everything, or only the Quran, the articles, or the duas.")
     static let lookingThrough = String(localized: "Looking through the Quran and articles\u{2026}")
     static let readWith: String? = String(localized: "The verses that lead an answer are not read alone: each comes with its tafsir, the app\u{2019}s other translation and the readings (qiraat) that differ in it. Each source beneath an answer lists what was read with it.")
     static let readWithoutReadings: String? = String(localized: "The verses that lead an answer are not read alone: each comes with its tafsir and the app\u{2019}s other translation. Each source beneath an answer lists what was read with it.")
@@ -600,10 +777,46 @@ private enum AskAICopy {
     static let heroMessage = String(localized: "A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own prayer times, articles, duas, Names of Allah and tips, with every source quoted beneath the reply and a line saying where it comes from.")
     static let searchedAcross = String(localized: "Your question is understood first (a greeting, a how-to, a question about the app), then searched across this app\u{2019}s own prayer times, articles, duas, Names of Allah and tips.")
     static let composerPrompt = String(localized: "Ask about prayer or Islam")
+    static let scopes = String(localized: "Choose what to answer from, above your question or under ANSWER FROM: everything, or only the articles, the duas, or the prayer times of any city on any day.")
     static let lookingThrough = String(localized: "Looking through the app\u{2019}s articles\u{2026}")
     static let readWith: String? = nil
     static let readWithoutReadings: String? = nil
     #endif
+
+    /// The field's prompt for the library chosen.
+    static func composerPrompt(for scope: AskAIScope) -> String {
+        switch scope {
+        case .everything: return composerPrompt
+        case .quran: return String(localized: "Ask what the Quran says")
+        case .hadith: return String(localized: "Ask what the hadith say")
+        case .articles: return String(localized: "Ask a how-to or a belief")
+        case .duas: return String(localized: "Ask for a dua or a Name of Allah")
+        case .prayerTimes: return String(localized: "Ask a prayer time, anywhere, any day")
+        }
+    }
+}
+
+/// The library a turn was asked of, as a small tinted capsule: under the question, and beside the
+/// answer's AI label.
+@available(iOS 16.0, *)
+private struct AskAIScopeBadge: View {
+    let scope: AskAIScope
+    private let settings = Settings.shared
+
+    var body: some View {
+        Label {
+            Text(scope.title)
+        } icon: {
+            Image(systemName: scope.systemImage)
+        }
+        .font(.caption2.weight(.semibold))
+        .foregroundStyle(settings.accentColor.color)
+        .labelStyle(.titleAndIcon)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(Capsule().fill(settings.accentColor.color.opacity(0.14)))
+        .accessibilityLabel(Text("Answered from \(scope.title)"))
+    }
 }
 
 /// The chat presented as a sheet (from the search screens), in its own navigation stack so the
@@ -644,7 +857,7 @@ private struct AskAIAnswerCard: View {
     private var uncited: [AskAISource] { message.uncitedSources }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 14) {
             header
 
             if message.text.isEmpty {
@@ -761,7 +974,7 @@ private struct AskAIAnswerCard: View {
                 suggestionChips
             }
         }
-        .padding(12)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         // Regular glass, not clear: clear glass on a dark ground is invisible, and the answer
         // read as loose text floating in the transcript instead of a card.
@@ -811,11 +1024,26 @@ private struct AskAIAnswerCard: View {
                     .padding(.vertical, 2)
                     .background(Capsule().fill(settings.accentColor.color.opacity(0.14)))
             }
+            if let scope = message.scope {
+                AskAIScopeBadge(scope: scope)
+            }
             if message.isStreaming {
                 ProgressView()
                     .controlSize(.mini)
             }
             Spacer()
+            // The answer to send on as it stands, its sources quoted under it (it was only in the
+            // card's long-press menu: Abu, 2026-11-24, "allow me to share ... ask ai").
+            if !message.isStreaming, message.hasAnswerProse, message.intent != .crisis {
+                ShareLink(item: AskAIText.shareText(answer: message.text, cited: cited, allSources: message.sources)) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.caption.weight(.semibold))
+                        .frame(width: 28, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Share Answer")
+            }
             if message.failed, isLast {
                 Button(action: onRetry) {
                     Image(systemName: "arrow.clockwise")
@@ -843,25 +1071,37 @@ private struct AskAIAnswerCard: View {
         return message.engine == .privateCloud ? String(localized: "Thinking on Private Cloud Compute\u{2026}") : String(localized: "Thinking\u{2026}")
     }
 
+    /// The follow-ups, one to a line and whole (a sideways row of chips cut the last one off at the
+    /// card's edge: "What are the sunnah p").
     private var suggestionChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(message.suggestions, id: \.self) { suggestion in
-                    Button {
-                        onSuggestion(suggestion)
-                    } label: {
-                        Text(suggestion)
-                            .font(.caption)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("ASK NEXT")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+            ForEach(message.suggestions, id: \.self) { suggestion in
+                Button {
+                    onSuggestion(suggestion)
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "arrow.turn.down.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(settings.accentColor.color)
+                        // As the question is sent: English, as the follow-ups always were.
+                        Text(verbatim: suggestion)
+                            .font(.subheadline)
                             .foregroundColor(.primary)
-                            .lineLimit(1)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .contentSurface()
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .contentSurface(rectangle: true)
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.vertical, 2)
         }
         .padding(.top, 2)
     }
@@ -875,7 +1115,8 @@ private struct AskAIAnswerProse: View {
     @Environment(\.appearance) private var appearance
 
     var body: some View {
-        let size = UIFont.preferredFont(forTextStyle: .subheadline).pointSize
+        // Body size (it was the subheadline): the answer is what the screen is for.
+        let size = UIFont.preferredFont(forTextStyle: .body).pointSize
         SelectableTextView(attributed: AskAIText.attributedAnswer(
             text, font: .roundedSystemFont(ofSize: size, weight: .regular), color: .label, accent: UIColor(appearance.accent)))
             // The text view opts out of automatic content-size tracking, so the font is rebuilt from
@@ -913,17 +1154,47 @@ private struct AskAISourceCard: View {
     }()
 
     var body: some View {
-        if !opensAScreen {
-            label
-        } else {
-            NavigationLink {
-                LazyDestination {
-                    AskAISourceDestination.view(for: source)
-                }
-            } label: {
+        Group {
+            if !opensAScreen {
                 label
+            } else {
+                NavigationLink {
+                    LazyDestination {
+                        AskAISourceDestination.view(for: source)
+                    }
+                } label: {
+                    label
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
+        }
+        // A tap reads the source here, inside the chat; the menu opens it in its own tab, to read
+        // in full, bookmark or share (Abu, 2026-11-24: "Maybe update ask AI too?").
+        .contextMenu {
+            if let open = AskAISourceLink.openRow(for: source.kind) {
+                Button {
+                    settings.hapticFeedback()
+                    if let link = AskAISourceLink.link(for: source.kind) { AppLinkRouter.open(link) }
+                } label: {
+                    Label(open.title, systemImage: open.systemImage)
+                }
+
+                Button {
+                    if let link = AskAISourceLink.link(for: source.kind) {
+                        AppLinkShare.share(link, title: displayTitle)
+                    }
+                } label: {
+                    Label("Share Link", systemImage: "link")
+                }
+            }
+
+            Button {
+                settings.hapticFeedback()
+                UIPasteboard.general.string = [displayTitle, source.arabic, source.text].compactMap { $0 }
+                    .filter { !$0.isEmpty }.joined(separator: "\n\n")
+            } label: {
+                Label("Copy", systemImage: "doc.on.doc")
+            }
         }
     }
 
@@ -997,6 +1268,12 @@ private struct AskAISourceCard: View {
     private var opensAScreen: Bool {
         switch source.kind {
         case .prayer: return false
+        case .cityPrayer:
+            #if HAS_ADHAN
+            return true
+            #else
+            return false
+            #endif
         #if !HAS_QURAN
         case .ayah, .tafsir, .surah: return false
         #endif
@@ -1006,6 +1283,9 @@ private struct AskAISourceCard: View {
         #if !HAS_TIPS
         case .tip: return false
         #endif
+        // A page built for the AI on the spot (a lesson, a hadith's explanation) has no screen of
+        // its own to push from here.
+        case .article(let id, _): return IslamArticles.destination(for: id) != nil
         default: return true
         }
     }
@@ -1169,6 +1449,52 @@ private struct AskAISourceCard: View {
     }
 }
 
+/// A source's place in the app as a shared link: what its card's "Open in Quran" / "Open in Hadith"
+/// and "Share Link" use. The hadith's printed number is read from its book only when a row is tapped.
+@MainActor
+enum AskAISourceLink {
+    static func openRow(for kind: AskAISource.Kind) -> (title: String, systemImage: String)? {
+        switch kind {
+        #if HAS_QURAN
+        case .ayah, .tafsir, .surah: return (OpenInTab.quranTitle, OpenInTab.quranSymbol)
+        #endif
+        #if HAS_HADITH
+        case .hadith: return (OpenInTab.hadithTitle, OpenInTab.hadithSymbol)
+        #endif
+        case .article(let id, _):
+            return AppLink.articlePage(id: id) == nil ? nil : (String(localized: "Open Article"), "doc.text")
+        case .name: return (String(localized: "Open in the 99 Names"), "sparkles")
+        #if HAS_ADHAN
+        case .cityPrayer: return (String(localized: "Open in City Prayer Times"), "map")
+        #endif
+        default: return nil
+        }
+    }
+
+    static func link(for kind: AskAISource.Kind) -> AppLink? {
+        switch kind {
+        // No link to a tab the app lacks (Al-Adhan has no Quran tab): no Share Link either, as before.
+        #if HAS_QURAN
+        case .ayah(let surah, let ayah): return AppLink(key: "quran", value: "\(surah):\(ayah)")
+        case .tafsir(let surah, let ayah, _): return .tafsir(surah: surah, ayah: ayah)
+        case .surah(let surah): return AppLink(key: "quran", value: "\(surah)")
+        #endif
+        case .hadith(let slug, let idInBook):
+            #if HAS_HADITH
+            guard let book = HadithCatalogBook.bySlug[slug], let data = HadithStore.shared.book(book),
+                  let row = data.hadith(numbered: idInBook) else { return nil }
+            return AppLink.hadith(row, in: book, data: data)
+            #else
+            let _ = (slug, idInBook)
+            return nil
+            #endif
+        case .article(let id, _): return AppLink.articlePage(id: id)?.link
+        case .name(let number): return AppLink(key: "name", value: String(number))
+        default: return nil
+        }
+    }
+}
+
 /// Where a source card opens: the reader at the ayah, the hadith in its chapter, the article, the
 /// Names screen scrolled to the Name, the dua's collection, the tip's setting.
 @available(iOS 16.0, *)
@@ -1242,6 +1568,14 @@ enum AskAISourceDestination {
             }
         case .prayer:
             EmptyView()
+        case .cityPrayer(let latitude, let longitude, let city, let day):
+            #if HAS_ADHAN
+            PrayerTimesMapView(initialLocation: Location(city: city, latitude: latitude, longitude: longitude),
+                               initialDate: day, showsCloseButton: false)
+            #else
+            let _ = (latitude, longitude, city, day)
+            EmptyView()
+            #endif
         }
     }
 }

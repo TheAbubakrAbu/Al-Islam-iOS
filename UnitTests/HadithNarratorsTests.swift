@@ -414,4 +414,127 @@ final class HadithNarratorsTests: XCTestCase {
         XCTAssertEqual(similar.list.sort, .match)
         XCTAssertEqual(similar.list.shown, matches.count)
     }
+
+    /// The index of one book (HadithNarratorBookIndex: the narrators of a book and of a chapter) is
+    /// the narrators' own lists turned the other way round, so it must say what they say: a
+    /// narrator's count in the book is his profile's count for it, his places are his list's, and
+    /// a chapter's narrators are the narrators of its narrations and no one else's.
+    func testABooksIndexSaysWhatTheNarratorsListsSay() throws {
+        let pack = try pack()
+        let slug = "bukhari"
+        let index = try XCTUnwrap(pack.bookIndex(slug: slug))
+        XCTAssertNil(pack.bookIndex(slug: "nowhere"))
+        XCTAssertNil(pack.bookIndex(slug: "riyad_assalihin"), "a compilation's rows carry no chain of their own")
+
+        var named = 0
+        for profile in pack.allProfiles() {
+            let inBook = profile.books.first { $0.slug == slug }?.count ?? 0
+            XCTAssertEqual(index.narrators[profile.id]?.narrations ?? 0, inBook, "narrator \(profile.id) in \(slug)")
+            if inBook > 0 { named += 1 }
+        }
+        XCTAssertGreaterThan(named, 500)
+        XCTAssertEqual(index.narrators.count, named)
+
+        // The book's busiest narrator, place by place, against his own list.
+        let busiest = try XCTUnwrap(index.narrators.max { ($0.value.narrations, $1.key) < ($1.value.narrations, $0.key) })
+        let refs = pack.refs(id: busiest.key).filter { $0.slug == slug }
+        XCTAssertEqual(busiest.value.narrations, refs.count)
+        XCTAssertEqual(busiest.value.fromProphet, refs.filter { $0.role == .top }.count)
+        XCTAssertEqual(busiest.value.teacher, refs.filter { $0.role == .teacher }.count)
+        XCTAssertEqual(busiest.value.ends, refs.filter { $0.role == .end }.count)
+        XCTAssertEqual(busiest.value.links, refs.filter { $0.role == .link }.count)
+
+        // Chapter by chapter: each chapter's narrators against their lists (the first three), and
+        // the chapters together are the book (a narration stands in one chapter).
+        let data = try book(slug)
+        var summed: [Int: Int] = [:]
+        for (position, chapter) in data.chapters.enumerated() {
+            let rows = data.hadiths(in: chapter).map(\.idInBook)
+            let inChapter = index.narrators(rows: rows)
+            for (narrator, tally) in inChapter { summed[narrator, default: 0] += tally.narrations }
+            guard position < 3 else { continue }
+            XCTAssertFalse(inChapter.isEmpty, "chapter \(position + 1) of \(slug) names narrators")
+            let inRows = Set(rows)
+            for (narrator, tally) in inChapter {
+                let own = pack.refs(id: narrator).filter { $0.slug == slug && inRows.contains($0.idInBook) }
+                XCTAssertEqual(tally.narrations, own.count, "narrator \(narrator), chapter \(position + 1)")
+                XCTAssertEqual(tally.fromProphet, own.filter { $0.role == .top }.count)
+            }
+        }
+        XCTAssertEqual(summed, index.narrators.mapValues(\.narrations))
+        XCTAssertTrue(index.narrators(rows: []).isEmpty)
+    }
+
+    /// The index of narrators held to a book lists that book's narrators, counted inside it, and a
+    /// narrator opened from it shows his narrations there first.
+    @MainActor
+    func testTheIndexHeldToABookCountsInsideIt() throws {
+        let catalog = try XCTUnwrap(HadithCatalogBook.bySlug["bukhari"])
+        let scope = HadithNarratorScope.make(book: catalog)
+        XCTAssertFalse(scope.isEmpty)
+        XCTAssertNotNil(HadithNarratorScope.ready(book: catalog), "made once, the book's index is in hand")
+        XCTAssertTrue(HadithNarratorScope.make(book: try XCTUnwrap(HadithCatalogBook.bySlug["nawawi40"])).isEmpty)
+
+        let model = HadithNarratorsIndexModel(scope: scope)
+        XCTAssertEqual(model.profiles.count, scope.count)
+        XCTAssertLessThan(model.profiles.count, HadithNarratorsIndexModel().profiles.count)
+        let rows = model.buckets.flatMap(\.rows)
+        XCTAssertEqual(rows.count, scope.count)
+        for profile in rows.prefix(50) {
+            XCTAssertEqual(model.count(profile, at: .all), profile.books.first { $0.slug == "bukhari" }?.count)
+            XCTAssertLessThanOrEqual(model.count(profile, at: .all), profile.narrations)
+        }
+        model.place = .first
+        XCTAssertTrue(model.buckets.flatMap(\.rows).allSatisfy { (scope.tallies[$0.id]?.fromProphet ?? 0) > 0 })
+
+        // His page, opened from the book: held to the book, one tap from everything.
+        let busiest = try XCTUnwrap(scope.tallies.max { ($0.value.narrations, $1.key) < ($1.value.narrations, $0.key) })
+        let page = HadithNarratorPage(narratorID: busiest.key, scope: scope)
+        XCTAssertEqual(page.list.shown, busiest.value.narrations)
+        XCTAssertTrue(page.list.isNarrowed)
+        page.list.reset()
+        XCTAssertEqual(page.list.shown, page.list.entries.count)
+
+        // And from a chapter: his narrations in that chapter.
+        let data = try XCTUnwrap(HadithStore.shared.book(catalog))
+        let chapter = try XCTUnwrap(data.chapters.first)
+        let held = HadithNarratorScope.make(book: catalog, chapter: .init(id: chapter.id, title: chapter.english,
+                                                                           rows: data.hadiths(in: chapter).map(\.idInBook)))
+        XCTAssertFalse(held.isEmpty)
+        XCTAssertLessThan(held.count, scope.count)
+        let someone = try XCTUnwrap(held.tallies.max { ($0.value.narrations, $1.key) < ($1.value.narrations, $0.key) })
+        let chapterPage = HadithNarratorPage(narratorID: someone.key, scope: held)
+        XCTAssertEqual(chapterPage.list.shown, someone.value.narrations)
+        XCTAssertNotNil(chapterPage.list.held)
+        chapterPage.list.reset()
+        XCTAssertNil(chapterPage.list.held)
+        XCTAssertEqual(chapterPage.list.shown, chapterPage.list.entries.count)
+    }
+
+    /// The book's card (Show More) says nothing twice: the story loses the compiler's Arabic name
+    /// in brackets, which the card writes above it, and nothing else; a full title that is the
+    /// short title over again is not shown.
+    func testTheBooksCardSaysNothingTwice() throws {
+        for book in HadithCatalogBook.all {
+            let told = HadithCatalogBook.droppingAuthorInBrackets(book.longDescription, authorArabic: book.authorArabic)
+            let before = book.longDescription.filter { $0 == "(" }.count
+            let after = told.filter { $0 == "(" }.count
+            // Every story names its compiler once in Arabic; the forty qudsi hadiths have none.
+            XCTAssertEqual(after, book.slug == "qudsi40" ? before : before - 1, book.slug)
+            XCTAssertEqual(after, told.filter { $0 == ")" }.count, book.slug)
+            XCTAssertFalse(told.contains(" ,") || told.contains("  ") || told.contains(" ."), "\(book.slug): \(told)")
+            XCTAssertEqual(told.components(separatedBy: "\n\n").count, book.longDescription.components(separatedBy: "\n\n").count)
+        }
+        let bukhari = try XCTUnwrap(HadithCatalogBook.bySlug["bukhari"])
+        XCTAssertTrue(HadithCatalogBook.droppingAuthorInBrackets(bukhari.longDescription, authorArabic: bukhari.authorArabic)
+            .hasPrefix("Compiled over sixteen years by Imam al-Bukhari, who sifted its 7,277 hadiths (numbered up to 7,563"))
+        let qudsi = try XCTUnwrap(HadithCatalogBook.bySlug["qudsi40"])
+        XCTAssertEqual(HadithCatalogBook.droppingAuthorInBrackets(qudsi.longDescription, authorArabic: qudsi.authorArabic), qudsi.longDescription,
+                       "a term the story teaches stays")
+        XCTAssertEqual(HadithCatalogBook.droppingAuthorInBrackets("No brackets here.", authorArabic: bukhari.authorArabic), "No brackets here.")
+        XCTAssertEqual(HadithCatalogBook.droppingAuthorInBrackets("An open (bracket", authorArabic: bukhari.authorArabic), "An open (bracket")
+
+        let plain = Set(HadithCatalogBook.all.filter { !$0.hasOwnFullTitle }.map(\.slug))
+        XCTAssertEqual(plain, ["mishkat_almasabih", "aladab_almufrad"])
+    }
 }

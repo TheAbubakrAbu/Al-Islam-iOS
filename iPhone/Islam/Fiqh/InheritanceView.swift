@@ -727,7 +727,9 @@ struct InheritanceCalculatorView: View {
                             ResourceHeroStat("6".localizedDigits, String(localized: "fixed shares")),
                             ResourceHeroStat("3".localizedDigits, String(localized: "verses of shares")),
                         ]
-                    ))
+                    ) {
+                        InheritanceSharesArt()
+                    })
                 }
                 #endif
                 if shows("shares") { resultSection }

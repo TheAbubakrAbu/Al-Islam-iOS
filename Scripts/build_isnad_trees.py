@@ -48,6 +48,25 @@ varint narrator ids, the fullest name first (the joined shorter forms after it),
 numbered narrators are not repeated here: the app reads them from the narrator index. Rerun after
 any .hpk rebuild, after build_hadith_chains.py and after build_similar_hadiths.py (this reads both
 packs); the samples test holds the pack to what the script built.
+
+The hadiths with the most chains (Abu, 2026-11-23: "would be fire to see/filter Hadiths with the most
+amount of chains ... as a filter thing or as another navigation link like most overlap most chains").
+A row's fourth number is its CHAINS: how many different chains its narrations come down by, a chain
+being the narrators as written from the top down to one compiler, counted once however many
+narrations repeat it (the forty narrations of Hammam's sahifah in one book are one chain). It is
+counted over a narrower family than the tree's, because two kinds of row are matched to rows that
+are not the same hadith, and a count that ranks hadiths must not be led by them (`rank`):
+  - a row whose own text only points at another ("عن النبي ﷺ مثله", "نحوه", "بهذا الإسناد"): ninety-six
+    such rows carry the same three words and are each other's "same text". It counts no chains.
+  - a row of at-Tirmidhi's, whose text ends in his own remarks ("وفي الباب عن ... هذا حديث حسن صحيح"):
+    another row of his that is only SIMILAR to it may share nothing but those remarks. It is left
+    out of the count; a row of his with the same text, or any other book's row, is counted.
+The trees themselves are untouched by this (the tree of such a row still merges what its similar
+list names). The last block lists the rows with the most chains, most first, one row for each
+hadith (a row most of whose family is already listed is left out): the whole shelf's list, then
+each book's own.
+
+    python3 Scripts/build_isnad_trees.py --ranking 40    # the top of the shelf's list, nothing written
 """
 import itertools
 import json
@@ -77,6 +96,13 @@ MAX_PATHS = 64
 DOMINANCE = 10
 SAMPLE_ROWS = [("bukhari", 1), ("muslim", 7), ("tirmidhi", 1), ("nasai", 1), ("riyad_assalihin", 1), ("nawawi40", 1),
                ("bukhari", 54), ("ibnmajah", 4137)]
+# A hadith is listed among those with the most chains from this many chains up.
+MIN_RANKED = 3
+# The words a row that only points at another narration is made of, beside the opening words and the
+# honorifics (`similar.LEAD_IN`, `similar.NOISE`): "مثله", "نحوه", "بهذا الإسناد", "فذكر الحديث".
+POINTER = {'مثله', 'بمثله', 'نحوه', 'بنحوه', 'مثل', 'بمثل', 'نحو', 'بنحو', 'نحوا', 'ذلك', 'فذكر', 'فذكره', 'يذكر', 'وذكر',
+           'ذكر', 'معناه', 'بمعناه', 'الحديث', 'حديث', 'حديثه', 'بحديث', 'بهذا', 'هذا', 'بهذه', 'هذه', 'الاسناد',
+           'باسناده', 'سواء', 'يفعل', 'القصه'}
 
 
 # MARK: - What the two packs say
@@ -441,38 +467,142 @@ def build_all(chain_rows, similar_rows):
     return index, trees, roots
 
 
+# MARK: - The hadiths with the most chains
+
+def substance(raw, parsed):
+    """The words of a row's own text that say something: what follows its chain (the whole row when
+    the app draws no chain for it) without the opening words, the honorifics and the pointing words."""
+    start = 0
+    if parsed:
+        nodes = [node for layer in parsed['shared'] for node in layer]
+        nodes += [node for layers in parsed['branches'] for layer in layers for node in layer]
+        start = max((node.last for node in nodes), default=-1) + 1
+    words = [similar.fold(token) for token in raw[start:]]
+    return [w for w in words if w and w not in similar.LEAD_IN and w not in similar.NOISE and w not in similar.DROP
+            and w not in POINTER]
+
+
+def rank(index, chain_rows, similar_rows):
+    """({(slug, id): chains}, the shelf's rows with the most chains, {slug: that book's}).
+
+    The count and the two rules are the header's. The order is by chains, then by the books and the
+    narrations of the row's tree (the numbers the app holds, so it sorts any list of its own the same
+    way), then the shelf's order."""
+    pointing, english = set(), {}
+    for slug in SLUGS:
+        shelf = Hadith(slug)
+        for position, row in enumerate(shelf.rows):
+            key = (slug, row.idInBook)
+            found = chain_rows.get(key)
+            if found is None and key not in index:
+                continue
+            item = shelf.item(position)
+            english[key] = bool(item.text.strip())
+            if len(substance(found[1] if found else item.arabic.split(), found[0] if found else None)) < 2:
+                pointing.add(key)
+
+    signatures = {}
+
+    def signature(key):
+        if key not in signatures:
+            parsed, _, keys = chain_rows[key]
+            book = SLUGS.index(key[0])
+            signatures[key] = (book, frozenset(tuple(path_keys(path, book, keys)) for path in paths(parsed)))
+        return signatures[key]
+
+    families = {}
+
+    def family(key):
+        if key not in families:
+            members = [key] if key in chain_rows else []
+            for slug, id_in_book, tier in similar_rows.get(key, []):
+                member = (slug, id_in_book)
+                if member not in chain_rows or member in pointing:
+                    continue
+                if tier == similar.TIER_SIMILAR and slug == key[0] == 'tirmidhi':
+                    continue
+                members.append(member)
+            families[key] = frozenset(members)
+        return families[key]
+
+    counts = {key: 0 if key in pointing else len({signature(member) for member in family(key)}) for key in index}
+
+    def order(key):
+        return (-counts[key], -index[key][2], -index[key][1], SLUGS.index(key[0]), key[1])
+
+    def listed(keys, translated):
+        taken, chosen, out = set(), set(), []
+        for key in sorted(keys, key=order):
+            if counts[key] < MIN_RANKED:
+                break
+            members = family(key)
+            if key in taken or 2 * len(members & taken) >= len(members):
+                taken |= members
+                continue
+            pick = key
+            if translated and not english[key]:
+                # The same hadith in a book the app has in English, when its own count is as good
+                # as this one's to within a tenth: the row a reader of English can read.
+                close = [m for m in members if m in index and english.get(m) and 10 * counts[m] >= 9 * counts[key]
+                         and counts[m] >= MIN_RANKED]
+                if close:
+                    pick = min(close, key=order)
+            taken |= members | family(pick) | {key, pick}
+            # Two rows of one hadith can both be sent to the same translated row: it is listed once.
+            if pick not in chosen:
+                chosen.add(pick)
+                out.append(pick)
+        return sorted(out, key=order)
+
+    shelf_list = listed(index, True)
+    books = {slug: listed([key for key in index if key[0] == slug], False) for slug in SLUGS}
+    return counts, shelf_list, books, len(pointing)
+
+
 # MARK: - The pack
 
-def write_pack(index, trees):
+def write_pack(index, trees, counts, shelf_list, books):
     """HadithIsnadTrees.qpk (QuranPackContainer, QuranPack.swift):
 
       header (48), block table (16 per block); records = blocks, units = rows with a tree
       eager (LZFSE)   u32 books, then per book: string slug, u32 rows with a tree; u32 rows, u32 trees,
                       u32 shard, u32 shards
       block 0..B-1    book n's rows: a row block by idInBook, a row's payload varint tree id,
-                      varint narrations in the tree, varint books in it
+                      varint narrations in the tree, varint books in it, varint chains (`rank`)
       block B..       the trees, SHARD to a block by tree id (1-based): a row block, a row's payload
                       the tree in preorder (`serialize`)
+      the last block  the rows with the most chains, most first: a row block of B + 1 rows, row 0 the
+                      whole shelf's (u8 book, varint idInBook each), row n + 1 book n's (varint idInBook)
 
+    The eager section ends with one more u32 after the shards: how many rows the shelf's list holds.
     Then reads the file back as the app will and checks every row and tree."""
     eager = bytearray(struct.pack('<I', len(SLUGS)))
     blocks = []
     for slug in SLUGS:
-        rows = [(i, similar.varint(t) + similar.varint(n) + similar.varint(b)) for (s, i), (t, n, b) in index.items() if s == slug]
+        rows = [(i, similar.varint(t) + similar.varint(n) + similar.varint(b) + similar.varint(counts[(s, i)]))
+                for (s, i), (t, n, b) in index.items() if s == slug]
         blocks.append(chains.row_block(rows))
         data = slug.encode('utf-8')
         eager += struct.pack('<I', len(data)) + data + struct.pack('<I', len(rows))
     shards = (len(trees) + SHARD - 1) // SHARD
-    eager += struct.pack('<IIII', len(index), len(trees), SHARD, shards)
+    eager += struct.pack('<IIIII', len(index), len(trees), SHARD, shards, len(shelf_list))
     for shard in range(shards):
         members = trees[shard * SHARD:(shard + 1) * SHARD]
         blocks.append(chains.row_block([(shard * SHARD + n + 1, payload) for n, payload in enumerate(members)]))
+    blocks.append(chains.row_block(ranking_rows(shelf_list, books)))
     chains.write_container(OUT, eager, blocks, len(blocks), len(index))
-    verify_pack(index, trees)
+    verify_pack(index, trees, counts, shelf_list, books)
     return sum(len(b) for b in blocks)
 
 
-def verify_pack(index, trees):
+def ranking_rows(shelf_list, books):
+    rows = [(0, b''.join(bytes([SLUGS.index(slug)]) + similar.varint(i) for slug, i in shelf_list))]
+    for n, slug in enumerate(SLUGS):
+        rows.append((n + 1, b''.join(similar.varint(i) for _, i in books[slug])))
+    return rows
+
+
+def verify_pack(index, trees, counts, shelf_list, books):
     eager, blocks, fields = chains.read_container(OUT)
     assert fields[6] == len(blocks) and fields[7] == len(index)
     pos = 4
@@ -483,45 +613,68 @@ def verify_pack(index, trees):
         pos += 4 + length
         assert struct.unpack_from('<I', eager, pos)[0] == sum(1 for s, _ in index if s == slug), slug
         pos += 4
-    rows, count, shard, shards = struct.unpack_from('<IIII', eager, pos)
-    assert pos + 16 == len(eager) and rows == len(index) and count == len(trees) and shard == SHARD
-    assert len(blocks) == len(SLUGS) + shards
+    rows, count, shard, shards, ranked = struct.unpack_from('<IIIII', eager, pos)
+    assert pos + 20 == len(eager) and rows == len(index) and count == len(trees) and shard == SHARD
+    assert ranked == len(shelf_list) and len(blocks) == len(SLUGS) + shards + 1
     for book, slug in enumerate(SLUGS):
         expected = sorted((i, v) for (s, i), v in index.items() if s == slug)
         found = chains.rows_of(blocks[book], len(expected))
         assert [i for i, _ in found] == [i for i, _ in expected], slug
-        for (_, payload), (_, (tree_id, narrations, books)) in zip(found, expected):
+        for (id_in_book, payload), (_, (tree_id, narrations, in_books)) in zip(found, expected):
             at = 0
             values = []
-            for _ in range(3):
+            for _ in range(4):
                 value, at = similar.read_varint(payload, at)
                 values.append(value)
-            assert at == len(payload) and values == [tree_id, narrations, books], slug
+            assert at == len(payload) and values == [tree_id, narrations, in_books, counts[(slug, id_in_book)]], slug
+    lists = chains.rows_of(blocks[-1], len(SLUGS) + 1)
+    assert [row_id for row_id, _ in lists] == list(range(len(SLUGS) + 1))
+    at, found = 0, []
+    while at < len(lists[0][1]):
+        book = lists[0][1][at]
+        id_in_book, at = similar.read_varint(lists[0][1], at + 1)
+        found.append((SLUGS[book], id_in_book))
+    assert found == shelf_list
+    for n, slug in enumerate(SLUGS):
+        at, found = 0, []
+        while at < len(lists[n + 1][1]):
+            id_in_book, at = similar.read_varint(lists[n + 1][1], at)
+            found.append((slug, id_in_book))
+        assert found == books[slug], slug
     for shard_index in range(shards):
         members = trees[shard_index * SHARD:(shard_index + 1) * SHARD]
         for (row_id, payload), (n, expected) in zip(chains.rows_of(blocks[len(SLUGS) + shard_index], len(members)), enumerate(members)):
             assert row_id == shard_index * SHARD + n + 1 and payload == expected
 
 
-def write_samples(index, roots, names):
+def write_samples(index, roots, names, counts, shelf_list, books):
     lines = ['// GENERATED by Scripts/build_isnad_trees.py: do not edit. A few rows\' trees of narrators exactly',
              '// as HadithIsnadTrees.qpk holds them (HadithIsnadTreesTests): the tree in preorder, one line per',
              '// node, "depth:root", "depth:narrator ids joined by +[^ raised]:name" (0 is a relation, with its text), or',
              '// "depth:book:idInBook[^ raised],...".',
              '', 'enum HadithIsnadTreeSamples {',
-             '    struct Sample { let slug: String; let idInBook: Int; let tree: Int; let narrations: Int; let books: Int; let outline: [String] }',
+             '    struct Sample { let slug: String; let idInBook: Int; let tree: Int; let narrations: Int; let books: Int; let chains: Int; let outline: [String] }',
              f'    static let books = [{", ".join(json.dumps(s) for s in SLUGS)}]',
              f'    static let rowCount = {len(index)}',
              f'    static let treeCount = {len(roots)}',
              f'    static let shard = {SHARD}',
+             '    /// The rows with the most chains: how many the shelf\'s list holds, its first rows with their',
+             '    /// chains, and how many each book\'s own list holds.',
+             f'    static let rankedCount = {len(shelf_list)}',
+             '    static let mostChains: [(slug: String, idInBook: Int, chains: Int)] = ['
+             + ', '.join(f'("{slug}", {i}, {counts[(slug, i)]})' for slug, i in shelf_list[:12]) + ']',
+             '    static let rankedInBook: [String: Int] = ['
+             + ', '.join(f'"{slug}": {len(books[slug])}' for slug in SLUGS) + ']',
+             '    /// Rows whose own text only points at another narration: they count no chains.',
+             '    static let pointing: [(slug: String, idInBook: Int)] = [("ahmed", 12820), ("ahmed", 1701), ("bukhari", 1162)]',
              '    static let all: [Sample] = [']
     for slug, id_in_book in SAMPLE_ROWS:
         found = index.get((slug, id_in_book))
         assert found, f'{slug}:{id_in_book} has no tree'
-        tree_id, narrations, books = found
+        tree_id, narrations, in_books = found
         text = ', '.join(json.dumps(line, ensure_ascii=False) for line in outline(roots[tree_id - 1], names))
         lines.append(f'        Sample(slug: "{slug}", idInBook: {id_in_book}, tree: {tree_id}, narrations: {narrations}, '
-                     f'books: {books}, outline: [{text}]),')
+                     f'books: {in_books}, chains: {counts[(slug, id_in_book)]}, outline: [{text}]),')
     lines += ['    ]', '}', '']
     SAMPLES.write_text('\n'.join(lines), encoding='utf-8')
 
@@ -554,6 +707,19 @@ def main():
           f'{biggest.leaves} roads; rows by roads: ' + ' '.join(f'{k}+={v}' for k, v in sorted(leaves.items())))
     per_book = Counter(slug for slug, _ in index)
     print('   ' + ' '.join(f'{slug}={per_book[slug]}' for slug in SLUGS))
+    counts, shelf_list, books, pointing = rank(index, chain_rows, similar_rows)
+    spread = Counter(min(counts[key], 40) // 5 * 5 for key in shelf_list)
+    print(f'most chains: {len(shelf_list)} hadiths with {MIN_RANKED} chains or more on the shelf\'s list ('
+          + ' '.join(f'{k}+={v}' for k, v in sorted(spread.items())) + f'), {pointing} rows only point at another; by book: '
+          + ' '.join(f'{slug}={len(books[slug])}' for slug in SLUGS))
+    if '--ranking' in sys.argv:
+        shelves = {}
+        for slug, id_in_book in shelf_list[:int(sys.argv[sys.argv.index('--ranking') + 1])]:
+            item = shelves.setdefault(slug, Hadith(slug)).find_id(id_in_book)
+            tree_id, narrations, in_books = index[(slug, id_in_book)]
+            print(f'   {counts[(slug, id_in_book)]:3} chains, {narrations:3} narrations, {in_books:2} books  {slug}:{id_in_book}  '
+                  + (item.text or item.arabic[-80:])[:90].replace('\n', ' '))
+        return
     if '--inspect' in sys.argv:
         for target in sys.argv[sys.argv.index('--inspect') + 1:]:
             slug, number = target.split(':')
@@ -561,18 +727,19 @@ def main():
             if not found:
                 print(f'{target}: no tree')
                 continue
-            tree_id, narrations, books = found
-            print(f'== {target}: tree {tree_id}, {narrations} narrations in {books} books, {roots[tree_id - 1].leaves} roads')
+            tree_id, narrations, in_books = found
+            print(f'== {target}: tree {tree_id}, {narrations} narrations in {in_books} books, {roots[tree_id - 1].leaves} roads, '
+                  f'{counts[(slug, int(number))]} chains')
             for line in outline(roots[tree_id - 1], names):
                 depth, _, rest = line.partition(':')
                 print('   ' + '  ' * int(depth) + rest)
         return
     if '--stats' in sys.argv:
         return
-    raw = write_pack(index, trees)
+    raw = write_pack(index, trees, counts, shelf_list, books)
     print(f'{OUT.relative_to(ROOT)}: {len(index)} rows, {len(trees)} trees, {raw} -> {OUT.stat().st_size} bytes, '
           f'read back and verified')
-    write_samples(index, roots, names)
+    write_samples(index, roots, names, counts, shelf_list, books)
     print(f'{SAMPLES.relative_to(ROOT)} written ({time.time() - started:.0f} s)')
 
 

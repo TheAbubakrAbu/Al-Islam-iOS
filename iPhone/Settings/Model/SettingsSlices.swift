@@ -1116,11 +1116,11 @@ final class QuranDisplay: ObservableObject, SettingsSlice {
     static let shared = QuranDisplay()
     static let label = "QuranDisplay"
     static let keys: Set<String> = [
-        "THEfontArabic", "acceptedBetaQiraatNotice", "automaticKhatmCompletion", "ayahPreviewCardScale",
-        "ayahSheetKeepsScreenOn", "beginnerMode", "betaQiraatEnabled", "cleanArabicText",
-        "copyAyahArabic", "copyAyahEnglishMustafa", "copyAyahEnglishSaheeh", "copyAyahTransliteration",
-        "displayQiraah", "englishFontSize", "fontArabicSize", "highlightAllahNames",
-        "highlightPlayingWords", "keepAyahSheetOpen", "keepAyahSheetOpenOnPlay", "khatmGroupByJuz",
+        "THEfontArabic", "THEkeepAyahSheetOpen", "acceptedBetaQiraatNotice", "automaticKhatmCompletion",
+        "ayahPreviewCardScale", "ayahSheetKeepsScreenOn", "beginnerMode", "betaQiraatEnabled",
+        "cleanArabicText", "copyAyahArabic", "copyAyahEnglishMustafa", "copyAyahEnglishSaheeh",
+        "copyAyahTransliteration", "displayQiraah", "englishFontSize", "fontArabicSize",
+        "highlightAllahNames", "highlightPlayingWords", "keepAyahSheetOpenOnPlay", "khatmGroupByJuz",
         "mushafFitPage", "mushafHafsPDFEdition", "mushafPDFAppearance", "mushafPageLanguage",
         "mushafTwoPageSpread", "qiraatComparisonMode", "quranArabicScriptStyle", "quranPageMode",
         "quranSortDirection", "quranSortMode", "quranTestModeEndsOnLeave", "quranTestModeHides",
@@ -1690,8 +1690,8 @@ final class IslamSettings: ObservableObject, SettingsSlice {
     static let label = "IslamSettings"
     static let keys: Set<String> = [
         "arabicLetterSizeIndex", "favoriteIslamResources", "favoriteLetterData", "favoriteNameNumbersData",
-        "hideEnglishInArabicLetters", "highlightAllahNamesIslam", "islamArabicFontFace", "islamGroupResources",
-        "islamTextSize", "quranicSukoonInLetterPractice", "showDescription",
+        "hideEnglishInArabicLetters", "highlightAllahNamesIslam", "islamArabicFontFace", "islamArticleLength",
+        "islamArticleLengthNoAsk", "islamGroupResources", "islamTextSize", "quranicSukoonInLetterPractice", "showDescription",
     ]
 
     private init() { ObjectPublishCounter.attach(self, label: Self.label) }
@@ -1723,6 +1723,11 @@ final class IslamSettings: ObservableObject, SettingsSlice {
     var islamArabicFaceRaw: String {
         get { Settings.shared.islamArabicFaceRaw }
         set { Settings.shared.islamArabicFaceRaw = newValue }
+    }
+
+    var islamArticleLengthRaw: String {
+        get { Settings.shared.islamArticleLengthRaw }
+        set { Settings.shared.islamArticleLengthRaw = newValue }
     }
 
     var islamGroupResources: Bool {

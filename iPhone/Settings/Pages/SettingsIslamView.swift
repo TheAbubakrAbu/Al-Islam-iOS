@@ -239,6 +239,18 @@ struct SettingsIslamView: View {
     private var librariesDestination: some View {
         List {
             Group {
+                // Every article is written twice (Abu, 2026-11-25): which one a page opens on. The
+                // switch at the top of each article reads the other for that visit (ArticleLength.swift).
+                Section(header: Text("ARTICLES"),
+                        footer: Text("Short keeps each article's core and its key evidence; Full is the whole article. Articles open in the length you pick here, and the switch at the top of each article shows the other one.")) {
+                    Picker("Article Length", selection: $islamSettings.islamArticleLengthRaw) {
+                        Text("Short").tag(ArticleLength.short.rawValue)
+                        Text("Full").tag(ArticleLength.long.rawValue)
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: settings.islamArticleLengthRaw) { _ in settings.hapticFeedback() }
+                }
+
                 Section(header: Text("LAYOUT")) {
                     SettingsToggle(String(localized: "Grid Mode"),
                                    caption: String(localized: "Shows the Islamic resources as tiles instead of rows. The 99 Names and the Arabic alphabet keep their own grid switches, in each screen's toolbar."),
@@ -495,6 +507,7 @@ extension SettingsSearchEntry {
         .init(title: "Hide English Readings", path: "Islam Settings → Arabic Alphabet", keywords: "hide english transliteration readings tashkeel letters practice ba bi bu", destination: .islamPage(.alphabet)),
         .init(title: "Use Quranic Sukoon", path: "Islam Settings → Arabic Alphabet", keywords: "quranic sukoon uthmani jazm letter practice mark", destination: .islamPage(.alphabet)),
         .init(title: "Grid Mode (Al-Islam)", path: "Islam Settings → Libraries", keywords: "grid list tiles rows islam resources layout", destination: .islamPage(.libraries)),
+        .init(title: "Article Length", path: "Islam Settings → Libraries", keywords: "article length short full long version read summary articles stories", destination: .islamPage(.libraries)),
     ] + quranIslamEntries + prayerIslamEntries
 
     /// The Libraries and Reminders controls of the domains an app may not ship.

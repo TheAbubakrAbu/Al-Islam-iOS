@@ -29,7 +29,8 @@ struct TajweedLessonDetailView: View {
     @State private var door: ArabicDoor?
     @State private var showLegend = false
 
-    private static let topID = "lesson-top"
+    /// The hero's anchor: Previous and Next scroll back to it, and the search lands on it.
+    private static let topID = ArticleHeader.anchorID(TajweedLesson.anchor("hero"))
 
     init(lesson: TajweedLesson) {
         _lesson = State(initialValue: lesson)
@@ -69,7 +70,14 @@ struct TajweedLessonDetailView: View {
                 }
                 .themedListRowBackground()
             }
-            .selectableArticleList(disableNowPlayingInset: true)
+            // The lesson's search bar at the foot with its share circle beside it, and the AI alone at
+            // the top right (Abu, 2026-11-24: "add a search bar to those pages with no search bar
+            // ... Tajweed course if possible"). Its words as shown for the bar, in English for the AI.
+            .searchablePage(id: IslamArticle.lessonPrefix + lesson.id,
+                            share: PageShare(link: .lesson(lesson.id), title: lesson.titleEn.localizedDisplay),
+                            page: { [lesson] in lesson.searchPage(quranData: QuranData.shared) },
+                            ai: { [lesson] in lesson.aiArticle },
+                            disableNowPlayingInset: true)
             .onChange(of: lesson.id) { _ in
                 withAnimation(appearance.reduceAnimations ? nil : .easeInOut(duration: 0.25)) {
                     proxy.scrollTo(Self.topID, anchor: .top)
@@ -83,10 +91,16 @@ struct TajweedLessonDetailView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 if let position = TajweedLessonsStore.shared.position(of: lesson.id) {
-                    Text("Lesson \(position.number) of \(position.total)")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
+                    // With the AI and Previous | Next in the bar too, a narrow phone may have room for
+                    // the numbers alone.
+                    ViewThatFits(in: .horizontal) {
+                        Text("Lesson \(position.number) of \(position.total)")
+                        Text("\(position.number) of \(position.total)")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .lineLimit(1)
                 }
             }
             ToolbarItemGroup(placement: .navigationBarTrailing) {
@@ -179,7 +193,7 @@ struct TajweedLessonDetailView: View {
                 }
             }
             .transformEnvironment(\.appearance) { $0.accent = tint }
-            .id(Self.topID)
+            .articleAnchor(TajweedLesson.anchor("hero"))
             .articleCardRow()
         }
     }
@@ -191,7 +205,8 @@ struct TajweedLessonDetailView: View {
         if let card = lesson.ruleCard {
             Section(header: TajweedLessonHeader(systemImage: "arrow.triangle.branch", title: String(localized: "The Rule"),
                                                 subtitle: String(localized: "What sets it off, what you do, how long you hold it."),
-                                                accent: accent)) {
+                                                accent: accent)
+                            .articleAnchor(TajweedLesson.anchor("rule"))) {
                 VStack(alignment: .leading, spacing: 13) {
                     if !card.countEn.isEmpty {
                         Text(card.countEn.localizedDisplay)
@@ -299,6 +314,7 @@ struct TajweedLessonDetailView: View {
                     }
                 }
                 .padding(.vertical, 6)
+                .articleAnchor(TajweedLesson.anchor("definition"))
             }
         }
     }
@@ -318,7 +334,8 @@ struct TajweedLessonDetailView: View {
     private var imagesSection: some View {
         if !lesson.images.isEmpty {
             Section(header: TajweedLessonHeader(systemImage: "square.stack.3d.up", title: String(localized: "How It Looks"),
-                                                subtitle: String(localized: "Tap a diagram to see it full screen."), accent: accent)) {
+                                                subtitle: String(localized: "Tap a diagram to see it full screen."), accent: accent)
+                            .articleAnchor(TajweedLesson.anchor("images"))) {
                 ForEach(lesson.images) { image in
                     VStack(alignment: .leading, spacing: 8) {
                         Image(image.name)
@@ -347,7 +364,8 @@ struct TajweedLessonDetailView: View {
                                                 title: lesson.letterSets.allSatisfy(\.isWords) ? String(localized: "The Words") : String(localized: "The Letters"),
                                                 subtitle: lesson.letterSets.contains(where: { !$0.isWords })
                                                     ? String(localized: "Tap a letter to open its page.") : nil,
-                                                accent: accent)) {
+                                                accent: accent)
+                            .articleAnchor(TajweedLesson.anchor("letters"))) {
                 ForEach(lesson.letterSets) { set in
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -375,7 +393,8 @@ struct TajweedLessonDetailView: View {
     // MARK: Explanation
 
     private var explanationSection: some View {
-        Section(header: TajweedLessonHeader(systemImage: "book", title: String(localized: "Explanation"), accent: accent)) {
+        Section(header: TajweedLessonHeader(systemImage: "book", title: String(localized: "Explanation"), accent: accent)
+                        .articleAnchor(TajweedLesson.anchor("explanation"))) {
             VStack(alignment: .leading, spacing: 14) {
                 ForEach(Array(lesson.body.enumerated()), id: \.offset) { _, paragraph in
                     SelectableProse(text: paragraph.localizedDisplay)
@@ -392,7 +411,8 @@ struct TajweedLessonDetailView: View {
         if !lesson.words.isEmpty {
             Section(header: TajweedLessonHeader(systemImage: "character.textbox.ar", title: String(localized: "In Words"),
                                                 subtitle: String(localized: "Read each one aloud, then check it against its reading."),
-                                                accent: accent)) {
+                                                accent: accent)
+                            .articleAnchor(TajweedLesson.anchor("words"))) {
                 ForEach(lesson.words) { group in
                     VStack(alignment: .leading, spacing: 10) {
                         TajweedCapsLabel(group.label.localizedDisplay)
@@ -455,6 +475,7 @@ struct TajweedLessonDetailView: View {
                     }
                 }
                 .padding(.vertical, 6)
+                .articleAnchor(TajweedLesson.anchor("keypoints"))
             }
         }
     }
@@ -467,6 +488,7 @@ struct TajweedLessonDetailView: View {
             Section {
                 TajweedLessonTableView(table: table, accent: accent)
                     .padding(.vertical, 4)
+                    .articleAnchor(TajweedLesson.anchor("table"))
             }
         }
     }
@@ -477,7 +499,8 @@ struct TajweedLessonDetailView: View {
     private var extrasSection: some View {
         if lesson.extras.contains(.waqfSigns) {
             Section(header: TajweedLessonHeader(systemImage: "hand.raised", title: String(localized: "Stop Signs"),
-                                                subtitle: String(localized: "What each sign above the line asks of you."), accent: accent),
+                                                subtitle: String(localized: "What each sign above the line asks of you."), accent: accent)
+                            .articleAnchor(TajweedLesson.anchor("extras")),
                     footer: Text("These signs guide the meaning, not your breathing.")) {
                 QuranSignsSectionContent(accentColor: accent)
                     .padding(.vertical, 4)
@@ -490,7 +513,8 @@ struct TajweedLessonDetailView: View {
     @ViewBuilder
     private var mistakesSection: some View {
         if !lesson.mistakes.isEmpty {
-            Section(header: TajweedLessonHeader(systemImage: "exclamationmark.circle", title: String(localized: "Common Mistakes"), accent: accent)) {
+            Section(header: TajweedLessonHeader(systemImage: "exclamationmark.circle", title: String(localized: "Common Mistakes"), accent: accent)
+                            .articleAnchor(TajweedLesson.anchor("mistakes"))) {
                 ForEach(lesson.mistakes) { mistake in
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
@@ -525,7 +549,8 @@ struct TajweedLessonDetailView: View {
         if !lesson.drills.isEmpty {
             Section(header: TajweedLessonHeader(systemImage: "checklist", title: String(localized: "Practice Patterns"),
                                                 subtitle: String(localized: "Build the movement before you meet it inside an ayah."),
-                                                accent: accent)) {
+                                                accent: accent)
+                            .articleAnchor(TajweedLesson.anchor("drills"))) {
                 ForEach(Array(lesson.drills.enumerated()), id: \.element.id) { index, drill in
                     VStack(alignment: .leading, spacing: 10) {
                         if !drill.caption.isEmpty {
@@ -572,7 +597,8 @@ struct TajweedLessonDetailView: View {
         if !lesson.examples.isEmpty {
             Section(header: TajweedLessonHeader(systemImage: "headphones", title: String(localized: "In the Mushaf"),
                                                 subtitle: String(localized: "Real ayahs, recited by your reciter. Tap play and listen for the words in the box."),
-                                                accent: accent)) {
+                                                accent: accent)
+                            .articleAnchor(TajweedLesson.anchor("examples"))) {
                 if let count = lesson.ruleCode.flatMap({ TajweedLessonsStore.shared.courseIfLoaded?.ruleCounts[$0] }),
                    count.ayahs > 0 {
                     Label("This rule occurs in \(count.ayahs.formatted()) ayahs of the mushaf.", systemImage: "text.magnifyingglass")
@@ -594,7 +620,8 @@ struct TajweedLessonDetailView: View {
     @ViewBuilder
     private var videosSection: some View {
         if !lesson.videos.isEmpty {
-            Section(header: TajweedLessonHeader(systemImage: "play.rectangle", title: String(localized: "Watch"), accent: accent)) {
+            Section(header: TajweedLessonHeader(systemImage: "play.rectangle", title: String(localized: "Watch"), accent: accent)
+                            .articleAnchor(TajweedLesson.anchor("videos"))) {
                 ForEach(lesson.videos) { video in
                     // The kit's row (ArticleDesign.swift): the same look as the Foundations pages, and
                     // a hold copies the link.
@@ -1179,23 +1206,8 @@ private struct TajweedExampleCard: View {
                 }
 
                 Divider()
-                Button {
-                    Settings.shared.hapticFeedback()
-                    AppNavigation.shared.open(.ayah(example.surahId, example.ayahNumber))
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "book")
-                        Text("Open in the Quran")
-                            .font(.subheadline.weight(.semibold))
-                        Spacer()
-                        Image(systemName: "chevron.forward")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .foregroundColor(appearance.accent)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+                // The app's one "open this in its tab" (`OpenInTab`).
+                OpenInTabButton(link: .ayah(surah: example.surahId, ayah: example.ayahNumber))
             }
             .padding(.vertical, 6)
         }
@@ -1413,4 +1425,99 @@ struct TajweedQuizCards: View {
         .accessibilityHint(answered ? (isAnswer ? String(localized: "The correct answer") : "") : String(localized: "Choose this answer"))
     }
 }
+// MARK: - The lesson as its search bar reads it
+
+extension TajweedLesson {
+    /// The anchor a card of the lesson page carries (`articleAnchor`), for its search to land on.
+    static func anchor(_ card: String) -> String { "lesson-\(card)" }
+
+    /// The lesson as its search bar reads it: card by card in the page's order, each under the
+    /// heading the page gives it and in the language the page shows it, landing on the card.
+    func searchPage(quranData: QuranData) -> IslamArticle {
+        typealias Passage = IslamArticle.PagePassage
+        func lines(_ parts: [String]) -> String {
+            parts.filter { !$0.isEmpty }.map(\.localizedDisplay).joined(separator: "\n")
+        }
+        var passages: [Passage] = [
+            Passage(heading: "", anchor: Self.anchor("hero"), text: [titleEn.localizedDisplay, translit, summary.localizedDisplay]
+                .filter { !$0.isEmpty }.joined(separator: "\n")),
+        ]
+        passages.append(Passage(heading: String(localized: "Watch"), anchor: Self.anchor("videos"),
+                                text: videos.map { [$0.title, $0.channel].filter { !$0.isEmpty }.joined(separator: ", ") }.joined(separator: "\n")))
+        if let ruleCard {
+            passages.append(Passage(heading: String(localized: "The Rule"), anchor: Self.anchor("rule"),
+                                    text: lines([ruleCard.countEn, ruleCard.trigger, ruleCard.action, ruleCard.hold, ruleCard.mnemonicGloss]
+                                                + ruleCard.fragments.map(\.caption))))
+        }
+        if let definition {
+            passages.append(Passage(heading: String(localized: "The word itself"), anchor: Self.anchor("definition"),
+                                    text: lines([definition.literal, definition.technical])))
+        }
+        passages.append(Passage(heading: String(localized: "How It Looks"), anchor: Self.anchor("images"),
+                                text: lines(images.map(\.caption))))
+        passages.append(Passage(heading: letterSets.allSatisfy(\.isWords) ? String(localized: "The Words") : String(localized: "The Letters"),
+                                anchor: Self.anchor("letters"), text: lines(letterSets.flatMap { [$0.label, $0.note] })))
+        passages.append(Passage(heading: String(localized: "Explanation"), anchor: Self.anchor("explanation"), text: lines(body)))
+        passages.append(Passage(heading: String(localized: "In Words"), anchor: Self.anchor("words"),
+                                text: words.map { group in
+                                    ([group.label.localizedDisplay, group.note.localizedDisplay]
+                                     + group.items.map { [$0.translit, $0.note.localizedDisplay].filter { !$0.isEmpty }.joined(separator: ", ") })
+                                        .filter { !$0.isEmpty }.joined(separator: "\n")
+                                }.joined(separator: "\n")))
+        passages.append(Passage(heading: String(localized: "Worth remembering"), anchor: Self.anchor("keypoints"), text: lines(keyPoints)))
+        if let table {
+            passages.append(Passage(heading: table.title.isEmpty ? String(localized: "At a glance") : table.title.localizedDisplay,
+                                    anchor: Self.anchor("table"),
+                                    text: ([table.columns.map(\.localizedDisplay).joined(separator: ", ")]
+                                           + table.rows.map { $0.map(\.localizedDisplay).joined(separator: ", ") }).joined(separator: "\n")))
+        }
+        passages.append(Passage(heading: String(localized: "Common Mistakes"), anchor: Self.anchor("mistakes"),
+                                text: lines(mistakes.flatMap { [$0.wrong, $0.right, $0.why] })))
+        passages.append(Passage(heading: String(localized: "Practice Patterns"), anchor: Self.anchor("drills"),
+                                text: drills.map { [$0.caption.localizedDisplay, $0.translit].filter { !$0.isEmpty }.joined(separator: ", ") }
+                                    .joined(separator: "\n")))
+        passages.append(Passage(heading: String(localized: "In the Mushaf"), anchor: Self.anchor("examples"),
+                                text: examples.map { example in
+                                    let name = quranData.surah(example.surahId)?.nameTransliteration ?? ""
+                                    return ["\(name) \(example.surahId):\(example.ayahNumber)", example.focus.localizedDisplay]
+                                        .filter { !$0.isEmpty }.joined(separator: ", ")
+                                }.joined(separator: "\n")))
+        return .searchable(id: IslamArticle.lessonPrefix + id, title: titleEn.localizedDisplay, passages: passages)
+    }
+}
+
+// MARK: - The lesson as the AI reads it
+
+extension TajweedLesson {
+    /// The lesson for Summarize with AI and Ask AI: its words card by card, in English (the
+    /// language the on-device model reads), under the headings the page gives them.
+    var aiArticle: IslamArticle {
+        var passages: [(heading: String, text: String)] = [("", summary)]
+        if let definition {
+            passages.append(("Definition", [definition.literal.isEmpty ? nil : "Literally: \(definition.literal)",
+                                            definition.technical.isEmpty ? nil : "In tajweed: \(definition.technical)"]
+                .compactMap { $0 }.joined(separator: "\n")))
+        }
+        if let ruleCard {
+            passages.append(("The Rule", [ruleCard.trigger.isEmpty ? nil : "When: \(ruleCard.trigger)",
+                                          ruleCard.action.isEmpty ? nil : "What you do: \(ruleCard.action)",
+                                          ruleCard.hold.isEmpty ? nil : "How long: \(ruleCard.hold)"]
+                .compactMap { $0 }.joined(separator: "\n")))
+        }
+        passages.append(("Explanation", body.joined(separator: "\n")))
+        passages.append(("What to Remember", keyPoints.map { "\u{2022} \($0)" }.joined(separator: "\n")))
+        if let table, !table.rows.isEmpty {
+            let rows = table.rows.map { row in
+                zip(table.columns, row).map { "\($0): \($1)" }.joined(separator: "; ")
+            }
+            passages.append((table.title, rows.joined(separator: "\n")))
+        }
+        passages.append(("Common Mistakes", mistakes.map { mistake in
+            ["Wrong: \(mistake.wrong)", "Right: \(mistake.right)", mistake.why.isEmpty ? nil : "Why: \(mistake.why)"]
+                .compactMap { $0 }.joined(separator: ". ")
+        }.joined(separator: "\n")))
+        return .built(id: IslamArticle.lessonPrefix + id, title: titleEn, passages: passages)
+    }
+}
+
 #endif

@@ -440,6 +440,11 @@ struct LetterFamiliesView: View {
 
     var title: String = String(localized: "Letter Families")
     var axes: [LetterAxis]? = nil
+    #if os(iOS)
+    /// The article id of the page's share circle beside the search bar (`AppLink.articlePage(id:)`):
+    /// the Sifaat shelf, which Tajweed Foundations lists as one of its pages and shares like them.
+    var shareArticle: String? = nil
+    #endif
 
     @State private var searchText = ""
     #if os(iOS)
@@ -528,8 +533,9 @@ struct LetterFamiliesView: View {
         .applyConditionalListStyle()
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
-            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
-                      placeholder: String(localized: "Search families"))
+            SearchBarWithShare(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
+                               placeholder: String(localized: "Search families"),
+                               share: shareArticle.flatMap { AppLink.articlePage(id: $0) }.map { PageShare(link: $0.link, title: $0.title) })
                 .minimizedBarStyle(barsCollapsed)
                 .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
                 .padding(.horizontal, 24)

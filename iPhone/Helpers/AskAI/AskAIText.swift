@@ -776,9 +776,12 @@ enum AskAIText {
             add("How do I set up prayer notifications?")
             add("How do I change the Arabic font?")
         case .prayerTimes:
+            #if HAS_ADHAN
+            // Another day, and another place (AskAIPrayerRequest): Ask AI computes both now.
+            add("What are the prayer times tomorrow?")
+            add("When is Maghrib in Makkah today?")
+            #endif
             add("How many rakahs is each prayer?")
-            add("What are the sunnah prayers around the fard ones?")
-            add("How do I make up a missed prayer?")
         case .sourceQuestion, .recap:
             if let firstHadith { add("Explain \(firstHadith.reference) in more detail") }
             if let firstAyah { add("What is the context of \(firstAyah.title)?") }

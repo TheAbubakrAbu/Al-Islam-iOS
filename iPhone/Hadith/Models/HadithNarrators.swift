@@ -56,6 +56,59 @@ struct HadithNarratorRef: Hashable {
     let grade: HadithGradeCategory
 }
 
+/// How a narrator's narrations stand inside one book, or inside some narrations of it (a chapter):
+/// how many name him there, and at which place of the chain.
+struct HadithNarratorTally: Equatable {
+    /// The narrations there whose chain names him.
+    var narrations = 0
+    /// Those he narrates from the Prophet ﷺ himself (`HadithNarratorRef.Role.top`).
+    var fromProphet = 0
+    /// Those in which he is the compiler's own teacher.
+    var teacher = 0
+    /// Those whose chain, as written, stops at him.
+    var ends = 0
+
+    /// The middle links: every narration that is none of the three ends.
+    var links: Int { narrations - fromProphet - teacher - ends }
+
+    fileprivate mutating func count(_ role: HadithNarratorRef.Role) {
+        narrations += 1
+        switch role {
+        case .top: fromProphet += 1
+        case .teacher: teacher += 1
+        case .end: ends += 1
+        case .link: break
+        }
+    }
+}
+
+/// Who the chains of one book name, narration by narration: the narrators' own lists (the pack's
+/// refs) turned the other way round, for the narrators of a book and of a chapter (Abu, 2026-11-23:
+/// "Within each book at the bottom have narrators but only include if in the book ... would be nice
+/// to have the same thing with each chapter"). Nothing is counted anew: a narration stands here
+/// under a narrator exactly when his page lists it, with the place his page gives it, so a count
+/// here and his page held to the same book always agree. One walk of the refs blocks
+/// (`HadithNarratorsPack.bookIndex`), kept for the book on screen.
+struct HadithNarratorBookIndex {
+    let slug: String
+    /// By narration number: each narrator its chain names, packed as his id times four plus his place.
+    fileprivate let byRow: [Int: [UInt32]]
+    /// Everyone the book's chains name, with his counts across the whole book.
+    let narrators: [Int: HadithNarratorTally]
+
+    /// The narrators of some narrations of the book (a chapter's), with their counts in those alone.
+    func narrators(rows: [Int]) -> [Int: HadithNarratorTally] {
+        var out: [Int: HadithNarratorTally] = [:]
+        for row in rows {
+            for packed in byRow[row] ?? [] {
+                guard let role = HadithNarratorRef.Role(rawValue: Int(packed & 3)) else { continue }
+                out[Int(packed >> 2), default: HadithNarratorTally()].count(role)
+            }
+        }
+        return out
+    }
+}
+
 /// Where a narrator stands in the chains that reach the Prophet ﷺ: his usual distance from him.
 /// 1 is the generation that narrates from the Prophet ﷺ himself (the Companions), 2 the one that
 /// narrates from them (the Successors), and so on down to the compilers' teachers; 0 when none of his
@@ -269,6 +322,36 @@ final class HadithNarratorsPack: @unchecked Sendable {
         } ?? []
     }
 
+    /// Every narrator's list read for one book (`HadithNarratorBookIndex`): one pass over the refs
+    /// where they lie, nothing made into an object but the answer. Nil for a book the pack does not
+    /// know (a collection whose rows carry no chain). Off the main thread: it inflates every shard.
+    func bookIndex(slug: String) -> HadithNarratorBookIndex? {
+        guard let book = slugs.firstIndex(of: slug) else { return nil }
+        var byRow: [Int: [UInt32]] = [:]
+        var narrators: [Int: HadithNarratorTally] = [:]
+        let size = 7
+        for shard in 0..<shardCount {
+            let count = min(shardSize, narratorCount - shard * shardSize)
+            withBlock(1 + shard, count: count) { block, count in
+                for index in 0..<count {
+                    guard let payload = block.payload(at: index, count: count), payload.count % size == 0 else { continue }
+                    let id = block.id(at: index)
+                    guard id >= 1 else { continue }
+                    var at = payload.startIndex
+                    while at + size <= payload.endIndex {
+                        defer { at += size }
+                        guard Int(payload[at]) == book,
+                              let role = HadithNarratorRef.Role(rawValue: Int(payload[at + 5])) else { continue }
+                        let row = Int(payload[at + 1]) | Int(payload[at + 2]) << 8 | Int(payload[at + 3]) << 16 | Int(payload[at + 4]) << 24
+                        byRow[row, default: []].append(UInt32(id) << 2 | UInt32(role.rawValue))
+                        narrators[id, default: HadithNarratorTally()].count(role)
+                    }
+                }
+            }
+        }
+        return HadithNarratorBookIndex(slug: slug, byRow: byRow, narrators: narrators)
+    }
+
     func purge() { container.purge() }
 
     private func withBlock<T>(_ block: Int, count: Int, _ body: (HadithRowBlock, Int) -> T) -> T? {
@@ -290,6 +373,8 @@ final class HadithNarratorStore: @unchecked Sendable {
     private var openedPack: HadithNarratorsPack?
     /// Every profile, kept once read (`allProfiles`); let go under memory pressure.
     private var profiles: [HadithNarratorProfile]?
+    /// The index of the book last asked for (`bookIndex`): the book on screen, and its chapters.
+    private var lastBookIndex: HadithNarratorBookIndex?
 
     /// The pack, opened once; nil for good when it is missing or does not parse (no profile opens).
     var pack: HadithNarratorsPack? {
@@ -329,11 +414,32 @@ final class HadithNarratorStore: @unchecked Sendable {
 
     func members(group: Int) -> [(slug: String, idInBook: Int)] { pack?.members(group: group) ?? [] }
 
+    /// Who one book's chains name, narration by narration; nil for a book that carries no chains.
+    /// The first ask of a book walks the pack's lists (off the main thread, please: 3 ms on the
+    /// simulator once the shards are inflated, some tens the first time); the answer is kept until
+    /// another book is asked for, so a chapter opened from its book finds it made.
+    func bookIndex(slug: String) -> HadithNarratorBookIndex? {
+        if let cached = cachedBookIndex(slug: slug) { return cached }
+        let built = pack?.bookIndex(slug: slug)
+        lock.lock()
+        if let built { lastBookIndex = built }
+        lock.unlock()
+        return built
+    }
+
+    /// `bookIndex` when it is already made, and nil, never a walk, when it is not.
+    func cachedBookIndex(slug: String) -> HadithNarratorBookIndex? {
+        lock.lock()
+        defer { lock.unlock() }
+        return lastBookIndex?.slug == slug ? lastBookIndex : nil
+    }
+
     /// Memory pressure (`MemoryTrim`): the decompressed blocks go; the next page inflates its own again.
     func purge() {
         lock.lock()
         let loaded = openedPack
         profiles = nil
+        lastBookIndex = nil
         lock.unlock()
         loaded?.purge()
     }

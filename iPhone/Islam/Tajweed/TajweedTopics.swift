@@ -100,7 +100,7 @@ struct TajweedImprovingRecitationView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TajweedImprovingRecitationView", kind: .page)
         .navigationTitle("Improving Your Recitation")
     }
 }
@@ -145,7 +145,7 @@ struct TajweedLipMovementView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TajweedLipMovementView", kind: .page)
         .navigationTitle("Lip Movement")
     }
 }
@@ -254,7 +254,7 @@ struct TajweedInMushafView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TajweedInMushafView", kind: .page)
         .navigationTitle("Tajweed Hints in the Mushaf")
     }
 }
@@ -409,7 +409,7 @@ struct TajweedMakharijView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TajweedMakharijView", kind: .page)
         .arabicDoorDestination($door)
         .navigationTitle("Makhaarij")
     }
@@ -555,7 +555,7 @@ struct TajweedHeavyLightView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TajweedHeavyLightView", kind: .page)
         .arabicDoorDestination($door)
         .navigationTitle("Heavy and Light")
     }
@@ -642,7 +642,7 @@ struct TajweedShamsQamarView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TajweedShamsQamarView", kind: .page)
         .arabicDoorDestination($door)
         .navigationTitle("Shams and Qamar")
     }
@@ -883,7 +883,7 @@ struct TajweedMaddView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TajweedMaddView", kind: .page)
         .arabicDoorDestination($door)
         .navigationTitle("Madd")
     }
@@ -965,7 +965,7 @@ struct TajweedQalqalahView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TajweedQalqalahView", kind: .page)
         .arabicDoorDestination($door)
         .navigationTitle("Qalqalah")
     }
@@ -1088,7 +1088,7 @@ struct TajweedIdghamIkhfaView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TajweedIdghamIkhfaView", kind: .page)
         .arabicDoorDestination($door)
         .navigationTitle("Noon Sakinah and Tanween")
     }
@@ -1201,7 +1201,7 @@ struct TajweedMeemSakinahView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TajweedMeemSakinahView", kind: .page)
         .navigationTitle("Meem Sakinah")
     }
 }
@@ -1224,6 +1224,10 @@ struct TajweedSukoonView: View {
                 Section(header: ArticleHeader(String(localized: "1. Normal Sukoon: Pronounce the Letter Without a Vowel"))) {
                     ArticleParagraph(verbatim: String(localized: "This is the common Qur’anic sukoon mark written like ـۡ above a consonant. It means the letter has no vowel, but the letter itself is still pronounced clearly."))
 
+                    // Abu, 2026-11-23: "mention the first Quran one is also called uthmanic sukoon and is
+                    // generally only found in the Quran".
+                    ArticleParagraph(verbatim: String(localized: "This mark is also called the Uthmani sukoon, after the Uthmani script of the mushaf. It is drawn like the head of a small خ without its dot, and it is generally found only in the Quran. Outside the Quran, Arabic writes the same thing with the round sukoon (ـْ) instead."))
+
                     TajweedArabicLine("رَزَقۡنَٰهُمۡ بِٱلۡغَيۡبِ", title: String(localized: "Example"))
 
                     TajweedKeyLine(String(localized: "Simple rule: Pronounce the letter, but do not add a vowel after it."), systemImage: "lightbulb.fill")
@@ -1232,9 +1236,31 @@ struct TajweedSukoonView: View {
                 Section(header: ArticleHeader(String(localized: "2. Permanent Silent Letter: Always Skip It"))) {
                     ArticleParagraph(verbatim: String(localized: "This mark shows that the letter is written in the Qur’an’s script but is not pronounced. You skip it whether you continue reciting or stop."))
 
+                    // Abu, 2026-11-23: the one "you ignore in the Quran is normally the default sukoon like
+                    // even in this app within Hadith".
+                    ArticleParagraph(verbatim: String(localized: "Its mark is a small round circle (ـْ), and that circle is the default sukoon everywhere else. In ordinary Arabic, and in the hadith in this app, it simply means a letter with no vowel, and the letter is read. In the Uthmani mushaf it means the opposite: the letter is written, but you skip it."))
+
                     TajweedArabicLine("بِأَيۡيْدٖ", title: String(localized: "Example"))
 
                     TajweedKeyLine(String(localized: "Simple rule: The letter is written, but never pronounced."), systemImage: "lightbulb.fill")
+                }
+
+                // The two marks side by side, in the same words: the hadith of intentions as the Hadith
+                // tab prints it (round sukoon, read) and 98:8 (Uthmani sukoon, read; round circle, skipped).
+                // Both copied byte for byte from the shelf and the Hafs text.
+                Section(header: ArticleHeader(String(localized: "Uthmani Sukoon and the Round Sukoon Compared"))) {
+                    ArticleParagraph(verbatim: String(localized: "The same words, written both ways. In the hadith, the noon of عَنْهُ carries the round sukoon and is read. In the Quran, that noon carries the Uthmani sukoon, and the round circle is kept for the alif of وَرَضُواْ, a letter you never say."))
+
+                    TajweedArabicLine("رَضِيَ اللَّهُ عَنْهُ",
+                                      title: String(localized: "In a hadith: Sahih al-Bukhari 1"),
+                                      caption: String(localized: "Round sukoon on the noon: read it. raḍiya llāhu ʿanhu"),
+                                      quranic: false)
+
+                    TajweedArabicLine("رَّضِيَ ٱللَّهُ عَنۡهُمۡ وَرَضُواْ عَنۡهُ",
+                                      title: String(localized: "In the Quran: 98:8"),
+                                      caption: String(localized: "Uthmani sukoon on the noon and the meem: read them. Round circle on the last alif: skip it. raḍiya llāhu ʿanhum wa raḍū ʿanhu"))
+
+                    TajweedKeyLine(String(localized: "In the Quran, the Uthmani sukoon means read the letter with no vowel, and the round circle means skip it. Outside the Quran, the round circle is the ordinary sukoon."), systemImage: "lightbulb.fill")
                 }
 
                 Section(header: ArticleHeader(String(localized: "3. Stop-Only Letter: Pronounce It Only If You Stop"))) {
@@ -1277,7 +1303,7 @@ struct TajweedSukoonView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TajweedSukoonView", kind: .page)
         .navigationTitle("4 Sukoon")
     }
 }
@@ -1302,6 +1328,53 @@ struct TajweedHamzatulWaslView: View {
                     ])
 
                     TajweedKeyLine(String(localized: "Key rule: If you start from the word, pronounce Hamzatul-Wasl. If you connect from the previous word, drop it."), systemImage: "key.fill")
+                }
+
+                // Abu, 2026-11-23: "outside of the Quran hamzatul wasl is generally written with an alif
+                // but an alif can never really start at the beginning of the word". The hadith line is
+                // the shelf's own Sahih al-Bukhari 1; the Quran line is 4:176 from the Hafs text.
+                Section(header: ArticleHeader(String(localized: "Outside the Quran: A Plain Alif"))) {
+                    ArticleParagraph(verbatim: String(localized: "Outside the Quran, in books and in the hadith in this app, Hamzatul-Wasl is generally written as a plain alif (ا) with no sign on it. You can still always tell it apart. An alif is a long vowel, and no Arabic word can begin on a vowel, so an alif can never really start a word on its own: a word that begins with a bare alif begins with Hamzatul-Wasl. A hamzah that is always said, Hamzatul-Qaṭʿ, is written with its sign: أ or إ."))
+
+                    TajweedArabicLine("وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى",
+                                      title: String(localized: "In a hadith: Sahih al-Bukhari 1"),
+                                      caption: String(localized: "The alif of امْرِئٍ is plain: a Hamzatul-Wasl, dropped as you read on. wa innamā likulli mriʾin mā nawā"),
+                                      quranic: false)
+
+                    TajweedArabicLine("إِنِ ٱمۡرُؤٌاْ هَلَكَ",
+                                      title: String(localized: "In the Quran: 4:176"),
+                                      caption: String(localized: "The same word, with the small ṣād on its alif. ini mruʾun halaka"))
+
+                    Text(verbatim: String(localized: "In casual writing the sign is often left off أ and إ as well, so a bare alif is a sure sign of Hamzatul-Wasl only in carefully vowelled text, like the hadith in this app."))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                // Abu, 2026-11-23: "mention some mushafs use the dot way and how that works and u can
+                // customize in the app". The dot line is the wasl engine's own output for 87:1
+                // (UnitTests/WaslSignSamples.swift), what the Dot setting shows in the reader.
+                Section(header: ArticleHeader(String(localized: "Some Mushafs Mark It With a Dot"))) {
+                    ArticleParagraph(verbatim: String(localized: "Mushafs that follow the Maghribi tradition, like the ones read with Warsh and Qaloon in North and West Africa, write Hamzatul-Wasl without the small ṣād. The alif carries the vowel you arrive on from the word before, and a mark tells you how to start on it: a dot above for a fatḥah, a ring below for a kasrah, and a small circle above for a ḍammah."))
+
+                    TajweedArabicLine("سَبِّحِ ٱسۡمَ رَبِّكَ ٱلۡأَعۡلَى",
+                                      title: String(localized: "Saad, as in the Madinah mushaf: 87:1"),
+                                      caption: String(localized: "The small ṣād on each alif: drop it when reading on."))
+
+                    TajweedArabicLine("سَبِّحِ اِ۪سۡمَ رَبِّكَ اَ۬لۡأَعۡلَى",
+                                      title: String(localized: "Dot, as in the Maghribi mushafs"),
+                                      caption: String(localized: "The first alif carries the kasrah of سَبِّحِ, and the ring below says to start on “i”: ism. The second carries the fatḥah of رَبِّكَ, and the dot above says to start on “a”: al-aʿlā."))
+
+                    ArticleParagraph(verbatim: String(localized: "You can choose how the app writes it, on every riwayah: Quran Settings → Arabic Text → Hamzat al-Wasl. Follow the Print writes each riwayah the way its own mushaf does, Saad puts the small ṣād on every one, and Dot uses the Maghribi marks on every one."))
+
+                    #if os(iOS) && HAS_QURAN
+                    NavigationLink(destination: LazyDestination {
+                        SettingsSearchDestinationView.view(for: .quranPage(.arabicText))
+                    }) {
+                        SettingsRowLabel(title: String(localized: "Hamzat al-Wasl"), systemImage: "textformat",
+                                         subtitle: String(localized: "Arabic Text"))
+                    }
+                    #endif
                 }
 
                 Section(header: ArticleHeader(String(localized: "WATCH"))) {
@@ -1393,7 +1466,7 @@ struct TajweedHamzatulWaslView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TajweedHamzatulWaslView", kind: .page)
         .navigationTitle("Hamzatul-Wasl")
     }
 }
@@ -1529,7 +1602,7 @@ struct TajweedWaqfView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TajweedWaqfView", kind: .page)
         .navigationTitle("Waqf")
     }
 }

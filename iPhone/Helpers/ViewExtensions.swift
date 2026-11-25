@@ -1163,11 +1163,65 @@ extension View {
     /// `fallback` is a generated page's own sections (`IslamArticle.generated`) for an `article` id the
     /// corpus does not carry (a prophecy, a prophet's sign): the bar scans those instead, and a hit
     /// scrolls to the same `ArticleHeader` heading.
+    ///
+    /// `pageSearch` false keeps the Share and AI buttons an `article` id brings but leaves out the
+    /// search bar at the foot.
+    ///
+    /// `kind` `.page` is a translated page the corpus carries in English (the Tajweed Foundations
+    /// pages, Abu, 2026-11-24: "add a search bar to those pages with no search bar"): its bar reads
+    /// the page in the reader's language (`IslamArticle.translatedForSearch`) and finds only on it.
     func selectableArticleList(article: String? = nil, fallback: IslamArticle? = nil,
-                               disableNowPlayingInset: Bool = false, topContentMargin: CGFloat = 0) -> some View {
+                               disableNowPlayingInset: Bool = false, topContentMargin: CGFloat = 0,
+                               pageSearch: Bool = true, kind: ArticleSearchKind = .article) -> some View {
         modifier(SelectableArticleList(article: article, fallback: fallback,
                                        disableNowPlayingInset: disableNowPlayingInset,
-                                       topContentMargin: topContentMargin))
+                                       topContentMargin: topContentMargin, pageSearch: pageSearch, kind: kind))
+    }
+
+    #if os(iOS)
+    /// A page of the app's own that the corpus does not carry, as an article page: its search bar at
+    /// the foot with its share circle beside it, and the AI alone at the top right (Abu, 2026-11-24:
+    /// "add a search bar to those pages with no search bar like tajweed foundations, Hadith
+    /// explanations, miracles. Tajweed course if possible"). A Tajweed Course lesson, a hadith's
+    /// explanation, a Miracles of the Quran article.
+    ///
+    /// `id` is the page's article id (`IslamArticle.lessonPrefix`, `encyclopediaPrefix`, "Miracle-").
+    /// `page` is its text as the bar searches it, in the language it is shown, each passage landing
+    /// on the anchor the page put where it begins (`IslamArticle.searchable`, `articleAnchor`). `ai`
+    /// is its text as the AI reads it, in English. Both are built when they are first needed (the
+    /// first query, the AI's tap), never on a render.
+    func searchablePage(id: String, kind: ArticleSearchKind = .page, share: PageShare?,
+                        page: @escaping () -> IslamArticle?, ai: @escaping () -> IslamArticle?,
+                        disableNowPlayingInset: Bool = false) -> some View {
+        modifier(SelectableArticleList(article: id, fallback: nil, disableNowPlayingInset: disableNowPlayingInset,
+                                       topContentMargin: 0, pageSearch: true, kind: kind,
+                                       page: page, ai: ai, share: share))
+    }
+    #endif
+
+    /// An article page's Share button on a screen that is not a `selectableArticleList`: the Sifaat
+    /// shelf Tajweed Foundations lists as one of its pages. `article` is the id
+    /// `AppLink.articlePage(id:)` reads. Nothing on the watch.
+    @ViewBuilder
+    func articleShareButton(article: String) -> some View {
+        #if os(iOS)
+        modifier(ArticleShareLink(articleID: article))
+        #else
+        self
+        #endif
+    }
+
+    /// An article page's AI button (Summarize with AI, Ask AI) on a screen that is not a
+    /// `selectableArticleList`: a Miracles of the Quran article, which keeps its own ⋯ menu for
+    /// copying and sharing. `text` builds the page's text, when the button is tapped and not before,
+    /// for a page the corpus does not carry.
+    @ViewBuilder
+    func articleAIButton(article: String, text: @escaping () -> IslamArticle?) -> some View {
+        #if os(iOS)
+        modifier(ArticleAskAI(articleID: article, fallback: nil, makeFallback: text))
+        #else
+        self
+        #endif
     }
 
     /// The article pages' list styling on its own: the reading-width list style plus text selection on
@@ -1845,6 +1899,18 @@ private struct SelectableArticleList: ViewModifier {
     let fallback: IslamArticle?
     let disableNowPlayingInset: Bool
     let topContentMargin: CGFloat
+    /// The search bar at the foot, for an `article` page (see `selectableArticleList(pageSearch:)`).
+    var pageSearch = true
+    /// An English article, or a page of the app's own (see `ArticleSearchKind`).
+    var kind: ArticleSearchKind = .article
+    /// The page's text as its bar searches it (see `searchablePage`).
+    var page: (() -> IslamArticle?)? = nil
+    /// The page's text as the AI reads it (see `searchablePage`).
+    var ai: (() -> IslamArticle?)? = nil
+    #if os(iOS)
+    /// The share circle beside the bar, for a page `AppLink.articlePage(id:)` does not know.
+    var share: PageShare? = nil
+    #endif
 
     private var opensOnSection: Bool { !(scrollTarget ?? "").isEmpty }
 
@@ -1855,10 +1921,15 @@ private struct SelectableArticleList: ViewModifier {
     func body(content: Content) -> some View {
         ScrollViewReader { proxy in
             styled(content, proxy: proxy)
+                // The page's two versions, its switch and the question it asks (ArticleLength.swift).
+                .modifier(ArticleLengthPage(article: article, handle: handle))
                 .environment(\.articleScrollHandle, handle)
                 #if os(iOS)
-                .modifier(ArticleShareLink(articleID: article))
-                .modifier(ArticleAskAI(articleID: article, fallback: fallback))
+                // A page with its search bar shares from beside the bar (Abu, 2026-11-24: "top right
+                // is always ai and to the right of search bar ... is share"); one without keeps the
+                // button in the bar, beside the AI's.
+                .modifier(ArticleShareLink(articleID: sharesFromSearchBar ? nil : article))
+                .modifier(ArticleAskAI(articleID: article, fallback: fallback, makeFallback: ai))
                 #endif
                 .onAppear {
                     // Once per page: `onAppear` runs again on the way back from a page this one pushed
@@ -1870,15 +1941,26 @@ private struct SelectableArticleList: ViewModifier {
         }
     }
 
+    private var sharesFromSearchBar: Bool { article != nil && pageSearch }
+
+    /// What the bar reads: the page's own text, or for a translated page the corpus carries in
+    /// English, that text in the reader's language. Nil for an article, which the corpus has as shown.
+    private func searchedPage(_ article: String) -> (() -> IslamArticle?)? {
+        if let page { return page }
+        guard kind == .page else { return nil }
+        return { IslamArticles.all.first { $0.id == article }?.translatedForSearch() }
+    }
+
     @ViewBuilder
     private func styled(_ content: Content, proxy: ScrollViewProxy) -> some View {
         #if os(iOS)
-        if let article {
+        if let article, pageSearch {
             // The search chrome applies `articleListStyle` itself, around the page AND its results.
             content.modifier(ArticleSearchChrome(articleID: article, proxy: proxy, handle: handle,
                                                  disableNowPlayingInset: disableNowPlayingInset,
                                                  topContentMargin: topContentMargin, veiled: veiled,
-                                                 fallback: fallback))
+                                                 fallback: fallback, page: searchedPage(article), kind: kind,
+                                                 share: share ?? AppLink.articlePage(id: article).map { PageShare(link: $0.link, title: $0.title) }))
         } else {
             veiledPage(content)
                 .articleListStyle(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin)
@@ -1926,22 +2008,29 @@ private struct ArticleShareLink: ViewModifier {
     }
 }
 
-/// Every article page's Ask AI (Abu, 2026-10-31: "Ask AI for each article and how to guide and
-/// prophecy and whatnot, literally every one"): a sparkles button in the navigation bar that opens the
-/// chat on the article, its questions about the article and every answer reading its sections first
-/// (`AskAIChatView.focusArticle`). Pages with no article identity (the index pages, the tajweed and
-/// Arabic lessons) have nothing to focus it on and go without; so does a device without Apple
-/// Intelligence, the OnDeviceAsk rule.
+/// Every article page's AI (Abu, 2026-10-31: "Ask AI for each article and how to guide and prophecy
+/// and whatnot, literally every one"; 2026-11-23: "and also support ai summary"): a sparkles button in
+/// the navigation bar with two choices. Summarize with AI hands the whole page to `SummarizeSheet`
+/// (`IslamArticle.summarySource`: every section, each cut to its share when the page is long, so the
+/// summary covers the page and not just its opening), with follow-up questions grounded on the same
+/// text. Ask AI opens the chat on the article, its questions about the article and every answer
+/// reading its sections first (`AskAIChatView.focusArticle`). Pages with no article identity (the
+/// index pages, the Arabic lessons) have nothing to work from and go without; so does a device
+/// without Apple Intelligence, the OnDeviceAsk rule.
 private struct ArticleAskAI: ViewModifier {
     let articleID: String?
     let fallback: IslamArticle?
+    /// The page's text built on the tap, for a page that would pay to build it on every render.
+    var makeFallback: (() -> IslamArticle?)? = nil
     /// The open sheet and the article it is about, as one item: a `focus` read only inside a
     /// `sheet(isPresented:)` closure is not a dependency of the body, so the sheet was built with
     /// the value from before the tap and opened unfocused.
     @State private var request: Request?
 
     private struct Request: Identifiable {
+        enum Kind { case chat, summary }
         let id = UUID()
+        let kind: Kind
         let article: IslamArticle?
     }
 
@@ -1950,28 +2039,54 @@ private struct ArticleAskAI: ViewModifier {
             content
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            Settings.shared.hapticFeedback()
-                            open(articleID)
+                        // A plain Menu: it opens on the tap (no double-tap shortcut to wait out).
+                        Menu {
+                            #if canImport(FoundationModels)
+                            Button {
+                                Settings.shared.hapticFeedback()
+                                open(articleID, .summary)
+                            } label: {
+                                Label("Summarize with AI", systemImage: "text.append")
+                            }
+                            #endif
+                            Button {
+                                Settings.shared.hapticFeedback()
+                                open(articleID, .chat)
+                            } label: {
+                                Label("Ask AI", systemImage: "sparkles")
+                            }
                         } label: {
                             Image(systemName: "sparkles")
                                 .font(.body.weight(.semibold))
                         }
                         .tint(Settings.shared.accentColor.color)
                         .accessibilityLabel("Ask AI")
-                        .accessibilityHint("Ask about this article")
+                        .accessibilityHint("Summarize this page, or ask about it")
                     }
                 }
                 .sheet(item: $request) { request in
-                    AskAIChatSheet(focusArticle: request.article)
+                    switch request.kind {
+                    case .chat:
+                        AskAIChatSheet(focusArticle: request.article)
+                    case .summary:
+                        #if canImport(FoundationModels)
+                        if let article = request.article {
+                            ArticleSummarySheet(article: article)
+                        }
+                        #endif
+                    }
                 }
                 #if DEBUG
-                // "-articleAskAI": open the sheet as the page appears (with `-islamOpenArticle <id>`;
-                // `-askAI "q"` then asks inside it). Once per launch: onAppear runs again on every pop.
+                // "-articleAskAI" / "-articleSummarize": open the chat or the summary as the page
+                // appears (with `-islamOpenArticle <id>`; `-askAI "q"` then asks inside the chat).
+                // Once per launch: onAppear runs again on every pop.
                 .onAppear {
-                    guard ProcessInfo.processInfo.arguments.contains("-articleAskAI"), !Self.debugOpened else { return }
+                    let arguments = ProcessInfo.processInfo.arguments
+                    let kind: Request.Kind? = arguments.contains("-articleSummarize") ? .summary
+                        : arguments.contains("-articleAskAI") ? .chat : nil
+                    guard let kind, !Self.debugOpened else { return }
                     Self.debugOpened = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { open(articleID) }
+                    debugOpen(articleID, kind, tries: 8)
                 }
                 #endif
         } else {
@@ -1980,15 +2095,52 @@ private struct ArticleAskAI: ViewModifier {
     }
 
     /// The corpus's article for the page, or the page's own generated one (a prophecy, a prophet's
-    /// sign); unfocused if neither has it, which the corpus verifier keeps from happening.
-    private func open(_ articleID: String) {
-        request = Request(article: IslamArticles.all.first { $0.id == articleID } ?? fallback)
+    /// sign, a Miracles article); unfocused if neither has it, which the corpus verifier keeps from
+    /// happening.
+    ///
+    /// A page whose text is still loading (a hadith's explanation, read off the main thread) has
+    /// nothing to summarize yet: the summary waits for the next tap rather than open empty.
+    private func open(_ articleID: String, _ kind: Request.Kind) {
+        let article = IslamArticles.all.first { $0.id == articleID } ?? fallback ?? makeFallback?()
+        if kind == .summary, article == nil { return }
+        request = Request(kind: kind, article: article)
     }
 
     #if DEBUG
     private static var debugOpened = false
+
+    /// The launch argument's open, a second at a time until the page's text has loaded.
+    private func debugOpen(_ articleID: String, _ kind: Request.Kind, tries: Int) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            let ready = IslamArticles.all.contains { $0.id == articleID } || fallback != nil || makeFallback?() != nil
+            if ready || tries <= 1 { open(articleID, kind) } else { debugOpen(articleID, kind, tries: tries - 1) }
+        }
+    }
     #endif
 }
+
+#if canImport(FoundationModels)
+/// "Summarize with AI" on an article page: `SummarizeSheet` over the whole page. The model reads
+/// English (`OnDeviceAsk.supportsArabic`), so while it has no Arabic the page's Arabic words are left
+/// out of what it reads; the reader sees only the summary, never the source, so nothing on screen
+/// changes. A Tajweed Foundations page is translated, so its title is shown in the reader's language;
+/// the articles are English and keep theirs.
+private struct ArticleSummarySheet: View {
+    let article: IslamArticle
+
+    var body: some View {
+        let source = article.summarySource(limit: OnDeviceAsk.summarizeSourceLimit,
+                                           keepArabic: OnDeviceAsk.supportsArabic)
+        SummarizeSheet(
+            title: article.title,
+            displayTitle: TajweedTopic.topic(pageID: article.id) != nil || article.id.hasPrefix(IslamArticle.lessonPrefix)
+                ? article.title.localizedDisplay : nil,
+            sourceText: source.text,
+            articleSource: source
+        )
+    }
+}
+#endif
 #endif
 
 /// Paints the per-row background for the Sepia / Gray reading themes. Must be applied to rows/sections inside
@@ -3611,6 +3763,9 @@ struct SectionPillHeader: View {
     var onRemove: (() -> Void)? = nil
     /// A read-out in the count's pill instead of the number (`CountPill.countText`).
     var countText: String? = nil
+    /// The section's pages read English in every interface language (FAITH & PROOFS): an "English
+    /// only" tag leads the trailing cluster, outside English (`EnglishOnly`).
+    var englishOnly: Bool = false
 
     /// The count pill's rendered height (caption line height + 2 x 4pt padding) - the shuffle circle
     /// matches it so the two controls read as one family.
@@ -3644,7 +3799,11 @@ struct SectionPillHeader: View {
         // of the cluster (it is information, not a control), then the buttons: search, shuffle, trash,
         // then the expand chevron. SurahsHeader lays out the same way; a header that hand-rolls its
         // cluster must follow this order too. Simple Mode drops the count, search and shuffle (each
-        // hides itself; the trash and the chevron stay).
+        // hides itself; the trash and the chevron stay). The English-only tag is information too, so
+        // it comes first.
+        if englishOnly && EnglishOnly.isShown {
+            EnglishOnlyTag()
+        }
         CountPill(count: count, overflow: overflow, countText: countText)
 
         if let onSearch {

@@ -29,6 +29,8 @@ struct ProvingIslamView: View {
     @State private var barsCollapsed = false
     @State private var scrollTarget: String?
     @StateObject private var search = IslamArticleSearchModel()
+    /// The filter row over the results (`IslamSearchFilterBar`): Topics, Match, Words, Without, Best Match.
+    @State private var searchFilters = IslamSearchFilters.remembered()
 
     var body: some View {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -46,7 +48,9 @@ struct ProvingIslamView: View {
 
                         goFurtherSection
                     } else {
-                        AskAISearchSection(query: query)
+                        if searchFilters.shows(.askAI) {
+                            AskAISearchSection(query: query)
+                        }
 
                         IslamArticleSearchSections(
                             query: query,
@@ -56,7 +60,9 @@ struct ProvingIslamView: View {
                             onScrollTo: { entry in
                                 withAnimation { searchText = "" }
                                 scrollTarget = entry.listID
-                            }
+                            },
+                            filters: searchFilters,
+                            reference: search.reference
                         )
                     }
                 }
@@ -65,6 +71,8 @@ struct ProvingIslamView: View {
             .englishArticle()
             .applyConditionalListStyle()
             .autoOpenArticle(openArticle, home: .proving)
+            .islamSearchFilterChrome($searchFilters, isSearching: !query.isEmpty, homes: [.proving],
+                                     kinds: [.scripture, .articles, .passages, .askAI])
             .islamArticleIndexSearch(searchText: $searchText, barsCollapsed: $barsCollapsed,
                                      scrollTarget: scrollTarget, proxy: proxy)
         }
@@ -78,8 +86,11 @@ struct ProvingIslamView: View {
             #endif
         }
         .onChange(of: searchText) { text in
-            search.update(query: text, homes: [.proving])
+            search.update(query: text, homes: [.proving], filters: searchFilters)
             if !text.isEmpty { scrollTarget = nil }
+        }
+        .onChange(of: searchFilters) { filters in
+            search.update(query: searchText, homes: [.proving], filters: filters)
         }
     }
 
@@ -160,7 +171,7 @@ struct ProvingIslamView: View {
 
     /// The library's opening card: the one question the whole case asks, set large. The card every
     /// resource now opens on started here (`ResourceHero`).
-    static var hero: ResourceHero<EmptyView> {
+    static var hero: ResourceHero<ProvingFingerprintsArt> {
         ResourceHero(
             eyebrow: "THE COMPLETE CASE",
             systemImage: "checkmark.shield.fill",
@@ -171,7 +182,9 @@ struct ProvingIslamView: View {
                 ResourceHeroStat("\(IslamArticleCatalog.provingGroups.count)", "parts"),
                 ResourceHeroStat("1", "question"),
             ]
-        )
+        ) {
+            ProvingFingerprintsArt()
+        }
     }
 
     // MARK: The signs libraries

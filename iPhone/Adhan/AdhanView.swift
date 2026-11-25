@@ -199,7 +199,9 @@ struct AdhanView: View {
     /// The tab's ⋯ More menu: the Prayer and Hijri calendars (pushed through `GlanceCalendarPushes`,
     /// the same doors the glance tiles use, so the menu and the tiles can never stack two pushes), then
     /// the prayer list's layout as a submenu (Abu, 2026-10-11: "have it be a menu that opens the
-    /// other"), the current one ticked inside it and named under the row.
+    /// other"), the current one ticked inside it and named under the row. The calendars stayed here when
+    /// the other tabs' doors became capsules under their summaries (Abu, 2026-11-24: "for Adhan we should
+    /// probably just keep that the top left").
     @ViewBuilder
     private var adhanMoreItems: some View {
         TabMoreMenuItem(String(localized: "Prayer Calendar"), systemImage: "calendar") {

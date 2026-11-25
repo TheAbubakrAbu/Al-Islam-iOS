@@ -575,11 +575,13 @@ Not verified: playback on a device (network stalls on the simulator held Ar-Rahm
 
 Abu, after the launch-preprocessing question of 2026-09-05 ("maybe we should do what you said above, maximize storage"): the one launch-time item worth megabytes was the AI corpora, whose first build on a device took minutes (the Quran corpus embeds 6,644 words; the all-books hadith corpus first opens all 17 books and embeds 14,700). They now ship prebuilt.
 
-**What ships.** `Resources/Data/Semantic/quran-en.svec` (4,231,317 bytes: 6,644 words x 300, 6,286 items) and `hadith-all.svec` (11,832,064 bytes: 14,700 words x 300, 50,884 items with their "slug|idInBook" keys), 16.1 MB together, iPhone target only. Format "SEM4" (`SemanticCorpus` bundled section in iPhone/Helpers/SemanticSearch.swift): Float16 vectors and 16-bit word rows, half the Caches format's Float32 (the same two corpora are 8.4 and 22.6 MB there). Measured before choosing Float16: the largest cosine change a half-precision round trip makes on either corpus is 1.4e-4 in Python and 1.2e-4 through vImage on device, against floors of 0.38 absolute and 0.85 x best; int8 would have been 2.8e-3 for another 8 MB saved and was not worth the precision argument.
+**What ships** (since 2026-11-23 as `.svec.lzfse` in format "SEM5", section 20). `Resources/Data/Semantic/quran-en.svec` (2,264,693 bytes unpacked: 6,644 words x 300, 6,286 items) and `hadith-all.svec` (7,892,204 bytes: 14,700 words x 300, 77,039 items with their "slug|idInBook" keys), 7.66 MB together as shipped, iPhone target only. Format "SEM5" (`SemanticCorpus` bundled section in iPhone/Helpers/AskAI/SemanticSearch.swift): one signed byte per vector component, one Float32 scale per word, and 16-bit word rows; the Caches format is Float32 (the same two corpora are 8.4 and 23.0 MB there). A word's bytes are its vector over (largest component / 127), rounded; its scale is (vector length / byte-row length), so bytes x scale has the vector's exact length and only the direction is rounded. Measured by the export on both corpora: the worst word keeps a cosine of 0.99991 with its Float32 vector, the worst length change is 1.3e-6, against floors of 0.38 absolute and 0.85 x best. The earlier "SEM4" (Float16, 2026-09-05) was twice the bytes. Checked end to end before switching (the app's tokenizer, NLEmbedding query vectors and MaxSim scoring run on the Mac against both packs, 40 searches per corpus): the first result is the same in 79 of 80, the top-10 set in 78 of 80, the hadith top-20 in all 40, and the largest score change is 0.0005.
 
-**The guard.** The header records the NLEmbedding English word-embedding revision the vectors came from (1 on macOS 26, the iOS 26 simulator and the iOS 18.6 simulator; the two simulators' own Caches builds were byte-identical, md5-checked) and a fingerprint of the source texts: for the Quran an FNV-1a 64 over every corpus text in order (`QuranSemanticCorpus.fingerprint(texts:)`, computed off the main actor from the texts the caller already built), for hadith every catalog slug with its .hpk byte size (`HadithSemanticCorpus.fingerprint`, no book opened). `SemanticSearchEngine.prepare` order is now: Caches build of this version, then the bundled pack when its revision and fingerprint match (`SemanticCorpus.loadBundled`, mapped, one vImage pass to Float32, rejected once per launch otherwise), then the on-device build exactly as before. A rejected pack costs one header read; nothing else changed for a user whose pack does not match.
+**The guard.** The header records the NLEmbedding English word-embedding revision the vectors came from (1 on macOS 26, the iOS 26 simulator and the iOS 18.6 simulator; the two simulators' own Caches builds were byte-identical, md5-checked) and a fingerprint of the source texts: for the Quran an FNV-1a 64 over every corpus text in order (`QuranSemanticCorpus.fingerprint(texts:)`, computed off the main actor from the texts the caller already built), for hadith every catalog slug with its .hpk byte size (`HadithSemanticCorpus.fingerprint`, no book opened). `SemanticSearchEngine.prepare` order is now: Caches build of this version, then the bundled pack when its revision and fingerprint match (`SemanticCorpus.loadBundled`, unpacked, one vDSP pass to Float32 and a scale per word, rejected once per launch otherwise), then the on-device build exactly as before. A rejected pack costs one header read; nothing else changed for a user whose pack does not match.
 
-**Regenerating.** The packs come out of the app itself, so the tokenizer, texts and embedding are the runtime's: build the iPhone scheme, `simctl launch <17 Pro> com.Quran.Elmallah.Islamic-Pillars -skipNotificationPrompt -exportSemanticPacks`, wait for "SEMANTIC EXPORT done" in `log show` (seconds when the Caches copies exist, minutes for a cold rebuild), copy the container's Documents/semantic-packs/*.svec over Resources/Data/Semantic/. Do this after ANY change to quran.qpk's English texts or any .hpk; `-auditSemanticPacks` logs "SEMANTIC PACK <id>: VALID" or "STALE" with both fingerprints, and a DEBUG launch logs "SEMANTIC PACK <id> loaded from the bundle" or "rejected (...)" when a corpus is first needed. The export also round-trips each file through the reader and reports the max vector drift and whether the rows are identical.
+**Regenerating.** The packs come out of the app itself, so the tokenizer, texts and embedding are the runtime's: build the iPhone scheme, `simctl launch <17 Pro> com.Quran.Elmallah.Islamic-Pillars -skipNotificationPrompt -exportSemanticPacks`, wait for "SEMANTIC EXPORT done" in `log show` (about 15 seconds: the export always embeds the texts afresh), copy the container's Documents/semantic-packs/*.svec over Resources/Data/Semantic/ and run `Scripts/compress_shipped.py --all`. A simulator still on the welcome screen never starts the export: add `-seedBool THEfirstLaunch=0` (`-THEfirstLaunch NO` is read as text and ignored). Do this after ANY change to quran.qpk's English texts or any .hpk; `-auditSemanticPacks` logs "SEMANTIC PACK <id>: VALID" or "STALE" with both fingerprints, and a DEBUG launch logs "SEMANTIC PACK <id> loaded from the bundle" or "rejected (...)" when a corpus is first needed. The export also round-trips each file through the reader and reports the worst word's cosine and whether the rows are identical.
+
+**The Caches trap (found 2026-11-23).** `prepare` trusts a Caches build of the same corpus version before anything else, and the all-books hadith version names the books, not their text. The export that shipped with the OCR pass over Muslim and at-Tirmidhi loaded a Caches build made before it and wrote those vectors under the new packs' fingerprint: 11 hadiths carried the old words (`cry` for `crying`, a stray `dot`), and the audit said VALID. The export now calls `SemanticSearchEngine.buildFromTextsOnly`, which removes the Caches builds and skips the shipped pack, and refuses to run when a corpus is already loaded. Two exports in a row are byte-identical.
 
 **Verify.** Delete Library/Caches/SemanticVectors in the container, then `-launchTabQuran -quranSearch "patience in hardship"` (AI RESULTS section within a second, "loaded from the bundle" in the log) on iOS 26 and 18.6, `-launchTabHadith -hadithSearch "patience in hardship"`, and the Ask AI chat (`-launchTabIslam -islamDestination askAI -askAI "..." -askAILog`, cited hadith in Documents/askai-log.txt). The Caches directory must stay empty afterwards: a bundled load persists nothing.
 
@@ -734,6 +736,65 @@ The other 45 screens hold 56 to 60 fps. Full table: rerun `scroll.sh`.
 What it means here: the fill the weak phone drew in rows is what every phone draws, in rows and in the cards and headers around them. `inRow`, `rowLiquidGlass` and `shouldPlainRowGlass` stay, and now reach only the glass still in a row (the ayah actions sheet's tiles, a name row's View First Found) and a surface under the Adhan tab's sky, where surfaces are clear glass. The full-tier scroll was NOT re-timed after this: the table above is the same switch on four screens under `-perfTierReduced`, so expect that direction, and measure before quoting a number. The Liquid Glass Everywhere setting (`Settings.liquidGlassEverywhere`, off by default) draws the surfaces as glass again, and with it the old cost; the DEBUG `-contentGlass` argument turns it on without touching the stored setting.
 
 **Traps met.** zsh does not split an unquoted `$ARGS` (the app got one long argument and opened the Adhan tab: write `${=ARGS}`); a run beside a build is worthless (`idleAt` far from 6 s or `openMain` far from 4.5 s gives it away); `sample` attached to the app halves its frame rate, so profiles rank symbols and never time them; two builds of different flavour (Debug against the optimized one) differ by the reader's progress bar alone, which follows how many rows the landing has measured by the screenshot, so compare like with like.
+
+## 20. Phase 14: install size (2026-11-23)
+
+Started by ITMS-90389: App Store Connect refused build 271 (4.6.7) because its watch app was 95 MB after
+thinning, over the 75 MB ceiling. Abu then asked to trim the iPhone app as far as it goes losslessly ("use xz
+everywhere we can if it helps with storage and quickness and lookup"). He first declined every lossy lever,
+then, with each one measured, took two of them the same day: one byte per component for the AI vectors, and
+HE-AAC for the adhan recordings. His rule for the rest: "I prefer speed and efficiency and optimization over
+storage". So -Osize and larger hadith blocks stay out (both cost speed, numbers below), and the rule of
+10.14 stands: nothing here may make a lookup slower.
+
+**String tables.** One catalog (14,195 keys) was compiled whole into every target, 44 MB per target with 14
+languages. The Watch, Complication and Widget now end with a "Trim Strings" phase (`Scripts/trim_strings.py`)
+that ships each only the keys it can reach; the rules, the tajweed-course field cut on the watch and its
+build-failing guard are in the Localization Guide, "Each extension's share". Watch 44.4 -> 25.8 MB,
+Complication 44.4 -> 2.1, Widget 44.4 -> 2.6. The iPhone app keeps the whole catalog.
+
+**Raw data files now compressed** (`Scripts/compress_shipped.py`, read through `ShippedFile` in
+QuranPack.swift, which also accepts the plain file):
+
+| File | Before | Shipped | How the app reads it |
+| --- | --- | --- | --- |
+| quran-search.qsp | 11.57 MB | .xz 1.61 MB | unpacked into Caches/Unpacked the first time the index is read after an install or update (55 ms on a Mac), then mapped: lookups unchanged |
+| hadith-all.svec, quran-en.svec | 16.47 MB | .lzfse 7.66 MB | one byte per component since the same day (format SEM5, section 15; 13.60 MB as Float16); unpacked in memory on the first AI search of a launch (12 ms on a Mac for both, 19 ms before) and widened to Float32 as before |
+| CrossLanguageLexicon.bin, WordAlignment.bin, HadithLexicon.bin | 1.00 MB | .lzfse 0.36 MB | unpacked in memory on load (0.8 ms on a Mac for the three; 10 ms as xz, which saved 80 KB) |
+
+The codec follows how often a file is unpacked: xz (smallest, slowest) only where it happens once per
+install, which is the search index; LZFSE (ten times quicker) for everything unpacked on every launch.
+Builders write the compressed form themselves (`build_word_alignment.py`,
+`build_hadith_lexicon.py`, `export_precomputed_packs.sh`); after `-exportSemanticPacks`, run
+`compress_shipped.py --all`. PrecomputedPackTests, CrossLanguageHighlightTests and WordAlignmentTests read the
+shipped files through the same loaders.
+
+**Adhan recordings in HE-AAC.** Eleven of the thirteen full recordings were re-encoded from AAC-LC (about
+60 kbps) to HE-AAC at 32 kbps, 14.25 -> 7.69 MB: `afconvert -f caff -d aach -b 32000 -s 2 -q 127` (32 kbps is
+the encoder's ceiling for 22.05 kHz mono; al-Qatami is stereo 44.1 kHz at `-b 48000`, encoded from the IMA4
+file in git 957c7df, which is the same master one generation earlier). Measured on every file against the one
+it replaces: same length to within one sample, zero offset (the notification cuts in `AdhanClipStore` start
+at measured offsets), level within 0.15 dB, loudness within 0.2 LU, the lower half of the band within 0.1 dB
+and the upper half 1 to 2 dB softer, which is the cost. `AVAudioFile` and `AVAudioPlayer` both read the files
+at their full rate (the CAF header names the 11.025 kHz core; the decoder restores the rest). A cut's stamp
+carries the full file's byte size, so every install renders its two cuts again from the new file on first
+launch; the simulator's minshawi-2 cuts came out the same length, in place, and 0.1 dB apart.
+Left as they were: `zakariya` (mastered at full scale; HE-AAC overshoots it to +3 dB and clips, -37 dB of
+distortion against -54 dB today, in every encoder mode), `madina` (11 kHz at 31 kbps already, below HE-AAC's
+range) and the alert tones (IMA4, which notification sounds require). A new adhan follows the same recipe;
+check the decoded peak before keeping an HE-AAC encode of a loud master.
+
+**Measured and declined, because they cost speed:**
+- **-Osize.** iPhone binary 45.8 -> 41.4 MB, Watch 16.0 -> 14.7 (both builds instrumented alike), but only
+  about 1.5 MB of download, since code compresses well, for slower code everywhere.
+- **Hadith packs at 1 MiB blocks** (`Scripts/reblock_packs.py --dry-run`): 2.34 MB (3.52 MB at 2 MiB). A hadith
+  open then inflates four times the text (LZMA alone 1.6 -> 5.5 ms on a Mac) and the 6 MB text cache of a
+  low-memory device holds three blocks. Hadith-JSON-Engine writes the packs at 256 KB, and the vectors and the
+  vocabulary are keyed on their byte sizes. The .tpk are already at large blocks: nothing to gain.
+
+**Checked and left alone (already compressed):** the .qpk packs, HadeethEnc.henc, WordTimings.bin, the
+.xz/.solidpack files, Assets.car (actool already LZFSE; the 1024 px app icon in three appearances is most of
+it), fonts (UIAppFonts needs them plain).
 
 ## Appendix: acceptance checklist per phase
 

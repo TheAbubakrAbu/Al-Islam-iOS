@@ -18,7 +18,7 @@ from islam_packs import Hadith, quran_ayah, strip_marks, is_weak, _quran
 
 ROOT=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),'iPhone','Islam')+'/'
 # Relative to iPhone/Islam/ (its subfolders since the 2026-10-07 regrouping).
-FILES=['Beliefs/PillarViews','Beliefs/BeliefsViews','Fiqh/HowToGuides','Beliefs/AqeedahViews','Beliefs/SalafiyyahViews','Beliefs/AnswersViews','Beliefs/ScholarsViews','Content/HadithSciencesViews','Proofs/ProvingIslamChapters']
+FILES=['Beliefs/PillarViews','Beliefs/BeliefsViews','Fiqh/HowToGuides','Beliefs/AqeedahViews','Beliefs/SalafiyyahViews','Beliefs/AnswersViews','Beliefs/ScholarsViews','Content/HadithSciencesViews','Proofs/ProvingIslamChapters','Library/StoriesOfTheProphets','Library/SahabahAndSalaf','Library/RefutingReligions','Library/PreservationOfTheQuran','Library/ScienceOfHadith','Library/DominoProcess']
 SLUG={'sahih al-bukhari':'bukhari','sahih bukhari':'bukhari','sahih muslim':'muslim','muqaddimah of sahih muslim':'muslim',
       'sunan abi dawud':'abudawud','sunan abu dawud':'abudawud','sunan al-tirmidhi':'tirmidhi','jami at-tirmidhi':'tirmidhi',
       'sunan ibn majah':'ibnmajah',"sunan an-nasa'i":'nasai','sunan al-darimi':'darimi','musnad ahmad':'ahmed'}

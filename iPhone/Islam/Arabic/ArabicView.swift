@@ -435,7 +435,7 @@ struct ArabicView: View {
 
     #if os(iOS)
     /// The card the alphabet opens on (`ResourceHero`).
-    private static var hero: ResourceHero<EmptyView> {
+    private static var hero: ResourceHero<ArabicSunMoonLettersArt> {
         ResourceHero(
             eyebrow: String(localized: "THE LANGUAGE OF THE QURAN"),
             systemImage: "textformat.size.ar",
@@ -447,7 +447,9 @@ struct ArabicView: View {
                 ResourceHeroStat("\(LetterTraits.makharij.count)".localizedDigits, String(localized: "makharij")),
                 ResourceHeroStat("\(ReadingTier.all.count)".localizedDigits, String(localized: "reading tiers")),
             ]
-        )
+        ) {
+            ArabicSunMoonLettersArt()
+        }
     }
     #endif
 

@@ -168,6 +168,11 @@ enum SolidPack {
     /// the qpk blocks, these files don't carry their decompressed size up front - the mushaf
     /// `.pdf.xz` facsimiles come through here too.
     static func xzDecompress(_ data: Data) -> Data? {
+        streamDecompress(data, algorithm: COMPRESSION_LZMA)
+    }
+
+    /// The same streaming decode for any of Apple's codecs (`.lzfse` shipped files, `ShippedFile`).
+    static func streamDecompress(_ data: Data, algorithm: compression_algorithm) -> Data? {
         let bufferSize = 1 << 20
         let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
         defer { buffer.deallocate() }
@@ -175,7 +180,7 @@ enum SolidPack {
         // compression_stream has no empty initializer in Swift; these fields are
         // overwritten by compression_stream_init and the loop before first use.
         var stream = compression_stream(dst_ptr: buffer, dst_size: 0, src_ptr: buffer, src_size: 0, state: nil)
-        guard compression_stream_init(&stream, COMPRESSION_STREAM_DECODE, COMPRESSION_LZMA)
+        guard compression_stream_init(&stream, COMPRESSION_STREAM_DECODE, algorithm)
             == COMPRESSION_STATUS_OK else { return nil }
         defer { compression_stream_destroy(&stream) }
 
@@ -204,6 +209,69 @@ enum SolidPack {
             }
         }
         return finished == true ? out : nil
+    }
+}
+
+// MARK: - Shipped files
+
+/// A data file the app ships plain or compressed (2026-11-23: the App Store counts every bundle byte
+/// uncompressed). `.xz` is the smallest and slow to unpack, for a file unpacked once; `.lzfse` is ten
+/// times quicker to unpack and a little larger, for one unpacked on every load. Scripts/compress_shipped.py
+/// writes them and lists which file takes which; a plain file in the bundle still works, so a builder that
+/// has not compressed yet breaks nothing.
+enum ShippedFile {
+    /// `name.ext` in the bundle in whichever form it ships, looked for in each of `subdirectories` (nil
+    /// is the bundle's root) in order, plain first.
+    static func url(_ name: String, _ ext: String, subdirectories: [String?] = [nil]) -> URL? {
+        for suffix in ["", ".xz", ".lzfse"] {
+            for folder in subdirectories {
+                if let url = Bundle.main.url(forResource: name, withExtension: ext + suffix, subdirectory: folder) {
+                    return url
+                }
+            }
+        }
+        return nil
+    }
+
+    /// The file's bytes: mapped when it ships plain, unpacked in memory when compressed. For data parsed
+    /// and copied out on load (a lexicon, the vectors), not for data kept for lookups (`mappableURL`).
+    static func data(at url: URL) -> Data? {
+        guard let stored = try? Data(contentsOf: url, options: .mappedIfSafe) else { return nil }
+        switch url.pathExtension {
+        case "xz": return SolidPack.streamDecompress(stored, algorithm: COMPRESSION_LZMA)
+        case "lzfse": return SolidPack.streamDecompress(stored, algorithm: COMPRESSION_LZFSE)
+        default: return stored
+        }
+    }
+
+    /// A plain file to map, for data kept for lookups: the bundle's own file when it ships plain; for a
+    /// compressed one, a copy unpacked into Caches/Unpacked once per build of the app (again only after iOS
+    /// purges Caches), so lookups run on clean mapped pages exactly as they did from the bundle. Nil when
+    /// the copy cannot be written; the caller then unpacks into memory (`data(at:)`).
+    static func mappableURL(for url: URL) -> URL? {
+        guard ["xz", "lzfse"].contains(url.pathExtension) else { return url }
+        let plainName = url.deletingPathExtension().lastPathComponent
+        let fileManager = FileManager.default
+        guard let app = stamp(Bundle.main.executableURL), let packed = stamp(url),
+              let caches = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else { return nil }
+        let folder = caches.appendingPathComponent("Unpacked", isDirectory: true)
+        let target = folder.appendingPathComponent("\(app)-\(packed)-\(plainName)")
+        if fileManager.fileExists(atPath: target.path) { return target }
+        guard let body = data(at: url) else { return nil }
+        try? fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
+        // Another build's copy of the same file is dead weight.
+        for name in (try? fileManager.contentsOfDirectory(atPath: folder.path)) ?? [] where name.hasSuffix("-" + plainName) {
+            try? fileManager.removeItem(at: folder.appendingPathComponent(name))
+        }
+        guard (try? body.write(to: target, options: .atomic)) != nil else { return nil }
+        return target
+    }
+
+    private static func stamp(_ url: URL?) -> String? {
+        guard let url, let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let size = attributes[.size] as? NSNumber,
+              let date = attributes[.modificationDate] as? Date else { return nil }
+        return "\(size.int64Value)-\(Int64(date.timeIntervalSince1970))"
     }
 }
 

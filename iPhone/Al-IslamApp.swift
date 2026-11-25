@@ -272,6 +272,9 @@ private struct MainTabView: View {
     /// ayah hidden.
     @State private var landAfterWarm: AppTab?
     @State private var didWarm = false
+    /// The sheet a shared link opened (an ayah's tafsir or comparison, a hadith's explanation):
+    /// presented here, over whichever tab the link landed on (AppLink.swift, `AppLinkSheets`).
+    @State private var linkSheet: AppLinkSheet?
     /// The opening Adhan tab's content waits for the launch cover's first frame, like the warm walk
     /// below: built in the same pass, it held that frame (and the cover's animation task) for about
     /// 780 ms in a Debug build, so the cover came up at +1.1 s instead of +0.5 s (Quality Guide F1).
@@ -317,6 +320,14 @@ private struct MainTabView: View {
             }
             .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
                 if let url = activity.webpageURL { AppLinkRouter.open(url) }
+            }
+            .onReceive(AppLinkSheets.shared.$pending) { sheet in
+                guard let sheet else { return }
+                AppLinkSheets.shared.pending = nil
+                linkSheet = sheet
+            }
+            .sheet(item: $linkSheet) { sheet in
+                AppLinkSheetView(sheet: sheet)
             }
             // A link to a tab itself: nothing to push, so it is selected and cleared here.
             .onReceive(AppNavigation.shared.$pendingTab) { raw in

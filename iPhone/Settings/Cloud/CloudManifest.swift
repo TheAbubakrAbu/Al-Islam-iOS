@@ -43,7 +43,7 @@ enum CloudManifest {
     }()
 
     static let listedPreferenceKeys: [String] = [
-        "THEfontArabic", "acceptedBetaQiraatNotice", "adhanAutoPlayInApp", "adhanNotificationSound", "adhanOverridesSilentMode",
+        "THEfontArabic", "THEkeepAyahSheetOpen", "acceptedBetaQiraatNotice", "adhanAutoPlayInApp", "adhanNotificationSound", "adhanOverridesSilentMode",
         "adhanSoundAsr", "adhanSoundDhuhr", "adhanSoundFajr", "adhanSoundIsha", "adhanSoundMaghrib",
         "alIslamGlow", "alertToneSound", "arabicFilterMode", "arabicLetterSizeIndex",
         "arabicShelfAxisPlace", "arabicShelfAxisQualities", "arabicShelfAxisRules", "askAIEngine",
@@ -59,7 +59,7 @@ enum CloudManifest {
         "hadithSearchHelpCollapsed", "hadithSearchHelpRemoved", "hapticOn", "helpDoorsCollapsed", "helpDoorsHidden",
         "hideEnglishInArabicLetters", "highlightAllahNames",
         "highlightAllahNamesHadith", "highlightAllahNamesIslam", "highlightPlayingWords", "hijriCalendarDisplayMode",
-        "islamArabicFontFace", "islamGroupResources", "islamTextSize", "keepAyahSheetOpen", "keepAyahSheetOpenOnPlay", "keepScreenOn", "khatmGroupByJuz", "launchTab", "launchTabChosen", "liquidGlassEverywhere",
+        "islamArabicFontFace", "islamArticleLength", "islamGroupResources", "islamTextSize", "keepAyahSheetOpenOnPlay", "keepScreenOn", "khatmGroupByJuz", "launchTab", "launchTabChosen", "liquidGlassEverywhere",
         "mushafBottomBarsCollapsed", "mushafFitPage", "mushafHafsPDFEdition", "mushafPDFAppearance", "mushafPageLanguage",
         "mushafTwoPageSpread", "naggingAsr", "naggingAyahInLastCall", "naggingDeadlineStarts",
         "naggingDhuhr", "naggingDuha", "naggingFajr", "naggingFollowUpMinutes", "naggingInterval",

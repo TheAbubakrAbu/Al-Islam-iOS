@@ -437,6 +437,41 @@ is not in either sibling. This is what waits for the next port.
   shared-link line (Al-Quran 0 leaks in all; Al-Adhan's 19 are RiwayatColorCode, SettingsControls and
   JumpIndexRail). The router already falls back by flag (`#if HAS_QURAN`, `#if HAS_HADITH`: the Islam tab).
   A zero from the checker is not a build: build each sibling before believing it (section 10's trap).
+- Since 2026-11-23 the grammar has `tajweed=<TajweedTopic.linkKey>` (a Tajweed Foundations page, e.g.
+  `tajweed=hamzatul-wasl`), with `IslamLinkedPage.tajweed` in both copies of the enum and a `tajweed` kind in
+  `Website/public/links.js`. Tajweed Foundations is in all three apps, so this arm needs no flag.
+- Since 2026-11-24 it also has `lesson=<id>` (a Tajweed Course lesson, `IslamLinkedPage.lesson` in both
+  enum copies), `tafsir=`, `translations=` and `qiraah=` (`s:a`, an ayah's sheet over the reader, `#if
+  HAS_QURAN`), and `explanation=` (`slug:reference` for a shelf hadith's explanation, or a bare Hadith
+  Encyclopedia id; `#if HAS_HADITH`). The sheets are presented by `MainTabView` from `AppLinkSheets`
+  (AppLink.swift), so the port adds its `linkSheet` state, `.onReceive` and `.sheet` there. AppLink.swift
+  also carries `ScriptureCitations` (the article and tafsir citations that open their ayah or hadith),
+  `PageShare`, `ShareCircleButton` and `SearchBarWithShare` (the share button beside a search bar).
+- Later on 2026-11-24: `OpenInTabButton` (AppLink.swift) draws the one "Open in Quran" / "Open in Hadith"
+  door, whose words and tab symbols are `OpenInTab` in `iPhone/Islam/Beliefs/PillarsView.swift` (iPhone and
+  Watch). `OpenInTab.quranTitle` is read by DailyReminders, DailyHub, SunnahReminders and the Qiraat Explorer,
+  so a sibling that ports any of those needs PillarsView.swift's `OpenInTab` too. A page's own search grew
+  `searchablePage(...)` (ViewExtensions.swift), `articleAnchor(_:)` and `ArticleSearchKind` (IslamSearch.swift)
+  and `IslamArticle.Section.anchor` (IslamArticles.swift): they travel together.
+- Still 2026-11-24 (Abu: "Al Quran doesn't support Hadith and Al adhan doesn't support either ... if it
+  doesn't exist it's similar to what it was before"): `AppLink.opensInThisApp` is false for a Quran link
+  without `HAS_QURAN` and a hadith link without `HAS_HADITH`. `OpenInTabButton` draws nothing for such a
+  link, a quote card's footer is plain words again (`ScriptureQuoteBody.openLink`), and `ScriptureCitations`
+  links "(Quran 2:185)" only under `HAS_QURAN` (hadith citations were already `HAS_HADITH`). The reminder's
+  "Open in Hadith" was already inside `#if HAS_HADITH`; `.hadithTab` keeps its arrow symbol without it.
+  Miracles' page search and AI text read `QuranData`, so they are `#if HAS_QURAN` with the plain
+  `.selectableArticleList()` in Al-Adhan. `QuranSurahNames` (QuranQuote.swift) names a cited surah from
+  `QuranData` and is nil without `HAS_QURAN`, so Al-Adhan's quote cards keep "Quran 5:3"; its hand-kept
+  `QuranQuoteSource` compiles unchanged (the transliteration line was taken back out the same day: quote
+  cards are Arabic and English only).
+- Later still on 2026-11-24 (Ask AI's filters and the locators): `AskAIScope.available` offers Quran only
+  under `HAS_QURAN`, Hadith only under `HAS_HADITH` and Prayer Times only under `HAS_ADHAN`, so Al-Quran
+  shows Everything, Quran, Articles and Duas, and Al-Adhan Everything, Articles, Duas and Prayer Times; a
+  saved choice the app does not offer reads as Everything. `AskAIPrayerRequest` (a named place or another
+  day, computed like City Prayer Times) and its use in AskAIRetrieval.swift are `#if HAS_ADHAN`, and so is
+  the `.cityPrayer` source's door to `PrayerTimesMapView` (AskAIChat.swift); the enum case itself is
+  unconditional, so saved transcripts decode in every app. The redesigned locators (MasjidView.swift) are
+  listed only under `HAS_ADHAN`, as before.
 
 **By hand at the port, per sibling (none of it merges by itself):**
 1. `AppNavigation` (`pendingTab`, `pendingHadithBook`, `IslamOpenTarget.resource/.page`, `IslamLinkedPage`)

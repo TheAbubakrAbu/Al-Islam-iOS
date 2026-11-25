@@ -13,7 +13,7 @@ import SwiftUI
 
 extension ProphetMiraclesView {
     /// The index order: groups in `Entry.Group` order.
-    static let entries: [Entry] = whyEntries + beforeEntries + beforeEntries2 + hisEntries + provisionEntries + creationEntries
+    static let entries: [Entry] = whyEntries + beforeEntries + beforeEntries2 + foretoldEntries + hisEntries + provisionEntries + creationEntries
         + prayerEntries + protectionEntries + hisEntries2
 
     /// The STRONGEST section, in reading order (Abu, 2026-09-25: "have a strongest tab section").
@@ -69,6 +69,7 @@ extension ProphetMiraclesView {
                       .text("The Quran describes the ark plainly, as planks and nails, and says it was left behind as a sign:"),
                       .quran("54:13-15"),
                       .text("It says the same of the rescue, calling it a sign for the worlds (29:15). Some early commentators took this to mean the ship itself was left to be seen; others, that every ship afloat since recalls the first. Either way the sign was not only for the people who drowned. It is told to every audience after them: the few who believed were carried, and the many who laughed were not."),
+                      .quran("29:15"),
                   ]),
               ]),
         .init(id: "hud-wind", title: "Hud's challenge, and the wind",
@@ -77,19 +78,26 @@ extension ProphetMiraclesView {
               aliases: ["'ad", "ad", "aad", "iram", "ahqaf", "storm", "dabur", "west wind", "east wind", "saba", "cloud", "hood"],
               sections: [
                   SignSection("THE SIGN", [
-                      .text("'Ad were a people of great stature who asked who could be stronger than they were (41:15). When Hud called them to worship Allah alone, they gave him their answer, and he gave them his:"),
+                      .text("'Ad were a people of great stature who asked who could be stronger than they were (41:15)."),
+                      .quran("41:15"),
+                      .text("When Hud called them to worship Allah alone, they gave him their answer, and he gave them his:"),
                       .quran("11:53-56"),
                       .text("The Quran names no wonder for Hud like the she-camel or the staff. Many commentators point to this instead: one man, alone among a powerful and hostile people, told all of them to plot against him together and give him no respite, and he came to no harm. The proof they said he lacked was standing in front of them."),
                   ]),
                   SignSection("WHAT THEY DID WITH IT", [
-                      .text("They kept their gods. When a cloud at last came towards their valleys, they welcomed it as rain (46:24). It was a wind:"),
+                      .text("They kept their gods. When a cloud at last came towards their valleys, they welcomed it as rain (46:24)."),
+                      .quran("46:24"),
+                      .text("It was a wind:"),
                       .quran("69:6-8"),
                       .text("Hud and those who believed with him were saved (11:58)."),
+                      .quran("11:58"),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The Prophet set the two winds side by side, the one that helped him and the one that ended 'Ad:"),
                       .hadith("muslim:900a", cite: "Sahih Muslim 900a", arabic: 41...45, english: 0...16),
                       .text("Al-Bukhari files the same saying under the Battle of the Trench, where a wind scattered the armies camped around Madinah (33:9). 'A'ishah said that when he saw a dark cloud his face would change and he would come and go until it rained; he told her he feared it might be like the cloud 'Ad had welcomed (Sahih al-Bukhari 3206, Sahih Muslim 899)."),
+                      .quran("33:9"),
+                      .hadith("bukhari:3206", cite: "Sahih al-Bukhari 3206, Sahih Muslim 899b", arabic: 17...59, english: 0...120),
                   ]),
               ]),
         .init(id: "salih-camel", title: "Salih and the she-camel",
@@ -98,7 +106,9 @@ extension ProphetMiraclesView {
               aliases: ["saleh", "thamud", "naqah", "camel", "hijr", "al-hijr", "madain salih", "hegra", "tabuk", "well", "hamstrung", "shared water"],
               sections: [
                   SignSection("THE SIGN", [
-                      .text("Thamud carved their houses out of the mountains. When Salih called them to Allah they told him he was a man like them, and should bring a sign if he was truthful (26:154). They were given one, with a warning not to harm it."),
+                      .text("Thamud carved their houses out of the mountains. When Salih called them to Allah they told him he was a man like them, and should bring a sign if he was truthful (26:154)."),
+                      .quran("26:154"),
+                      .text("They were given one, with a warning not to harm it."),
                       .quran("7:73"),
                       .text("It came with terms. The water was to be shared: one day hers, one day theirs."),
                       .quran("26:155-156"),
@@ -109,9 +119,11 @@ extension ProphetMiraclesView {
                       .text("Salih gave them a deadline:"),
                       .quran("11:65"),
                       .text("When it passed, the blast seized them in their homes, and Salih and those who believed with him were saved (11:66-67)."),
+                      .quran("11:66-67"),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The she-camel was a sign they could watch every day, drinking on her appointed day, not a wonder done once and then remembered. The Quran calls her a visible sign, and says what held back signs of the kind the Quraysh demanded: earlier peoples had been given them and denied them. Such signs, it says, are sent only as a warning (17:59)."),
+                      .quran("17:59"),
                       .text("On the march to Tabuk in 9 AH the Prophet camped at al-Hijr, the land of Thamud, and the she-camel's well was still known:"),
                       .hadith("bukhari:3379", cite: "Sahih al-Bukhari 3379", arabic: 25...67, english: 0...77),
                   ]),
@@ -125,6 +137,7 @@ extension ProphetMiraclesView {
                       .text("Ibrahim broke his people's idols and left the largest standing, then told them to ask it who had done it. They admitted their gods could not speak. Having no answer, they built a fire and threw him into it. The command that followed was addressed to the fire itself:"),
                       .quran("21:68-70"),
                       .text("The fire was not put out. It was told to be coolness and safety for one man, and Allah saved him from it (29:24)."),
+                      .quran("29:24"),
                   ]),
                   SignSection("WHAT HE SAID", [
                       .text("Ibn 'Abbas reported the words Ibrahim said as he was thrown in, and the day the Prophet said them too:"),
@@ -132,6 +145,8 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("They built the fire as a public verdict on him, and it became a public verdict on them: they intended harm, and were made the losers. The Quran says there are signs in it for people who believe (29:24). Yet the one the Quran names as believing him is Lut (29:26), and the two of them left together for the land Allah had blessed (21:71)."),
+                      .quran("29:26"),
+                      .quran("21:71"),
                   ]),
               ]),
         .init(id: "ibrahim-birds", title: "Ibrahim and the four birds",
@@ -140,7 +155,9 @@ extension ProphetMiraclesView {
               aliases: ["abraham", "khalil", "resurrection", "revival", "give life to the dead", "hills", "certainty", "yaqin", "doubt", "heart at rest", "itminan"],
               sections: [
                   SignSection("THE SIGN", [
-                      .text("Ibrahim had told a king to his face that his Lord is the One who gives life and causes death (2:258). He believed it; he asked to see it."),
+                      .text("Ibrahim had told a king to his face that his Lord is the One who gives life and causes death (2:258)."),
+                      .quran("2:258"),
+                      .text("He believed it; he asked to see it."),
                       .quran("2:260"),
                       .text("Most commentators explain that he took four birds, slaughtered them and mixed their parts, set a portion on each hill, and called them. They came back to him whole, and in haste."),
                   ]),
@@ -159,9 +176,13 @@ extension ProphetMiraclesView {
               aliases: ["lot", "sodom", "gomorrah", "angels", "messengers", "stones", "baked clay", "sijjil", "dead sea", "mutafikat", "his wife", "blinded"],
               sections: [
                   SignSection("THE SIGN", [
-                      .text("The angels came first to Ibrahim, with news of a son, and told him they had been sent to Lut's people. Then they came to Lut as guests. His people came hurrying to take them, and Lut, with no one to defend him, wished aloud for some power against them (11:80). His guests then told him who they were:"),
+                      .text("The angels came first to Ibrahim, with news of a son, and told him they had been sent to Lut's people. Then they came to Lut as guests. His people came hurrying to take them, and Lut, with no one to defend him, wished aloud for some power against them (11:80)."),
+                      .quran("11:80"),
+                      .text("His guests then told him who they were:"),
                       .quran("11:81"),
-                      .text("When the men still demanded his guests, Allah blinded them (54:37). Then the morning came:"),
+                      .text("When the men still demanded his guests, Allah blinded them (54:37)."),
+                      .quran("54:37"),
+                      .text("Then the morning came:"),
                       .quran("11:82-83"),
                   ]),
                   SignSection("WHY IT MATTERS", [
@@ -169,6 +190,7 @@ extension ProphetMiraclesView {
                       .quran("15:75-76"),
                       .quran("29:35"),
                       .text("The Quran tells the Quraysh, whose caravans went north to Syria, that they passed it morning and evening (37:137-138). Commentators have long placed it by the Dead Sea, which Arabic has also called the Sea of Lut. The sign was the destruction and the place together: a site people knew, on a road they used, and a story that explained what they saw."),
+                      .quran("37:137-138"),
                   ]),
               ]),
         .init(id: "zamzam", title: "The spring of Zamzam",
@@ -188,6 +210,8 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("What the angel said came to pass: Ibrahim and Isma'il later raised the House together (2:127). The Prophet called her running the origin of the walk every pilgrim makes between the two hills, which the Quran names among the symbols of Allah (2:158). The well is still drawn from today, a short distance from the Kaaba inside the Sacred Mosque."),
+                      .quran("2:127"),
+                      .quran("2:158"),
                   ]),
               ]),
         .init(id: "yusuf-dream-shirt", title: "Yusuf's dream, and the shirt",
@@ -197,11 +221,14 @@ extension ProphetMiraclesView {
               sections: [
                   SignSection("THE DREAM", [
                       .text("As a boy, Yusuf told his father a dream. Ya'qub understood it, and told him to keep it from his brothers (12:5)."),
-                      .quran("12:4"),
+                      .quran("12:4-5"),
                       .text("His brothers threw him into a well, and he was sold into Egypt. He was imprisoned there, and his gift for interpreting dreams brought him out: he read the king's dream of seven fat cows eaten by seven lean ones as seven years of plenty followed by seven of drought, and told Egypt how to live through them (12:43-49). He was put in charge of its stores."),
+                      .quran("12:47-48"),
                   ]),
                   SignSection("THE SHIRT", [
-                      .text("Ya'qub had grieved for him until his eyes turned white (12:84). When the famine brought the brothers to Egypt and Yusuf made himself known, he forgave them and sent his shirt home:"),
+                      .text("Ya'qub had grieved for him until his eyes turned white (12:84)."),
+                      .quran("12:84"),
+                      .text("When the famine brought the brothers to Egypt and Yusuf made himself known, he forgave them and sent his shirt home:"),
                       .quran("12:92-93"),
                       .quran("12:94-96"),
                   ]),
@@ -217,13 +244,16 @@ extension ProphetMiraclesView {
               aliases: ["job", "ayub", "patience", "sabr", "illness", "affliction", "bath", "healing", "golden locusts", "family restored"],
               sections: [
                   SignSection("THE SIGN", [
-                      .text("Ayyub was tried in his body and in his family. When he called on his Lord, his prayer was a statement of his state and nothing more: that harm had touched him, and that Allah is the most merciful of those who show mercy (21:83). The answer was a spring at his feet:"),
+                      .text("Ayyub was tried in his body and in his family. When he called on his Lord, his prayer was a statement of his state and nothing more: that harm had touched him, and that Allah is the most merciful of those who show mercy (21:83)."),
+                      .quran("21:83"),
+                      .text("The answer was a spring at his feet:"),
                       .quran("38:41-42"),
                       .text("The commentators say the bath cured what was outside him and the drink what was within. Then what he had lost was given back, and as much again:"),
                       .quran("21:84"),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The Quran gives its own verdict on him: 'We found him patient, an excellent servant' (38:44). His name became a byword for patience, and the spring was its reward: not an escape from the trial, but its end, when Allah willed it."),
+                      .quran("38:44"),
                       .text("The Prophet told of a day when Ayyub was bathing and gold fell on him:"),
                       .hadith("bukhari:279", cite: "Sahih al-Bukhari 279", arabic: 11...42, english: 4...63),
                       .text("It is the same man on both sides of the trial: patient while he was tried, and still asking for his Lord's blessing when he had more than enough."),
@@ -258,7 +288,7 @@ extension ProphetMiraclesView {
                   SignSection("THE SIGN", [
                       .quran("17:101"),
                       .text("The staff and the hand were the first two. Then came years of drought and failing harvests (7:130), and after them a run of plagues, each one plain to see:"),
-                      .quran("7:133"),
+                      .quran("7:130-133"),
                       .text("A count reported from Ibn 'Abbas and several early commentators makes the nine these: the staff, the hand, the years of famine, the failing fruits, and the five plagues. Other commentators count a little differently."),
                   ]),
                   SignSection("WHAT THEY DID WITH IT", [
@@ -281,6 +311,7 @@ extension ProphetMiraclesView {
                       .text("Musa led the Children of Israel out of Egypt by night, and Pharaoh's army came after them at sunrise. With the sea in front of them and soldiers behind, his people gave themselves up for lost."),
                       .quran("26:61-63"),
                       .text("The pursuers followed them onto the path. Musa and everyone with him were brought across, and the sea closed over the others (26:64-66)."),
+                      .quran("26:64-66"),
                   ]),
                   SignSection("PHARAOH'S LAST WORDS", [
                       .text("The man who had called himself a god declared his faith only when the water reached him, and was answered with a rebuke:"),
@@ -300,7 +331,9 @@ extension ProphetMiraclesView {
                   SignSection("THE SIGN", [
                       .text("In the wilderness after Egypt, a whole people needed water, food and shelter, and the land gave them none of the three."),
                       .quran("2:60"),
-                      .text("Twelve springs, one for each of the twelve tribes (7:160), and every tribe knew its own. Food and shade came the same way:"),
+                      .text("Twelve springs, one for each of the twelve tribes (7:160), and every tribe knew its own."),
+                      .quran("7:160"),
+                      .text("Food and shade came the same way:"),
                       .quran("2:57"),
                   ]),
                   SignSection("WHAT THEY DID WITH IT", [
@@ -321,7 +354,9 @@ extension ProphetMiraclesView {
                   SignSection("THE SIGN", [
                       .text("A man was killed among the Children of Israel, and each party pushed the blame onto another. Musa brought them a command they did not expect:"),
                       .quran("2:67"),
-                      .text("The command was simply to slaughter a cow. They asked instead about her age, then her colour, then her work, and each answer narrowed the search, until they slaughtered her, the Quran says, but could hardly do it (2:71). Then came the point of it:"),
+                      .text("The command was simply to slaughter a cow. They asked instead about her age, then her colour, then her work, and each answer narrowed the search, until they slaughtered her, the Quran says, but could hardly do it (2:71)."),
+                      .quran("2:71"),
+                      .text("Then came the point of it:"),
                       .quran("2:72-73"),
                       .text("The commentators report, from the first generations, that the man came back to life for a moment, named the one who had killed him, and died again."),
                   ]),
@@ -352,6 +387,7 @@ extension ProphetMiraclesView {
                       .text("They had seen the mountain over them, and still, the very next verse says:"),
                       .quran("2:64"),
                       .text("The Quran recalls it again when it lists what they did with the covenant (2:93)."),
+                      .quran("2:93"),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The sign did not ask them to believe in Musa; they already followed him. It made the weight of the covenant plain, so that no one could say afterwards that the command had been light. Jewish tradition kept a memory of the same scene: the Babylonian Talmud (Shabbat 88a) reads Exodus 19:17, where the people stood \"at the nether part of the mount\", as \"beneath the mountain\", with the mountain held over them like an upturned tub."),
@@ -386,6 +422,7 @@ extension ProphetMiraclesView {
               sections: [
                   SignSection("THE SIGN", [
                       .text("Dawud's son Sulayman asked for a kingdom that would belong to no one after him (38:35), and was given one: the wind under his command, and the jinn working for him."),
+                      .quran("38:35"),
                       .quran("34:12-13"),
                       .text("The list ends not with praise of the king but with a command to be grateful, and a warning that few are."),
                   ]),
@@ -538,6 +575,180 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("A NOTE", [
                       .text("Most commentators held that the table did come down, as the promise says. A few early ones, Mujahid and al-Hasan al-Basri among them, held that the disciples withdrew the request once they heard the condition. Either way, the exchange gave the fifth surah its name: al-Ma'idah, the Table Spread."),
+                  ]),
+              ]),
+    ]
+
+    // MARK: Foretold before him
+
+    /// The earlier scriptures' promises of him (Abu, 2026-11-24: "include some from the bible like the
+    /// paraclete will be with you soon (Ahmed) and the prophecy in genesis about making Ishmael a great
+    /// nation ... and the Daniel prophecy"). The Bible is quoted as written (`.quote`, King James); the
+    /// Quran and hadith by reference as everywhere else.
+    static let foretoldEntries: [Entry] = [
+        .init(id: "paraclete", title: "The Comforter Jesus promised",
+              summary: "On his last night 'Isa promised another Comforter, who would come only once he had gone, speak only what he heard, and abide for ever.",
+              group: .foretold,
+              aliases: ["paraclete", "parakletos", "periklytos", "comforter", "faraqlit", "spirit of truth", "ahmad", "gospel of john", "john 14", "john 16", "holy ghost", "holy spirit", "pentecost", "jesus", "injil"],
+              sections: [
+                  SignSection("WHAT THE QURAN SAYS HE FORETOLD", [
+                      .text("The Quran records that 'Isa (peace be upon him) came to the Children of Israel confirming the Torah that was before him, and bringing good tidings of a messenger to come after him:"),
+                      .quran("61:6"),
+                      .text("It also says that those who follow the Prophet Muhammad (peace and blessings be upon him) find him written in what they have of the Torah and the Gospel:"),
+                      .quran("7:157"),
+                      .text("The scholars who wrote on these glad tidings, Ibn Taymiyyah in al-Jawab as-Sahih, his student Ibn al-Qayyim in Hidayat al-Hayara and, in the nineteenth century, Rahmatullah al-Kairanawi in Izhar al-Haqq, returned most often to one passage of the Gospel of John: the long talk at 'Isa's last meal with his disciples."),
+                  ]),
+                  SignSection("THE PROMISE", [
+                      .quote("“And I will pray the Father, and he shall give you another Comforter, that he may abide with you for ever” (John 14:16, KJV)"),
+                      .quote("“Nevertheless I tell you the truth; It is expedient for you that I go away: for if I go not away, the Comforter will not come unto you; but if I depart, I will send him unto you.” (John 16:7, KJV)"),
+                      .quote("“I have yet many things to say unto you, but ye cannot bear them now. Howbeit when he, the Spirit of truth, is come, he will guide you into all truth: for he shall not speak of himself; but whatsoever he shall hear, that shall he speak: and he will shew you things to come. He shall glorify me: for he shall receive of mine, and shall shew it unto you.” (John 16:12–14, KJV)"),
+                      .text("The word translated Comforter is the Greek parakletos, which the Arabic writers spelled faraqlit: one called to stand beside another, a helper or an advocate. Its meaning was argued over even in their day, so Ibn Taymiyyah did not rest on the word. He argued from what the Comforter is said to do."),
+                  ]),
+                  SignSection("WHAT THE COMFORTER WOULD DO", [
+                      .text("He is “another” Comforter. A second implies a first of the same kind, and the one who had stood beside the disciples until that night was 'Isa himself. What is promised is someone like him, sent after him."),
+                      .text("He cannot come until 'Isa has gone (John 16:7). Yet in the Gospels' own telling the Holy Spirit was at work long before that night: John the Baptist was to be filled with the Holy Ghost from his mother's womb (Luke 1:15), Elisabeth and Zacharias were filled with it (Luke 1:41, 1:67), and it was upon Simeon in the Temple (Luke 2:25). Ibn Taymiyyah made the same point: the Holy Spirit had always strengthened the prophets and the righteous, before 'Isa and after him, and no one had called that the Comforter. A help that was already present cannot be the one that waits on his leaving."),
+                      .text("He “shall not speak of himself; but whatsoever he shall hear, that shall he speak”. That is how the Quran describes the Prophet:"),
+                      .quran("53:3-4"),
+                      .text("It is also how the Torah describes the prophet promised to Musa (peace be upon him), with God's words put in his mouth:"),
+                      .quote("“I will raise them up a Prophet from among their brethren, like unto thee, and will put my words in his mouth; and he shall speak unto them all that I shall command him.” (Deuteronomy 18:18, KJV)"),
+                      .text("“He shall glorify me”, and in the chapter before, “he shall testify of me” (John 15:26). Ibn Taymiyyah observed that no one after 'Isa bore witness for him in a testimony heard across the earth except Muhammad, who cleared him of the slanders of those who rejected him and of the excess of those who made him a god. The Quran says of him and his mother:"),
+                      .quran("5:75"),
+                      .text("He will “abide with you for ever”. No man lives for ever, so Ibn Taymiyyah read it of what he would bring: a law never to be replaced, which fits the last of the prophets. And the “many things” the disciples could not yet bear, all truth and things to come, fit a revelation that completed the religion and told of the Hour and what follows it in more detail than any scripture before it."),
+                  ]),
+                  SignSection("THE CHRISTIAN READING", [
+                      .text("Christians read the Comforter as the Holy Spirit, and the Gospel of John names him so in the same talk:"),
+                      .quote("“But the Comforter, which is the Holy Ghost, whom the Father will send in my name, he shall teach you all things, and bring all things to your remembrance, whatsoever I have said unto you.” (John 14:26, KJV)"),
+                      .text("They hold the promise kept at the feast of Pentecost, when the disciples “were all filled with the Holy Ghost, and began to speak with other tongues” (Acts 2:4). To the point about the Spirit's earlier presence they answer from John itself, which says that before then “the Holy Ghost was not yet given” (John 7:39): what came at Pentecost, on their reading, was a new indwelling, not a first arrival."),
+                      .text("The Muslim answer does not depend on removing “the Holy Ghost” from John 14:26. Even with those words, the rest of the description is of someone seen and heard: he speaks only what he hears, he testifies, he will “reprove the world of sin” (John 16:8), and he tells of things to come. These, Ibn Taymiyyah said, are not the marks of something in the hearts of a few that no one sees or hears; they fit one whom people see and whose words they hear. And the Quran names the one 'Isa foretold: Ahmad, a messenger."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("Some modern writers have suggested that John's Greek once read periklytos, “the praised one”, close in meaning to Ahmad, rather than parakletos. No Greek manuscript of John reads periklytos; every one reads parakletos. The suggestion has no manuscript support, and the argument here does not rest on it. The classical scholars argued from the description, and the description is in every copy."),
+                  ]),
+              ]),
+        .init(id: "ishmael-nation", title: "A great nation from Isma'il",
+              summary: "Genesis promises Ibrahim a great nation from Isma'il by name; the Arabs descend from him, and the Prophet from them.",
+              group: .foretold,
+              aliases: ["ishmael", "ismail", "hagar", "hajar", "great nation", "genesis 17", "genesis 21", "twelve princes", "kedar", "nebaioth", "nebajoth", "ishmaelites", "hagarenes", "saracens", "john of damascus"],
+              sections: [
+                  SignSection("THE PROMISE, BY NAME", [
+                      .text("Genesis tells of Ibrahim's two sons, Isma'il, born to Hajar (Hagar), and Ishaq, born to Sarah, and it records promises for both. Before Isma'il was born, the angel told his mother that her offspring would be past counting:"),
+                      .quote("“I will multiply thy seed exceedingly, that it shall not be numbered for multitude.” (Genesis 16:10, KJV)"),
+                      .text("When Ibrahim prayed for his son, God answered with the promise, and named him in it:"),
+                      .quote("“And as for Ishmael, I have heard thee: Behold, I have blessed him, and will make him fruitful, and will multiply him exceedingly; twelve princes shall he beget, and I will make him a great nation.” (Genesis 17:20, KJV)"),
+                      .text("It was given again when Hajar and the boy were sent away: to Ibrahim, that the son of the bondwoman too would be made a nation (Genesis 21:13), and then to Hajar in the wilderness, with the boy dying of thirst:"),
+                      .quote("“Arise, lift up the lad, and hold him in thine hand; for I will make him a great nation.” (Genesis 21:18, KJV)"),
+                      .text("Genesis says he grew up in the wilderness of Paran (Genesis 21:21), and later it lists his twelve sons:"),
+                      .quote("“And these are the names of the sons of Ishmael, by their names, according to their generations: the firstborn of Ishmael, Nebajoth; and Kedar, and Adbeel, and Mibsam” … “These are the sons of Ishmael, and these are their names, by their towns, and by their castles; twelve princes according to their nations.” (Genesis 25:13, 16, KJV)"),
+                  ]),
+                  SignSection("THE ARABS FROM HIM, AND THE PROPHET FROM THEM", [
+                      .text("The Arabs of the north, Quraysh among them, trace their line to Isma'il, and the Prophet Muhammad (peace and blessings be upon him) placed himself in that line:"),
+                      .hadith("muslim:2276", cite: "Sahih Muslim 2276", arabic: 45...64, english: 7...48),
+                      .text("The Quran tells the other half of the story. Ibrahim and Isma'il, raising the foundations of the House together in Makkah, asked for a nation submitting to Allah from their descendants, and for a messenger from among them:"),
+                      .quran("2:127-129"),
+                      .text("After Isma'il, no prophet arose from his line until one came from the very valley where the two of them had prayed, and the nation that prayer asked for gathered around him."),
+                  ]),
+                  SignSection("WHAT CHRISTIANS CALLED THE MUSLIMS", [
+                      .text("The Christians who first wrote about the Muslims named them after Isma'il and his mother. Sebeos, an Armenian historian of the later seventh century whose work is the earliest surviving major account of the rise of Islam, opens his account of it with the son of Abraham “born of a serving maid”, about whom, he says, the words of Genesis 16:12 were fulfilled. He calls the Prophet “a man of the sons of Ishmael” who “taught them to recognize the God of Abraham”. A Syriac apocalypse written in northern Syria in the 690s, which goes under the name of Methodius, calls the conquerors “the sons of Ishmael”. Early Syriac, Greek, Coptic and Armenian writers called them Hagarenes, after Hajar: Agarenoi in Greek, Hagraye in Syriac."),
+                      .text("John of Damascus, a monk who wrote in Greek in the eighth century under Muslim rule, opened his chapter on Islam with the same genealogy:"),
+                      .quote("“There is also the superstition of the Ishmaelites which to this day prevails and keeps people in error, being a forerunner of the Antichrist. They are descended from Ishmael, [who] was born to Abraham of Agar, and for this reason they are called both Agarenes and Ishmaelites.” (John of Damascus, On Heresies, ch. 100 (101 in Migne), tr. F. H. Chase, 1958)"),
+                      .text("He then gave the older Greek and Roman name for the Arabs, Saracens, and explained it by a play on words as Sarras kenoi, “destitute of Sara”. His purpose was polemic. But he and the writers before him agree on the one fact this page needs: to their opponents, the people who carried the new religion out of Arabia were the children of Isma'il."),
+                  ]),
+                  SignSection("THE OTHER READING", [
+                      .text("Jewish and Christian readers take the promise as kept, and finished, in the tribes: twelve princes, and the Arab peoples descended from them. The covenant itself, Genesis says in the next verse, was to be established with Ishaq:"),
+                      .quote("“But my covenant will I establish with Isaac, which Sarah shall bear unto thee at this set time in the next year.” (Genesis 17:21, KJV)"),
+                      .text("Muslims do not deny the covenant with Ishaq: the prophets of the Children of Israel came through it, and the Quran honours every one of them. The question is what “a great nation” from Isma'il amounted to. Ibn Taymiyyah argued that a man is not made great merely by having many descendants, and that a nation of unbelievers is not what God calls great in a promise of blessing. The honour by which the children of Isma'il came to stand above other peoples, he said, appeared only with the prophethood of Muhammad, and that shows it was true and foretold."),
+                      .text("Ibn al-Qayyim records the Jews of his day conceding that Genesis foretells the Arabs' dominion, while denying that it foretells a prophet. His answer was that a liar's empire is not given as good news. A false prophet's kingdom would be a warning, as the Antichrist is a warning, not a blessing promised to Hajar in her distress. Proving Islam's chapter on the Bible sets this promise beside the others the scholars gathered, and argues it at length."),
+                  ]),
+              ]),
+        .init(id: "daniel-stone", title: "The stone that became a mountain",
+              summary: "Daniel read a king's dream of a great statue broken by a stone cut out without hands, which became a mountain and filled the earth.",
+              group: .foretold,
+              aliases: ["daniel", "daniel 2", "nebuchadnezzar", "bukhtnassar", "statue", "image", "four kingdoms", "stone cut without hands", "great mountain", "kingdom of god", "cornerstone", "builders rejected", "psalm 118", "matthew 21", "last brick"],
+              sections: [
+                  SignSection("THE DREAM", [
+                      .text("The Book of Daniel tells of a dream that troubled Nebuchadnezzar, king of Babylon, which Daniel, a young captive from Judah, recounted and interpreted for him. The king had seen a great image:"),
+                      .quote("“This image’s head was of fine gold, his breast and his arms of silver, his belly and his thighs of brass, His legs of iron, his feet part of iron and part of clay. Thou sawest till that a stone was cut out without hands, which smote the image upon his feet that were of iron and clay, and brake them to pieces.” (Daniel 2:32–34, KJV)"),
+                      .text("The whole image was broken together and blown away like chaff, “and the stone that smote the image became a great mountain, and filled the whole earth” (Daniel 2:35). Daniel told the king that he was the head of gold, that other kingdoms would follow, each of a lesser metal, and then the last:"),
+                      .quote("“And in the days of these kings shall the God of heaven set up a kingdom, which shall never be destroyed: and the kingdom shall not be left to other people, but it shall break in pieces and consume all these kingdoms, and it shall stand for ever.” (Daniel 2:44, KJV)"),
+                  ]),
+                  SignSection("THE CHRISTIAN READING", [
+                      .text("The traditional Christian reading takes the four metals as Babylon, Medo-Persia, Greece and Rome, and the stone as the kingdom of God that came with Christ, small at its beginning and spread since through the world. Most modern scholars read the four instead as Babylon, Media, Persia and the Greek kingdoms that followed Alexander."),
+                  ]),
+                  SignSection("THE MUSLIM READING", [
+                      .text("Ibn Taymiyyah in al-Jawab as-Sahih and Ibn al-Qayyim in Hidayat al-Hayara both count this dream among the glad tidings of the Prophet Muhammad (peace and blessings be upon him). They quote it from an Arabic rendering used by earlier Muslim writers, in which Daniel's interpretation calls the stone a prophet whom God raises up with a strong law, who breaks the kings of the earth and their nations until the earth is filled with him and his nation, and whose rule lasts to the end of the world. Ibn Taymiyyah's verdict on it:"),
+                      .quote("“This is the description of Muhammad, not the description of the Messiah. He is the one who was sent with a strong law, and broke all the kings of the earth and its nations, until the earth was filled with him and with his nation in its east and its west. And his rule endures: no one has been able to remove it, as the rule of the Jews was removed, and the rule of the Christians from the best and the middle of the earth.” (Ibn Taymiyyah, al-Jawab as-Sahih, vol. 5)"),
+                      .text("The Bible as it stands speaks of a kingdom that God sets up, not of a prophet, so the reading has to be argued from the kingdom, and it is the kingdom both scholars point to: one that broke the kings of the earth, and whose rule was not taken away. The details of the dream fit that picture. The stone is “cut out without hands”: it does not grow out of the empires it breaks, as each metal grew out of the one before, but comes from outside them. It strikes while they still stand. And it fills the whole earth and is “not left to other people”. Within a generation of the Prophet's death, the two empires that ruled the Near East, Persia and Rome, had lost to his Companions every land from Iraq to Egypt. He had described what was shown to him:"),
+                      .hadith("muslim:2889a", cite: "Sahih Muslim 2889a", arabic: 38...53, english: 0...37),
+                      .text("The kingdom of the Christian reading did not break Rome; within four centuries it had become Rome's own religion. Christians answer that the kingdom is spiritual, and grows in hearts rather than across borders. That is a fair account of their faith, but it is not the picture the dream paints, of a stone that strikes."),
+                  ]),
+                  SignSection("THE STONE THE BUILDERS REFUSED", [
+                      .text("A second stone is read beside it. A psalm speaks of “the stone which the builders refused” that “is become the head stone of the corner” (Psalm 118:22), and in Matthew, Jesus quotes it at the end of a parable of tenants who beat and kill the servants sent to a vineyard for its fruit, and then the owner's son:"),
+                      .quote("“Therefore say I unto you, The kingdom of God shall be taken from you, and given to a nation bringing forth the fruits thereof. And whosoever shall fall on this stone shall be broken: but on whomsoever it shall fall, it will grind him to powder.” (Matthew 21:43–44, KJV)"),
+                      .text("Ibn Taymiyyah quotes the passage among the glad tidings, and Ibn al-Qayyim explains it: this is the description of Muhammad and of those who opposed and fought him, and it fits no one after the Messiah but him. The stone that grinds to powder whomever it falls on recalls the stone that broke the image. And the Prophet's own picture of his place among the prophets is a building, and the one stone it lacked:"),
+                      .hadith("bukhari:3535", cite: "Sahih al-Bukhari 3535, Sahih Muslim 2286b", arabic: 34...67, english: 4...70),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("This is an interpretation, argued, not a proof text. Daniel's dream names no prophet and no people, and the Arabic rendering the classical scholars quoted says more than the Bible as it stands. What can fairly be said is that the dream describes a kingdom set up by God, from outside the empires, that breaks them, fills the earth and is never handed on to another people; and that the coming of Islam fits it at least as well as any other reading. Christians read the same chapter as glad tidings of their own, and the Jews before them as theirs."),
+                  ]),
+              ]),
+        .init(id: "prophet-like-musa", title: "A prophet like Musa, from their brethren",
+              summary: "The Torah promises a prophet like Musa, from among the brethren of Israel, with God's words in his mouth.",
+              group: .foretold,
+              aliases: ["moses", "deuteronomy 18", "deuteronomy 34", "prophet like moses", "like unto thee", "brethren", "my words in his mouth", "that prophet", "torah", "joshua", "esau", "edom", "witness from the children of israel"],
+              sections: [
+                  SignSection("THE PROMISE", [
+                      .text("Near the end of the Torah, Musa (peace be upon him) tells the Children of Israel that God will raise up for them a prophet like himself (Deuteronomy 18:15), and then gives God's own words to him:"),
+                      .quote("“I will raise them up a Prophet from among their brethren, like unto thee, and will put my words in his mouth; and he shall speak unto them all that I shall command him. And it shall come to pass, that whosoever will not hearken unto my words which he shall speak in my name, I will require it of him.” (Deuteronomy 18:18–19, KJV)"),
+                      .text("The same passage gives the test of a prophet: if what he says in God's name does not come to pass, God did not send him (Deuteronomy 18:21–22). The Prophecies library is a long record of the other outcome."),
+                  ]),
+                  SignSection("LIKE MUSA", [
+                      .text("The Torah's last chapter, written after Musa's death, says that none like him had arisen in Israel:"),
+                      .quote("“And there arose not a prophet since in Israel like unto Moses, whom the LORD knew face to face” (Deuteronomy 34:10, KJV)"),
+                      .text("Muslim scholars read the promise as the Prophet Muhammad (peace and blessings be upon him), and the Quran describes his sending in the very terms of the comparison:"),
+                      .quran("73:15"),
+                      .text("The likeness is close. Each brought a law from God, not only a message; each led a people, judged between them and fought for them; each led those who believed out of the land that persecuted them; each saw his enemies overthrown, Pharaoh in the sea and the chiefs of Quraysh at Badr, until in the end Makkah opened to the Prophet; and each married, had children, and died a natural death. The prophets of Israel who came after Musa judged by the Torah rather than bringing a new law of their own, and of the law and the prophets 'Isa says, “I am not come to destroy, but to fulfil” (Matthew 5:17). The one like Musa is the one who brought a law as Musa did."),
+                  ]),
+                  SignSection("FROM AMONG THEIR BRETHREN", [
+                      .text("The prophet is to come “from among their brethren”, and the Torah uses the word of Israel's kin outside Israel: it calls the Edomites, the descendants of Esau, “your brethren the children of Esau” (Deuteronomy 2:4). Ibn al-Qayyim relates the answer a Muslim scholar of the Maghrib gave a Jew who said the promised prophet was Joshua. That cannot be, he said: the Torah's own last chapter says no prophet like Musa arose in Israel; and the brethren of Israel are the Arabs, the children of Isma'il, or the children of Esau, from whose line no prophet came after Musa. That leaves the children of Isma'il."),
+                      .text("The words “will put my words in his mouth” describe how the Quran came: the Prophet did not compose it, but recited what he was given. And the Quran calls on the learned of the Children of Israel as witnesses. One of them, it says, testified to it and believed:"),
+                      .quran("46:10"),
+                      .text("Their scholars' knowing it, it says elsewhere, was itself a sign:"),
+                      .quran("26:196-197"),
+                      .text("'Abdullah ibn 'Amr ibn al-'As said that an ayah of the Quran describing the Prophet appears in the Torah in these words:"),
+                      .hadith("bukhari:4838", cite: "Sahih al-Bukhari 4838", arabic: 30...96, english: 0...156),
+                  ]),
+                  SignSection("THE OTHER READING", [
+                      .text("Christians read the promise as Jesus, as Peter applies it in Acts 3:22. Jews, following their classical commentators, read it as the line of Israelite prophets who came after Musa one by one. Yet the Gospel of John has the priests ask John the Baptist whether he is the Christ, or Elias, or “that prophet” (John 1:21), so the Jews of that day awaited the prophet like Moses as someone other than the Messiah. And one prophet like Musa is promised, while the Torah's last chapter says none like him arose in Israel. Proving Islam's chapter on the Bible gives the full argument."),
+                  ]),
+              ]),
+        .init(id: "paran", title: "He shone forth from Paran",
+              summary: "Musa's last blessing names three mountains, Sinai, Seir and Paran; Muslim scholars read them as the Torah, the Gospel and the Quran.",
+              group: .foretold,
+              aliases: ["faran", "sinai", "seir", "deuteronomy 33", "habakkuk 3", "teman", "ten thousand", "ten thousands of saints", "conquest of makkah", "fath makkah", "wilderness of paran", "fig and olive", "ibn qutaybah", "mount hira"],
+              sections: [
+                  SignSection("THREE MOUNTAINS", [
+                      .text("Before his death, Musa (peace be upon him) blessed the Children of Israel. The blessing opens with three places:"),
+                      .quote("“And he said, The LORD came from Sinai, and rose up from Seir unto them; he shined forth from mount Paran, and he came with ten thousands of saints: from his right hand went a fiery law for them.” (Deuteronomy 33:2, KJV)"),
+                      .text("The prophet Habakkuk uses the same picture in his prayer:"),
+                      .quote("“God came from Teman, and the Holy One from mount Paran. Selah. His glory covered the heavens, and the earth was full of his praise.” (Habakkuk 3:3, KJV)"),
+                      .text("And Genesis names Paran as the place where Isma'il grew up, after he and his mother were sent away:"),
+                      .quote("“And he dwelt in the wilderness of Paran: and his mother took him a wife out of the land of Egypt.” (Genesis 21:21, KJV)"),
+                  ]),
+                  SignSection("THE MUSLIM READING", [
+                      .text("Ibn Taymiyyah, in al-Jawab as-Sahih, gives the reading in the words of Ibn Qutaybah, as many scholars before him had made it, and Ibn al-Qayyim repeats it in Hidayat al-Hayara. God's coming from Sinai is His sending down the Torah to Musa on Sinai, as Muslims and the People of the Book agree. His rising from Seir, a range in the land of Sham where 'Isa's prophethood appeared, is the Gospel. And His shining forth from Paran is the Quran sent down to the Prophet Muhammad (peace and blessings be upon him), for the mountains of Paran are the mountains of Makkah, and among them is Hira, where the first revelation came. The order is the order of time, and Ibn Taymiyyah likened the three to the break of dawn, the sunrise, and the sun high in the sky, since the light of the last spread over the east and the west of the earth."),
+                      .text("He set beside it the oath that opens Surat at-Tin, which names the same three places: the fig and the olive of the Holy Land where 'Isa was sent, Mount Sinai where Musa was spoken to, and the secure city where Ibrahim settled Isma'il:"),
+                      .quran("95:1-3"),
+                  ]),
+                  SignSection("WHY PARAN IS MAKKAH", [
+                      .text("The argument rests on Genesis 21:21. Isma'il grew up in the wilderness of Paran, and it is known by mass transmission and the agreement of the nations, said Ibn Taymiyyah, that Isma'il was raised in Makkah and built the House there with his father; so the land of Makkah is Paran. The Quran keeps Ibrahim's prayer as he left them there:"),
+                      .quran("14:37"),
+                      .text("The blessing also says he came “with ten thousands of saints”. Later writers set this beside the conquest of Makkah, when the Prophet came to the city of Isma'il with an army of ten thousand:"),
+                      .hadith("bukhari:4276", cite: "Sahih al-Bukhari 4276", arabic: 24...54, english: 0...45),
+                      .text("“Ten thousands” is a multitude, not a count, so this is a resonance, not the argument. Nor does the argument rest on Habakkuk's “his praise”: the Arabic rendering Ibn al-Qayyim quoted reads that the earth was filled with the praise of Ahmad, which says more than the Bible's text does."),
+                  ]),
+                  SignSection("THE OTHER READING", [
+                      .text("Jewish and Christian readers place all three in the south, on the route of the Exodus. Seir is the hill country of Edom, where the Torah itself says “the children of Esau” lived (Deuteronomy 2:4), and Paran is the wilderness between Sinai and Canaan, where the Israelites came after they left Sinai (Numbers 10:12). On this reading the verse describes one event, God's appearing at Sinai, seen blazing over the mountains around it, and the fiery law in His right hand is the Torah."),
+                      .text("The Muslim scholars knew this geography. Ibn Taymiyyah himself notes that the wilderness between Makkah and Sinai is called the wilderness of Paran. Their answer is that the name reaches to Makkah, as Genesis shows by settling Isma'il in Paran; that the three verbs grow brighter one after another, which suits three revelations in sequence better than a single event; and that after 'Isa no scripture came down and no prophet was sent anywhere in that land except at Makkah. It is a reading, and it is argued, but it was not invented: it was made from the text of the Torah and the history of Isma'il."),
                   ]),
               ]),
     ]
@@ -717,6 +928,7 @@ extension ProphetMiraclesView {
                       .text("On a journey the travellers overslept past sunrise, and by the time they moved on they were badly thirsty. Men sent ahead to look for water found a woman riding between two water-skins, who told them her people's water was a day and a night's travel away. They brought her to the Prophet. 'Imran ibn Husayn was among them:"),
                       .hadith("bukhari:3571", cite: "Sahih al-Bukhari 3571", arabic: 185...210, english: 283...347),
                       .text("In another telling, from the same Companion, the call went out to the whole company to drink and water their animals. 'Imran swears by Allah that when her skins were handed back they looked fuller than when they began, and the Prophet told her they had taken nothing of her water: it was Allah who had given them to drink (Sahih al-Bukhari 344)."),
+                      .hadith("bukhari:344", cite: "Sahih al-Bukhari 344", arabic: 326...393, english: 563...680),
                   ]),
                   SignSection("WHO SAW IT", [
                       .text("The woman stood and watched it done with her own water, and she was not a Muslim. What she told her people is the best witness in the story:"),
@@ -804,6 +1016,7 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("WHO SAW IT", [
                       .text("Anas carried the pot in and carried it out, and he was the one sent round to fill the house. He gives the number when asked, and he fixes the day: it was the wedding after which the verse telling guests not to linger in the Prophet's house came down (Quran 33:53). Muslim reports it through several chains, and al-Bukhari cites it too."),
+                      .quran("33:53"),
                   ]),
               ]),
         .init(id: "milk-bowl", title: "One bowl of milk for the people of the Suffah",
@@ -944,6 +1157,7 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The sign is not left as a wonder; it is put to work at once as a rule. The animal is something Allah placed in the man's keeping, and its hunger and exhaustion are a matter of fearing Allah. The same concern runs through his teaching elsewhere: he told of a woman who entered the Fire over a cat she shut away and starved (Sahih al-Bukhari 3482, Sahih Muslim 2242)."),
+                      .hadith("bukhari:3482", cite: "Sahih al-Bukhari 3482, Sahih Muslim 2242a", arabic: 33...56, english: 4...51),
                   ]),
               ]),
         .init(id: "apostate-grave", title: "The grave that would not keep him",
@@ -1006,6 +1220,7 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("A NOTE", [
                       .text("Ibn Mas'ud read the verses on the smoke in Surah ad-Dukhan (44:10-16) as describing this famine, and the great seizure they threaten as Badr. The smoke is also counted among the ten great signs before the Hour in Sahih Muslim, and many scholars hold that those verses refer to that sign, still to come. Both readings are old; the answered prayers stand on either."),
+                      .quran("44:10-11, 16"),
                   ]),
               ]),
         .init(id: "kaaba-seven", title: "The men he named at the Kaaba",
@@ -1198,6 +1413,8 @@ extension ProphetMiraclesView {
                   SignSection("WHY IT IS HARD TO EXPLAIN AWAY", [
                       .text("The poison was real: a man who ate with him died of it. He named it at the meal, and the people who had prepared it confirmed it under questioning, giving their reason in their own words."),
                       .text("He lived about four more years and completed his mission. Anas said the trace of the poison could still be seen in his mouth (Sahih al-Bukhari 2617), and in his final illness he said he had felt its pain ever since (Sahih al-Bukhari 4428)."),
+                      .hadith("bukhari:2617", cite: "Sahih al-Bukhari 2617", arabic: 25...57, english: 0...50),
+                      .hadith("bukhari:4428", cite: "Sahih al-Bukhari 4428", arabic: 13...44, english: 0...43),
                   ]),
               ]),
         .init(id: "sees-behind", title: "He saw them from behind",
@@ -1257,6 +1474,9 @@ extension ProphetMiraclesView {
                       .text("Ibrahim asked the question too. In Surat al-Hijr the tidings come to him first, and his reply is that of a man who knows his own age and still refuses to despair of his Lord:"),
                       .quran("15:52-56"),
                       .text("The Quran records the promise kept, in one line: Ishaq was given to him, and Ya'qub in addition (21:72). When the fear had left him and the tidings had come, Ibrahim began to plead with the same guests for the people of Lut (11:74), and was told that the command of his Lord had already gone out (11:76). Lut's city has its own article."),
+                      .quran("21:72"),
+                      .quran("11:74"),
+                      .quran("11:76"),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The sign was a promise about a future no one at that table could bring about: a son to a woman past bearing and a man grown old, and after the son a grandson, named before either was born. The guests' question, whether she wondered at the decree of Allah, is the answer to every such wonder. The same messengers went on from his house to overturn a city, so that one visit carried both of the things a prophet is sent with, a mercy and a warning."),
@@ -1279,6 +1499,8 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("A NOTE", [
                       .text("The Quran does not name the son. Ibn Taymiyyah, Ibn Kathir and Ibn Baz hold that he was Isma'il, the firstborn, because the tidings of Ishaq come only after the story is over (37:112) and Ishaq was promised a son of his own, Ya'qub (11:71), so he could not have been the boy laid down to die; some of the Salaf said Ishaq, and the difference is one of reading, not of faith."),
+                      .quran("37:112"),
+                      .quran("11:71"),
                   ]),
               ]),
         .init(id: "shuayb-shade", title: "Shu'ayb, and the day of the shade",
@@ -1300,9 +1522,12 @@ extension ProphetMiraclesView {
                       .text("Surat Hud sets Madyan beside Thamud, and names the ones who were saved:"),
                       .quran("11:94-95"),
                       .text("Shu'ayb turned from the dead with a question: he had conveyed his Lord's messages and advised them, so how could he grieve for a people who had disbelieved (7:93)?"),
+                      .quran("7:93"),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("They asked for a piece of the sky to fall on them, and the punishment came from above them, on the day of the cloud. Shu'ayb performed no wonder; the Quran names no staff or she-camel for him. His sign was the exactness of the answer to a demand they had made in mockery, and the market they had cheated in left as if no one had ever lived there (7:92). The surah says of it what it says of every people in it: in that is a sign, but most of them were not believers (26:190)."),
+                      .quran("7:92"),
+                      .quran("26:190"),
                   ]),
               ]),
         .init(id: "musa-river-mother", title: "Musa on the river, and the promise to his mother",
@@ -1320,6 +1545,7 @@ extension ProphetMiraclesView {
                       .text("Surat Ta-Ha tells the same favour to Musa himself, years later, at the fire. It adds what no one on the river bank could see: the love placed on him, and whose eye he was raised under:"),
                       .quran("20:37-39"),
                       .text("The list goes on (20:40): his sister's errand, his return to his mother, the killing he was saved from, the years in Madyan, every one counted to him as a favour before he was sent."),
+                      .quran("20:40"),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("Nothing in this story is a wonder anyone saw. A chest floated, Pharaoh's wife pleaded, an infant refused every breast, a girl offered a suggestion. The sign is in the fit of the parts: a promise made to a frightened woman at the worst moment of her life and kept in every detail, so that the child Pharaoh's men would have killed came back to his mother's arms, with Pharaoh's household none the wiser. The Quran says why it was done that way: so that she would know the promise of Allah is true."),
@@ -1331,7 +1557,9 @@ extension ProphetMiraclesView {
               aliases: ["moses", "sinai", "tur", "kalimullah", "kalim allah", "speech", "spoke", "see allah", "ruyah", "tajalli", "forty nights", "tuwa"],
               sections: [
                   SignSection("THE SIGN", [
-                      .text("Musa was given an appointment of forty nights at the mountain, and left Harun in charge of his people (7:142). When he came to it his Lord spoke to him, and he asked for the one thing beyond that:"),
+                      .text("Musa was given an appointment of forty nights at the mountain, and left Harun in charge of his people (7:142)."),
+                      .quran("7:142"),
+                      .text("When he came to it his Lord spoke to him, and he asked for the one thing beyond that:"),
                       .quran("7:143"),
                       .text("He was not rebuked as a man who had asked wrongly. He was shown what a mountain could not bear, and when he came round he turned to his Lord in repentance and called himself the first of the believers. The sign was given to the mountain, and Musa was its witness."),
                   ]),
@@ -1345,6 +1573,7 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The Quran says that no human being is spoken to by Allah except by revelation, from behind a veil, or through a messenger He sends (42:51). Musa was spoken to from behind the veil, and when he asked for more than that, the answer was a sign no one could stand under: a mountain that could not hold its place before its Lord. The believers are promised the sight he asked for, but not in this world."),
+                      .quran("42:51"),
                   ]),
                   SignSection("A NOTE", [
                       .text("Ahl al-Sunnah hold that Allah spoke to Musa with real speech that Musa heard, as the words say, and that no one sees Allah in this world; the believers will see Him in the Hereafter. The Prophet promised it on a full-moon night, with the moon in front of them:"),
@@ -1399,6 +1628,7 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("A NOTE", [
                       .text("Ahl al-Sunnah hold that 'Isa was raised alive, body and soul, that he is alive now, and that he will descend before the Hour; the commentators read 43:61 as making his descent a sign of the Hour, and the Prophecies library tells of it. The words 'I will take you' in 3:55 are read as his being taken up whole, not as death, since Surat an-Nisa says plainly that they did not kill him and that Allah raised him to Himself."),
+                      .quran("43:61"),
                   ]),
               ]),
     ]
@@ -1430,6 +1660,7 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("A NOTE", [
                       .text("'A'ishah held that what the Prophet saw in these ayahs was Jibril and not his Lord, whom no eye sees in this life, and most of the Salaf held the same (Sahih al-Bukhari 4855, Sahih Muslim 177); Ibn 'Abbas spoke of a seeing with the heart, and the scholars reconcile the two reports that way."),
+                      .hadith("muslim:177a", cite: "Sahih Muslim 177a, Sahih al-Bukhari 4855", arabic: 81...121, english: 115...187),
                   ]),
               ]),
         .init(id: "cave-protection", title: "Two in the cave, and Allah the third",
@@ -1468,6 +1699,7 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("WHO SAW IT", [
                       .text("Jabir ibn 'Abdullah tells it, and the Companions he called came and found the man sitting beside him, disarmed by nothing but an answer. Al-Bukhari records from Abu Bishr that the man's name was Ghawrath ibn al-Harith (Sahih al-Bukhari 4136)."),
+                      .hadith("bukhari:4136", cite: "Sahih al-Bukhari 4136", arabic: 95...103, english: 147...163),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("A sleeping man, a drawn sword, and no one within reach: everything a killer needs. He answered the question with one word, and the man who held the blade put it back in its sheath and sat down. The Prophet did not punish him. The Quran had promised the Messenger exactly this:"),
@@ -1507,6 +1739,7 @@ extension ProphetMiraclesView {
                       .text("Anas tells it in a few words. Two of the Companions had been with the Prophet, and set out for home on a night with no moon:"),
                       .hadith("bukhari:3639", cite: "Sahih al-Bukhari 3639", arabic: 18...54, english: 0...61),
                       .text("Al-Bukhari gives the same report in the merits of the Ansar, and there Anas names the two: Usayd ibn Hudayr and 'Abbad ibn Bishr (Sahih al-Bukhari 3805)."),
+                      .hadith("bukhari:3805", cite: "Sahih al-Bukhari 3805", arabic: 17...70, english: 0...29),
                   ]),
                   SignSection("WHO SAW IT", [
                       .text("The two men walked home by it, and Anas, who served in the Prophet's house, is the one who tells it. Usayd ibn Hudayr is the Companion whose recitation of Surah al-Baqarah one night drew what looked like a canopy of lamps down over his yard; that is told in its own entry."),
@@ -1524,6 +1757,7 @@ extension ProphetMiraclesView {
                       .text("Al-Tufayl ibn 'Amr was a chief of Daws, a tribe of the south, who had accepted Islam and gone home to call his people. He came to the Prophet with the Muslims of his tribe and reported that Daws had refused. Abu Hurayrah, himself a man of Daws, tells what was asked for and what was given:"),
                       .hadith("bukhari:2937", cite: "Sahih al-Bukhari 2937", arabic: 19...53, english: 0...62),
                       .text("Al-Tufayl went back. In the year of Khaybar, 7 AH, the Daws came to Madinah as Muslims, households of them, and Abu Hurayrah arrived with them: al-Bukhari notes that he came to the Prophet in the days of Khaybar (Sahih al-Bukhari 4137)."),
+                      .hadith("bukhari:4137", cite: "Sahih al-Bukhari 4137", arabic: 29...40, english: 36...47),
                   ]),
                   SignSection("WHO SAW IT", [
                       .text("The narrator is one of the people prayed for. Abu Hurayrah, a man of Daws, is the one who passes the prayer on, and he lived its answer: the rest of his life was spent in Madinah among the Companions, and he became the most prolific narrator of the Prophet's words."),
@@ -1541,12 +1775,14 @@ extension ProphetMiraclesView {
                       .text("In 5 AH (627 CE) Quraysh, Ghatafan and their allies, some ten thousand men by the sirah's count, camped against Madinah, and the Muslims held them off across a trench for weeks. The Quran recalls how it ended:"),
                       .quran("33:9"),
                       .text("Hudhayfah ibn al-Yaman was there on the last night, and remembered it as a night of violent wind and severe cold (Sahih Muslim 1788); the Prophet sent him across the trench to find out what the enemy were doing."),
+                      .hadith("muslim:1788", cite: "Sahih Muslim 1788", arabic: 44...58, english: 55...81),
                       .text("He found Abu Sufyan warming his back at a fire, and came back with the news. The sirah's record is that the camp could not be held in that wind: the Confederates broke it up that night and went home, and Quraysh never marched on Madinah again."),
                       .text("The Prophet named the wind afterwards, and set it beside the wind that had ended 'Ad:"),
                       .hadith("bukhari:1035", cite: "Sahih al-Bukhari 1035", arabic: 18...26, english: 0...21),
                   ]),
                   SignSection("WHO SAW IT", [
                       .text("Everyone on both sides of the trench felt the cold; Hudhayfah walked through the enemy's camp in it. Ibn 'Abbas carries the saying about the two winds, and al-Bukhari files it both under the prayer for rain and under the Battle of the Confederates (Sahih al-Bukhari 4105)."),
+                      .hadith("bukhari:4105", cite: "Sahih al-Bukhari 4105", arabic: 30...34, english: 0...26),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The sign is in the timing and the naming. An east wind came on the one night it was needed, against an army that had everything else in its favour, and the Prophet called it his victory in the same breath as the wind that destroyed 'Ad, a wind the Quran describes as sent. The angels of Badr were seen by some; here the hosts were not seen at all, and the Quran says so."),
@@ -1581,6 +1817,7 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("WHO SAW IT", [
                       .text("The whole camp was gathered when 'Ali was led in, with eyes sore enough to have kept him from the march. Sahl ibn Sa'd tells it, and Salamah ibn al-Akwa' confirms why 'Ali had stayed behind (Sahih al-Bukhari 3702). The man who was cured was sent straight at the fortresses."),
+                      .hadith("bukhari:3702", cite: "Sahih al-Bukhari 3702", arabic: 12...36, english: 0...34),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The cure was complete and immediate: as if he had never been ill, says the narration, and he was given a banner and a siege the same morning. The banner, and what the Prophet said the night before, are told in the Prophecies library; this entry is the healing, one of several at his hand recorded at Khaybar, with Salamah's wound."),
@@ -1635,6 +1872,7 @@ extension ProphetMiraclesView {
                       .text("Jabir was riding back from an expedition with the Prophet, and his camel was done. He tells it:"),
                       .hadith("bukhari:2097", cite: "Sahih al-Bukhari 2097", arabic: 24...80, english: 0...90),
                       .text("Muslim's narration says the Prophet prayed for the camel and struck it, and that it then went as it had never gone before (Sahih Muslim 715). On the road the Prophet talked with him about his marriage and his sisters, then asked whether he would sell the camel, and bought it for an uqiyyah."),
+                      .hadith("muslim:715o", cite: "Sahih Muslim 715", arabic: 29...92, english: 0...89),
                       .text("The Prophet reached Madinah first. When Jabir arrived in the morning he was told to leave the camel, go into the mosque and pray two rak'ahs, and Bilal weighed out the price, with something over. Then he was called back:"),
                       .hadith("bukhari:2097", cite: "Sahih al-Bukhari 2097", arabic: 186...209, english: 308...346),
                   ]),
@@ -1658,6 +1896,7 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("Usayd saw a thing he could not explain; the Prophet named it, and told him it would have stayed until daylight for the whole town to see. The sign was given to a Companion reciting alone, and its reading was given by the Prophet. Al-Bara' tells of another man whose recitation of al-Kahf brought a cloud down over him, and the Prophet called that the tranquillity that descends for the Quran (Sahih al-Bukhari 5011, 3614)."),
+                      .hadith("bukhari:5011", cite: "Sahih al-Bukhari 5011, 3614", arabic: 12...47, english: 0...77),
                   ]),
               ]),
         .init(id: "jinn-listened", title: "The jinn who heard him at Nakhlah",
@@ -1678,6 +1917,7 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("A NOTE", [
                       .text("Ibn Mas'ud tells of a different night, when the Prophet went out to the jinn with an inviter of theirs and recited to them, and the Companions searched for him until dawn (Sahih Muslim 450); the scholars count that as a later occasion, and this entry is the first, when they came to him unseen."),
+                      .hadith("muslim:450a", cite: "Sahih Muslim 450a", arabic: 51...115, english: 31...162),
                   ]),
               ]),
     ]

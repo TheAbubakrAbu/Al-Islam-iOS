@@ -491,7 +491,9 @@ struct DuaView: View {
                     ResourceHeroStat("\(DuaLibrary.shared.allItems.count)".localizedDigits, String(localized: "duas")),
                     ResourceHeroStat("\(DuaLibrary.shared.collections.count)".localizedDigits, String(localized: "collections")),
                 ] + (hisnLibrary.map { [ResourceHeroStat("\($0.entries.count)".localizedDigits, String(localized: "in Hisn al-Muslim"))] } ?? [])
-            ))
+            ) {
+                DuaAnswerHoursArt()
+            })
             #else
             Section(header: Text("SUPPLICATIONS TO ALLAH")) {
                 ArticleLead(String(localized: "Short, daily supplications that keep your heart connected to Allah in every situation. \"Call upon Me; I will respond to you.\" (Quran 40:60)"),

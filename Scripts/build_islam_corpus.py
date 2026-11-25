@@ -35,6 +35,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from hadith_spans import row as shelf_row, token_count, words as shelf_words  # noqa: E402
+import article_zones  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES = [
@@ -50,8 +51,31 @@ SOURCES = [
     ROOT / "iPhone/Islam/Qiraat/RiwayatDifferencesView.swift",
     ROOT / "iPhone/Islam/Content/HadithSciencesViews.swift",
     ROOT / "iPhone/Islam/Proofs/ProvingIslamChapters.swift",
+    # The six reading libraries (2026-11-24): Stories of the Prophets; Sahabah, Ahlul Bayt & Salaf; Refuting
+    # Religions; Preservation of the Quran; Science of Hadith; the Domino Process.
+    ROOT / "iPhone/Islam/Library/StoriesOfTheProphets.swift",
+    ROOT / "iPhone/Islam/Library/SahabahAndSalaf.swift",
+    ROOT / "iPhone/Islam/Library/RefutingReligions.swift",
+    ROOT / "iPhone/Islam/Library/PreservationOfTheQuran.swift",
+    ROOT / "iPhone/Islam/Library/ScienceOfHadith.swift",
+    ROOT / "iPhone/Islam/Library/DominoProcess.swift",
+]
+# Tajweed Foundations (2026-11-23, Abu: "support sharing articles for tajweed foundations ... and also
+# support ai summary"): the reference's pages are read too, so the Ask AI chat can answer from them and
+# each page can be summarized. They are INTERFACE text, translated, so every literal is wrapped in
+# `String(localized: "...")`; `tajweed_body` peels that wrapper before the regexes read the page, and
+# reads the tajweed kit's own cards (TAJWEED_* below). Kept apart from SOURCES because the verifier's
+# catalog checks (search tag, sources section, literal quotes) are about the catalog articles.
+TAJWEED_SOURCES = [
+    ROOT / "iPhone/Islam/Tajweed/TajweedFoundations.swift",
+    ROOT / "iPhone/Islam/Tajweed/TajweedTopics.swift",
 ]
 OUT = ROOT / "Resources/Data/Islam/IslamArticles.json.deflate"
+# The articles written twice (2026-11-25, iPhone/Islam/Content/ArticleLength.swift): how long each version takes
+# to read, for the switch at the top of the page. Generated with the pack, from the same marks.
+LENGTHS_OUT = ROOT / "iPhone/Islam/Content/ArticleLengths.swift"
+# Words a minute, read with the quotes; a version is never under a minute.
+READING_SPEED = 220
 
 # A Swift string literal: "..." with backslash escapes, or a """...""" block.
 STR = r'"""(?:.*?)"""|"(?:[^"\\\n]|\\.)*"'
@@ -89,6 +113,26 @@ CHAIN_CAPTION_RE = re.compile(r"(?:(?<![\w.])ArticleChainDiagram\(|(?<!\w)\.chai
 ISNAD_RE = re.compile(r"(?:(?<![\w.])ArticleIsnadCard\(|(?<!\w)\.isnad\()\s*(" + STR + r")\s*,", re.S)
 CHECKLIST_RE = re.compile(r"(?:(?<![\w.])ArticleChecklist\(|(?<!\w)\.checklist\()\s*\[(.*?)\]\s*,\s*title:\s*(" + STR + r")", re.S)
 SIDE_RE = re.compile(r"ArticleVersus\.Side\(\s*(" + STR + r")(?:\s*,\s*arabic:\s*(" + STR + r"))?\s*,\s*caption:\s*(" + STR + r")\s*\)", re.S)
+# The tajweed pages (TAJWEED_SOURCES) only. Their interface text is `String(localized: "...")`, peeled to
+# the bare literal first (`tajweed_body`), so the regexes above read their headings, paragraphs, steps,
+# checklists, callouts and term cards as they read any article. These read the tajweed kit's own cards
+# (iPhone/Islam/Tajweed/TajweedFoundations.swift) and the two kit calls the articles spell differently:
+# a lead with an eyebrow ("IN SHORT"), a callout of several paragraphs, and a comparison's sides written
+# `.init(...)`. A word card is its title, its note and each word's READING and note; the Arabic word
+# itself, and a line of the Quran set on its own card, stay out (the caption under that line is read).
+# Apple's on-device model refuses a prompt heavy with Arabic, and the reading says how the word sounds.
+LOCALIZED_RE = re.compile(r"String\(localized:\s*(" + STR + r")\s*\)", re.S)
+TAJWEED_LEAD_RE = re.compile(r"(?<![\w.])ArticleLead\(\s*(" + STR + r")\s*,\s*eyebrow:", re.S)
+TAJWEED_CALLOUT_RE = re.compile(r"(?<![\w.])ArticleCallout\(\s*paragraphs:\s*\[(.*?)\]\s*,\s*title:\s*(" + STR + r")", re.S)
+TAJWEED_SIDE_RE = re.compile(r"(?<!\w)\.init\(\s*(" + STR + r")\s*,\s*arabic:\s*(" + STR + r")\s*,\s*caption:\s*(" + STR + r")\s*\)", re.S)
+TAJWEED_KEY_RE = re.compile(r"(?<![\w.])TajweedKeyLine\(\s*(" + STR + r")", re.S)
+TAJWEED_CARD_RE = re.compile(r"(?<![\w.])TajweedWordCard\(\s*(?:(" + STR + r")\s*,\s*)?(?:note:\s*(" + STR + r")\s*,\s*)?words:\s*\[", re.S)
+TAJWEED_WORD_RE = re.compile(r"(?<![\w.])TajweedWord\(\s*(?:" + STR + r")\s*,\s*(" + STR + r")(?:\s*,\s*note:\s*(" + STR + r"))?\s*\)", re.S)
+TAJWEED_LINE_RE = re.compile(r"(?<![\w.])TajweedArabicLine\(\s*(?:" + STR + r")(?:\s*,\s*title:\s*(" + STR + r"))?(?:\s*,\s*caption:\s*(" + STR + r"))?", re.S)
+TAJWEED_FIX_RE = re.compile(r"(?<![\w.])TajweedFix\(\s*wrong:\s*(" + STR + r")\s*,\s*right:\s*(" + STR + r")\s*\)", re.S)
+TAJWEED_STRIP_RE = re.compile(r"(?<![\w.])TajweedLetterStrip\(\s*(" + STR + r")\s*,\s*note:\s*(" + STR + r")", re.S)
+# A card title that only labels its example ("Example") says nothing on its own.
+TAJWEED_PLAIN_TITLES = {"Example", "Examples"}
 LADDER_RE = re.compile(r"HadithGradeLadder\(\)|(?<!\w)\.gradeLadder\b")
 # The classes of report by how many carried it (`HadithCountLadder`, its own card since 2026-11-22).
 COUNT_LADDER_RE = re.compile(r"HadithCountLadder\(\)|(?<!\w)\.countLadder\b")
@@ -102,8 +146,19 @@ TRAITS_TABLE_RE = re.compile(r"RiwayahTraitsTable\(\)")
 TRAITS_RE = re.compile(r"RiwayahTraits\(name:\s*(" + STR + r"),\s*from:\s*(" + STR + r"),\s*tag:\s*[\w.]+,\s*hamzah:\s*(" + STR
                        + r"),\s*wasl:\s*(" + STR + r"),\s*dots:\s*(" + STR + r"),\s*silah:\s*(" + STR + r"),\s*madd:\s*(" + STR + r")\)", re.S)
 RIWAYAT_PAGE = Path(__file__).resolve().parent.parent / "iPhone/Islam/Qiraat/RiwayatDifferencesView.swift"
+# `.facts("musa")` / `.mentions("musa")` in a data-backed article, `ProphetFactsSection(prophet: "musa")` /
+# `ProphetMentionsSection(prophet: "musa")` in a view-based one (2026-11-24).
+PROPHET_BLOCK_RE = re.compile(r'(?<!\w)\.(facts|mentions)\(\s*"([a-z]+)"\s*\)|Prophet(Facts|Mentions)Section\(\s*prophet:\s*"([a-z]+)"\s*\)')
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import build_prophet_facts as prophet_facts  # noqa: E402
+PROPHET_MENTIONS = prophet_facts.mentions()
 DESIGN_KIT = Path(__file__).resolve().parent.parent / "iPhone/Islam/Content/ArticleDesign.swift"
 QUOTE_RE = re.compile(r"(?:ScriptureQuote|(?<!\w)\.quote)\(\s*text:\s*(" + STR + r")", re.S)
+# The same card's Arabic (`arabic:` after the text). It goes to the section's SEARCH-ONLY Arabic
+# (`"arabic"` in the pack, 2026-11-24, Abu: "Searching up Arabic or for verses and Hadiths in Islam
+# shows nothing"), never to `text`: the Ask AI chat reads `text`, and Apple's on-device model refuses a
+# prompt heavy with Arabic.
+QUOTE_ARABIC_RE = re.compile(r"(?:ScriptureQuote|(?<!\w)\.quote)\(\s*text:\s*(?:" + STR + r")\s*,\s*arabic:\s*(" + STR + r")", re.S)
 # The 10 Qiraat article's "Companions behind each Qiraah" cards (2026-09-26): each reading is
 # `lineageRow("Nafi", companions: ["Umar ibn al-Khattab", ...], note: "...")`, drawn as chips, so
 # the prose the ten paragraphs used to carry is rebuilt here as one sentence per reading.
@@ -179,6 +234,31 @@ def quran_quote(reference: str, words=None) -> str:
     return f"“{english}” (Quran {reference.strip()})"
 
 
+def quran_arabic(reference: str) -> str:
+    """The cited ayahs' Arabic (the app's Uthmani text), for the section's search-only Arabic. The whole
+    ayah, even when `words` narrows the card: a reader may search any part of it."""
+    parsed = parse_reference(reference)
+    if parsed is None:
+        return ""
+    surah, numbers = parsed
+    ayahs = quran_ayahs()
+    return " ".join(ayahs[(surah, n)]["textArabic"].strip() for n in numbers)
+
+
+def hadith_arabic(args: dict) -> str:
+    """The hadith card's Arabic: the referenced words of the row's Arabic, or the literal
+    `arabicText`, or nothing when the card shows none."""
+    if args["arabicText"]:
+        return args["arabicText"]
+    if args["arabic"] is None:
+        return ""
+    slug, _, citation = args["link"].partition(":")
+    item = shelf_row(slug, citation) if slug and citation else None
+    if item is None:
+        return ""
+    return shelf_words(item.arabic, [args["arabic"]])
+
+
 def quran_references():
     """Every Quran reference in the article files: (file, line, reference, words or None)."""
     found = []
@@ -239,7 +319,7 @@ def hadith_references():
 
 
 # Views that are chrome, not an article: the index screens and the shared pieces.
-SKIP_VIEWS = {"GuidesView", "PillarsView", "DebugArticleLink", "ScriptureQuote", "GuideSourcesSection", "ArticleSourcesSection", "ArticleSource",
+SKIP_VIEWS = {"GuidesView", "PillarsView", "TajweedFoundationsView", "DebugArticleLink", "ScriptureQuote", "GuideSourcesSection", "ArticleSourcesSection", "ArticleSource",
               "IslamArticleIndexSections"}
 
 
@@ -325,10 +405,94 @@ def riwayah_traits_text() -> str:
     return _traits_cache
 
 
+def tajweed_body(src: str) -> str:
+    """A tajweed file with every `String(localized: "...")` peeled to its literal, so the article
+    regexes read it as they read the English-only article files."""
+    return LOCALIZED_RE.sub(lambda m: m.group(1), src)
+
+
+def _closing_bracket(text: str, start: int) -> int:
+    """The index of the `]` closing the `[` at `start`, stepping over string literals."""
+    depth, i = 0, start
+    while i < len(text):
+        c = text[i]
+        if c == '"':
+            m = re.compile(STR, re.S).match(text, i)
+            i = m.end() if m else i + 1
+            continue
+        if c == "[":
+            depth += 1
+        elif c == "]":
+            depth -= 1
+            if depth == 0:
+                return i
+        i += 1
+    return len(text)
+
+
+def _reading(literal: str, note_literal) -> str:
+    """One word of a card: its reading, and its note in brackets."""
+    reading = unquote(literal)
+    note = unquote(note_literal) if note_literal else ""
+    return f"{reading} ({note})" if note else reading
+
+
+def tajweed_hits(body: str):
+    """The tajweed kit's cards on one page, as (position, "computed", sentence)."""
+    hits = []
+    inside_cards = []
+    for m in TAJWEED_CARD_RE.finditer(body):
+        end = _closing_bracket(body, m.end() - 1)
+        inside_cards.append((m.end(), end))
+        words = [_reading(w.group(1), w.group(2)) for w in TAJWEED_WORD_RE.finditer(body, m.end(), end)]
+        title = unquote(m.group(1)) if m.group(1) else ""
+        note = unquote(m.group(2)) if m.group(2) else ""
+        label = title if title and title not in TAJWEED_PLAIN_TITLES else ""
+        if note:
+            label = f"{label} ({note})" if label else note
+        if words:
+            joined = "; ".join(words)
+            hits.append((m.start(), "computed", f"{label}: {joined}." if label else f"{joined}."))
+        elif label:
+            hits.append((m.start(), "computed", f"{label}."))
+    for m in TAJWEED_WORD_RE.finditer(body):
+        if not any(lo <= m.start() < hi for lo, hi in inside_cards):
+            hits.append((m.start(), "computed", _reading(m.group(1), m.group(2)) + "."))
+    for m in TAJWEED_LEAD_RE.finditer(body):
+        hits.append((m.start(1), "text", m.group(1)))
+    for m in TAJWEED_KEY_RE.finditer(body):
+        hits.append((m.start(1), "text", m.group(1)))
+    for m in TAJWEED_LINE_RE.finditer(body):
+        title = unquote(m.group(1)) if m.group(1) else ""
+        caption = unquote(m.group(2)) if m.group(2) else ""
+        if caption:
+            hits.append((m.start(), "computed",
+                         f"{title}: {caption}" if title and title not in TAJWEED_PLAIN_TITLES else caption))
+    for m in TAJWEED_FIX_RE.finditer(body):
+        hits.append((m.start(1), "computed", f"Instead of {unquote(m.group(1))}, do this: {unquote(m.group(2))}"))
+    for m in TAJWEED_STRIP_RE.finditer(body):
+        hits.append((m.start(1), "computed", f"{unquote(m.group(1))}: {unquote(m.group(2))}"))
+    for m in TAJWEED_CALLOUT_RE.finditer(body):
+        paragraphs = " ".join(unquote(p) for p in re.findall(STR, m.group(1), re.S))
+        hits.append((m.start(), "computed", f"{unquote(m.group(2))}. {paragraphs}"))
+    for m in TAJWEED_SIDE_RE.finditer(body):
+        hits.append((m.start(1), "computed", f"{unquote(m.group(1))} ({unquote(m.group(2))}): {unquote(m.group(3))}"))
+    return hits
+
+
 def articles():
     found = []
-    for path in SOURCES:
-        src = path.read_text()
+    for path in SOURCES + TAJWEED_SOURCES:
+        found += file_articles(path, tajweed=path in TAJWEED_SOURCES)
+    return found
+
+
+def file_articles(path, tajweed=False):
+    """The articles of one source file, each {"id", "title", "sections"}; an article written twice also
+    carries "_minutes" (short, long) and "_words" (short, long) for the tools (popped before the pack)."""
+    found = []
+    if True:
+        src = tajweed_body(path.read_text()) if tajweed else path.read_text()
         bounds = [(m.group(1), m.start()) for m in STRUCT_RE.finditer(src)]
         bounds.append(("", len(src)))
         for (name, start), (_, end) in zip(bounds, bounds[1:]):
@@ -346,8 +510,13 @@ def articles():
             for m in QURAN_RE.finditer(body):
                 words = (int(m.group(2)), int(m.group(3))) if m.group(2) else None
                 hits.append((m.start(1), "ayah", (m.group(1), words)))
+                hits.append((m.start(1), "arabic", quran_arabic(unquote(m.group(1)))))
             for m in HADITH_RE.finditer(body):
-                hits.append((m.start(1), "hadith", (m.group(1), parse_hadith(m.group(1), m.group(2), m.group(3)))))
+                args = parse_hadith(m.group(1), m.group(2), m.group(3))
+                hits.append((m.start(1), "hadith", (m.group(1), args)))
+                hits.append((m.start(1), "arabic", hadith_arabic(args)))
+            for m in QUOTE_ARABIC_RE.finditer(body):
+                hits.append((m.start(), "arabic", unquote(m.group(1))))
             for m in LINEAGE_RE.finditer(body):
                 names = [unquote(n) for n in re.findall(STR, m.group(2))]
                 sentence = f"{unquote(m.group(1))}: transmitted from {', '.join(names)}."
@@ -370,7 +539,7 @@ def articles():
                 hits.append((m.start(1), "computed", unquote(m.group(1))))
             for m in CHECKLIST_RE.finditer(body):
                 items = [unquote(item) for item in re.findall(STR, m.group(1))]
-                hits.append((m.start(), "computed", f"{unquote(m.group(2))}: " + " ".join(items)))
+                hits.append((m.start(), "computed", f"{unquote(m.group(2)).rstrip(':')}: " + " ".join(items)))
             for m in SIDE_RE.finditer(body):
                 arabic = f" ({unquote(m.group(2))})" if m.group(2) else ""
                 hits.append((m.start(1), "computed", f"{unquote(m.group(1))}{arabic}: {unquote(m.group(3))}"))
@@ -388,15 +557,48 @@ def articles():
                 hits.append((m.start(1), "computed", f"{unquote(m.group(1))}: {m.group(2)} filled dots, {m.group(3)} hollow rings."))
             for m in TRAITS_TABLE_RE.finditer(body):
                 hits.append((m.start(), "computed", riwayah_traits_text()))
+            # A prophet's facts card and the ayahs that name him (2026-11-24), generated by
+            # build_prophet_facts.py: the same words the cards show. The view-based Pillars pages draw
+            # each as a section of its own, so those carry their heading too.
+            for m in PROPHET_BLOCK_RE.finditer(body):
+                kind, key = m.group(1) or m.group(3), m.group(2) or m.group(4)
+                if m.group(3):
+                    heading = "AT A GLANCE" if kind == "Facts" else "NAMED IN THE QURAN"
+                    hits.append((m.start(), "heading", '"' + heading + '"'))
+                text = prophet_facts.facts_text(key, PROPHET_MENTIONS) if kind.lower() == "facts" else prophet_facts.mentions_text(key, PROPHET_MENTIONS)
+                hits.append((m.start() + 1, "computed", text))
+            if tajweed:
+                hits += tajweed_hits(body)
             # A section header IS a Text(...), so it matches twice - keep the heading, drop the twin.
             headings = {pos for pos, kind, _ in hits if kind == "heading"}
             hits = [h for h in hits if not (h[1] == "text" and h[0] in headings)]
-            hits.sort()
-            sections, current = [], None
+            hits.sort(key=lambda h: (h[0], h[1]))
+            # The two versions (article_zones.py). The pack carries the LONG version: what both show, and
+            # what only the long one shows as parts of their own (`"only": "long"`), so a search hit there
+            # opens the page in full. What only the short version shows is a retelling of the long one and
+            # is left out of the pack; it is only counted, for the short version's reading time.
+            marks = article_zones.zones(body)
+            words = {"short": 0, "long": 0}
+            sections, heading, parts = [], None, {}
+
+            def part(only):
+                nonlocal heading, parts
+                if heading is None:
+                    heading = ""
+                if only not in parts:
+                    parts[only] = {"heading": heading, "text": [], "arabic": [], "only": only}
+                    sections.append(parts[only])
+                return parts[only]
+
             for pos, kind, literal in hits:
+                only = article_zones.zone_at(marks, pos)
+                if kind == "arabic":
+                    if literal and only != "short":
+                        part(only)["arabic"].append(literal)
+                    continue
                 if kind == "ayah":
-                    literal, words = literal
-                    value = quran_quote(unquote(literal), words)
+                    literal, ayah_words = literal
+                    value = quran_quote(unquote(literal), ayah_words)
                 elif kind == "hadith":
                     literal, args = literal
                     value = hadith_quote(args)
@@ -407,23 +609,58 @@ def articles():
                 if not value or "\\(" in literal:
                     continue
                 if kind == "heading":
-                    current = {"heading": value, "text": []}
-                    sections.append(current)
+                    if only == "short":
+                        continue
+                    heading, parts = value, {}
+                    part(only)
                     continue
-                if current is None:
-                    current = {"heading": "", "text": []}
-                    sections.append(current)
-                current["text"].append(value)
+                count = len(value.split())
+                if only != "short":
+                    words["long"] += count
+                if only != "long":
+                    words["short"] += count
+                if only == "short":
+                    continue
+                part(only)["text"].append(value)
             title_text = unquote(title.group(1))
             body_sections = [
-                {"heading": s["heading"], "text": "\n".join(s["text"])}
+                {"heading": s["heading"], "text": "\n".join(s["text"]),
+                 **({"arabic": "\n".join(s["arabic"])} if s["arabic"] else {}),
+                 **({"only": s["only"]} if s["only"] else {})}
                 for s in sections
                 if s["text"] and s["heading"] != title_text
             ]
             if not body_sections:
                 continue
-            found.append({"id": name, "title": title_text, "sections": body_sections})
+            article = {"id": name, "title": title_text, "sections": body_sections}
+            if marks:
+                article["_minutes"] = tuple(max(1, round(words[v] / READING_SPEED)) for v in ("short", "long"))
+                article["_words"] = (words["short"], words["long"])
+            found.append(article)
     return found
+
+
+def write_lengths(items) -> None:
+    """ArticleLengths.swift: the reading time of each version of every article written twice."""
+    LENGTHS_OUT.write_text(lengths_text(items))
+
+
+def lengths_text(items) -> str:
+    """What ArticleLengths.swift holds for `items` (verify_islam_corpus.py compares it with the file)."""
+    rows = [f'        "{a["id"]}": Minutes(short: {a["_minutes"][0]}, long: {a["_minutes"][1]}),'
+            for a in sorted(items, key=lambda a: a["id"]) if "_minutes" in a]
+    table = "[\n" + "\n".join(rows) + "\n    ]" if rows else "[:]"
+    return (
+        "// Generated by Scripts/build_islam_corpus.py from the articles' marks (ArticleLength.swift). Do not edit.\n\n"
+        "enum ArticleLengths {\n"
+        "    /// Minutes each version takes to read.\n"
+        "    struct Minutes: Equatable, Sendable {\n"
+        "        let short: Int\n"
+        "        let long: Int\n"
+        "    }\n\n"
+        "    /// The articles written twice, by catalog id: the pages that draw the switch.\n"
+        f"    static let minutes: [String: Minutes] = {table}\n"
+        "}\n")
 
 
 def main():
@@ -434,6 +671,10 @@ def main():
             print(f'{a["id"]:28s} {a["title"][:42]:44s} {len(a["sections"])} sections, {chars} chars')
         print(f"\n{len(items)} articles, {sum(sum(len(s['text']) for s in a['sections']) for a in items)} chars")
         return
+    write_lengths(items)
+    for a in items:
+        a.pop("_minutes", None)
+        a.pop("_words", None)
     payload = json.dumps({"version": 1, "articles": items}, ensure_ascii=False).encode()
     OUT.parent.mkdir(parents=True, exist_ok=True)
     # Raw deflate, no zlib header: what `compression_decode_buffer(COMPRESSION_ZLIB)` reads.
@@ -442,4 +683,5 @@ def main():
     print(f"{OUT.relative_to(ROOT)}: {len(items)} articles, {len(payload)} -> {OUT.stat().st_size} bytes")
 
 
-main()
+if __name__ == "__main__":
+    main()

@@ -183,6 +183,50 @@ struct MiracleArticle: Identifiable {
         parts.append("Shared from \(AppIdentifiers.appName)")
         return parts.joined(separator: "\n\n")
     }
+
+    /// The article as the AI reads it (Abu, 2026-11-23: "support ai summary" across Faith & Proofs):
+    /// one section per block, in order, English only. A verse is its Saheeh International translation
+    /// and reference (the Arabic would sink the prompt, see `OnDeviceAsk.supportsArabic`); an image is
+    /// left out. Each block is a section so the chat's focus lane can pick the paragraphs that answer
+    /// a question; "Summarize with AI" reads them all.
+    ///
+    /// It is also what the page's search bar reads (Abu, 2026-11-24): each section lands on its
+    /// block's row (`anchor(_:)`), and a match shows as the paragraph's words, there being no headings.
+    /// Al-Islam only: it reads the verses from `QuranData`, which Al-Adhan does not ship.
+    #if HAS_QURAN
+    func aiArticle(quranData: QuranData) -> IslamArticle {
+        var sections: [IslamArticle.Section] = []
+        var index = 0
+        func add(_ text: String) {
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return }
+            sections.append(IslamArticle.Section(heading: "", text: trimmed, folded: IslamArticles.fold(trimmed),
+                                                 anchor: Self.anchor(index)))
+        }
+        for (blockIndex, block) in blocks.enumerated() {
+            index = blockIndex
+            switch block {
+            case .claim(let text, _), .lead(let text, _), .text(let text, _), .closer(let text, _):
+                add(text)
+            case .ayah(let surah, let first, let endAyah):
+                let last = min(endAyah ?? first, first + 4)
+                let english = (first...max(first, last)).compactMap {
+                    quranData.ayah(surah: surah, ayah: $0)?.textEnglishSaheeh
+                }.joined(separator: " ")
+                guard !english.isEmpty else { break }
+                add("\u{201C}\(english)\u{201D} (Quran \(last > first ? "\(surah):\(first)-\(last)" : "\(surah):\(first)"))")
+            case .quote(let text, let sourceLabel, _):
+                add(sourceLabel.isEmpty ? text : "\(text) (\(sourceLabel))")
+            case .image:
+                break
+            }
+        }
+        return IslamArticle(id: "Miracle-\(slug)", title: title, sections: sections, foldedTitle: IslamArticles.fold(title))
+    }
+    #endif
+
+    /// The anchor on the row of the block at `index` in `blocks` (`articleAnchor`), for the search.
+    static func anchor(_ index: Int) -> String { "miracle-block-\(index)" }
 }
 
 // MARK: - Store
@@ -398,7 +442,9 @@ struct MiraclesView: View {
                             ResourceHeroStat("\(MiracleCategory.allCases.filter { library.count(in: $0) > 0 }.count)", "fields"),
                             ResourceHeroStat("\(library.strongest.count)", "strongest"),
                         ]
-                    ))
+                    ) {
+                        MiraclesHorizonsArt()
+                    })
 
                     StrongestSection(
                         items: library.strongest,
@@ -783,7 +829,6 @@ struct MiracleArticleView: View {
         case category(MiracleCategory)
     }
     @State private var linkDoor: LinkDoor?
-    @State private var copied = false
 
     /// The one line the article argues, with its links.
     private var claim: (text: String, links: [MiracleLink])? {
@@ -864,6 +909,7 @@ struct MiracleArticleView: View {
                 Section {
                     if let claim {
                         claimLead(claim)
+                            .articleAnchor(MiracleArticle.anchor(article.blocks.firstIndex { $0.isClaim } ?? 0))
                     } else {
                         // Two of the 202 articles argue no single claim: the subject line alone.
                         categoryLine(appearance.accent)
@@ -874,8 +920,9 @@ struct MiracleArticleView: View {
                 Section {
                     // The claim is set with the title above and draws nothing here, so it is left
                     // out of the rows, and each row is one view by its type (see `OneRow`).
-                    ForEach(Array(article.blocks.enumerated()).filter { !$0.element.isClaim }, id: \.offset) { _, block in
+                    ForEach(Array(article.blocks.enumerated()).filter { !$0.element.isClaim }, id: \.offset) { index, block in
                         OneRow { MiracleBlockView(block: block) }
+                            .articleAnchor(MiracleArticle.anchor(index))
                     }
                 }
 
@@ -891,7 +938,25 @@ struct MiracleArticleView: View {
             }
             .themedListRowBackground()
         }
-        .englishArticle().selectableArticleList()
+        .englishArticle()
+        // Its search bar at the foot, the share circle beside it (the link, the article as text) and
+        // the AI alone at the top right (Abu, 2026-11-24: "add a search bar to those pages with no
+        // search bar like ... miracles"). The text is built when it is first needed, from the blocks
+        // as they read.
+        // An app without the Quran (Al-Adhan) has no verse text to search or share: the plain list,
+        // as the page was before (Abu, 2026-11-24: "if it doesn't exist it's similar to what it
+        // was before").
+        #if HAS_QURAN
+        .searchablePage(id: "Miracle-\(article.slug)", kind: .article,
+                        share: PageShare(link: .miracle(article.slug), title: article.title,
+                                         text: { [article] in article.plainText(quranData: QuranData.shared) },
+                                         textLabel: AppLanguage.article("Share Article"),
+                                         copyLabel: AppLanguage.article("Copy Article")),
+                        page: { [article] in article.aiArticle(quranData: QuranData.shared) },
+                        ai: { [article] in article.aiArticle(quranData: QuranData.shared) })
+        #else
+        .selectableArticleList()
+        #endif
         #if DEBUG
         // `-miracleScrollToSiblings`: the Previous|Next pair sits under the whole article, and there
         // is no scroll tooling in the simulator, so a screenshot run needs a way to reach it.
@@ -904,34 +969,6 @@ struct MiracleArticleView: View {
         #endif
         .navigationTitle(article.title)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    Button {
-                        Settings.shared.hapticFeedback()
-                        UIPasteboard.general.string = article.plainText(quranData: quranData)
-                        withAnimation { copied = true }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { withAnimation { copied = false } }
-                    } label: {
-                        Label(AppLanguage.article(copied ? "Copied" : "Copy Article"), systemImage: copied ? "checkmark" : "doc.on.doc")
-                    }
-                    Button {
-                        Settings.shared.hapticFeedback()
-                        presentSystemShareSheet(items: [article.plainText(quranData: quranData)])
-                    } label: {
-                        Label("Share Article", systemImage: "square.and.arrow.up")
-                    }
-                    Button {
-                        AppLinkShare.share(.miracle(article.slug), title: article.title)
-                    } label: {
-                        Label("Share Link", systemImage: "link")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .tint(appearance.accent)
-            }
-        }
         // The prose's in-app links land here: `MiracleProse` routes them through `openURL` with the
         // app's own scheme, and the push happens on the List (a lazy row's destination never fires).
         .environment(\.openURL, OpenURLAction { url in

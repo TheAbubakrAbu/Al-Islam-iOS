@@ -114,6 +114,51 @@ final class ReadingModeLandingTests: XCTestCase {
         XCTAssertFalse(midPage.contains(2), "al-Baqarah opens page 2")
     }
 
+    /// A surah opened from its top onto a page it shares with another surah has its first ayah
+    /// selected (Abu, 2026-11-23: "If I open a Surah in page mode and there are multiple surahs on
+    /// that page select the first ayah of that surah"); a surah that has its opening page to itself
+    /// has nothing selected, and neither has a page that does not hold the surah's first ayah.
+    @MainActor
+    func testOpeningASurahSelectsItsFirstAyahOnlyOnASharedPage() async {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let pages = MushafPagination.pages(quran: data.quran, qiraah: nil)
+        XCTAssertFalse(pages.isEmpty, "no pagination")
+
+        var shared: [Int] = []
+        for surah in data.quran {
+            guard let index = MushafPagination.pageIndex(surahID: surah.id, ayahID: nil, in: pages) else {
+                XCTFail("surah \(surah.id) is on no page"); continue
+            }
+            let page = pages[index]
+            let selection = MushafPagination.openingSelection(on: page, surahID: surah.id)
+            let surahsOnPage = Set(page.segments.map(\.surah.id))
+            if surahsOnPage.count > 1 {
+                XCTAssertEqual(selection?.surahID, surah.id, "surah \(surah.id) shares page \(page.page)")
+                XCTAssertEqual(selection?.ayahID, surah.ayahs.first?.id, "surah \(surah.id)")
+                shared.append(surah.id)
+            } else {
+                XCTAssertNil(selection, "surah \(surah.id) has page \(page.page) to itself")
+            }
+            // A page further into the surah does not hold its first ayah: nothing to select there.
+            if index + 1 < pages.count, pages[index + 1].segments.first?.surah.id == surah.id {
+                XCTAssertNil(MushafPagination.openingSelection(on: pages[index + 1], surahID: surah.id),
+                             "page \(pages[index + 1].page) continues surah \(surah.id)")
+            }
+            // Nor is there anything to select for a surah the page does not hold.
+            if let absent = (1...114).first(where: { !surahsOnPage.contains($0) }) {
+                XCTAssertNil(MushafPagination.openingSelection(on: page, surahID: absent))
+            }
+        }
+        // Every surah that opens partway down a page shares it, and so do the ones a later surah
+        // begins under (al-Ikhlas opens page 604 and shares it with al-Falaq and an-Nas).
+        XCTAssertTrue(shared.contains(5), "al-Ma'idah opens under the last ayah of an-Nisa on page 106")
+        XCTAssertTrue(shared.contains(112) && shared.contains(113) && shared.contains(114))
+        XCTAssertFalse(shared.contains(1), "al-Fatihah has page 1 to itself")
+        XCTAssertFalse(shared.contains(2), "al-Baqarah opens page 2 alone")
+        XCTAssertGreaterThanOrEqual(shared.count, 64)
+    }
+
     /// On the last page (al-Ikhlas, al-Falaq, an-Nas): a named ayah the page holds is the position; an
     /// ayah it does not hold falls back to that surah's first ayah on the page; a surah it does not hold
     /// falls back to the page's first row.

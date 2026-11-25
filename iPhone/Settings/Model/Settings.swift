@@ -781,6 +781,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         }
         #endif
 
+        // Keep Sheet Open moved to a new key on 2026-11-23 so it reset to OFF for everyone (see
+        // `keepAyahSheetOpen`); the value under the old one is never read again.
+        UserDefaults.standard.removeObject(forKey: "keepAyahSheetOpen")
+
         // Hadith Allah-highlighting used to follow the Quran toggle; when the setting split in two,
         // seed the new key from the old one so nothing visibly changes until the user flips it.
         // Only an EXPLICITLY stored Quran value is copied: `bool(forKey:)` reads an absent key as
@@ -3285,7 +3289,13 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// Text...), instead of closing it first (Abu, 2026-09-19: "maybe I still want the other sheet to
     /// be there cause I plan on doing something else with it"). Off keeps the old swap, which is the
     /// lighter feel on a small screen; on stacks them, so dismissing the second returns to the first.
-    @Setting("keepAyahSheetOpen") var keepAyahSheetOpen: Bool = false
+    ///
+    /// Stored under a new key since 2026-11-23, so it starts OFF for everyone again (Abu: "keep it as a
+    /// setting actually but by default off saved value make it reset"). Its switch left the actions
+    /// sheet on 2026-10-25 and stayed only in Quran Settings, so a reader who had turned it on saw
+    /// sheets pile up with nothing in sight to explain why. The old key is deleted at launch
+    /// (`init`), so neither a restore nor iCloud brings the old value back.
+    @Setting("THEkeepAyahSheetOpen") var keepAyahSheetOpen: Bool = false
 
     /// Play This Ayah and Repeat Ayah start the recitation WITHOUT closing the ayah's actions sheet
     /// (Abu, 2026-10-25: "sometimes when its playing i want to read the big sheet"). Off by default,
@@ -3513,6 +3523,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// option to not group for islamic resources ... make that default where it is one section"). The
     /// ⋯ More menu switches it.
     @Setting("islamGroupResources") var islamGroupResources: Bool = true
+
+    /// How every article on the Al-Islam tab opens: "short" (the default) or "long" (Abu, 2026-11-25:
+    /// "have a setting picker that says long or short articles by default short"). The switch at the top
+    /// of an article reads the other version for that visit only (ArticleLength.swift).
+    @Setting("islamArticleLength") var islamArticleLengthRaw: String = "short"
+
+    /// "Don't Ask Again" on the question an article's switch asks when it is moved away from
+    /// `islamArticleLengthRaw`: make that the default?
+    @Setting("islamArticleLengthNoAsk") var islamArticleLengthNoAsk: Bool = false
 
     var settingsGridMode: Bool {
         get { gridModeSettingsRaw != 0 }

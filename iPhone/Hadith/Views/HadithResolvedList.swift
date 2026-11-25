@@ -18,6 +18,11 @@ import SwiftUI
 //   are buttons).
 // - The search field sits at the foot of the screen with the options menu at its far side, the
 //   Quran and Arabic screens' bar.
+//
+// Since 2026-11-23 (Abu: "would be fire to see/filter Hadiths with the most amount of chains whether
+// in narrators or add as a filter thing or as another navigation link"): every list can be put in the
+// order of the most chains (`Sort.chains`), each row then saying how many chains its hadith comes
+// down by; the pack counted them (`HadithIsnadTreesPack.Summary.chains`), the list only reads them.
 
 /// One narration of a list: where it stands on the shelf, and what its list decorates it with.
 struct HadithListEntry: Identifiable {
@@ -51,6 +56,12 @@ struct HadithListEntry: Identifiable {
     var gradeLine: String { HadithGradeLine.joined(grades) }
 
     /// The line the Grade sort and the Grade grouping file the row under: its verdicts as printed, and
+    /// The row's tree of narrators and its counts, when the pack built one: a binary search in its
+    /// book's block, read when the row draws its chains or its list is sorted by them, never kept.
+    var tree: HadithIsnadTreesPack.Summary? {
+        HadithIsnadTreeStore.shared.summary(slug: book.slug, idInBook: hadith.idInBook)
+    }
+
     /// "Sahih" for the two Sahihs. They carry no grade line by design, because the collections are
     /// sahih, so their narrations never stand under "No Grade Recorded" (Abu, 2026-11-22: "when it
     /// says no grade reported if it's sahih Bukhari or Muslim that means sahih"). The search filters
@@ -109,11 +120,11 @@ struct HadithListEntry: Identifiable {
 /// to `HadithResolvedList`, and may narrow the list from its own header through it.
 @MainActor
 final class HadithListModel: ObservableObject {
-    /// The order within a group: the closest match first (the pack's own order), the shelf's order, or
-    /// by grade. The verdicts are never ranked (see `HadithBookData.Hadith.grades`): the grade sort only
-    /// keeps equal verdicts together.
+    /// The order within a group: the closest match first (the pack's own order), the shelf's order,
+    /// by grade, or the hadiths that come down by the most chains first. The verdicts are never
+    /// ranked (see `HadithBookData.Hadith.grades`): the grade sort only keeps equal verdicts together.
     enum Sort: String, CaseIterable, Identifiable {
-        case match, book, grade
+        case match, book, grade, chains
 
         var id: String { rawValue }
 
@@ -122,6 +133,7 @@ final class HadithListModel: ObservableObject {
             case .match: return String(localized: "Closest Match")
             case .book: return String(localized: "Book Order")
             case .grade: return String(localized: "Grade")
+            case .chains: return String(localized: "Most Chains")
             }
         }
     }
@@ -165,6 +177,10 @@ final class HadithListModel: ObservableObject {
     @Published var grade: HadithGradeCategory? { didSet { if grade != oldValue { rebuild() } } }
     /// The search field's text: the list is held to the narrations whose words carry every word of it.
     @Published var query = "" { didSet { if query != oldValue { search() } } }
+    /// The list held to some of its rows by the screen it was opened from, by `HadithListEntry.id`,
+    /// with what to call them ("This chapter of Sahih al-Bukhari"): a narrator opened from a
+    /// chapter's narrators shows his narrations in that chapter. Show All lets go of it.
+    @Published var held: (ids: Set<String>, title: String)? { didSet { rebuild() } }
 
     /// The list as shaped, a section a group.
     @Published private(set) var sections: [Bucket] = []
@@ -179,18 +195,22 @@ final class HadithListModel: ObservableObject {
     private(set) var matchedQuery = ""
     private var searchTask: Task<Void, Never>?
 
-    init(entries: [HadithListEntry], tiered: Bool = false, narrator: Bool = false) {
+    /// `sort` and `grouping`: what the list opens in, when its screen has an order of its own (the
+    /// hadiths with the most chains); nil opens it as its kind does.
+    init(entries: [HadithListEntry], tiered: Bool = false, narrator: Bool = false,
+         sort: Sort? = nil, grouping: Grouping? = nil) {
         self.entries = entries
         self.tiered = tiered
         self.narrator = narrator
-        sort = tiered ? .match : .book
-        grouping = tiered ? .match : .book
+        self.sort = sort ?? (tiered ? .match : .book)
+        self.grouping = grouping ?? (tiered ? .match : .book)
         rebuild()
     }
 
     /// The model of a list of rows by their keys (`HadithListEntry.make`).
-    convenience init(requests: [HadithListEntry.Request], tiered: Bool = false, narrator: Bool = false) {
-        self.init(entries: HadithListEntry.make(requests), tiered: tiered, narrator: narrator)
+    convenience init(requests: [HadithListEntry.Request], tiered: Bool = false, narrator: Bool = false,
+                     sort: Sort? = nil, grouping: Grouping? = nil) {
+        self.init(entries: HadithListEntry.make(requests), tiered: tiered, narrator: narrator, sort: sort, grouping: grouping)
     }
 
     var sorts: [Sort] { Sort.allCases.filter { tiered || $0 != .match } }
@@ -201,14 +221,16 @@ final class HadithListModel: ObservableObject {
 
     /// Whether anything narrows the list: a hidden book, a place, a grade, a search.
     var isNarrowed: Bool {
-        !hiddenBooks.isEmpty || role != nil || grade != nil || matched != nil
+        !hiddenBooks.isEmpty || role != nil || grade != nil || matched != nil || held != nil
     }
 
-    /// Everything shown again: the books, every place and grade, the search field emptied.
+    /// Everything shown again: the books, every place and grade, the search field emptied, and
+    /// the chapter the list was opened from let go.
     func reset() {
         hiddenBooks = []
         role = nil
         grade = nil
+        if held != nil { held = nil }
         if !query.isEmpty { query = "" }
     }
 
@@ -246,6 +268,7 @@ final class HadithListModel: ObservableObject {
         if !hiddenBooks.isEmpty { rows = rows.filter { !hiddenBooks.contains($0.book.slug) } }
         if let role { rows = rows.filter { $0.role == role } }
         if let grade { rows = rows.filter { $0.category == grade } }
+        if let held { rows = rows.filter { held.ids.contains($0.id) } }
         if let matched { rows = rows.filter { matched.contains($0.id) } }
         shown = rows.count
         sections = grouped(sorted(rows))
@@ -260,6 +283,14 @@ final class HadithListModel: ObservableObject {
             }
         case .book:
             return rows.sorted { ($0.bookOrder, $0.hadith.idInBook) < ($1.bookOrder, $1.hadith.idInBook) }
+        case .chains:
+            // The pack's counts and the pack's own order (`Summary.mostChainsFirst`), the shelf's
+            // order within a tie; a row with no tree stands last. The counts are read once, here.
+            let keyed = rows.map { (row: $0, tree: $0.tree) }
+            return keyed.sorted { a, b in
+                HadithIsnadTreesPack.Summary.mostChainsFirst(a.tree, b.tree)
+                    ?? ((a.row.bookOrder, a.row.hadith.idInBook) < (b.row.bookOrder, b.row.hadith.idInBook))
+            }.map(\.row)
         case .grade:
             if narrator {
                 // The pack's own counts: sahih, hasan, da'if, then the rest, in the shelf's order within.
@@ -405,7 +436,14 @@ struct HadithResolvedList<Header: View>: View {
     let footnote: String
     /// The search field's prompt.
     var prompt = String(localized: "Search these narrations")
+    /// A row's chains open its tree of narrators (the page of the hadiths with the most chains).
+    /// Off everywhere else: a tree lists narrations, and a list of narrations that opened trees
+    /// would be a corridor without an end.
+    var opensTrees = false
     @ViewBuilder let header: () -> Header
+
+    /// The row whose tree is open: flag and target in one (`PushItemDestination`).
+    @State private var pushedTree: HadithListEntry? = nil
 
     var body: some View {
         List {
@@ -427,7 +465,11 @@ struct HadithResolvedList<Header: View>: View {
                     ForEach(Array(model.sections.enumerated()), id: \.element.id) { index, section in
                         Section {
                             ForEach(section.rows) { row in
-                                HadithListRow(entry: row, term: model.matchedQuery)
+                                // In the order of the most chains a row says how many it has (and on
+                                // the page of them, in any order: the count is its door to the tree).
+                                HadithListRow(entry: row, term: model.matchedQuery,
+                                              tree: model.sort == .chains || opensTrees ? row.tree : nil,
+                                              openTree: opensTrees ? { pushedTree = row } : nil)
                             }
                         } header: {
                             // The app's section header: capitals and the count in its pill.
@@ -458,6 +500,12 @@ struct HadithResolvedList<Header: View>: View {
             .padding(.bottom, BottomBarCushion.standard)
             .background(Color.white.opacity(0.00001))
         }
+        // On the List, not on a row: a lazy row's own destination goes with the row.
+        .pushDestination(item: $pushedTree) { entry in
+            if let tree = entry.tree {
+                HadithIsnadTreeView(book: entry.book, hadith: entry.hadith, summary: tree)
+            }
+        }
         #if DEBUG
         // "-narrationsQuery <words>": the list searched for them as it appears. Headless
         // verification only (a search field cannot be typed into from a script).
@@ -484,8 +532,16 @@ struct HadithResolvedList<Header: View>: View {
                      : String(localized: "No narration here carries \u{201C}\(model.matchedQuery)\u{201D}."))
                     .foregroundStyle(.secondary)
             } else {
-                Text(String(localized: "Showing \(model.shown) of \(model.entries.count)"))
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(String(localized: "Showing \(model.shown) of \(model.entries.count)"))
+                        .foregroundStyle(.secondary)
+                    // What the screen before held the list to, said in its own words.
+                    if let held = model.held {
+                        Text(held.title)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
 
             Spacer(minLength: 8)
@@ -687,6 +743,11 @@ struct HadithListRow: View {
     let entry: HadithListEntry
     /// The words the list was searched for, painted where the row carries them; "" paints nothing.
     var term = ""
+    /// The row's chains, said under its reference while the list is in the order of the most
+    /// chains; nil says nothing.
+    var tree: HadithIsnadTreesPack.Summary? = nil
+    /// Opens the row's tree of narrators from its chains; nil draws them as a plain line.
+    var openTree: (() -> Void)? = nil
 
     @State private var showShareSheet = false
     @State private var showChainSheet = false
@@ -729,6 +790,8 @@ struct HadithListRow: View {
                 }
                 .accessibilityLabel("Hadith Actions")
             }
+
+            chainsLine
 
             if !grades.isEmpty {
                 HadithGradeLine(grades: grades, font: .footnote)
@@ -832,6 +895,50 @@ struct HadithListRow: View {
         }
     }
 
+    /// How widely the hadith is carried, as the pack counted it: its chains and the books they are
+    /// in. A door to the tree of them all where the list opens trees, a plain line elsewhere; a
+    /// row the pack counted no chains for (one that only points at another narration) says nothing.
+    @ViewBuilder
+    private var chainsLine: some View {
+        if let tree, tree.chains > 0 {
+            let words = String(localized: "\(tree.chains) chains")
+                + (tree.books > 1 ? " · " + String(localized: "\(tree.books) books") : "")
+            let label = HStack(spacing: 5) {
+                Image(systemName: "arrow.triangle.branch")
+                    .font(.caption2.weight(.semibold))
+                    .accessibilityHidden(true)
+                Text(words)
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                if openTree != nil {
+                    Image(systemName: "chevron.forward")
+                        .font(.caption2.weight(.bold))
+                        .accessibilityHidden(true)
+                }
+            }
+            .foregroundColor(accent)
+            .padding(.horizontal, 9)
+            .frame(height: 26)
+            .background(Capsule().fill(accent.opacity(0.14)))
+            .contentShape(Capsule())
+
+            if let openTree {
+                Button {
+                    settings.hapticFeedback()
+                    openTree()
+                } label: {
+                    label
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens the tree of narrators")
+            } else {
+                label
+            }
+        }
+    }
+
     private func arabicBlock(_ arabic: String) -> some View {
         let custom = settings.hadithArabicWantsCustomFace
         let size = CGFloat(settings.hadithArabicFontSize)
@@ -925,7 +1032,8 @@ struct HadithListRow: View {
                 settings.hapticFeedback()
                 openInBook(entry.book.slug, entry.hadith.idInBook)
             } label: {
-                Label("Open in Book", systemImage: "book")
+                // The app's one "open this in its tab" (`OpenInTab`): the narration in its book.
+                Label(OpenInTab.hadithTitle, systemImage: OpenInTab.hadithSymbol)
             }
         }
 

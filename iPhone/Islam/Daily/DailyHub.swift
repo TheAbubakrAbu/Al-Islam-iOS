@@ -171,7 +171,7 @@ struct DailyHubView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .leftToRightContent()
 
-                    openRow(String(localized: "Read in the Quran"), symbol: "book") {
+                    openRow(OpenInTab.quranTitle, symbol: OpenInTab.quranSymbol) {
                         openAyah(surah.id, ayah.id)
                     }
                 }

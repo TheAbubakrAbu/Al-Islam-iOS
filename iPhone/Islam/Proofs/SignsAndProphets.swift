@@ -216,6 +216,10 @@ enum SignBlock {
     /// "7:73" or "19:29-30", rendered from the app's own mushaf.
     case quran(String)
     case hadith(String, cite: String, arabic: ClosedRange<Int>, english: ClosedRange<Int>)
+    /// Words from another book, as written, with where they are from inside the text: the Bible's
+    /// promises of him (2026-11-24, Abu: "include some from the bible like the paraclete"). Never the
+    /// Quran or a hadith, which are always the two cases above.
+    case quote(String)
 }
 
 struct SignSection {
@@ -338,6 +342,8 @@ struct SignArticleSections: View {
                             ScriptureQuote(quran: reference)
                         case let .block(.hadith(link, cite, arabic, english)):
                             ScriptureQuote(hadith: link, cite: cite, arabic: arabic, english: english)
+                        case let .block(.quote(text)):
+                            ScriptureQuote(text: text, dimmed: true)
                         case .block(.text(let text)):
                             ArticleParagraph(verbatim: text)
                         }

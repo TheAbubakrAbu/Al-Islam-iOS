@@ -51,49 +51,83 @@ struct ProphetAdamView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Adam (peace be upon him) is the first man and the first prophet, whom Allah created with His own hand and taught the names of all things.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "**Adam (آدَم)** is the father of mankind and the first of the prophets. Allah created him from clay, breathed into him of His spirit, and commanded the angels to prostrate to him. He is mentioned by name 25 times in the Quran.")
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "adam")
 
-                    ArticleParagraph(verbatim: "Allah announced his creation before it happened, and the angels asked about it:")
-                    ScriptureQuote(quran: "2:30-31")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Adam (آدَم)** is the father of mankind and the first of the prophets. Allah created him from clay, breathed into him of His spirit, and commanded the angels to prostrate to him. He is mentioned by name 25 times in the Quran.")
 
-                    ArticleParagraph(verbatim: "The prostration Allah commanded was one of honour to Adam, not of worship: worship belongs to Allah alone. Iblis alone refused out of arrogance, and that refusal is the beginning of his enmity to the children of Adam.")
+                        ArticleParagraph(verbatim: "Allah announced his creation before it happened, and the angels asked about it:")
+                        ScriptureQuote(quran: "2:30-31")
+
+                        ArticleParagraph(verbatim: "The prostration Allah commanded was one of honour to Adam, not of worship: worship belongs to Allah alone. Iblis alone refused out of arrogance, and that refusal is the beginning of his enmity to the children of Adam.")
+                    }
+
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "Allah settled Adam and his wife in the Garden and permitted them everything in it but one tree:")
+                        ScriptureQuote(quran: "2:35")
+
+                        ArticleParagraph(verbatim: "Shaytan whispered to them until they ate from it. The Quran does not blame the woman for it, as other accounts do: it says they both ate, and in Surah Ta-Ha it is Adam who is addressed.")
+                        ScriptureQuote(quran: "20:115")
+
+                        ArticleParagraph(verbatim: "What follows is the point of the whole story. Adam did not argue or persist. He turned back to his Lord, and Allah taught him the very words with which to do it:")
+                        ScriptureQuote(quran: "2:37")
+
+                        ArticleParagraph(verbatim: "Allah then sent them down to the earth, and He did not send them down abandoned. He promised guidance, and made the response to it the dividing line:")
+                        ScriptureQuote(quran: "20:123-124")
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Repentance is the way back.** Adam's sin did not end him; his repentance restored him. The difference between Adam and Iblis is not that one sinned and the other did not, it is that one repented and the other refused.")
+
+                        ArticleStep("2. **Knowledge is an honour Allah gave man.** The angels' rank did not include the names Adam was taught. Allah honoured the son of Adam with knowledge before He honoured him with anything else.")
+
+                        ArticleStep("3. **The enmity of Shaytan is old and personal.** He refused to prostrate to your father and swore to mislead you. Knowing this is half of guarding against it.")
+
+                        ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) said of the sons of Adam:")
+                        ScriptureQuote(hadith: "ibnmajah:4251", cite: "Sunan Ibn Majah 4251; graded hasan by al-Albani, da'if by Shu'ayb al-Arna'ut", arabic: 29...35, english: 0...17)
+
+                        ArticleParagraph(verbatim: "The scholars differ over the chain of that narration, so what it means is established here by one whose authenticity no one disputes:")
+                        ScriptureQuote(hadith: "muslim:2749", cite: "Sahih Muslim 2749", english: 8...44)
+                    }
                 }
 
-                Section(header: ArticleHeader("HIS STORY")) {
-                    ArticleParagraph(verbatim: "Allah settled Adam and his wife in the Garden and permitted them everything in it but one tree:")
-                    ScriptureQuote(quran: "2:35")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Adam (آدَم)** is the father of mankind and the first of the prophets. Allah created him from clay, breathed into him of His spirit, and commanded the angels to prostrate to him. He is mentioned by name 25 times in the Quran.")
+                    }
 
-                    ArticleParagraph(verbatim: "Shaytan whispered to them until they ate from it. The Quran does not blame the woman for it, as other accounts do: it says they both ate, and in Surah Ta-Ha it is Adam who is addressed.")
-                    ScriptureQuote(quran: "20:115")
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "Allah settled Adam and his wife in the Garden and permitted them everything in it but one tree. Shaytan whispered to them until they ate from it, and the Quran does not blame the woman for it, as other accounts do: it says they both ate.")
 
-                    ArticleParagraph(verbatim: "What follows is the point of the whole story. Adam did not argue or persist. He turned back to his Lord, and Allah taught him the very words with which to do it:")
-                    ScriptureQuote(quran: "2:37")
+                        ArticleParagraph(verbatim: "What follows is the point of the whole story. Adam did not argue or persist. He turned back to his Lord, and Allah taught him the very words with which to do it:")
+                        ScriptureQuote(quran: "2:37")
 
-                    ArticleParagraph(verbatim: "Allah then sent them down to the earth, and He did not send them down abandoned. He promised guidance, and made the response to it the dividing line:")
-                    ScriptureQuote(quran: "20:123-124")
-                }
+                        ArticleParagraph(verbatim: "Allah then sent them down to the earth, and He did not send them down abandoned: He promised guidance, and made the response to it the dividing line.")
+                    }
 
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Repentance is the way back.** Adam's sin did not end him; his repentance restored him. The difference between Adam and Iblis is not that one sinned and the other did not, it is that one repented and the other refused.")
-
-                    ArticleStep("2. **Knowledge is an honour Allah gave man.** The angels' rank did not include the names Adam was taught. Allah honoured the son of Adam with knowledge before He honoured him with anything else.")
-
-                    ArticleStep("3. **The enmity of Shaytan is old and personal.** He refused to prostrate to your father and swore to mislead you. Knowing this is half of guarding against it.")
-
-                    ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) said of the sons of Adam:")
-                    ScriptureQuote(hadith: "ibnmajah:4251", cite: "Sunan Ibn Majah 4251; graded hasan by al-Albani, da'if by Shu'ayb al-Arna'ut", arabic: 29...35, english: 0...17)
-
-                    ArticleParagraph(verbatim: "The scholars differ over the chain of that narration, so what it means is established here by one whose authenticity no one disputes:")
-                    ScriptureQuote(hadith: "muslim:2749", cite: "Sahih Muslim 2749", english: 8...44)
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Repentance is the way back.** Adam's sin did not end him; his repentance restored him. The difference between Adam and Iblis is not that one sinned and the other did not, it is that one repented and the other refused.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
                     ArticleClosing("The first man was also the first to sin, the first to repent, and the first to be forgiven: the pattern every one of his children lives by.")
+                }
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "adam")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryAdamView"))
                 }
 
                 ArticleSourcesSection(article: "ProphetAdamView")
@@ -112,36 +146,63 @@ struct ProphetIdrisView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Idris (peace be upon him) is praised in the Quran as a man of truth and a prophet whom Allah raised to a high station.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "**Idris (إِدرِيس)** is named twice in the Quran, and both mentions are praise. Nothing of his story is given in detail, which is itself the lesson: Allah tells us what we need, and what He left out is not needed.")
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "idris")
 
-                    ScriptureQuote(quran: "19:56-57")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Idris (إِدرِيس)** is named twice in the Quran, and both mentions are praise. Nothing of his story is given in detail, which is itself the lesson: Allah tells us what we need, and what He left out is not needed.")
 
-                    ArticleParagraph(verbatim: "And Allah names him among those who were patient and righteous:")
-                    ScriptureQuote(quran: "21:85-86")
+                        ScriptureQuote(quran: "19:56-57")
+
+                        ArticleParagraph(verbatim: "And Allah names him among those who were patient and righteous:")
+                        ScriptureQuote(quran: "21:85-86")
+                    }
+
+                    Section(header: ArticleHeader("WHAT IS AND IS NOT ESTABLISHED")) {
+                        ArticleParagraph(verbatim: "Idris is commonly identified with Enoch, and he is often said to have been the first to write with the pen, the first to sew garments, and to have been raised alive to the heavens. None of that is established from the Quran or from an authentic narration. It comes from the reports of the People of the Scripture, and the position of the Salaf toward such reports is neither to affirm nor to deny them. What is authentic is that the Prophet ﷺ met him in the fourth heaven on the night of the Mi'raj (Sahih Muslim 162).")
+
+                        ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) said about these reports:")
+                        ScriptureQuote(hadith: "bukhari:7362", cite: "Sahih al-Bukhari 7362", english: 28...56)
+
+                        ArticleParagraph(articleMarkdown: "Scholars also differ on whether Idris came **before** Nuh (peace be upon them), as most held, or after him among the Children of Israel. The order in this app's list follows the majority.")
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Allah's praise is enough.** Two short mentions, and in them Allah calls him truthful, a prophet, patient, and righteous, and says He raised him high. A man needs no longer record than that.")
+
+                        ArticleStep("2. **Silence in revelation is deliberate.** Where the Quran is brief, adding detail from elsewhere and teaching it as religion is exactly what the Salaf refused to do.")
+                    }
                 }
 
-                Section(header: ArticleHeader("WHAT IS AND IS NOT ESTABLISHED")) {
-                    ArticleParagraph(verbatim: "Idris is commonly identified with Enoch, and he is often said to have been the first to write with the pen, the first to sew garments, and to have been raised alive to the heavens. None of that is established from the Quran or from an authentic narration. It comes from the reports of the People of the Scripture, and the position of the Salaf toward such reports is neither to affirm nor to deny them. What is authentic is that the Prophet ﷺ met him in the fourth heaven on the night of the Mi'raj (Sahih Muslim 162).")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Idris (إِدرِيس)** is named twice in the Quran, and both mentions are praise. Nothing of his story is given in detail, which is itself the lesson: Allah tells us what we need, and what He left out is not needed.")
 
-                    ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) said about these reports:")
-                    ScriptureQuote(hadith: "bukhari:7362", cite: "Sahih al-Bukhari 7362", english: 28...56)
+                        ScriptureQuote(quran: "19:56-57")
+                    }
 
-                    ArticleParagraph(articleMarkdown: "Scholars also differ on whether Idris came **before** Nuh (peace be upon them), as most held, or after him among the Children of Israel. The order in this app's list follows the majority.")
-                }
-
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Allah's praise is enough.** Two short mentions, and in them Allah calls him truthful, a prophet, patient, and righteous, and says He raised him high. A man needs no longer record than that.")
-
-                    ArticleStep("2. **Silence in revelation is deliberate.** Where the Quran is brief, adding detail from elsewhere and teaching it as religion is exactly what the Salaf refused to do.")
+                    Section(header: ArticleHeader("WHAT IS AND IS NOT ESTABLISHED")) {
+                        ArticleParagraph(verbatim: "Idris is commonly identified with Enoch and said to have been raised alive to the heavens. None of that is established from the Quran or from an authentic narration; it comes from the reports of the People of the Scripture.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
                     ArticleClosing("Idris is named for his truthfulness, his patience, and the high station Allah raised him to, and the rest of his story was not given to us.")
+                }
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "idris")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryIdrisView"))
                 }
 
                 ArticleSourcesSection(article: "ProphetIdrisView")
@@ -162,47 +223,69 @@ struct ProphetNuhView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Nuh (peace be upon him) called his people to Allah alone for 950 years, and when they refused, Allah saved him and the believers in the ark and drowned the rest.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "**Nuh (نُوح)**, Noah, is the first messenger Allah sent to the people of the earth after they fell into idolatry, and one of the five messengers of firm resolve, **Ulul-Azm (أُولُو العَزم)**. A whole surah of the Quran carries his name.")
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "nuh")
 
-                    ScriptureQuote(quran: "7:59")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Nuh (نُوح)**, Noah, is the first messenger Allah sent to the people of the earth after they fell into idolatry, and one of the five messengers of firm resolve, **Ulul-Azm (أُولُو العَزم)**. A whole surah of the Quran carries his name.")
 
-                    ArticleParagraph(verbatim: "He was sent with the same message every prophet was sent with, and he gave it for longer than any of them:")
-                    ScriptureQuote(quran: "71:1")
+                        ScriptureQuote(quran: "7:59")
+
+                        ArticleParagraph(verbatim: "He was sent with the same message every prophet was sent with, and he gave it for longer than any of them:")
+                        ScriptureQuote(quran: "71:1")
+                    }
+
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(articleMarkdown: "He called them for **950 years**, and Nuh himself describes the answer he got:")
+                        ScriptureQuote(quran: "71:7")
+
+                        ArticleParagraph(verbatim: "They clung to the idols of their fathers, and Allah names those idols in the Quran. They were the names of righteous men whose images were made after them until they were worshipped:")
+                        ScriptureQuote(quran: "71:23")
+
+                        ArticleParagraph(verbatim: "Only at the end, after every approach had failed, did he pray against them:")
+                        ScriptureQuote(quran: "71:26-28")
+
+                        ArticleParagraph(verbatim: "Allah commanded him to build the ark, and he built it while his people passed by and laughed:")
+                        ScriptureQuote(quran: "23:27")
+
+                        ArticleParagraph(verbatim: "When the command came, the water rose from the earth and fell from the sky, and he called to his own son:")
+                        ScriptureQuote(quran: "11:42-43")
+
+                        ArticleParagraph(verbatim: "His son drowned. This is the hardest and most important part of the story: prophethood in a father does not save a son who rejects. Nuh asked his Lord about him, and Allah corrected him plainly, telling him not to ask about what he had no knowledge of.")
+
+                        ArticleParagraph(verbatim: "Allah made his descendants the ones who remained on the earth (Quran 37:77), and those who believed with him and boarded the ark were few:")
+                        ScriptureQuote(quran: "11:40")
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Shirk begins with exaggerating the righteous.** The idols of Nuh's people started as memorials to good men. This is why Islam closes every door to venerating graves and images of the pious.")
+
+                        ArticleStep("2. **Success is not measured in numbers.** After 950 years he had a handful of followers, and he is among the greatest of the messengers. The messenger is asked to convey, not to be accepted.")
+
+                        ArticleStep("3. **Faith is not inherited.** His own son drowned with the disbelievers. No lineage, not even a prophet's, stands in place of belief.")
+                    }
                 }
 
-                Section(header: ArticleHeader("HIS STORY")) {
-                    ArticleParagraph(articleMarkdown: "He called them for **950 years**, and Nuh himself describes the answer he got:")
-                    ScriptureQuote(quran: "71:7")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Nuh (نُوح)**, Noah, is the first messenger Allah sent to the people of the earth after they fell into idolatry, and one of the five messengers of firm resolve, **Ulul-Azm (أُولُو العَزم)**. A whole surah of the Quran carries his name.")
 
-                    ArticleParagraph(verbatim: "They clung to the idols of their fathers, and Allah names those idols in the Quran. They were the names of righteous men whose images were made after them until they were worshipped:")
-                    ScriptureQuote(quran: "71:23")
+                        ScriptureQuote(quran: "7:59")
+                    }
 
-                    ArticleParagraph(verbatim: "Only at the end, after every approach had failed, did he pray against them:")
-                    ScriptureQuote(quran: "71:26-28")
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(articleMarkdown: "He called them for **950 years**, and Nuh himself describes the answer he got:")
+                        ScriptureQuote(quran: "71:7")
 
-                    ArticleParagraph(verbatim: "Allah commanded him to build the ark, and he built it while his people passed by and laughed:")
-                    ScriptureQuote(quran: "23:27")
-
-                    ArticleParagraph(verbatim: "When the command came, the water rose from the earth and fell from the sky, and he called to his own son:")
-                    ScriptureQuote(quran: "11:42-43")
-
-                    ArticleParagraph(verbatim: "His son drowned. This is the hardest and most important part of the story: prophethood in a father does not save a son who rejects. Nuh asked his Lord about him, and Allah corrected him plainly, telling him not to ask about what he had no knowledge of.")
-
-                    ArticleParagraph(verbatim: "Allah made his descendants the ones who remained on the earth (Quran 37:77), and those who believed with him and boarded the ark were few:")
-                    ScriptureQuote(quran: "11:40")
-                }
-
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Shirk begins with exaggerating the righteous.** The idols of Nuh's people started as memorials to good men. This is why Islam closes every door to venerating graves and images of the pious.")
-
-                    ArticleStep("2. **Success is not measured in numbers.** After 950 years he had a handful of followers, and he is among the greatest of the messengers. The messenger is asked to convey, not to be accepted.")
-
-                    ArticleStep("3. **Faith is not inherited.** His own son drowned with the disbelievers. No lineage, not even a prophet's, stands in place of belief.")
+                        ArticleParagraph(verbatim: "They clung to the idols of their fathers, the names of righteous men whose images were made after them until they were worshipped. Only after every approach had failed did he pray against them, and Allah commanded him to build the ark. When the water came, his own son refused to board and drowned: prophethood in a father does not save a son who rejects.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -214,6 +297,14 @@ struct ProphetNuhView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetNuhView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "nuh")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryNuhView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetNuhView")
             }
@@ -231,9 +322,14 @@ struct ProphetHudView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Hud (peace be upon him) was sent to the people of 'Aad, who were the strongest of their age, and their strength is what destroyed them.")
                 }
+
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "hud")
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(articleMarkdown: "**Hud (هُود)** was sent to **'Aad (عَاد)**, an Arab people of the sand dunes of al-Ahqaf in the south of the Arabian peninsula. A surah of the Quran carries his name. He was one of their own, which is how Allah describes almost every messenger: their brother, from among them.")
@@ -241,25 +337,33 @@ struct ProphetHudView: View {
                     ScriptureQuote(quran: "7:65-66")
                 }
 
-                Section(header: ArticleHeader("HIS STORY")) {
-                    ArticleParagraph(verbatim: "'Aad were given a physique and a power no people before them had. Hud reminded them whose gift it was:")
-                    ScriptureQuote(quran: "7:69")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "'Aad were given a physique and a power no people before them had. Hud reminded them whose gift it was:")
+                        ScriptureQuote(quran: "7:69")
 
-                    ArticleParagraph(verbatim: "He warned them in the valleys of al-Ahqaf:")
-                    ScriptureQuote(quran: "46:21")
+                        ArticleParagraph(verbatim: "He warned them in the valleys of al-Ahqaf:")
+                        ScriptureQuote(quran: "46:21")
 
-                    ArticleParagraph(verbatim: "They answered with the one argument that has never changed: our fathers did this. And they dared him to bring the punishment he warned them of. When it came, it came in the form of the thing they had been waiting for:")
-                    ScriptureQuote(quran: "46:24-25")
+                        ArticleParagraph(verbatim: "They answered with the one argument that has never changed: our fathers did this. And they dared him to bring the punishment he warned them of. When it came, it came in the form of the thing they had been waiting for:")
+                        ScriptureQuote(quran: "46:24-25")
 
-                    ArticleParagraph(verbatim: "They saw a cloud coming toward their valleys and said it was rain. It was a wind Allah loosed against them for seven nights and eight days, and it left them fallen as though they were hollow trunks of palm trees. Hud and those who believed with him were saved.")
+                        ArticleParagraph(verbatim: "They saw a cloud coming toward their valleys and said it was rain. It was a wind Allah loosed against them for seven nights and eight days, and it left them fallen as though they were hollow trunks of palm trees. Hud and those who believed with him were saved.")
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Strength is a test, not a proof.** 'Aad measured themselves by what they could build and lift, and asked who was stronger than them. The wind answered.")
+
+                        ArticleStep("2. **“Our fathers did it” is not a reason.** The Quran records this answer from nation after nation. Inheriting a practice does not make it true.")
+
+                        ArticleStep("3. **What you long for can be what ruins you.** They welcomed the cloud as rain. Not everything a person hopes for is good for him.")
+                    }
                 }
 
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Strength is a test, not a proof.** 'Aad measured themselves by what they could build and lift, and asked who was stronger than them. The wind answered.")
-
-                    ArticleStep("2. **“Our fathers did it” is not a reason.** The Quran records this answer from nation after nation. Inheriting a practice does not make it true.")
-
-                    ArticleStep("3. **What you long for can be what ruins you.** They welcomed the cloud as rain. Not everything a person hopes for is good for him.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "'Aad were given a power no people before them had. They answered Hud that their fathers did this, and dared him to bring the punishment. When they saw a cloud coming toward their valleys they said it was rain; it was a wind Allah loosed against them for seven nights and eight days, and Hud and those who believed with him were saved.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -271,6 +375,14 @@ struct ProphetHudView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetHudView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "hud")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryHudView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetHudView")
             }
@@ -288,9 +400,14 @@ struct ProphetSalihView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Salih (peace be upon him) was sent to Thamud with a she-camel as a clear sign, and when they hamstrung her the punishment came.")
                 }
+
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "salih")
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(articleMarkdown: "**Salih (صَالِح)** was sent to **Thamud (ثَمُود)**, the people who came after 'Aad and who carved their homes out of the mountains at al-Hijr, in the north-west of the Arabian peninsula. ")
@@ -298,26 +415,34 @@ struct ProphetSalihView: View {
                     ScriptureQuote(quran: "11:61")
                 }
 
-                Section(header: ArticleHeader("HIS STORY")) {
-                    ArticleParagraph(verbatim: "They asked him for a sign, and Allah sent them one as a trial (Quran 54:27): a she-camel, with a share of the water on a known day that was hers alone. Salih warned them what touching her would mean:")
-                    ScriptureQuote(quran: "7:73")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "They asked him for a sign, and Allah sent them one as a trial (Quran 54:27): a she-camel, with a share of the water on a known day that was hers alone. Salih warned them what touching her would mean:")
+                        ScriptureQuote(quran: "7:73")
 
-                    ArticleParagraph(verbatim: "The Quran does not give his name; it describes one man whom the people called on to do it, acting for all of them:")
-                    ScriptureQuote(quran: "54:29")
+                        ArticleParagraph(verbatim: "The Quran does not give his name; it describes one man whom the people called on to do it, acting for all of them:")
+                        ScriptureQuote(quran: "54:29")
 
-                    ArticleParagraph(verbatim: "The wretched one among them was roused to it, and they hamstrung her. Salih gave them three days, and on the third the cry seized them and they lay lifeless in their homes:")
-                    ScriptureQuote(quran: "11:67")
+                        ArticleParagraph(verbatim: "The wretched one among them was roused to it, and they hamstrung her. Salih gave them three days, and on the third the cry seized them and they lay lifeless in their homes:")
+                        ScriptureQuote(quran: "11:67")
 
-                    ArticleParagraph(verbatim: "Their dwellings still stand in the rock. When the Prophet (peace and blessings be upon him) passed them with his army on the way to Tabuk, he did not let his companions treat them as a sight to see:")
-                    ScriptureQuote(hadith: "bukhari:433", cite: "Sahih al-Bukhari 433", arabic: 33...52, english: 4...21)
+                        ArticleParagraph(verbatim: "Their dwellings still stand in the rock. When the Prophet (peace and blessings be upon him) passed them with his army on the way to Tabuk, he did not let his companions treat them as a sight to see:")
+                        ScriptureQuote(hadith: "bukhari:433", cite: "Sahih al-Bukhari 433", arabic: 33...52, english: 4...21)
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **A people carries what its worst member does when it consents to it.** One man hamstrung the camel; the Quran says “they” hamstrung her, because they were pleased with it.")
+
+                        ArticleStep("2. **Signs do not create faith.** They asked for a sign, were given one, and killed it. Whoever has decided not to believe will not be argued into it.")
+
+                        ArticleStep("3. **The ruins of the punished are not tourist sites.** The Sunnah is to pass them weeping, in fear of Allah, not to wander them taking in the view.")
+                    }
                 }
 
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **A people carries what its worst member does when it consents to it.** One man hamstrung the camel; the Quran says “they” hamstrung her, because they were pleased with it.")
-
-                    ArticleStep("2. **Signs do not create faith.** They asked for a sign, were given one, and killed it. Whoever has decided not to believe will not be argued into it.")
-
-                    ArticleStep("3. **The ruins of the punished are not tourist sites.** The Sunnah is to pass them weeping, in fear of Allah, not to wander them taking in the view.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "They asked for a sign, and Allah sent them a she-camel as a trial, with a share of the water that was hers alone. The wretched one among them was roused to it and they hamstrung her; Salih gave them three days, and on the third the cry seized them and they lay lifeless in their homes.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -330,6 +455,14 @@ struct ProphetSalihView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetSalihView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "salih")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StorySalihView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetSalihView")
             }
@@ -347,55 +480,86 @@ struct ProphetIbrahimView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Ibrahim (peace be upon him) is the friend of Allah and the father of the prophets, who broke his people's idols, was thrown into the fire, and was ready to sacrifice his son.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "**Ibrahim (إِبرَاهِيم)**, Abraham, is named more often in the Quran than any prophet but Musa. He is one of the five messengers of firm resolve, and Allah took him as **Khalil (خَلِيل)**, an intimate friend, a station given to him and to Muhammad (peace be upon them) alone.")
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "ibrahim")
 
-                    ScriptureQuote(quran: "19:41-42")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Ibrahim (إِبرَاهِيم)**, Abraham, is named more often in the Quran than any prophet but Musa. He is one of the five messengers of firm resolve, and Allah took him as **Khalil (خَلِيل)**, an intimate friend, a station given to him and to Muhammad (peace be upon them) alone.")
 
-                    ArticleParagraph(verbatim: "The prophets who came after him from his line include Ismail, Ishaq, Yaqub, Yusuf, Musa, Harun, Dawud, Sulayman, Zakariya, Yahya, Isa, and Muhammad (peace be upon them all), which is why he is called the father of the prophets.")
+                        ScriptureQuote(quran: "19:41-42")
+
+                        ArticleParagraph(verbatim: "The prophets who came after him from his line include Ismail, Ishaq, Yaqub, Yusuf, Musa, Harun, Dawud, Sulayman, Zakariya, Yahya, Isa, and Muhammad (peace be upon them all), which is why he is called the father of the prophets.")
+                    }
+
+                    Section(header: ArticleHeader("THE IDOLS AND THE FIRE")) {
+                        ArticleParagraph(verbatim: "His people, and his own father Azar, carved and worshipped idols. Ibrahim reasoned with them, and when reasoning failed he acted:")
+                        ScriptureQuote(quran: "21:51-52")
+
+                        ArticleParagraph(verbatim: "He broke them all but the largest. When they accused him, he said the largest had done it and told them to ask the idols, and they were forced to admit that idols do not speak. Their answer was to build a fire:")
+                        ScriptureQuote(quran: "21:68-69")
+
+                        ArticleParagraph(verbatim: "He was thrown in, and the fire was commanded to be cool and safe for him. This is the sign of what tawakkul means: he had no way out and did not need one.")
+                    }
+
+                    Section(header: ArticleHeader("THE SACRIFICE")) {
+                        ArticleParagraph(verbatim: "In old age Allah gave him a son, and then commanded him in a dream to sacrifice him. He did not hide it from the boy; he asked him:")
+                        ScriptureQuote(quran: "37:100-103")
+
+                        ArticleParagraph(verbatim: "The son answered that he would be found, by Allah's will, among the patient. When both had submitted and he had laid him down, Allah called out and ransomed the boy with a great sacrifice:")
+                        ScriptureQuote(quran: "37:104-107")
+
+                        ArticleParagraph(articleMarkdown: "This is what Muslims commemorate every year at **Eid al-Adha**. The Quran does not name the son in this passage, and the position of the scholars of the Sunnah, and the stronger view, is that he was **Ismail**: the good news of Ishaq comes after the account is finished.")
+                    }
+
+                    Section(header: ArticleHeader("THE KA'BAH AND THE CALL")) {
+                        ArticleParagraph(verbatim: "Allah showed him the site of the House and commanded him to purify it and proclaim the pilgrimage:")
+                        ScriptureQuote(quran: "22:26-27")
+
+                        ArticleParagraph(verbatim: "He left his wife Hajar and the infant Ismail in a barren valley with no crop and no water, and turned back saying:")
+                        ScriptureQuote(quran: "14:37")
+
+                        ArticleParagraph(verbatim: "Zamzam sprang there, and the valley he left them in is Makkah. Allah also made him an example in tests, and He tested him and he fulfilled them:")
+                        ScriptureQuote(quran: "2:124")
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Tawhid is worth standing alone for.** He stood against his father, his people and his king, by himself, and Allah calls him a nation in himself.")
+
+                        ArticleStep("2. **Submission is tested in what you love most.** The command was not about the knife; it was about whether anything competed with Allah in his heart.")
+
+                        ArticleStep("3. **Leave what you love in Allah's care.** He left a wife and a nursing child in an empty valley because he was commanded to, and Allah built a city and a pilgrimage there.")
+                    }
                 }
 
-                Section(header: ArticleHeader("THE IDOLS AND THE FIRE")) {
-                    ArticleParagraph(verbatim: "His people, and his own father Azar, carved and worshipped idols. Ibrahim reasoned with them, and when reasoning failed he acted:")
-                    ScriptureQuote(quran: "21:51-52")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Ibrahim (إِبرَاهِيم)**, Abraham, is named more often in the Quran than any prophet but Musa. He is one of the five messengers of firm resolve, and Allah took him as **Khalil (خَلِيل)**, an intimate friend, a station given to him and to Muhammad (peace be upon them) alone.")
+                    }
 
-                    ArticleParagraph(verbatim: "He broke them all but the largest. When they accused him, he said the largest had done it and told them to ask the idols, and they were forced to admit that idols do not speak. Their answer was to build a fire:")
-                    ScriptureQuote(quran: "21:68-69")
+                    Section(header: ArticleHeader("THE IDOLS AND THE FIRE")) {
+                        ArticleParagraph(verbatim: "His people, and his own father Azar, carved and worshipped idols. Ibrahim reasoned with them, and when reasoning failed he broke them all but the largest. Their answer was to build a fire:")
+                        ScriptureQuote(quran: "21:68-69")
 
-                    ArticleParagraph(verbatim: "He was thrown in, and the fire was commanded to be cool and safe for him. This is the sign of what tawakkul means: he had no way out and did not need one.")
-                }
+                        ArticleParagraph(verbatim: "He was thrown in, and the fire was commanded to be cool and safe for him.")
+                    }
 
-                Section(header: ArticleHeader("THE SACRIFICE")) {
-                    ArticleParagraph(verbatim: "In old age Allah gave him a son, and then commanded him in a dream to sacrifice him. He did not hide it from the boy; he asked him:")
-                    ScriptureQuote(quran: "37:100-103")
+                    Section(header: ArticleHeader("THE SACRIFICE")) {
+                        ArticleParagraph(verbatim: "In old age Allah gave him a son, and then commanded him in a dream to sacrifice him. When both had submitted and he had laid him down, Allah called out and ransomed the boy with a great sacrifice:")
+                        ScriptureQuote(quran: "37:104-107")
 
-                    ArticleParagraph(verbatim: "The son answered that he would be found, by Allah's will, among the patient. When both had submitted and he had laid him down, Allah called out and ransomed the boy with a great sacrifice:")
-                    ScriptureQuote(quran: "37:104-107")
+                        ArticleParagraph(articleMarkdown: "This is what Muslims commemorate every year at **Eid al-Adha**. The stronger view, and the position of the scholars of the Sunnah, is that the son was **Ismail**.")
+                    }
 
-                    ArticleParagraph(articleMarkdown: "This is what Muslims commemorate every year at **Eid al-Adha**. The Quran does not name the son in this passage, and the position of the scholars of the Sunnah, and the stronger view, is that he was **Ismail**: the good news of Ishaq comes after the account is finished.")
-                }
-
-                Section(header: ArticleHeader("THE KA'BAH AND THE CALL")) {
-                    ArticleParagraph(verbatim: "Allah showed him the site of the House and commanded him to purify it and proclaim the pilgrimage:")
-                    ScriptureQuote(quran: "22:26-27")
-
-                    ArticleParagraph(verbatim: "He left his wife Hajar and the infant Ismail in a barren valley with no crop and no water, and turned back saying:")
-                    ScriptureQuote(quran: "14:37")
-
-                    ArticleParagraph(verbatim: "Zamzam sprang there, and the valley he left them in is Makkah. Allah also made him an example in tests, and He tested him and he fulfilled them:")
-                    ScriptureQuote(quran: "2:124")
-                }
-
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Tawhid is worth standing alone for.** He stood against his father, his people and his king, by himself, and Allah calls him a nation in himself.")
-
-                    ArticleStep("2. **Submission is tested in what you love most.** The command was not about the knife; it was about whether anything competed with Allah in his heart.")
-
-                    ArticleStep("3. **Leave what you love in Allah's care.** He left a wife and a nursing child in an empty valley because he was commanded to, and Allah built a city and a pilgrimage there.")
+                    Section(header: ArticleHeader("THE KA'BAH AND THE CALL")) {
+                        ArticleParagraph(verbatim: "He left his wife Hajar and the infant Ismail in a barren valley with no crop and no water. Zamzam sprang there, and the valley he left them in is Makkah, where Allah showed him the site of the House and commanded him to purify it and proclaim the pilgrimage.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -408,6 +572,14 @@ struct ProphetIbrahimView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetIbrahimView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "ibrahim")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryIbrahimView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetIbrahimView")
             }
@@ -425,37 +597,55 @@ struct ProphetLutView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Lut (peace be upon him) was sent to a people who invented an obscenity no nation had committed before, and they were destroyed for it.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "**Lut (لُوط)**, Lot, believed in Ibrahim early (Quran 29:26), and the historians report that he was his **nephew**, the son of his brother Haran. He is named 27 times in the Quran. Allah sent him to the people of Sodom, in the cities of the plain.")
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "lut")
 
-                    ArticleParagraph(verbatim: "He named their sin to them plainly, and the Quran records that no people had done it before them:")
-                    ScriptureQuote(quran: "7:80-81")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Lut (لُوط)**, Lot, believed in Ibrahim early (Quran 29:26), and the historians report that he was his **nephew**, the son of his brother Haran. He is named 27 times in the Quran. Allah sent him to the people of Sodom, in the cities of the plain.")
+
+                        ArticleParagraph(verbatim: "He named their sin to them plainly, and the Quran records that no people had done it before them:")
+                        ScriptureQuote(quran: "7:80-81")
+                    }
+
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "He called them for years, and their answer was to threaten to expel him for the crime of wanting to stay clean. The angels came to him as guests, in the form of young men, and his people came running to the house. He offered every appeal he had, and said:")
+                        ScriptureQuote(quran: "11:78-80")
+
+                        ArticleParagraph(verbatim: "That night the angels told him to leave with his family before dawn, and not to look back. His wife was not with him in faith and stayed behind with those who were destroyed:")
+                        ScriptureQuote(quran: "11:81")
+
+                        ArticleParagraph(verbatim: "At sunrise the cities were overturned and stones of baked clay rained down on them:")
+                        ScriptureQuote(quran: "11:82-83")
+
+                        ArticleParagraph(verbatim: "And Allah left their ruin as a clear sign for people who reason:")
+                        ScriptureQuote(quran: "29:35")
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **A sin can become a people's identity, and that is when it destroys them.** What was condemned was not only the act but the public, defended, organised practice of it.")
+
+                        ArticleStep("2. **Marriage does not transfer faith.** Lut's wife lived in a prophet's house and was destroyed with her people. The Quran gives her and Nuh's wife as the example for this.")
+
+                        ArticleStep("3. **Standing alone is not failure.** He said, if only I had against you some power. Allah records the wish, and He sent the angels the same night.")
+                    }
                 }
 
-                Section(header: ArticleHeader("HIS STORY")) {
-                    ArticleParagraph(verbatim: "He called them for years, and their answer was to threaten to expel him for the crime of wanting to stay clean. The angels came to him as guests, in the form of young men, and his people came running to the house. He offered every appeal he had, and said:")
-                    ScriptureQuote(quran: "11:78-80")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Lut (لُوط)**, Lot, was sent to the people of Sodom, in the cities of the plain. He named their sin to them plainly, and the Quran records that no people had done it before them:")
+                        ScriptureQuote(quran: "7:80-81")
+                    }
 
-                    ArticleParagraph(verbatim: "That night the angels told him to leave with his family before dawn, and not to look back. His wife was not with him in faith and stayed behind with those who were destroyed:")
-                    ScriptureQuote(quran: "11:81")
-
-                    ArticleParagraph(verbatim: "At sunrise the cities were overturned and stones of baked clay rained down on them:")
-                    ScriptureQuote(quran: "11:82-83")
-
-                    ArticleParagraph(verbatim: "And Allah left their ruin as a clear sign for people who reason:")
-                    ScriptureQuote(quran: "29:35")
-                }
-
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **A sin can become a people's identity, and that is when it destroys them.** What was condemned was not only the act but the public, defended, organised practice of it.")
-
-                    ArticleStep("2. **Marriage does not transfer faith.** Lut's wife lived in a prophet's house and was destroyed with her people. The Quran gives her and Nuh's wife as the example for this.")
-
-                    ArticleStep("3. **Standing alone is not failure.** He said, if only I had against you some power. Allah records the wish, and He sent the angels the same night.")
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "He called them for years, and their answer was to threaten to expel him. The angels came to him as guests, in the form of young men, and his people came running to the house. That night the angels told him to leave with his family before dawn; his wife was not with him in faith and stayed behind, and at sunrise the cities were overturned and stones of baked clay rained down on them.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -467,6 +657,14 @@ struct ProphetLutView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetLutView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "lut")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryLutView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetLutView")
             }
@@ -484,37 +682,57 @@ struct ProphetIsmailView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Ismail (peace be upon him) is the son Ibrahim was commanded to sacrifice, who helped him raise the Ka'bah, and the forefather of Prophet Muhammad.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "**Ismail (إِسمَاعِيل)**, Ishmael, is the elder son of Ibrahim, born to Hajar. The Arabs of the Hijaz descend from him, and through him, Prophet Muhammad (peace and blessings be upon him).")
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "ismail")
 
-                    ArticleParagraph(verbatim: "Allah praises him for the one quality He mentions first about him:")
-                    ScriptureQuote(quran: "19:54-55")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Ismail (إِسمَاعِيل)**, Ishmael, is the elder son of Ibrahim, born to Hajar. The Arabs of the Hijaz descend from him, and through him, Prophet Muhammad (peace and blessings be upon him).")
 
-                    ArticleParagraph(verbatim: "He is named among the patient and the righteous:")
-                    ScriptureQuote(quran: "21:85")
+                        ArticleParagraph(verbatim: "Allah praises him for the one quality He mentions first about him:")
+                        ScriptureQuote(quran: "19:54-55")
+
+                        ArticleParagraph(verbatim: "He is named among the patient and the righteous:")
+                        ScriptureQuote(quran: "21:85")
+                    }
+
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "As an infant he was left with his mother Hajar in the valley of Makkah, and Zamzam sprang for him there. As a boy he was the one his father saw in the dream, and his answer when told of it is the reason he is honoured:")
+                        ScriptureQuote(quran: "37:102")
+
+                        ArticleParagraph(verbatim: "And when he was grown he raised the foundations of the House with his father, and the two of them prayed while they built:")
+                        ScriptureQuote(quran: "2:127")
+
+                        ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) named his own descent from him:")
+                        ScriptureQuote(hadith: "muslim:2276", cite: "Sahih Muslim 2276", arabic: 45...64, english: 7...48)
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **He was true to his promise.** Of everything that could be said about him, Allah chose this. A man who keeps his word is rare enough that Allah praises it by name.")
+
+                        ArticleStep("2. **Obedience is a young man's virtue too.** He was a boy when he told his father to do what he was commanded. Faith is not something that arrives with age.")
+
+                        ArticleStep("3. **Build and ask for acceptance.** Father and son laid the stones of the Ka'bah and asked Allah to accept it from them. Doing the work is not the same as having it accepted.")
+                    }
                 }
 
-                Section(header: ArticleHeader("HIS STORY")) {
-                    ArticleParagraph(verbatim: "As an infant he was left with his mother Hajar in the valley of Makkah, and Zamzam sprang for him there. As a boy he was the one his father saw in the dream, and his answer when told of it is the reason he is honoured:")
-                    ScriptureQuote(quran: "37:102")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Ismail (إِسمَاعِيل)**, Ishmael, is the elder son of Ibrahim, born to Hajar. The Arabs of the Hijaz descend from him, and through him, Prophet Muhammad (peace and blessings be upon him).")
+                    }
 
-                    ArticleParagraph(verbatim: "And when he was grown he raised the foundations of the House with his father, and the two of them prayed while they built:")
-                    ScriptureQuote(quran: "2:127")
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "As a boy he was the one his father saw in the dream, and his answer when told of it is the reason he is honoured:")
+                        ScriptureQuote(quran: "37:102")
 
-                    ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) named his own descent from him:")
-                    ScriptureQuote(hadith: "muslim:2276", cite: "Sahih Muslim 2276", arabic: 45...64, english: 7...48)
-                }
-
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **He was true to his promise.** Of everything that could be said about him, Allah chose this. A man who keeps his word is rare enough that Allah praises it by name.")
-
-                    ArticleStep("2. **Obedience is a young man's virtue too.** He was a boy when he told his father to do what he was commanded. Faith is not something that arrives with age.")
-
-                    ArticleStep("3. **Build and ask for acceptance.** Father and son laid the stones of the Ka'bah and asked Allah to accept it from them. Doing the work is not the same as having it accepted.")
+                        ArticleParagraph(verbatim: "And when he was grown he raised the foundations of the House with his father.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -526,6 +744,14 @@ struct ProphetIsmailView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetIsmailView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "ismail")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryKabahView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetIsmailView")
             }
@@ -543,9 +769,14 @@ struct ProphetIshaqView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Ishaq (peace be upon him) was the son given to Ibrahim and Sarah in old age as glad tidings, and a prophet from whose line came the prophets of the Children of Israel.")
                 }
+
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "ishaq")
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(articleMarkdown: "**Ishaq (إِسحَاق)**, Isaac, is the second son of Ibrahim, born to Sarah. From his son Yaqub came the twelve tribes and almost every prophet sent to the Children of Israel.")
@@ -554,20 +785,22 @@ struct ProphetIshaqView: View {
                     ScriptureQuote(quran: "37:112-113")
                 }
 
-                Section(header: ArticleHeader("HIS STORY")) {
-                    ArticleParagraph(verbatim: "The angels who were sent to the people of Lut passed by Ibrahim first, and gave the news to Sarah, who was old and barren and laughed in astonishment:")
-                    ScriptureQuote(quran: "11:71-73")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "The angels who were sent to the people of Lut passed by Ibrahim first, and gave the news to Sarah, who was old and barren and laughed in astonishment:")
+                        ScriptureQuote(quran: "11:71-73")
 
-                    ArticleParagraph(verbatim: "Allah names Ishaq among those He guided, and joins him to his father and his son as a single line of favour:")
-                    ScriptureQuote(quran: "6:84")
+                        ArticleParagraph(verbatim: "Allah names Ishaq among those He guided, and joins him to his father and his son as a single line of favour:")
+                        ScriptureQuote(quran: "6:84")
 
-                    ArticleParagraph(articleMarkdown: "The Quran gives little of his life beyond this. His importance is in what came through him: **Yaqub**, the twelve tribes, and the long chain of prophets to Bani Israil ending with Isa (peace be upon them all).")
-                }
+                        ArticleParagraph(articleMarkdown: "The Quran gives little of his life beyond this. His importance is in what came through him: **Yaqub**, the twelve tribes, and the long chain of prophets to Bani Israil ending with Isa (peace be upon them all).")
+                    }
 
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Allah's promise does not answer to age or circumstance.** A barren woman past childbearing was given a son, and a prophet, and a line of prophets after him.")
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Allah's promise does not answer to age or circumstance.** A barren woman past childbearing was given a son, and a prophet, and a line of prophets after him.")
 
-                    ArticleStep("2. **The glad tidings were of a righteous son, not merely a son.** What was announced was his prophethood. A child is a blessing in proportion to what he becomes.")
+                        ArticleStep("2. **The glad tidings were of a righteous son, not merely a son.** What was announced was his prophethood. A child is a blessing in proportion to what he becomes.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -579,6 +812,14 @@ struct ProphetIshaqView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetIshaqView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "ishaq")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryIshaqView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetIshaqView")
             }
@@ -597,37 +838,57 @@ struct ProphetYaqubView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Yaqub (peace be upon him), also called Israil, is the father of the twelve tribes, whose patience at losing Yusuf the Quran holds up as beautiful patience.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "**Yaqub (يَعقُوب)**, Jacob, is the son of Ishaq and grandson of Ibrahim. He is also called **Israil (إِسرَائِيل)**, and his twelve sons are the twelve tribes: the **Children of Israel, Bani Israil (بَنِي إِسرَائِيل)**, are his descendants. He is named 16 times in the Quran.")
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "yaqub")
 
-                    ArticleParagraph(verbatim: "He was given to Ibrahim as an addition beyond what was asked, and made a prophet:")
-                    ScriptureQuote(quran: "21:72")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Yaqub (يَعقُوب)**, Jacob, is the son of Ishaq and grandson of Ibrahim. He is also called **Israil (إِسرَائِيل)**, and his twelve sons are the twelve tribes: the **Children of Israel, Bani Israil (بَنِي إِسرَائِيل)**, are his descendants. He is named 16 times in the Quran.")
+
+                        ArticleParagraph(verbatim: "He was given to Ibrahim as an addition beyond what was asked, and made a prophet:")
+                        ScriptureQuote(quran: "21:72")
+                    }
+
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "Most of what the Quran tells of him is inside the story of his son Yusuf. When Yusuf told him of the dream, he understood at once what it meant and what his brothers would do:")
+                        ScriptureQuote(quran: "12:4-6")
+
+                        ArticleParagraph(articleMarkdown: "When they brought his shirt stained with false blood, he did not scream or curse. He said what the Quran records as his answer, and the phrase in it, **sabrun jamil (صَبرٌ جَمِيل)**, beautiful patience, became the name for grief borne without complaint to anyone but Allah:")
+                        ScriptureQuote(quran: "12:18")
+
+                        ArticleParagraph(verbatim: "He wept until his eyes turned white from grief, and he lost his second son too, and still he did not despair:")
+                        ScriptureQuote(quran: "12:86-87")
+
+                        ArticleParagraph(verbatim: "At the end of his life his concern was not his wealth or his tribe. He gathered his sons and asked them one question:")
+                        ScriptureQuote(quran: "2:133")
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Beautiful patience is not silence about pain.** He said his grief was severe and he wept until he lost his sight. He complained of it to Allah, and to no one else. That is the distinction.")
+
+                        ArticleStep("2. **Despair of Allah's mercy is a disbelief of its own.** He sent his sons back to search after years, when everyone else had given up.")
+
+                        ArticleStep("3. **A father's greatest concern is his children's faith.** On his deathbed he asked them what they would worship after him. Nothing else was worth the question.")
+                    }
                 }
 
-                Section(header: ArticleHeader("HIS STORY")) {
-                    ArticleParagraph(verbatim: "Most of what the Quran tells of him is inside the story of his son Yusuf. When Yusuf told him of the dream, he understood at once what it meant and what his brothers would do:")
-                    ScriptureQuote(quran: "12:4-6")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Yaqub (يَعقُوب)**, Jacob, is the son of Ishaq and grandson of Ibrahim. He is also called **Israil (إِسرَائِيل)**, and his twelve sons are the twelve tribes: the **Children of Israel, Bani Israil (بَنِي إِسرَائِيل)**, are his descendants. He is named 16 times in the Quran.")
+                    }
 
-                    ArticleParagraph(articleMarkdown: "When they brought his shirt stained with false blood, he did not scream or curse. He said what the Quran records as his answer, and the phrase in it, **sabrun jamil (صَبرٌ جَمِيل)**, beautiful patience, became the name for grief borne without complaint to anyone but Allah:")
-                    ScriptureQuote(quran: "12:18")
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(articleMarkdown: "Most of what the Quran tells of him is inside the story of his son Yusuf. When Yusuf's brothers brought his shirt stained with false blood, he did not scream or curse, and the phrase in his answer, **sabrun jamil (صَبرٌ جَمِيل)**, beautiful patience, became the name for grief borne without complaint to anyone but Allah:")
+                        ScriptureQuote(quran: "12:18")
 
-                    ArticleParagraph(verbatim: "He wept until his eyes turned white from grief, and he lost his second son too, and still he did not despair:")
-                    ScriptureQuote(quran: "12:86-87")
-
-                    ArticleParagraph(verbatim: "At the end of his life his concern was not his wealth or his tribe. He gathered his sons and asked them one question:")
-                    ScriptureQuote(quran: "2:133")
-                }
-
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Beautiful patience is not silence about pain.** He said his grief was severe and he wept until he lost his sight. He complained of it to Allah, and to no one else. That is the distinction.")
-
-                    ArticleStep("2. **Despair of Allah's mercy is a disbelief of its own.** He sent his sons back to search after years, when everyone else had given up.")
-
-                    ArticleStep("3. **A father's greatest concern is his children's faith.** On his deathbed he asked them what they would worship after him. Nothing else was worth the question.")
+                        ArticleParagraph(verbatim: "He wept until his eyes turned white from grief, and still he did not despair. At the end of his life he gathered his sons and asked them what they would worship after him.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -640,13 +901,21 @@ struct ProphetYaqubView: View {
                 ProphetMiraclesLink(article: "ProphetYaqubView")
                 #endif
 
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "yaqub")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryYaqubView"))
+                }
+
                 ArticleSourcesSection(article: "ProphetYaqubView")
             }
             .themedListRowBackground()
         }
         .englishArticle().selectableArticleList(article: "ProphetYaqubView")
         .prophetMiraclesHost()
-        .navigationTitle("Yaqub")
+        .navigationTitle("Yaqub / Israil")
     }
 }
 
@@ -656,40 +925,60 @@ struct ProphetYusufView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Yusuf (peace be upon him) was thrown in a well by his brothers, sold as a slave, imprisoned though innocent, raised to authority over Egypt, and then forgave them all.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "**Yusuf (يُوسُف)**, Joseph, is the son of Yaqub. Surah Yusuf tells his life from beginning to end in one continuous account, which the Quran itself calls **the best of stories**, and it is the only story told this way. He is named 27 times.")
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "yusuf")
 
-                    ScriptureQuote(quran: "12:3")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Yusuf (يُوسُف)**, Joseph, is the son of Yaqub. Surah Yusuf tells his life from beginning to end in one continuous account, which the Quran itself calls **the best of stories**, and it is the only story told this way. He is named 27 times.")
+
+                        ScriptureQuote(quran: "12:3")
+                    }
+
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "It begins with a dream he told his father, and his father told him to keep it from his brothers. They took him out to play, threw him into the bottom of a well, and came back at nightfall weeping with a false-bloodied shirt.")
+
+                        ArticleParagraph(verbatim: "A caravan drew him out and sold him in Egypt for a trifling price. He grew up in the house of a man of rank, and the man's wife sought to seduce him and locked the doors. His answer was one sentence:")
+                        ScriptureQuote(quran: "12:23")
+
+                        ArticleParagraph(verbatim: "He chose prison over her, and asked Allah for it plainly:")
+                        ScriptureQuote(quran: "12:33")
+
+                        ArticleParagraph(verbatim: "In prison he called two fellow prisoners to tawhid before he interpreted their dreams, and he remained there several years after the freed prisoner forgot to mention him (Quran 12:42). When the king's dream came and he was summoned, he refused to leave until his innocence was established. The women confessed:")
+                        ScriptureQuote(quran: "12:51")
+
+                        ArticleParagraph(verbatim: "He was given authority over the storehouses of Egypt. His brothers came seeking food and did not know him, and when he finally told them, he did not take a single thing back from them:")
+                        ScriptureQuote(quran: "12:90-92")
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Fleeing sin can cost you, and it is still the cheaper price.** He preferred prison to disobedience, and Allah gave him Egypt.")
+
+                        ArticleStep("2. **Clear your name before you accept a position.** He would not walk out of prison under a cloud. Reputation is a trust, not vanity.")
+
+                        ArticleStep("3. **Forgiveness is the strongest thing a person in power can do.** He had every legal right and total authority, and he used neither.")
+
+                        ArticleStep("4. **Whoever fears Allah and is patient, Allah does not waste his reward.** This is the sentence Yusuf himself gives as the summary of his own life (Quran 12:90).")
+                    }
                 }
 
-                Section(header: ArticleHeader("HIS STORY")) {
-                    ArticleParagraph(verbatim: "It begins with a dream he told his father, and his father told him to keep it from his brothers. They took him out to play, threw him into the bottom of a well, and came back at nightfall weeping with a false-bloodied shirt.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Yusuf (يُوسُف)**, Joseph, is the son of Yaqub. Surah Yusuf tells his life from beginning to end in one continuous account, and it is the only story told this way.")
+                    }
 
-                    ArticleParagraph(verbatim: "A caravan drew him out and sold him in Egypt for a trifling price. He grew up in the house of a man of rank, and the man's wife sought to seduce him and locked the doors. His answer was one sentence:")
-                    ScriptureQuote(quran: "12:23")
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "It begins with a dream he told his father. His brothers threw him into the bottom of a well, a caravan sold him in Egypt for a trifling price, and the wife of the man of rank in whose house he grew up sought to seduce him and locked the doors. His answer was one sentence:")
+                        ScriptureQuote(quran: "12:23")
 
-                    ArticleParagraph(verbatim: "He chose prison over her, and asked Allah for it plainly:")
-                    ScriptureQuote(quran: "12:33")
-
-                    ArticleParagraph(verbatim: "In prison he called two fellow prisoners to tawhid before he interpreted their dreams, and he remained there several years after the freed prisoner forgot to mention him (Quran 12:42). When the king's dream came and he was summoned, he refused to leave until his innocence was established. The women confessed:")
-                    ScriptureQuote(quran: "12:51")
-
-                    ArticleParagraph(verbatim: "He was given authority over the storehouses of Egypt. His brothers came seeking food and did not know him, and when he finally told them, he did not take a single thing back from them:")
-                    ScriptureQuote(quran: "12:90-92")
-                }
-
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Fleeing sin can cost you, and it is still the cheaper price.** He preferred prison to disobedience, and Allah gave him Egypt.")
-
-                    ArticleStep("2. **Clear your name before you accept a position.** He would not walk out of prison under a cloud. Reputation is a trust, not vanity.")
-
-                    ArticleStep("3. **Forgiveness is the strongest thing a person in power can do.** He had every legal right and total authority, and he used neither.")
-
-                    ArticleStep("4. **Whoever fears Allah and is patient, Allah does not waste his reward.** This is the sentence Yusuf himself gives as the summary of his own life (Quran 12:90).")
+                        ArticleParagraph(verbatim: "He chose prison over her. When the king summoned him, he refused to leave until his innocence was established, and he was given authority over the storehouses of Egypt. His brothers came seeking food, and when he finally told them who he was, he did not take a single thing back from them.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -701,6 +990,14 @@ struct ProphetYusufView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetYusufView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "yusuf")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryYusufView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetYusufView")
             }
@@ -718,32 +1015,49 @@ struct ProphetAyyubView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Ayyub (peace be upon him) lost his health, his wealth and his children, and the Quran names him the model of patience because he never complained of his Lord.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "**Ayyub (أَيُّوب)**, Job, is named 4 times in the Quran. He was given wealth, family and health, and then all of it was taken, and he bore it for years. Allah's verdict on him is the shortest and highest praise in the matter of patience.")
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "ayyub")
 
-                    ScriptureQuote(quran: "38:44")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Ayyub (أَيُّوب)**, Job, is named 4 times in the Quran. He was given wealth, family and health, and then all of it was taken, and he bore it for years. Allah's verdict on him is the shortest and highest praise in the matter of patience.")
+
+                        ScriptureQuote(quran: "38:44")
+                    }
+
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "The Quran does not describe his illness in detail. It records the moment he finally called on his Lord, and the wording is the lesson: he did not ask for removal, he did not ask why, and he mentioned Allah's mercy before he mentioned his own need:")
+                        ScriptureQuote(quran: "21:83-84")
+
+                        ArticleParagraph(verbatim: "And Allah's answer came with relief for the body and the family both:")
+                        ScriptureQuote(quran: "38:41-44")
+
+                        ArticleParagraph(articleMarkdown: "The oath he had sworn (the commentators report that it concerned his wife; the Quran does not give the detail) ends in mercy: he was told to take a bundle of grass and strike once with it so as not to break his oath. The Quran preserves it as an easing, not a punishment.")
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Patience is not refusing to ask.** He did call on his Lord. Patience is in how you ask, and in never accusing Allah in your asking.")
+
+                        ArticleStep("2. **Allah tests those He loves.** Illness is not a sign of Allah's anger. Ayyub was a prophet through every year of it.")
+
+                        ArticleStep("3. **Relief comes, and it comes complete.** He was given his family back and the like of them with them. Allah does not restore by halves.")
+                    }
                 }
 
-                Section(header: ArticleHeader("HIS STORY")) {
-                    ArticleParagraph(verbatim: "The Quran does not describe his illness in detail. It records the moment he finally called on his Lord, and the wording is the lesson: he did not ask for removal, he did not ask why, and he mentioned Allah's mercy before he mentioned his own need:")
-                    ScriptureQuote(quran: "21:83-84")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Ayyub (أَيُّوب)**, Job, lost his wealth, his family and his health, and bore it for years. Allah's verdict on him is the highest praise in the matter of patience:")
+                        ScriptureQuote(quran: "38:44")
 
-                    ArticleParagraph(verbatim: "And Allah's answer came with relief for the body and the family both:")
-                    ScriptureQuote(quran: "38:41-44")
-
-                    ArticleParagraph(articleMarkdown: "The oath he had sworn (the commentators report that it concerned his wife; the Quran does not give the detail) ends in mercy: he was told to take a bundle of grass and strike once with it so as not to break his oath. The Quran preserves it as an easing, not a punishment.")
-                }
-
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Patience is not refusing to ask.** He did call on his Lord. Patience is in how you ask, and in never accusing Allah in your asking.")
-
-                    ArticleStep("2. **Allah tests those He loves.** Illness is not a sign of Allah's anger. Ayyub was a prophet through every year of it.")
-
-                    ArticleStep("3. **Relief comes, and it comes complete.** He was given his family back and the like of them with them. Allah does not restore by halves.")
+                        ArticleParagraph(verbatim: "When he called on his Lord, he mentioned Allah's mercy before he mentioned his own need:")
+                        ScriptureQuote(quran: "21:83-84")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -755,6 +1069,14 @@ struct ProphetAyyubView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetAyyubView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "ayyub")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryAyyubView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetAyyubView")
             }
@@ -772,9 +1094,14 @@ struct ProphetShuaybView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Shu'ayb (peace be upon him) was sent to Madyan, a people who cheated in weights and measures, and he tied honest trade directly to faith.")
                 }
+
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "shuayb")
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(articleMarkdown: "**Shu'ayb (شُعَيب)** was sent to **Madyan (مَديَن)**, a trading people of the north-west of Arabia, and to the Companions of the Wood. He is named 11 times in the Quran. He is often called the orator of the prophets for the clarity with which he argued.")
@@ -782,26 +1109,34 @@ struct ProphetShuaybView: View {
                     ScriptureQuote(quran: "7:85")
                 }
 
-                Section(header: ArticleHeader("HIS STORY")) {
-                    ArticleParagraph(verbatim: "Their sin was not idolatry alone. They short-changed people in the scales, and Shu'ayb made the connection that the Quran keeps making: worship and honest dealing are one religion, not two.")
-                    ScriptureQuote(quran: "26:181-183")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "Their sin was not idolatry alone. They short-changed people in the scales, and Shu'ayb made the connection that the Quran keeps making: worship and honest dealing are one religion, not two.")
+                        ScriptureQuote(quran: "26:181-183")
 
-                    ArticleParagraph(verbatim: "They answered him with the argument of every people who want religion kept out of their business:")
-                    ScriptureQuote(quran: "11:87")
+                        ArticleParagraph(verbatim: "They answered him with the argument of every people who want religion kept out of their business:")
+                        ScriptureQuote(quran: "11:87")
 
-                    ArticleParagraph(verbatim: "He told them plainly that he was not asking them for anything, and that he did not want to do himself what he forbade them from. When they refused, the punishment took them:")
-                    ScriptureQuote(quran: "11:94")
+                        ArticleParagraph(verbatim: "He told them plainly that he was not asking them for anything, and that he did not want to do himself what he forbade them from. When they refused, the punishment took them:")
+                        ScriptureQuote(quran: "11:94")
 
-                    ArticleParagraph(articleMarkdown: "Madyan is also where **Musa** (peace be upon him) fled after leaving Egypt, where he watered the flocks of two women and married one of them, and served their father ten years. The Quran does not name that father, and the common identification of him as Shu'ayb is not established.")
-                    ScriptureQuote(quran: "28:27")
+                        ArticleParagraph(articleMarkdown: "Madyan is also where **Musa** (peace be upon him) fled after leaving Egypt, where he watered the flocks of two women and married one of them, and served their father ten years. The Quran does not name that father, and the common identification of him as Shu'ayb is not established.")
+                        ScriptureQuote(quran: "28:27")
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Cheating in trade is a matter of creed.** A whole nation was destroyed over weights and measures. Islam does not separate the prayer mat from the marketplace.")
+
+                        ArticleStep("2. **Practise before you preach.** He said he did not want to contradict himself by doing what he forbade. A caller is measured against his own words first.")
+
+                        ArticleStep("3. **“Our wealth is our own business” is an old objection.** They mocked him for thinking prayer had anything to do with their money. It had everything to do with it.")
+                    }
                 }
 
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Cheating in trade is a matter of creed.** A whole nation was destroyed over weights and measures. Islam does not separate the prayer mat from the marketplace.")
-
-                    ArticleStep("2. **Practise before you preach.** He said he did not want to contradict himself by doing what he forbade. A caller is measured against his own words first.")
-
-                    ArticleStep("3. **“Our wealth is our own business” is an old objection.** They mocked him for thinking prayer had anything to do with their money. It had everything to do with it.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "Their sin was not idolatry alone. They short-changed people in the scales, and Shu'ayb made the connection that the Quran keeps making: worship and honest dealing are one religion, not two. They mocked him for thinking prayer had anything to do with their wealth, and when they refused, the punishment took them.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -813,6 +1148,14 @@ struct ProphetShuaybView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetShuaybView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "shuayb")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryShuaybView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetShuaybView")
             }
@@ -830,9 +1173,14 @@ struct ProphetMusaView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Musa (peace be upon him) is the prophet Allah spoke to directly, who confronted Pharaoh, brought the Children of Israel out of Egypt, and received the Torah.")
                 }
+
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "musa")
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(articleMarkdown: "**Musa (مُوسَى)**, Moses, is named 136 times in the Quran, more than any other prophet. He is one of the five messengers of firm resolve, and Allah gave him a distinction He gave to no one else in the same way: He spoke to him directly, which is why he is called **Kalimullah (كَلِيمُ اللَّه)**.")
@@ -840,49 +1188,71 @@ struct ProphetMusaView: View {
                     ScriptureQuote(quran: "4:164")
                 }
 
-                Section(header: ArticleHeader("EGYPT AND THE FLIGHT")) {
-                    ArticleParagraph(verbatim: "He was born while Pharaoh was killing the newborn sons of the Children of Israel. His mother was inspired to put him in the river, and Allah returned him to her arms to be nursed, raised in Pharaoh's own house:")
-                    ScriptureQuote(quran: "28:7-13")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("EGYPT AND THE FLIGHT")) {
+                        ArticleParagraph(verbatim: "He was born while Pharaoh was killing the newborn sons of the Children of Israel. His mother was inspired to put him in the river, and Allah returned him to her arms to be nursed, raised in Pharaoh's own house:")
+                        ScriptureQuote(quran: "28:7-13")
 
-                    ArticleParagraph(verbatim: "As a young man he struck an Egyptian in defence of an Israelite and the man died. He did not excuse it. He called it what it was and asked forgiveness:")
-                    ScriptureQuote(quran: "28:15-16")
+                        ArticleParagraph(verbatim: "As a young man he struck an Egyptian in defence of an Israelite and the man died. He did not excuse it. He called it what it was and asked forgiveness:")
+                        ScriptureQuote(quran: "28:15-16")
 
-                    ArticleParagraph(verbatim: "He fled to Madyan, watered the flocks of two women, married, and served ten years. On the way back, at the mountain, he saw a fire.")
+                        ArticleParagraph(verbatim: "He fled to Madyan, watered the flocks of two women, married, and served ten years. On the way back, at the mountain, he saw a fire.")
+                    }
+
+                    Section(header: ArticleHeader("THE CALL AND PHARAOH")) {
+                        ArticleParagraph(verbatim: "At the valley of Tuwa, Allah spoke to him and appointed him:")
+                        ScriptureQuote(quran: "20:9-14")
+
+                        ArticleParagraph(verbatim: "He was afraid, and he asked for his brother Harun to be sent with him, and he asked for something else first, which is one of the most quoted duas in the Quran:")
+                        ScriptureQuote(quran: "20:25-28")
+
+                        ArticleParagraph(verbatim: "Pharaoh had claimed divinity outright. Allah sent Musa to him with a specific instruction about how to speak to him:")
+                        ScriptureQuote(quran: "20:43-44")
+
+                        ArticleParagraph(verbatim: "The magicians were gathered and Musa's staff swallowed what they had made. They knew at once that it was not magic, and they believed on the spot. Pharaoh threatened to crucify them, and their answer is one of the great statements of faith in the Quran:")
+                        ScriptureQuote(quran: "20:72-73")
+                    }
+
+                    Section(header: ArticleHeader("THE SEA AND THE TORAH")) {
+                        ArticleParagraph(verbatim: "He led the Children of Israel out at night. With the sea ahead and Pharaoh's army behind, his people said they were caught, and he answered:")
+                        ScriptureQuote(quran: "26:61-63")
+
+                        ArticleParagraph(verbatim: "The sea parted, they crossed, and Pharaoh drowned in it. Allah says his body was preserved as a sign. Musa went to the mountain for forty nights and was given the Torah, and while he was away his people made the calf.")
+
+                        ArticleParagraph(verbatim: "He asked to see his Lord, and was answered:")
+                        ScriptureQuote(quran: "7:143")
+
+                        ArticleParagraph(articleMarkdown: "The Prophet (peace and blessings be upon him) fasted **Ashura** for the same deliverance, and claimed Musa as his own:")
+                        ScriptureQuote(hadith: "bukhari:2004", cite: "Sahih al-Bukhari 2004", english: [48...55, 56...71])
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Speak gently, even to a tyrant.** The instruction to Musa and Harun before Pharaoh was to speak a gentle word. If that was the manner with Pharaoh, harshness has no excuse anywhere else.")
+
+                        ArticleStep("2. **Ask Allah to open your chest before you ask Him for the task.** His dua at Tuwa asked for ease in himself first, and for a helper, before anything else.")
+
+                        ArticleStep("3. **Certainty is not the absence of a visible way out.** With the sea in front and the army behind, he said his Lord was with him and would guide him, and the sea was not yet open when he said it.")
+                    }
                 }
 
-                Section(header: ArticleHeader("THE CALL AND PHARAOH")) {
-                    ArticleParagraph(verbatim: "At the valley of Tuwa, Allah spoke to him and appointed him:")
-                    ScriptureQuote(quran: "20:9-14")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("EGYPT AND THE FLIGHT")) {
+                        ArticleParagraph(verbatim: "He was born while Pharaoh was killing the newborn sons of the Children of Israel. His mother was inspired to put him in the river, and Allah returned him to her arms, to be raised in Pharaoh's own house. As a young man he struck an Egyptian in defence of an Israelite and the man died; he fled to Madyan, married, and served ten years.")
+                    }
 
-                    ArticleParagraph(verbatim: "He was afraid, and he asked for his brother Harun to be sent with him, and he asked for something else first, which is one of the most quoted duas in the Quran:")
-                    ScriptureQuote(quran: "20:25-28")
+                    Section(header: ArticleHeader("THE CALL AND PHARAOH")) {
+                        ArticleParagraph(verbatim: "At the valley of Tuwa, Allah spoke to him and appointed him, and sent him with his brother Harun to Pharaoh, who had claimed divinity outright, with a specific instruction about how to speak to him:")
+                        ScriptureQuote(quran: "20:43-44")
 
-                    ArticleParagraph(verbatim: "Pharaoh had claimed divinity outright. Allah sent Musa to him with a specific instruction about how to speak to him:")
-                    ScriptureQuote(quran: "20:43-44")
+                        ArticleParagraph(verbatim: "The magicians were gathered, Musa's staff swallowed what they had made, and they believed on the spot.")
+                    }
 
-                    ArticleParagraph(verbatim: "The magicians were gathered and Musa's staff swallowed what they had made. They knew at once that it was not magic, and they believed on the spot. Pharaoh threatened to crucify them, and their answer is one of the great statements of faith in the Quran:")
-                    ScriptureQuote(quran: "20:72-73")
-                }
+                    Section(header: ArticleHeader("THE SEA AND THE TORAH")) {
+                        ArticleParagraph(verbatim: "He led the Children of Israel out at night. With the sea ahead and Pharaoh's army behind, his people said they were caught, and he answered:")
+                        ScriptureQuote(quran: "26:61-63")
 
-                Section(header: ArticleHeader("THE SEA AND THE TORAH")) {
-                    ArticleParagraph(verbatim: "He led the Children of Israel out at night. With the sea ahead and Pharaoh's army behind, his people said they were caught, and he answered:")
-                    ScriptureQuote(quran: "26:61-63")
-
-                    ArticleParagraph(verbatim: "The sea parted, they crossed, and Pharaoh drowned in it. Allah says his body was preserved as a sign. Musa went to the mountain for forty nights and was given the Torah, and while he was away his people made the calf.")
-
-                    ArticleParagraph(verbatim: "He asked to see his Lord, and was answered:")
-                    ScriptureQuote(quran: "7:143")
-
-                    ArticleParagraph(articleMarkdown: "The Prophet (peace and blessings be upon him) fasted **Ashura** for the same deliverance, and claimed Musa as his own:")
-                    ScriptureQuote(hadith: "bukhari:2004", cite: "Sahih al-Bukhari 2004", english: [48...55, 56...71])
-                }
-
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Speak gently, even to a tyrant.** The instruction to Musa and Harun before Pharaoh was to speak a gentle word. If that was the manner with Pharaoh, harshness has no excuse anywhere else.")
-
-                    ArticleStep("2. **Ask Allah to open your chest before you ask Him for the task.** His dua at Tuwa asked for ease in himself first, and for a helper, before anything else.")
-
-                    ArticleStep("3. **Certainty is not the absence of a visible way out.** With the sea in front and the army behind, he said his Lord was with him and would guide him, and the sea was not yet open when he said it.")
+                        ArticleParagraph(verbatim: "The sea parted, they crossed, and Pharaoh drowned in it. Musa went to the mountain for forty nights and was given the Torah.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -895,6 +1265,14 @@ struct ProphetMusaView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetMusaView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "musa")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryMusaEarlyView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetMusaView")
             }
@@ -912,37 +1290,56 @@ struct ProphetHarunView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Harun (peace be upon him) was the brother Musa asked for, sent with him to Pharaoh, and left in charge when Musa went to the mountain.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "**Harun (هَارُون)**, Aaron, is the brother of Musa (the commentators report that he was the elder) and a prophet in his own right. He is the answer to a dua: Musa asked for him by name, and Allah granted it.")
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "harun")
 
-                    ScriptureQuote(quran: "20:29-32")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Harun (هَارُون)**, Aaron, is the brother of Musa (the commentators report that he was the elder) and a prophet in his own right. He is the answer to a dua: Musa asked for him by name, and Allah granted it.")
 
-                    ArticleParagraph(verbatim: "Allah records the granting of that request as a mercy, and calls Harun a prophet in the same verse:")
-                    ScriptureQuote(quran: "19:53")
+                        ScriptureQuote(quran: "20:29-32")
+
+                        ArticleParagraph(verbatim: "Allah records the granting of that request as a mercy, and calls Harun a prophet in the same verse:")
+                        ScriptureQuote(quran: "19:53")
+                    }
+
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "He was more eloquent than Musa, and Musa said so when he asked for him. The two went to Pharaoh together and were told together not to fear.")
+
+                        ArticleParagraph(verbatim: "When Musa went to the mountain for forty nights he left Harun over his people, and in his absence as-Samiri made the calf. Harun warned them and they would not listen:")
+                        ScriptureQuote(quran: "20:90-91")
+
+                        ArticleParagraph(verbatim: "Musa returned in fury and seized his brother by the head and beard. Harun's answer shows what he had been weighing:")
+                        ScriptureQuote(quran: "20:94")
+
+                        ArticleParagraph(verbatim: "He had feared that acting against them would split the people, and he had chosen to hold them together and wait. Musa then prayed for them both.")
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Ask Allah for the help you need, by name.** Musa asked for his brother specifically, and Allah gave him a prophet as his helper.")
+
+                        ArticleStep("2. **Unity is weighed against correction, and it is a real weight.** Harun feared dividing the people. The Quran records his reasoning without condemning it.")
+
+                        ArticleStep("3. **A deputy is answerable.** He was left in charge and he was questioned about what happened on his watch, though he had warned them.")
+                    }
                 }
 
-                Section(header: ArticleHeader("HIS STORY")) {
-                    ArticleParagraph(verbatim: "He was more eloquent than Musa, and Musa said so when he asked for him. The two went to Pharaoh together and were told together not to fear.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Harun (هَارُون)**, Aaron, is the brother of Musa and a prophet in his own right. He is the answer to a dua: Musa asked for him by name, and Allah granted it.")
 
-                    ArticleParagraph(verbatim: "When Musa went to the mountain for forty nights he left Harun over his people, and in his absence as-Samiri made the calf. Harun warned them and they would not listen:")
-                    ScriptureQuote(quran: "20:90-91")
+                        ScriptureQuote(quran: "20:29-32")
+                    }
 
-                    ArticleParagraph(verbatim: "Musa returned in fury and seized his brother by the head and beard. Harun's answer shows what he had been weighing:")
-                    ScriptureQuote(quran: "20:94")
-
-                    ArticleParagraph(verbatim: "He had feared that acting against them would split the people, and he had chosen to hold them together and wait. Musa then prayed for them both.")
-                }
-
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Ask Allah for the help you need, by name.** Musa asked for his brother specifically, and Allah gave him a prophet as his helper.")
-
-                    ArticleStep("2. **Unity is weighed against correction, and it is a real weight.** Harun feared dividing the people. The Quran records his reasoning without condemning it.")
-
-                    ArticleStep("3. **A deputy is answerable.** He was left in charge and he was questioned about what happened on his watch, though he had warned them.")
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "When Musa went to the mountain for forty nights he left Harun over his people, and in his absence as-Samiri made the calf. Harun warned them, and chose to hold the people together rather than split them.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -954,6 +1351,14 @@ struct ProphetHarunView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetHarunView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "harun")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryHarunView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetHarunView")
             }
@@ -974,6 +1379,9 @@ struct ProphetDhulKiflView: View {
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Dhul-Kifl (peace be upon him) is named twice in the Quran, both times among the patient and the excellent, and nothing more of his story is given.")
                 }
+
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "dhulkifl")
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(articleMarkdown: "**Dhul-Kifl (ذُو الكِفل)** is one of the briefest entries in the Quran. He is named twice, each time in a list of prophets Allah praises, and no episode of his life is related.")
@@ -1003,6 +1411,14 @@ struct ProphetDhulKiflView: View {
                     ArticleClosing("Two verses, both of them praise, and no story: Dhul-Kifl is remembered for his patience and for nothing we were told to add to it.")
                 }
 
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "dhulkifl")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryDhulKiflView"))
+                }
+
                 ArticleSourcesSection(article: "ProphetDhulKiflView")
             }
             .themedListRowBackground()
@@ -1019,9 +1435,14 @@ struct ProphetDawudView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Dawud (peace be upon him) killed Jalut as a young man, was given kingship and the Zabur, and the mountains and birds joined him when he praised Allah.")
                 }
+
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "dawud")
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(articleMarkdown: "**Dawud (دَاوُود)**, David, is both a prophet and a king, which the Quran notes as a combined gift. He was given the **Zabur (زَبُور)**, the Psalms. He is named 16 times.")
@@ -1031,26 +1452,34 @@ struct ProphetDawudView: View {
                     ArticleParagraph(verbatim: "He was in the army of Talut when he killed Jalut, and Allah gave him kingship and wisdom afterwards.")
                 }
 
-                Section(header: ArticleHeader("WHAT HE WAS GIVEN")) {
-                    ArticleParagraph(verbatim: "Allah subjected the mountains and the birds to praise along with him, and softened iron in his hands:")
-                    ScriptureQuote(quran: "34:10-11")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("WHAT HE WAS GIVEN")) {
+                        ArticleParagraph(verbatim: "Allah subjected the mountains and the birds to praise along with him, and softened iron in his hands:")
+                        ScriptureQuote(quran: "34:10-11")
 
-                    ArticleParagraph(verbatim: "He made his own armour and ate from the work of his hands. The Prophet (peace and blessings be upon him) said:")
-                    ScriptureQuote(hadith: "bukhari:2073", cite: "Sahih al-Bukhari 2073", english: 4...19)
+                        ArticleParagraph(verbatim: "He made his own armour and ate from the work of his hands. The Prophet (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:2073", cite: "Sahih al-Bukhari 2073", english: 4...19)
 
-                    ArticleParagraph(verbatim: "His worship was the measure the Prophet (peace and blessings be upon him) held up as the best, precisely because it was sustainable:")
-                    ScriptureQuote(hadith: "bukhari:1131", cite: "Sahih al-Bukhari 1131", english: 5...57)
+                        ArticleParagraph(verbatim: "His worship was the measure the Prophet (peace and blessings be upon him) held up as the best, precisely because it was sustainable:")
+                        ScriptureQuote(hadith: "bukhari:1131", cite: "Sahih al-Bukhari 1131", english: 5...57)
 
-                    ArticleParagraph(verbatim: "He judged between people, and Allah taught him and his son in a case where they ruled differently and praised them both:")
-                    ScriptureQuote(quran: "21:78-79")
+                        ArticleParagraph(verbatim: "He judged between people, and Allah taught him and his son in a case where they ruled differently and praised them both:")
+                        ScriptureQuote(quran: "21:78-79")
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Eat from the work of your own hands.** A prophet and a king made armour for a living. Work is not beneath anyone.")
+
+                        ArticleStep("2. **The best worship is what you can keep up.** Sleeping half the night, praying a third of it and sleeping its last sixth, and fasting every other day: the Prophet called this the most beloved to Allah, not the most extreme.")
+
+                        ArticleStep("3. **A sincere judge who errs is not condemned.** Allah gave understanding to Sulayman in that case and praised both of them for judgement and knowledge.")
+                    }
                 }
 
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Eat from the work of your own hands.** A prophet and a king made armour for a living. Work is not beneath anyone.")
-
-                    ArticleStep("2. **The best worship is what you can keep up.** Sleeping half the night, praying a third of it and sleeping its last sixth, and fasting every other day: the Prophet called this the most beloved to Allah, not the most extreme.")
-
-                    ArticleStep("3. **A sincere judge who errs is not condemned.** Allah gave understanding to Sulayman in that case and praised both of them for judgement and knowledge.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("WHAT HE WAS GIVEN")) {
+                        ArticleParagraph(verbatim: "Allah subjected the mountains and the birds to praise along with him, and softened iron in his hands, and he made his own armour.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -1063,6 +1492,14 @@ struct ProphetDawudView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetDawudView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "dawud")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryDawudView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetDawudView")
             }
@@ -1080,9 +1517,14 @@ struct ProphetSulaymanView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Sulayman (peace be upon him) was given a kingdom like no one after him, understood the speech of birds and ants, and ruled over the jinn and the wind.")
                 }
+
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "sulayman")
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(articleMarkdown: "**Sulayman (سُلَيمَان)**, Solomon, is the son of Dawud and inherited his prophethood and his kingdom. He asked Allah for a kingdom that would belong to no one after him, and it was given:")
@@ -1091,36 +1533,52 @@ struct ProphetSulaymanView: View {
 
                 }
 
-                Section(header: ArticleHeader("HIS STORY")) {
-                    ArticleParagraph(verbatim: "He was taught the speech of the birds, and the Quran records him overhearing an ant warn her colony to get out of the way of his armies. His reaction was not pride at the power but gratitude for it:")
-                    ScriptureQuote(quran: "27:16-19")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "He was taught the speech of the birds, and the Quran records him overhearing an ant warn her colony to get out of the way of his armies. His reaction was not pride at the power but gratitude for it:")
+                        ScriptureQuote(quran: "27:16-19")
 
-                    ArticleParagraph(verbatim: "The hoopoe brought him news of a queen in Saba whose people prostrated to the sun. He did not act on the report until he had checked it:")
-                    ScriptureQuote(quran: "27:27-28")
+                        ArticleParagraph(verbatim: "The hoopoe brought him news of a queen in Saba whose people prostrated to the sun. He did not act on the report until he had checked it:")
+                        ScriptureQuote(quran: "27:27-28")
 
-                    ArticleParagraph(verbatim: "And the letter he sent called her to Islam, not to submission to himself:")
-                    ScriptureQuote(quran: "27:30-31")
+                        ArticleParagraph(verbatim: "And the letter he sent called her to Islam, not to submission to himself:")
+                        ScriptureQuote(quran: "27:30-31")
 
-                    ArticleParagraph(verbatim: "Her throne was brought to him in the time it takes to blink, by one who had knowledge of the Scripture, and again his response was about himself and not about the marvel:")
-                    ScriptureQuote(quran: "27:40")
+                        ArticleParagraph(verbatim: "Her throne was brought to him in the time it takes to blink, by one who had knowledge of the Scripture, and again his response was about himself and not about the marvel:")
+                        ScriptureQuote(quran: "27:40")
 
-                    ArticleParagraph(verbatim: "She came, saw, and declared her faith along with him. And when Sulayman died, the jinn who had been made to labour for him did not know it until a worm ate through his staff and he fell, which the Quran gives as proof that they do not know the unseen:")
-                    ScriptureQuote(quran: "34:14")
+                        ArticleParagraph(verbatim: "She came, saw, and declared her faith along with him. And when Sulayman died, the jinn who had been made to labour for him did not know it until a worm ate through his staff and he fell, which the Quran gives as proof that they do not know the unseen:")
+                        ScriptureQuote(quran: "34:14")
+                    }
+
+                    Section(header: ArticleHeader("MAGIC IS NOT HIS")) {
+                        ArticleParagraph(verbatim: "Sulayman is falsely associated with magic and with talismans bearing his name. The Quran answers this charge directly and clears him of it:")
+                        ScriptureQuote(quran: "2:102", words: 0...23)
+
+                        ArticleParagraph(articleMarkdown: "Magic is **kufr**, disbelief, and Sulayman did not disbelieve. Any amulet, seal or ring sold in his name is a lie against a prophet.")
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **The greater the blessing, the greater the gratitude owed.** At every marvel in his story, Sulayman's first words are about thanking Allah and about his own soul.")
+
+                        ArticleStep("2. **Verify a report before you act on it.** He told the hoopoe he would see whether it had told the truth, and he checked before he acted.")
+
+                        ArticleStep("3. **The jinn do not know the unseen.** They laboured on for a dead king leaning on a staff. This one verse closes the door on every claim built on their supposed knowledge.")
+                    }
                 }
 
-                Section(header: ArticleHeader("MAGIC IS NOT HIS")) {
-                    ArticleParagraph(verbatim: "Sulayman is falsely associated with magic and with talismans bearing his name. The Quran answers this charge directly and clears him of it:")
-                    ScriptureQuote(quran: "2:102", words: 0...23)
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "He was taught the speech of the birds, and when he overheard an ant warn her colony to get out of the way of his armies, his reaction was not pride at the power but gratitude for it. The hoopoe brought him news of a queen in Saba whose people prostrated to the sun. He did not act on the report until he had checked it, and the letter he sent called her to Islam, not to submission to himself:")
+                        ScriptureQuote(quran: "27:30-31")
 
-                    ArticleParagraph(articleMarkdown: "Magic is **kufr**, disbelief, and Sulayman did not disbelieve. Any amulet, seal or ring sold in his name is a lie against a prophet.")
-                }
+                        ArticleParagraph(verbatim: "She came, saw, and declared her faith along with him. And when Sulayman died, the jinn who had been made to labour for him did not know it until a worm ate through his staff and he fell, which the Quran gives as proof that they do not know the unseen:")
+                        ScriptureQuote(quran: "34:14")
+                    }
 
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **The greater the blessing, the greater the gratitude owed.** At every marvel in his story, Sulayman's first words are about thanking Allah and about his own soul.")
-
-                    ArticleStep("2. **Verify a report before you act on it.** He told the hoopoe he would see whether it had told the truth, and he checked before he acted.")
-
-                    ArticleStep("3. **The jinn do not know the unseen.** They laboured on for a dead king leaning on a staff. This one verse closes the door on every claim built on their supposed knowledge.")
+                    Section(header: ArticleHeader("MAGIC IS NOT HIS")) {
+                        ArticleParagraph(articleMarkdown: "Sulayman is falsely associated with magic and with talismans bearing his name. Magic is **kufr**, disbelief, and Sulayman did not disbelieve: any amulet, seal or ring sold in his name is a lie against a prophet.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -1133,6 +1591,14 @@ struct ProphetSulaymanView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetSulaymanView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "sulayman")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StorySulaymanView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetSulaymanView")
             }
@@ -1153,6 +1619,9 @@ struct ProphetIlyasView: View {
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Ilyas (peace be upon him) was sent to a people who worshipped an idol called Ba'l, and he called them back to Allah alone.")
                 }
+
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "ilyas")
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(articleMarkdown: "**Ilyas (إِليَاس)**, Elias, is named twice in the Quran. He was sent to a people of the Children of Israel who had taken an idol named **Ba'l (بَعل)** beside Allah.")
@@ -1180,6 +1649,14 @@ struct ProphetIlyasView: View {
                     ArticleClosing("Ilyas asked a people worshipping an idol why they had left the best of creators, and Allah preserved his name among the believers.")
                 }
 
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "ilyas")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryIlyasView"))
+                }
+
                 ArticleSourcesSection(article: "ProphetIlyasView")
             }
             .themedListRowBackground()
@@ -1199,6 +1676,9 @@ struct ProphetAlyasaView: View {
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Alyasa (peace be upon him) is named twice in the Quran, both times among the chosen and the excellent, with no episode of his life related.")
                 }
+
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "alyasa")
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(articleMarkdown: "**Alyasa (اليَسَع)**, Elisha, was a prophet of the Children of Israel. Like Dhul-Kifl and Idris, the Quran names him in praise and tells no story about him.")
@@ -1225,6 +1705,14 @@ struct ProphetAlyasaView: View {
                     ArticleClosing("Alyasa is named among those Allah chose above the worlds, and that is the entire record we were given of him.")
                 }
 
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "alyasa")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryAlyasaView"))
+                }
+
                 ArticleSourcesSection(article: "ProphetAlyasaView")
             }
             .themedListRowBackground()
@@ -1241,40 +1729,58 @@ struct ProphetYunusView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Yunus (peace be upon him) left his people without permission, was swallowed by the whale, and the dua he made in that darkness is answered for anyone who says it.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "**Yunus (يُونُس)**, Jonah, was sent to the people of Nineveh. He is named 4 times and a surah carries his name. He is also called **Dhun-Nun (ذُو النُّون)**, the one of the whale, and **Sahib al-Hut**, the companion of the fish.")
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "yunus")
 
-                    ScriptureQuote(quran: "37:139-141")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Yunus (يُونُس)**, Jonah, was sent to the people of Nineveh. He is named 4 times and a surah carries his name. He is also called **Dhun-Nun (ذُو النُّون)**, the one of the whale, and **Sahib al-Hut**, the companion of the fish.")
+
+                        ScriptureQuote(quran: "37:139-141")
+                    }
+
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "He called his people and they did not answer, and he left them in anger before he was given permission to. He boarded a ship, lots were drawn, and he was thrown into the sea and swallowed by the whale.")
+
+                        ArticleParagraph(verbatim: "In three layers of darkness he called out, and the Quran preserves the exact words:")
+                        ScriptureQuote(quran: "21:87-88")
+
+                        ArticleParagraph(articleMarkdown: "This is the **Dua of Yunus**, and the Prophet (peace and blessings be upon him) said of it:")
+                        ScriptureQuote(hadith: "tirmidhi:3505", cite: "Jami' at-Tirmidhi 3505; graded sahih by al-Albani", english: 0...58)
+
+                        ArticleParagraph(verbatim: "Allah says that had he not been of those who exalt Him, he would have stayed in the whale's belly until the Day of Resurrection. He was cast onto the open shore, ill, and a gourd plant was made to grow over him.")
+
+                        ArticleParagraph(verbatim: "And his people, alone among all the nations the Quran mentions, believed before the punishment fell:")
+                        ScriptureQuote(quran: "10:98")
+
+                        ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) also forbade anyone to claim superiority over him:")
+                        ScriptureQuote(hadith: "bukhari:3416", cite: "Sahih al-Bukhari 3416", english: 4...14)
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Begin with tawhid, then admit the wrong.** His dua declares Allah's oneness and perfection first and only then confesses. That order is why it is answered.")
+
+                        ArticleStep("2. **No darkness is outside Allah's reach.** Inside a whale, inside the sea, inside the night, and he was heard.")
+
+                        ArticleStep("3. **A caller does not get to quit on his own timing.** His leaving was before permission, and the Quran never hides it.")
+                    }
                 }
 
-                Section(header: ArticleHeader("HIS STORY")) {
-                    ArticleParagraph(verbatim: "He called his people and they did not answer, and he left them in anger before he was given permission to. He boarded a ship, lots were drawn, and he was thrown into the sea and swallowed by the whale.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Yunus (يُونُس)**, Jonah, was sent to the people of Nineveh. He is named 4 times and a surah carries his name. He is also called **Dhun-Nun (ذُو النُّون)**, the one of the whale, and **Sahib al-Hut**, the companion of the fish.")
+                    }
 
-                    ArticleParagraph(verbatim: "In three layers of darkness he called out, and the Quran preserves the exact words:")
-                    ScriptureQuote(quran: "21:87-88")
-
-                    ArticleParagraph(articleMarkdown: "This is the **Dua of Yunus**, and the Prophet (peace and blessings be upon him) said of it:")
-                    ScriptureQuote(hadith: "tirmidhi:3505", cite: "Jami' at-Tirmidhi 3505; graded sahih by al-Albani", english: 0...58)
-
-                    ArticleParagraph(verbatim: "Allah says that had he not been of those who exalt Him, he would have stayed in the whale's belly until the Day of Resurrection. He was cast onto the open shore, ill, and a gourd plant was made to grow over him.")
-
-                    ArticleParagraph(verbatim: "And his people, alone among all the nations the Quran mentions, believed before the punishment fell:")
-                    ScriptureQuote(quran: "10:98")
-
-                    ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) also forbade anyone to claim superiority over him:")
-                    ScriptureQuote(hadith: "bukhari:3416", cite: "Sahih al-Bukhari 3416", english: 4...14)
-                }
-
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Begin with tawhid, then admit the wrong.** His dua declares Allah's oneness and perfection first and only then confesses. That order is why it is answered.")
-
-                    ArticleStep("2. **No darkness is outside Allah's reach.** Inside a whale, inside the sea, inside the night, and he was heard.")
-
-                    ArticleStep("3. **A caller does not get to quit on his own timing.** His leaving was before permission, and the Quran never hides it.")
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "He left his people in anger before he was given permission, was thrown from a ship into the sea, and was swallowed by the whale. In three layers of darkness he called out, and the Quran preserves the exact words:")
+                        ScriptureQuote(quran: "21:87-88")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -1287,6 +1793,14 @@ struct ProphetYunusView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetYunusView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "yunus")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryYunusView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetYunusView")
             }
@@ -1304,35 +1818,55 @@ struct ProphetZakariyaView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Zakariya (peace be upon him) was an old man with a barren wife who asked Allah for an heir in private, and was given Yahya.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "**Zakariya (زَكَرِيَّا)**, Zachariah, was a prophet of the Children of Israel and the guardian of **Maryam**. He is named 7 times in the Quran. He worked as a carpenter, and the Prophet (peace and blessings be upon him) mentioned it:")
-                    ScriptureQuote(hadith: "muslim:2379", cite: "Sahih Muslim 2379", english: 0...7)
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "zakariyya")
 
-                    ArticleParagraph(verbatim: "He was appointed over Maryam, and what he saw in her chamber is what moved him to ask:")
-                    ScriptureQuote(quran: "3:37")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Zakariya (زَكَرِيَّا)**, Zachariah, was a prophet of the Children of Israel and the guardian of **Maryam**. He is named 7 times in the Quran. He worked as a carpenter, and the Prophet (peace and blessings be upon him) mentioned it:")
+                        ScriptureQuote(hadith: "muslim:2379", cite: "Sahih Muslim 2379", english: 0...7)
+
+                        ArticleParagraph(verbatim: "He was appointed over Maryam, and what he saw in her chamber is what moved him to ask:")
+                        ScriptureQuote(quran: "3:37")
+                    }
+
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "He was old, his bones had weakened, his head was aflame with grey, and his wife had been barren all her life. He did not ask loudly:")
+                        ScriptureQuote(quran: "19:2-6")
+
+                        ArticleParagraph(verbatim: "Allah answered him with the news of a son and even named the child Himself, and said He had given that name to no one before:")
+                        ScriptureQuote(quran: "19:7")
+
+                        ArticleParagraph(verbatim: "He asked for a sign and was given one: he would not speak to people for three nights though he was sound. And the Quran sums up why such people are answered:")
+                        ScriptureQuote(quran: "21:89-90")
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Call on Allah in secret.** The Quran points out that he called his Lord a private call. The best dua has no audience.")
+
+                        ArticleStep("2. **Nothing is too late to ask for.** An old man with a barren wife asked for a child, and the Quran preserves both the impossibility and the answer.")
+
+                        ArticleStep("3. **Ask for what will outlast you.** He wanted an heir to the religion, not to an estate. He said he feared for what would come after him.")
+                    }
                 }
 
-                Section(header: ArticleHeader("HIS STORY")) {
-                    ArticleParagraph(verbatim: "He was old, his bones had weakened, his head was aflame with grey, and his wife had been barren all her life. He did not ask loudly:")
-                    ScriptureQuote(quran: "19:2-6")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Zakariya (زَكَرِيَّا)**, Zachariah, was a prophet of the Children of Israel and the guardian of **Maryam**. He is named 7 times in the Quran.")
+                    }
 
-                    ArticleParagraph(verbatim: "Allah answered him with the news of a son and even named the child Himself, and said He had given that name to no one before:")
-                    ScriptureQuote(quran: "19:7")
+                    Section(header: ArticleHeader("HIS STORY")) {
+                        ArticleParagraph(verbatim: "He was old, his bones had weakened, his head was aflame with grey, and his wife had been barren all her life. He did not ask loudly:")
+                        ScriptureQuote(quran: "19:2-6")
 
-                    ArticleParagraph(verbatim: "He asked for a sign and was given one: he would not speak to people for three nights though he was sound. And the Quran sums up why such people are answered:")
-                    ScriptureQuote(quran: "21:89-90")
-                }
-
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Call on Allah in secret.** The Quran points out that he called his Lord a private call. The best dua has no audience.")
-
-                    ArticleStep("2. **Nothing is too late to ask for.** An old man with a barren wife asked for a child, and the Quran preserves both the impossibility and the answer.")
-
-                    ArticleStep("3. **Ask for what will outlast you.** He wanted an heir to the religion, not to an estate. He said he feared for what would come after him.")
+                        ArticleParagraph(verbatim: "Allah answered him with the news of a son, and named the child Himself: Yahya.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -1344,6 +1878,14 @@ struct ProphetZakariyaView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetZakariyaView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "zakariyya")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryZakariyyaView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetZakariyaView")
             }
@@ -1364,6 +1906,9 @@ struct ProphetYahyaView: View {
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Yahya (peace be upon him) was given wisdom as a child, and Allah greeted him with peace on the day he was born, the day he dies, and the day he is raised.")
                 }
+
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "yahya")
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(articleMarkdown: "**Yahya (يَحيَى)**, John the Baptist, is the son of Zakariya, the answer to his father's private prayer. Allah named him Himself and gave him qualities in a single verse that few others are given.")
@@ -1398,6 +1943,14 @@ struct ProphetYahyaView: View {
                 ProphetMiraclesLink(article: "ProphetYahyaView")
                 #endif
 
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "yahya")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryYahyaView"))
+                }
+
                 ArticleSourcesSection(article: "ProphetYahyaView")
             }
             .themedListRowBackground()
@@ -1414,55 +1967,87 @@ struct ProphetIsaView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Isa (peace be upon him) was born to Maryam without a father, given the Injil, raised up by Allah before he could be killed, and will return before the Hour. He is a servant of Allah, not His son.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "**Isa ibn Maryam (عِيسَى ابنُ مَريَم)**, Jesus son of Mary, is one of the five messengers of firm resolve. He is named 25 times in the Quran, given the **Injil (إِنجِيل)**, the Gospel, and is called the **Masih (مَسِيح)**, the Messiah. His mother Maryam is the only woman named in the Quran, and a surah carries her name.")
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "isa")
 
-                    ScriptureQuote(quran: "3:45-47")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Isa ibn Maryam (عِيسَى ابنُ مَريَم)**, Jesus son of Mary, is one of the five messengers of firm resolve. He is named 25 times in the Quran, given the **Injil (إِنجِيل)**, the Gospel, and is called the **Masih (مَسِيح)**, the Messiah. His mother Maryam is the only woman named in the Quran, and a surah carries her name.")
+
+                        ScriptureQuote(quran: "3:45-47")
+                    }
+
+                    Section(header: ArticleHeader("HIS BIRTH AND SIGNS")) {
+                        ArticleParagraph(verbatim: "He was created without a father, and the Quran compares that creation to Adam's, who had neither father nor mother:")
+                        ScriptureQuote(quran: "3:59")
+
+                        ArticleParagraph(verbatim: "Maryam withdrew to a remote place, and she bore him alone under a palm tree. When she brought him to her people and they accused her, she pointed to the infant, and he spoke from the cradle:")
+                        ScriptureQuote(quran: "19:29-33")
+
+                        ArticleParagraph(articleMarkdown: "His first recorded words are **“Indeed, I am the servant of Allah”**, which is the answer to everything later claimed about him. Allah gave him signs by His permission: he formed a bird from clay and breathed into it, healed the blind and the leper, and revived the dead, and the Quran attaches **by Allah's permission** to each one:")
+                        ScriptureQuote(quran: "3:49")
+
+                        ArticleParagraph(verbatim: "And he foretold the Messenger to come after him:")
+                        ScriptureQuote(quran: "61:6")
+                    }
+
+                    Section(header: ArticleHeader("HE WAS NOT CRUCIFIED")) {
+                        ArticleParagraph(verbatim: "The Quran states directly that he was neither killed nor crucified, and that Allah raised him to Himself:")
+                        ScriptureQuote(quran: "4:157-158")
+
+                        ArticleParagraph(verbatim: "He will return before the Day of Judgement, break the cross, and rule by the Sharia of Muhammad (peace and blessings be upon them both). The Prophet (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:3448", cite: "Sahih al-Bukhari 3448", english: 4...46)
+                    }
+
+                    Section(header: ArticleHeader("WHAT MUSLIMS DO NOT BELIEVE")) {
+                        ArticleParagraph(articleMarkdown: "Loving and honouring Isa is part of Islam. Claiming he is Allah, or the son of Allah, or one of three, is **shirk**, and the Quran answers it explicitly:")
+                        ScriptureQuote(quran: "4:171")
+
+                        ArticleParagraph(verbatim: "And Allah will ask him on the Day of Judgement, and his answer clears him of all of it:")
+                        ScriptureQuote(quran: "5:116")
+
+                        ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) forbade his own followers the excess the Christians committed over Isa:")
+                        ScriptureQuote(hadith: "bukhari:3445", cite: "Sahih al-Bukhari 3445", english: 6...35)
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **Every miracle was by Allah's permission.** The Quran repeats the phrase each time. The one who performs a sign is not the one who owns it.")
+
+                        ArticleStep("2. **Love without exaggeration.** A Muslim who denies Isa is not a Muslim, and a Muslim who deifies him is not either. The Sunnah is the middle.")
+
+                        ArticleStep("3. **He called to the same thing every prophet called to.** Worship Allah, my Lord and your Lord. That sentence is in his mouth in the Quran twice.")
+                    }
                 }
 
-                Section(header: ArticleHeader("HIS BIRTH AND SIGNS")) {
-                    ArticleParagraph(verbatim: "He was created without a father, and the Quran compares that creation to Adam's, who had neither father nor mother:")
-                    ScriptureQuote(quran: "3:59")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "**Isa ibn Maryam (عِيسَى ابنُ مَريَم)**, Jesus son of Mary, is one of the five messengers of firm resolve. He is named 25 times in the Quran, given the **Injil (إِنجِيل)**, the Gospel, and is called the **Masih (مَسِيح)**, the Messiah. His mother Maryam is the only woman named in the Quran, and a surah carries her name.")
+                    }
 
-                    ArticleParagraph(verbatim: "Maryam withdrew to a remote place, and she bore him alone under a palm tree. When she brought him to her people and they accused her, she pointed to the infant, and he spoke from the cradle:")
-                    ScriptureQuote(quran: "19:29-33")
+                    Section(header: ArticleHeader("HIS BIRTH AND SIGNS")) {
+                        ArticleParagraph(verbatim: "He was created without a father, and the Quran compares that creation to Adam's, who had neither father nor mother:")
+                        ScriptureQuote(quran: "3:59")
 
-                    ArticleParagraph(articleMarkdown: "His first recorded words are **“Indeed, I am the servant of Allah”**, which is the answer to everything later claimed about him. Allah gave him signs by His permission: he formed a bird from clay and breathed into it, healed the blind and the leper, and revived the dead, and the Quran attaches **by Allah's permission** to each one:")
-                    ScriptureQuote(quran: "3:49")
+                        ArticleParagraph(verbatim: "Maryam bore him alone under a palm tree, and when her people accused her, he spoke from the cradle and declared that he was the servant of Allah. Allah gave him signs by His permission: he healed the blind and the leper and revived the dead.")
+                    }
 
-                    ArticleParagraph(verbatim: "And he foretold the Messenger to come after him:")
-                    ScriptureQuote(quran: "61:6")
-                }
+                    Section(header: ArticleHeader("HE WAS NOT CRUCIFIED")) {
+                        ArticleParagraph(verbatim: "The Quran states directly that he was neither killed nor crucified, and that Allah raised him to Himself:")
+                        ScriptureQuote(quran: "4:157-158")
 
-                Section(header: ArticleHeader("HE WAS NOT CRUCIFIED")) {
-                    ArticleParagraph(verbatim: "The Quran states directly that he was neither killed nor crucified, and that Allah raised him to Himself:")
-                    ScriptureQuote(quran: "4:157-158")
+                        ArticleParagraph(verbatim: "He will return before the Day of Judgement, break the cross, and rule by the Sharia of Muhammad (peace and blessings be upon them both). The Prophet (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:3448", cite: "Sahih al-Bukhari 3448", english: 4...46)
+                    }
 
-                    ArticleParagraph(verbatim: "He will return before the Day of Judgement, break the cross, and rule by the Sharia of Muhammad (peace and blessings be upon them both). The Prophet (peace and blessings be upon him) said:")
-                    ScriptureQuote(hadith: "bukhari:3448", cite: "Sahih al-Bukhari 3448", english: 4...46)
-                }
-
-                Section(header: ArticleHeader("WHAT MUSLIMS DO NOT BELIEVE")) {
-                    ArticleParagraph(articleMarkdown: "Loving and honouring Isa is part of Islam. Claiming he is Allah, or the son of Allah, or one of three, is **shirk**, and the Quran answers it explicitly:")
-                    ScriptureQuote(quran: "4:171")
-
-                    ArticleParagraph(verbatim: "And Allah will ask him on the Day of Judgement, and his answer clears him of all of it:")
-                    ScriptureQuote(quran: "5:116")
-
-                    ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) forbade his own followers the excess the Christians committed over Isa:")
-                    ScriptureQuote(hadith: "bukhari:3445", cite: "Sahih al-Bukhari 3445", english: 6...35)
-                }
-
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **Every miracle was by Allah's permission.** The Quran repeats the phrase each time. The one who performs a sign is not the one who owns it.")
-
-                    ArticleStep("2. **Love without exaggeration.** A Muslim who denies Isa is not a Muslim, and a Muslim who deifies him is not either. The Sunnah is the middle.")
-
-                    ArticleStep("3. **He called to the same thing every prophet called to.** Worship Allah, my Lord and your Lord. That sentence is in his mouth in the Quran twice.")
+                    Section(header: ArticleHeader("WHAT MUSLIMS DO NOT BELIEVE")) {
+                        ArticleParagraph(articleMarkdown: "Loving and honouring Isa is part of Islam. Claiming he is Allah, or the son of Allah, or one of three, is **shirk**.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -1475,6 +2060,14 @@ struct ProphetIsaView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetIsaView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "isa")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryIsaView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetIsaView")
             }
@@ -1492,9 +2085,14 @@ struct ProphetMuhammadView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Muhammad (peace and blessings be upon him) is the final Messenger, sent to all of humanity, given the Quran, and the example every Muslim follows.")
                 }
+
+                // His tags and Arabic name (`ProphetFacts`, 2026-11-24).
+                ProphetFactsSection(prophet: "muhammad")
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(articleMarkdown: "**Muhammad (مُحَمَّد)** is the last of the prophets and the only one sent to all people rather than to one nation. He was born in Makkah in the Year of the Elephant, around 570 CE, received revelation at forty, and died in Madinah in 11 AH. He is named 4 times in the Quran by this name.")
@@ -1504,37 +2102,49 @@ struct ProphetMuhammadView: View {
                     ArticleParagraph(verbatim: "After him there is no prophet. Anyone claiming prophethood after him is a liar, and this is a matter of creed, not opinion.")
                 }
 
-                Section(header: ArticleHeader("WHAT ALLAH SAYS OF HIM")) {
-                    ArticleParagraph(verbatim: "Allah describes his character in a single verse:")
-                    ScriptureQuote(quran: "68:4")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("WHAT ALLAH SAYS OF HIM")) {
+                        ArticleParagraph(verbatim: "Allah describes his character in a single verse:")
+                        ScriptureQuote(quran: "68:4")
 
-                    ArticleParagraph(verbatim: "And names the purpose he was sent for:")
-                    ScriptureQuote(quran: "21:107")
+                        ArticleParagraph(verbatim: "And names the purpose he was sent for:")
+                        ScriptureQuote(quran: "21:107")
 
-                    ArticleParagraph(verbatim: "And makes him the standard to follow:")
-                    ScriptureQuote(quran: "33:21")
+                        ArticleParagraph(verbatim: "And makes him the standard to follow:")
+                        ScriptureQuote(quran: "33:21")
 
-                    ArticleParagraph(verbatim: "And states that he does not speak from himself:")
-                    ScriptureQuote(quran: "53:3-4")
+                        ArticleParagraph(verbatim: "And states that he does not speak from himself:")
+                        ScriptureQuote(quran: "53:3-4")
+                    }
+
+                    Section(header: ArticleHeader("LOVE WITHOUT EXCESS")) {
+                        ArticleParagraph(verbatim: "A Muslim must love him more than his parents, his children and all people, and even more than himself (Sahih al-Bukhari 6632). The Prophet (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:15", cite: "Sahih al-Bukhari 15", english: 4...22)
+
+                        ArticleParagraph(articleMarkdown: "And that love is shown by **following him**, not by exceeding the bounds in praising him. He forbade that himself, in the clearest terms:")
+                        ScriptureQuote(hadith: "bukhari:3445", cite: "Sahih al-Bukhari 3445", english: 6...35)
+
+                        ArticleParagraph(verbatim: "So he is never called upon, never asked for help, and never sought for rescue: those belong to Allah alone. He is loved, obeyed, and sent blessings upon, and Allah commands that:")
+                        ScriptureQuote(quran: "33:56")
+                    }
+
+                    Section(header: ArticleHeader("LESSONS")) {
+                        ArticleStep("1. **He is the seal.** Belief in his finality is part of the Shahadah. No revelation, no prophet, and no new law comes after him.")
+
+                        ArticleStep("2. **Following is the proof of loving.** Allah tied His own love to it: say, if you love Allah, then follow me, and Allah will love you (Quran 3:31).")
+
+                        ArticleStep("3. **Honour him as Allah honoured him, and no further.** Servant and Messenger. He chose those two words for himself, and so should we.")
+                    }
                 }
 
-                Section(header: ArticleHeader("LOVE WITHOUT EXCESS")) {
-                    ArticleParagraph(verbatim: "A Muslim must love him more than his parents, his children and all people, and even more than himself (Sahih al-Bukhari 6632). The Prophet (peace and blessings be upon him) said:")
-                    ScriptureQuote(hadith: "bukhari:15", cite: "Sahih al-Bukhari 15", english: 4...22)
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("WHAT ALLAH SAYS OF HIM")) {
+                        ArticleParagraph(verbatim: "Allah describes his character in a single verse:")
+                        ScriptureQuote(quran: "68:4")
 
-                    ArticleParagraph(articleMarkdown: "And that love is shown by **following him**, not by exceeding the bounds in praising him. He forbade that himself, in the clearest terms:")
-                    ScriptureQuote(hadith: "bukhari:3445", cite: "Sahih al-Bukhari 3445", english: 6...35)
-
-                    ArticleParagraph(verbatim: "So he is never called upon, never asked for help, and never sought for rescue: those belong to Allah alone. He is loved, obeyed, and sent blessings upon, and Allah commands that:")
-                    ScriptureQuote(quran: "33:56")
-                }
-
-                Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **He is the seal.** Belief in his finality is part of the Shahadah. No revelation, no prophet, and no new law comes after him.")
-
-                    ArticleStep("2. **Following is the proof of loving.** Allah tied His own love to it: say, if you love Allah, then follow me, and Allah will love you (Quran 3:31).")
-
-                    ArticleStep("3. **Honour him as Allah honoured him, and no further.** Servant and Messenger. He chose those two words for himself, and so should we.")
+                        ArticleParagraph(verbatim: "And names the purpose he was sent for:")
+                        ScriptureQuote(quran: "21:107")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -1547,6 +2157,14 @@ struct ProphetMuhammadView: View {
                 #if os(iOS)
                 ProphetMiraclesLink(article: "ProphetMuhammadView")
                 #endif
+
+                // Every ayah that names him, and his full story in Stories of the Prophets (2026-11-24).
+                ProphetMentionsSection(prophet: "muhammad")
+
+                Section(header: ArticleHeader("HIS FULL STORY")) {
+                    ArticleParagraph(verbatim: "Told in full, with his name, his family and the people he was sent to, in Stories of the Prophets.")
+                    ArticleDoorRow(door: .article("StoryMuhammadView"))
+                }
 
                 ArticleSourcesSection(article: "ProphetMuhammadView")
             }

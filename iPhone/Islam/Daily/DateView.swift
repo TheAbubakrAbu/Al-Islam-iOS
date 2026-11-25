@@ -64,7 +64,9 @@ struct DateView: View {
                             ResourceHeroStat("354".localizedDigits, String(localized: "days, about")),
                             ResourceHeroStat("622".localizedDigits, String(localized: "CE, year 1 AH")),
                         ]
-                    ))
+                    ) {
+                        HijriMonthsRingArt(month: hijriCalendar.component(.month, from: convertedDate))
+                    })
                     selectionSection
                     convertedDateSection
                     aboutHijriSection

@@ -92,7 +92,7 @@ enum AskAIIntent: String, Codable, CaseIterable {
         case .appHelp:
             return "The question is about using THIS app (\(AppIdentifiers.appName)). Answer only from the setting and tip sources: name the exact place (the tab, then the screen, then the setting, in the app's own words, for example Settings, then Quran Settings, then Recitation) and what the control does, as short steps if there are several. Do not invent screens or controls. If no source covers it, say you are not sure the app has that and suggest searching in Settings."
         case .prayerTimes:
-            return "The question is about today's prayer schedule. Answer from the \u{201C}Prayer times today\u{201D} source exactly as written (times and rakah counts), doing any arithmetic the question needs from the current time it states."
+            return "The question is about prayer times. Answer from the prayer times source marked SUBJECT OF THE QUESTION exactly as written: say which place and which day it gives, then the times asked for (and their rakah counts when asked), doing any arithmetic the question needs from the current time it states. If the source says a place could not be found, say so plainly and do not give another place\u{2019}s times as if they were its."
         case .reference:
             return "The question names a specific verse, surah, hadith or Name, marked SUBJECT OF THE QUESTION. Explain that one: what it says, its context, and its meaning, drawing on the tafsir or background source when there is one, and say where each point comes from. Do not describe some other verse instead."
         case .scripture:
@@ -206,6 +206,14 @@ struct AskAIQuestion {
                              searchText: searchText, searchTerms: expanded, hintTerms: hints, isArabic: isArabic,
                              asksForRuling: asksForRuling, leansQuran: leansQuran, leansHadith: leansHadith,
                              mentionsApp: mentionsApp, topicDisplay: topicDisplay.isEmpty ? content.joined(separator: " ") : topicDisplay)
+    }
+
+    /// The same question, read as another intent (Prayer Times chosen above the composer).
+    func with(intent: AskAIIntent) -> AskAIQuestion {
+        AskAIQuestion(raw: raw, intent: intent, isFollowUp: isFollowUp, contentWords: contentWords,
+                      searchText: searchText, searchTerms: searchTerms, hintTerms: hintTerms, isArabic: isArabic,
+                      asksForRuling: asksForRuling, leansQuran: leansQuran, leansHadith: leansHadith,
+                      mentionsApp: mentionsApp, topicDisplay: topicDisplay)
     }
 
     private static let standaloneShapeRegex = try! NSRegularExpression(

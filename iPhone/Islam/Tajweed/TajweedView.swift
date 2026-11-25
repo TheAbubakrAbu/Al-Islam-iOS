@@ -163,8 +163,10 @@ struct TajweedCourseView: View {
         .openScreen(.tajweedCourse)
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
-            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
-                      placeholder: String(localized: "Search lessons"))
+            // The course's link beside its search (Abu, 2026-11-24: "allow me to share ... tajweed course").
+            SearchBarWithShare(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
+                               placeholder: String(localized: "Search lessons"),
+                               share: PageShare(link: .resource("tajweedCourse"), title: String(localized: "Tajweed Course")))
                 .minimizedBarStyle(barsCollapsed)
                 .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
                 .padding(.horizontal, 24)
@@ -205,6 +207,27 @@ struct TajweedCourseView: View {
 
     // MARK: What the course is
 
+    /// The course's stages for the hero's road (`TajweedCoursePathArt`, Abu, 2026-11-24: "Each Islamic
+    /// resource should get one"): each with its lessons done and its finished chapters, and the pack's
+    /// four, unfilled, until the pack is parsed, so the card keeps one height.
+    private var pathStages: [TajweedPathStage] {
+        guard let course, !course.stages.isEmpty else { return TajweedPathStage.placeholder }
+        return course.stages.map { stage in
+            let chapters = course.chapters.filter { $0.stage == stage.id }
+            let stageLessons = chapters.flatMap(\.lessons)
+            return TajweedPathStage(
+                id: stage.id,
+                title: stage.titleEn.localizedDisplay,
+                arabic: stage.titleAr,
+                lessons: stageLessons.count,
+                done: stageLessons.filter { progress.isDone($0.id) }.count,
+                chaptersDone: chapters.map { chapter in
+                    !chapter.lessons.isEmpty && chapter.lessons.allSatisfy { progress.isDone($0.id) }
+                }
+            )
+        }
+    }
+
     /// The course's opening card (`ResourceHero`), then where to pick up once a lesson is done.
     @ViewBuilder
     private func overviewSection(lessons: [TajweedLesson]) -> some View {
@@ -225,6 +248,8 @@ struct TajweedCourseView: View {
                 ResourceHeroStat(Self.duration(minutes), String(localized: "in all")),
             ]
         ) {
+            TajweedCoursePathArt(stages: pathStages)
+
             if doneCount > 0, !lessons.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     ProgressView(value: Double(doneCount), total: Double(max(1, lessons.count)))

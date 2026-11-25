@@ -1755,6 +1755,8 @@ struct ArabicLetterPage: View {
                     Text("If a word starts with hamzatul waSl, its pronunciation depends on the third letter of the word. For verbs: if the third letter has a damma, pronounce it with a damma (أُ); if it has a kasra or fatha, pronounce it with a kasra (إِ).")
                     Text("In the Quran, there are seven nouns that start with hamzatul waSl. These nouns always begin with a kasra when pronounced in isolation.")
                     Text("Hamzatul waSl is usually not written with diacritics, but in learner texts or the Quran, it may be marked with a small ص above the Alif, indicating waSl.")
+                    // The Hamzatul WaSl page's own paragraph (one catalog key for both, 2026-11-23).
+                    Text("Outside the Quran it is generally written as a plain alif, ا, with no mark: the hadith in this app write امْرِئٍ (a man) and الْأَعْمَالُ (the deeds) this way. It is still easy to spot. An alif is a long vowel, and no word can begin on a vowel, so a plain alif can never really start a word: when one does, it is hamzatul waSl. A hamza that is always said is written أ or إ.")
                     // The whole of it, with the drills, on its own page (2026-10-27).
                     HamzatulWaslLink()
                 }

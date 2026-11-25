@@ -441,6 +441,7 @@
   ],
   "keys": [
    "THEfontArabic",
+   "THEkeepAyahSheetOpen",
    "acceptedBetaQiraatNotice",
    "automaticKhatmCompletion",
    "ayahPreviewCardScale",
@@ -457,7 +458,6 @@
    "fontArabicSize",
    "highlightAllahNames",
    "highlightPlayingWords",
-   "keepAyahSheetOpen",
    "keepAyahSheetOpenOnPlay",
    "khatmGroupByJuz",
    "mushafFitPage",

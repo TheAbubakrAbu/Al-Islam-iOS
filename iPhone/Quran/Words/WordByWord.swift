@@ -1332,15 +1332,14 @@ enum CrossLanguageWordHighlight {
                           glossFingerprint: VerseSearchPack.fnv1a(gloss))
         }()
 
+        /// Ships as CrossLanguageLexicon.bin.lzfse since 2026-11-23 (0.47 MB -> 0.16 MB), unpacked in memory (under 1 ms).
         private static func bundledURL() -> URL? {
-            Bundle.main.url(forResource: "CrossLanguageLexicon", withExtension: "bin", subdirectory: "Quran")
-                ?? Bundle.main.url(forResource: "CrossLanguageLexicon", withExtension: "bin", subdirectory: "Data/Quran")
-                ?? Bundle.main.url(forResource: "CrossLanguageLexicon", withExtension: "bin")
+            ShippedFile.url("CrossLanguageLexicon", "bin", subdirectories: ["Quran", "Data/Quran", nil])
         }
 
         /// The lexicon shipped in the bundle, when its stamps are this bundle's texts.
         static func loadBundled() -> [String: Set<String>]? {
-            guard let url = bundledURL(), let data = try? Data(contentsOf: url, options: .mappedIfSafe),
+            guard let url = bundledURL(), let data = ShippedFile.data(at: url),
                   let expected = currentStamps, stamps(in: data) == expected else { return nil }
             #if DEBUG
             let started = DispatchTime.now().uptimeNanoseconds
@@ -1770,10 +1769,9 @@ enum CrossLanguageWordHighlight {
 
     /// Decoded once, on first use, from whichever thread asks (a `static let` initialises once).
     private static let hadithDictionary: [String: [String]]? = {
-        guard let url = Bundle.main.url(forResource: "HadithLexicon", withExtension: "bin", subdirectory: "Data/Hadith")
-                ?? Bundle.main.url(forResource: "HadithLexicon", withExtension: "bin", subdirectory: "Hadith")
-                ?? Bundle.main.url(forResource: "HadithLexicon", withExtension: "bin"),
-              let data = try? Data(contentsOf: url, options: .mappedIfSafe) else { return nil }
+        // Ships as HadithLexicon.bin.lzfse since 2026-11-23, unpacked in memory (under 1 ms).
+        guard let url = ShippedFile.url("HadithLexicon", "bin", subdirectories: ["Data/Hadith", "Hadith", nil]),
+              let data = ShippedFile.data(at: url) else { return nil }
         return decodeHadithDictionary(data)
     }()
 

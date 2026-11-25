@@ -49,6 +49,9 @@ struct SummarizeSheet: View {
     /// What the caller left OUT of the source and why (the Arabic editions while the model has no
     /// Arabic) - appended to the note card so the reader knows the summary's reach.
     var excludedNote: String? = nil
+    /// A whole article, already laid out and fitted by `IslamArticle.summarySource` (every section,
+    /// each cut to its share when the page is long): taken as it is, with a note that says so.
+    var articleSource: (text: String, truncated: Bool)? = nil
 
     private var writesArabic: Bool { language == .arabic }
 
@@ -80,6 +83,7 @@ struct SummarizeSheet: View {
     /// Multi-source callers pass text already combined and proportionally clipped
     /// (`OnDeviceAsk.combinedSource`), so it is taken as-is; a gatherer's result likewise.
     private var clippedSource: (text: String, truncated: Bool) {
+        if let articleSource { return articleSource }
         if let gathered { return gathered }
         if gatherSource != nil { return ("", false) }   // still gathering
         if multiSource { return (sourceText.trimmingCharacters(in: .whitespacesAndNewlines), sourceTruncated) }
@@ -177,17 +181,27 @@ struct SummarizeSheet: View {
             // window at the character budgets, and two thirds of it summarized beats a failure.
             var attemptSource = source
             var retriedLeaner = false
+            #if DEBUG
+            let probe = SummaryProbe(label: "summary", sourceCharacters: source.count)
+            var probeOutcome = "ok"
+            defer { probe?.finish(characters: summary.count, outcome: probeOutcome) }
+            #endif
             while true {
                 do {
                     for try await snapshot in OnDeviceAsk.streamSummary(
                         title: title, source: attemptSource, multiSource: multiSource, language: language, focus: focus
                     ) {
+                        #if DEBUG
+                        probe?.token()
+                        probe?.paint()
+                        #endif
                         summary = snapshot
                     }
                 } catch {
                     if error is CancellationError { break }
                     #if DEBUG
                     NSLog("SUMMARIZE FAILED: %@", String(describing: error))
+                    probeOutcome = "failed"
                     #endif
                     if !retriedLeaner, summary.isEmpty, OnDeviceAsk.isContextOverflow(error) {
                         retriedLeaner = true
@@ -201,6 +215,32 @@ struct SummarizeSheet: View {
                 break
             }
             isSummarizing = false
+            #if DEBUG
+            // THROWAWAY bench: warm passes at several source sizes, no UI.
+            if ProcessInfo.processInfo.arguments.contains("-summaryBench") {
+                let whole = sourceText.trimmingCharacters(in: .whitespacesAndNewlines)
+                NSLog("SUMMARYPROBE bench whole=%d", whole.count)
+                for size in [6000, 3000, 1500, 9000, 10500, 6000] {
+                    let text = String(whole.prefix(size))
+                    let began = CFAbsoluteTimeGetCurrent()
+                    var first: CFAbsoluteTime?
+                    var count = 0
+                    var last = ""
+                    do {
+                        for try await snapshot in OnDeviceAsk.streamSummary(title: title, source: text) {
+                            if first == nil { first = CFAbsoluteTimeGetCurrent() }
+                            count += 1
+                            last = snapshot
+                        }
+                        NSLog("SUMMARYPROBE bench size=%d wait=%.2fs total=%.2fs snapshots=%d chars=%d", text.count,
+                              (first ?? began) - began, CFAbsoluteTimeGetCurrent() - began, count, last.count)
+                    } catch {
+                        NSLog("SUMMARYPROBE bench size=%d FAILED after %.2fs: %@", text.count,
+                              CFAbsoluteTimeGetCurrent() - began, String(describing: error))
+                    }
+                }
+            }
+            #endif
         }
         await streamTask?.value
     }
@@ -283,6 +323,11 @@ struct SummarizeSheet: View {
     private var sourceNoteBase: String {
         if isGathering {
             return String(localized: "Gathering every available text for this summary…")
+        }
+        if let articleSource {
+            return articleSource.truncated
+                ? String(localized: "Summarizing this whole page. Its longer sections were shortened to fit the on-device model.")
+                : String(localized: "Summarizing this page, and answering questions about it.")
         }
         if let focus {
             return clippedSource.truncated
@@ -477,6 +522,87 @@ struct SummarizeSheet: View {
         .padding(32)
     }
 }
+
+#if DEBUG
+/// The summary stopwatch (`-summaryProbe`, DEBUG): one `SUMMARYPROBE` line per generation, so "the
+/// summary is slow" can be read as numbers. `wait` is the time from the request to the first word (the
+/// model loading and reading the source), `total` the whole generation, `tokens` the snapshots the
+/// model sent and `paints` the ones the sheet drew. The frame numbers cover the streaming only:
+/// `hitch` is ms of late frames per second (under 5 is smooth, over 10 is felt), `worst` the longest
+/// frame, `main` the main thread's CPU ms per second.
+@MainActor
+final class SummaryProbe: NSObject {
+    static let enabled = ProcessInfo.processInfo.arguments.contains("-summaryProbe")
+
+    private let label: String
+    private let sourceCharacters: Int
+    private let started = CFAbsoluteTimeGetCurrent()
+    private var firstToken: CFAbsoluteTime?
+    private var tokens = 0
+    private var paints = 0
+    private var link: CADisplayLink?
+    private var lastStamp = 0.0
+    private var hitchSeconds = 0.0
+    private var worst = 0.0
+    private var over33 = 0
+    private var streamCPU = 0.0
+
+    init?(label: String, sourceCharacters: Int) {
+        guard Self.enabled else { return nil }
+        self.label = label
+        self.sourceCharacters = sourceCharacters
+    }
+
+    func token() {
+        tokens += 1
+        guard firstToken == nil else { return }
+        firstToken = CFAbsoluteTimeGetCurrent()
+        streamCPU = Self.mainThreadCPU()
+        let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
+        link.add(to: .main, forMode: .common)
+        self.link = link
+    }
+
+    func paint() { paints += 1 }
+
+    @objc private func tick(_ link: CADisplayLink) {
+        defer { lastStamp = link.timestamp }
+        guard lastStamp > 0 else { return }
+        let gap = link.timestamp - lastStamp
+        let frame = max(link.targetTimestamp - link.timestamp, 1.0 / 120)
+        if gap > frame * 1.5 { hitchSeconds += gap - frame }
+        if gap > 0.033 { over33 += 1 }
+        worst = max(worst, gap)
+    }
+
+    func finish(characters: Int, outcome: String) {
+        link?.invalidate()
+        link = nil
+        let now = CFAbsoluteTimeGetCurrent()
+        let streamed = max(0.001, now - (firstToken ?? now))
+        let cpu = firstToken == nil ? 0 : Self.mainThreadCPU() - streamCPU
+        NSLog("SUMMARYPROBE %@ outcome=%@ source=%d wait=%.2fs total=%.2fs tokens=%d paints=%d chars=%d stream=%.2fs hitch=%.1fms/s worst=%.0fms over33=%d main=%.0fms/s",
+              label, outcome, sourceCharacters, (firstToken ?? now) - started, now - started, tokens, paints, characters,
+              streamed, hitchSeconds / streamed * 1000, worst * 1000, over33, cpu / streamed * 1000)
+    }
+
+    /// CPU seconds the calling thread has used (call it on the main thread).
+    private static func mainThreadCPU() -> Double {
+        var info = thread_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<thread_basic_info>.size / MemoryLayout<integer_t>.size)
+        let thread = mach_thread_self()
+        defer { mach_port_deallocate(mach_task_self_, thread) }
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                thread_info(thread, thread_flavor_t(THREAD_BASIC_INFO), $0, &count)
+            }
+        }
+        guard result == KERN_SUCCESS else { return 0 }
+        return Double(info.user_time.seconds) + Double(info.user_time.microseconds) / 1_000_000
+            + Double(info.system_time.seconds) + Double(info.system_time.microseconds) / 1_000_000
+    }
+}
+#endif
 
 /// The shared entry button: a sparkles toolbar icon, matching the Ask card's styling. Callers gate
 /// it on `OnDeviceAsk.isAvailable` at render time (the OnDeviceAsk pattern - when Apple Intelligence

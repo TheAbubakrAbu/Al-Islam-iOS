@@ -1,7 +1,8 @@
 import XCTest
 
-/// Simple Mode end to end (docs/Simple Mode Guide.md): what moved into a tab's ⋯ More menu is really
-/// there and really opens, the ayah menu keeps to its five actions, and the splash can choose it.
+/// Simple Mode end to end (docs/Simple Mode Guide.md): what moved into a tab's ⋯ More menu or its
+/// capsules under the summary (2026-11-24) is really there and really opens, the ayah menu keeps to its
+/// five actions, and the splash can choose it.
 /// Since 2026-10-11 the More menu leads every tab in BOTH modes (Abu: "always have the top left button
 /// just be a more button"), so the Full Mode tests here check the same menus with the switch off.
 /// Every launch seeds the switch, and `tearDown` puts it back off for whatever runs next on this
@@ -79,41 +80,47 @@ final class SimpleModeUITests: XCTestCase {
         if banner.exists { banner.swipeUp() }
     }
 
-    /// The Quran tab's toolbar buttons and summary doors, gathered into the one menu.
+    /// The Quran tab's doors are capsules under YOUR SUMMARY since 2026-11-24 (Abu: "put it in summary
+    /// underneath the bottom as a bunch of capsule buttons ... so the top left ellipses has as little
+    /// options as possible"). In Simple the ⋯ menu keeps Today, whose pill Simple hides, beside how the
+    /// tab is shown; Random Surah is a capsule because the SURAHS shuffle hides too.
     func testQuranMoreMenuHoldsTheMovedDoors() {
         let app = launch(["-launchTabQuran", "-seedBool", "simpleMode=1,quranPageMode=0"])
         let more = app.buttons["tabMoreMenu"]
         XCTAssertTrue(more.waitForExistence(timeout: 15), "no More menu on the Quran tab in Simple Mode")
-        XCTAssertTrue(openMoreMenu(app, expecting: ["Today"]), "the Quran More menu did not open")
-        for item in ["Today", "History", "Open a Random Surah", "Explore"] {
-            XCTAssertTrue(app.buttons[item].waitForExistence(timeout: 5), "the More menu has no \(item)")
+        for door in ["History", "Random Surah"] {
+            XCTAssertTrue(app.buttons[door].waitForExistence(timeout: 5), "no \(door) capsule on the Quran tab in Simple Mode")
         }
+        XCTAssertTrue(openMoreMenu(app, expecting: ["Today"]), "the Quran More menu did not open")
+        XCTAssertTrue(app.buttons["Sort"].waitForExistence(timeout: 5), "the More menu has no Sort")
         XCTAssertTrue(app.buttons["Read as Pages"].exists || app.buttons["Read as List"].exists,
                       "the More menu has no reading-mode switch")
         XCTAssertTrue(app.buttons["Show as Grid"].exists || app.buttons["Show as List"].exists,
                       "the More menu has no grid switch")
-        // The feature doors sit behind Explore (2026-10-21); opening it replaces the top level.
-        app.buttons["Explore"].tap()
-        XCTAssertTrue(app.buttons["Browse by Theme"].waitForExistence(timeout: 5), "Explore has no Browse by Theme")
+        for gone in ["Explore", "Open a Random Surah"] {
+            XCTAssertFalse(app.buttons[gone].exists, "the More menu still has \(gone)")
+        }
     }
 
-    /// Full Mode has the same menu: the reading mode, the planner and the grid, which were three toolbar
-    /// buttons until 2026-10-11, and the doors that are also chips on the screen.
+    /// Full Mode: the doors are capsules under the summary (the planner among them), and the ⋯ menu is
+    /// how the tab is shown: the sort, the reading mode and the grid, which were toolbar buttons until
+    /// 2026-10-11. Today stays the summary header's pill, never a menu item beside it.
     func testQuranMoreMenuLeadsInFullMode() {
         let app = launch(["-launchTabQuran", "-seedBool", "simpleMode=0,quranPageMode=0"])
         let more = app.buttons["tabMoreMenu"]
         XCTAssertTrue(more.waitForExistence(timeout: 15), "no More menu on the Quran tab in Full Mode")
         XCTAssertFalse(app.buttons["Read surahs as pages"].exists, "Full Mode still shows the reading-mode button")
-        XCTAssertTrue(openMoreMenu(app, expecting: ["Today"]), "the Quran More menu did not open in Full Mode")
-        for item in ["Today", "History", "Open a Random Surah", "Explore"] {
-            XCTAssertTrue(app.buttons[item].waitForExistence(timeout: 5), "the Full Mode More menu has no \(item)")
+        for door in ["History", "Topics", "Planner"] {
+            XCTAssertTrue(app.buttons[door].waitForExistence(timeout: 5), "no \(door) capsule under YOUR SUMMARY in Full Mode")
         }
+        XCTAssertTrue(openMoreMenu(app, expecting: ["Sort"]), "the Quran More menu did not open in Full Mode")
         XCTAssertTrue(app.buttons["Read as Pages"].exists || app.buttons["Read as List"].exists,
                       "the Full Mode More menu has no reading-mode switch")
         XCTAssertTrue(app.buttons["Show as Grid"].exists || app.buttons["Show as List"].exists,
                       "the Full Mode More menu has no grid switch")
-        app.buttons["Explore"].tap()
-        XCTAssertTrue(app.buttons["Quran Planner"].waitForExistence(timeout: 5), "Explore has no Quran Planner")
+        for gone in ["Explore", "Open a Random Surah"] {
+            XCTAssertFalse(app.buttons[gone].exists, "the Full Mode More menu still has \(gone)")
+        }
     }
 
     /// The sort row hides in Simple while the sort is the default, so the ⋯ menu carries a Sort submenu in
@@ -123,30 +130,25 @@ final class SimpleModeUITests: XCTestCase {
             let app = launch(["-launchTabQuran", "-seedBool", "simpleMode=\(simple),quranPageMode=0"])
             XCTAssertTrue(app.buttons["tabMoreMenu"].waitForExistence(timeout: 15),
                           "no More menu on the Quran tab (simpleMode=\(simple))")
-            XCTAssertTrue(openMoreMenu(app, expecting: ["Today"]), "the Quran More menu did not open (simpleMode=\(simple))")
+            XCTAssertTrue(openMoreMenu(app, expecting: ["Sort"]), "the Quran More menu did not open (simpleMode=\(simple))")
             XCTAssertTrue(app.buttons["Sort"].waitForExistence(timeout: 5),
                           "the Quran More menu has no Sort (simpleMode=\(simple))")
             app.terminate()
         }
     }
 
-    /// The Islam tab has no Today pill in Simple (the card pills hide), so its ⋯ menu leads with a Today
-    /// item in both modes, and it pushes the Daily Hub (Simple Mode v2, Task 9).
+    /// The Islam tab has no Today pill in Simple (the card pills hide), so its ⋯ menu carries a Today item
+    /// there, and it pushes the Daily Hub (Simple Mode v2, Task 9). In Full the Reminder of the Day's pill
+    /// is the door, and the menu leaves it out (2026-11-24).
     func testIslamMoreMenuHasToday() {
-        for simple in [1, 0] {
-            let app = launch(["-launchTabIslam", "-seedBool", "simpleMode=\(simple)"])
-            XCTAssertTrue(app.buttons["tabMoreMenu"].waitForExistence(timeout: 15),
-                          "no More menu on the Islam tab (simpleMode=\(simple))")
-            XCTAssertTrue(openMoreMenu(app, expecting: ["Today"]), "the Islam More menu did not open (simpleMode=\(simple))")
-            let today = app.buttons["Today"]
-            XCTAssertTrue(today.waitForExistence(timeout: 5), "the Islam More menu has no Today (simpleMode=\(simple))")
-            today.tap()
-            let landed = app.navigationBars.matching(NSPredicate(format: "identifier CONTAINS[c] 'Today'")).firstMatch
-            let heading = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'AYAH OF THE DAY' OR label CONTAINS[c] 'Today'")).firstMatch
-            XCTAssertTrue(landed.waitForExistence(timeout: 8) || heading.waitForExistence(timeout: 8),
-                          "Today did not open the Daily Hub (simpleMode=\(simple))")
-            app.terminate()
-        }
+        let app = launch(["-launchTabIslam", "-seedBool", "simpleMode=1"])
+        XCTAssertTrue(app.buttons["tabMoreMenu"].waitForExistence(timeout: 15), "no More menu on the Islam tab in Simple Mode")
+        XCTAssertTrue(openMoreMenu(app, expecting: ["Today"]), "the Islam More menu has no Today in Simple Mode")
+        app.buttons["Today"].tap()
+        let landed = app.navigationBars.matching(NSPredicate(format: "identifier CONTAINS[c] 'Today'")).firstMatch
+        let heading = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'AYAH OF THE DAY' OR label CONTAINS[c] 'Today'")).firstMatch
+        XCTAssertTrue(landed.waitForExistence(timeout: 8) || heading.waitForExistence(timeout: 8),
+                      "Today did not open the Daily Hub")
     }
 
     /// The Simple Mode page is the live catalog of what Simple hides and where each thing went (Simple
@@ -284,7 +286,8 @@ final class SimpleModeUITests: XCTestCase {
 
     /// The Adhan tab's More menu, in Full Mode: the two calendars, and the prayer list's layout, which
     /// left the PRAYER TIMES header for it (Abu, 2026-10-11: "for prayer have it contain a menu to switch
-    /// between tiles and grid and whatnot and remove it from where it was originally").
+    /// between tiles and grid and whatnot and remove it from where it was originally"). The calendars
+    /// stayed in the menu when the other tabs' doors became capsules (Abu, 2026-11-24).
     func testAdhanMoreMenuHoldsTheCalendarsAndTheLayout() {
         // `travelAutomatic` off, and the two persisted "ask me" flags cleared: this simulator's
         // location is far from its saved home, and the "Traveling Mode On" card the automatic check
@@ -349,25 +352,23 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertTrue(more.waitForExistence(timeout: 10), "no More menu on the Hadith tab in Full Mode")
         XCTAssertFalse(app.buttons["Show grid"].exists || app.buttons["Show list"].exists,
                        "the Hadith tab still shows its grid button")
-        XCTAssertTrue(openMoreMenu(app, expecting: ["Topics"]), "the Hadith More menu has no Topics in Full Mode")
-        XCTAssertTrue(app.buttons["Show as Grid"].exists || app.buttons["Show as List"].exists,
+        XCTAssertTrue(app.buttons["Topics"].waitForExistence(timeout: 5), "no Topics capsule on the Hadith tab in Full Mode")
+        XCTAssertTrue(openMoreMenu(app, expecting: ["Show as Grid", "Show as List"]),
                       "the Hadith More menu has no grid switch in Full Mode")
     }
 
-    /// The two More menu items whose hosts are easiest to lose: the Quran Planner (a buttonless planner
-    /// kept mounted behind the menu, whose settle hooks stamp a finished plan) and the reading-mode
-    /// switch (a confirmation hung on the menu).
+    /// The two doors whose hosts are easiest to lose: the Quran Planner (a buttonless planner kept
+    /// mounted behind the menu, whose settle hooks stamp a finished plan, opened from its capsule under the
+    /// summary) and the reading-mode switch (a confirmation hung on the menu).
     func testQuranMoreMenuOpensThePlannerAndAsksBeforeReadingAsPages() {
         let app = launch(["-launchTabQuran", "-seedBool", "simpleMode=1,quranPageMode=0"])
         let more = app.buttons["tabMoreMenu"]
         XCTAssertTrue(more.waitForExistence(timeout: 15), "no More menu on the Quran tab in Simple Mode")
-        XCTAssertTrue(openMoreMenu(app, expecting: ["Explore"]), "the More menu has no Explore")
-        app.buttons["Explore"].tap()
-        let planner = app.buttons["Quran Planner"]
-        XCTAssertTrue(planner.waitForExistence(timeout: 5), "Explore has no Quran Planner")
+        let planner = app.buttons["Planner"]
+        XCTAssertTrue(planner.waitForExistence(timeout: 5), "no Planner capsule under the summary")
         planner.tap()
         XCTAssertTrue(app.navigationBars["Quran Planner"].waitForExistence(timeout: 10),
-                      "Quran Planner from the More menu did not open the planner")
+                      "the Planner capsule did not open the planner")
         app.swipeDown(velocity: .fast)
         Thread.sleep(forTimeInterval: 1.5)
 
@@ -380,7 +381,8 @@ final class SimpleModeUITests: XCTestCase {
         // outside dismisses it), and answering would switch this simulator to page mode.
     }
 
-    /// The Hadith tab's door chips moved into its More menu, and a door there really opens its screen.
+    /// The Hadith tab's doors are capsules under its summary (2026-11-24), and a door there really opens
+    /// its screen; the menu keeps its view item, by name.
     func testHadithMoreMenuOpensTopics() {
         // Lists, so the menu's view item reads "Show as Grid": that symbol's name must not stand in
         // for the title either.
@@ -389,12 +391,13 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertTrue(more.waitForExistence(timeout: 15), "no More menu on the Hadith tab in Simple Mode")
         // By NAME: before `TabMoreMenuItem`, VoiceOver (and so this query) read this item as
         // "Large Grid", its symbol's name.
-        XCTAssertTrue(openMoreMenu(app, expecting: ["Topics"]), "the Hadith More menu has no Topics")
+        XCTAssertTrue(openMoreMenu(app, expecting: ["Show as Grid"]), "the Hadith More menu's view item lost its name")
+        app.tap()
         let topics = app.buttons["Topics"]
-        XCTAssertTrue(app.buttons["Show as Grid"].exists, "the Hadith More menu's view item lost its name")
+        XCTAssertTrue(topics.waitForExistence(timeout: 5), "no Topics capsule on the Hadith tab")
         topics.tap()
         XCTAssertTrue(app.navigationBars["Browse by Topic"].waitForExistence(timeout: 10),
-                      "Topics from the More menu did not open the topics screen")
+                      "the Topics capsule did not open the topics screen")
     }
 
     /// The Islam tab folds TOOLS and ASK AI behind one row, and the row opens them.
@@ -906,8 +909,23 @@ final class SimpleModeUITests: XCTestCase {
 
     private func launchActionsSheet(keepSheetOpen: Bool) -> XCUIApplication {
         launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:2", "-openRowSheet", "actions", "-sheetLarge",
-                "-seedBool", "simpleMode=0,THEfirstLaunch=0,ayahSheetKeepsScreenOn=0,keepAyahSheetOpenOnPlay=0,keepAyahSheetOpen=\(keepSheetOpen ? 1 : 0)",
+                "-seedBool", "simpleMode=0,THEfirstLaunch=0,ayahSheetKeepsScreenOn=0,keepAyahSheetOpenOnPlay=0,THEkeepAyahSheetOpen=\(keepSheetOpen ? 1 : 0)",
                 "-seedString", "shareAyahLastActionMode=text"])
+    }
+
+    /// A value saved under Keep Sheet Open's old key is dropped (2026-11-23: Abu, "by default off saved value
+    /// make it reset"): the old key stored ON, the setting still reads off, and Share Ayah swaps the sheet.
+    func testKeepSheetOpenSavedUnderTheOldKeyIsReset() {
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:2", "-openRowSheet", "actions", "-sheetLarge",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0,ayahSheetKeepsScreenOn=0,keepAyahSheetOpenOnPlay=0,keepAyahSheetOpen=1",
+                          "-seedString", "shareAyahLastActionMode=text"])
+        let share = app.buttons["Share Ayah"]
+        XCTAssertTrue(share.waitForExistence(timeout: 10), "the actions sheet has no Share Ayah row")
+        share.tap()
+        XCTAssertTrue(app.buttons["Copy"].waitForExistence(timeout: 10), "Share Ayah did not open the share editor")
+        let swapped = !actionsSheetSwitch(app).exists
+        if !swapped { attachScreenshot("Share editor over the actions sheet with the old key stored on") }
+        XCTAssertTrue(swapped, "the old Keep Sheet Open value still stacked the share editor")
     }
 
     /// Share Ayah with Keep Sheet Open off, its default: the actions sheet closes as the share editor opens.

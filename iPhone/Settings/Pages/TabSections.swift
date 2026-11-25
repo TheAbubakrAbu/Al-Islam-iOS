@@ -145,7 +145,7 @@ enum TabSection: CaseIterable, Identifiable {
         #endif
         #if HAS_HADITH
         case .hadithSummary:
-            return String(localized: "The Hadith of the Day and the hadith you last read, at the top of the tab. Turned off, History in the More menu still lists what you read.")
+            return String(localized: "The Hadith of the Day and the hadith you last read, at the top of the tab. Turned off, the History button at the top of the tab still lists what you read.")
         case .hadithNarrators:
             return String(localized: "The door to every narrator of the shelf's chains, under the books: searched by name, grouped by generation, each with the narrations that name him.")
         case .hadithAbout:

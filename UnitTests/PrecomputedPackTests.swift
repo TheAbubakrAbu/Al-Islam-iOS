@@ -213,6 +213,64 @@ final class PrecomputedPackTests: XCTestCase {
                                                     records: records, vocabulary: ["allah", "name", "beneficent"], translationWords: ["name"]))
     }
 
+    // MARK: - AI search vectors (.svec)
+
+    /// The shipped vector packs store one byte per component. A write and a read must give back the
+    /// same words and rows, every word's direction to four nines, and its length untouched.
+    func testVectorPackKeepsEveryWordsDirection() throws {
+        let dimension = 300, wordCount = 64
+        var generator = SystemRandomNumberGenerator()
+        var vectors = [Float](repeating: 0, count: wordCount * dimension)
+        for word in 0..<(wordCount - 1) {      // the last word stays all zeros on purpose
+            var squares: Float = 0
+            for component in 0..<dimension {
+                let value = Float.random(in: -1...1, using: &generator) * (component % 7 == 0 ? 3 : 1)
+                vectors[word * dimension + component] = value
+                squares += value * value
+            }
+            let length = squares.squareRoot()
+            for component in 0..<dimension { vectors[word * dimension + component] /= length }
+        }
+        let words = (0..<wordCount).map { "word\($0)" }
+        let corpus = SemanticCorpus(id: "test", version: "1", dimension: dimension, vocabWords: words, vocabVectors: vectors,
+                                    itemWordIndices: [[0, 5, 63], [], [1, 2, 3, 62]], itemKeys: ["a|1", "b|2", "c|3"])
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("vectors-\(UUID().uuidString).svec")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try corpus.writeBundledPack(to: url, fingerprint: "fingerprint", embeddingRevision: SemanticSearchEngine.embeddingRevision)
+
+        let size = try XCTUnwrap(try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int)
+        XCTAssertLessThan(size, wordCount * dimension * 2, "one byte per component, not two")
+        XCTAssertNil(SemanticCorpus.loadBundled(url: url, id: "test", version: "1", expectedFingerprint: "other texts"))
+        let loaded = try XCTUnwrap(SemanticCorpus.loadBundled(url: url, id: "test", version: "1", expectedFingerprint: "fingerprint"))
+        XCTAssertEqual(loaded.vocabWords, words)
+        XCTAssertEqual(loaded.itemWords, corpus.itemWords)
+        XCTAssertEqual(loaded.itemOffsets, corpus.itemOffsets)
+        XCTAssertEqual(loaded.itemKeys, corpus.itemKeys)
+        XCTAssertEqual(loaded.vocabVectors.count, vectors.count)
+        for word in 0..<(wordCount - 1) {
+            var dot: Float = 0, shipped: Float = 0
+            for component in (word * dimension)..<((word + 1) * dimension) {
+                dot += vectors[component] * loaded.vocabVectors[component]
+                shipped += loaded.vocabVectors[component] * loaded.vocabVectors[component]
+            }
+            XCTAssertGreaterThan(dot / shipped.squareRoot(), 0.9999, "word \(word) turned")
+            XCTAssertEqual(shipped.squareRoot(), 1, accuracy: 1e-4, "word \(word) changed length")
+        }
+        XCTAssertTrue(loaded.vocabVectors[((wordCount - 1) * dimension)...].allSatisfy { $0 == 0 }, "a zero word stays zero")
+    }
+
+    /// Both shipped packs are in the format this build reads (a format change without a re-export
+    /// would make every device rebuild the vectors itself: minutes on the first AI search).
+    func testShippedVectorPacksAreReadable() throws {
+        for (id, words) in [("quran-en", 6_000), ("hadith-all", 14_000)] {
+            let url = try XCTUnwrap(SemanticCorpus.bundledURL(id: id), "\(id).svec is not in the bundle")
+            let header = try XCTUnwrap(SemanticCorpus.bundledHeader(at: url), "\(id).svec is not in the format this build reads")
+            XCTAssertEqual(header.dimension, 300)
+            XCTAssertEqual(header.embeddingRevision, SemanticSearchEngine.embeddingRevision)
+            XCTAssertGreaterThan(header.vocabCount, words)
+        }
+    }
+
     // MARK: - Export
 
     /// Writes quran-search.qsp and CrossLanguageLexicon.bin from a live build into PRECOMPUTED_EXPORT_DIR,

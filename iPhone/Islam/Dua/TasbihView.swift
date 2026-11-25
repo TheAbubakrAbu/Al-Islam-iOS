@@ -397,7 +397,9 @@ struct TasbihView: View {
                     headline: String(localized: "O you who have believed, remember Allah with much remembrance."),
                     source: String(localized: "Quran 33:41"),
                     message: String(localized: "Choose a remembrance below and count each one you say on the card at the bottom of the screen, or name any other dhikr of your own. Your lifetime total and your day streak are kept for you.")
-                ))
+                ) {
+                    TasbihBeadsArt()
+                })
                 #endif
                 statsSection
                 freeDhikrSection

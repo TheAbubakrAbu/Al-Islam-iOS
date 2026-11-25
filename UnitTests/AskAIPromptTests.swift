@@ -80,7 +80,10 @@ final class AskAIPromptTests: XCTestCase {
         // times today" source on every turn, the model invented a timetable for "What is the best
         // time to pray?" (no prayer source retrieved) and said it was "exactly as written".
         XCTAssertFalse(instructions.contains("Prayer times today"))
-        XCTAssertTrue(AskAIIntent.prayerTimes.taskLine.contains("Prayer times today"))
+        // Since 2026-11-24 the source can be any place and any day (`AskAIPrayerRequest`): the task
+        // names the source by its mark, and says what to do with a place that could not be found.
+        XCTAssertTrue(AskAIIntent.prayerTimes.taskLine.contains("prayer times source marked SUBJECT OF THE QUESTION"))
+        XCTAssertTrue(AskAIIntent.prayerTimes.taskLine.contains("could not be found"))
         // Rule 6 forbids invented clock times only: "How many rakahs is Fajr?" and "How many days is
         // Ramadan?" still get their numbers.
         XCTAssertTrue(instructions.contains("time of day"))

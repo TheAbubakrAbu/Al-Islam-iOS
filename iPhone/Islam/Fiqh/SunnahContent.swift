@@ -68,6 +68,7 @@ extension SunnahView {
                       .text("The Prophet described what happens to a person while he sleeps, and what it takes to undo it. Shaytan ties three knots at the back of the sleeper's head, and at each one he whispers that the night is long. The three acts that loosen them are the three the Prophet's own mornings began with: remembering Allah, wudu, and prayer. Abu Hurayrah narrated it, and both al-Bukhari and Muslim recorded it."),
                       .hadith("bukhari:1142", cite: "Sahih al-Bukhari 1142", arabic: 21...72, english: 0...90),
                       .text("Muslim's wording of the same report has the wudu loosen two knots at once and the prayer the rest, and it ends the same way, with a morning that is either light and glad or heavy and sluggish (Sahih Muslim 776). The hadith gives a cause for something everyone has felt: the weight of a morning that began with nothing, and the ease of one that began with Allah."),
+                      .hadith("muslim:776", cite: "Sahih Muslim 776", arabic: 45...67, english: 30...82),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("The moment you are awake, remember Allah. The words of praise on waking, the first page of this library, are the natural way, or any dhikr will do: la ilaha illallah (there is no god but Allah), subhanallah (glory be to Allah), astaghfirullah (I seek Allah's forgiveness). The first knot goes before you have left the bed."),
@@ -86,8 +87,10 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("Ibn 'Abbas was a boy when he spent a night at the house of his aunt Maymunah, the Prophet's wife, so that he could watch how the Prophet prayed at night. He lay across the cushion and the Prophet and his wife lay along it. Around the middle of the night the Prophet woke, sat up, wiped the sleep from his face with his hand, and recited the closing ayahs of Al 'Imran before he went to the water-skin for wudu."),
                       .hadith("bukhari:183", cite: "Sahih al-Bukhari 183", arabic: 47...97, english: 40...112),
-                      .text("Other reports of the same night name the passage he began with, the ayah on the creation of the heavens and the earth and the alternation of night and day as signs for people of understanding, and say he recited to the end of the surah (Sahih al-Bukhari 4569, Sahih Muslim 763). So the last ten run from 3:190, the ayah he opened with, to the surah's close:"),
+                      .text("Other reports of the same night name the passage he began with, the ayah on the creation of the heavens and the earth and the alternation of night and day as signs for people of understanding, and say he recited to the end of the surah (Sahih al-Bukhari 4569, Sahih Muslim 763l). So the last ten run from 3:190, the ayah he opened with, to the surah's close:"),
                       .quran("3:190-200"),
+                      .hadith("bukhari:4569", cite: "Sahih al-Bukhari 4569", arabic: 29...65, english: 25...70),
+                      .hadith("muslim:763l", cite: "Sahih Muslim 763l", arabic: 44...66, english: 13...61),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When you wake in the night, sit up and wipe your face with your hands, the way one wipes sleep from the eyes. It is a small act, but it is the first thing Ibn 'Abbas saw him do on waking, and it marks the move from sleep to wakefulness before anything else is said or done."),
@@ -107,7 +110,9 @@ extension SunnahView {
               aliases: ["miswak", "toothbrush", "teeth", "gums", "brushing", "arak", "hudhayfah", "tahajjud", "night prayer", "purify", "pleasing to the lord", "breath"],
               sections: [
                   SignSection("WHAT HE DID", [
-                      .text("The siwak, a stick of arak wood chewed soft at one end, was always within the Prophet's reach, and rising from sleep was one of the times he reached for it. Hudhayfah said that whenever he got up at night to pray he scrubbed his mouth with it. Al-Bukhari records the same from Hudhayfah in plainer words, that he used to clean his mouth when he got up at night (Sahih al-Bukhari 889), and in one account of the night at Maymunah's he used the siwak before his wudu as well (Sahih Muslim 763)."),
+                      .text("The siwak, a stick of arak wood chewed soft at one end, was always within the Prophet's reach, and rising from sleep was one of the times he reached for it. Hudhayfah said that whenever he got up at night to pray he scrubbed his mouth with it. Al-Bukhari records the same from Hudhayfah in plainer words, that he used to clean his mouth when he got up at night (Sahih al-Bukhari 889), and in one account of the night at Maymunah's he used the siwak before his wudu as well (Sahih Muslim 763l)."),
+                      .hadith("bukhari:889", cite: "Sahih al-Bukhari 889", arabic: 16...27, english: 0...17),
+                      .hadith("muslim:763l", cite: "Sahih Muslim 763l", arabic: 44...66, english: 13...61),
                       .hadith("muslim:255a", cite: "Sahih Muslim 255a", arabic: 16...29, english: 0...17),
                       .text("'A'ishah reported what the Prophet said of the siwak itself, and the scholars count it among the most emphasised of his habits because of it: it cleans the mouth, and it pleases the Lord. A clean mouth is the worldly part, and any brush can claim it; the pleasure of Allah is the part that makes the stick an act of worship."),
                       .hadith("nasai:5", cite: "Sunan an-Nasa'i 5; graded sahih by al-Albani", arabic: 37...43, english: 13...27),
@@ -119,6 +124,7 @@ extension SunnahView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The narration from 'A'ishah names the two rewards: a mouth made clean, and a Lord made pleased. The Prophet also said that were it not for the hardship on his people he would have ordered the siwak at every prayer (Sahih al-Bukhari 887), which the scholars read as the strongest recommendation short of a command. On waking it has a plain sense too: the mouth changes during sleep, and he met the Quran and the prayer with it clean."),
+                      .hadith("bukhari:887", cite: "Sahih al-Bukhari 887", arabic: 31...45, english: 0...30),
                   ]),
                   SignSection("A NOTE", [
                       .text("The scholars say the purpose is a clean mouth, so a toothbrush serves where no siwak is at hand; the siwak itself is what he used, and using it is the fuller keeping of the sunnah."),
@@ -154,6 +160,7 @@ extension SunnahView {
               sections: [
                   SignSection("WHAT HE DID", [
                       .text("Rinsing the nose, drawing water in and blowing it out, is part of every wudu. For the wudu after sleep the Prophet added a number and a reason. Abu Hurayrah reported that he told them to rinse the nose three times on waking, because Shaytan spends the night in the upper part of it. Al-Bukhari placed the same report in his chapter on Iblis and his soldiers (Sahih al-Bukhari 3295), and Muslim gives it in the Book of Purification."),
+                      .hadith("bukhari:3295", cite: "Sahih al-Bukhari 3295", arabic: 36...51, english: 0...44),
                       .hadith("muslim:238", cite: "Sahih Muslim 238", arabic: 26...49, english: 0...36),
                   ]),
                   SignSection("HOW TO KEEP IT", [
@@ -178,7 +185,9 @@ extension SunnahView {
                       .quran("30:17-18"),
                       .text("Ibn Mas'ud reported the evening form in full: the kingdom has entered the evening belonging to Allah, praise is His, there is no god but He, then a request for the good of the night and refuge from its evil, from laziness, from the evil of old age, and from the punishment of the Fire and the grave. The report ends by saying that in the morning he said the same, beginning instead with asbahna, we have entered the morning:"),
                       .hadith("muslim:2723b", cite: "Sahih Muslim 2723b", arabic: 25...117, english: 0...161),
-                      .text("He also taught a shorter pair for the two ends of the day: Allahumma bika asbahna wa bika amsayna, wa bika nahya wa bika namut (O Allah, by You we enter the morning and by You the evening, by You we live and by You we die), with the evening form adding wa ilaykal-masir, and to You is the return (Sunan Ibn Majah 3868; graded sahih by al-Albani). And he named one supplication the master of all asking for forgiveness, to be said in the day and in the night, with a reward attached:"),
+                      .text("He also taught a shorter pair for the two ends of the day: Allahumma bika asbahna wa bika amsayna, wa bika nahya wa bika namut (O Allah, by You we enter the morning and by You the evening, by You we live and by You we die), with the evening form adding wa ilaykal-masir, and to You is the return (Sunan Ibn Majah 3868; graded sahih by al-Albani)."),
+                      .hadith("ibnmajah:3868", cite: "Sunan Ibn Majah 3868; graded sahih by al-Albani", arabic: 31...56, english: 0...106),
+                      .text("And he named one supplication the master of all asking for forgiveness, to be said in the day and in the night, with a reward attached:"),
                       .hadith("bukhari:6306", cite: "Sahih al-Bukhari 6306", arabic: 28...110, english: 0...184),
                   ]),
                   SignSection("HOW TO KEEP IT", [
@@ -213,7 +222,10 @@ extension SunnahView {
                       .text("Keep a siwak where you make wudu and another in a pocket or bag for the masjid, so the sunnah costs nothing to remember. Chew or cut the tip until the fibres open into a small brush, trim it back when they fray, and soften a dried twig in water before using it."),
                       .text("Use it as part of the wudu itself. The scholars place it at the rinsing of the mouth, so that the mouth is cleaned as the face and hands are, and they say to begin on the right side of the mouth as he began everything on the right. Pass it along the teeth and the gums; no number of strokes is fixed, only a clean mouth."),
                       .text("Use it again when you stand to pray, whether the prayer is obligatory or voluntary, at home or in the masjid. Zayd ibn Khalid, a Companion, kept his siwak behind his ear the way a scribe keeps his pen and used it every time he rose to pray (Sunan Abi Dawud 47), so that it was never missed for want of a stick."),
+                      .hadith("abudawud:47", cite: "Sunan Abi Dawud 47; graded sahih by al-Albani", arabic: 51...72, english: 29...63),
                       .text("Reach for it too at the other times he did: on waking from sleep, which is the first thing Hudhayfah saw him do at night (Sahih al-Bukhari 245), and on coming into his house, which 'A'ishah said he began with (Sahih Muslim 253). The aim the narration names is a clean mouth and a Lord who is pleased, and both are served whenever it is used."),
+                      .hadith("bukhari:245", cite: "Sahih al-Bukhari 245", arabic: 13...25, english: 0...15),
+                      .hadith("muslim:253b", cite: "Sahih Muslim 253b", arabic: 25...30, english: 0...12),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("He wanted this for every prayer, and the only thing that stopped him commanding it was mercy for his followers. The narration names the two rewards: a mouth made clean for the words of the Quran and of dhikr, and a Lord who is pleased. A twig that costs nothing earns both, five times a day and more."),
@@ -257,6 +269,7 @@ extension SunnahView {
                   SignSection("HOW TO KEEP IT", [
                       .text("Wash the right arm to the elbow three times, then the left; at the end, wash the right foot to the ankle, then the left. The mouth, nose, face and head are single parts with no right and left to order; the arms and feet are pairs, and the pair is where the sunnah lives. Keep the order every time until it needs no thought."),
                       .text("Carry the same rule out of the washroom. Put the right arm into a sleeve first and the right foot into a shoe first, and step into the masjid with the right foot. When you take shoes off, begin with the left, as he taught (Sahih al-Bukhari 5855); the scholars extend the same to garments and to leaving the masjid."),
+                      .hadith("bukhari:5855", cite: "Sahih al-Bukhari 5855", arabic: 29...43, english: 4...48),
                       .text("Eat and drink with the right hand, give and take with it, and keep the left for what the right is spared: cleaning after the toilet, and the left foot first into it. The foot into the toilet is not in a narration of its own; it is the scholars' reading of a Prophet who liked the right in all of his affairs."),
                   ]),
                   SignSection("WHY IT MATTERS", [
@@ -280,6 +293,7 @@ extension SunnahView {
                   SignSection("HOW TO KEEP IT", [
                       .text("Wash each part fully and in turn: the hands to the wrists, the mouth and the nose, the face from the hairline to the chin and from ear to ear, the arms to the elbows, the head and the ears, the feet to the ankles. Rub the water in rather than letting it run off, and pass wet fingers between the fingers and the toes."),
                       .text("Watch the places the water misses: the heels and the backs of the ankles, the elbows, the corners under the nails, the skin between the toes. He warned of the Fire for heels left dry (Sahih al-Bukhari 165), so it is these edges, not the broad surfaces, that separate complete from careless."),
+                      .hadith("bukhari:165", cite: "Sahih al-Bukhari 165", arabic: 27...42, english: 21...36),
                       .text("Keep the same care when it costs you: the cold water of a winter dawn, the five minutes you do not think you have, a crowded washroom before the prayer. This is the hardship the narration names, and the reward is attached to the difficulty, not given in spite of it. Make it complete, and no more than complete: three washes is the most, and water is not to be wasted."),
                   ]),
                   SignSection("WHY IT MATTERS", [
@@ -287,6 +301,8 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("Hardship here means what is unwelcome, not what is harmful: one who fears that cold water will make him ill warms it, or where no safe water can be had makes tayammum, as the Quran allows the sick (4:43). Complete is not excessive; he made wudu with a mudd of water (Sahih al-Bukhari 201) and washed no part more than three times."),
+                      .hadith("bukhari:201", cite: "Sahih al-Bukhari 201", arabic: 14...31, english: 0...30),
+                      .quran("4:43"),
                   ]),
               ]),
         .init(id: "wudu-testimony", title: "The testimony after wudu",
@@ -354,6 +370,7 @@ extension SunnahView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("He called these acts the fitrah, the way human beings were made to be, and the Quran says that Allah loves those who keep themselves pure (2:222). A person who keeps them is clean for prayer, clean for company and distinct from those who let the body go or shape it against the fitrah. The forty nights are a mercy: a limit, not a target."),
+                      .quran("2:222"),
                   ]),
                   SignSection("A NOTE", [
                       .text("Ibn Baz, Ibn 'Uthaymin and the Permanent Committee read the words leave the beard as a command that binds, and count shaving it a sin rather than a missed sunnah; Ibn 'Umar took what went beyond his fist at Hajj and 'Umrah, and the scholars differ on whether that was his own practice or a limit for everyone. No sound narration sets a day of the week or an order of the fingers for cutting the nails."),
@@ -396,7 +413,9 @@ extension SunnahView {
                   SignSection("HOW TO KEEP IT", [
                       .text("Say as-salamu 'alaykum (peace be upon you) as you step in, loud enough to be heard, before anything else. Let it be the first thing your family hears from you, ahead of the news of the day and ahead of any complaint; the ayah puts the greeting at the moment of entering, not after you have settled."),
                       .text("Greet whoever is there: your wife or husband, your parents, your children. The young are not left out; Anas passed a group of boys and greeted them, and said the Prophet used to do the same (Sahih al-Bukhari 6247). A child who is greeted every day learns to greet, and learns that he counts."),
+                      .hadith("bukhari:6247", cite: "Sahih al-Bukhari 6247", arabic: 19...32, english: 0...19),
                       .text("Answer in full when someone enters upon you: wa 'alaykumus-salam wa rahmatullah (and upon you be peace and the mercy of Allah). The Quran asks that a greeting be returned with a better one or at least its equal (4:86), so the reply is a sunnah of the house as much as the greeting is."),
+                      .quran("4:86"),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The narration ties the greeting to love, love to faith, and faith to Paradise, and it names the spreading of salam as the one thing he pointed to when he spoke of how believers come to love one another. The house is where the greeting is spread most often, several times a day for a lifetime, and the Quran calls it a greeting from Allah, blessed and good."),
@@ -411,6 +430,7 @@ extension SunnahView {
                       .text("Anas reported a short sentence the Prophet taught for the moment of stepping out of the house. It names Allah, places the outing in His hands, and admits that there is no strength to do any of it except by Him. The reply, he said, comes at once, and the devils stand aside from the one who said it."),
                       .hadith("abudawud:5095", cite: "Sunan Abi Dawud 5095; graded sahih by al-Albani", arabic: 32...72, english: 4...74),
                       .text("At-Tirmidhi carries the same report from Anas with the shorter reply, sufficed and protected, and calls it hasan sahih (Sunan al-Tirmidhi 3426)."),
+                      .hadith("tirmidhi:3426", cite: "Sunan al-Tirmidhi 3426; graded sahih by al-Albani", arabic: 34...62, english: 0...59),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Say it on the threshold as you leave: Bismillah, tawakkaltu 'alallah, la hawla wa la quwwata illa billah (in the name of Allah; I have put my trust in Allah; there is no might and no power except by Allah). Once is the sunnah; the narration sets no number and asks for no raised voice."),
@@ -442,6 +462,8 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("The same chapter forbids walking in one shoe: put on both or take off both (Sahih al-Bukhari 5856, Sahih Muslim 2097). The order is recommended, not required; a shoe put on the other way round first is no sin, only a sunnah missed."),
+                      .hadith("bukhari:5856", cite: "Sahih al-Bukhari 5856", arabic: 25...35, english: 0...25),
+                      .hadith("muslim:2097b", cite: "Sahih Muslim 2097b", arabic: 26...36, english: 0...19),
                   ]),
               ]),
         .init(id: "white-clothes", title: "Wear white",
@@ -452,6 +474,7 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("Ibn 'Abbas reported his instruction about colour. White, he said, is among the best of our garments, and it serves at both ends of life: it is what the living are told to wear and what the dead are wrapped in. At-Tirmidhi adds that white is the shroud the people of knowledge preferred (Sunan al-Tirmidhi 994)."),
                       .hadith("abudawud:4061", cite: "Sunan Abi Dawud 4061; graded sahih by al-Albani", arabic: 30...39, english: 4...20),
+                      .hadith("tirmidhi:994", cite: "Sunan al-Tirmidhi 994; graded sahih by al-Albani", arabic: 30...40, english: 0...26),
                       .text("Samurah ibn Jundub carries the same instruction with its reason:"),
                       .hadith("ibnmajah:3567", cite: "Sunan Ibn Majah 3567; graded sahih by al-Albani", arabic: 34...40, english: 0...8),
                   ]),
@@ -465,6 +488,8 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("White is preferred, not required. He wore other colours too: al-Bara' saw him in a red suit and thought nothing finer (Sahih al-Bukhari 5848), and he addressed the people in a black turban (Sahih Muslim 1359). Any clean, modest garment in your land's custom is permitted; the limits are set by other narrations, silk and gold for men among them, not by colour."),
+                      .hadith("bukhari:5848", cite: "Sahih al-Bukhari 5848", arabic: 23...32, english: 8...23),
+                      .hadith("muslim:1359a", cite: "Sahih Muslim 1359a", arabic: 21...32, english: 0...31),
                   ]),
               ]),
         .init(id: "new-garment", title: "Thank Allah for a new garment",
@@ -511,6 +536,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("The left foot in and the right foot out is the scholars' derivation from his habit of beginning with the right in honourable things (Sahih al-Bukhari 168), not a narration about the privy itself. The words themselves are recommended, not required, and they are said at every privy, at home, at work or in the open."),
+                      .hadith("bukhari:168", cite: "Sahih al-Bukhari 168", arabic: 20...34, english: 0...27),
                   ]),
               ]),
     ]
@@ -531,6 +557,7 @@ extension SunnahView {
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When the adhan begins, pause and answer each line as the mu'adhdhin finishes it, in his own words: Allahu akbar after his Allahu akbar, the two testimonies after his. At the two summons, hayya 'ala as-salah and hayya 'ala al-falah, say instead La hawla wa la quwwata illa billah (there is no power and no strength except through Allah), as 'Umar reported from him (Sahih Muslim 385)."),
+                      .hadith("muslim:385", cite: "Sahih Muslim 385", arabic: 97...155, english: 85...185),
                       .text("When the call ends, send blessings on the Prophet, for instance Allahumma salli 'ala Muhammad (O Allah, send blessings upon Muhammad), or the fuller salah you say in the last sitting of the prayer. He said that whoever sends one blessing on him is blessed by Allah ten times for it."),
                       .text("Then ask for the wasilah in the words he taught: Allahumma rabba hadhihi ad-da'wati at-tammah, was-salatil-qa'imah, ati Muhammadan al-wasilata wal-fadilah, wab'athhu maqaman mahmudan alladhi wa'adtah (O Allah, Lord of this perfect call and of the prayer about to be established, grant Muhammad the wasilah and the distinction, and raise him to the praised station You promised him)."),
                       .text("Finish with a dua of your own, in any language. The time from the adhan to the iqamah is one he named as a time when dua is not turned away, and it has its own page in this library; the answer to the adhan is the natural door into it."),
@@ -556,6 +583,8 @@ extension SunnahView {
                       .text("After you have answered the adhan and asked for the wasilah, stay where you are, in the masjid or at home, and turn to dua instead of your phone. Begin as the scholars advise every dua be begun: praise Allah, send blessings on the Prophet, then ask."),
                       .text("Ask in your own words and your own language, for yourself first and then for others: forgiveness, guidance, a good end, your parents, the Muslims. Nothing is prescribed for this moment; the duas that come from the Quran and the Sunnah are the best choice, but any sincere request belongs here."),
                       .text("If there is time, pray two rak'ahs in the gap: he said there is a prayer between every two calls, for whoever wishes (Sahih al-Bukhari 627), and the nearest a servant is to his Lord is in prostration, so ask there too (Sahih Muslim 482)."),
+                      .hadith("bukhari:627", cite: "Sahih al-Bukhari 627", arabic: 29...44, english: 0...38),
+                      .hadith("muslim:482", cite: "Sahih Muslim 482", arabic: 45...54, english: 0...25),
                       .text("When the iqamah is called, stop and stand for the prayer; the asking does not end there. The prayer has its own prostrations, where dua is nearest to being heard, and the remembrances that follow the salam have their own page in this library. Between them, a Muslim who keeps this sunnah is asking Allah for things many times a day."),
                   ]),
                   SignSection("WHY IT MATTERS", [
@@ -578,8 +607,11 @@ extension SunnahView {
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Make wudu at home, carefully, and leave early enough that the iqamah does not catch you on the road. He counted a thorough wudu, many steps to the masjid and waiting for the next prayer among the things by which Allah wipes out sins and raises ranks (Sahih Muslim 251a)."),
+                      .hadith("muslim:251a", cite: "Sahih Muslim 251a", arabic: 35...69, english: 0...62),
                       .text("Walk at an ordinary pace, with sakinah (composure) and waqar (dignity): no running, no pushing at the door, no calling out to the imam to wait. If the iqamah is called while you are on the way, keep the same pace. He said that a person who is on his way to the prayer is already in prayer (Sahih Muslim 602b)."),
+                      .hadith("muslim:602b", cite: "Sahih Muslim 602b", arabic: 37...62, english: 0...46),
                       .text("When you arrive, join the imam in whatever he is doing, without bowing on the way to the row. When Abu Bakrah bowed before he reached the row, the Prophet said: may Allah increase your eagerness, but do not do it again (Sahih al-Bukhari 783). When the imam gives the salam, stand and complete the rak'ahs you missed."),
+                      .hadith("bukhari:783", cite: "Sahih al-Bukhari 783", arabic: 18...48, english: 0...50),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("Every step is a degree raised and a sin removed, and the walker is counted as being in prayer before he has said the takbir. Ibn 'Uthaymin draws out the sense of the command: a person who runs arrives breathless and distracted, and has traded the calm of the prayer for a rak'ah he might have caught anyway. Composure on the way is how the prayer is entered in the state it should be prayed in."),
@@ -598,9 +630,13 @@ extension SunnahView {
                       .hadith("muslim:713a", cite: "Sahih Muslim 713a", arabic: 38...56, english: 0...36),
                       .hadith("bukhari:444", cite: "Sahih al-Bukhari 444", arabic: 34...42, english: 4...17),
                       .text("He held people to it. When Abu Qatadah came in and sat down among the people, because he saw the Prophet sitting, he was asked what had stopped him from praying two rak'ahs first (Sahih Muslim 714b). On a Friday, in the middle of the khutbah, he told a man who had just sat down to stand and pray (Sahih Muslim 875a)."),
+                      .hadith("muslim:714b", cite: "Sahih Muslim 714b", arabic: 42...96, english: 0...86),
+                      .hadith("muslim:875a", cite: "Sahih Muslim 875a", arabic: 26...57, english: 0...19),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Step in with the right foot, which the scholars derive from his liking to begin with the right in everything (Sahih al-Bukhari 168), and say: Allahumma-ftah li abwaba rahmatik (O Allah, open for me the doors of Your mercy). He also sought refuge on entering: A'udhu billahil-'Azim wa bi-wajhihil-karim wa sultanihil-qadim min ash-shaytanir-rajim (I seek refuge in Allah the Mighty, in His noble face and His eternal authority, from the accursed Shaytan), after which Shaytan says he is protected from me for the rest of the day (Sunan Abi Dawud 466; graded sahih by al-Albani)."),
+                      .hadith("bukhari:168", cite: "Sahih al-Bukhari 168", arabic: 20...34, english: 0...27),
+                      .hadith("abudawud:466", cite: "Sunan Abi Dawud 466; graded sahih by al-Albani", arabic: 43...77, english: 0...82),
                       .text("Before you sit, pray two rak'ahs, at any hour. If the iqamah has been called, join the obligatory prayer instead; it stands in for the greeting, as does the regular sunnah you came to pray, such as the two rak'ahs before Fajr. The greeting is for the one who means to sit; a person passing through the masjid is not asked for it."),
                       .text("Pray them without hurry, and then sit, read or wait for the prayer. If you came in while the khutbah is being given, pray them briefly and sit; that is the one time he had a man stand up again to do it, so the khutbah is no reason to leave them."),
                       .text("On the way out, step out with the left foot and say: Allahumma inni as'aluka min fadlik (O Allah, I ask You of Your bounty). Mercy is what the masjid is entered for; fadl, bounty, is what is sought outside it, in the day's work, so both are asked for from the same Lord."),
@@ -629,13 +665,18 @@ extension SunnahView {
                       .text("As soon as you have given the salam, say Astaghfirullah (I ask Allah for forgiveness) three times, then: Allahumma anta as-salam wa minka as-salam, tabarakta ya dhal-jalali wal-ikram (O Allah, You are Peace and from You is peace; blessed are You, Owner of majesty and honour). It takes a few seconds, and it is the first thing he said."),
                       .text("Then the tahlil: La ilaha illallahu wahdahu la sharika lah, lahul-mulku wa lahul-hamdu wa huwa 'ala kulli shay'in qadir. Allahumma la mani'a lima a'tayt, wa la mu'tiya lima mana't, wa la yanfa'u dhal-jaddi minkal-jadd (none has the right to be worshipped but Allah alone, without partner; His is the dominion and His the praise, and He is able to do all things. O Allah, none can withhold what You give, none can give what You withhold, and the fortune of the fortunate is no use to him against You)."),
                       .text("Then count on your fingers: Subhanallah (glory be to Allah) thirty-three times, Alhamdulillah (praise be to Allah) thirty-three times, Allahu akbar (Allah is greatest) thirty-three times, and as the hundredth: La ilaha illallahu wahdahu la sharika lah, lahul-mulku wa lahul-hamdu wa huwa 'ala kulli shay'in qadir. He told the women who asked him to count on their fingers, for the fingers will be questioned and made to speak (Sunan Abi Dawud 1501; graded hasan by al-Albani)."),
+                      .hadith("abudawud:1501", cite: "Sunan Abi Dawud 1501; graded hasan by al-Albani", arabic: 24...35, english: 0...51),
                       .text("He also told Mu'adh never to leave, after each prayer, Allahumma a'inni 'ala dhikrika wa shukrika wa husni 'ibadatik (O Allah, help me to remember You, to thank You and to worship You well), and told 'Uqbah ibn 'Amir to recite the three last surahs after every prayer (Sunan Abi Dawud 1522 and 1523; both graded sahih by al-Albani). Add them once the first three are a habit."),
+                      .hadith("abudawud:1522", cite: "Sunan Abi Dawud 1522; graded sahih by al-Albani", arabic: 41...74, english: 0...36),
+                      .hadith("abudawud:1523", cite: "Sunan Abi Dawud 1523; graded sahih by al-Albani", arabic: 28...40, english: 0...19),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The hundred earn forgiveness of sins though they be like the foam of the sea, and it was the poor of the Muhajirin, who could not match the rich in charity, whom he first taught them as the way to catch up (Sahih Muslim 595a). The scholars add that these adhkar are the seal of the prayer: a person leaves it praising Allah rather than rushing for the door, and five times a day a few minutes are spent in the words the Prophet himself chose."),
+                      .hadith("muslim:595a", cite: "Sahih Muslim 595a", arabic: 34...122, english: 0...142),
                   ]),
                   SignSection("A NOTE", [
                       .text("The counts vary between sound reports: thirty-three of each here, ten of each in Sahih al-Bukhari 6329. The scholars say each form is a sunnah and that varying between them is better than fixing on one."),
+                      .hadith("bukhari:6329", cite: "Sahih al-Bukhari 6329", arabic: 66...75, english: 125...145),
                   ]),
               ]),
         .init(id: "sit-until-sunrise", title: "Stay seated until the sun rises",
@@ -653,6 +694,7 @@ extension SunnahView {
                       .text("After the remembrances that follow the prayer, stay in your place rather than heading for the door. The morning remembrances belong here, the words he said at the start of each day, and so does the Quran; the narration's reward is for the one who sits remembering Allah, so it is not a matter of simply staying put."),
                       .text("Keep to remembrance, recitation and dua, and keep the talk light if there is company; his Companions talked and laughed around him, and he smiled. The scholars count reading the Quran and sitting in a lesson of knowledge as remembrance for this purpose."),
                       .text("When the sun has risen, wait until it is well up, about a quarter of an hour, since he forbade prayer from after Fajr until the sun has risen (Sahih al-Bukhari 581); then pray two rak'ahs. The scholars count them as the Duha prayer at its earliest time, which some call the prayer of Ishraq."),
+                      .hadith("bukhari:581", cite: "Sahih al-Bukhari 581", arabic: 23...40, english: 0...21),
                       .text("If you cannot stay, because work or sleep is calling, keep what you can: the adhkar after the prayer and the morning remembrances, and go. The sunnah is the sitting and nothing in it is obligatory; the reward named is for the complete form, and whatever is kept of it is kept for Allah."),
                   ]),
                   SignSection("WHY IT MATTERS", [
@@ -686,9 +728,11 @@ extension SunnahView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The narration names the reward outright: a house built in Paradise for whoever prays these twelve in a day and night. He said that when the deeds are reckoned the voluntary prayers complete whatever was lacking in the obligatory ones (Sunan al-Tirmidhi 413; graded sahih by al-Albani), and the scholars add that a fixed pair around each prayer means the obligatory prayer is never begun cold or left in a hurry: there is a prayer before it to settle the heart and one after it to seal it."),
+                      .hadith("tirmidhi:413", cite: "Sunan al-Tirmidhi 413; graded sahih by al-Albani", arabic: 71...117, english: 68...156),
                   ]),
                   SignSection("A NOTE", [
                       .text("Ibn 'Umar counted ten from the Prophet, with two before Dhuhr rather than four (Sahih al-Bukhari 1180). Both reports are sound: he prayed two before Dhuhr at times and four at others, so the twelve of Umm Habibah's report add a second pair before Dhuhr, and the scholars give the fuller count as the one to aim for."),
+                      .hadith("bukhari:1180", cite: "Sahih al-Bukhari 1180", arabic: 22...60, english: 0...54),
                   ]),
               ]),
         .init(id: "fajr-two", title: "The two rak'ahs before Fajr",
@@ -706,6 +750,7 @@ extension SunnahView {
                   SignSection("HOW TO KEEP IT", [
                       .text("Pray them after the Fajr adhan and before the obligatory prayer: two rak'ahs with one tasleem. If you pray Fajr in the masjid, pray them at home before you set out, as he did, or in the masjid before the iqamah; either way they come before Fajr, never after it."),
                       .text("Keep them brief. Recite al-Fatihah and a short surah in each rak'ah: he recited Say, O disbelievers (al-Kafirun) in the first and Say, He is Allah, One (al-Ikhlas) in the second (Sahih Muslim 726). Their lightness is part of the sunnah, so do not stretch them into a long recitation."),
+                      .hadith("muslim:726", cite: "Sahih Muslim 726", arabic: 32...46, english: 0...11),
                       .text("Do not let them go when you are rushed. The obligatory prayer is the one that cannot be missed, but these two are the pair he was most careful never to leave, so give them their few minutes in the Fajr routine rather than treating them as an extra for days with time to spare."),
                   ]),
                   SignSection("WHY IT MATTERS", [
@@ -713,6 +758,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("Once the iqamah is called, do not begin them: he said that when the prayer is called there is no prayer but the obligatory one (Sahih Muslim 710). On a journey the regular sunnahs may be left, but the scholars note that he kept these two and Witr wherever he was."),
+                      .hadith("muslim:710b", cite: "Sahih Muslim 710b", arabic: 34...40, english: 0...11),
                   ]),
               ]),
         .init(id: "sunnah-at-home", title: "Pray the voluntary prayers at home",
@@ -723,12 +769,14 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("In Ramadan the Prophet set up a small enclosure of matting in the masjid and prayed in it at night. Men gathered to pray behind him. After a few nights he stayed inside, and in the morning he told them why: the voluntary prayer belongs in the house. Muslim's version adds that he feared it would be made obligatory on them (Sahih Muslim 781)."),
                       .hadith("bukhari:731", cite: "Sahih al-Bukhari 731", arabic: 68...81, english: 74...98),
+                      .hadith("muslim:781a", cite: "Sahih Muslim 781a", arabic: 85...125, english: 78...136),
                       .text("He put the same rule as a command, with a warning folded into it:"),
                       .hadith("bukhari:432", cite: "Sahih al-Bukhari 432", arabic: 23...30, english: 5...20),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Pray the obligatory prayers in the masjid, in congregation, as he did and told the men to do. The rule here is for the voluntary prayers, and it does not move the obligatory ones out of the masjid; the narration itself names them as the exception."),
                       .text("Take the regular sunnahs home. The two after Maghrib and the two after 'Isha are the easiest, since you are going home anyway, and Ibn 'Umar remembered the Prophet praying both pairs in his house (Sahih al-Bukhari 1180). The two before Fajr can be prayed at home before you leave for the masjid."),
+                      .hadith("bukhari:1180", cite: "Sahih al-Bukhari 1180", arabic: 22...60, english: 0...54),
                       .text("Pray Witr and the night prayer at home, which is where he prayed them. The enclosure of mats in Ramadan was the exception, and he ended it himself; Tarawih in the masjid is the one night prayer the scholars keep in congregation, on the example of the Companions."),
                       .text("Let the house have prayer in it. A house with no voluntary prayer is what he likened to a grave, so give one corner of it to prayer, where the family's sunnahs are prayed and the children see them prayed and learn them without being taught."),
                   ]),
@@ -755,6 +803,8 @@ extension SunnahView {
                   SignSection("HOW TO KEEP IT", [
                       .text("Wait until the sun has fully risen and stands clear of the horizon, about a quarter of an hour after sunrise by the scholars' reckoning. The time then runs until shortly before Dhuhr; it is not prayed at sunrise itself, nor when the sun stands at its height just before Dhuhr."),
                       .text("Pray two rak'ahs at least. 'A'ishah said he prayed four and added what Allah willed (Sahih Muslim 719), and on the day Makkah was opened he prayed eight (Sahih al-Bukhari 357). Two are enough to pay the day's charity; four and eight are also reported from him."),
+                      .hadith("muslim:719c", cite: "Sahih Muslim 719c", arabic: 20...33, english: 0...21),
+                      .hadith("bukhari:357", cite: "Sahih al-Bukhari 357", arabic: 72...121, english: 64...142),
                       .text("If you can choose the hour, choose the later one. He called it the prayer of those who turn back to Allah and placed it when the young camels feel the heat of the ground: mid to late morning rather than straight after sunrise. A pair prayed early still counts; the later pair is better."),
                       .text("Tie it to something you already do. Abu Hurayrah held to it for the rest of his life; a pair of rak'ahs after breakfast, or before leaving for work or school, keeps it in the day without any planning, and a habit that costs two minutes is one that survives."),
                   ]),
@@ -763,6 +813,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("'A'ishah said she never saw the Prophet pray Duha, though she prayed it herself (Sahih al-Bukhari 1177), while she also reported that he prayed four (Sahih Muslim 719). The scholars reconcile the two: she did not see what he did away from her house, and he left some voluntary acts at times so they would not be taken for obligations."),
+                      .hadith("bukhari:1177", cite: "Sahih al-Bukhari 1177", arabic: 19...31, english: 0...14),
                   ]),
               ]),
         .init(id: "witr", title: "Never leave Witr",
@@ -780,14 +831,18 @@ extension SunnahView {
                   SignSection("HOW TO KEEP IT", [
                       .text("Pray Witr any time after 'Isha and before Fajr. The least is one rak'ah; three is the common habit, prayed as two with a tasleem and then one more, or as three with a single tashahhud at the end; larger odd numbers are reported from him."),
                       .text("Decide at bedtime. If you doubt you will wake before Fajr, pray Witr before you sleep, as the Prophet counselled Abu Hurayrah (Sahih al-Bukhari 1178). If you are confident of waking, leave it for the end of the night, which he said is witnessed and is better."),
+                      .hadith("bukhari:1178", cite: "Sahih al-Bukhari 1178", arabic: 25...42, english: 0...37),
                       .text("If you pray Witr early and then wake with time to pray more, pray in pairs and leave Witr where it was. He said there are not two Witrs in one night (Sunan al-Tirmidhi 470; graded sahih by al-Albani), so the scholars rule that it is not repeated; the early Witr stands."),
+                      .hadith("tirmidhi:470", cite: "Sunan al-Tirmidhi 470; graded sahih by al-Albani", arabic: 29...32, english: 0...15),
                       .text("If sleep or illness takes the night, make it up by day: when that happened to him he prayed twelve rak'ahs in the daytime, an even number (Sahih Muslim 746). The scholars say the same of a missed Witr: pray it by day as an even number, three becoming four."),
+                      .hadith("muslim:746e", cite: "Sahih Muslim 746e", arabic: 35...50, english: 0...26),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("He did not let Witr go, at home or on a journey, and he commanded the Companions to end their night with it; the scholars grade it the most emphasised of the voluntary prayers alongside the two before Fajr, and the Hanafis count it as a duty. A single rak'ah is enough to keep it, so there is no night on which it cannot be prayed."),
                   ]),
                   SignSection("A NOTE", [
                       .text("Witr is a confirmed sunnah with the majority of scholars and wajib with the Hanafis; either way his command was to keep it. Supplication (qunut) in its last rak'ah is sunnah, not a condition, and the words he taught al-Hasan are the ones to learn (Sunan al-Tirmidhi 464, graded sahih)."),
+                      .hadith("tirmidhi:464", cite: "Sunan al-Tirmidhi 464; graded sahih by Darussalam", arabic: 25...68, english: 0...117),
                   ]),
               ]),
         .init(id: "night-prayer", title: "The night prayer",
@@ -798,15 +853,20 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("The Quran told the Prophet to rise for part of the night and pray, and he did, standing until his feet swelled (Sahih al-Bukhari 1130). For his followers it is voluntary, and he ranked it first among all the voluntary prayers."),
                       .quran("17:79"),
+                      .hadith("bukhari:1130", cite: "Sahih al-Bukhari 1130", arabic: 17...39, english: 0...37),
                       .hadith("muslim:1163a", cite: "Sahih Muslim 1163a", arabic: 34...46, english: 0...23),
                       .text("He told the Companions what happens in the last third of every night:"),
                       .hadith("bukhari:1145", cite: "Sahih al-Bukhari 1145", arabic: 35...60, english: 5...68),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Begin small. Two rak'ahs and then Witr, prayed before you sleep or after you wake, is the night prayer; the amount is not fixed, and what you can keep up matters more than what you can manage once. 'A'ishah said he never prayed more than eleven rak'ahs, in Ramadan or outside it (Sahih al-Bukhari 1147)."),
+                      .hadith("bukhari:1147", cite: "Sahih al-Bukhari 1147", arabic: 41...77, english: 16...61),
                       .text("Pray two by two, with a tasleem after each pair, and end with a single rak'ah of Witr; that is how he described it to a man who asked (Sahih al-Bukhari 990). Recite slowly, as the Quran says, and let the prayer be long or short as you can bear."),
+                      .hadith("bukhari:990", cite: "Sahih al-Bukhari 990", arabic: 38...53, english: 0...61),
                       .text("If you can, rise in the last third of the night: that is the hour he said our Lord descends to the nearest heaven and asks who is calling Him, asking of Him and seeking His forgiveness. Set an alarm for a little before Fajr, pray, and ask; then stay up for the Fajr sunnah and Fajr."),
                       .text("If you sleep through it, do not count the night lost. When sleep or pain kept him from his night prayer he made it up by day (Sahih Muslim 746), and he said that whoever sleeps past his nightly portion and makes it up between Fajr and Dhuhr is written as having done it at night (Sahih Muslim 747)."),
+                      .hadith("muslim:746e", cite: "Sahih Muslim 746e", arabic: 35...50, english: 0...26),
+                      .hadith("muslim:747", cite: "Sahih Muslim 747", arabic: 56...76, english: 0...44),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .quran("51:17-18"),
@@ -814,6 +874,8 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("It can be as little as two rak'ahs and Witr: he said the night prayer is two by two and that one rak'ah makes odd what came before (Sahih al-Bukhari 990). The deeds Allah loves most are the ones kept up, even if small (Sahih al-Bukhari 6464, Sahih Muslim 783), so choose a portion you will keep every night over a long one you will abandon."),
+                      .hadith("bukhari:6464", cite: "Sahih al-Bukhari 6464", arabic: 30...46, english: 0...40),
+                      .hadith("muslim:783b", cite: "Sahih Muslim 783b", arabic: 25...41, english: 0...26),
                   ]),
               ]),
     ]
@@ -840,9 +902,12 @@ extension SunnahView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The name of Allah over food shuts Shaytan out of the meal. The Prophet said that Shaytan counts as lawful for himself any food over which the name of Allah has not been mentioned (Sahih Muslim 2017), and that when a man names Allah on entering his house and on eating, Shaytan tells his companions there is no lodging and no supper for them there (Sahih Muslim 2018). The right hand marks the believer apart from Shaytan, who eats and drinks with his left."),
+                      .hadith("muslim:2017a", cite: "Sahih Muslim 2017a", arabic: 83...92, english: 98...109),
+                      .hadith("muslim:2018a", cite: "Sahih Muslim 2018a", arabic: 33...73, english: 0...89),
                   ]),
                   SignSection("A NOTE", [
                       .text("The right hand is more than good manners. The Prophet forbade eating with the left, and a man who refused his instruction out of pride could never again raise his right hand to his mouth (Sahih Muslim 2021); so Ibn Baz and Ibn 'Uthaymin held eating and drinking with the right hand to be obligatory for anyone able to, and the left to be allowed only for a real excuse."),
+                      .hadith("muslim:2021", cite: "Sahih Muslim 2021", arabic: 23...58, english: 0...46),
                   ]),
               ]),
         .init(id: "forgot-bismillah", title: "If you forget bismillah",
@@ -866,6 +931,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("Both wordings are reported and either may be said: Bismillahi awwalahu wa akhirahu, as Abu Dawud has it, or Bismillahi fi awwalihi wa akhirihi, as al-Tirmidhi has it (Sunan al-Tirmidhi 1858)."),
+                      .hadith("tirmidhi:1858", cite: "Sunan al-Tirmidhi 1858; graded sahih by Darussalam", arabic: 38...54, english: 9...45),
                   ]),
               ]),
         .init(id: "eat-together", title: "Eat together, and from the edge",
@@ -901,6 +967,7 @@ extension SunnahView {
               sections: [
                   SignSection("WHAT HE DID", [
                       .text("The Prophet ate with three fingers, and when he finished he licked them before anything else (Sahih Muslim 2034). He told the Companions to do the same, to wipe the dish clean, and to pick up a morsel that fell, clean it and eat it. The reason he gave is the same every time: no one knows which part of his food holds the blessing."),
+                      .hadith("muslim:2034", cite: "Sahih Muslim 2034", arabic: 27...64, english: 0...50),
                       .hadith("muslim:2033b", cite: "Sahih Muslim 2033b", arabic: 17...56, english: 0...60),
                       .text("Ibn 'Abbas carried the shortest form of it:"),
                       .hadith("bukhari:5456", cite: "Sahih al-Bukhari 5456", arabic: 16...35, english: 0...23),
@@ -974,6 +1041,8 @@ extension SunnahView {
                       .text("Abu Hurayrah, who ate at the Prophet's table and beside him at others', summed up his manner with food in one line. Food that was served was never spoken ill of, whether it was plain or poorly made; it was eaten, or quietly left."),
                       .hadith("bukhari:5409", cite: "Sahih al-Bukhari 5409", arabic: 15...29, english: 0...27),
                       .text("Muslim has the same report with one more detail: if he did not want it, he kept silent (Sahih Muslim 2064d). When a roasted lizard was set before him at Maymunah's house he drew back his hand, and when Khalid ibn al-Walid asked whether it was forbidden he said no, it was not found in the land of his people and he found himself disinclined to it; Khalid ate it as he watched (Sahih al-Bukhari 5537)."),
+                      .hadith("muslim:2064d", cite: "Sahih Muslim 2064d", arabic: 34...53, english: 0...28),
+                      .hadith("bukhari:5537", cite: "Sahih al-Bukhari 5537", arabic: 29...102, english: 0...100),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When food is put in front of you, look for what you can eat of it. If it is to your liking, eat it and thank the one who made it; if only part of it is, eat that part and say nothing of the rest."),
@@ -1057,15 +1126,20 @@ extension SunnahView {
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Greet first, before anything else is said: as-salamu 'alaykum (peace be upon you). Add wa rahmatullahi wa barakatuh (and Allah's mercy and His blessings) when you can. Three men greeted the Prophet in turn, the first with the short form and the last with the full one, and he counted ten, twenty and thirty rewards (Sunan Abi Dawud 5195, graded sahih by al-Albani)."),
+                      .hadith("abudawud:5195", cite: "Sunan Abi Dawud 5195; graded sahih by al-Albani", arabic: 18...78, english: 0...90),
                       .text("Give it to Muslims you know and Muslims you do not: the stranger in the street, the man at the next till, the family passing you in the masjid. He named greeting the unknown as one of the best things in Islam, so a greeting kept for friends is only half the sunnah."),
                       .text("When you are unsure who should begin, follow his order: the one riding greets the one walking, the one walking greets the one sitting, the few greet the many, and the young greet the old (Sahih al-Bukhari 6231). If both of you begin at once, nothing is lost."),
+                      .hadith("bukhari:6231", cite: "Sahih al-Bukhari 6231", arabic: 27...36, english: 0...31),
                       .text("Answer every greeting with the same words or more: wa 'alaykumus-salam wa rahmatullahi wa barakatuh (and upon you be peace, and Allah's mercy and His blessings). Beginning the greeting is a sunnah; returning it is a duty the ayah commands, and one of the rights a Muslim has over a Muslim (Sahih Muslim 2162), so never let a salam go unanswered."),
+                      .hadith("muslim:2162b", cite: "Sahih Muslim 2162b", arabic: 31...67, english: 0...81),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("He made spreading the greeting the road to loving one another, loving one another the condition of faith, and faith the condition of Paradise, all in one breath. A greeting costs nothing, and it is a dua for the one you meet. Said to everyone, it tells a stranger that he is your brother before you know his name."),
                   ]),
                   SignSection("A NOTE", [
                       .text("The greeting of salam is begun with Muslims: the Prophet told the Companions not to be the first to greet the Jews and Christians with it (Sahih Muslim 2167), and to answer their greeting with wa 'alaykum (Sahih al-Bukhari 6258). Other courteous words, a good morning or a how are you, are open to everyone, as the scholars say."),
+                      .hadith("muslim:2167a", cite: "Sahih Muslim 2167a", arabic: 28...33, english: 0...11),
+                      .hadith("bukhari:6258", cite: "Sahih al-Bukhari 6258", arabic: 33...39, english: 0...22),
                   ]),
               ]),
         .init(id: "smile", title: "Smile",
@@ -1075,6 +1149,8 @@ extension SunnahView {
               sections: [
                   SignSection("WHAT HE DID", [
                       .text("The Companions remembered his face. Jarir said that from the day he became Muslim the Prophet never saw him without smiling at him (Sahih al-Bukhari 6089), and 'Abdullah ibn al-Harith said he had seen nobody who smiled more (Sunan al-Tirmidhi 3641, graded sahih by al-Albani). He taught that this costs nothing and counts for something: a smile in your brother's face is written as charity, and no small kindness is to be looked down on."),
+                      .hadith("bukhari:6089", cite: "Sahih al-Bukhari 6089", arabic: 13...27, english: 0...32),
+                      .hadith("tirmidhi:3641", cite: "Sunan al-Tirmidhi 3641; graded sahih by al-Albani", arabic: 18...29, english: 0...13),
                       .hadith("tirmidhi:1956", cite: "Sunan al-Tirmidhi 1956; graded sahih by al-Albani", arabic: 38...78, english: 0...77),
                       .hadith("muslim:2626", cite: "Sahih Muslim 2626", arabic: 37...47, english: 6...26),
                   ]),
@@ -1107,6 +1183,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("The handshake is a man's with a man and a woman's with a woman: the Prophet took the women's pledge by word alone and told them he did not shake hands with women (Sunan Ibn Majah 2874, graded sahih by al-Albani), so a man gives his hand only to a woman who is his mahram. Zubair 'Ali Za'i grades the forgiveness narration weak where al-Albani and most graders call it sahih."),
+                      .hadith("ibnmajah:2874", cite: "Sunan Ibn Majah 2874; graded sahih by al-Albani", arabic: 21...41, english: 0...40),
                   ]),
               ]),
         .init(id: "sneeze", title: "Yarhamukallah to the one who sneezes",
@@ -1121,7 +1198,9 @@ extension SunnahView {
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When you sneeze, say alhamdulillah (praise be to Allah), loud enough to be heard. He said that Allah loves the sneeze (Sahih al-Bukhari 6226), and the praise is what the rest of the exchange hangs on: the hearer answers the praise, not the sneeze."),
+                      .hadith("bukhari:6226", cite: "Sahih al-Bukhari 6226", arabic: 25...46, english: 0...32),
                       .text("When you hear someone praise Allah after a sneeze, say yarhamukallah (may Allah have mercy on you). He called this a right on every Muslim who hears it (Sahih al-Bukhari 6226) and counted it among the five rights a Muslim has over his brother (Sahih Muslim 2162)."),
+                      .hadith("muslim:2162a", cite: "Sahih Muslim 2162a", arabic: 61...76, english: 0...27),
                       .text("If you were the one who sneezed, answer the answer: yahdikumullah wa yuslih balakum (may Allah guide you and set your affairs right). The exchange ends with the sneezer praying for the ones who prayed for him, so three duas have passed in the time a sneeze takes."),
                       .text("Leave the one who did not praise Allah unanswered, as the Prophet did, and tell him why if he asks; that is how the Companions learnt the rule. The scholars say it is good to remind him gently to praise Allah, so that he can be answered."),
                   ]),
@@ -1130,6 +1209,8 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("Because the narration calls the answer a right on everyone who hears, Ibn 'Uthaymin held that answering a sneezer who has praised Allah is a duty on each hearer, while other scholars count one answer from the gathering enough. Answer up to three sneezes; after that he has a cold, as the Prophet said of a man who kept sneezing (Sahih Muslim 2993; Sunan Abi Dawud 5034, graded hasan by al-Albani)."),
+                      .hadith("muslim:2993", cite: "Sahih Muslim 2993", arabic: 56...79, english: 0...41),
+                      .hadith("abudawud:5034", cite: "Sunan Abi Dawud 5034; graded hasan by al-Albani", arabic: 17...23, english: 0...21),
                   ]),
               ]),
         .init(id: "yawn", title: "Cover a yawn",
@@ -1146,6 +1227,7 @@ extension SunnahView {
                       .text("When a yawn comes, hold it back as far as you can: close the lips, breathe through the nose, swallow it down. The narration asks for your best effort, not a guarantee; a yawn that escapes after a real try is not what he disliked."),
                       .text("If it will not be held, put your hand over your mouth. That is the instruction of the Muslim narration in its own words, and it covers the yawn in prayer and out of it; the mouth is not left open."),
                       .text("Keep it silent. He said that when a man lets out a ha with his yawn, Shaytan laughs at him (Sahih al-Bukhari 6223), so a yawn held behind closed lips and without the sound is already most of the sunnah kept."),
+                      .hadith("bukhari:6223", cite: "Sahih al-Bukhari 6223", arabic: 47...61, english: 37...64),
                       .text("Mind it most in prayer. One version of the narration speaks of the one who yawns in his prayer (Sahih Muslim 2995c), and a wide-open yawn in the middle of recitation is the very picture of the heaviness he disliked; hold it, cover it, and go on."),
                   ]),
                   SignSection("WHY IT MATTERS", [
@@ -1170,6 +1252,7 @@ extension SunnahView {
                       .text("Never make a man get up so that you can sit in his place; he forbade it outright. If someone rises for you of his own accord you may still decline: Ibn 'Umar, who narrated the prohibition, would not take a seat that had been left for him."),
                       .text("When someone else arrives, make room: shift along, close the gap, widen the circle. That is what the Prophet told a gathering to do instead of unseating anyone, and it is what the ayah asks of the believers, with a promise attached."),
                       .text("If you leave your place and come back, it is yours: the Prophet said the one who gets up from his seat and returns to it has the most right to it (Sahih Muslim 2179), so nobody should be put out of a seat he stepped away from for a moment."),
+                      .hadith("muslim:2179", cite: "Sahih Muslim 2179", arabic: 45...54, english: 20...42),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("He read the three men's seating as three attitudes to Allah: one turned to Him and was taken in, one was shy and was sheltered, one turned away and was turned away from. Where a person sits in a gathering of knowledge is a small picture of what he came for, and the ayah promises that whoever makes room is made room for by Allah."),
@@ -1204,6 +1287,8 @@ extension SunnahView {
               sections: [
                   SignSection("WHAT HE DID", [
                       .text("Visiting the sick is one of the five rights a Muslim has over his brother (Sahih Muslim 2162), and the Prophet kept it himself: with a Bedouin, with his Companions, and with the Jewish boy who used to serve him (Sahih al-Bukhari 1356). He named its reward in terms of Paradise, he had words for the bedside, and he taught a dua to be said seven times over the sick."),
+                      .hadith("muslim:2162a", cite: "Sahih Muslim 2162a", arabic: 61...76, english: 0...27),
+                      .hadith("bukhari:1356", cite: "Sahih al-Bukhari 1356", arabic: 21...75, english: 0...71),
                       .hadith("muslim:2568b", cite: "Sahih Muslim 2568b", arabic: 34...43, english: 0...16),
                       .hadith("bukhari:5656", cite: "Sahih al-Bukhari 5656", arabic: 21...80, english: 0...73),
                       .hadith("tirmidhi:2083", cite: "Sunan al-Tirmidhi 2083; graded sahih by al-Albani", arabic: 39...60, english: 0...50),
@@ -1216,6 +1301,7 @@ extension SunnahView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The visitor is in the orchard of Paradise until he comes home: that is the reward the narration gives, and when the Prophet was asked what the orchard was, he said its gathered fruit (Sahih Muslim 2568d). On the Day of Resurrection Allah will say to a man, I was sick and you did not visit Me, meaning a servant of His whom the man knew to be ill (Sahih Muslim 2569). Few sunnahs are rewarded so plainly, and few are so easily put off until tomorrow."),
+                      .hadith("muslim:2569", cite: "Sahih Muslim 2569", arabic: 30...68, english: 0...86),
                   ]),
                   SignSection("A NOTE", [
                       .text("The seven-times dua is, in its own words, for one whose appointed time has not come; it is a dua, not a guarantee against death. A sick non-Muslim may be visited too: the Prophet visited the Jewish boy who served him and called him to Islam at his bedside (Sahih al-Bukhari 1356)."),
@@ -1229,15 +1315,19 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("Of all the manners of speech, he reduced the rule to one line, and he set it beside the neighbour and the guest as a mark of believing in Allah and the Last Day. He also warned what a single careless word can do, in either direction, and he told Mu'adh that what throws people into the Fire on their faces is the harvest of their tongues (Sunan al-Tirmidhi 2616, graded sahih by al-Albani)."),
                       .hadith("bukhari:6018", cite: "Sahih al-Bukhari 6018", arabic: 26...52, english: 4...50),
+                      .hadith("tirmidhi:2616", cite: "Sunan al-Tirmidhi 2616; graded sahih by al-Albani", arabic: 148...200, english: 198...279),
                       .hadith("bukhari:6478", cite: "Sahih al-Bukhari 6478", arabic: 36...65, english: 3...58),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Before you speak, ask whether the words are good: true, useful, kind or needed. If they are, say them; the narration does not praise silence for its own sake, and he counted a good word as charity (Sahih al-Bukhari 2989). If they are not, say nothing, and let the moment pass."),
+                      .hadith("bukhari:2989", cite: "Sahih al-Bukhari 2989", arabic: 27...66, english: 0...106),
                       .text("Stop the tongue at the things the Quran and Sunnah forbid: backbiting, tale-bearing, lying, mockery, obscenity, and talk of what does not concern you. The test is not whether the words are true but whether they are good; he defined backbiting as mentioning your brother with what he dislikes, and said that if it is true you have backbitten him, and if it is not you have slandered him (Sahih Muslim 2589)."),
+                      .hadith("muslim:2589", cite: "Sahih Muslim 2589", arabic: 26...67, english: 0...92),
                       .text("When the words are neither good nor bad, hold back. Al-Nawawi says of this narration that permitted talk whose two sides are equal is better left, because it slides so easily into the disliked and the forbidden, and a tongue that has learnt to wait is easier to stop when it must."),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("He guaranteed Paradise to whoever guarantees him the tongue and the private parts (Sahih al-Bukhari 6474), and the second narration shows why the tongue needs guarding: a word the speaker gives no thought to can raise him by degrees or throw him into the Fire. Most of a day's sins pass through the mouth, and this one sentence closes the door on most of them."),
+                      .hadith("bukhari:6474", cite: "Sahih al-Bukhari 6474", arabic: 27...38, english: 0...34),
                   ]),
               ]),
         .init(id: "gifts", title: "Give gifts",
@@ -1254,6 +1344,7 @@ extension SunnahView {
                   SignSection("HOW TO KEEP IT", [
                       .text("Give, and give small things without embarrassment: a dish from your kitchen to the neighbour, fruit, a book, something brought back from a journey. He named a trotter, the least part of a sheep, as a gift he would accept, so the sunnah is in the giving, not in the price."),
                       .text("Accept what you are given, and do not refuse a gift out of politeness; accepting is what he did. Thank the giver with a dua: jazakallahu khayran (may Allah reward you with good), which he said is the fullest thanks a person can give (Sunan al-Tirmidhi 2035, graded sahih by al-Albani)."),
+                      .hadith("tirmidhi:2035", cite: "Sunan al-Tirmidhi 2035; graded sahih by al-Albani", arabic: 40...52, english: 0...26),
                       .text("Give something back when you can, as he did, without turning it into a trade or a tally; a return gift keeps the giving moving in both directions, and it is the second half of 'A'ishah's description of his habit."),
                       .text("Never look down on a gift, yours or another's. He addressed the women in particular because it is neighbours who exchange food most, and the rule is the same for everyone: no gift is too small to give, or to receive with thanks."),
                   ]),
@@ -1262,6 +1353,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("A gift given to an official because of his post is not a gift. When a collector came back saying that part of what he brought had been presented to him, the Prophet asked why he had not sat in his father's or mother's house to see whether anyone gave him presents there (Sahih al-Bukhari 2597)."),
+                      .hadith("bukhari:2597", cite: "Sahih al-Bukhari 2597", arabic: 23...61, english: 0...63),
                   ]),
               ]),
     ]
@@ -1276,18 +1368,22 @@ extension SunnahView {
               sections: [
                   SignSection("WHAT HE DID", [
                       .text("The Prophet kept two voluntary fasts most weeks, on Monday and on Thursday. Usamah ibn Zayd noticed that these were the two days he fasted even in the stretches when he was otherwise not fasting, and asked him about it (Sunan an-Nasa'i 2358). His answer named what happens on those days: deeds are raised to Allah, and he wanted his own to go up while he was fasting."),
+                      .hadith("nasai:2358", cite: "Sunan an-Nasa'i 2358; graded hasan sahih by al-Albani", arabic: 31...83, english: 0...85),
                       .hadith("tirmidhi:747", cite: "Sunan al-Tirmidhi 747; graded sahih by al-Albani", arabic: 31...41, english: 5...23),
                       .text("Monday carried a second reason of its own. When he was asked about fasting on that day, he did not speak of deeds being raised but of what the day had held for him: it was the day he was born, and the day the revelation first came down to him. Asked about the Monday fast, he said:"),
                       .hadith("muslim:1162e", cite: "Sahih Muslim 1162e", arabic: 41...45, english: 0...14),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Settle it the night before. A voluntary fast needs no spoken words, only the intention in the heart, and the scholars allow a voluntary fast to begin even during the day for someone who has not eaten since dawn, as he once did when 'A'ishah had nothing to offer him (Sahih Muslim 1154). Still, deciding before you sleep means the suhur gets eaten and the day is planned around the fast."),
+                      .hadith("muslim:1154b", cite: "Sahih Muslim 1154b", arabic: 22...47, english: 0...29),
                       .text("Take suhur before Fajr, even if it is only dates and water, and keep the fast as in Ramadan: no food, drink or marital relations from the true dawn until the sun sets. Keep the day ordinary. A voluntary fast is between you and Allah and needs no announcement; if someone offers you food, you may simply say that you are fasting."),
                       .text("Break the fast at sunset without delay, as he did, on dates or water, then pray Maghrib. If a Monday turns out to be impossible, through illness, travel or a guest, a voluntary fast may be left or broken without sin, as he broke his when food was brought to him; most scholars say completing it is better and making it up is not required."),
                       .text("Thursday, the same. If two fasts a week are too much at first, keep one and grow into the other; he said the most beloved deeds to Allah are the regular ones, even when they are small (Sahih al-Bukhari 6464). A Monday or Thursday that falls on one of the white days of the month counts for both sunnahs at once."),
+                      .hadith("bukhari:6464", cite: "Sahih al-Bukhari 6464", arabic: 30...46, english: 0...40),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("He gave the reason himself: on these two days the deeds are shown to Allah, and he wanted his presented while he was fasting. Fasting is the one deed Allah has said is for Him, and that He Himself will reward (Sahih al-Bukhari 1904), so the week's record goes up with a fast in it twice. Monday adds the memory of his birth and of the first revelation, honoured the way he honoured it: with a fast, and nothing else added to the day."),
+                      .hadith("bukhari:1904", cite: "Sahih al-Bukhari 1904", arabic: 37...50, english: 0...29),
                   ]),
               ]),
         .init(id: "white-days", title: "Three days a month: the white days",
@@ -1298,6 +1394,7 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("Abu Hurayrah counted three things the Prophet charged him never to leave, and three fasts a month were the first of them. He urged the same on Abu Dharr and on 'Abdullah ibn 'Amr, and he gave the sum: three days in every month, with each good deed counted ten times over, comes to a year of fasting (Sahih al-Bukhari 1976)."),
                       .hadith("bukhari:1981", cite: "Sahih al-Bukhari 1981", arabic: 22...41, english: 0...34),
+                      .hadith("bukhari:1976", cite: "Sahih al-Bukhari 1976", arabic: 46...69, english: 50...100),
                       .text("Which three days? Abu Dharr's report names them: the thirteenth, the fourteenth and the fifteenth of the month, which sit in its middle. The Arabs called their nights white because the moon is full on them and the night is lit from dusk to dawn, so the days can be known from the sky alone."),
                       .hadith("nasai:2422", cite: "Sunan an-Nasa'i 2422; graded hasan by al-Albani", arabic: 24...43, english: 0...17),
                       .text("When a man asked him how he fasted and 'Umar went through the patterns one by one, the Prophet set the three days beside the month of Ramadan and gave the total. The arithmetic is the hadith's own: three days in thirty, ten rewards for each, and the whole month is covered; add Ramadan every year, and the year is covered too."),
@@ -1306,6 +1403,7 @@ extension SunnahView {
                   SignSection("HOW TO KEEP IT", [
                       .text("Mark the thirteenth, fourteenth and fifteenth of each Hijri month when the month begins, so that they do not slip past. A Hijri calendar shows the day, and the moon shows it too: it is full on the white nights, which is what they are named for, so a glance at the sky confirms the date."),
                       .text("Fast the three as you would any voluntary day: suhur before Fajr, nothing from dawn to sunset, iftar at once when the sun goes. If one of the three falls on a day you cannot fast, take another day in the month instead; 'A'ishah said he did not mind which days of the month he fasted (Sahih Muslim 1160)."),
+                      .hadith("muslim:1160", cite: "Sahih Muslim 1160", arabic: 39...55, english: 1...34),
                       .text("Let the fasts overlap when they can. A Monday or Thursday inside the three counts for both sunnahs, and nothing needs to be said twice. If three in a row is hard at first, spread them through the month; what matters is that no month passes without its three days, since that is what he asked for."),
                   ]),
                   SignSection("WHY IT MATTERS", [
@@ -1325,6 +1423,7 @@ extension SunnahView {
                       .hadith("muslim:1164a", cite: "Sahih Muslim 1164a", arabic: 56...66, english: 0...23),
                       .text("Thawban, who served him, carries the reason in his report of the same promise: a good deed is rewarded ten times over, so a month and six days come to a year. Ramadan counts as ten months, the six as two more, and the year is complete. The hadith closes with the ayah that states the rule of ten (6:160)."),
                       .hadith("ibnmajah:1715", cite: "Sunan Ibn Majah 1715; graded sahih by al-Albani", arabic: 43...57, english: 0...25),
+                      .quran("6:160"),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Make up any days of Ramadan you owe first. The hadith speaks of one who has fasted Ramadan and then follows it with six, and the scholars, Ibn 'Uthaymin among them, take that in order: the missed days, then the six. A woman who missed days in her period, or a traveller who broke the fast, begins there."),
@@ -1346,12 +1445,14 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("Two single days of the year he set apart for a fast with a reward he named. The first is the day of 'Arafah, the ninth of Dhul-Hijjah, when the pilgrims stand on the plain of 'Arafah. The second is 'Ashura, the tenth of Muharram, which he found the Jews of Madinah fasting in thanks for Musa's rescue; he said the Muslims had more claim to Musa than they did, fasted it, and ordered it (Sahih al-Bukhari 2004)."),
                       .hadith("muslim:1162a", cite: "Sahih Muslim 1162a", arabic: 176...200, english: 224...267),
+                      .hadith("bukhari:2004", cite: "Sahih al-Bukhari 2004", arabic: 26...66, english: 0...71),
                       .text("In the last year of his life he resolved to add the ninth of Muharram to the tenth, to be different from the Jews, who kept the tenth alone. Ibn 'Abbas reports the exchange: when he fasted 'Ashura and ordered the Companions to fast it, they said to him:"),
                       .hadith("muslim:1134a", cite: "Sahih Muslim 1134a", arabic: 48...93, english: 0...50),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Note the two dates when the Hijri year begins: 'Ashura is the tenth of Muharram, the first month, and 'Arafah is the ninth of Dhul-Hijjah, the last, the day before Eid al-Adha. Each comes once a year, and each is easily missed when the day is found out only after it has passed."),
                       .text("On 'Arafah, fast if you are not at Hajj; the pilgrims do not fast it, as he did not when he stood there. The first ten days of Dhul-Hijjah, with 'Arafah the ninth of them, are days on which he said no good deed is better than on any other (Sahih al-Bukhari 969), so give the day its due in dua and remembrance as well as the fast."),
+                      .hadith("bukhari:969", cite: "Sahih al-Bukhari 969", arabic: 28...37, english: 0...23),
                       .text("On 'Ashura, fast the tenth of Muharram and the ninth with it, as he resolved to do. If the ninth is missed, some scholars say to fast the eleventh with the tenth instead, and fasting the tenth alone is also allowed; the fast of the tenth is the sunnah itself, and the ninth is added to it to differ from the Jews."),
                       .text("Keep both like any voluntary fast: suhur before Fajr, nothing from dawn until sunset, iftar at once. Both are single days, so there is little excuse to fall short on them; a Monday or Thursday that coincides with either needs no second intention, since one fast carries both."),
                   ]),
@@ -1360,6 +1461,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("The fast of 'Arafah is for those not at Hajj: the Prophet did not fast it while standing at 'Arafah, and Umm al-Fadl's cup of milk, which he drank on his camel in front of the people, settled the Companions' dispute about it (Sahih al-Bukhari 1988). The pilgrim keeps his strength for the standing and the dua."),
+                      .hadith("bukhari:1988", cite: "Sahih al-Bukhari 1988", arabic: 47...76, english: 0...57),
                   ]),
               ]),
         .init(id: "suhur", title: "Take suhur, and take it late",
@@ -1376,9 +1478,12 @@ extension SunnahView {
                       .text("Get up for it. Set the alarm with enough time to eat without hurry and to stop before the true dawn, the time of the Fajr adhan. A few dates and a glass of water are a suhur; the sunnah is in eating something at that hour, not in the size of the meal, so do not let a small appetite talk you out of it."),
                       .text("Eat towards the end of the night rather than at midnight. The gap he left between finishing and the prayer was the time it takes to recite fifty verses at a measured pace, and the scholars count delaying the suhur to that point among the sunnahs of the fast, as long as the dawn is not in doubt."),
                       .text("Stop at the adhan of Fajr, and plan to be finished before it. If the call begins while the cup is already in your hand, he said not to put it down until you have had your need of it (Sunan Abi Dawud 2350, hasan sahih by al-Albani), but nothing new is begun after it. Then pray Fajr, and the day's fast is under way."),
+                      .hadith("abudawud:2350", cite: "Sunan Abi Dawud 2350; graded hasan sahih by al-Albani", arabic: 27...39, english: 0...31),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("He named the reason himself: there is blessing in it. The scholars count that blessing in several ways: it is his sunnah followed, strength for the day's fast and for the Fajr prayer, and a meal taken in the last part of the night, the hour in which Allah descends to the lowest heaven and asks who is calling on Him (Sahih al-Bukhari 1145). He also said that suhur is what sets the Muslims' fast apart from the fast of the People of the Book (Sahih Muslim 1096)."),
+                      .hadith("bukhari:1145", cite: "Sahih al-Bukhari 1145", arabic: 35...60, english: 0...68),
+                      .hadith("muslim:1096a", cite: "Sahih Muslim 1096a", arabic: 33...41, english: 0...17),
                   ]),
                   SignSection("A NOTE", [
                       .text("Suhur is a sunnah, not a condition of the fast: whoever sleeps through it fasts the day as it is, and the fast is valid. The scholars differ on how far the hadith of the cup in hand reaches once the adhan is given at the true dawn itself, so the safe course is to be finished before the call, not to eat through it."),
@@ -1398,11 +1503,14 @@ extension SunnahView {
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Watch for the sunset, not the clock alone: the fast ends when the sun has gone below the horizon, which is the time of the Maghrib adhan. He said that when night comes on from one side, the day departs from the other and the sun has set, the fasting person breaks his fast (Sahih al-Bukhari 1954). Have the dates and water in front of you before it."),
+                      .hadith("bukhari:1954", cite: "Sahih al-Bukhari 1954", arabic: 35...50, english: 0...28),
                       .text("Eat first, pray after. Take fresh dates if you have them, dried dates if not, and water if you have neither, as he did, and then go to the Maghrib prayer. A few mouthfuls are enough; the fuller meal can wait until the prayer is done, so that the prayer is not delayed either."),
                       .text("After the first mouthfuls, say the words as the hadith gives them: dhahaba az-zama'u wabtallatil-'uruqu wa thabatal-ajru in sha' Allah (the thirst is gone, the veins are moist, and the reward is settled, if Allah wills). They are said after breaking the fast, not before, since they describe what has just happened."),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("He put the good of the people on it: they remain in goodness as long as they hasten the iftar, and in another report the religion stays uppermost as long as they do, because the Jews and Christians delay it (Sunan Abi Dawud 2353, hasan by al-Albani). The scholars read in it a servant who fasts for Allah and stops when Allah says stop, taking the ease He has given; and he said the fasting person has two joys, one at the breaking of the fast and one at meeting his Lord (Sahih al-Bukhari 1904)."),
+                      .hadith("abudawud:2353", cite: "Sunan Abi Dawud 2353; graded hasan by al-Albani", arabic: 28...39, english: 0...26),
+                      .hadith("bukhari:1904", cite: "Sahih al-Bukhari 1904", arabic: 84...94, english: 106...142),
                   ]),
                   SignSection("A NOTE", [
                       .text("The dua many recite before eating, Allahumma laka sumtu wa 'ala rizqika aftartu (O Allah, for You I fasted and on Your provision I break my fast), comes through a chain al-Albani graded weak (Sunan Abi Dawud 2358); the words above are the sound ones. Breaking the fast on something else when there are no dates is fine; the order in the hadith is his preference, not a condition."),
@@ -1423,10 +1531,15 @@ extension SunnahView {
                   SignSection("HOW TO KEEP IT", [
                       .text("Settle a small daily amount you will not miss and give it every day, in the morning if you can, the time the angels make their dua. A coin into a box by the door, a standing payment to a cause you trust, a daily gift to someone you pass: the method matters less than the habit of not letting a day go by without it."),
                       .text("Give from what is lawful, since Allah accepts only what is good, and give decent things, not the worn-out coin or the food you would not take yourself (2:267). Give quietly where you can; the Quran says that concealing charity and giving it to the poor is better for you, though giving openly is good as well (2:271)."),
+                      .quran("2:267"),
+                      .quran("2:271"),
                       .text("On a day you have nothing to give, give what else counts as sadaqah. He said every joint of the body owes a charity each day the sun rises, and he counted justice between two people, a hand with someone's load, a good word, a step towards the prayer and clearing harm from the road among them (Sahih al-Bukhari 2989)."),
+                      .hadith("bukhari:2989", cite: "Sahih al-Bukhari 2989", arabic: 27...66, english: 0...106),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("A daily gift is small, but it is daily, and he said the most beloved deeds to Allah are the regular ones even when they are little (Sahih al-Bukhari 6464). The angel's dua each morning is for the one who gives today, not the one who gave last year. His promise stands behind it: charity does not decrease wealth (Sahih Muslim 2588), and what is given from honest earnings is raised by Allah until it stands like a mountain."),
+                      .hadith("bukhari:6464", cite: "Sahih al-Bukhari 6464", arabic: 30...46, english: 0...40),
+                      .hadith("muslim:2588", cite: "Sahih Muslim 2588", arabic: 32...50, english: 0...30),
                   ]),
                   SignSection("A NOTE", [
                       .text("This is the voluntary sadaqah. Zakah on wealth that reaches the threshold and has been held a year is an obligation with its own rates and its own recipients, and a daily gift, however regular, does not stand in for it; the one is the pillar, the other is the sunnah built around it."),
@@ -1439,6 +1552,7 @@ extension SunnahView {
               sections: [
                   SignSection("WHAT HE DID", [
                       .text("Friday was the week's eid for him, a day he said Allah has made a festival for the Muslims (Sunan Ibn Majah 1098, hasan by al-Albani), and he prepared for it. He ordered the ghusl for whoever comes to the Friday prayer, and he went early and sat for the khutbah. He told the Companions that the day holds an hour in which a Muslim's dua is answered, and he asked them to send blessings on him in abundance on it."),
+                      .hadith("ibnmajah:1098", cite: "Sunan Ibn Majah 1098; graded hasan by al-Albani", arabic: 35...53, english: 0...50),
                       .hadith("bukhari:877", cite: "Sahih al-Bukhari 877", arabic: 30...34, english: 5...15),
                       .text("Going early has its own ladder of reward, counted in sacrifices from a camel down to an egg, hour by hour, and the ladder ends when the imam comes out: after that the angels present themselves to listen to the khutbah. Whoever arrives then has the prayer, but not the hours before it. Then the hour of answer, and the blessings sent on him:"),
                       .hadith("bukhari:881", cite: "Sahih al-Bukhari 881", arabic: 38...88, english: 5...129),
@@ -1447,15 +1561,22 @@ extension SunnahView {
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Before you go, take a full bath as for janabah, then clean the teeth with the siwak and put on perfume and your best clothes; he named the ghusl, the siwak and perfume together for the day (Sahih Muslim 846). The ghusl is for whoever goes to the prayer, so those who pray at home are not asked for it."),
+                      .hadith("muslim:846b", cite: "Sahih Muslim 846b", arabic: 51...63, english: 0...17),
                       .text("Go early, walking if you can, and sit close to the imam. The scholars take the hours in the hadith as the parts of the day from its start to the imam's coming out; the earlier you are within them, the greater the sacrifice counted for you. Pray what you can when you arrive, until the imam comes out."),
                       .text("Listen to the khutbah in silence from the moment the imam begins until the prayer; he said that even telling the person beside you to be quiet during it is idle talk (Sahih al-Bukhari 934). Through the day, send blessings on the Prophet often: Allahumma salli 'ala Muhammad (O Allah, send blessings on Muhammad), in any of the forms he taught."),
+                      .hadith("bukhari:934", cite: "Sahih al-Bukhari 934", arabic: 31...40, english: 0...30),
                       .text("Seek the hour of answer; he showed with his hand how short it is. The two strongest views place it between the imam's sitting down and the end of the prayer (Sahih Muslim 853), or in the last hour of the day before Maghrib (Sunan an-Nasa'i 1389, sahih by al-Albani). Spend both in dua, and especially the last hour of Friday afternoon, asking Allah for whatever good you need."),
+                      .hadith("muslim:853", cite: "Sahih Muslim 853", arabic: 72...81, english: 0...56),
+                      .hadith("nasai:1389", cite: "Sunan an-Nasa'i 1389; graded sahih by al-Albani", arabic: 53...73, english: 0...38),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("Each of these carries a reward he named: a sacrifice for the early comer, an answer for whoever meets the hour, and his own receipt of the blessings sent on him. Together they make the day what he called it, the best day on which the sun rises (Sahih Muslim 854), and he said that whoever bathes, comes, prays what is written for him, keeps silent until the imam finishes and then prays with him, is forgiven what lies between that Friday and the next, and three days more (Sahih Muslim 857)."),
+                      .hadith("muslim:854a", cite: "Sahih Muslim 854a", arabic: 30...45, english: 0...30),
+                      .hadith("muslim:857a", cite: "Sahih Muslim 857a", arabic: 29...56, english: 0...51),
                   ]),
                   SignSection("A NOTE", [
                       .text("Most scholars hold the Friday ghusl to be a confirmed sunnah rather than an obligation, since he said that wudu on Friday is fine and the ghusl is better (Sunan Abi Dawud 354, hasan by al-Albani); some held it obligatory from the wording of Sahih Muslim 846, so do not leave it without need. The scholars differ on the hour as above, and many of them, Ibn al-Qayyim among them, favoured the last hour after 'Asr."),
+                      .hadith("abudawud:354", cite: "Sunan Abi Dawud 354; graded hasan by al-Albani", arabic: 22...31, english: 0...23),
                   ]),
               ]),
     ]
@@ -1493,17 +1614,22 @@ extension SunnahView {
               aliases: ["early night", "bedtime", "stay up", "talking", "samar", "conversation", "late", "isha", "night prayer", "tahajjud", "fajr", "abu barzah"],
               sections: [
                   SignSection("WHAT HE DID", [
-                      .text("His night had a shape. 'Isha was prayed, the hours after it were for sleep, and the last part of the night was for prayer; 'A'ishah said he slept the first of the night and stood the last of it (Sahih al-Bukhari 1146). Abu Barzah al-Aslami, asked how the Prophet prayed, described the whole day and added this about the night:"),
+                      .text("His night had a shape. 'Isha was prayed, the hours after it were for sleep, and the last part of the night was for prayer; 'A'ishah said he slept the first of the night and stood the last of it (Sahih al-Bukhari 1146)."),
+                      .hadith("bukhari:1146", cite: "Sahih al-Bukhari 1146", arabic: 31...41, english: 11...34),
+                      .text("Abu Barzah al-Aslami, asked how the Prophet prayed, described the whole day and added this about the night:"),
                       .hadith("bukhari:568", cite: "Sahih al-Bukhari 568", arabic: 19...32, english: 0...14),
                       .text("Muslim's fuller version has him not minding some delay of 'Isha, even to the middle of the night, and still disliking sleep before it and talk after it (Sahih Muslim 647). Al-Bukhari heads later chapters of the same book with the limits: sleep before 'Isha for one overcome by it, and sitting up after it for knowledge, for good, or with a guest or one's family."),
+                      .hadith("muslim:647b", cite: "Sahih Muslim 647b", arabic: 18...42, english: 0...36),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Pray 'Isha in its time, in congregation where you can, and treat it as the close of the day's business rather than the opening of an evening. What needs doing after it, a meal, a word with the family, a guest, is done without lingering over it."),
                       .text("Go to bed early enough that the night has a second half left for you. Rising before Fajr is the fruit of this sunnah, and it is won at the hour you lie down, not by willpower when the alarm sounds."),
                       .text("Treat conversation after 'Isha as something that needs a reason. Talk of knowledge, the needs of the household, a guest's company: these the Companions kept up, and al-Bukhari records the Prophet himself delaying 'Isha to midnight and then addressing the people after it (Sahih al-Bukhari 600). An hour lost to idle talk or a screen is what the dislike was for."),
+                      .hadith("bukhari:600", cite: "Sahih al-Bukhari 600", arabic: 33...69, english: 39...88),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The scholars read the two dislikes together: sleep before 'Isha risks missing the prayer or praying it late, and talk after it eats the hours that belong to the night prayer and to a fresh Fajr. The last third of the night is when, in his words, our Lord descends to the lowest heaven and asks who is calling on Him, who is asking, who is seeking forgiveness (Sahih al-Bukhari 1145). Guarding the two ends of the night is how that middle stays within reach."),
+                      .hadith("bukhari:1145", cite: "Sahih al-Bukhari 1145", arabic: 35...60, english: 0...68),
                   ]),
                   SignSection("A NOTE", [
                       .text("The dislike is a precaution, not a prohibition: one overcome by sleep before 'Isha, or kept up after it by a need, has done nothing wrong, and al-Bukhari's chapter headings around this report say so."),
@@ -1523,6 +1649,7 @@ extension SunnahView {
                   SignSection("HOW TO KEEP IT", [
                       .text("Go to bed in wudu. If the wudu you prayed 'Isha with still holds, it serves; if it has gone, renew it as you would for prayer. The instruction is to reach the bed in a state of purity, and it costs a minute at the sink."),
                       .text("Lie on your right side. It is the position he named here and in Abu Hurayrah's report of the bed, and the side al-Bara' describes him lying on himself when he went to his bed (Sahih al-Bukhari 6315). Settle there before you speak."),
+                      .hadith("bukhari:6315", cite: "Sahih al-Bukhari 6315", arabic: 19...66, english: 0...53),
                       .text("Then say: Allahumma aslamtu wajhi ilayk, wa fawwadtu amri ilayk, wa alja'tu zahri ilayk, raghbatan wa rahbatan ilayk, la malja'a wa la manja minka illa ilayk, Allahumma amantu bikitabikal-ladhi anzalt, wa binabiyyikal-ladhi arsalt (O Allah, I have turned my face to You and entrusted my affair to You and leaned my back on You, in hope of You and fear of You; there is no refuge and no escape from You except to You; O Allah, I believe in Your Book which You sent down and in Your Prophet whom You sent)."),
                       .text("Let them be the last words of the night. He told al-Bara' to make them the last thing he spoke, so whatever the evening held, nothing follows them but sleep. Keep the wording as he gave it: Your Prophet whom You sent, not Your Messenger."),
                   ]),
@@ -1548,6 +1675,7 @@ extension SunnahView {
                       .text("Before you get in, brush the bedding down three times with the edge of your clothing, or a cloth, saying Bismillah as you do. The point is the bed and not the garment: whatever has crept onto it since the morning is swept off before you lie where it was."),
                       .text("Lie down on your right side. Muslim's report names it here, between the brushing and the words, and al-Bara' was taught the same side with the words of surrender; it is the side on which the night's remembrances were said. Settle there before you speak."),
                       .text("Say Bismika Rabbi wada'tu janbi wa bika arfa'uh, in amsakta nafsi faghfir laha, wa in arsaltaha fahfazha bima tahfazu bihi 'ibadakas-salihin (in Your name, my Lord, I lay down my side, and by You I raise it; if You hold my soul, forgive it, and if You send it back, guard it with what You guard Your righteous servants). Muslim's form begins Subhanaka Allahumma Rabbi, glory be to You, O Allah, my Lord, and al-Bukhari's other route has farhamha, have mercy on it, for faghfir laha (Sahih al-Bukhari 6320); all are his wording, so say the one you have learned."),
+                      .hadith("bukhari:6320", cite: "Sahih al-Bukhari 6320", arabic: 31...66, english: 0...60),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The reason is in the hadith: you do not know what came onto the bed after you left it. The words then put the night in its true light. Lying down is a laying down of the self in Allah's hand, and the sleeper does not know whether that soul will be kept or sent back; he asks forgiveness for the one case and protection for the other, the protection Allah gives His righteous servants."),
@@ -1565,6 +1693,7 @@ extension SunnahView {
                       .hadith("bukhari:2311", cite: "Sahih al-Bukhari 2311", arabic: 309...338, english: 489...526),
                       .text("The ayah itself, which he called the greatest in the Book of Allah when Ubayy ibn Ka'b named it (Sahih Muslim 810):"),
                       .quran("2:255"),
+                      .hadith("muslim:810", cite: "Sahih Muslim 810", arabic: 36...90, english: 0...83),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When you are in bed and ready for sleep, recite Ayat al-Kursi in full, the two hundred and fifty-fifth ayah of al-Baqarah, from Allahu la ilaha illa huwal-Hayyul-Qayyum to the end of the ayah, wa la ya'uduhu hifdhuhuma wa huwal-'Aliyyul-'Adhim, without stopping short."),
@@ -1595,9 +1724,11 @@ extension SunnahView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("Al-Ikhlas is the Quran's statement of who Allah is, and al-Falaq and an-Nas are its two surahs of refuge: from the evil of creation, of the dark, of envy and of the whisperer. 'A'ishah also tells that when he was ill he recited the two of refuge over himself and blew, and in his last illness she did it for him with his own hand (Sahih al-Bukhari 5016). The scholars count this with Ayat al-Kursi among the night's protections."),
+                      .hadith("bukhari:5016", cite: "Sahih al-Bukhari 5016", arabic: 24...41, english: 0...46),
                   ]),
                   SignSection("A NOTE", [
                       .text("This is the sunnah of the bed, done once there. The same three surahs, said three times each in the morning and the evening, are a separate sunnah with its own report, in which he promised they would suffice against everything (Sunan Abi Dawud 5082; graded hasan by al-Albani)."),
+                      .hadith("abudawud:5082", cite: "Sunan Abi Dawud 5082; graded hasan by al-Albani", arabic: 28...99, english: 0...93),
                   ]),
               ]),
         .init(id: "baqarah-last-two", title: "The last two ayahs of al-Baqarah",
@@ -1606,7 +1737,9 @@ extension SunnahView {
               aliases: ["amanar-rasul", "amana rasul", "2:285", "2:286", "baqara", "suffice", "kafatahu", "night recitation", "abu mas'ud", "two lights", "rabbana la tu'akhidhna"],
               sections: [
                   SignSection("WHAT HE DID", [
-                      .text("A short practice with a wide promise. Abu Mas'ud al-Ansari carried it, and when 'Abd ar-Rahman ibn Yazid met him at the Ka'bah and asked whether the hadith was really his, he said yes and repeated it to his face (Sahih Muslim 807a). Al-Bukhari's wording:"),
+                      .text("A short practice with a wide promise. Abu Mas'ud al-Ansari carried it, and when 'Abd ar-Rahman ibn Yazid met him at the Ka'bah and asked whether the hadith was really his, he said yes and repeated it to his face (Sahih Muslim 807a)."),
+                      .hadith("muslim:807a", cite: "Sahih Muslim 807a", arabic: 16...52, english: 0...59),
+                      .text("Al-Bukhari's wording:"),
                       .hadith("bukhari:5009", cite: "Sahih al-Bukhari 5009", arabic: 23...40, english: 0...21),
                       .text("The two ayahs:"),
                       .quran("2:285-286"),
@@ -1615,9 +1748,11 @@ extension SunnahView {
                       .text("Recite the two ayahs, Amanar-rasulu bima unzila ilayhi mir-rabbihi wal-mu'minun to the end of the surah, at some point in the night. The report says in a night and names no hour, so after 'Isha, in bed, or on waking for prayer all fulfil it."),
                       .text("Learn them if you have not. They are two ayahs, the surah's closing creed and its closing prayer, and reading them from the page each night for a week fixes them. Until then, the page counts as much as the memory."),
                       .text("Say the closing prayer as a prayer. Rabbana la tu'akhidhna in nasina aw akhta'na, our Lord, do not take us to task if we forget or err, and the requests after it were each answered by Allah with the words I have done so, as Ibn 'Abbas related (Sahih Muslim 126). The night is the time to mean them."),
+                      .hadith("muslim:126", cite: "Sahih Muslim 126", arabic: 79...135, english: 56...159),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("They suffice him. The scholars read the promise more than one way and allow them all: an-Nawawi lists that the two ayahs suffice in place of the night prayer, or suffice as protection from every harm and from the Shaytan, or both. Ibn 'Abbas also reported that an angel who had never come down before brought the Prophet news of two lights given to no prophet before him, the opening of the Book and the closing ayahs of al-Baqarah, and that no letter of them is recited without its reward (Sahih Muslim 806)."),
+                      .hadith("muslim:806", cite: "Sahih Muslim 806", arabic: 29...89, english: 0...85),
                   ]),
               ]),
         .init(id: "tasbih-before-sleep", title: "Thirty-three, thirty-three, thirty-four",
@@ -1626,7 +1761,9 @@ extension SunnahView {
               aliases: ["tasbih", "tahmid", "takbir", "subhanallah", "alhamdulillah", "allahu akbar", "fatimah", "ali", "servant", "hundred", "khadim", "siffin"],
               sections: [
                   SignSection("WHAT HE DID", [
-                      .text("Fatimah's hands were worn from the hand-mill, and when prisoners of war were brought in she went to ask her father for a servant. He did not give her one. That night he came to her house, found her and 'Ali already in bed, told them to stay where they were and sat between them; 'Ali said he felt the cold of his feet on his chest. Then he taught them this, and said it was better for them than a servant (Sahih Muslim 2727a). Al-Bukhari's wording:"),
+                      .text("Fatimah's hands were worn from the hand-mill, and when prisoners of war were brought in she went to ask her father for a servant. He did not give her one. That night he came to her house, found her and 'Ali already in bed, told them to stay where they were and sat between them; 'Ali said he felt the cold of his feet on his chest. Then he taught them this, and said it was better for them than a servant (Sahih Muslim 2727a)."),
+                      .hadith("muslim:2727a", cite: "Sahih Muslim 2727a", arabic: 94...119, english: 35...85),
+                      .text("Al-Bukhari's wording:"),
                       .hadith("bukhari:5362", cite: "Sahih al-Bukhari 5362", arabic: 24...62, english: 0...43),
                       .text("'Ali, who told the story, added what it became for him:"),
                       .hadith("bukhari:5362", cite: "Sahih al-Bukhari 5362", arabic: 71...81, english: 44...76),
@@ -1663,6 +1800,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("Al-Bukhari carries the shorter form too, Bismika amutu wa ahya without Allahumma (Sahih al-Bukhari 6312); both are his wording and either fulfils the sunnah."),
+                      .hadith("bukhari:6312", cite: "Sahih al-Bukhari 6312", arabic: 20...28, english: 0...13),
                   ]),
               ]),
         .init(id: "mulk-at-night", title: "Surah al-Mulk at night",
@@ -1726,6 +1864,7 @@ extension SunnahView {
                       .text("The Prophet's habit was a new wudu for every prayer, even when the last one had not been broken. Anas, who served him for ten years, described it, and when he was asked what the Companions themselves did he gave the other half of the rule: one wudu served them for prayer after prayer, as long as nothing broke it. The two halves stand together, his habit and their licence."),
                       .hadith("bukhari:214", cite: "Sahih al-Bukhari 214", arabic: 31...51, english: 0...36),
                       .text("On the day Makkah was opened he did the opposite, on purpose. Buraydah reported that he prayed all the prayers of that day with a single wudu, wiping over his khuffs, and when 'Umar remarked that he had done something he did not usually do, he answered that it was deliberate (Sahih Muslim 277). The scholars read the day as a lesson given in public: the fresh wudu is a merit, and the single wudu is enough."),
+                      .hadith("muslim:277", cite: "Sahih Muslim 277", arabic: 41...73, english: 0...25),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When the time of a prayer comes in and you are still in wudu, make a new one anyway if water is at hand: the full wudu, hands to feet, with Bismillah at the start and the testimony at the end, as the pages before this describe. It takes a minute, and it is prayed with straight away, so the washing and the prayer stay joined."),
@@ -1760,6 +1899,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("Ibn Baz, Ibn 'Uthaymin and the Permanent Committee affirm wiping over ordinary socks (jawrab) as well as leather khuffs, under the same three conditions: put on in a state of purity, within the time limit, and for minor impurity only. Al-Mughirah also reported that the Prophet wiped over socks and sandals (Sunan Abi Dawud 159; graded sahih by al-Albani), and Abu Dawud names 'Ali, Ibn Mas'ud, Anas and other Companions who wiped over socks."),
+                      .hadith("abudawud:159", cite: "Sunan Abi Dawud 159; graded sahih by al-Albani", arabic: 29...40, english: 0...13),
                   ]),
               ]),
         .init(id: "sutrah", title: "Pray towards a sutrah",
@@ -1770,6 +1910,7 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("When the Prophet prayed in the open he had something planted in front of him: at al-Batha, outside Makkah, it was a short spear, and the women and the donkeys passed beyond it while he led Dhuhr and 'Asr. The thing in front is the sutrah, the screen, and he told the Companions what it does. Talhah reported his words, which Muslim also records (Sahih Muslim 499):"),
                       .hadith("abudawud:685", cite: "Sunan Abi Dawud 685; graded sahih by al-Albani", arabic: 29...42, english: 0...32),
+                      .hadith("muslim:499a", cite: "Sahih Muslim 499a", arabic: 38...53, english: 0...35),
                       .text("Abu Juhayfah saw the spear in use:"),
                       .hadith("bukhari:501", cite: "Sahih al-Bukhari 501", arabic: 13...29, english: 0...31),
                       .text("And he said to stand close to it:"),
@@ -1777,8 +1918,11 @@ extension SunnahView {
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Before you say the takbir, put something in front of you: a wall, a pillar, the back of a chair, a bag, a stick stood in the ground, anything about the height of the back of a camel saddle, which 'Ata put at a cubit or more (Sunan Abi Dawud 686). Then stand close to it, with no more than about three cubits between your feet and it, so that your forehead comes near it in prostration."),
+                      .hadith("abudawud:686", cite: "Sunan Abi Dawud 686; graded sahih maqtu' by al-Albani", arabic: 13...17, english: 0...14),
                       .text("In the masjid, pray towards a wall or a pillar when you pray alone, and let the imam's sutrah serve for the whole congregation; a person praying in the rows needs none of his own. Where the masjid is open and crowded, a bag set on the floor in front of you is enough. Outside, on a journey or in a park, a stick or a stone of some height does what the spear did."),
                       .text("Once the sutrah is set, pray and do not mind who passes beyond it. If someone tries to pass between you and it, hold out a hand to stop him, as he taught and as Abu Sa'id did (Sahih al-Bukhari 509), without leaving the prayer; and never walk in front of a person praying yourself, for he said that if the one who passes knew what he carried he would rather stand forty than pass (Sahih al-Bukhari 510)."),
+                      .hadith("bukhari:509", cite: "Sahih al-Bukhari 509", arabic: 49...152, english: 17...170),
+                      .hadith("bukhari:510", cite: "Sahih al-Bukhari 510", arabic: 55...74, english: 35...75),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The narrations name two things the sutrah does: it frees the one praying from minding what moves in front of him, and it keeps Shaytan from cutting into his prayer. The scholars add that it marks out a space that belongs to the prayer, so that others know not to cross it and the heart is not pulled after everything that passes. It is a stick or a wall, it costs nothing, and he kept it even in the open desert."),
@@ -1795,6 +1939,7 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("Between the takbir that opens the prayer and the recitation of al-Fatihah there was a pause, short enough that Abu Hurayrah had to ask what filled it. The answer was a supplication, said quietly, before a single ayah: a request to be set as far from sin as east is from west, to be cleaned of it as a white garment is cleaned, and to have it washed away with water, snow and hail. Muslim records the same report (Sahih Muslim 598)."),
                       .hadith("bukhari:744", cite: "Sahih al-Bukhari 744", arabic: 24...85, english: 0...133),
+                      .hadith("muslim:598a", cite: "Sahih Muslim 598a", arabic: 24...78, english: 0...75),
                       .text("He opened with other words too. Abu Sa'id al-Khudri reported the ones he said on rising to pray at night, which the scholars count among the sound openings, and any one of them keeps the sunnah:"),
                       .hadith("abudawud:775", cite: "Sunan Abi Dawud 775; graded sahih by al-Albani", arabic: 21...46, english: 0...49),
                   ]),
@@ -1808,6 +1953,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("Several opening supplications are sound, among them the two above and the longer Wajjahtu wajhiya that he said in the night prayer (Sahih Muslim 771); any one of them fulfils the sunnah, and the scholars prefer varying between them to fixing on one. It is a sunnah, not a pillar of the prayer: a prayer begun without it is complete."),
+                      .hadith("muslim:771a", cite: "Sahih Muslim 771a", arabic: 41...128, english: 0...206),
                   ]),
               ]),
         .init(id: "dua-in-sujud", title: "Ask in prostration",
@@ -1821,6 +1967,8 @@ extension SunnahView {
                       .text("Abu Hurayrah carried the rule in its shortest form:"),
                       .hadith("muslim:482", cite: "Sahih Muslim 482", arabic: 45...55, english: 6...25),
                       .text("His own words in prostration are recorded too. He would say, O Allah, forgive me all my sins, small and great, first and last, open and secret (Sahih Muslim 483), and in both bowing and prostration, Subbuhun quddus, rabbul-mala'ikati war-ruh, All-Glorious, All-Holy, Lord of the angels and the Spirit (Sahih Muslim 487)."),
+                      .hadith("muslim:483", cite: "Sahih Muslim 483", arabic: 37...54, english: 0...26),
+                      .hadith("muslim:487a", cite: "Sahih Muslim 487a", arabic: 35...47, english: 0...10),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("In each prostration, first say the glorification that belongs to it: Subhana Rabbiyal A'la (glory be to my Lord, the Most High), which is the sujud's own dhikr and is never left for the sake of dua. Then, when the glorification is said, stay down a little longer than habit and ask."),
@@ -1871,11 +2019,15 @@ extension SunnahView {
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When the iqamah is called, go to the first row if there is a place in it, and fill each row from the middle outward, behind the imam, rather than from the edge. He said to complete the front row, then the one next to it, and to let any shortfall be in the last row (Sunan Abi Dawud 671; graded sahih by al-Albani), so a new row is not begun while the one in front has room."),
+                      .hadith("abudawud:671", cite: "Sunan Abi Dawud 671; graded sahih by al-Albani", arabic: 31...44, english: 0...26),
                       .text("Stand so that your shoulder touches your neighbour's shoulder and the side of your foot is near his, without straining or spreading the feet wide; he said to line up the shoulders, close the gaps, be yielding in the hands of your brothers and leave no openings for Shaytan, and that whoever joins a row Allah joins him (Sunan Abi Dawud 666; graded sahih by al-Albani). When the imam says straighten the rows, move rather than nod."),
+                      .hadith("abudawud:666", cite: "Sunan Abi Dawud 666; graded sahih by al-Albani", arabic: 60...95, english: 0...53),
                       .text("Keep the rows straight for the whole prayer: if the man beside you leaves, close the gap by moving across. Women praying behind the men keep their rows the same way, and for them he said the best row is the last one and the worst the first (Sahih Muslim 440), since it is the farthest from the men; the merit of the first row is for the men's rows and for women praying by themselves."),
+                      .hadith("muslim:440a", cite: "Sahih Muslim 440a", arabic: 23...34, english: 0...35),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("He made a straight row part of establishing the prayer, and warned the Companions that if they did not straighten their rows Allah would set their faces at odds (Sahih al-Bukhari 717), which the scholars read as division among their hearts following division in their lines. The first row carries a reward he compared to a prize worth drawing lots over, and it is also the row of those who came early and the one nearest the imam's recitation."),
+                      .hadith("bukhari:717", cite: "Sahih al-Bukhari 717", arabic: 35...41, english: 0...12),
                   ]),
                   SignSection("A NOTE", [
                       .text("Ibn 'Uthaymin held that straightening the rows is obligatory, on the view he preferred from the warning in the hadith, while most scholars count it a stressed sunnah; the first row is a merit, and the one who cannot reach it has lost nothing of his prayer."),
@@ -1889,6 +2041,7 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("Certain ayahs of the Quran, fifteen on the count most scholars keep, describe prostration or call for it, and when the Prophet recited one of them he went down in prostration where he was, and whoever was listening went down with him. Ibn 'Umar remembered the crowding: so many prostrated around him that some could find no room for their foreheads. In Makkah, when he recited an-Najm, everyone present prostrated except one old man who lifted a handful of earth to his forehead and said it was enough for him (Sahih al-Bukhari 1067)."),
                       .hadith("bukhari:1075", cite: "Sahih al-Bukhari 1075", arabic: 20...38, english: 0...35),
+                      .hadith("bukhari:1067", cite: "Sahih al-Bukhari 1067", arabic: 25...51, english: 0...47),
                       .text("Muslim's wording adds that this was outside the prayer, so the prostration follows the ayah wherever it is read:"),
                       .hadith("muslim:575b", cite: "Sahih Muslim 575b", arabic: 21...46, english: 0...55),
                       .text("'Umar showed its standing from the minbar, on two Fridays in a row:"),
@@ -1898,9 +2051,11 @@ extension SunnahView {
                       .text("When you reach an ayah of sajdah in the prayer, say Allahu akbar and go down into a single prostration from standing, say Subhana Rabbiyal A'la (glory be to my Lord, the Most High) as in any sujud, then say Allahu akbar and stand up again and carry on reciting. There is no sitting after it and no tashahhud; it is one prostration inside the rak'ah. Behind an imam, follow him down and up."),
                       .text("Outside the prayer, do the same: on reaching the ayah, prostrate once from where you sit, with the glorification, and sit up; the scholars allow the takbir going down, and no salam follows. The marked ayahs in this app's mushaf show where the places are, and a listener prostrates when the reciter he is listening to prostrates, as the Companions did around him."),
                       .text("Add, if you like, the words 'A'ishah reported from him in this prostration at night: Sajada wajhiya lilladhi khalaqahu wa shaqqa sam'ahu wa basarahu bi-hawlihi wa quwwatih (my face has prostrated to the One who created it and opened its hearing and its sight by His might and His power) (Sunan al-Tirmidhi 580; graded sahih by al-Albani). The glorification alone is enough."),
+                      .hadith("tirmidhi:580", cite: "Sunan al-Tirmidhi 580; graded sahih by al-Albani", arabic: 17...40, english: 0...48),
                   ]),
                   SignSection("WHY IT MATTERS", [
-                      .text("He said that when the son of Adam recites an ayah of sajdah and prostrates, Shaytan withdraws weeping, saying that the son of Adam was commanded to prostrate and did, and Paradise is his, while he himself was commanded and refused, and the Fire is his (Sahih Muslim 81). The prostration answers the ayah with the act it describes, and the scholars count it among the easiest sunnahs of reciting, since the Quran itself tells the reader where to go down."),
+                      .text("He said that when the son of Adam recites an ayah of sajdah and prostrates, Shaytan withdraws weeping, saying that the son of Adam was commanded to prostrate and did, and Paradise is his, while he himself was commanded and refused, and the Fire is his (Sahih Muslim 81a). The prostration answers the ayah with the act it describes, and the scholars count it among the easiest sunnahs of reciting, since the Quran itself tells the reader where to go down."),
+                      .hadith("muslim:81a", cite: "Sahih Muslim 81a", arabic: 30...62, english: 11...44),
                   ]),
                   SignSection("A NOTE", [
                       .text("The prostration of recitation is recommended, not obligatory, as 'Umar's words from the minbar settle: whoever prostrates has done well, and there is no sin on the one who does not. Most scholars require wudu for it as for the prayer; Ibn Taymiyyah and Ibn 'Uthaymin held that it is not a prayer and needs none, so on their view a reader without wudu may still prostrate."),
@@ -1916,6 +2071,7 @@ extension SunnahView {
                       .hadith("abudawud:2774", cite: "Sunan Abi Dawud 2774; graded sahih by al-Albani", arabic: 27...39, english: 0...23),
                       .hadith("ibnmajah:1394", cite: "Sunan Ibn Majah 1394; graded hasan by al-Albani", arabic: 30...51, english: 0...36),
                       .text("The Companions learned it from him. When Ka'b ibn Malik, after fifty days cut off from everyone over his absence from Tabuk, heard a voice calling from the hill that his repentance had been accepted, the first thing he did was fall in prostration, knowing that relief had come (Sahih al-Bukhari 4418)."),
+                      .hadith("bukhari:4418", cite: "Sahih al-Bukhari 4418", arabic: 1156...1207, english: 1997...2090),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When good news reaches you, a child born, an illness lifted, an exam passed, a debt cleared, a Muslim guided, go down in a single prostration wherever you are, facing the qiblah if you can. Say Allahu akbar as you go down if you wish; there is no tashahhud and no salam after it. It is one prostration, and then you sit up."),
@@ -1947,6 +2103,7 @@ extension SunnahView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The narration carries his encouragement three times over, and the sight of the Companions hurrying to the pillars, so many that a stranger thought the prayer had already been prayed, shows how they understood it. He said that there is a prayer between every two calls, for whoever wishes (Sahih al-Bukhari 627), and these two rak'ahs are that prayer at the one time of day when the two calls come closest together."),
+                      .hadith("bukhari:627", cite: "Sahih al-Bukhari 627", arabic: 29...44, english: 0...38),
                   ]),
                   SignSection("A NOTE", [
                       .text("These two rak'ahs are not among the twelve regular sunnahs, the rawatib, which have their own page: those are the two after Maghrib, not before it. Pray before Maghrib is a recommendation for whoever wishes, and his addition the third time was meant to keep it so."),
@@ -1989,6 +2146,7 @@ extension SunnahView {
                       .text("Of all the remembrances, the Prophet set the tahlil apart: the plain statement that there is no god but Allah, alone, without partner, that the kingdom and the praise are His and that He has power over all things. Said a hundred times in a day, he attached four rewards and a rank to it: the reward of freeing ten slaves, a hundred good deeds written, a hundred bad deeds wiped away, and a guard against Shaytan until evening. Abu Hurayrah narrated it, and al-Bukhari and Muslim both recorded it."),
                       .hadith("bukhari:3293", cite: "Sahih al-Bukhari 3293", arabic: 33...90, english: 4...112),
                       .text("Muslim's report carries the same words with the same count and the same promises, and joins a second hundred to it, the tasbih that is the next page of this library (Sahih Muslim 2691). The last line of the hadith is the one the scholars dwell on: no one brings anything better on that day than this, except someone who says it more."),
+                      .hadith("muslim:2691", cite: "Sahih Muslim 2691", arabic: 26...103, english: 0...156),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Learn the words until they come by themselves: La ilaha illallahu wahdahu la sharika lah, lahul-mulku wa lahul-hamdu, wa huwa 'ala kulli shay'in qadir (there is no god but Allah alone, without partner; His is the kingdom and His is the praise, and He has power over all things). They are also part of the morning remembrances, so most readers already have them."),
@@ -1997,6 +2155,7 @@ extension SunnahView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The reward is spelled out in his own words: the worth of freeing ten slaves, a hundred good deeds, a hundred sins wiped out, and shelter from Shaytan from morning until evening, with no one doing better that day except the one who says more. The tahlil is the first half of the testimony of faith, and he called it the best of all remembrance (Sunan al-Tirmidhi 3383, graded hasan by al-Albani); a hundred of it takes a few minutes and costs nothing."),
+                      .hadith("tirmidhi:3383", cite: "Sunan al-Tirmidhi 3383; graded hasan by al-Albani", arabic: 38...48, english: 0...32),
                   ]),
               ]),
         .init(id: "hundred-tasbih", title: "A hundred times: glory and praise to Allah",
@@ -2133,6 +2292,7 @@ extension SunnahView {
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When rain falls, say sayyiban nafi'an (a beneficial downpour), the two words of al-Bukhari's report, or with the opening that al-Nasa'i's report carries: Allahummaj'alhu sayyiban nafi'an (O Allah, make it a beneficial downpour; Sunan an-Nasa'i 1523, graded sahih by al-Albani). Say it when you first see or hear the rain, once or a few times."),
+                      .hadith("nasai:1523", cite: "Sunan an-Nasa'i 1523; graded sahih by al-Albani", arabic: 24...34, english: 0...17),
                       .text("When the wind is strong, say: Allahumma inni as'aluka khayraha wa khayra ma fiha wa khayra ma ursilat bihi, wa a'udhu bika min sharriha wa sharri ma fiha wa sharri ma ursilat bihi (O Allah, I ask You for its good, the good in it and the good it was sent with, and I seek refuge in You from its evil, the evil in it and the evil it was sent with)."),
                       .text("Never curse the wind, the rain, the cold or the heat; they do what they are sent to do. When the weather is against you, turn the complaint into the dua of the step before, asking Allah for its good and refuge from its harm, which is exactly what he told the Companions to do instead of cursing."),
                   ]),
@@ -2141,6 +2301,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("After rain, he taught the Companions to say that they had been given it by the grace and mercy of Allah, and not to credit it to a star or a season (Sahih al-Bukhari 846). Sayyiban nafi'an is what al-Bukhari's report has; the Allahumma before it is from the other reports, and either is the sunnah."),
+                      .hadith("bukhari:846", cite: "Sahih al-Bukhari 846", arabic: 28...93, english: 0...110),
                   ]),
               ]),
         .init(id: "rooster-donkey", title: "The rooster and the donkey",
@@ -2151,10 +2312,12 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("Two sounds of the countryside carry a signal from the unseen, and the Prophet told his Companions what each one means and what to say. A rooster crows because it has seen an angel; the one who hears it should ask Allah of His bounty. A donkey brays because it has seen a devil; the one who hears it should seek refuge with Allah from Shaytan. Abu Hurayrah narrated it, and al-Bukhari and Muslim both recorded it (Sahih Muslim 2729)."),
                       .hadith("bukhari:3303", cite: "Sahih al-Bukhari 3303", arabic: 27...48, english: 4...48),
+                      .hadith("muslim:2729", cite: "Sahih Muslim 2729", arabic: 24...46, english: 9...47),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When you hear a rooster crow, by day or in the night, ask Allah for something of His bounty. The narration fixes no words, so ask in your own, for instance Allahumma inni as'aluka min fadlik (O Allah, I ask You of Your bounty); the scholars say the moment is one in which an angel is near, and a dua then is hoped to be answered."),
                       .text("When you hear a donkey bray, say a'udhu billahi minash-shaytanir-rajim (I seek refuge with Allah from Shaytan, the accursed). Another report adds the barking of dogs at night to the braying, with the same refuge, because they see what we do not (Sunan Abi Dawud 5103, graded sahih by al-Albani), so the words serve for that too."),
+                      .hadith("abudawud:5103", cite: "Sunan Abi Dawud 5103; graded sahih by al-Albani", arabic: 33...47, english: 0...29),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The narration opens a window on what the animals see and we do not: an angel at the rooster's crow, a devil at the donkey's bray. He gave the two sounds two responses, a request at the sign of the angel and a refuge at the sign of the devil, so that a believer's first thought at each is of Allah. It is one of the plainest examples of how he filled the ordinary moments of a day with remembrance."),
@@ -2176,6 +2339,7 @@ extension SunnahView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("He named the reward, protection from that affliction, and the words give the reason: the one who sees his health as Allah's favour and says so is in a different state from the one who takes it for granted. The scholars read it as a sunnah of gratitude, which the Quran promises to answer with more (14:7), and count the affliction as anything Allah has tested a person with, in his body, his wealth or his religion."),
+                      .quran("14:7"),
                   ]),
                   SignSection("A NOTE", [
                       .text("The words are said quietly, out of the afflicted person's hearing, so that he is not wounded by them; that is the etiquette the scholars attach to this sunnah, with the one exception of a sin done openly, where saying it within hearing may serve as a warning. Zubair 'Ali Za'i grades the report weak where Ahmad Shakir and al-Albani call it sahih, and al-Tirmidhi called it hasan gharib."),
@@ -2213,11 +2377,13 @@ extension SunnahView {
                       .text("The market is where people are busiest with the world and least mindful of Allah, and the Prophet gave a dua for the door of it. Salim ibn 'Abdullah narrated it from his father Ibn 'Umar, from his grandfather 'Umar: whoever enters the market and says the tahlil in its long form, with He gives life and causes death, He is living and does not die, in His hand is the good, has a million good deeds written for him, a million sins erased, and a million ranks raised. Al-Tirmidhi recorded it and called it gharib, and al-Albani graded it hasan."),
                       .hadith("tirmidhi:3428", cite: "Sunan al-Tirmidhi 3428; graded hasan by al-Albani", arabic: 42...86, english: 6...109),
                       .text("A second chain of the same report, which al-Tirmidhi gives next, ends with a house built for him in Paradise in place of the ranks (Sunan al-Tirmidhi 3429, graded hasan by al-Albani). Either way the reward is out of all proportion to the act, and the scholars explain it by the place: a word of remembrance is dearest where remembrance is rarest."),
+                      .hadith("tirmidhi:3429", cite: "Sunan al-Tirmidhi 3429; graded hasan by al-Albani", arabic: 43...88, english: 0...110),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("As you go into a market, a bazaar, a mall, a supermarket, any place of buying and selling, say: La ilaha illallahu wahdahu la sharika lah, lahul-mulku wa lahul-hamdu, yuhyi wa yumitu wa huwa hayyun la yamut, biyadihil-khayr, wa huwa 'ala kulli shay'in qadir (there is no god but Allah alone, without partner; His is the kingdom and His the praise; He gives life and causes death, and He is living and does not die; in His hand is all good, and He has power over all things)."),
                       .text("Say it at the entrance, once, as the report has it. The words are the tahlil of the hundred with three clauses added, so if you already keep that sunnah the market dua is learned in a minute; the added clauses are the ones that answer the market, where life, death and wealth seem to be in human hands."),
                       .text("Carry the remembrance in with you. The scholars say the dua is the door to keeping Allah in mind among the stalls: lower the gaze, deal honestly, and do not swear by Allah to sell. He said the markets are the places Allah likes least (Sahih Muslim 671), so the one who remembers Him there is doing something rare."),
+                      .hadith("muslim:671", cite: "Sahih Muslim 671", arabic: 49...58, english: 0...18),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The reward is stated as the narration states it: a million good deeds, a million sins wiped away, a million ranks, or in the other chain a house in Paradise. The scholars explain the size of it by the place: a word of tawhid said where everyone else is absorbed in buying and selling is worth more than the same word said at ease, because it is harder and rarer. It is also a reminder that a shop can be a place of worship, for the one who remembers."),
@@ -2242,6 +2408,7 @@ extension SunnahView {
                       .text("Notice the road. A branch, a stone, broken glass, a spill, a nail, a bag of rubbish, anything that could trip a walker or cut a tyre: when you pass it, move it, without waiting for whoever should have. The man in the hadith was simply walking and found a branch; he did not go looking, and neither do you have to."),
                       .text("Make it a habit rather than an event. The narration about the joints counts it among the charities owed every day the sun rises, so the eye that looks for harm on the way to the masjid or the car is keeping a daily sunnah, and the hand that moves it is paying a debt the body owes."),
                       .text("Do not be the harm. Rubbish dropped, a car left across a path, a thing left where someone will fall over it, is the opposite of this sunnah; the scholars draw from the hadith that putting harm in the road is a wrong as surely as removing it is a charity. He counted the removing among the branches of faith (Sahih Muslim 35b)."),
+                      .hadith("muslim:35b", cite: "Sahih Muslim 35b", arabic: 29...51, english: 0...45),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("He named the reward twice: Allah forgave a man for one branch, and another was seen turning about in Paradise for a tree he cut from the road. Of all the branches of faith he called this the lowest, which the scholars take not as the least important but as the floor every believer can reach; it costs a moment and a bend of the back. And a harm removed is a kindness to people who will never know who did it, which is the purest kind."),
@@ -2277,6 +2444,7 @@ extension SunnahView {
                       .text("Thanks in the Sunnah is a dua. Usamah ibn Zayd reported that whoever has a kindness done to him and says to the one who did it jazakallahu khayran, may Allah reward you with good, has reached the utmost in praise. Al-Tirmidhi recorded it and called it hasan jayyid gharib, and al-Albani graded it sahih."),
                       .hadith("tirmidhi:2035", cite: "Sunan al-Tirmidhi 2035; graded sahih by al-Albani", arabic: 40...52, english: 0...26),
                       .text("He also said that whoever does not thank people does not thank Allah (Sunan Abi Dawud 4811, graded sahih by al-Albani), which is where the scholars place this dua: the thanks owed to people, said in words that bring Allah into it."),
+                      .hadith("abudawud:4811", cite: "Sunan Abi Dawud 4811; graded sahih by al-Albani", arabic: 24...30, english: 0...15),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When someone does you a kindness, large or small, say jazakallahu khayran (may Allah reward you with good) to his face. To a woman the words are jazakillahu khayran, and to more than one person jazakumullahu khayran; the meaning is the same. Say it with the thanks you would have said anyway, not instead of looking at the person."),
@@ -2324,6 +2492,7 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("The Prophet set out the whole of eating in one sentence. Al-Miqdam ibn Ma'dikarib heard him say that a person fills no vessel worse than his stomach, that a few mouthfuls are enough to keep him on his feet, and that if he must have more, the stomach is to be divided in three: a third for food, a third for drink, and a third left empty for breath. Ibn Majah and al-Tirmidhi both record it, and al-Tirmidhi called it hasan sahih (Sunan al-Tirmidhi 2380)."),
                       .hadith("ibnmajah:3349", cite: "Sunan Ibn Majah 3349; graded sahih by al-Albani", arabic: 32...53, english: 8...54),
+                      .hadith("tirmidhi:2380", cite: "Sunan al-Tirmidhi 2380; graded sahih by al-Albani", arabic: 40...62, english: 0...54),
                       .text("The words rest on an ayah. The Quran tells the children of Adam to eat and drink and not to be excessive, and adds that Allah does not love those who are, so the measure the Prophet gave is the measure the Book had already set:"),
                       .quran("7:31"),
                   ]),
@@ -2379,6 +2548,7 @@ extension SunnahView {
                       .text("Keep honey in the house as a medicine and not only as a sweet. The Prophet's instruction was to give it to drink, so a spoon stirred into warm water or milk is the plain way; take it for a stomach complaint and for general strength, and keep taking it, as he told the man to, rather than judging it by a single dose."),
                       .text("Take the black seed as your land takes it: the whole seeds chewed or ground over food, or the pressed oil by the spoon. The narration fixes no dose and no way of taking it, so there is no sunnah count to keep; a small amount each day is how most Muslims keep the habit."),
                       .text("Say Bismillah over either as over any food, and take them as means with your trust in Allah. See the doctor as well: the Prophet said that Allah sent down no disease without sending down its cure (Sahih al-Bukhari 5678), and honey and the seed are two of the cures, not a reason to refuse the rest."),
+                      .hadith("bukhari:5678", cite: "Sahih al-Bukhari 5678", arabic: 38...45, english: 0...19),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("Honey carries the Quran's own word, healing for people, and the Prophet's reply to the man shows what trust in that word looks like: when the first dose seemed to fail, he did not doubt the revelation, he doubted the stomach. The seed carries his word that its healing reaches every disease but death. Ibn Hajar records that the scholars read this as a general wording with a particular meaning: the seed is a cure for the ailments it suits, taken as it should be, and the healing is Allah's."),
@@ -2421,6 +2591,7 @@ extension SunnahView {
                       .text("Abu Dharr learned what the water could do before he had met him. He came to Makkah as a stranger, was beaten for asking after the Prophet, and lived for thirty days and nights on nothing but Zamzam, and grew fat on it. When he told the Prophet, the answer named the water's two qualities:"),
                       .hadith("muslim:2473a", cite: "Sahih Muslim 2473a", arabic: 522...556, english: 894...945),
                       .text("He also drank it himself, standing at the well, as Ibn 'Abbas saw him (Sahih al-Bukhari 5617), which is why the page on drinking sitting makes Zamzam its exception. The water was taken as it came, at the place it came from, with no ceremony around it beyond the name of Allah and the need it was drunk for."),
+                      .hadith("bukhari:5617", cite: "Sahih al-Bukhari 5617", arabic: 14...22, english: 0...7),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Bring a need to it. Before you drink, decide what you are drinking it for: healing, knowledge, a child, strength for worship, forgiveness, whatever is lawful to ask. Say Bismillah, drink, and ask Allah for that thing by name; the narration ties the water to the intention of the one who drinks it."),
@@ -2494,6 +2665,7 @@ extension SunnahView {
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When someone offers you scent, take it, and when you have it, wear it. A man puts on perfume for the prayer, for Friday, for a gathering and for his own household; the Prophet named perfume beside the Friday ghusl and the siwak for anyone who can find it (Sahih al-Bukhari 880)."),
+                      .hadith("bukhari:880", cite: "Sahih al-Bukhari 880", arabic: 38...51, english: 0...44),
                       .text("Keep some at home and offer it to a guest. The one who is offered scent has been told not to refuse it, so the giver does him a kindness twice: a drop of oud or musk on the hand of a visitor is a sunnah in the giving and a sunnah in the accepting."),
                       .text("Choose for a man a scent whose smell carries: the oils and perfumes the air takes, musk, oud, rose. Let it be pleasant to those near you and not overpowering, since the point of the narrations is that scent is a kindness to others as much as to the wearer."),
                   ]),
@@ -2502,6 +2674,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("A woman's perfume is for her home and her husband: the Prophet said severe words of a woman who perfumes herself and passes among men so that they catch her scent (Sunan Abi Dawud 4173, graded hasan by al-Albani), so she goes out without it."),
+                      .hadith("abudawud:4173", cite: "Sunan Abi Dawud 4173; graded hasan by al-Albani", arabic: 24...39, english: 0...25),
                   ]),
               ]),
         .init(id: "dye-grey", title: "Dye the grey, but not black",
@@ -2539,6 +2712,7 @@ extension SunnahView {
                       .hadith("abudawud:4093", cite: "Sunan Abi Dawud 4093; graded sahih by al-Albani", arabic: 24...64, english: 22...88),
                       .text("Ibn 'Umar carried the threat for pride, and Abu Bakr's worry about it. One side of his izar would slip down unless he kept hold of it, and the Prophet told him he was not one of those who do it out of pride. Abu Hurayrah's short report fixes the limit without any mention of pride at all: what hangs below the ankles of the izar is in the Fire (Sahih al-Bukhari 5787)."),
                       .hadith("bukhari:5784", cite: "Sahih al-Bukhari 5784", arabic: 28...68, english: 0...64),
+                      .hadith("bukhari:5787", cite: "Sahih al-Bukhari 5787", arabic: 27...34, english: 0...17),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Have your thawb, trousers or izar end above the ankle bone. The sunnah is mid-shin, as the narration says; anywhere between there and the ankles is without blame; the ankle itself is the line, and nothing of the garment goes below it."),
@@ -2550,6 +2724,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("The ruling of the Salafi scholars, Ibn Baz and Ibn 'Uthaymin among them, is that for a man letting the garment fall below the ankles is forbidden whether or not it is done out of pride, with the severer threat reserved for pride; some other scholars confine the prohibition to pride. Women do the opposite and lengthen theirs: the Prophet told Umm Salamah a hand-span, and when she said their feet would show, a cubit and no more (Sunan al-Tirmidhi 1731, graded sahih by al-Albani)."),
+                      .hadith("tirmidhi:1731", cite: "Sunan al-Tirmidhi 1731; graded sahih by al-Albani", arabic: 38...63, english: 23...63),
                   ]),
               ]),
         .init(id: "cover-vessels", title: "Nightfall: the children in, the doors shut, the vessels covered",
@@ -2590,6 +2765,7 @@ extension SunnahView {
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Lie down on your right side, as the pages on the bedtime sunnahs describe, with the words he taught; that is the sleeping position he kept and told al-Bara' to keep. On the back is permitted: he was seen lying on his back in the masjid with one leg over the other (Sahih al-Bukhari 475)."),
+                      .hadith("bukhari:475", cite: "Sahih al-Bukhari 475", arabic: 16...31, english: 0...22),
                       .text("If you wake and find yourself on your stomach, turn over. The body moves in sleep and no one is blamed for where he wakes; the sunnah is in the position you choose when you lie down and the one you return to when you notice."),
                       .text("Teach it to the children, gently, the way the Prophet did: a nudge and a sentence. A child who learns the right side at five will sleep on it at fifty, and the correction is kinder from a parent at bedtime than from anyone later."),
                   ]),
@@ -2608,6 +2784,7 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("The Prophet divided dreams in two. A dream a person likes is from Allah: he thanks Him for it and may tell it, to those he loves (Sahih al-Bukhari 7044). A dream he hates is from Shaytan: he seeks refuge from its evil, tells no one, and it will not harm him."),
                       .hadith("bukhari:6985", cite: "Sahih al-Bukhari 6985", arabic: 29...61, english: 4...71),
+                      .hadith("bukhari:7044", cite: "Sahih al-Bukhari 7044", arabic: 41...75, english: 36...112),
                       .text("Jabir's report adds two acts to the refuge: spitting lightly to the left three times, and turning over from the side he was sleeping on. The refuge itself is said three times in his wording, so the whole comes to three of each."),
                       .hadith("muslim:2262", cite: "Sahih Muslim 2262", arabic: 28...47, english: 0...41),
                       .text("Abu Hurayrah's report adds a third, and says what dreams are:"),
@@ -2621,9 +2798,11 @@ extension SunnahView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The promise is in the narrations: it will not harm you. The dream from Shaytan is meant to grieve, the Prophet said, and the whole of the remedy is to deny it that: refuge taken, the dream spat away, the side changed, the prayer prayed, the story untold. Abu Salamah used to be made ill by his dreams until he heard these words from Abu Qatadah (Sahih Muslim 2261), and the believer sleeps knowing that a bad night is a thing with a sunnah for it."),
+                      .hadith("muslim:2261g", cite: "Sahih Muslim 2261g", arabic: 28...92, english: 0...110),
                   ]),
                   SignSection("A NOTE", [
                       .text("A dream is not told to the first person who asks, and not laid before anyone who will guess at it: the Prophet said a dream hangs on a bird's leg until it is interpreted, and then it falls (Sunan Abi Dawud 5020, graded sahih by al-Albani), so it is told only to one who loves you or one who has judgement, and the interpretation of dreams is a knowledge, not a game."),
+                      .hadith("abudawud:5020", cite: "Sunan Abi Dawud 5020; graded sahih by al-Albani", arabic: 27...51, english: 0...42),
                   ]),
               ]),
         .init(id: "olive-oil", title: "Eat the olive and anoint with its oil",
@@ -2640,6 +2819,7 @@ extension SunnahView {
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Eat it. Olives with bread, oil on bread or over a dish; it was the oil Sa'd ibn 'Ubadah set before the Prophet with bread (Sunan Abi Dawud 3854), and it is the oil of the lands of the Quran. Keep a bottle of good olive oil in the kitchen and let it be the oil you reach for first."),
+                      .hadith("abudawud:3854", cite: "Sunan Abi Dawud 3854; graded sahih by al-Albani", arabic: 13...46, english: 0...48),
                       .text("Anoint with it: rub it into the skin and the hair, as the Arabs of his time did with oil, and as the narration's second verb says. A little on the hands, the face, the scalp or the beard after washing is the sunnah kept, and it needs nothing added to it."),
                       .text("Do both with the ayah in mind. The Quran called the tree blessed before the Prophet repeated it, so the oil on your bread and in your hair is a thing Allah Himself praised; say Bismillah over it as over any food, and let the blessing be the reason you chose it."),
                   ]),
@@ -2666,11 +2846,13 @@ extension SunnahView {
                       .hadith("bukhari:5991", cite: "Sahih al-Bukhari 5991", arabic: 44...53, english: 4...39),
                       .text("The Quran opens Surat an-Nisa by binding fear of Allah to the wombs, the ties of kinship, in a single ayah, and the Prophet warned that the one who cuts them will not enter Paradise (Sahih al-Bukhari 5984). The scholars read the long life in the hadith as blessing in it, or as a real lengthening in what the angels have written, since Allah knew from the first what the person would do; either way the promise is his."),
                       .quran("4:1"),
+                      .hadith("bukhari:5984", cite: "Sahih al-Bukhari 5984", arabic: 33...36, english: 0...18),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Know who your relatives are, and keep a list if the family is large: parents first, then brothers and sisters, grandparents, uncles and aunts, cousins and their children, through both your father and your mother. The nearer the relative, the stronger the claim, and parents above all; but the hadith speaks of the rahim as a whole, so the far cousin has a share too."),
                       .text("Keep the tie with whatever reaches them: a call, a message, a visit, a gift, a meal shared, help with money when they need it, and dua for them when you can do no more. Silat is not one act but the habit of not letting the thread go slack, so settle a rhythm, a weekly call to the parents, a visit to the aunt each month, and keep it."),
                       .text("Keep it with the one who has cut you off. This is the whole point of the second narration: answering kindness with kindness is only fairness, and the wasil is the one who goes on greeting, giving and forgiving when nothing comes back. If a quarrel stands between you, be the first to the door, and do not let it pass three days without a greeting (Sahih al-Bukhari 6077)."),
+                      .hadith("bukhari:6077", cite: "Sahih al-Bukhari 6077", arabic: 29...46, english: 0...63),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The two rewards are his own words: a provision made wide and a life made long, and the scholars add that the second may be the blessing in a life, its days filled with what counts, which is a longer life in the only sense that matters. Against them stands the warning that the one who cuts the ties will not enter Paradise, so the matter is not manners but faith. A family kept together by one member who refuses to let go is also the plainest dawah a Muslim ever gives."),
@@ -2690,6 +2872,8 @@ extension SunnahView {
                       .hadith("bukhari:6014", cite: "Sahih al-Bukhari 6014", arabic: 36...44, english: 4...31),
                       .hadith("muslim:2625b", cite: "Sahih Muslim 2625b", arabic: 46...55, english: 0...19),
                       .text("He swore three times that a man whose neighbour is not safe from his harm does not believe (Sahih al-Bukhari 6016), and for the guest he set the measure: a day and a night of the best you have, hospitality for three days, and whatever is beyond that is charity (Sahih al-Bukhari 6135)."),
+                      .hadith("bukhari:6016", cite: "Sahih al-Bukhari 6016", arabic: 21...42, english: 0...44),
+                      .hadith("bukhari:6135", cite: "Sahih al-Bukhari 6135", arabic: 26...52, english: 0...87),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Begin with the neighbour by doing him no harm: no noise that disturbs him, no rubbish or car across his door, no eye on his household, no word against him. The hadith starts with harm because that is what neighbours suffer from most, and removing it costs nothing. Then add the good: the greeting, a hand with a load, a visit when he is ill."),
@@ -2701,6 +2885,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("The three days are the limit of what a host owes, not of what he may give; a guest who overstays should not be made to feel it, and a host who can do more may. The nearer neighbour has the greater right: when 'A'ishah asked which of two neighbours to send a gift to first, he said the one whose door is nearer (Sahih al-Bukhari 2259)."),
+                      .hadith("bukhari:2259", cite: "Sahih al-Bukhari 2259", arabic: 30...46, english: 0...33),
                   ]),
               ]),
         .init(id: "tell-love", title: "Tell your brother that you love him",
@@ -2713,6 +2898,8 @@ extension SunnahView {
                       .hadith("abudawud:5124", cite: "Sunan Abi Dawud 5124; graded sahih by al-Albani", arabic: 29...35, english: 4...17),
                       .hadith("abudawud:5125", cite: "Sunan Abi Dawud 5125; graded hasan by al-Albani", arabic: 15...65, english: 0...64),
                       .text("The love meant is love for Allah's sake, for a person's faith and goodness. The Prophet promised it the shade of Allah on the Day when there is no shade but His (Sahih Muslim 2566), and told of a man who set out to visit a brother in another town and met an angel on the road, sent to tell him that Allah loved him as he loved his brother (Sahih Muslim 2567a)."),
+                      .hadith("muslim:2566", cite: "Sahih Muslim 2566", arabic: 38...54, english: 0...38),
+                      .hadith("muslim:2567a", cite: "Sahih Muslim 2567a", arabic: 25...82, english: 0...105),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When you find that you love someone for Allah's sake, a friend whose faith draws you, a teacher, a brother in the masjid, tell him plainly: uhibbuka fillah (I love you for Allah's sake); a woman says to a woman uhibbuki fillah. Say it in person if you can. The man in the narration went after him rather than waiting for a better moment."),
@@ -2721,6 +2908,7 @@ extension SunnahView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("He gave the reason to the man he sent: inform him. Love that is spoken grows, and the one who hears it finds his own heart softened towards the speaker; the scholars say this is the wisdom of the command. Love for Allah's sake is also one of the strongest ropes of faith, and he counted loving a person for nothing but Allah among the three things by which a person finds the sweetness of faith (Sahih al-Bukhari 16)."),
+                      .hadith("bukhari:16", cite: "Sahih al-Bukhari 16", arabic: 26...59, english: 0...60),
                   ]),
                   SignSection("A NOTE", [
                       .text("The words are for a brother to a brother and a sister to a sister, or within the family and the mahram circle; they are not said between a man and a woman who are not related, since the scholars close that door to what it leads to."),
@@ -2737,12 +2925,16 @@ extension SunnahView {
                       .hadith("bukhari:6245", cite: "Sahih al-Bukhari 6245", arabic: 45...67, english: 61...99),
                       .hadith("bukhari:6250", cite: "Sahih al-Bukhari 6250", arabic: 22...48, english: 0...40),
                       .text("His own habit at a door was to stand to the side of it, not facing it, since doors then had no curtains, and to say the greeting twice (Sunan Abi Dawud 5186, graded sahih by al-Albani). A man who called out asking whether he could come in was sent a servant to teach him the form: say as-salamu 'alaykum, may I enter? (Sunan Abi Dawud 5177, graded sahih by al-Albani)."),
+                      .hadith("abudawud:5186", cite: "Sunan Abi Dawud 5186; graded sahih by al-Albani", arabic: 25...64, english: 0...49),
+                      .hadith("abudawud:5177", cite: "Sunan Abi Dawud 5177; graded sahih by al-Albani", arabic: 13...67, english: 0...83),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("At the door, knock or ring, and stand to one side so that you do not look in when it opens. Then say the greeting and ask: as-salamu 'alaykum, may I come in? The greeting comes before the request in the ayah and in the form he taught, so it is the first thing the house hears."),
                       .text("When they ask who it is, give your name, or something that identifies you: it is Ahmad, your neighbour. Do not answer with a bare me, which tells them nothing; that is what he disliked in Jabir's answer. On the phone and at an intercom the same manners apply."),
                       .text("Ask up to three times, with a pause between, and if no one answers or you are told to go back, go back without offence, as the next ayah of the passage says (24:28). An unanswered door may mean sleep, prayer, illness or a wish to be alone, and all of those are the household's right."),
+                      .quran("24:28"),
                       .text("Inside your own house, the scholars say, ask leave before entering a room where a parent, a grown child or a sibling may be undressed or resting, and teach the children the three times of day the Quran sets for them (24:58). The rule is one of privacy, and privacy begins at home."),
+                      .quran("24:58"),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The Quran gives the reason itself: the asking and the greeting are better for you, that you may remember. A household that is never walked in on unawares keeps its dignity, and a visitor who leaves after three unanswered knocks has committed no wrong and caused none. The scholars note that 'Umar's demand for a witness was not doubt of Abu Musa but care that nothing be attributed to the Prophet without certainty, and the sunnah came down to us with that care."),
@@ -2761,13 +2953,16 @@ extension SunnahView {
                   SignSection("HOW TO KEEP IT", [
                       .text("When Sha'ban begins, fast more than you do in other months: the Mondays and Thursdays, the white days, and as many more as you can carry without harm. 'A'ishah's report fixes no number, and the scholars say the sunnah is in fasting most of the month rather than all of it, since he completed no month except Ramadan."),
                       .text("Keep each day as any voluntary fast: suhur, nothing from dawn to sunset, iftar at once. A woman who has days of Ramadan still to make up should give them priority, and 'A'ishah used to make hers up in Sha'ban (Sahih al-Bukhari 1950), which is another reason the month suits fasting."),
+                      .hadith("bukhari:1950", cite: "Sahih al-Bukhari 1950", arabic: 20...32, english: 0...20),
                       .text("Stop before Ramadan arrives: do not fast the last day or two of Sha'ban to meet Ramadan early, unless the day falls on a fast you already keep, such as a Monday (Sahih al-Bukhari 1914). The last days are for the sighting of the moon, and the fasting of Sha'ban is a preparation for Ramadan, not an extension of it."),
+                      .hadith("bukhari:1914", cite: "Sahih al-Bukhari 1914", arabic: 31...48, english: 0...39),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("He gave the reason himself, in Usamah's report: the deeds of the year are raised to the Lord of the worlds in Sha'ban, and he wanted his to go up while he was fasting. The scholars add what 'A'ishah's report shows, that a month of frequent fasting trains the body and the soul for Ramadan, so that its first day finds a person already used to the fast. It is also a month most people neglect, and a deed done when others are heedless has a worth of its own."),
                   ]),
                   SignSection("A NOTE", [
                       .text("No fast is singled out for the fifteenth of Sha'ban and no prayer for its night, on the view of the scholars of the Sunnah, since the narrations about them do not stand; and some scholars hold, by the hadith that forbids fasting once Sha'ban reaches its middle (Sunan Abi Dawud 2337, graded sahih by al-Albani), that a person with no habit of fasting should not begin one in the second half, while others read it beside 'A'ishah's report and allow it."),
+                      .hadith("abudawud:2337", cite: "Sunan Abi Dawud 2337; graded sahih by al-Albani", arabic: 43...47, english: 52...60),
                   ]),
               ]),
         .init(id: "ten-dhul-hijjah", title: "The first ten days of Dhul-Hijjah",
@@ -2791,6 +2986,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("'A'ishah said she never saw him fasting in the ten (Sahih Muslim 1176a); the scholars reconcile her report with the others by taking it as what she saw, since he divided his nights among his wives and may have left the fast at times for illness or travel, and the fasting of the nine stands established and recommended, the ninth above all."),
+                      .hadith("muslim:1176a", cite: "Sahih Muslim 1176a", arabic: 31...42, english: 0...14),
                   ]),
               ]),
         .init(id: "fast-muharram", title: "Fast in Muharram, the month of Allah",
@@ -2806,6 +3002,7 @@ extension SunnahView {
                   SignSection("HOW TO KEEP IT", [
                       .text("When the new year begins with the moon of Muharram, fast more than usual in it: the Mondays and Thursdays, the white days, and the tenth with the ninth. The hadith sets no number, and he fasted no whole month but Ramadan, so the sunnah is in fasting much of the month rather than all of it."),
                       .text("Give the month its other right as a sacred month: the Quran names four months in which wrongdoing is weightier (9:36), and the scholars say good deeds in them are weightier too. Begin the year with repentance, with the ties of kinship kept, and with the night prayer the same hadith praises."),
+                      .quran("9:36"),
                       .text("Keep the day of 'Ashura as its own page describes, the tenth and the ninth together, and let the fast of the month surround it. A person who cannot fast much may keep 'Ashura and a day or two around it and still have a share of the month."),
                   ]),
                   SignSection("WHY IT MATTERS", [
@@ -2831,14 +3028,17 @@ extension SunnahView {
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Enter i'tikaf if you are able: a stay in the masjid, from the evening of the twentieth of Ramadan until the Eid, leaving only for what you must, given to prayer, Quran and remembrance. He entered his place after Fajr on the twenty-first (Sahih al-Bukhari 2041), and the scholars reconcile that with the twentieth night. A shorter i'tikaf of a few days is valid for whoever cannot stay the ten."),
+                      .hadith("bukhari:2041", cite: "Sahih al-Bukhari 2041", arabic: 25...66, english: 0...73),
                       .text("Whether in i'tikaf or at home, keep the nights: pray the night prayer at length, recite, give charity, make dua, and wake your household for it as he woke his. All ten are the nights of worship, not only the odd ones, since the sunnah is that he kept them all."),
                       .text("Seek Laylat al-Qadr in the odd nights, the twenty-first, twenty-third, twenty-fifth, twenty-seventh and twenty-ninth, and most of all in the twenty-seventh, which many Companions favoured, without being sure of any. Say often: Allahumma innaka 'afuwwun tuhibbul-'afwa fa'fu 'anni (O Allah, You are Pardoning, You love to pardon, so pardon me)."),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("Laylat al-Qadr is worth more than a thousand months of worship, by the Quran's own measure, and whoever stands it in faith and hope of reward is forgiven his past sins (Sahih al-Bukhari 1901). Because the night is hidden among the ten, the hiding itself is the reward's door: the one who keeps all ten is sure of it. I'tikaf, the scholars say, is the fuller form of seeking it, since the heart is cut off from everything but Allah for the whole stretch."),
+                      .hadith("bukhari:1901", cite: "Sahih al-Bukhari 1901", arabic: 28...50, english: 0...57),
                   ]),
                   SignSection("A NOTE", [
                       .text("A woman may keep i'tikaf in the masjid with her husband's leave where it is safe and proper; his wives did (Sahih al-Bukhari 2041). The night's date is not known and is not announced; the sign reported for its morning, a sun that rises white and without rays (Sahih Muslim 762a), is seen after the fact, and whoever has kept the ten has not missed it."),
+                      .hadith("muslim:762a", cite: "Sahih Muslim 762a", arabic: 72...87, english: 73...95),
                   ]),
               ]),
         .init(id: "umrah-ramadan", title: "'Umrah in Ramadan",
@@ -2850,10 +3050,12 @@ extension SunnahView {
                       .text("When the Prophet came back from his Hajj he asked a woman of the Ansar why she had not come. Her husband and son had taken their one riding camel, and the other was needed for the water. He gave her something in its place that has kept its value ever since: an 'umrah in the month of Ramadan, which he set beside a Hajj."),
                       .hadith("bukhari:1782", cite: "Sahih al-Bukhari 1782", arabic: 20...69, english: 5...79),
                       .text("Muslim records the same exchange with the woman named, Umm Sinan, and with the words a Hajj, or a Hajj with me (Sahih Muslim 1256). The scholars say the second wording is the stronger, since a Hajj in his company was the greatest Hajj there could be."),
+                      .hadith("muslim:1256", cite: "Sahih Muslim 1256", arabic: 20...73, english: 0...77),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("Plan an 'umrah in Ramadan when you can afford it and your duties allow it, and make it with the intention of this hadith: the reward of a Hajj. It may be made on any days of the month, since the whole month carries the promise, so the last ten need not be the time if the crowds are too much."),
                       .text("Perform it as he performed it: ihram from the miqat with the talbiyah, tawaf around the Ka'bah, two rak'ahs behind the Station of Ibrahim, sa'i between Safa and Marwah, and the shaving or shortening of the hair. The fast may be kept through it all, and the traveller may break it and make the days up, as the Quran allows (2:184)."),
+                      .quran("2:184"),
                       .text("Give the rest of the stay in Makkah to what the month is for: the prayers in the Sacred Mosque, the Quran, the night prayer, i'tikaf if you can. The promise is for the 'umrah; the days around it are a gift of their own."),
                   ]),
                   SignSection("WHY IT MATTERS", [
@@ -2880,7 +3082,9 @@ extension SunnahView {
                       .text("When you are seated for the journey, in the car, the train or the plane, say Allahu akbar three times, then: Subhanalladhi sakhkhara lana hadha wa ma kunna lahu muqrinin, wa inna ila rabbina la-munqalibun (glory be to Him who subjected this to us, for we could not have done it ourselves, and to our Lord we shall return). The words are the same for any vehicle; the mount is whatever carries you."),
                       .text("Then ask: Allahumma inna nas'aluka fi safarina hadha al-birra wat-taqwa wa minal-'amali ma tarda; Allahumma hawwin 'alayna safarana hadha watwi 'anna bu'dah; Allahumma antas-sahibu fis-safari wal-khalifatu fil-ahl; Allahumma inni a'udhu bika min wa'tha'is-safari wa ka'abatil-manzari wa su'il-munqalabi fil-mali wal-ahl (O Allah, we ask You on this journey for righteousness, piety and deeds You are pleased with; O Allah, make this journey easy for us and fold up its distance; O Allah, You are the Companion on the journey and the Guardian over the family; O Allah, I seek refuge in You from the hardship of the journey, from a grim sight, and from an ill return in wealth and family)."),
                       .text("On the road, say Allahu akbar as the land rises and subhanallah as it falls: on a hill, a flight's climb and descent, a bridge. Keep the voice low; when the Companions raised theirs in takbir he told them to go easy on themselves, since the One they called on was not deaf or absent (Sahih al-Bukhari 2992)."),
+                      .hadith("bukhari:2992", cite: "Sahih al-Bukhari 2992", arabic: 21...66, english: 0...83),
                       .text("On the way home say the same dua again, and add: ayibuna, ta'ibuna, 'abiduna, li-rabbina hamidun (returning, repenting, worshipping, praising our Lord). The traveller's dua is answered, he said, like the parent's and the wronged one's (Sunan Abi Dawud 1536, graded hasan by al-Albani), so the journey is also a time to ask."),
+                      .hadith("abudawud:1536", cite: "Sunan Abi Dawud 1536; graded hasan by al-Albani", arabic: 24...35, english: 0...29),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The dua puts the journey where it belongs: the road is subjected by Allah, the destination is Him, and the family left behind is in His keeping. It asks for what a traveller actually needs, ease, a short road, protection on the way and at home, and for what he most easily forgets, that the journey be one of righteousness. The traveller's dua is among those answered without doubt, and a journey begun and ended with these words is held inside them."),
@@ -2900,6 +3104,7 @@ extension SunnahView {
                       .hadith("muslim:716", cite: "Sahih Muslim 716", arabic: 57...75, english: 0...39),
                       .hadith("bukhari:1797", cite: "Sahih al-Bukhari 1797", arabic: 26...77, english: 0...90),
                       .text("He also forbade a man away for a long time to come to his family at night without warning (Sahih al-Bukhari 1801), so that the house could be ready and no one be taken unawares; Jabir carried the prohibition, and the scholars read it as a kindness to both sides of the door."),
+                      .hadith("bukhari:1801", cite: "Sahih al-Bukhari 1801", arabic: 16...25, english: 0...14),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When home comes into view, say Allahu akbar three times, then: la ilaha illallahu wahdahu la sharika lah, lahul-mulku wa lahul-hamdu wa huwa 'ala kulli shay'in qadir; ayibuna ta'ibuna 'abiduna sajiduna li-rabbina hamidun; sadaqallahu wa'dah, wa nasara 'abdah, wa hazamal-ahzaba wahdah (there is no god but Allah alone, without partner; His is the kingdom and His the praise, and He has power over all things; we return, repenting, worshipping, prostrating, praising our Lord; Allah kept His promise, gave His servant victory and routed the confederates alone)."),
@@ -2928,12 +3133,15 @@ extension SunnahView {
                       .text("Before you go out, take a full bath and put on the best clothes you have; Malik records in the Muwatta that Ibn 'Umar bathed on the morning of the Fitr before going to the prayer ground, and the scholars list the ghusl and the finest dress among the sunnahs of the day. On the Fitr, eat an odd number of dates, three or five, before you leave. On the Adha, eat nothing until the prayer is over, so that the first food of the day is from the sacrifice."),
                       .text("Say the takbir on the way and at the prayer ground: Allahu akbar, Allahu akbar, la ilaha illallah, wallahu akbar, Allahu akbar, wa lillahil-hamd (Allah is the greatest, Allah is the greatest, there is no god but Allah; Allah is the greatest, Allah is the greatest, and to Allah belongs the praise). On the Fitr it runs from the evening before until the prayer; on the Adha the scholars take it from the Fajr of 'Arafah to the last of the days of tashriq."),
                       .text("Walk to the prayer if you can, as he went out and came back on foot (Sunan Ibn Majah 1294, graded hasan by al-Albani), take the women and children, and go home by a different road from the one you came by. Greet those you meet; the Companions said to one another taqabbalallahu minna wa minkum (may Allah accept from us and from you), and the scholars allow it on that ground."),
+                      .hadith("ibnmajah:1294", cite: "Sunan Ibn Majah 1294; graded hasan by al-Albani", arabic: 19...33, english: 0...28),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("Each sunnah of the day says something: the dates say the fast is over by Allah's leave; the empty stomach on the Adha says the first meal is from what was given to Allah; the takbir is the thanks the Quran asks for at the end of the month, for having been guided; and the two roads, the scholars say, let both ways bear witness and both sets of neighbours be greeted. The order to bring the women out, even those not praying, shows the day is for the whole community, and Umm 'Atiyyah gives the reason: to hope for its blessing and its purification."),
                   ]),
                   SignSection("A NOTE", [
-                      .text("The Eid prayer has no adhan and no iqamah (Sahih Muslim 886a), and no prayer is offered before or after it at the prayer ground (Sahih al-Bukhari 989); the scholars count attending it an emphasised duty, and some an obligation, so do not let the sunnahs around it become a reason to miss it. Fasting on either Eid is forbidden."),
+                      .text("The Eid prayer has no adhan and no iqamah (Sahih Muslim 887), and no prayer is offered before or after it at the prayer ground (Sahih al-Bukhari 989); the scholars count attending it an emphasised duty, and some an obligation, so do not let the sunnahs around it become a reason to miss it. Fasting on either Eid is forbidden."),
+                      .hadith("muslim:887", cite: "Sahih Muslim 887", arabic: 30...46, english: 0...22),
+                      .hadith("bukhari:989", cite: "Sahih al-Bukhari 989", arabic: 25...36, english: 0...36),
                   ]),
               ]),
         .init(id: "udhiyah", title: "The sacrifice of Eid al-Adha",
@@ -2947,17 +3155,21 @@ extension SunnahView {
                       .hadith("muslim:1977g", cite: "Sahih Muslim 1977g", arabic: 47...66, english: 0...37),
                       .text("The Quran sets the meaning: the animal is not what reaches Allah, but the piety of the one who offers it, and the meat is for eating and for the poor. He also set the time: whoever slaughtered before the Eid prayer had only given meat to his family, and had to slaughter again (Sahih al-Bukhari 955)."),
                       .quran("22:36-37"),
+                      .hadith("bukhari:955", cite: "Sahih al-Bukhari 955", arabic: 19...48, english: 0...51),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("If you mean to sacrifice, leave your hair and nails untouched from the first of Dhul-Hijjah until the animal is slaughtered; the rule is for the one who offers, not for the household. Choose a sound animal, a sheep of a year or, if that is hard to find, a lamb of six months (Sahih Muslim 1963), free of lameness, blindness, sickness and wasting."),
+                      .hadith("muslim:1963", cite: "Sahih Muslim 1963", arabic: 21...33, english: 0...28),
                       .text("Slaughter after the Eid prayer, on the day of the Eid or in the three days after it, and if you can, with your own hand as he did, facing the qiblah, with a sharp knife and quickly, saying: Bismillah, Allahu akbar (in the name of Allah; Allah is the greatest). One sheep suffices a household, and seven may share a camel or a cow."),
                       .text("Eat from it, give to the poor, and give gifts of it; the Quran names the eating and the feeding, and the scholars like a share for each without making it a rule. You may store what you keep for as long as you like, since he lifted the three-day limit he had once set (Sahih Muslim 1977a)."),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The sacrifice is the rite of the day; the Quran says to pray and sacrifice to your Lord (108:2) and sets its purpose in piety, not in blood. The scholars say it keeps the memory of Ibrahim's offering of his son and the ram Allah sent in his place, feeds the poor on the one day everyone should eat meat, and lets a family give its wealth to Allah with its own hands. Leaving the hair and nails likens the one who sacrifices, in a small way, to the pilgrim in ihram."),
+                      .quran("108:2"),
                   ]),
                   SignSection("A NOTE", [
                       .text("On the majority view the udhiyah is a stressed sunnah for the one who can afford it; Abu Hanifah held it obligatory, and Ibn Taymiyyah and Ibn 'Uthaymin preferred that view for whoever has the means, so the able should not leave it. Nothing of it is sold, not even the skin, and the butcher's fee is not paid from it, as he ordered 'Ali for the sacrificial camels of Hajj (Sahih al-Bukhari 1717)."),
+                      .hadith("bukhari:1717", cite: "Sahih al-Bukhari 1717", arabic: 39...55, english: 0...38),
                   ]),
               ]),
         .init(id: "walimah-dua", title: "The dua for the newlywed, and the walimah",
@@ -2970,10 +3182,15 @@ extension SunnahView {
                       .hadith("tirmidhi:1091", cite: "Sunan al-Tirmidhi 1091; graded sahih by al-Albani", arabic: 23...40, english: 0...33),
                       .hadith("bukhari:5167", cite: "Sahih al-Bukhari 5167", arabic: 86...95, english: 134...147),
                       .text("His own walimahs were simple: for Safiyyah it was dates, dried curd and clarified butter spread on a leather mat (Sahih al-Bukhari 5085), and for Zaynab a sheep (Sahih al-Bukhari 5168). The invitation to a walimah is to be answered, he said, by whoever receives it (Sahih al-Bukhari 5173)."),
+                      .hadith("bukhari:5085", cite: "Sahih al-Bukhari 5085", arabic: 16...51, english: 0...61),
+                      .hadith("bukhari:5168", cite: "Sahih al-Bukhari 5168", arabic: 11...27, english: 0...35),
+                      .hadith("bukhari:5173", cite: "Sahih al-Bukhari 5173", arabic: 29...34, english: 0...21),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When you hear of a marriage, or meet the couple, say the dua he said: Barakallahu laka, wa baraka 'alayka, wa jama'a baynakuma fi khayr (may Allah bless you, and send blessings upon you, and join you both in good). It is said to the groom, and to the bride in her form, and it replaces the pre-Islamic wish of harmony and sons: when people said that to 'Aqil ibn Abi Talib he told them to say what the Prophet said instead (Sunan an-Nasa'i 3371, graded sahih by al-Albani)."),
+                      .hadith("nasai:3371", cite: "Sunan an-Nasa'i 3371; graded sahih by al-Albani", arabic: 16...46, english: 0...48),
                       .text("If you are the groom, hold a walimah: a meal for family and friends at the wedding or after it, with what you can afford; he said even one sheep, and his own were dates and butter. Invite the poor with the rich; Abu Hurayrah called the worst food the food of a walimah to which the rich are invited and the poor are left out, and said that whoever refuses the invitation has disobeyed Allah and His Messenger (Sahih al-Bukhari 5177)."),
+                      .hadith("bukhari:5177", cite: "Sahih al-Bukhari 5177", arabic: 21...40, english: 0...35),
                       .text("If you are invited, go, unless the gathering has in it what you cannot sit with; answering the invitation is a right of the one who gives it, and a person who is fasting may attend and pray for the hosts if he does not eat. Keep the feast free of extravagance and of what Allah forbids, and let the dua be heard in it."),
                   ]),
                   SignSection("WHY IT MATTERS", [
@@ -2981,6 +3198,7 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("Men and women are not mixed at a walimah, and music beyond the daff and the singing of the girls that he allowed at a wedding (Sahih al-Bukhari 5147) is left out; a walimah that takes the guests into what is forbidden is not one the invited must attend."),
+                      .hadith("bukhari:5147", cite: "Sahih al-Bukhari 5147", arabic: 17...61, english: 6...88),
                   ]),
               ]),
         .init(id: "aqiqah", title: "The 'aqiqah on the seventh day",
@@ -2991,6 +3209,7 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("A child's first week ends, in the Sunnah, with a sacrifice. The Prophet said a boy is held in pledge by his 'aqiqah, slaughtered for him on the seventh day, when his head is shaved and he is named, and Umm Kurz heard him set the number: two sheep for a boy and one for a girl. He did it for his own grandsons, and told Fatimah to shave al-Hasan's head and give the weight of the hair in silver (Sunan al-Tirmidhi 1519, graded hasan by al-Albani)."),
                       .hadith("abudawud:2838", cite: "Sunan Abi Dawud 2838; graded sahih by al-Albani", arabic: 26...35, english: 4...29),
+                      .hadith("tirmidhi:1519", cite: "Sunan al-Tirmidhi 1519; graded hasan by al-Albani", arabic: 33...54, english: 0...36),
                       .hadith("abudawud:2834", cite: "Sunan Abi Dawud 2834; graded sahih by al-Albani", arabic: 29...35, english: 8...22),
                   ]),
                   SignSection("HOW TO KEEP IT", [
@@ -3023,6 +3242,7 @@ extension SunnahView {
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("The tahnik is a sunnah done for the child before he can do anything for himself, and Ibn Hajar notes that the sweetness of the date was the first taste the Companions' children had, by the Prophet's hand. The dua for blessing asks for the one thing a parent most wants and least controls, and the name is the first gift a child carries all his life; he changed ugly names to good ones, as he changed 'Asiyah, the disobedient, to Jamilah, the beautiful (Sahih Muslim 2139a)."),
+                      .hadith("muslim:2139a", cite: "Sahih Muslim 2139a", arabic: 37...44, english: 0...7),
                   ]),
                   SignSection("A NOTE", [
                       .text("The adhan in the newborn's ear rests on a narration al-Albani first graded hasan and later weak (Sunan Abi Dawud 5105); Ibn 'Uthaymin and others kept it as a sunnah, so the scholars differ on it, and nothing on this page depends on it. The scholars differ on whether the blessing of the tahnik lay in the Prophet's own saliva or in the act, and most allow a righteous person to do it today."),
@@ -3036,18 +3256,23 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("The Prophet gave the funeral a reward with a measure. Whoever attends until the prayer has a qirat, and whoever stays until the burial has two, and when he was asked what a qirat was he answered with two great mountains. Ibn 'Umar, who used to pray and leave, said when the report reached him that they had lost many qirats (Sahih Muslim 945a). 'Uthman remembered what he did when the burial was finished: he stood at the grave and told the people what to ask for."),
                       .hadith("bukhari:1325", cite: "Sahih al-Bukhari 1325", arabic: 70...93, english: 6...53),
+                      .hadith("muslim:945a", cite: "Sahih Muslim 945a", arabic: 89...105, english: 59...89),
                       .hadith("abudawud:3221", cite: "Sunan Abi Dawud 3221; graded sahih by al-Albani", arabic: 21...44, english: 0...36),
                   ]),
                   SignSection("HOW TO KEEP IT", [
                       .text("When a Muslim dies near you, go to the funeral prayer: it is prayed standing, with four takbirs, al-Fatihah after the first, the blessing on the Prophet after the second, the dua for the dead after the third, and the salam after the fourth. The dua he prayed asks forgiveness, mercy, a wide grave, a washing from sins and a home better than the one left (Sahih Muslim 963a)."),
+                      .hadith("muslim:963a", cite: "Sahih Muslim 963a", arabic: 43...90, english: 0...109),
                       .text("Walk with the body to the grave, or go with it in the car, and stay until it is buried. He said to hurry with the funeral, since a righteous soul is being brought to good and any other is a burden being set down from your necks (Sahih al-Bukhari 1315), so the walk is brisk and quiet, without wailing and without dhikr raised aloud."),
+                      .hadith("bukhari:1315", cite: "Sahih al-Bukhari 1315", arabic: 32...47, english: 0...36),
                       .text("At the grave, after the burial, stand a moment and ask for the dead as he asked: Allahummaghfir lahu, Allahumma thabbit-hu (O Allah, forgive him; O Allah, make him firm), for he is being questioned now. Then go to the family, console them, and see that food is sent to them, as he ordered food made for the family of Ja'far (Sunan Abi Dawud 3132, graded hasan by al-Albani)."),
+                      .hadith("abudawud:3132", cite: "Sunan Abi Dawud 3132; graded hasan by al-Albani", arabic: 25...34, english: 0...23),
                   ]),
                   SignSection("WHY IT MATTERS", [
                       .text("Two qirats, each like a great mountain, for a prayer and a walk: the scholars say this is the largest reward attached to anything so short, and it is given because the dead has no one else now, and the funeral is a right the living owe him. Standing at the grave for his firmness comes at the hour he needs it most, the questioning in the grave, and the Prophet's words tell the living that this is the moment to be there."),
                   ]),
                   SignSection("A NOTE", [
                       .text("Women do not follow the funeral to the grave: Umm 'Atiyyah said they were forbidden it, though not strictly (Sahih al-Bukhari 1278), and the scholars keep the women at home or at the prayer. Following the body with incense, loud recitation or wailing is left out; the sunnah is silence, and dua in the heart."),
+                      .hadith("bukhari:1278", cite: "Sahih al-Bukhari 1278", arabic: 21...27, english: 0...9),
                   ]),
               ]),
         .init(id: "visit-graves", title: "Visit the graves",
@@ -3058,6 +3283,7 @@ extension SunnahView {
                   SignSection("WHAT HE DID", [
                       .text("Early in Islam the Prophet forbade the visiting of graves, when the people had only just left the ways of idolatry; later he lifted the ban in a sentence Buraydah reports, and said why on other occasions: the graves remind of the Hereafter. He asked his Lord's leave to visit his own mother's grave and was given it (Sahih Muslim 976a). For those who go out to the graves he taught a greeting, and Buraydah carried that too."),
                       .hadith("muslim:977a", cite: "Sahih Muslim 977a", arabic: 55...59, english: 0...11),
+                      .hadith("muslim:976a", cite: "Sahih Muslim 976a", arabic: 39...52, english: 0...32),
                       .hadith("muslim:975", cite: "Sahih Muslim 975", arabic: 59...75, english: 21...51),
                   ]),
                   SignSection("HOW TO KEEP IT", [
@@ -3070,6 +3296,8 @@ extension SunnahView {
                   ]),
                   SignSection("A NOTE", [
                       .text("The visit is for remembrance and for dua for the dead, and nothing else: no journey is undertaken to a grave, since he forbade setting out except for the three masjids (Sahih al-Bukhari 1189), and nothing is asked of the dead, nor of Allah by their standing, which the scholars count as the door to shirk. The scholars differ on women visiting graves: Ibn Baz forbade it by the hadith that curses the women who visit often (Sunan al-Tirmidhi 1056, graded hasan by al-Albani), and others allow a visit without frequenting, by the general permission."),
+                      .hadith("bukhari:1189", cite: "Sahih al-Bukhari 1189", arabic: 25...41, english: 0...30),
+                      .hadith("tirmidhi:1056", cite: "Sunan al-Tirmidhi 1056; graded hasan by al-Albani", arabic: 15...24, english: 0...11),
                   ]),
               ]),
     ]

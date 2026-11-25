@@ -580,7 +580,9 @@ struct JournalView: View {
                             ResourceHeroStat(store.entries.count.formatted(), store.entries.count == 1 ? String(localized: "entry") : String(localized: "entries")),
                             ResourceHeroStat(shown.notesCount.formatted(), shown.notesCount == 1 ? String(localized: "margin note") : String(localized: "margin notes")),
                         ]
-                    ))
+                    ) {
+                        JournalNotebookArt(entries: store.entries.count, notes: shown.notesCount)
+                    })
                     writeSection
                 }
 

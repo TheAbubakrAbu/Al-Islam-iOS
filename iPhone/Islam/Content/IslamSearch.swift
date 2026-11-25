@@ -21,6 +21,16 @@ import SwiftUI
 
 // MARK: - Catalog
 
+/// What a page's own search bar is on, which decides what its results show and in which language.
+enum ArticleSearchKind {
+    /// An English article (Pillars & Beliefs, the How-To Guides, Proving Islam, the generated pages
+    /// and the Miracles articles): IN THIS ARTICLE, then the other articles, in English.
+    case article
+    /// A page of the app's own, translated or not (a Tajweed Foundations page, a Tajweed Course
+    /// lesson, a hadith's explanation): ON THIS PAGE alone, in the reader's language.
+    case page
+}
+
 enum IslamArticleHome: String, Hashable, CaseIterable {
     case pillars
     case guides
@@ -28,6 +38,19 @@ enum IslamArticleHome: String, Hashable, CaseIterable {
     /// provingislam.net's "The Complete Case". Its chapters are ordinary catalog articles, so search,
     /// the Ask AI corpus and the in-page search reach them like any other page.
     case proving
+    // The six reading libraries opened as Islamic resources on 2026-11-24 (Abu: "Stories of prophets",
+    // "Sahaba, Ahlul Bayt, Salaf", "Refuting religions", "Preservation/Compilation of Quran", "Science of
+    // Hadiths", "Domino Process proving Islam"). Each is drawn by `IslamLibraryView`; its groups list its
+    // own chapters beside the Pillars & Beliefs and Proving Islam articles on the same subject
+    // (`IslamArticleCatalog.members`), so the library is whole without a second copy of any page.
+    case stories
+    case companions
+    case religions
+    case preservation
+    case hadithScience
+    /// The Domino Process: Abu's own dawah workshop series (Dawah/Handbook), seven dominoes from
+    /// reality to a Creator, to revelation, to Islam.
+    case domino
 
     /// The resource's English title. Data (the Ask AI sources cite it); it is shown beside the English
     /// articles through `AppLanguage.article`, while the Islam tab's own tile translates.
@@ -36,6 +59,12 @@ enum IslamArticleHome: String, Hashable, CaseIterable {
         case .pillars: return "Pillars & Beliefs"
         case .guides: return "How-To Guides"
         case .proving: return "Proving Islam"
+        case .stories: return "Stories of the Prophets"
+        case .companions: return "Sahabah, Ahlul Bayt & Salaf"
+        case .religions: return "Refuting Religions"
+        case .preservation: return "Preservation of the Quran"
+        case .hadithScience: return "Science of Hadith"
+        case .domino: return "The Domino Process"
         }
     }
 
@@ -44,6 +73,46 @@ enum IslamArticleHome: String, Hashable, CaseIterable {
         case .pillars: return "moon.stars"
         case .guides: return "list.bullet.rectangle"
         case .proving: return "checkmark.shield"
+        case .stories: return "scroll"
+        case .companions: return "person.3"
+        case .religions: return "signpost.right"
+        case .preservation: return "lock.doc"
+        case .hadithScience: return "link"
+        case .domino: return "rectangle.split.3x1"
+        }
+    }
+
+    /// One line of what the home holds: the resource's subtitle, in English (a door to the library sits
+    /// on English pages and says it with them).
+    var subtitle: String {
+        switch self {
+        case .pillars: return "The Five Pillars and Six Beliefs"
+        case .guides: return "Wudu, salah, Jumuah, and more"
+        case .proving: return "The complete case that Islam is true, one line of evidence at a time"
+        case .stories: return "From Adam to Isa, told from the Quran and sound hadith"
+        case .companions: return "The Companions, the Prophet\u{2019}s household, and the early generations"
+        case .religions: return "Other faiths and worldviews, answered fairly"
+        case .preservation: return "How the Quran was revealed, memorised, written, and kept"
+        case .hadithScience: return "How every narration is checked, graded, and preserved"
+        case .domino: return "From reality to a Creator, to revelation, to Islam"
+        }
+    }
+
+    /// The homes drawn by `IslamLibraryView` (every one but the three with screens of their own).
+    var isLibrary: Bool {
+        switch self {
+        case .pillars, .guides, .proving: return false
+        default: return true
+        }
+    }
+
+    /// The Islam tab's DEBUG launch argument that opens an article on this home's index.
+    var debugArticleArgument: String {
+        switch self {
+        case .pillars: return "-pillarsArticle"
+        case .guides: return "-guidesArticle"
+        case .proving: return "-provingArticle"
+        default: return "-libraryArticle"
         }
     }
 }
@@ -98,6 +167,7 @@ struct IslamArticleGroup: Identifiable {
         case "THE BASICS":                      return "questionmark.circle"
         case "THE 5 PILLARS OF ISLAM":          return "building.columns"
         case "THE 6 PILLARS OF IMAN (FAITH)":   return "heart"
+        case "THE 3 PILLARS OF TAWHID":         return "hand.point.up"
         case "THE 25 PROPHETS NAMED IN THE QURAN": return "person.wave.2"
         case "THE THREE HOLY MOSQUES":          return "building.2"
         case "QURAN & TAFSIR":                  return "book.closed"
@@ -120,6 +190,40 @@ struct IslamArticleGroup: Identifiable {
         case "FASTING & CHARITY":               return "sunrise"
         case "EID":                             return "sparkles"
         case "FAITH & THE HEART":               return "heart.text.square"
+        // The six libraries (2026-11-24).
+        case "BEFORE THE STORIES":              return "book"
+        case "THE FIRST PEOPLE":                return "figure.stand"
+        case "IBRAHIM AND HIS HOUSE":           return "flame"
+        case "PATIENCE AND RETURN":             return "hourglass"
+        case "MUSA AND BANI ISRA'IL":           return "water.waves"
+        case "THE PROPHETS OF ARABIA":          return "sun.dust"
+        case "THE KINGS AND PROPHETS OF BANI ISRA'IL": return "crown"
+        case "THE LAST OF BANI ISRA'IL":        return "star.and.crescent"
+        case "BEYOND THE QURAN":                return "questionmark.folder"
+        case "THE SEAL OF THE PROPHETS":        return "seal"
+        case "WHO THEY ARE":                    return "person.3"
+        case "THE RIGHTLY GUIDED CALIPHS":      return "flag"
+        case "PROMISED PARADISE":               return "leaf"
+        case "AHLUL BAYT: THE PROPHET'S HOUSEHOLD": return "house"
+        case "COMPANIONS OF NOTE":              return "star"
+        case "THE SALAF AFTER THEM":            return "arrow.down.forward"
+        case "THE PEOPLE OF THE BOOK":          return "book.closed"
+        case "THE RELIGIONS OF THE EAST":       return "sunrise"
+        case "WITHOUT GOD OR WITHOUT REVELATION": return "questionmark.circle"
+        case "NEW PROPHETS AND SECTS":          return "exclamationmark.triangle"
+        case "HOW IT CAME DOWN":                return "arrow.down.to.line"
+        case "KEPT IN HEARTS AND ON PAGES":     return "heart.text.square"
+        case "THE MUSHAF ACROSS THE CENTURIES": return "text.book.closed"
+        case "QUESTIONS ANSWERED":              return "questionmark.bubble"
+        case "THE FOUNDATIONS":                 return "square.stack.3d.up"
+        case "THE CHAIN":                       return "link"
+        case "THE TEXT AND ITS FORGERS":        return "exclamationmark.shield"
+        case "THE BOOKS AND THEIR GRADES":      return "books.vertical"
+        case "ANSWERING THE DOUBTS":            return "bubble.left.and.bubble.right"
+        case "PART 1: DOES GOD EXIST?":         return "sparkles"
+        case "PART 2: WHICH RELIGION IS TRUE?": return "signpost.right"
+        case "PART 3: WHY ISLAM?":              return "moon.stars"
+        case "DOING DAWAH":                     return "person.wave.2"
         default:                                return "doc.text"
         }
     }
@@ -132,6 +236,8 @@ struct IslamArticleGroup: Identifiable {
 struct IslamArticleOpenRequest: Hashable {
     let id: String
     var section: String? = nil
+    /// The section is one only the full article has (a search hit there): open the page in full.
+    var long = false
 }
 
 enum IslamArticleCatalog {
@@ -149,6 +255,30 @@ enum IslamArticleCatalog {
         }, foldedCount: foldedCount)
     }
 
+    /// A row of one of the six libraries: a chapter written for it, or an article another home already
+    /// has (Pillars & Beliefs, Proving Islam) that the library lists in its reading order too. The
+    /// borrowed row keeps its own home and group, so it opens, shares and is cited exactly as before.
+    private enum LibraryRow {
+        case new(String, String, String, [String])
+        case existing(String)
+    }
+
+    private static func library(_ title: String, _ home: IslamArticleHome, _ rows: [LibraryRow]) -> IslamArticleGroup {
+        IslamArticleGroup(title: title, home: home, entries: rows.compactMap { row in
+            switch row {
+            case let .new(id, rowTitle, key, aliases):
+                return entry(id, rowTitle, title, home, key: key, aliases: aliases)
+            case let .existing(id):
+                return borrowable[id]
+            }
+        })
+    }
+
+    /// The articles a library may list from the other homes, by id.
+    private static let borrowable: [String: IslamArticleEntry] = Dictionary(
+        (pillarsGroups + guidesGroups + provingGroups).flatMap(\.entries).map { ($0.id, $0) },
+        uniquingKeysWith: { a, _ in a })
+
     /// Pillars & Beliefs, in the order the index shows them.
     static let pillarsGroups: [IslamArticleGroup] = [
         group("THE BASICS", .pillars, [
@@ -159,6 +289,12 @@ enum IslamArticleCatalog {
             ("NamesOfAllahPillarView", "The 99 Names of Allah", "names-of-allah",
              ["99 names", "ninety-nine", "asma", "husna", "asma ul husna", "beautiful names", "attributes", "ahsaha"]),
             ("QuranPillarView", "What is the Quran?", "quran", ["koran", "book", "revelation"]),
+            // Abu, 2026-11-24: "How do we know the prophet was given the Quran or that Allah gave it to the
+            // prophet? Prove just using the Quran then later u can use Hadith."
+            ("QuranRevealedPillarView", "How Do We Know Allah Revealed the Quran?", "quran-revealed",
+             ["revealed", "revelation", "wahy", "tanzil", "proof of the quran", "is the quran from god", "who wrote the quran",
+              "author of the quran", "jibril", "gabriel", "hira", "iqra", "unlettered", "ummi", "challenge", "tahaddi",
+              "inspiration", "word of god", "speech of allah"]),
             ("ProphetPillarView", "Who is Prophet Muhammad \u{FDFA}?", "prophet", ["messenger", "rasul", "muhammad"]),
             ("SunnahPillarView", "What is the Sunnah?", "sunnah", ["tradition", "way of the prophet"]),
             ("HadithPillarView", "What are Hadiths?", "hadith", ["narration", "ahadith", "bukhari", "muslim"]),
@@ -178,6 +314,24 @@ enum IslamArticleCatalog {
             ("DayView", "Belief in the Last Day", "lastday", ["judgement", "judgment", "resurrection", "qiyamah", "afterlife", "paradise", "hell"]),
             ("QadarView", "Belief in Al-Qadar", "qadar", ["qadr", "destiny", "predestination", "decree", "fate"]),
         ]),
+        // Abu, 2026-11-24: "add a section called three pillars of tawheed", beside the five pillars of
+        // Islam and the six of iman. The scholars' word is aqsam, categories; each is a pillar in that
+        // tawhid falls without it.
+        group("THE 3 PILLARS OF TAWHID", .pillars, [
+            ("RububiyyahView", "Tawhid ar-Rububiyyah (Lordship)", "rububiyyah",
+             ["tawheed", "three pillars", "categories of tawhid", "types of tawhid", "lordship", "rabb", "lord",
+              "creator", "creation", "khalq", "mulk", "tadbir", "fitrah", "qadariyyah", "amulet", "tamimah",
+              "horoscope", "astrology", "fortune teller", "talbiyah of the pagans", "qawaid al-arba"]),
+            ("UluhiyyahView", "Tawhid al-Uluhiyyah (Worship)", "uluhiyyah",
+             ["tawheed", "three pillars", "categories of tawhid", "worship", "ibadah", "ibaadah", "ilah", "uloohiyyah",
+              "uluhiyya", "ikhlas", "sincerity", "intercession", "shafaah", "tawassul", "istighathah", "graves",
+              "dua is worship", "vow", "nadhr", "sacrifice", "wadd", "suwa", "two conditions"]),
+            ("AsmaSifatView", "Tawhid al-Asma\u{2019} was-Sifat (Names & Attributes)", "asma-sifat",
+             ["tawheed", "three pillars", "categories of tawhid", "names and attributes", "asma wa sifat",
+              "asma was sifat", "sifat", "attributes", "istiwa", "istawa", "throne", "arsh", "rising", "malik",
+              "where is allah", "above the throne", "uluw", "tahrif", "tatil", "takyif", "tamthil", "tafwid",
+              "tawil", "hand of allah", "seeing allah", "ruyah", "tadmuriyyah", "qawaid al-muthla"]),
+        ]),
         group("THE 25 PROPHETS NAMED IN THE QURAN", .pillars, [
             ("ProphetAdamView", "Adam", "adam", ["first man", "father of mankind"]),
             ("ProphetIdrisView", "Idris", "idris", ["enoch"]),
@@ -188,7 +342,7 @@ enum IslamArticleCatalog {
             ("ProphetLutView", "Lut", "lut", ["lot", "sodom"]),
             ("ProphetIsmailView", "Ismail", "ismail", ["ishmael", "zamzam", "hajar"]),
             ("ProphetIshaqView", "Ishaq", "ishaq", ["isaac", "sarah"]),
-            ("ProphetYaqubView", "Yaqub", "yaqub", ["jacob", "israil", "israel", "twelve tribes"]),
+            ("ProphetYaqubView", "Yaqub / Israil", "yaqub", ["jacob", "israil", "israel", "twelve tribes"]),
             ("ProphetYusufView", "Yusuf", "yusuf", ["joseph", "egypt", "well", "dream"]),
             ("ProphetAyyubView", "Ayyub", "ayyub", ["job", "patience", "illness"]),
             ("ProphetShuaybView", "Shu\u{2019}ayb", "shuayb", ["shuaib", "jethro", "madyan", "midian", "weights", "measures"]),
@@ -224,6 +378,11 @@ enum IslamArticleCatalog {
             ("JuzView", "The 30 Juz (Parts)", "juz", ["ajza", "para", "hizb", "parts of the quran"]),
             ("AhrufView", "The 7 Ahruf (Modes)", "ahruf", ["harf", "modes", "seven ahruf"]),
             ("QiraatView", "The 10 Qiraat (Recitations)", "qiraat", ["qiraah", "riwayah", "hafs", "warsh", "readings"]),
+            // Abu, 2026-11-24: "do the qiraat contradict?"
+            ("QiraatContradictView", "Do the Qiraat Contradict?", "qiraat-contradict",
+             ["contradiction", "contradict", "contradictions", "different readings", "different qurans", "variants",
+              "variant readings", "ikhtilaf", "tanawwu", "tadadd", "maliki", "maaliki", "arjulakum", "arjulikum",
+              "yathurna", "rasm", "ibn al-jazari", "nashr", "4:82"]),
             ("RiwayatDifferencesView", "How the Riwayat Differ on the Page", "riwayat-differences",
              ["hamzah", "hamza", "hamzat al-wasl", "wasl", "madani", "maghribi", "dot", "dots", "imalah", "taqlil",
               "tas-hil", "tashil", "ibdal", "naql", "silah", "warsh", "qalun", "qaloon", "susi", "duri", "abu jafar",
@@ -273,12 +432,14 @@ enum IslamArticleCatalog {
             ("LaterScholarsView", "Later Scholars of the Sunnah", "later", ["ibn hajar", "nawawi", "albani", "ibn baz", "ibn uthaymin", "muhammad ibn abd al-wahhab"]),
         ]),
         group("SALAFIYYAH: THE WAY OF THE SALAF", .pillars, [
-            ("TawhidView", "Tawhid: The Oneness of Allah", "tawhid", ["tawheed", "oneness", "monotheism", "la ilaha illa allah"]),
+            ("TawhidView", "Tawhid: The Oneness of Allah", "tawhid", ["tawheed", "oneness", "monotheism", "la ilaha illa allah",
+             "three pillars of tawhid"]),
             ("SalafiyyahView", "What is Salafiyyah?", "salafiyyah", ["salafi", "salafism", "wahhabi", "najd", "ibn abd al-wahhab", "salaf", "dhahabi"]),
             ("QuranSunnahView", "The Quran and the Sunnah", "quransunnah", ["two sources", "revelation", "evidence", "daleel"]),
             ("ShirkView", "Shirk: The Unforgivable Sin", "shirk", ["polytheism", "idolatry", "associating partners", "grave worship"]),
             ("KufrView", "Kufr and What Breaks Islam", "kufr", ["disbelief", "apostasy", "nullifiers", "riddah", "takfir"]),
-            ("BidahView", "Bid\u{2019}ah (Innovation)", "bidah", ["bidah", "innovation", "newly invented"]),
+            ("BidahView", "Bid\u{2019}ah (Innovation)", "bidah", ["bidah", "innovation", "newly invented", "bidah hasanah",
+             "good innovation", "shafii", "two kinds of bidah", "four imams", "istihsan"]),
             ("MawlidView", "The Mawlid", "mawlid", ["birthday", "milad", "rabi al-awwal", "celebration"]),
             // What it is and what it is not (Abu, 2026-11-14); the practical side is the How-to guide
             // `EvilEyeGuideView`, and each page opens the other.
@@ -312,6 +473,11 @@ enum IslamArticleCatalog {
             ("WudhuView", "How to Make Wudhu", "wudhu", ["wudu", "ablution", "purification", "washing"]),
             ("GhuslView", "How to Make Ghusl", "ghusl", ["bath", "full ablution", "janabah", "ritual bath"]),
             ("TayammumView", "How to Make Tayammum", "tayammum", ["dry ablution", "no water", "earth", "dust", "sand"]),
+            // Abu, 2026-11-24: "Awrah of men versus women"
+            ("AwrahView", "How to Cover the Awrah (Men and Women)", "awrah",
+             ["awrah", "aurah", "aurat", "awra", "satr", "cover", "covering", "private parts", "navel", "knee", "thigh",
+              "shoulders", "hijab", "niqab", "khimar", "jilbab", "face veil", "veil", "modesty", "mahram", "dress code",
+              "clothing", "what to wear", "prayer clothes", "women in prayer"]),
             ("JumuahView", "How to Pray Jumuah", "jumuah", ["friday prayer", "jummah", "juma", "khutbah", "late for jumuah", "eid on friday"]),
             ("KhutbahView", "How to Give the Khutbah", "khutbah", ["khutba", "sermon", "friday sermon", "khatib", "minbar", "khutbat al-hajah", "amma bad", "imam"]),
             ("AdhanOtherView", "How to Give the Adhan", "adhan", ["azan", "call to prayer", "muadhin", "muezzin", "jumuah adhan", "first adhan", "tarji"]),
@@ -405,15 +571,335 @@ enum IslamArticleCatalog {
         ]),
     ]
 
+    // BEGIN LIBRARY GROUPS: generated from the libraries' plan (2026-11-24); the order inside a
+    // group is reading order, an `.existing` row is a Pillars & Beliefs or Proving Islam page the
+    // library lists too.
+
+    /// Stories of the Prophets, in the order its index shows it.
+    static let storiesGroups: [IslamArticleGroup] = [
+        library("BEFORE THE STORIES", .stories, [
+            .new("StoryProphetsView", "Prophets and Messengers", "prophets-and-messengers",
+                 ["nabi", "rasul", "anbiya", "rusul", "prophethood", "nubuwwah", "ulul azm", "firm resolve", "ismah", "infallibility", "124000 prophets", "twenty five prophets", "mujizah", "miracles", "scriptures", "suhuf", "zabur", "injil", "tawrah", "o prophet", "seal of the prophets", "khatam an-nabiyyin", "shepherds"]),
+            .new("StoryIntroView", "Why the Quran Tells Their Stories", "why",
+                 ["qasas", "best of stories", "ahsan al-qasas", "israiliyyat", "israeliyyat", "people of the book", "ibrah", "lessons", "bible", "torah", "sources", "weak stories", "order of the prophets", "chronology", "ibn taymiyyah", "ibn kathir", "repetition"]),
+            .new("StoryFamilyView", "One Family: The Prophets\u{2019} Family Tree", "family-tree",
+                 ["family tree", "lineage", "genealogy", "nasab", "dhurriyyah", "twelve tribes", "asbat", "tribes of israel", "sons of jacob", "reuben", "levi", "judah", "benjamin", "sam ham yafith", "shem ham japheth", "azar", "terah", "adnan", "quraysh", "hajar", "sarah", "leah", "rachel", "cousins", "israel"]),
+            .new("StoryNationsView", "The Peoples They Were Sent To", "nations",
+                 ["nations", "peoples", "ad", "aad", "iram", "ahqaf", "thamud", "hijr", "madain salih", "hegra", "sodom", "mutafikat", "madyan", "midian", "aykah", "thicket", "pharaoh", "haman", "qarun", "korah", "nineveh", "ashab ar-rass", "tubba", "saba", "sheba"]),
+        ]),
+        library("THE FIRST PEOPLE", .stories, [
+            .new("StoryAdamView", "Adam", "adam",
+                 ["abu al-bashar", "father of mankind", "hawwa", "eve", "iblis", "satan", "khalifah", "successor", "the names", "prostration", "the tree", "garden of eternity", "repentance", "qabil", "habil", "cain", "abel", "shith", "seth", "covenant", "alast", "fitrah", "adamah", "safiyyullah", "bani adam"]),
+            .new("StoryIdrisView", "Idris", "idris",
+                 ["enoch", "akhnukh", "hanokh", "idrees", "siddiq", "high station", "makanan aliyya", "fourth heaven", "miraj", "hermes", "jared", "methuselah", "israiliyyat", "ka'b al-ahbar"]),
+            .new("StoryNuhView", "Nuh", "nuh",
+                 ["noah", "noach", "ark", "flood", "deluge", "tufan", "judi", "al-judi", "ararat", "tannur", "wadd", "suwa", "yaghuth", "yauq", "nasr", "950 years", "surah nuh", "grateful servant", "first messenger", "ulul azm", "sam ham yafith", "shem", "japheth", "kanan", "yam"]),
+        ]),
+        library("THE PROPHETS OF ARABIA", .stories, [
+            .new("StoryHudView", "Hud", "hud",
+                 ["ad", "aad", "‘ad", "iram", "ahqaf", "al-ahqaf", "barren wind", "dabur", "saba", "east wind", "eber", "abir", "hadramawt", "hood", "surah hud", "envoy of ad", "qayl", "ubar", "sarsar", "cloud", "grey hair", "shayyabatni"]),
+            .new("StorySalihView", "Salih", "salih",
+                 ["saleh", "thamud", "she-camel", "naqah", "naqat allah", "camel", "hijr", "al-hijr", "madain salih", "mada’in salih", "hegra", "al-ula", "tabuk", "qudar", "nine men", "sayhah", "rajfah", "omen", "tatayyur", "abu zamah"]),
+            .new("StoryShuaybView", "Shu\u{2019}ayb", "shuayb",
+                 ["shuaib", "shoaib", "shuayb", "jethro", "reuel", "hobab", "madyan", "midian", "aykah", "thicket", "laykah", "al-bad", "scales", "measure", "weights", "mutaffifin", "tatfif", "khatib al-anbiya", "zullah", "old man of madyan", "baqiyyatullah"]),
+        ]),
+        library("IBRAHIM AND HIS HOUSE", .stories, [
+            .new("StoryIbrahimView", "Ibrahim", "ibrahim",
+                 ["abraham", "abram", "ibraheem", "khalil", "khalilullah", "al-khalil", "azar", "terah", "sarah", "hajar", "namrud", "nimrod", "fire", "idols", "hanif", "millah", "suhuf", "scrolls of ibrahim", "ur", "babylon", "hebron", "father of the prophets", "four birds", "neither jew nor christian"]),
+            .new("StoryLutView", "Lut", "lut",
+                 ["lot", "sodom", "sadum", "gomorrah", "mutafikat", "al-mutafikat", "overturned cities", "dead sea", "bahr lut", "qawm lut", "people of lut", "sijjil", "fahishah", "wife of lut", "daughters of lut", "ruknun shadid", "strong support", "haran"]),
+            .new("StoryKabahView", "Isma\u{2019}il", "ismail-kabah",
+                 ["ismail", "ishmael", "ismael", "yishmael", "hajar", "hagar", "zamzam", "safa", "marwah", "sa'y", "jurhum", "kaaba", "kabah", "sacrifice", "dhabih", "adh-dhabih", "maqam ibrahim", "eid al-adha", "nabit", "qaydar", "kedar", "adnan", "arabs", "hajj"]),
+            .new("StoryIshaqView", "Ishaq", "ishaq",
+                 ["isaac", "yitzhaq", "yitzhak", "ishak", "sarah", "laughter", "glad tidings", "bushra", "guests of ibrahim", "honoured guests", "rebekah", "rifqa", "esau", "al-is", "edom", "nafilah", "ghulam alim"]),
+            .new("StoryYaqubView", "Ya\u{2019}qub / Isra\u{2019}il", "yaqub",
+                 ["yaqub", "jacob", "israel", "israil", "isra'il", "bani israil", "children of israel", "twelve tribes", "asbat", "al-asbat", "sabrun jamil", "beautiful patience", "leah", "rachel", "bilhah", "zilpah", "reuben", "judah", "levi", "binyamin", "benjamin", "dinah", "laban", "sciatica", "irq an-nasa"]),
+            .new("StoryYusufView", "Yusuf", "yusuf",
+                 ["joseph", "yosef", "binyamin", "benjamin", "zulaykha", "zulaikha", "al-aziz", "potiphar", "rachel", "rahil", "eleven stars", "the well", "sabrun jamil", "beautiful patience", "as-siddiq", "ahsan al-qasas", "best of stories", "egypt", "famine", "the shirt", "seven cows", "dream interpretation", "al-karim ibn al-karim", "surah yusuf"]),
+        ]),
+        library("PATIENCE AND RETURN", .stories, [
+            .new("StoryAyyubView", "Ayyub", "ayyub",
+                 ["job", "ayub", "iyyov", "patience", "sabr", "awwab", "the spring", "golden locusts", "dighth", "bundle of grass", "oath", "rahmah", "his wife", "illness", "affliction", "worms", "book of job", "hawran", "esau"]),
+            .new("StoryYunusView", "Yunus", "yunus",
+                 ["jonah", "yonah", "dhun-nun", "dhu an-nun", "sahib al-hut", "companion of the fish", "whale", "the fish", "matta", "amittai", "nineveh", "mosul", "gourd", "yaqtin", "la ilaha illa anta subhanaka", "dua of yunus", "mughadib", "surah yunus", "ibn matta"]),
+        ]),
+        library("MUSA AND BANI ISRA'IL", .stories, [
+            .new("StoryMusaEarlyView", "Musa: From the River to the Fire", "musa-early",
+                 ["moses", "moshe", "kalimullah", "burning bush", "tuwa", "madyan", "midian", "staff", "white hand", "basket", "nile", "asiyah", "zipporah", "safura", "jethro", "imran", "amram", "jochebed", "miriam", "levi", "tawrah", "torah", "mount tur", "sinai"]),
+            .new("StoryMusaPharaohView", "Musa and Pharaoh", "musa-pharaoh",
+                 ["moses", "firaun", "fir'awn", "haman", "magicians", "sorcerers", "asiyah", "believer of pharaoh's family", "nine signs", "plagues", "red sea", "exodus", "ashura", "muharram", "drowning", "egypt", "tower", "istikhfaf"]),
+            .new("StoryHarunView", "Harun", "harun",
+                 ["aaron", "aharon", "wazir", "minister", "golden calf", "samiri", "sister of harun", "ukht harun", "safiyyah", "ali", "tabuk", "manzilah", "fifth heaven", "mount hor", "elisheba", "eleazar", "priesthood", "levi", "ibn umm"]),
+            .new("StoryWildernessView", "Bani Isra\u{2019}il in the Wilderness", "wilderness",
+                 ["children of israel", "bani israel", "golden calf", "samiri", "tih", "wandering", "forty years", "manna", "quails", "mann", "salwa", "twelve springs", "tablets", "seventy", "see allah", "cow", "baqarah", "qarun", "korah", "yusha", "joshua", "hittah", "red sand hill", "death of musa"]),
+            .new("StoryKhidrView", "Musa and al-Khidr", "khidr",
+                 ["khadir", "al-khadir", "khizr", "two seas", "majma al-bahrayn", "fish", "yusha", "joshua", "ship", "boy", "wall", "orphans", "ilm ladunni", "kahf", "surah kahf", "is khidr alive", "patience", "knowledge"]),
+        ]),
+        library("THE KINGS AND PROPHETS OF BANI ISRA'IL", .stories, [
+            .new("StoryDawudView", "Dawud", "dawud",
+                 ["david", "dawood", "daud", "zabur", "psalms", "talut", "saul", "jalut", "goliath", "armour", "chain mail", "iron", "mountains and birds", "awwab", "khalifah", "fast of dawud", "prayer of dawud", "sajdah sad", "two litigants", "jesse", "judah", "bathsheba", "tel dan"]),
+            .new("StorySulaymanView", "Sulayman", "sulayman",
+                 ["solomon", "sulaiman", "suleiman", "shelomoh", "ant", "naml", "hoopoe", "hudhud", "sheba", "saba", "bilqis", "queen of sheba", "throne", "jinn", "ifrit", "wind", "harut", "marut", "magic", "staff", "horses", "bayt al-maqdis", "two mothers", "in sha allah"]),
+            .new("StoryIlyasView", "Ilyas", "ilyas",
+                 ["elijah", "elias", "ilyaas", "eliyahu", "baal", "ba'l", "il yasin", "al yasin", "baalbek", "ahab", "jezebel", "carmel", "tishbite", "khidr", "still alive", "chariot of fire"]),
+            .new("StoryAlyasaView", "al-Yasa\u{2019}", "alyasa",
+                 ["elisha", "alyasa", "al-yasa", "yasa", "al-laysa", "laysa", "elisha son of shaphat", "successor of ilyas", "akhyar", "faddalna", "banyas", "mantle"]),
+            .new("StoryDhulKiflView", "Dhul-Kifl", "dhul-kifl",
+                 ["dhul kifl", "zul kifl", "dhu al-kifl", "zulkifli", "kifl", "al-kifl", "ezekiel", "hizqil", "bishr", "pledge", "patient", "sabirin", "akhyar", "tomb of dhul kifl"]),
+        ]),
+        library("THE LAST OF BANI ISRA'IL", .stories, [
+            .new("StoryZakariyyaView", "Zakariyya", "zakariyya",
+                 ["zakariya", "zakaria", "zechariah", "zacharias", "zekharyah", "carpenter", "mihrab", "prayer chamber", "guardian of maryam", "casting of pens", "lots", "kafalah", "barren wife", "elisabeth", "isha", "heir", "three nights silence", "sign of silence", "private supplication", "bayt al-maqdis", "yahya father"]),
+            .new("StoryYahyaView", "Yahya", "yahya",
+                 ["john", "john the baptist", "yuhanna", "yohanan", "baptist", "hasur", "sayyid", "samiyy", "hanan", "five commands", "five words", "cousins", "sons of maternal aunts", "second heaven", "herod", "salome", "son of zakariyya", "chaste", "wisdom as a child"]),
+            .new("StoryMaryamView", "Maryam", "maryam",
+                 ["mary", "mariam", "miriam", "virgin mary", "mother of jesus", "imran", "hannah", "anne", "wife of imran", "sister of harun", "sister of aaron", "siddiqah", "batul", "palm tree", "annunciation", "jibril", "mihrab", "muharrar", "best of women", "surah maryam", "joseph", "najran"]),
+            .new("StoryIsaView", "Isa", "isa",
+                 ["jesus", "yeshua", "yasu", "messiah", "al-masih", "christ", "son of maryam", "ibn maryam", "kalimah", "word of allah", "ruh", "injil", "gospel", "disciples", "hawariyyun", "table", "maidah", "crucifixion", "not crucified", "raised", "second coming", "return of jesus", "dajjal", "damascus", "trinity"]),
+        ]),
+        library("THE SEAL OF THE PROPHETS", .stories, [
+            .new("StoryMuhammadView", "Muhammad ﷺ", "muhammad",
+                 ["muhammad", "mohammed", "ahmad", "al-mahi", "al-hashir", "al-aqib", "abu al-qasim", "khatam an-nabiyyin", "seal of the prophets", "ummi", "quraysh", "banu hashim", "abdullah", "aminah", "abd al-muttalib", "abu talib", "khadijah", "fatimah", "ibrahim son of the prophet", "waraqah", "rahmatan lil alamin", "surah muhammad"]),
+            .existing("SeerahView"),
+            .existing("ProphetMuhammadView"),
+        ]),
+        library("BEYOND THE QURAN", .stories, [
+            .new("StoryIsraeliyyatView", "Prophets Named Only Outside the Quran", "beyond-the-quran",
+                 ["israiliyyat", "israeliyyat", "joshua", "yusha ibn nun", "samuel", "shamwil", "seth", "shith", "daniel", "danyal", "tustar", "jeremiah", "irmiya", "isaiah", "ezekiel", "hizqil", "uzayr", "ezra", "khidr", "luqman", "dhul-qarnayn", "talut", "tubba", "khalid ibn sinan", "unnamed prophets"]),
+        ]),
+    ]
+
+    /// Sahabah, Ahlul Bayt & Salaf, in the order its index shows it.
+    static let companionsGroups: [IslamArticleGroup] = [
+        library("WHO THEY ARE", .companions, [
+            .new("CompanionsIntroView", "Who Are the Sahabah?", "who",
+                 ["sahabi", "sahaba", "companions", "ashab", "adalah", "udul", "best generation", "qarn", "salaf", "muhajirun", "ansar", "badr", "ahl badr", "bayat ar-ridwan", "pledge of ridwan", "hudaybiyah", "people of the tree", "do not revile my companions", "mujtahid", "camel", "siffin", "hawd", "usayhabi", "rafidah", "muawiyah"]),
+            .existing("SahabahView"),
+            .existing("AhlusSunnahView"),
+        ]),
+        library("THE RIGHTLY GUIDED CALIPHS", .companions, [
+            .new("CompanionAbuBakrView", "Abu Bakr as-Siddiq", "abu-bakr",
+                 ["abubakar", "siddiq", "siddique", "atiq", "abdullah ibn uthman", "abu quhafah", "cave of thawr", "thani ithnayn", "hijrah", "ibn ad-daghinah", "bilal", "khalil", "saqifah", "banu saidah", "khalifat rasul allah", "riddah", "ridda wars", "apostasy wars", "musaylimah", "yamamah", "usamah", "mistah"]),
+            .new("CompanionUmarView", "Umar ibn al-Khattab", "umar",
+                 ["omar", "farooq", "faruq", "al-faruq", "abu hafs", "amir al-muminin", "muhaddath", "agreements with revelation", "diwan", "hijri calendar", "qadisiyyah", "yarmuk", "jerusalem", "al-quds", "year of ashes", "ramadah", "amwas", "abu lulu", "tarawih", "black stone", "sasanian", "kisra"]),
+            .new("CompanionUthmanView", "Uthman ibn Affan", "uthman",
+                 ["usman", "othman", "osman", "dhun-nurayn", "dhul nurain", "two lights", "ruqayyah", "umm kulthum", "well of rumah", "bir rumah", "army of hardship", "jaysh al-usrah", "tabuk", "mushaf", "uthmani mushaf", "hudhayfah", "zayd ibn thabit", "day of the house", "yawm ad-dar", "siege", "al-walid ibn uqbah", "banu umayyah"]),
+            .new("CompanionAliView", "Ali ibn Abi Talib", "ali",
+                 ["aly", "imam ali", "abu turab", "abu al-hasan", "abu talib", "fatimah", "khaybar", "banner", "harun", "aaron", "tabuk", "ghadir khumm", "mawla", "man kuntu mawlahu", "thaqalayn", "yemen", "khawarij", "kharijites", "haruriyyah", "nahrawan", "ibn muljam", "kufah", "nawasib", "city of knowledge"]),
+            .existing("CaliphatesView"),
+        ]),
+        library("PROMISED PARADISE", .companions, [
+            .new("CompanionTenView", "The Ten Promised Paradise", "the-ten",
+                 ["ashara mubashshara", "asharah mubashsharah", "mubashsharun", "ten promised jannah", "talha", "talhah ibn ubaydullah", "zubair", "zubayr ibn al-awwam", "abdur rahman ibn auf", "abd al-rahman ibn awf", "saad ibn abi waqqas", "sa'd", "said ibn zayd", "saeed ibn zaid", "abu ubaidah", "abu ubaydah ibn al-jarrah", "amin of this ummah", "hawari", "shura", "bilal", "thabit ibn qays", "ukkashah", "abdullah ibn salam", "qadisiyyah", "amwas plague"]),
+        ]),
+        library("AHLUL BAYT: THE PROPHET'S HOUSEHOLD", .companions, [
+            .new("CompanionKhadijahAishahView", "Khadijah and A\u{2019}ishah", "khadijah-aishah",
+                 ["khadija", "khadijah bint khuwaylid", "aisha", "aishah", "ayesha", "aisha bint abi bakr", "mothers of the believers", "umm al-muminin", "ummahat al-muminin", "ifk", "slander", "surah an-nur", "hira", "waraqah", "house of qasab", "tharid", "battle of the camel", "jamal", "year of sorrow", "wives of the prophet"]),
+            .new("CompanionFatimahView", "Fatimah, al-Hasan and al-Husayn", "fatimah",
+                 ["fatima", "fatimah az-zahra", "zahra", "hasan", "hussain", "husain", "husayn ibn ali", "ahl al-kisa", "people of the cloak", "hadith al-kisa", "mubahalah", "ayah of purification", "karbala", "ashura", "muharram", "yazid", "zayn al-abidin", "year of unity", "am al-jamaah", "leaders of the youth of paradise", "sayyidat nisa ahl al-jannah", "tasbih fatimah"]),
+            .new("CompanionUnclesView", "Hamzah, al-Abbas and Ja\u{2019}far", "hamzah-abbas",
+                 ["hamza", "hamzah ibn abd al-muttalib", "sayyid ash-shuhada", "leader of the martyrs", "wahshi", "uhud", "abbas", "al-abbas ibn abd al-muttalib", "istisqa", "rain prayer", "tawassul", "jafar", "jafar ibn abi talib", "jafar at-tayyar", "dhul-janahayn", "two wings", "mutah", "negus", "najashi", "abyssinia", "habasha", "abu talib", "abu lahab", "surah al-masad", "uncles of the prophet"]),
+            .existing("AhlulBaytView"),
+            .existing("WivesView"),
+        ]),
+        library("COMPANIONS OF NOTE", .companions, [
+            .new("CompanionFirstBelieversView", "The First Believers and the First Martyrs", "first-believers",
+                 ["bilal", "ahad ahad", "ammar ibn yasir", "yasir", "sumayyah", "sumayya", "first martyr", "khabbab", "musab ibn umayr", "mus'ab", "abu dharr", "ghifar", "suhayb", "miqdad", "abyssinia", "habasha", "najashi", "negus", "people of the ship", "siffin", "transgressing party", "sabiqun", "early muslims", "persecution"]),
+            .new("CompanionAbuHurayrahView", "Abu Hurayrah and the Narrators", "abu-hurayrah",
+                 ["abu huraira", "abu hurairah", "abd ar-rahman ibn sakhr", "daws", "dawsi", "suffah", "ahl as-suffah", "mukthirun", "most hadith", "narrators", "ibn umar", "anas ibn malik", "jabir ibn abdullah", "abu said al-khudri", "ibn abbas", "hammam ibn munabbih", "sahifah", "abu rayyah", "goldziher", "orientalists", "adalah", "kitten"]),
+            .new("CompanionWomenView", "The Women Companions", "women",
+                 ["sahabiyat", "sahabiyyah", "female companions", "umm salamah", "hudaybiyah", "asma bint abi bakr", "two belts", "dhat an-nitaqayn", "umm sulaym", "umm haram", "cyprus", "ash-shifa", "umm atiyyah", "umm ayman", "barakah", "asma bint umays", "umm kulthum bint uqbah", "khawlah", "mujadilah", "pledge of the women", "rubayyi", "umm umarah", "al-hajjaj"]),
+            .existing("SahabahScholarsView"),
+        ]),
+        library("THE SALAF AFTER THEM", .companions, [
+            .new("CompanionTabiunView", "The Tabi\u{2019}un", "tabiun",
+                 ["tabiun", "tabi'un", "tabiin", "tabi'in", "successors", "uways al-qarani", "uwais", "said ibn al-musayyib", "hasan al-basri", "ibn sirin", "mujahid", "said ibn jubayr", "umar ibn abd al-aziz", "zuhri", "urwah ibn az-zubayr", "atba at-tabiin", "sufyan ath-thawri", "awzai", "layth ibn sad", "ibn al-mubarak", "mujaddid", "renewer", "mukhadram", "hajjaj"]),
+            .new("CompanionFourImamsView", "The Four Imams", "four-imams",
+                 ["abu hanifa", "abu hanifah", "imam malik", "malik ibn anas", "shafii", "ash-shafi'i", "imam shafi", "ahmad ibn hanbal", "imam ahmad", "hanafi", "maliki", "shafi'i school", "hanbali", "madhhab", "madhab", "muwatta", "risalah", "musnad ahmad", "mihnah", "created quran", "khalq al-quran", "usul al-fiqh", "taqlid", "golden chain"]),
+            .existing("SalafScholarsView"),
+            .existing("SalafiyyahView"),
+        ]),
+    ]
+
+    /// Refuting Religions, in the order its index shows it.
+    static let religionsGroups: [IslamArticleGroup] = [
+        library("THE METHOD", .religions, [
+            .new("ReligionsMethodView", "How the Quran Argues With Other Faiths", "method",
+                 ["dawah", "debate", "jadal", "hikmah", "mubahalah", "munazarah", "hujjah", "burhan", "dialogue", "interfaith", "heraclius", "najran", "people of the book", "ahl al-kitab", "common word", "ibrahim", "abraham", "namrud", "nimrod", "al-jawab as-sahih", "hidayat al-hayara", "ibn taymiyyah", "ibn al-qayyim", "apologetics"]),
+            .new("ReligionsOneView", "One Religion From Adam to Muhammad", "one-religion",
+                 ["islam", "submission", "tawhid", "hanif", "hunafa", "din", "shariah", "shirah", "minhaj", "brothers", "allat", "covenant of the prophets", "mithaq", "primordial monotheism", "fitrah", "wadd", "suwa", "yaqub", "jacob", "abraham", "millah", "name muslim", "mohammedan", "noah"]),
+            .new("ReligionsPluralismView", "Are All Religions the Same?", "pluralism",
+                 ["religious pluralism", "perennialism", "perennial philosophy", "traditionalism", "john hick", "schuon", "guenon", "elephant", "many paths", "unity of religions", "wahdat al-adyan", "interfaith", "salvation", "exclusivism", "2:62", "5:69", "sabians", "ahl al-fatrah", "people of the interval", "message never reached", "la ikraha", "al-kafirun", "lakum dinukum", "permanent committee", "abrahamic"]),
+        ]),
+        library("THE PEOPLE OF THE BOOK", .religions, [
+            .existing("ChristianityAnswerView"),
+            .existing("JudaismAnswerView"),
+        ]),
+        library("THE RELIGIONS OF THE EAST", .religions, [
+            .existing("HinduismAnswerView"),
+            .existing("BuddhismAnswerView"),
+            .new("ReligionsSikhismView", "Answering Sikhism", "sikhism",
+                 ["sikh", "sikhs", "guru nanak", "nanak", "guru granth sahib", "adi granth", "khalsa", "gurdwara", "waheguru", "ik onkar", "mool mantar", "guru gobind singh", "guru arjan", "punjab", "langar", "reincarnation", "rebirth", "karma", "five ks", "amritsar", "golden temple", "baba farid"]),
+            .new("ReligionsZoroastrianismView", "Answering Zoroastrianism", "zoroastrianism",
+                 ["zoroaster", "zarathustra", "zoroastrian", "majus", "magians", "magi", "parsi", "parsis", "ahura mazda", "ahriman", "angra mainyu", "avesta", "gathas", "fire temple", "fire worship", "dualism", "chinvat bridge", "persia", "kisra", "salman al-farisi", "nowruz", "jizyah"]),
+            .new("ReligionsEastAsiaView", "Answering Confucianism, Taoism and Shinto", "east-asia",
+                 ["confucius", "confucian", "kongzi", "analects", "tian", "taoism", "daoism", "laozi", "lao tzu", "tao te ching", "wu wei", "shinto", "kami", "amaterasu", "japanese emperor", "ancestor worship", "ancestors", "china", "japan", "hui", "zheng he", "immortality", "yin yang"]),
+        ]),
+        library("WITHOUT GOD OR WITHOUT REVELATION", .religions, [
+            .existing("AtheismAnswerView"),
+            .existing("PaganismAnswerView"),
+            .new("ReligionsSecularismView", "Answering Secular Humanism and Liberalism", "secularism",
+                 ["secularism", "secular", "humanism", "liberalism", "liberal", "almaniyyah", "ilmaniyyah", "mill", "harm principle", "locke", "rawls", "hume", "is ought", "nietzsche", "autonomy", "freedom", "liberty", "hawa", "desire", "ubudiyyah", "tashri", "legislation", "hukm", "man-made law", "neutrality"]),
+        ]),
+        library("NEW PROPHETS AND SECTS", .religions, [
+            .new("ReligionsNewProphetsView", "Answering the Ahmadiyyah, the Baha\u{2019}is and the Nation of Islam", "new-prophets",
+                 ["ahmadiyya", "ahmadi", "qadiani", "qadiyani", "lahori", "mirza ghulam ahmad", "bahai", "baha'i", "bahaullah", "the bab", "kitab-i-aqdas", "nation of islam", "elijah muhammad", "wallace fard", "farrakhan", "malcolm x", "seal of the prophets", "khatam an-nabiyyin", "false prophet", "promised messiah", "mahdi", "yuz asaf"]),
+            .existing("ShiaAnswerView"),
+            .existing("SufismAnswerView"),
+            .existing("HadithRejectorsView"),
+        ]),
+    ]
+
+    /// Preservation of the Quran, in the order its index shows it.
+    static let preservationGroups: [IslamArticleGroup] = [
+        library("HOW IT CAME DOWN", .preservation, [
+            .existing("QuranRevealedPillarView"),
+            .new("PreservationStagesView", "Revealed in Stages", "stages",
+                 ["tanjim", "asbab an-nuzul", "occasions of revelation", "laylat al-qadr", "night of decree", "first revelation", "iqra", "hira", "last verse", "last ayah", "makki", "madani", "makkan", "madinan", "meccan", "medinan", "wine prohibition", "khamr", "fatrah", "bayt al-izzah", "jibril", "gabriel", "wahy"]),
+        ]),
+        library("KEPT IN HEARTS AND ON PAGES", .preservation, [
+            .new("PreservationMemoryView", "Preserved in the Hearts", "memory",
+                 ["hifz", "hifdh", "hafiz", "huffaz", "memorisation", "memorization", "qurra", "reciters", "ijazah", "sanad", "chain of recitation", "talaqqi", "mu'aradah", "final review", "ardah", "bir maunah", "yamamah", "ubayy ibn kab", "ibn masud", "asim", "hafs", "as-sulami"]),
+            .new("PreservationWritingView", "Written in His Lifetime", "writing",
+                 ["scribes of revelation", "kuttab al-wahy", "zayd ibn thabit", "katib", "writing the quran", "parchment", "palm stalks", "shoulder blade", "usub", "likhaf", "riqa", "do not write from me", "writing hadith", "suhuf", "mushaf", "muawiyah", "hanzalah", "abu shah", "two covers", "daffatayn"]),
+            .existing("CompileView"),
+            .new("PreservationOrderView", "The Order of the Ayat and Surahs", "order",
+                 ["tartib", "arrangement", "sequence", "surah order", "ayah order", "tawqifi", "order of revelation", "chronological order", "mufassal", "mathani", "seven long surahs", "tiwal", "miun", "at-tawbah", "basmalah", "bismillah", "surah 9", "ayah count", "munasabah", "ibn az-zubayr", "ibn masud mushaf"]),
+        ]),
+        library("THE MUSHAF ACROSS THE CENTURIES", .preservation, [
+            .new("PreservationScriptView", "Dots, Vowels and the Uthmani Script", "script",
+                 ["rasm", "uthmani rasm", "i'jam", "ijam", "naqt", "tashkil", "harakat", "abu al-aswad ad-duali", "duali", "al-khalil ibn ahmad", "farahidi", "nasr ibn asim", "yahya ibn yamur", "al-muqni", "ad-dani", "juz", "hizb", "ayah numbers", "madinah mushaf", "king fahd complex", "uthman taha", "cairo 1924", "diacritics", "quran spelling"]),
+            .new("PreservationManuscriptsView", "The Oldest Manuscripts", "manuscripts",
+                 ["birmingham quran", "mingana", "tubingen", "tübingen", "radiocarbon", "carbon dating", "sanaa palimpsest", "sana'a", "codex parisino-petropolitanus", "deroche", "topkapi", "samarkand", "tashkent", "uthman's mushaf", "hijazi script", "kufic", "corpus coranicum", "bergstrasser", "van putten", "wansbrough", "parchment", "palimpsest"]),
+            .existing("AhrufView"),
+            .existing("QiraatView"),
+            .existing("QiraatContradictView"),
+        ]),
+        library("QUESTIONS ANSWERED", .preservation, [
+            .new("PreservationNaskhView", "Abrogation (Naskh)", "naskh",
+                 ["abrogation", "nasikh", "mansukh", "abrogated verses", "2:106", "verse of stoning", "rajm", "ten sucklings", "five sucklings", "qiblah change", "bada", "bada'", "takhsis", "verse of the sword", "widow's waiting period", "bir maunah", "abrogated recitation", "lifted verses"]),
+            .new("PreservationClaimsView", "Answering the Claims of Corruption", "claims",
+                 ["tahrif", "corruption of the quran", "ibn masud", "mu'awwidhatayn", "muawwidhatayn", "al-falaq", "an-nas", "ubayy ibn kab", "qunut", "al-khal", "al-hafd", "uthman burned the mushafs", "goat ate the verses", "sheep ate", "surah al-ahzab", "fasl al-khitab", "al-kafi", "nuri tabarsi", "hajjaj", "shia quran", "missing verses", "surat al-wilayah"]),
+            .existing("ProvingPreservationView"),
+        ]),
+    ]
+
+    /// Science of Hadith, in the order its index shows it.
+    static let hadithScienceGroups: [IslamArticleGroup] = [
+        library("THE FOUNDATIONS", .hadithScience, [
+            .existing("HadithPillarView"),
+            .existing("HadithSciencesView"),
+            .new("HadithScienceTermsView", "The Terms of Hadith", "terms",
+                 ["mustalah", "glossary", "terminology", "marfu", "mawquf", "maqtu", "qudsi", "musnad", "muttasil", "thulathiyyat", "musalsal", "aziz", "gharib", "mashhur", "mutabaah", "shahid", "shadh", "munkar", "mudraj", "maqlub", "mudtarib", "musahhaf", "haddathana", "akhbarana", "hasan sahih"]),
+        ]),
+        library("THE CHAIN", .hadithScience, [
+            .new("HadithScienceBreaksView", "When the Chain Breaks", "breaks",
+                 ["muallaq", "mursal", "munqati", "mudal", "tadlis", "mudallis", "ananah", "mursal khafi", "taliq", "taghliq", "broken chain", "missing link", "hisham ibn ammar", "maazif", "baqiyyah", "abu az-zubayr", "mustakhraj", "ibn ishaq", "taswiyah", "marasil"]),
+            .new("HadithScienceRijalView", "The Narrators and Their Critics", "rijal",
+                 ["rijal", "jarh", "tadil", "jarh wa tadil", "adalah", "dabt", "thiqah", "saduq", "taqrib", "tahdhib", "mizan", "ibn hajar", "dhahabi", "ibn main", "shubah", "yahya al-qattan", "ibn abi hatim", "narrator criticism", "backbiting", "mukhtalit", "innovators"]),
+            .new("HadithScienceAhadView", "Mutawatir, Ahad and Belief", "ahad",
+                 ["khabar al-wahid", "single narrator", "single report", "aqidah", "creed", "tawatur", "mutawatir lafzi", "mutawatir manawi", "kalam", "mutazilah", "zann", "certainty", "risalah", "ibn al-qayyim", "sawaiq", "albani", "talaqqi bil-qabul", "quba qiblah", "muadh yemen", "fatimah bint qais"]),
+        ]),
+        library("THE TEXT AND ITS FORGERS", .hadithScience, [
+            .new("HadithScienceFabricationView", "Fabrication, and How It Was Caught", "fabrication",
+                 ["mawdu", "mawdoo", "forged hadith", "fake hadith", "fabricated hadith", "whoever lies about me", "seek knowledge even in china", "love of the homeland", "ink of the scholar", "differing of my ummah is a mercy", "lawlaka", "al-manar al-munif", "ibn al-jawzi", "al-mawdu'at", "silsilah ad-da'ifah", "zindiq", "zanadiqah", "storytellers", "khaybar document", "check before sharing"]),
+            .new("HadithScienceQudsiView", "Hadith Qudsi", "qudsi",
+                 ["sacred hadith", "divine hadith", "hadith ilahi", "hadith rabbani", "40 hadith qudsi", "forty hadith qudsi", "o my servants", "i have forbidden oppression", "as my servant thinks of me", "wali", "friend of allah", "descent of allah", "last third of the night", "fatihah divided", "i was sick and you did not visit me", "hidden treasure", "kuntu kanzan", "allah says", "hadith nabawi"]),
+        ]),
+        library("THE BOOKS AND THEIR GRADES", .hadithScience, [
+            .existing("HadithPreservationView"),
+            .new("HadithScienceGradesView", "How to Read a Hadith\u{2019}s Grade", "grades",
+                 ["grading", "sahih", "hasan", "daif", "da'if", "hasan sahih", "li-ghayrihi", "isnad sahih", "albani", "shuayb al-arnaut", "zubair ali zai", "ahmad shakir", "darussalam", "bashar awad maruf", "weak hadith in virtues", "fadail al-amal", "sunan", "authenticity", "hadith numbering", "tirmidhi"]),
+        ]),
+        library("ANSWERING THE DOUBTS", .hadithScience, [
+            .existing("HadithRejectorsView"),
+            .new("HadithScienceOrientalistsView", "Goldziher, Schacht and the Western Critics", "orientalists",
+                 ["orientalism", "orientalists", "mustashriq", "juynboll", "common link", "madar", "azami", "al-azami", "motzki", "schoeler", "sezgin", "nabia abbott", "hammam ibn munabbih", "sahifah", "sibai", "isnad-cum-matn", "argument from silence", "backward growth", "zuhri", "three mosques"]),
+        ]),
+    ]
+
+    /// The Domino Process, in the order its index shows it.
+    static let dominoGroups: [IslamArticleGroup] = [
+        library("THE METHOD", .domino, [
+            .new("DominoIntroView", "The Domino Process", "process",
+                 ["domino", "domino effect", "seven dominoes", "dawah", "da'wah", "method", "proving islam", "why are you muslim", "basirah", "yaqin", "certainty", "aql", "reason", "steelman", "how we argue", "private evidence", "al imran", "3:190", "afala taqilun", "workshop"]),
+        ]),
+        library("PART 1: DOES GOD EXIST?", .domino, [
+            .new("DominoRealityView", "Dominoes 1 and 2: Something Exists, Something Is Necessary", "reality",
+                 ["contingency", "contingent", "necessary being", "necessary existent", "wajib al-wujud", "mumkin al-wujud", "cosmological argument", "kalam", "ibn sina", "avicenna", "first cause", "infinite regress", "borrowed book", "big bang", "52:35", "surat at-tur", "al-ghani", "al-awwal", "something from nothing", "quantum vacuum", "tahawi"]),
+            .new("DominoCreatorView", "Domino 3: An Intelligent Creator", "creator",
+                 ["design", "fine-tuning", "fine tuning", "cosmological constant", "chance", "randomness", "takhsis", "particularization", "consciousness", "hard problem", "chalmers", "nagel", "plantinga", "wigner", "mathematics", "attributes of allah", "iradah", "hikmah", "al-ghazali", "bedouin"]),
+            .new("DominoOneView", "Domino 4: Only One", "one",
+                 ["oneness", "tawhid", "monotheism", "polytheism", "two gods", "dualism", "manichaeism", "tamanu", "mutual hindrance", "21:22", "23:91", "ikhlas", "surah al-ikhlas", "as-samad", "ahad", "fitrah", "ikrimah", "rububiyyah", "uluhiyyah", "hanif"]),
+            .new("DominoWorldviewsView", "Atheism, Agnosticism and Deism", "worldviews",
+                 ["atheist", "agnostic", "deist", "naturalism", "materialism", "who created god", "multiverse", "god of the gaps", "problem of evil", "suffering", "divine hiddenness", "schellenberg", "huxley", "thomas paine", "watchmaker", "burden of proof", "pair exercise", "did god speak"]),
+        ]),
+        library("PART 2: WHICH RELIGION IS TRUE?", .domino, [
+            .new("DominoRevelationView", "Domino 5: Has the Creator Spoken?", "revelation",
+                 ["deism", "deist", "revelation", "wahy", "risalah", "prophethood", "messengers", "purpose of life", "watchmaker", "voltaire", "thomas paine", "is reason enough", "silent god", "why did god send prophets", "suda", "hujjah", "23:115", "75:36", "4:165", "17:15"]),
+            .new("DominoTestView", "Domino 6: Testing Every Claim", "test",
+                 ["which religion is true", "comparative religion", "criteria for revelation", "heraclius", "abu sufyan", "buddhism", "jainism", "taoism", "confucianism", "polytheism", "zeus", "hinduism", "judaism", "noahide laws", "zoroastrianism", "druze", "sikhism", "bahai", "ahmadiyya", "nation of islam", "seal of the prophets", "khatam an-nabiyyin", "rububiyyah", "uluhiyyah"]),
+        ]),
+        library("PART 3: WHY ISLAM?", .domino, [
+            .new("DominoChristianityView", "Christianity Tested", "christianity",
+                 ["jesus", "isa", "trinity", "crucifixion", "cross", "bible", "gospels", "new testament", "nicaea", "paul", "james", "ebionites", "atonement", "original sin", "john 10:30", "john 1:1", "shubbiha lahum", "4:157", "injil", "nasara", "gospel of barnabas", "swoon theory", "1 john 5:7", "canon"]),
+            .new("DominoIslamView", "Domino 7: Islam", "islam",
+                 ["shahadah", "why islam", "preservation of the quran", "birmingham manuscript", "qiraat", "challenge of the quran", "tahaddi", "ijaz", "jubayr ibn mutim", "prophecies", "romans", "abu lahab", "adi ibn hatim", "al-ikhlas", "seven dominoes", "4:82", "15:9", "becoming muslim", "yaqin", "ikhtilaf"]),
+        ]),
+        library("DOING DAWAH", .domino, [
+            .new("DominoDawahView", "Say This, Not That", "dawah",
+                 ["dawah", "da'wah", "how to give dawah", "adab", "debate", "jidal", "hikmah", "basirah", "balagh", "16:125", "28:56", "convey from me even one ayah", "red camels", "i don't know", "doubts", "roleplay", "exercises", "common mistakes", "talking to christians", "overclaiming"]),
+        ]),
+    ]
+
+    static let libraryGroups: [IslamArticleGroup] = storiesGroups + companionsGroups + religionsGroups + preservationGroups + hadithScienceGroups + dominoGroups
+    // END LIBRARY GROUPS
+
     static func groups(for home: IslamArticleHome) -> [IslamArticleGroup] {
         switch home {
         case .pillars: return pillarsGroups
         case .guides: return guidesGroups
         case .proving: return provingGroups
+        case .stories: return storiesGroups
+        case .companions: return companionsGroups
+        case .religions: return religionsGroups
+        case .preservation: return preservationGroups
+        case .hadithScience: return hadithScienceGroups
+        case .domino: return dominoGroups
         }
     }
 
+    /// Every article once, under the home that owns it: a library's borrowed rows are counted where
+    /// they live.
     static let all: [IslamArticleEntry] = (pillarsGroups + guidesGroups + provingGroups).flatMap(\.entries)
+        + libraryGroups.flatMap { group in group.entries.filter { $0.home == group.home } }
+
+    /// The article ids each home LISTS, its own and the ones it borrows: what a search scoped to that
+    /// home covers (`covers`), so Refuting Religions' search finds Answering Christianity.
+    static let members: [IslamArticleHome: Set<String>] = Dictionary(uniqueKeysWithValues: IslamArticleHome.allCases.map { home in
+        (home, Set(groups(for: home).flatMap { $0.entries.map(\.id) }))
+    })
+
+    /// The article ids in each group, by the group's id ("religions/THE PEOPLE OF THE BOOK"): what the
+    /// Topics filter admits (`IslamSearchFilters.admits`), borrowed rows included.
+    static let groupMembers: [String: Set<String>] = Dictionary(
+        IslamArticleHome.allCases.flatMap(groups(for:)).map { ($0.id, Set($0.entries.map(\.id))) },
+        uniquingKeysWith: { a, b in a.union(b) })
+
+    /// Whether a search over `homes` reaches this article: its own home, or a library that lists it.
+    static func covers(_ homes: Set<IslamArticleHome>, _ entry: IslamArticleEntry) -> Bool {
+        homes.contains(entry.home) || homes.contains { members[$0]?.contains(entry.id) == true }
+    }
 
     static let byID: [String: IslamArticleEntry] = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
 
@@ -450,10 +936,11 @@ enum IslamArticleCatalog {
             case .pillars: return AnyView(PillarsView(openArticle: request))
             case .guides: return AnyView(GuidesView(openArticle: request))
             case .proving: return AnyView(ProvingIslamView(openArticle: request))
+            default: return AnyView(IslamLibraryView(home: home, openArticle: request))
             }
         }
         #endif
-        return destination(id: request.id, section: request.section)
+        return destination(id: request.id, section: request.section, long: request.long)
     }
 
     /// The article page. With a `section`, the page scrolls to that heading as it appears (see
@@ -463,15 +950,18 @@ enum IslamArticleCatalog {
         destination(id: entry.id, section: section)
     }
 
+    /// `long` opens the page in full whatever the setting: a search hit in words only the full article
+    /// has (ArticleLength.swift).
     @MainActor
-    static func destination(id: String, section: String? = nil) -> AnyView {
+    static func destination(id: String, section: String? = nil, long: Bool = false) -> AnyView {
         guard let view = IslamArticles.destination(for: id) else {
             return AnyView(Text(verbatim: AppLanguage.article("Article not found")).foregroundColor(.secondary))
         }
         // Declared open by id, so a `door` row further down the stack that leads back here greys
         // out (`ArticleDoorRow`): articles that cite each other could be pushed without end.
         if let section, !section.isEmpty {
-            return AnyView(view.environment(\.articleScrollTarget, section).openScreen(.islamArticle, id: id))
+            return AnyView(view.environment(\.articleScrollTarget, section).environment(\.articleOpensLong, long)
+                .openScreen(.islamArticle, id: id))
         }
         // Cleared, not left unset: the environment carries down the navigation stack, so an article
         // pushed without a section from one opened on "SUMMARY" (a door row, an OTHER ARTICLES result)
@@ -557,10 +1047,26 @@ struct IslamArticleIndexSections: View {
             HStack(spacing: 12) {
                 AccentIconChip(systemImage: icon, size: 29)
 
-                Text(AppLanguage.article(entry.title))
-                    .font(.subheadline.weight(entry.emphasized ? .semibold : .regular))
-                    .foregroundColor(entry.emphasized ? appearance.accent : .primary)
-                    .fixedSize(horizontal: false, vertical: true)
+                // A prophet's row carries his Arabic name and his tags, an answer to another faith its
+                // own (`LibraryTags`, 2026-11-24): "so I can see each prophet together".
+                let tags = LibraryTags.tags(for: entry.id)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(AppLanguage.article(entry.title))
+                            .font(.subheadline.weight(entry.emphasized ? .semibold : .regular))
+                            .foregroundColor(entry.emphasized ? appearance.accent : .primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let arabic = LibraryTags.arabic(for: entry.id) {
+                            Spacer(minLength: 6)
+                            Text(arabic)
+                                .font(.subheadline)
+                                .foregroundColor(appearance.accent)
+                        }
+                    }
+                    if !tags.isEmpty {
+                        LibraryTagFlow(tags: tags)
+                    }
+                }
             }
             .padding(.vertical, 3)
         }
@@ -598,6 +1104,21 @@ struct ArticleHeader: View {
     }
 
     static func anchorID(_ heading: String) -> String { "articleSection_\(heading)" }
+}
+
+extension View {
+    /// Marks where a passage of a page built at runtime begins, so its own search bar can land there
+    /// (`IslamArticle.PagePassage.anchor`): what `ArticleHeader` is to a catalog article, for a row or
+    /// a header the page draws its own way. Goes on a section's header, or on the outermost view of
+    /// the row.
+    func articleAnchor(_ key: String) -> some View {
+        #if os(iOS)
+        background(ArticleHeaderProbe(heading: key))
+            .id(ArticleHeader.anchorID(key))
+        #else
+        id(ArticleHeader.anchorID(key))
+        #endif
+    }
 }
 
 /// The scroll to a section heading: three plain jumps a fifth of a second apart, then the exact offset.
@@ -655,6 +1176,10 @@ final class ArticleScrollHandle: ObservableObject {
     var openingLandingRequested = false
     /// The latest landing. Only it may end the hiding; an earlier one it overtook does not.
     private var landingGeneration = 0
+    /// The version of the page on screen, for a page written twice (ArticleLength.swift): the
+    /// setting's when the page opens, then the switch's. Here because the page's search moves it too: a
+    /// hit only the full article has opens the full article before it lands.
+    @Published var length: ArticleLength = .preferred
 
     func beginLanding() -> Int {
         landingGeneration += 1
@@ -804,6 +1329,19 @@ enum ArticleBlock {
     case countLadder
     /// A row that opens another page: an article, a prophecy, a site.
     case door(ArticleDoor)
+    /// A prophet's facts card (`ProphetFactsCard`): his Arabic name and his tags, by his key in
+    /// `ProphetFacts` ("musa"). Under SUMMARY on his first chapter (2026-11-24).
+    case facts(String)
+    /// Every surah and ayah that names him (`ProphetMentionsCard`), from the preprocessed table.
+    case mentions(String)
+
+    // The two versions (ArticleLength.swift, 2026-11-25): a block only one of them shows. Unwrapped by
+    // `ArticleSection.shown(_:in:)` before any row is made; the corpus builder reads the mark.
+
+    /// A block only the full article shows.
+    indirect case longOnly(ArticleBlock)
+    /// A block only the short version shows: the few lines that stand in for what it leaves out.
+    indirect case shortOnly(ArticleBlock)
 }
 
 /// Where an article's `door` row goes. Articles are named by their catalog id, so a door can never
@@ -823,6 +1361,8 @@ enum ArticleDoor {
     case library(ArticleLibrary)
     /// The Proving Islam library itself.
     case provingIslam
+    /// One of the six reading libraries (2026-11-24) whole, by its home (`IslamLibraryView`).
+    case home(IslamArticleHome)
     /// A page on the web.
     case link(String, title: String, subtitle: String)
 }
@@ -835,10 +1375,13 @@ enum ArticleLibrary {
 
 struct ArticleSection {
     let heading: String
+    /// The one version that shows this section, or nil for both (ArticleLength.swift).
+    let only: ArticleLength?
     let blocks: [ArticleBlock]
 
-    init(_ heading: String, _ blocks: [ArticleBlock]) {
+    init(_ heading: String, only: ArticleLength? = nil, _ blocks: [ArticleBlock]) {
         self.heading = heading
+        self.only = only
         self.blocks = blocks
     }
 }
@@ -852,22 +1395,34 @@ struct ArticleSection {
 struct ArticleSectionsView: View {
     let sections: [ArticleSection]
 
+    /// The version on screen, for a page written twice (ArticleLength.swift).
+    @Environment(\.articleLength) private var length
+
     var body: some View {
-        ForEach(sections.indices, id: \.self) { index in
-            let section = sections[index]
+        // A door that leads nowhere on this platform, and a block or section the other version shows,
+        // are left out HERE: every block that reaches a ForEach is exactly one row (see
+        // `ArticleBlockView.body`). Rows keep their index in the article as their identity, so a switch
+        // between the versions inserts and removes rows instead of redrawing every one.
+        let shown = ArticleSection.shown(sections, in: length)
+        // The Short / Full switch first, above SUMMARY: only the sections that open the page have it (a
+        // page can draw its sections in two parts with rows of its own between them).
+        if shown.first?.heading == "SUMMARY" {
+            ArticleLengthSection()
+        }
+        ForEach(shown, id: \.index) { section in
             Section(header: ArticleHeader(section.heading)) {
-                // A door that leads nowhere on this platform is left out HERE: every block that
-                // reaches the ForEach is exactly one row (see `ArticleBlockView.body`).
-                ForEach(section.blocks.indices.filter { section.blocks[$0].drawsRow }, id: \.self) { blockIndex in
-                    ArticleBlockView(block: section.blocks[blockIndex],
-                                     role: Self.role(heading: section.heading, blockIndex: blockIndex))
+                let first = section.rows.first?.index
+                ForEach(section.rows, id: \.index) { row in
+                    ArticleBlockView(block: row.block, role: Self.role(heading: section.heading, isFirst: row.index == first))
                 }
             }
         }
     }
 
-    static func role(heading: String, blockIndex: Int) -> ArticleBlockView.Role {
-        guard blockIndex == 0 else { return .body }
+    /// The first block a version shows of SUMMARY is the page's lead card, and of IN SUMMARY its
+    /// closing card.
+    static func role(heading: String, isFirst: Bool) -> ArticleBlockView.Role {
+        guard isFirst else { return .body }
         switch heading {
         case "SUMMARY": return .lead
         case "IN SUMMARY": return .closing
@@ -933,6 +1488,13 @@ struct ArticleBlockView: View {
                 HadithCountLadder()
             case .door(let door):
                 ArticleDoorRow(door: door)
+            case .facts(let key):
+                if let facts = ProphetFacts.named(key) { ProphetFactsCard(facts: facts) }
+            case .mentions(let key):
+                if let facts = ProphetFacts.named(key) { ProphetMentionsCard(facts: facts) }
+            case .longOnly, .shortOnly:
+                // Unwrapped before a row is made (`ArticleSection.shown`).
+                EmptyView()
             }
         }
         .articleCardRow(when: isLeadCard)
@@ -952,8 +1514,11 @@ extension ArticleBlock {
     /// False for a door `ArticleDoorRow` draws nothing for (a page this platform does not have, an
     /// id the catalog does not know): `ArticleSectionsView` leaves those out of its rows.
     var drawsRow: Bool {
-        if case .door(let door) = self { return door.opens }
-        return true
+        switch self {
+        case .door(let door): return door.opens
+        case .facts(let key), .mentions(let key): return ProphetFacts.named(key) != nil
+        default: return true
+        }
     }
 }
 
@@ -977,7 +1542,7 @@ extension ArticleDoor {
             #else
             return false
             #endif
-        case .miracle, .library, .provingIslam:
+        case .miracle, .library, .provingIslam, .home:
             #if os(iOS)
             return true
             #else
@@ -1101,6 +1666,17 @@ struct ArticleDoorRow: View {
             #else
             EmptyView()
             #endif
+        case .home(let home):
+            #if os(iOS)
+            OpenScreenLink(screen: .articleLibrary, id: home.rawValue) {
+                IslamLibraryView(home: home).openScreen(.articleLibrary, id: home.rawValue)
+            } label: {
+                label(title: AppLanguage.article(home.title), subtitle: AppLanguage.article(home.subtitle),
+                      systemImage: home.systemImage)
+            }
+            #else
+            EmptyView()
+            #endif
         case .link(let raw, let title, let subtitle):
             if let url = URL(string: raw) {
                 Link(destination: url) {
@@ -1201,6 +1777,9 @@ enum IslamArticleSearch {
         let sectionIndex: Int
         /// A window of the section's prose around the first match, ready to display.
         let snippet: String
+        /// True when the match is in the section's quotes' Arabic (an ayah, a hadith, a scholar's
+        /// words), so the window is Arabic and reads right to left.
+        var snippetIsArabic: Bool = false
 
         var id: String { "\(article.id)#\(sectionIndex)" }
         var entry: IslamArticleEntry? { IslamArticleCatalog.byID[article.id] }
@@ -1212,13 +1791,7 @@ enum IslamArticleSearch {
     /// Non-overlapping occurrences of `term` in `haystack`, without the array `components(separatedBy:)`
     /// allocated per term per section (~1,000 sections per keystroke).
     static func occurrences(of term: String, in haystack: String) -> Int {
-        var count = 0
-        var start = haystack.startIndex
-        while start < haystack.endIndex, let range = haystack.range(of: term, range: start..<haystack.endIndex) {
-            count += 1
-            start = range.upperBound
-        }
-        return count
+        IslamSearchQuery.count(term, in: haystack, rule: .contains)
     }
 
     /// The folded query words: lowercased, punctuation flattened, empties dropped.
@@ -1226,98 +1799,180 @@ enum IslamArticleSearch {
         IslamArticles.fold(query).split(separator: " ").map(String.init).filter { !$0.isEmpty }
     }
 
-    /// Index rows whose title, section name or aliases carry EVERY word of the query.
+    /// Index rows whose title, section name or aliases carry the query, under the filters (Match,
+    /// Words, Without, Topics).
     /// The last answer (Phase 10.8): the sections view asked this on every body pass while a query was
     /// typed, and the ranking re-folds every title and alias each time.
-    nonisolated(unsafe) private static var titleHitsMemo: (query: String, homes: Set<IslamArticleHome>, hits: [IslamArticleEntry])?
+    nonisolated(unsafe) private static var titleHitsMemo: (key: String, hits: [IslamArticleEntry])?
     private static let titleHitsLock = NSLock()
 
-    static func titleHits(_ query: String, homes: Set<IslamArticleHome>) -> [IslamArticleEntry] {
+    static func titleHits(_ query: String, homes: Set<IslamArticleHome>,
+                          filters: IslamSearchFilters = IslamSearchFilters()) -> [IslamArticleEntry] {
+        let key = [query, homes.map(\.rawValue).sorted().joined(separator: "+"), filters.match.rawValue,
+                   filters.combine.rawValue, filters.excludedWords.joined(separator: "+"),
+                   filters.groups.sorted().joined(separator: "+")].joined(separator: "|")
         titleHitsLock.lock()
-        if let memo = titleHitsMemo, memo.query == query, memo.homes == homes { titleHitsLock.unlock(); return memo.hits }
+        if let memo = titleHitsMemo, memo.key == key { titleHitsLock.unlock(); return memo.hits }
         titleHitsLock.unlock()
-        let hits = computeTitleHits(query, homes: homes)
-        titleHitsLock.lock(); titleHitsMemo = (query, homes, hits); titleHitsLock.unlock()
+        let hits = computeTitleHits(query, homes: homes, filters: filters)
+        titleHitsLock.lock(); titleHitsMemo = (key, hits); titleHitsLock.unlock()
         return hits
     }
 
-    private static func computeTitleHits(_ query: String, homes: Set<IslamArticleHome>) -> [IslamArticleEntry] {
-        let terms = words(query)
-        guard !terms.isEmpty else { return [] }
-        let direct = IslamArticleCatalog.all.filter { entry in
-            guard homes.contains(entry.home), let haystack = IslamArticleCatalog.foldedHaystacks[entry.id] else { return false }
-            return terms.allSatisfy { haystack.contains($0) }
+    private static func computeTitleHits(_ query: String, homes: Set<IslamArticleHome>,
+                                         filters: IslamSearchFilters) -> [IslamArticleEntry] {
+        let compiled = IslamSearchQuery(query, filters: filters)
+        guard !compiled.words.isEmpty else { return [] }
+        let candidates = IslamArticleCatalog.all.filter { IslamArticleCatalog.covers(homes, $0) && filters.admits($0) }
+        let direct = candidates.filter { entry in
+            guard let haystack = IslamArticleCatalog.foldedHaystacks[entry.id] else { return false }
+            return compiled.matches(haystack)
         }
         // The article titled for the query leads the ones that carry it in a section name or alias.
         guard direct.isEmpty else { return SearchRank.sorted(direct, by: query) { [$0.title] + $0.aliases } }
-        // No row spelled that way: fold the spelling and ask again. A fallback only.
-        let candidates = IslamArticleCatalog.all.filter { homes.contains($0.home) }
+        // No row spelled that way: fold the spelling and ask again. A fallback only, and only under the
+        // default word rules (Whole Word or Without means what was typed).
+        guard filters.match == .contains, filters.combine == .allWords, compiled.excluded.isEmpty else { return [] }
         return SpellingFold.matches(query, in: candidates) {
             IslamArticleCatalog.spellings[$0.id] ?? SpellingFold.Entry(names: [])
         }
     }
 
-    /// Sections whose prose carries every word of the query, in the index's order, at most
-    /// `perArticle` sections per article (the ones with the most hits) and `limit` in all.
+    /// Sections whose prose (or quotes' Arabic) carries the query, in the index's order, at most
+    /// `perArticle` sections per article (the ones with the most hits) and `limit` in all; with Best
+    /// Match, the strongest first. A query that names an ayah or a hadith lists the passages that cite
+    /// exactly it instead.
     ///
     /// Reads `IslamArticles.all`, which inflates the article pack on first use - call this off the
     /// main actor (`IslamArticleSearchModel` does).
     static func contentHits(_ query: String, homes: Set<IslamArticleHome>,
                             perArticle: Int = 3, limit: Int = 60) -> [ContentHit] {
-        let terms = words(query)
-        guard !terms.isEmpty else { return [] }
+        contentHits(IslamSearchQuery(query), homes: homes, filters: IslamSearchFilters(), perArticle: perArticle, limit: limit)
+    }
+
+    static func contentHits(_ query: IslamSearchQuery, homes: Set<IslamArticleHome>, filters: IslamSearchFilters,
+                            perArticle: Int = 3, limit: Int = 60) -> [ContentHit] {
+        guard !query.isEmpty else { return [] }
         // Index order, so the results read top to bottom like the list they came from.
         let order = IslamArticleCatalog.order
         let articles = IslamArticles.all
             .filter { article in
                 guard let entry = IslamArticleCatalog.byID[article.id] else { return false }
-                return homes.contains(entry.home)
+                return IslamArticleCatalog.covers(homes, entry) && filters.admits(entry)
             }
             .sorted { (order[$0.id] ?? .max) < (order[$1.id] ?? .max) }
 
-        var hits: [ContentHit] = []
+        if let reference = query.reference {
+            let byID = Dictionary(articles.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+            let cited = IslamScriptureReference.citations(for: reference.keys)
+                .filter { byID[$0.article] != nil }
+                .sorted { ((order[$0.article] ?? .max), $0.section) < ((order[$1.article] ?? .max), $1.section) }
+            return cited.prefix(max(limit, 120)).compactMap { citation in
+                guard let article = byID[citation.article], article.sections.indices.contains(citation.section) else { return nil }
+                let section = article.sections[citation.section]
+                return ContentHit(article: article, section: section, sectionIndex: citation.section,
+                                  snippet: snippet(of: section.text, atUTF16: citation.location))
+            }
+        }
+
+        var picked: [(article: IslamArticle, index: Int, score: Int)] = []
         for article in articles {
-            // A newer keystroke has already replaced this search: stop walking 93 articles for it.
-            if Task.isCancelled { return hits }
+            // A newer keystroke has already replaced this search: stop walking the articles for it.
+            if Task.isCancelled { return [] }
             var scored: [(index: Int, count: Int)] = []
             for (index, section) in article.sections.enumerated() {
-                var total = 0
-                var all = true
-                for term in terms {
-                    let count = occurrences(of: term, in: section.folded)
-                    if count == 0 { all = false; break }
-                    total += count
-                }
-                if all { scored.append((index, total)) }
+                if let count = query.score(section.folded, section.foldedArabic) { scored.append((index, count)) }
             }
             guard !scored.isEmpty else { continue }
-            let picked = scored.sorted { $0.count > $1.count }.prefix(perArticle).sorted { $0.index < $1.index }
-            for pick in picked {
-                let section = article.sections[pick.index]
-                hits.append(ContentHit(article: article, section: section, sectionIndex: pick.index,
-                                       snippet: snippet(of: section.text, around: query, terms: terms)))
-                if hits.count >= limit { return hits }
+            let best = scored.sorted { $0.count > $1.count }.prefix(perArticle).sorted { $0.index < $1.index }
+            picked += best.map { (article, $0.index, $0.count) }
+            if filters.sort == .index, picked.count >= limit { break }
+        }
+        if filters.sort == .relevance {
+            // Stable on ties, so equal scores keep the index's order.
+            picked = picked.enumerated().sorted { a, b in
+                a.element.score != b.element.score ? a.element.score > b.element.score : a.offset < b.offset
+            }.map(\.element)
+        }
+        return picked.prefix(limit).map { hit(in: $0.article, at: $0.index, for: query) }
+    }
+
+    /// Every section of ONE article whose prose carries the query, in page order: the page's own
+    /// search, which has no per-article cap. Off the main actor, like `contentHits`.
+    /// `fallback`: the page's own sections, scanned when the corpus has no article for `articleID`
+    /// (the prophecy and prophet-miracle pages are generated from data, so the corpus never carries
+    /// them and their bar found nothing).
+    /// `page`: the page's text as it is shown, searched in place of the corpus (a translated page,
+    /// a page built at runtime); its sections land on their anchors and need no heading.
+    static func sectionHits(_ query: String, articleID: String, fallback: IslamArticle? = nil,
+                            page: IslamArticle? = nil) -> [ContentHit] {
+        sectionHits(IslamSearchQuery(query), articleID: articleID, fallback: fallback, page: page)
+    }
+
+    static func sectionHits(_ query: IslamSearchQuery, articleID: String, fallback: IslamArticle? = nil,
+                            page: IslamArticle? = nil) -> [ContentHit] {
+        guard !query.isEmpty,
+              let article = page ?? IslamArticles.all.first(where: { $0.id == articleID }) ?? fallback else { return [] }
+        if let reference = query.reference, page == nil, article.id == articleID {
+            let cited = IslamScriptureReference.citations(for: reference.keys).filter { $0.article == article.id }
+            let hits = cited.sorted { $0.section < $1.section }.compactMap { citation -> ContentHit? in
+                guard article.sections.indices.contains(citation.section) else { return nil }
+                let section = article.sections[citation.section]
+                guard !section.heading.isEmpty || section.anchor != nil else { return nil }
+                return ContentHit(article: article, section: section, sectionIndex: citation.section,
+                                  snippet: snippet(of: section.text, atUTF16: citation.location))
             }
+            if !hits.isEmpty || query.words.isEmpty { return hits }
+        }
+        var hits: [ContentHit] = []
+        for (index, section) in article.sections.enumerated() where !section.heading.isEmpty || section.anchor != nil {
+            guard query.matches(section.folded, section.foldedArabic) else { continue }
+            hits.append(hit(in: article, at: index, for: query))
         }
         return hits
     }
 
-    /// Every section of ONE article whose prose carries every word of the query, in page order: the
-    /// page's own search, which has no per-article cap. Off the main actor, like `contentHits`.
-    /// `fallback`: the page's own sections, scanned when the corpus has no article for `articleID`
-    /// (the prophecy and prophet-miracle pages are generated from data, so the corpus never carries
-    /// them and their bar found nothing).
-    static func sectionHits(_ query: String, articleID: String, fallback: IslamArticle? = nil) -> [ContentHit] {
-        let terms = words(query)
-        guard !terms.isEmpty,
-              let article = IslamArticles.all.first(where: { $0.id == articleID }) ?? fallback else { return [] }
-        var hits: [ContentHit] = []
-        for (index, section) in article.sections.enumerated() where !section.heading.isEmpty {
-            guard terms.allSatisfy({ section.folded.contains($0) }) else { continue }
-            hits.append(ContentHit(article: article, section: section, sectionIndex: index,
-                                   snippet: snippet(of: section.text, around: query, terms: terms)))
+    /// The hit for one matching section, its window cut around the match: in the prose when the
+    /// match is there, in the quotes' Arabic when only that carries it.
+    private static func hit(in article: IslamArticle, at index: Int, for query: IslamSearchQuery) -> ContentHit {
+        let section = article.sections[index]
+        let flat = section.text.replacingOccurrences(of: "\n", with: " ")
+        if let range = locate(query, in: flat) {
+            return ContentHit(article: article, section: section, sectionIndex: index, snippet: window(flat, around: range))
         }
-        return hits
+        if !section.arabic.isEmpty {
+            let arabic = section.arabic.replacingOccurrences(of: "\n", with: " \u{2022} ")
+            if let range = locate(query, in: arabic) ?? locate(query, in: arabic, daggerAsAlif: true) {
+                return ContentHit(article: article, section: section, sectionIndex: index,
+                                  snippet: window(arabic, around: range, radius: 70), snippetIsArabic: true)
+            }
+        }
+        return ContentHit(article: article, section: section, sectionIndex: index, snippet: window(flat, around: nil))
+    }
+
+    /// Where the query sits in `text` itself, found in its fold and mapped back. `daggerAsAlif` reads
+    /// the mushaf's dagger alif as a full alif first (the second Arabic lane, `Section.foldedArabic`);
+    /// one scalar for one, so the offsets still fall in `text`.
+    static func locate(_ query: IslamSearchQuery, in text: String, daggerAsAlif: Bool = false) -> Range<String.Index>? {
+        let source = daggerAsAlif ? text.replacingOccurrences(of: "\u{0670}", with: "\u{0627}") : text
+        let (folded, origins) = IslamArticles.foldMapped(source)
+        guard let range = query.firstRange(in: folded) else { return nil }
+        let scalars = folded.unicodeScalars
+        let low = scalars.distance(from: scalars.startIndex, to: range.lowerBound)
+        let high = scalars.distance(from: scalars.startIndex, to: range.upperBound)
+        guard high > low, high - 1 < origins.count else { return nil }
+        let textScalars = text.unicodeScalars
+        guard origins[high - 1] < textScalars.count else { return nil }
+        let start = textScalars.index(textScalars.startIndex, offsetBy: origins[low])
+        let last = textScalars.index(textScalars.startIndex, offsetBy: origins[high - 1])
+        return start..<textScalars.index(after: last)
+    }
+
+    /// A window of `text` around a citation at a UTF-16 offset (the reference index's location).
+    static func snippet(of text: String, atUTF16 location: Int) -> String {
+        let flat = text.replacingOccurrences(of: "\n", with: " ")
+        let range = Range(NSRange(location: location, length: 1), in: flat)
+        return window(flat, around: range)
     }
 
     /// A window of `text` around the first occurrence of the query (or of its first word), cut at
@@ -1325,32 +1980,41 @@ enum IslamArticleSearch {
     /// opening line.
     static func snippet(of text: String, around query: String, terms: [String], radius: Int = 110) -> String {
         let flat = text.replacingOccurrences(of: "\n", with: " ")
-        let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
-        var match = flat.range(of: query.trimmingCharacters(in: .whitespacesAndNewlines), options: options)
-        if match == nil {
-            for term in terms {
-                if let r = flat.range(of: term, options: options) { match = r; break }
-            }
-        }
+        return window(flat, around: locate(IslamSearchQuery(query), in: flat), radius: radius)
+    }
+
+    /// `flat` (one line) cut to about `radius` characters either side of `match`, at word boundaries,
+    /// with ellipses where it was cut; the opening of the text when there is no match.
+    static func window(_ flat: String, around match: Range<String.Index>?, radius: Int = 110) -> String {
         guard let match else {
             return flat.count > radius * 2 ? String(flat.prefix(radius * 2)).trimmingCharacters(in: .whitespaces) + "\u{2026}" : flat
         }
+        // Character boundaries: a scalar index inside an Arabic letter's marks moves back to its letter.
+        func aligned(_ index: String.Index) -> String.Index {
+            var index = index
+            while index > flat.startIndex, index < flat.endIndex, index.samePosition(in: flat) == nil {
+                index = flat.unicodeScalars.index(before: index)
+            }
+            return index
+        }
+        let lower = aligned(match.lowerBound)
+        let upper = match.upperBound >= flat.endIndex ? flat.endIndex : aligned(match.upperBound)
 
-        var start = match.lowerBound
+        var start = lower
         var steps = 0
         while start > flat.startIndex, steps < radius {
             start = flat.index(before: start); steps += 1
         }
-        var end = match.upperBound
+        var end = max(upper, lower)
         steps = 0
         while end < flat.endIndex, steps < radius {
             end = flat.index(after: end); steps += 1
         }
         // Snap to word boundaries, so the window never opens or closes mid-word.
-        if start > flat.startIndex, let space = flat[start...].firstIndex(of: " "), space < match.lowerBound {
+        if start > flat.startIndex, let space = flat[start...].firstIndex(of: " "), space < lower {
             start = flat.index(after: space)
         }
-        if end < flat.endIndex, let space = flat[..<end].lastIndex(of: " "), space > match.upperBound {
+        if end < flat.endIndex, let space = flat[..<end].lastIndex(of: " "), space > upper {
             end = space
         }
         var out = String(flat[start..<end]).trimmingCharacters(in: .whitespaces)
@@ -1369,6 +2033,8 @@ final class IslamArticleSearchModel: ObservableObject {
     @Published private(set) var contentHits: [IslamArticleSearch.ContentHit] = []
     /// Every matching section of the page's own article (`update(query:homes:within:)`), in page order.
     @Published private(set) var articleHits: [IslamArticleSearch.ContentHit] = []
+    /// The ayah or hadith the query names, for the row that opens it (`IslamScriptureReferenceSection`).
+    @Published private(set) var reference: IslamScriptureReference?
     /// True between a query change and its results landing, so the screen can hold "no matches"
     /// until the scan has actually run.
     @Published private(set) var isSearching = false
@@ -1383,13 +2049,17 @@ final class IslamArticleSearchModel: ObservableObject {
     /// `within`: the open article's id on an article page. Its own sections come back in `articleHits`
     /// (all of them), while `contentHits` still covers every article for the "other articles" rows.
     /// `fallback`: the page's own sections for an id the corpus lacks (see `sectionHits`).
-    func update(query: String, homes: Set<IslamArticleHome>, within articleID: String? = nil,
-                fallback: IslamArticle? = nil) {
+    /// `page`: the page's text as it is shown, which wins over the corpus (see `sectionHits`).
+    /// `filters`: the screen's search filters (Match, Words, Without, Topics, Best Match).
+    /// Empty `homes` searches the page alone.
+    func update(query: String, homes: Set<IslamArticleHome>, filters: IslamSearchFilters = IslamSearchFilters(),
+                within articleID: String? = nil, fallback: IslamArticle? = nil, page: IslamArticle? = nil) {
         task?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             if !contentHits.isEmpty { contentHits = [] }
             if !articleHits.isEmpty { articleHits = [] }
+            if reference != nil { reference = nil }
             isSearching = false
             return
         }
@@ -1397,13 +2067,16 @@ final class IslamArticleSearchModel: ObservableObject {
         task = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 180_000_000)
             guard !Task.isCancelled else { return }
-            let (hits, own) = await Task.detached(priority: .userInitiated) {
-                (IslamArticleSearch.contentHits(trimmed, homes: homes),
-                 articleID.map { IslamArticleSearch.sectionHits(trimmed, articleID: $0, fallback: fallback) } ?? [])
+            let (hits, own, reference) = await Task.detached(priority: .userInitiated) {
+                let compiled = IslamSearchQuery(trimmed, filters: filters)
+                return (homes.isEmpty ? [] : IslamArticleSearch.contentHits(compiled, homes: homes, filters: filters),
+                        articleID.map { IslamArticleSearch.sectionHits(compiled, articleID: $0, fallback: fallback, page: page) } ?? [],
+                        compiled.reference)
             }.value
             guard !Task.isCancelled else { return }
             self?.contentHits = hits
             self?.articleHits = own
+            self?.reference = reference
             self?.isSearching = false
         }
     }
@@ -1490,9 +2163,11 @@ struct IslamArticleContentRow: View {
     private var destination: AnyView {
         if openViaHome, let home = hit.home {
             return IslamArticleCatalog.homeDestination(
-                home, opening: IslamArticleOpenRequest(id: hit.article.id, section: hit.section.heading))
+                home, opening: IslamArticleOpenRequest(id: hit.article.id, section: hit.section.heading,
+                                                       long: hit.section.only == .long))
         }
-        return IslamArticleCatalog.destination(id: hit.article.id, section: hit.section.heading)
+        return IslamArticleCatalog.destination(id: hit.article.id, section: hit.section.heading,
+                                               long: hit.section.only == .long)
     }
 
     var body: some View {
@@ -1503,15 +2178,33 @@ struct IslamArticleContentRow: View {
                     .foregroundColor(appearance.accent)
                     .lineLimit(2)
 
-                HighlightedSnippet(
-                    source: hit.snippet,
-                    term: query,
-                    font: .subheadline,
-                    accent: appearance.accent,
-                    fg: .primary,
-                    lineLimit: 4,
-                    guaranteeMatch: true
-                )
+                if hit.snippetIsArabic {
+                    // A quote's Arabic (an ayah, a hadith, a scholar's words): right to left, in the
+                    // Islam tab's Arabic face, against the trailing edge.
+                    HighlightedSnippet(
+                        source: hit.snippet,
+                        term: query,
+                        font: appearance.islamArabicFont(base: 18, relativeTo: .body),
+                        accent: appearance.accent,
+                        fg: .primary,
+                        lineLimit: 3,
+                        guaranteeMatch: true
+                    )
+                    .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .environment(\.layoutDirection, .rightToLeft)
+                } else {
+                    HighlightedSnippet(
+                        source: hit.snippet,
+                        term: query,
+                        font: .subheadline,
+                        accent: appearance.accent,
+                        fg: .primary,
+                        lineLimit: 4,
+                        guaranteeMatch: true
+                    )
+                }
             }
             // The article's English keeps the left edge in the Arabic interface.
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1619,16 +2312,31 @@ struct IslamArticleSearchSections: View {
     /// Clears the search and scrolls the index to the article's row. Nil on an article page, which has
     /// no index rows to scroll to.
     var onScrollTo: ((IslamArticleEntry) -> Void)? = nil
+    /// The screen's search filters (`IslamSearchFilterBar`): Search In and Topics narrow the titles
+    /// as they narrow the passages, Match and Words shape both, and Show hides a kind.
+    var filters: IslamSearchFilters = IslamSearchFilters()
+    /// The ayah or hadith the query names (`IslamArticleSearchModel.reference`): a row on top opens it.
+    var reference: IslamScriptureReference? = nil
 
     var body: some View {
-        let titleHits = IslamArticleSearch.titleHits(query, homes: homes).filter { $0.id != excludeArticle }
-        let passages = excludeArticle == nil ? contentHits : contentHits.filter { $0.article.id != excludeArticle }
+        let searched = filters.searchedHomes(homes)
+        let titleHits = filters.shows(.articles)
+            ? IslamArticleSearch.titleHits(query, homes: searched, filters: filters).filter { $0.id != excludeArticle }
+            : []
+        let passages = !filters.shows(.passages) ? []
+            : excludeArticle == nil ? contentHits : contentHits.filter { $0.article.id != excludeArticle }
+        let showsReference = reference != nil && filters.shows(.scripture) && excludeArticle == nil
+
+        if showsReference, let reference {
+            IslamScriptureReferenceSection(reference: reference, translated: openViaHome)
+        }
 
         if !titleHits.isEmpty {
             Section(header: SectionPillHeader(title: articlesTitle, count: titleHits.count)) {
                 ForEach(titleHits) { entry in
                     IslamArticleTitleRow(entry: entry, query: query, showHome: showHome, openViaHome: openViaHome,
                                          scrollLabel: scrollLabel(entry), onScrollTo: scrollAction(for: entry))
+                        .environment(\.searchWordRule, filters.match.wordRule)
                 }
             }
         }
@@ -1639,11 +2347,13 @@ struct IslamArticleSearchSections: View {
                     IslamArticleContentRow(hit: hit, query: query, showHome: showHome, openViaHome: openViaHome,
                                            scrollLabel: hit.entry.map(scrollLabel) ?? "Scroll To Article",
                                            onScrollTo: hit.entry.flatMap(scrollAction))
+                        // The colour follows the Match button, as the Quran tab's does.
+                        .environment(\.searchWordRule, filters.match.wordRule)
                 }
             }
         }
 
-        if titleHits.isEmpty, passages.isEmpty, !isSearching, !hasOtherResults {
+        if titleHits.isEmpty, passages.isEmpty, !isSearching, !hasOtherResults, !showsReference {
             Section {
                 Text(verbatim: openViaHome ? String(localized: "No articles match your search.")
                                            : AppLanguage.article("No articles match your search."))
@@ -1780,13 +2490,24 @@ struct ArticleSearchChrome: ViewModifier {
     /// `articleID` (a generated page). Its headings are the page's `ArticleHeader`s, so a hit still
     /// scrolls to its section. Nil on the catalog pages, which the corpus carries.
     var fallback: IslamArticle? = nil
+    /// The page's text as the bar searches it, in place of the corpus: a page the corpus does not
+    /// carry, or carries only in English (see `selectableArticleList(kind:)`, `searchablePage`).
+    /// Built at the first query and kept while the page is the same (`articleID`).
+    var page: (() -> IslamArticle?)? = nil
+    var kind: ArticleSearchKind = .article
+    /// The page's share button, beside the bar (`SearchBarWithShare`); nil for a page with no link.
+    var share: PageShare? = nil
 
     @State private var searchText = ""
+    /// `page`'s text, once built (a lesson stepped to its neighbour is a new page: see `searched`).
+    @State private var builtPage: IslamArticle?
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
     /// The heading a result asked for, consumed once the results have faded out.
     @State private var scrollTarget: String?
     @StateObject private var search = IslamArticleSearchModel()
+    /// Match, Words and Without for the page's own search (2026-11-24), as the Quran reader's bar has.
+    @State private var searchFilters = IslamSearchFilters()
 
     private var query: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -1804,13 +2525,16 @@ struct ArticleSearchChrome: ViewModifier {
             .animation(.easeOut(duration: 0.2), value: veiled)
             .overlay {
                 if searching {
-                    ArticleSearchResults(articleID: articleID, query: query, search: search) { heading in
+                    ArticleSearchResults(articleID: articleID, query: query, kind: kind, search: search, filters: $searchFilters) { section in
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                         // Hidden in the same update that clears the search, or the page starts fading
                         // back in at the old spot before the landing hides it again.
                         _ = handle.beginLanding()
+                        // Words only the full article has: the full article, under the veil, so the
+                        // landing finds the section drawn.
+                        if section.only == .long { handle.length = .long }
                         withAnimation { searchText = "" }
-                        scrollTarget = heading
+                        scrollTarget = section.landing
                     }
                     .transition(.opacity)
                 }
@@ -1819,8 +2543,9 @@ struct ArticleSearchChrome: ViewModifier {
             .collapseBarsOnScroll($barsCollapsed)
             .articleListStyle(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin)
             .adaptiveSafeArea(edge: .bottom) {
-                SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)),
-                          placeholder: "Search this article")
+                SearchBarWithShare(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)),
+                                   placeholder: kind == .article ? "Search this article" : String(localized: "Search this page"),
+                                   share: share)
                     .minimizedBarStyle(barsCollapsed)
                     .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
                     .padding(.horizontal, 24)
@@ -1839,15 +2564,21 @@ struct ArticleSearchChrome: ViewModifier {
                             guard let first = search.articleHits.first else { return }
                             _ = handle.beginLanding()
                             withAnimation { searchText = "" }
-                            scrollTarget = first.section.heading
+                            scrollTarget = first.section.landing
                         }
                     }
                 }
                 #endif
             }
             .onChange(of: searchText) { text in
-                search.update(query: text, homes: [.pillars, .guides, .proving], within: articleID, fallback: fallback)
+                search.update(query: text, homes: kind == .article ? Set(IslamArticleHome.allCases) : [], filters: searchFilters,
+                              within: articleID, fallback: fallback, page: text.isEmpty ? nil : searched())
                 if !text.isEmpty { scrollTarget = nil }
+            }
+            .onChange(of: searchFilters) { filters in
+                guard !searchText.isEmpty else { return }
+                search.update(query: searchText, homes: kind == .article ? Set(IslamArticleHome.allCases) : [], filters: filters,
+                              within: articleID, fallback: fallback, page: searched())
             }
             .onChange(of: scrollTarget) { target in
                 guard let target else { return }
@@ -1855,54 +2586,80 @@ struct ArticleSearchChrome: ViewModifier {
                 ArticleScroll.land(on: target, proxy: proxy, after: 0.2, handle: handle)
             }
     }
+
+    /// The page's text for this query: built once, and again only for a new page (a lesson's
+    /// Previous and Next replace the page in place) or while it is still loading (an explanation
+    /// read off the main thread).
+    private func searched() -> IslamArticle? {
+        guard let page else { return nil }
+        if let builtPage, builtPage.id == articleID { return builtPage }
+        let built = page()
+        builtPage = built
+        return built
+    }
 }
 
 /// The results over an article page: Ask AI, the page's own matching sections, then the other articles.
 private struct ArticleSearchResults: View {
     let articleID: String
     let query: String
+    let kind: ArticleSearchKind
     @ObservedObject var search: IslamArticleSearchModel
-    /// Called with the heading of a tapped section: clears the search and scrolls the page to it.
-    let onScrollTo: (String) -> Void
+    @Binding var filters: IslamSearchFilters
+    /// Called with the tapped section: clears the search and scrolls the page to where it lands (its
+    /// heading or anchor), in the full article when only that has it.
+    let onScrollTo: (IslamArticle.Section) -> Void
+
+    private var translated: Bool { kind == .page }
 
     var body: some View {
         List {
             Group {
-                AskAISearchSection(query: query)
+                AskAISearchSection(query: query, translated: translated)
 
                 // Held until the scan has run, so the page never flashes "nothing matches" mid-keystroke.
                 if !search.articleHits.isEmpty || !search.isSearching {
-                    Section(header: SectionPillHeader(title: "IN THIS ARTICLE", count: search.articleHits.count)) {
+                    Section(header: SectionPillHeader(title: translated ? String(localized: "ON THIS PAGE") : "IN THIS ARTICLE",
+                                                      count: search.articleHits.count)) {
                         if search.articleHits.isEmpty {
-                            Text(verbatim: AppLanguage.article("Nothing in this article matches your search."))
+                            Text(verbatim: translated ? String(localized: "No matches on this page.")
+                                                      : AppLanguage.article("Nothing in this article matches your search."))
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
 
                         ForEach(search.articleHits) { hit in
-                            ArticleSectionHitRow(hit: hit, query: query) {
-                                onScrollTo(hit.section.heading)
+                            ArticleSectionHitRow(hit: hit, query: query, translated: translated) {
+                                onScrollTo(hit.section)
                             }
+                            .environment(\.searchWordRule, filters.match.wordRule)
                         }
                     }
                 }
 
-                IslamArticleSearchSections(
-                    query: query,
-                    homes: [.pillars, .guides, .proving],
-                    contentHits: search.contentHits,
-                    isSearching: search.isSearching,
-                    showHome: true,
-                    excludeArticle: articleID,
-                    articlesTitle: "OTHER ARTICLES",
-                    passagesTitle: "IN OTHER ARTICLES",
-                    hasOtherResults: true
-                )
+                if kind == .article {
+                    IslamArticleSearchSections(
+                        query: query,
+                        homes: Set(IslamArticleHome.allCases),
+                        contentHits: search.contentHits,
+                        isSearching: search.isSearching,
+                        showHome: true,
+                        excludeArticle: articleID,
+                        articlesTitle: "OTHER ARTICLES",
+                        passagesTitle: "IN OTHER ARTICLES",
+                        hasOtherResults: true,
+                        filters: filters
+                    )
+                }
             }
             .themedListRowBackground()
         }
-        // An overlay outside the page's own `englishArticle()`: the results are the article's English too.
-        .englishArticle()
+        // The page's own row of filters rides the RESULTS, not the page under them: an inset on the
+        // page would move it while it lands on a section.
+        .islamSearchFilterChrome($filters, isSearching: true, homes: [], kinds: [], translated: translated, inPage: true)
+        // An overlay outside the page's own `englishArticle()`: an article's results are its English
+        // too. A page of the app's own reads in the interface's language.
+        .leftToRightContent(kind == .article && AppLanguage.pinsArticlesEnglish)
     }
 }
 
@@ -1913,6 +2670,8 @@ private struct ArticleSectionHitRow: View {
 
     let hit: IslamArticleSearch.ContentHit
     let query: String
+    /// On a page of the app's own: the menu follows the interface (see `ArticleSearchKind`).
+    var translated = false
     let onSelect: () -> Void
 
     var body: some View {
@@ -1922,10 +2681,14 @@ private struct ArticleSectionHitRow: View {
         } label: {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(hit.section.heading)
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(appearance.accent)
-                        .lineLimit(2)
+                    // A passage with no heading of its own (a Miracles article's paragraph) is its
+                    // words alone.
+                    if !hit.section.heading.isEmpty {
+                        Text(hit.section.heading)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(appearance.accent)
+                            .lineLimit(2)
+                    }
 
                     HighlightedSnippet(
                         source: hit.snippet,
@@ -1948,8 +2711,10 @@ private struct ArticleSectionHitRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .islamArticleRowActions(title: hit.section.heading, copyText: hit.snippet,
-                                scrollLabel: "Scroll To Section", onScrollTo: onSelect)
+        .islamArticleRowActions(title: hit.section.heading.isEmpty ? hit.article.title : hit.section.heading,
+                                copyText: hit.snippet,
+                                scrollLabel: translated ? String(localized: "Scroll To Section") : "Scroll To Section",
+                                onScrollTo: onSelect, translated: translated)
     }
 }
 
@@ -2020,6 +2785,14 @@ enum ArticleSources {
             ArticleSource(title: "Muqaddimah fi Usul at-Tafsir", subtitle: "Ibn Taymiyyah"),
             ArticleSource(title: "Is the Quran the Word of Allah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/13804"),
             ArticleSource(title: "Miraculous aspects of the Holy Qur'an", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/245475"),
+        ],
+        "QuranRevealedPillarView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar, on the Book of the Beginning of Revelation in Sahih al-Bukhari"),
+            ArticleSource(title: "Tafsir Ibn Kathir", subtitle: "Tafsir al-Quran al-Azim"),
+            ArticleSource(title: "Al-Jawab as-Sahih", subtitle: "Ibn Taymiyyah, on the proofs of prophethood"),
+            ArticleSource(title: "Is the Quran the Word of Allah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/13804"),
+            ArticleSource(title: "What Is the Evidence that Islam Is True?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/175339"),
         ],
         "ProphetPillarView": [
             ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
@@ -2294,6 +3067,38 @@ enum ArticleSources {
             ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
             ArticleSource(title: "What Is Qadar in Islam?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/34732"),
             ArticleSource(title: "Al-Qada wal Qadar according to Ahl al-Sunnah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49004"),
+        ],
+        "RububiyyahView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Sharh Thalathat al-Usul", subtitle: "Ibn al-Uthaymin, the definitions of the three categories of tawhid (Majmu' Fatawa wa Rasa'il, vol. 6)"),
+            ArticleSource(title: "Al-Qawa'id al-Arba'", subtitle: "Muhammad ibn Abd al-Wahhab, the first principle"),
+            ArticleSource(title: "At-Tadmuriyyah", subtitle: "Ibn Taymiyyah, that no people held two equal makers (Majmu' al-Fatawa, vol. 3)"),
+            ArticleSource(title: "What Is Tawhid Al-Rububiyyah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49025"),
+            ArticleSource(title: "Dividing Tawhid into categories", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10262"),
+        ],
+        "UluhiyyahView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Sharh Thalathat al-Usul", subtitle: "Ibn al-Uthaymin, the definitions of the three categories of tawhid (Majmu' Fatawa wa Rasa'il, vol. 6)"),
+            ArticleSource(title: "Al-Usul ath-Thalathah", subtitle: "Muhammad ibn Abd al-Wahhab, the kinds of worship"),
+            ArticleSource(title: "Kitab at-Tawhid", subtitle: "Muhammad ibn Abd al-Wahhab, with al-Qawl al-Mufid by Ibn al-Uthaymin"),
+            ArticleSource(title: "Al-Ubudiyyah", subtitle: "Ibn Taymiyyah, the definition of worship"),
+            ArticleSource(title: "Madarij as-Salikin", subtitle: "Ibn al-Qayyim, the two kinds of tawhid (vol. 3)"),
+            ArticleSource(title: "Al-Ikhlas wan-Niyyah", subtitle: "Ibn Abi ad-Dunya, al-Fudayl ibn Iyad on the sincere and correct deed"),
+            ArticleSource(title: "Conditions of Acceptability of Deeds by Allah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/14258"),
+            ArticleSource(title: "The real meaning of ‘uboodiyyah (true submission to Allah)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49016"),
+        ],
+        "AsmaSifatView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Sharh Thalathat al-Usul", subtitle: "Ibn al-Uthaymin, the definitions of the three categories of tawhid (Majmu' Fatawa wa Rasa'il, vol. 6)"),
+            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
+            ArticleSource(title: "At-Tadmuriyyah", subtitle: "Ibn Taymiyyah, the two principles on the attributes (Majmu' al-Fatawa, vol. 3)"),
+            ArticleSource(title: "Al-Qawa'id al-Muthla", subtitle: "Ibn al-Uthaymin, the rules on the names and attributes of Allah"),
+            ArticleSource(title: "Al-Asma' was-Sifat and Sharh Usul I'tiqad Ahl as-Sunnah", subtitle: "Al-Bayhaqi and al-Lalaka'i, the statements of the Salaf with their chains"),
+            ArticleSource(title: "Ash-Shari'ah and Mukhtasar al-'Uluw", subtitle: "Al-Ajurri; and adh-Dhahabi's al-'Uluw abridged by al-Albani, with his gradings"),
+            ArticleSource(title: "Dar' Ta'arud al-'Aql wan-Naql", subtitle: "Ibn Taymiyyah, on tafwid (vol. 1)"),
+            ArticleSource(title: "How to Understand the Names and Attributes of Allah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/178915"),
+            ArticleSource(title: "Meaning of tafweed with regard to the names and attributes of Allah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/138920"),
+            ArticleSource(title: "Is Allah above the Throne?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/11035"),
         ],
         "HaramView": [
             ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
@@ -2773,6 +3578,27 @@ enum ArticleSources {
             ArticleSource(title: "Al-Ibanah al-Kubra", subtitle: "Ibn Battah"),
             ArticleSource(title: "Bid'ah Hasanah (\"Good Innovations\")", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/864"),
             ArticleSource(title: "What Is the Meaning of Bid'ah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/7277"),
+            ArticleSource(title: "Jami' al-Ulum wal-Hikam", subtitle: "Ibn Rajab, on hadith 28, \"every innovation is misguidance\""),
+            ArticleSource(title: "The Notion of Bid'ah Hasanah: the Statements of Imam ash-Shafi'i", subtitle: "Bidah.com, part 3 of the series", url: "https://www.bidah.com/articles/rouuz-the-notion-of-bidah-hasanah-good-innovation-in-worship-destroyed-part-3.cfm"),
+            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, the definition of bid'ah in belief and worship (vol. 18)"),
+            ArticleSource(title: "Which Group Is the Saved One?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/90112"),
+        ],
+        "QiraatContradictView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "An-Nashr fi al-Qira'at al-'Ashr", subtitle: "Ibn al-Jazari, on the three kinds of difference between the readings"),
+            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, the fatwa on the seven ahruf (vol. 13)"),
+            ArticleSource(title: "Tafsir Ibn Kathir", subtitle: "Tafsir al-Quran al-Azim, on al-Ma'idah 5:6"),
+            ArticleSource(title: "The revelation of the Quran in seven styles (ahruf)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/5142"),
+            ArticleSource(title: "The seven modes of recitation are mutawaatir", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/178120"),
+        ],
+        "AwrahView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, the chapter on dress in prayer (vol. 22)"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, on the conditions of prayer"),
+            ArticleSource(title: "Fatawa al-Lajnah ad-Da'imah", subtitle: "The Permanent Committee, fatwas 5128 and 21302"),
+            ArticleSource(title: "Risalat al-Hijab and Jilbab al-Mar'ah al-Muslimah", subtitle: "Ibn al-Uthaymin and al-Albani, the two views on the face"),
+            ArticleSource(title: "Evidence that Men's Awrah Is from the Navel to the Knee", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/34976"),
+            ArticleSource(title: "What is a woman permitted to uncover in front of other women and mahrams?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/34745"),
         ],
         "MawlidView": [
             ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),

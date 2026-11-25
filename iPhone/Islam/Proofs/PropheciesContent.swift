@@ -527,6 +527,7 @@ extension PropheciesView {
                   SignSection("WHAT HAPPENED", [
                       .hadith("bukhari:4274", cite: "Sahih al-Bukhari 4274", arabic: 54...90, english: 29...94),
                       .text("The letter was from Hatib ibn Abi Balta'ah, a veteran of Badr, telling Quraysh what the Prophet intended. Hatib explained that he had no tribe in Makkah to protect his family there and had wanted a favour owed to him. The Prophet accepted his explanation and would not let 'Umar punish him, because he had fought at Badr. The opening of Surah al-Mumtahanah (60:1) was revealed about this letter."),
+                      .quran("60:1"),
                       .text("Nothing about it was public: not that the letter existed, who carried it, or where she would be. The woman herself denied having it until they said they would search her."),
                   ]),
               ]),
@@ -694,6 +695,7 @@ extension PropheciesView {
                   SignSection("WHAT HAPPENED", [
                       .text("Abu Bakr, the Siddiq, died of illness in 13 AH. The other two were killed. 'Umar was stabbed while leading the dawn prayer in the mosque of Madinah and died of the wound in 23 AH (644 CE). 'Uthman was killed in his own house by rebels who had besieged it, in 35 AH (656 CE)."),
                       .text("Neither died in battle, where a martyr's death would be looked for. Both were killed in Madinah itself, far from any front, and 'Umar had asked Allah for exactly that: martyrdom, and a death in the city of the Prophet (Sahih al-Bukhari 1890)."),
+                      .hadith("bukhari:1890", cite: "Sahih al-Bukhari 1890", arabic: 29...42, english: 0...20),
                   ]),
               ]),
         .init(id: "umar-door", title: "The door that would be broken",
@@ -1034,6 +1036,7 @@ extension PropheciesView {
                   ]),
                   SignSection("WHAT HAPPENED", [
                       .text("The renaming began early. In his own lifetime he was asked about bit', made from honey, and mizr, made from barley, and he answered that every intoxicant is forbidden (Sahih al-Bukhari 4343). Later, 'Abd al-Rahman ibn Ghanm, who also narrated this hadith from Abu Malik al-Ash'ari, recalled it when the people he was sitting with began discussing tila', a drink of cooked grape juice."),
+                      .hadith("bukhari:4343", cite: "Sahih al-Bukhari 4343", arabic: 22...59, english: 0...69),
                       .text("Today intoxicants circulate under more names than ever, from trade names to the language of medicine and recreation, and the word wine is seldom the one used. What intoxicates has not changed; the names have, as he said they would."),
                   ]),
               ]),
@@ -1078,6 +1081,7 @@ extension PropheciesView {
                       .text("His own mosque in Madinah was as plain as a building can be. 'Abdullah ibn 'Umar described it:"),
                       .hadith("bukhari:446", cite: "Sahih al-Bukhari 446", arabic: 27...43, english: 0...27),
                       .text("Building a mosque is itself a virtue: he promised whoever builds one for Allah the like of it in Paradise (Sahih al-Bukhari 450, Sahih Muslim 533). What he foretold was the rivalry. Mosques are now among the grandest buildings of many cities, and it has become common to describe one by the record it holds: the tallest minaret, the widest dome, the largest carpet."),
+                      .hadith("bukhari:450", cite: "Sahih al-Bukhari 450, Sahih Muslim 533a", arabic: 42...73, english: 22...56),
                   ]),
               ]),
         .init(id: "whips-and-clothed", title: "Two kinds he had never seen",
@@ -1325,6 +1329,7 @@ extension PropheciesView {
                   SignSection("WHAT THE SCHOLARS SAY", [
                       .text("Ahl al-Sunnah hold these as the greater signs, the ones that change the world rather than its habits. All are believed because he said them, and belief in them is part of belief in the Last Day, as Ibn 'Uthaymin sets out in his commentary on al-'Aqidah al-Wasitiyyah. Ibn Kathir gathers the narrations in al-Nihayah and Ibn Hajar discusses their order in Fath al-Bari: the hadith does not rank them, and the order the scholars draw from other texts is Dajjal, then 'Isa, then Gog and Magog, then the sun from the west and the beast close together, with the fire the last of all."),
                       .text("On the smoke, the scholars record a disagreement among the Companions themselves. Ibn Mas'ud read the smoke of Surah al-Dukhan (44:10) as the famine that struck Quraysh in the Prophet's lifetime, when a hungry man looked at the sky and saw it as smoke; Hudhayfah's narration counts a smoke still to come. Ibn Kathir takes both to be true: one smoke seen, and one awaited."),
+                      .quran("44:10"),
                   ]),
                   SignSection("A NOTE", [
                       .text("This group gathers the signs the Prophet said would come before the Hour that have not yet come: they are believed as part of faith in the Last Day, and they are kept out of this library's strongest list because a sign still to come proves nothing yet. What is known of the ten is what the narrations say; what is not known is when any of them begins. He said more than once that the Hour's time is with Allah alone."),
@@ -1361,7 +1366,9 @@ extension PropheciesView {
               aliases: ["isa", "jesus", "son of mary", "ibn maryam", "descent", "nuzul", "cross", "swine", "jizyah", "damascus", "white minaret", "ludd"],
               sections: [
                   SignSection("WHAT HE SAID", [
-                      .text("The Quran says that 'Isa was neither killed nor crucified but raised to Allah (4:157–158). The Prophet told his Companions what comes after that, and swore to it:"),
+                      .text("The Quran says that 'Isa was neither killed nor crucified but raised to Allah (4:157–158)."),
+                      .quran("4:157-158"),
+                      .text("The Prophet told his Companions what comes after that, and swore to it:"),
                       .hadith("bukhari:3448", cite: "Sahih al-Bukhari 3448", arabic: 34...65, english: 4...83),
                       .text("Abu Hurayrah, who narrated it, would then recite the verse he read as speaking of that day; and in Surah al-Zukhruf 'Isa is called a sign of the Hour:"),
                       .quran("4:159"),
@@ -1373,6 +1380,7 @@ extension PropheciesView {
                   ]),
                   SignSection("WHAT THE SCHOLARS SAY", [
                       .text("Ibn Kathir writes that the hadiths of his descent are mutawatir, and Ibn Baz and Ibn 'Uthaymin say the same: it is established by the Quran, the Sunnah and the agreement of Ahl al-Sunnah. He descends as a man of this ummah, not with a new law: he rules by the Shari'ah of Muhammad, and when he comes down the Muslims' commander invites him to lead the prayer and he declines (Sahih Muslim 156, under the Mahdi). Breaking the cross and killing the swine end the claims made in his name; ending the jizyah means that in his time no religion but Islam is accepted."),
+                      .hadith("muslim:156", cite: "Sahih Muslim 156", arabic: 42...83, english: 8...73),
                       .text("He kills Dajjal, lives among the Muslims, and Gog and Magog are released in his time; after they perish the earth is restored, as the same narration of al-Nawwas describes. The narration of Abu Dawud gives forty years for his stay, then his death and the Muslims' prayer over him. Ibn Kathir reads the verse of Surah al-Nisa' as every one of the People of the Book believing in him before his death, that is, at his descent."),
                   ]),
                   SignSection("A NOTE", [

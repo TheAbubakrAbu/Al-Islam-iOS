@@ -349,7 +349,9 @@ struct AyahTafsirSheet: View {
                             onNext: { goToMatch(1) }
                         )
                     }
-                    SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search tafsir"))
+                    // Share beside the field, the AI at the top right (Abu, 2026-11-24).
+                    SearchBarWithShare(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
+                                       placeholder: String(localized: "Search tafsir"), share: pageShare)
                         .padding(.horizontal, 24)
                         .padding(.bottom, BottomBarCushion.standard)
                 }
@@ -481,6 +483,23 @@ struct AyahTafsirSheet: View {
         return (combined.text, truncated || combined.truncated)
     }
     #endif
+
+    /// The sheet's link (it opens this ayah's tafsir in the app) and the edition on screen as text:
+    /// its name, the ayahs it covers, the tafsir itself, and the link to read it in the app.
+    private var pageShare: PageShare {
+        let link = AppLink.tafsir(surah: surahNumber, ayah: ayahNumber)
+        let title = String(localized: "Tafsir of \(tafsirRangeTitle)")
+        let author = selectedAuthor
+        let content = selectedTafsirText
+        return PageShare(link: link, title: title, text: {
+            guard let content else { return nil }
+            let prose = AskAIText.stripMarkdown(TafsirMarkdownView.normalizedMarkdown(content))
+                .replacingOccurrences(of: #"\[([^\]]+)\]\([^)]*\)"#, with: "$1", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !prose.isEmpty else { return nil }
+            return [author.displayTitle, tafsirRangeTitle, prose, link.url.absoluteString].joined(separator: "\n\n")
+        }, textLabel: String(localized: "Share Tafsir"))
+    }
 
     private var noticeCard: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -1294,12 +1313,21 @@ private struct TafsirMarkdownView: View {
         alignment: NSTextAlignment,
         currentMatchIndex: Int?
     ) -> (text: NSAttributedString, currentRange: NSRange?) {
-        let base = baseDocument(markdown: markdown, alignment: alignment)
+        let unlinked = baseDocument(markdown: markdown, alignment: alignment)
+        let accentColor = UIColor(accent)
+        // The references are links in the accent: the text view draws a link in its run's own colour.
+        var base = unlinked
+        if Self.hasLinks(unlinked) {
+            let colored = NSMutableAttributedString(attributedString: unlinked)
+            colored.enumerateAttribute(.link, in: NSRange(location: 0, length: colored.length)) { value, range, _ in
+                if value != nil { colored.addAttribute(.foregroundColor, value: accentColor, range: range) }
+            }
+            base = colored
+        }
         let ranges = matchRanges(in: base.string, query: searchText)
         guard !ranges.isEmpty else { return (base, nil) }
 
         let highlighted = NSMutableAttributedString(attributedString: base)
-        let accentColor = UIColor(accent)
         for range in ranges {
             highlighted.addAttribute(.foregroundColor, value: accentColor, range: range)
         }
@@ -1310,6 +1338,15 @@ private struct TafsirMarkdownView: View {
             highlighted.addAttribute(.backgroundColor, value: accentColor.withAlphaComponent(0.25), range: ranges[index])
         }
         return (highlighted, currentRange)
+    }
+
+    /// Whether the entry refers to any ayah (a link run in the document).
+    static func hasLinks(_ text: NSAttributedString) -> Bool {
+        var found = false
+        text.enumerateAttribute(.link, in: NSRange(location: 0, length: text.length)) { value, _, stop in
+            if value != nil { found = true; stop.pointee = true }
+        }
+        return found
     }
 
     /// How many matches the find bar should report. Counted on the same rendered text `document` uses, so
@@ -1388,6 +1425,11 @@ private struct TafsirMarkdownView: View {
             ))
         }
 
+        // The ayahs the prose refers to ("(41:39)") open in the reader (`ScriptureCitations`).
+        for hit in ScriptureCitations.tafsirHits(in: document.string) {
+            if let url = hit.link.schemeURL { document.addAttribute(.link, value: url, range: hit.range) }
+        }
+
         documentCache.setObject(TafsirDocumentBox(document), forKey: key)
         return document
     }
@@ -1401,7 +1443,10 @@ private struct TafsirMarkdownView: View {
             currentMatchIndex: currentMatchIndex
         )
 
-        return SelectableTextView(attributed: document.text, scrollTarget: document.currentRange)
+        let linked = Self.hasLinks(document.text)
+        return SelectableTextView(attributed: document.text, scrollTarget: document.currentRange,
+                                  onLink: linked ? { url in ScriptureCitations.open(url) } : nil,
+                                  linkMenu: linked ? { url in ScriptureCitations.menu(for: url) } : nil)
             // The fonts are resolved into the document above, so a type-size change must rebuild it.
             .id(sizeCategory)
             .frame(maxWidth: .infinity, alignment: frameAlignment)

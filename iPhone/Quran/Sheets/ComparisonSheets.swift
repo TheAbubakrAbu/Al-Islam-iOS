@@ -192,7 +192,9 @@ struct AyahQiraahComparisonSheet: View {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
                 textSizeBar
                 if !duelMode {
-                    SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search riwayat"))
+                    // Share beside the field, the AI at the top right (Abu, 2026-11-24).
+                    SearchBarWithShare(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
+                                       placeholder: String(localized: "Search riwayat"), share: pageShare)
                 }
             }
             .padding(.horizontal, 24)
@@ -1083,6 +1085,21 @@ struct AyahQiraahComparisonSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// The sheet's link (it opens this ayah's Qiraah Comparison in the app) and the riwayat on
+    /// screen as text, each under its name.
+    private var pageShare: PageShare {
+        let link = AppLink.qiraah(surah: surahNumber, ayah: ayahNumber)
+        let title = ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber)
+        return PageShare(link: link, title: String(localized: "Qiraah Comparison of \(title)"), text: {
+            let rows = filteredOptions.compactMap { option -> String? in
+                guard let text = resolvedText(for: option)?.text, !text.isEmpty else { return nil }
+                return "\(option.shownLabel)\n\(text)"
+            }
+            guard !rows.isEmpty else { return nil }
+            return ([String(localized: "Qiraah Comparison of \(title)")] + rows + [link.url.absoluteString]).joined(separator: "\n\n")
+        }, textLabel: String(localized: "Share Comparison"))
+    }
+
     private func qiraahRow(_ option: QiraahDisplay) -> some View {
         let resolved = resolvedText(for: option)
         let text = resolved?.text
@@ -1594,11 +1611,35 @@ struct AyahEnglishComparisonSheet: View {
         .compactListSectionSpacing()
         // The app's own bottom search bar, not `.searchable` - see the riwayah sheet above.
         .adaptiveSafeArea(edge: .bottom) {
-            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search translations"))
+            // Share beside the field, the AI at the top right (Abu, 2026-11-24).
+            SearchBarWithShare(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
+                               placeholder: String(localized: "Search translations"), share: pageShare)
                 .padding(.horizontal, 24)
                 .padding(.bottom, BottomBarCushion.standard)
                 .background(Color.white.opacity(0.00001))
         }
+    }
+
+    /// The sheet's link (it opens this ayah's Translation Comparison in the app) and the
+    /// translations on screen as text, each under its edition's name.
+    private var pageShare: PageShare {
+        let link = AppLink.translations(surah: surahNumber, ayah: ayahNumber)
+        let title = ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber)
+        return PageShare(link: link, title: String(localized: "Translation Comparison of \(title)"), text: {
+            var rows: [String] = []
+            if let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber) {
+                rows.append(ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText))
+                for edition in filteredInAppEditions {
+                    let text = inAppTranslationText(for: edition.id, ayah: ayah)
+                    if !text.isEmpty { rows.append("\(edition.name)\n\(text)") }
+                }
+            }
+            for edition in filteredOnlineEditions {
+                if let text = viewModel.translations[edition.id], !text.isEmpty { rows.append("\(edition.name)\n\(text)") }
+            }
+            guard !rows.isEmpty else { return nil }
+            return ([String(localized: "Translation Comparison of \(title)")] + rows + [link.url.absoluteString]).joined(separator: "\n\n")
+        }, textLabel: String(localized: "Share Comparison"))
     }
 
     private func inAppTranslationText(for editionID: String, ayah: Ayah? = nil) -> String {

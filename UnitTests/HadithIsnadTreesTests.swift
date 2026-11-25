@@ -51,6 +51,7 @@ final class HadithIsnadTreesTests: XCTestCase {
         XCTAssertEqual(pack.rowCount, HadithIsnadTreeSamples.rowCount)
         XCTAssertEqual(pack.treeCount, HadithIsnadTreeSamples.treeCount)
         XCTAssertEqual(pack.shardSize, HadithIsnadTreeSamples.shard)
+        XCTAssertEqual(pack.rankedCount, HadithIsnadTreeSamples.rankedCount)
         XCTAssertGreaterThan(pack.rowCount, 20_000)
         XCTAssertGreaterThan(pack.treeCount, 10_000)
         XCTAssertNil(pack.tree(id: 0))
@@ -69,6 +70,10 @@ final class HadithIsnadTreesTests: XCTestCase {
             XCTAssertEqual(summary.tree, sample.tree)
             XCTAssertEqual(summary.narrations, sample.narrations)
             XCTAssertEqual(summary.books, sample.books)
+            XCTAssertEqual(summary.chains, sample.chains, "\(sample.slug) \(sample.idInBook)")
+            // A chain is counted once however many narrations repeat it, over a family no wider
+            // than the tree's: never more chains than narrations.
+            XCTAssertLessThanOrEqual(summary.chains, summary.narrations)
             let tree = try XCTUnwrap(pack.tree(id: sample.tree), "tree \(sample.tree)")
             XCTAssertEqual(outline(tree), sample.outline, "\(sample.slug) \(sample.idInBook)")
             // The counts agree with the tree: as many books as compilers' books, and every narration
@@ -179,12 +184,81 @@ final class HadithIsnadTreesTests: XCTestCase {
         XCTAssertEqual(english.roads, layout.roads)
     }
 
+    /// The hadiths with the most chains (Abu, 2026-11-23): the shelf's list and each book's are the
+    /// script's, most chains first, a row once, every row with a tree and three chains at least; a
+    /// row whose text only points at another narration ("مثله") counts none and is on no list.
+    func testTheListsOfTheMostChainsAreTheScripts() throws {
+        let pack = try pack()
+        let shelf = pack.mostChains(slug: nil)
+        XCTAssertEqual(shelf.count, HadithIsnadTreeSamples.rankedCount)
+        XCTAssertGreaterThan(shelf.count, 1_000)
+        for (found, sample) in zip(shelf, HadithIsnadTreeSamples.mostChains) {
+            XCTAssertEqual(found.slug, sample.slug)
+            XCTAssertEqual(found.idInBook, sample.idInBook)
+            XCTAssertEqual(pack.summary(slug: found.slug, idInBook: found.idInBook)?.chains, sample.chains)
+        }
+        XCTAssertEqual(Set(shelf.map { "\($0.slug):\($0.idInBook)" }).count, shelf.count, "a row is listed twice")
+        var previous: HadithIsnadTreesPack.Summary?
+        for row in shelf {
+            let summary = try XCTUnwrap(pack.summary(slug: row.slug, idInBook: row.idInBook), "\(row.slug) \(row.idInBook) has no tree")
+            XCTAssertGreaterThanOrEqual(summary.chains, 3)
+            XCTAssertLessThanOrEqual(summary.chains, summary.narrations)
+            if let previous {
+                XCTAssertNotEqual(HadithIsnadTreesPack.Summary.mostChainsFirst(summary, previous), true,
+                                  "\(row.slug) \(row.idInBook) stands under a row with fewer chains")
+            }
+            previous = summary
+        }
+        for pointing in HadithIsnadTreeSamples.pointing {
+            XCTAssertEqual(pack.summary(slug: pointing.slug, idInBook: pointing.idInBook)?.chains, 0,
+                           "\(pointing.slug) \(pointing.idInBook) only points at another narration")
+            XCTAssertFalse(shelf.contains { $0.slug == pointing.slug && $0.idInBook == pointing.idInBook })
+        }
+        for slug in pack.slugs {
+            let own = pack.mostChains(slug: slug)
+            XCTAssertEqual(own.count, HadithIsnadTreeSamples.rankedInBook[slug], slug)
+            XCTAssertTrue(own.allSatisfy { $0.slug == slug })
+            XCTAssertEqual(Set(own.map(\.idInBook)).count, own.count, "\(slug) lists a row twice")
+            var last: HadithIsnadTreesPack.Summary?
+            for row in own {
+                let summary = try XCTUnwrap(pack.summary(slug: slug, idInBook: row.idInBook))
+                XCTAssertGreaterThanOrEqual(summary.chains, 3)
+                if let last { XCTAssertNotEqual(HadithIsnadTreesPack.Summary.mostChainsFirst(summary, last), true, slug) }
+                last = summary
+            }
+        }
+        XCTAssertTrue(pack.mostChains(slug: "nowhere").isEmpty)
+    }
+
+    /// A list put in the order of the most chains stands as the pack's own list does: the page of
+    /// them and the Most Chains order of any other list are one order (`Summary.mostChainsFirst`,
+    /// then the shelf's order).
+    @MainActor
+    func testAListSortedByTheMostChainsStandsAsThePacksList() throws {
+        let shelf = HadithIsnadTreeStore.shared.mostChains()
+        XCTAssertFalse(shelf.isEmpty)
+        // Handed over in the shelf's order, so the model's own sort does the work.
+        let requests = shelf.map { HadithListEntry.Request(slug: $0.slug, idInBook: $0.idInBook) }
+        let scrambled = HadithListModel(requests: requests.reversed(), sort: .chains, grouping: HadithListModel.Grouping.none)
+        XCTAssertEqual(scrambled.entries.count, shelf.count, "a listed narration is not on the shelf")
+        XCTAssertEqual(scrambled.sections.count, 1)
+        XCTAssertEqual(scrambled.sections.first?.rows.map(\.id), shelf.map { "\($0.slug)-\($0.idInBook)" })
+        XCTAssertTrue(scrambled.sorts.contains(.chains))
+        // Any other list offers the order too, and a row with no tree stands last in it.
+        let mixed = HadithListModel(requests: [.init(slug: "ibnmajah", idInBook: 1), .init(slug: shelf[0].slug, idInBook: shelf[0].idInBook)])
+        XCTAssertNil(mixed.entries.first { $0.book.slug == "ibnmajah" }?.tree)
+        mixed.sort = .chains
+        mixed.grouping = .none
+        XCTAssertEqual(mixed.sections.first?.rows.last?.book.slug, "ibnmajah")
+    }
+
     func testTheStoreAnswersAndSurvivesAPurge() throws {
         let store = HadithIsnadTreeStore.shared
         let summary = try XCTUnwrap(store.summary(slug: "bukhari", idInBook: 1))
         XCTAssertNotNil(store.tree(id: summary.tree))
         store.purge()
         XCTAssertEqual(store.summary(slug: "bukhari", idInBook: 1), summary)
+        XCTAssertEqual(store.mostChains().count, store.mostChainsCount)
         XCTAssertEqual(store.tree(id: summary.tree)?.nodes.count, store.tree(id: summary.tree)?.nodes.count)
     }
 }

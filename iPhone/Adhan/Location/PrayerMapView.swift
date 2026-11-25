@@ -36,6 +36,18 @@ struct PrayerTimesMapView: View {
 
     private let columnWidth: CGFloat = 80
 
+    /// The place and day to open on: an Ask AI source's (`AskAISource.Kind.cityPrayer`), pushed from
+    /// the chat, so with its back button instead of the sheet's close.
+    private let initialLocation: Location?
+    private let showsCloseButton: Bool
+    @State private var appliedInitialLocation = false
+
+    init(initialLocation: Location? = nil, initialDate: Date? = nil, showsCloseButton: Bool = true) {
+        self.initialLocation = initialLocation
+        self.showsCloseButton = showsCloseButton
+        _selectedDate = State(initialValue: initialDate ?? Date())
+    }
+
     private var effectiveLocation: Location? {
         selectedLocation ?? live.currentLocation
     }
@@ -79,12 +91,14 @@ struct PrayerTimesMapView: View {
         .navigationTitle("City Prayer Times")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button { settings.hapticFeedback(); dismiss() } label: {
-                    Image(systemName: "xmark")
-                        .font(.body.weight(.semibold))
+            if showsCloseButton {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button { settings.hapticFeedback(); dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
+                    }
+                    .tint(settings.accentColor.color)
                 }
-                .tint(settings.accentColor.color)
             }
             ToolbarItem(placement: .primaryAction) {
                 if effectiveLocation != nil {
@@ -102,6 +116,11 @@ struct PrayerTimesMapView: View {
         }
         .onAppear {
             refreshPrayers()
+            // Once: the city picker's sheet closing brings this back on screen too.
+            if let initialLocation, !appliedInitialLocation {
+                appliedInitialLocation = true
+                selectedLocation = initialLocation
+            }
             #if DEBUG
             // "-cityPrayerTimesCity Makkah:21.4225:39.8262" selects that city on appear, and
             // "-cityPrayerTimesCompare" also switches the comparison on (screenshot runs).

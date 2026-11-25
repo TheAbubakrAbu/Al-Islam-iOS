@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Ship the watch only the strings it can show (a Run Script phase of the Watch and Complication targets).
+"""Ship each extension only the strings it can show (a Run Script phase of the Watch, Complication and
+Widget targets).
 
 Resources/Localizable.xcstrings is one catalog for every target, so Xcode compiles all of its keys (the whole
-iPhone app's interface, about 14,000 of them) into each target that carries it, in every language. On the
-watch that cost about 3 MB per language twice over (Watch.app and Complication.appex): with 11 languages the
-watchOS variant of build 271 (4.6.7) came to 95 MB, and App Store Connect refuses a watch app over 75 MB after
-thinning (ITMS-90389, 2026-11-23).
+iPhone app's interface, about 14,000 of them) into each target that carries it, in every language: about
+3 MB per language per target. On the watch that came twice (Watch.app and Complication.appex): with 11
+languages the watchOS variant of build 271 (4.6.7) was 95 MB, and App Store Connect refuses a watch app over
+75 MB after thinning (ITMS-90389, 2026-11-23). The Widget carried the same 44 MB inside the iPhone app.
 
 This phase runs after Copy Bundle Resources. It compiles a copy of the catalog holding only the keys the
 target can reach, with the same compiler Xcode uses (`xcstringstool compile`), and puts its
@@ -17,14 +18,15 @@ Localizable.strings and Localizable.stringsdict in place of the full ones. A key
   3. one of those files holds an interpolated literal it matches ("surah.meaning.\\(id)"), or
   4. with --with-data-keys, it is a manual key: data text shown through `.localizedDisplay`. The Watch app
      ships the tajweed course, surah info, the Names and the hadith quotes and shows them, and the catalog
-     does not record which data a manual key came from, so the Watch keeps them all. The Complication ships
-     no data and leaves this off.
+     does not record which data a manual key came from, so the Watch keeps them, less the course fields its
+     lesson page never shows (--watch-course, below). The Complication and Widget ship no data.
 
-Rules 2 and 3 are deliberately generous: a key kept that is never shown costs a few bytes, a key dropped that
-is shown reads English. The catalog itself is never touched.
+Rules 2 and 3 scan only code the target compiles (`#if os(iOS)` branches are left out of a watch scan) and
+are deliberately generous: a key kept that is never shown costs a few bytes, a key dropped that is shown
+reads English. The catalog itself is never touched.
 
-    python3 "${PROJECT_DIR}/Scripts/trim_watch_strings.py" [--with-data-keys]   # from the build phase
-    ./Scripts/trim_watch_strings.py --objects DIR [--with-data-keys] --report  # what a build would keep
+    python3 "${PROJECT_DIR}/Scripts/trim_strings.py" [--with-data-keys [--watch-course]]   # the build phase
+    ./Scripts/trim_strings.py --objects DIR [--conditions "HAS_X ..."] [flags] --report    # what it would keep
 
 Skips itself when nothing it reads has changed since its last run (a stamp in DERIVED_FILE_DIR), since the
 compile takes about five seconds.
@@ -40,9 +42,32 @@ import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CATALOG = os.path.join(REPO, "Resources", "Localizable.xcstrings")
-# Linked into both watch targets; its enum raw values can reach `.localizedDisplay`.
+# Linked into every target this runs in; its enum raw values can reach `.localizedDisplay`.
 PACKAGE_SOURCES = os.path.join(REPO, "Resources", "Packages", "adhan-swift-main", "Sources")
 OUTPUTS = ("Localizable.strings", "Localizable.stringsdict")
+# The tajweed course reaches the Watch as manual keys. Its lesson page there (TajweedLessonWatchView,
+# iPhone/Islam/Tajweed/TajweedView.swift) shows titles, summary, definition, rule card, letter sets, body, word
+# groups, key points and the mistakes' wrong and right forms; the fields below stay on the phone, so with
+# --watch-course their text is left out of the Watch (2,000 keys, about 7 MB over 14 languages). Each maps to
+# the Swift properties that would show it: the build FAILS if watch-compiled code that touches the course
+# reads one of them, so a field the watch starts to show can never quietly read English. Short strings are
+# always kept (a word like "Light" may be shown elsewhere), only sentences go.
+COURSE = os.path.join(REPO, "Resources", "Data", "Quran", "TajweedLessons.json.xz")
+WATCH_HIDDEN_COURSE_FIELDS = {
+    "lessons.examples": ("examples",),
+    "lessons.quiz": ("quiz",),
+    "lessons.mistakes.why": ("why",),
+    "lessons.table": ("table",),
+    "lessons.drills": ("drills",),
+    "lessons.images": ("images",),
+    "lessons.ruleCard.fragments": ("fragments",),
+    "lessons.ruleCard.mnemonic": ("mnemonicGloss", "mnemonicArabic"),
+    "lessons.ruleCard.countEn": ("countEn",),
+    "chapters.subtitle": ("subtitle",),
+    "stages.blurb": ("blurb",),
+}
+COURSE_TYPES = re.compile(r"\bTajweed(Lesson|Course|Quiz)")
+MIN_DROPPED_LENGTH = 16
 # An interpolated literal becomes a pattern only when a fixed end of it is at least this long, so
 # "\(a) \(b)" does not pull in every key holding a space.
 MIN_ANCHOR = 3
@@ -50,7 +75,7 @@ MIN_ANCHOR = 3
 
 def fail(message):
     # The Xcode issue navigator shows "error:" lines as build errors.
-    print(f"error: trim_watch_strings: {message}", file=sys.stderr)
+    print(f"error: trim_strings: {message}", file=sys.stderr)
     sys.exit(1)
 
 
@@ -287,9 +312,54 @@ def package_sources():
     return sorted(glob.glob(os.path.join(PACKAGE_SOURCES, "**", "*.swift"), recursive=True))
 
 
-def keep_set(strings, extracted, sources, with_data_keys, flags=None, platform="watchOS"):
+def course_fields():
+    """(shown, left out) strings of the tajweed course pack, split by WATCH_HIDDEN_COURSE_FIELDS."""
+    import lzma
+    course = json.loads(lzma.decompress(open(COURSE, "rb").read()))
+    shown, hidden = set(), set()
+
+    def walk(value, where):
+        if isinstance(value, dict):
+            for key, inner in value.items():
+                walk(inner, f"{where}.{key}")
+        elif isinstance(value, list):
+            for inner in value:
+                walk(inner, where)
+        elif isinstance(value, str):
+            gone = any(where == f or where.startswith(f + ".") for f in WATCH_HIDDEN_COURSE_FIELDS)
+            (hidden if gone else shown).add(value)
+
+    for stage in course.get("stages", []):
+        walk(stage, "stages")
+    for chapter in course.get("chapters", []):
+        for key, value in chapter.items():
+            if key == "lessons":
+                for lesson in value:
+                    walk(lesson, "lessons")
+            else:
+                walk(value, f"chapters.{key}")
+    return shown, hidden
+
+
+def course_guard(texts):
+    """Lines of compiled code, in files that touch the course, reading a field the Watch leaves out."""
+    names = sorted({name for props in WATCH_HIDDEN_COURSE_FIELDS.values() for name in props})
+    # `lesson.quiz`, `card?.fragments`: a member read on a value, not an enum case (`case .quiz:`).
+    reads = re.compile(r"(?<=[\w)\]?!])\.(" + "|".join(names) + r")\b")
+    found = []
+    for path, text in texts:
+        if not COURSE_TYPES.search(text):
+            continue
+        for number, line in enumerate(text.split("\n"), 1):
+            hit = reads.search(line.split("//")[0])
+            if hit:
+                found.append(f"{os.path.relpath(path, REPO)}:{number}: .{hit.group(1)}")
+    return found
+
+
+def keep_set(strings, extracted, sources, with_data_keys, flags=None, platform="watchOS", watch_course=False):
     catalog_keys = set(strings)
-    literal, patterns = set(), []
+    literal, patterns, texts = set(), [], []
     for path in sources:
         try:
             text = open(path, encoding="utf-8").read()
@@ -297,6 +367,7 @@ def keep_set(strings, extracted, sources, with_data_keys, flags=None, platform="
             continue
         # The package is built with its own conditions: only its os() branches are decided.
         text = active_code(text, None if path.startswith(PACKAGE_SOURCES) else flags, platform)
+        texts.append((path, text))
         for parts in swift_literals(text):
             parts = multiline_body(parts)
             if len(parts) == 1:
@@ -325,10 +396,25 @@ def keep_set(strings, extracted, sources, with_data_keys, flags=None, platform="
             if key not in matched and regex.fullmatch(key):
                 matched.add(key)
     manual = {k for k, v in strings.items() if v.get("extractionState") == "manual"} if with_data_keys else set()
+    left_out = set()
+    if with_data_keys and watch_course:
+        violations = course_guard(texts)
+        if violations:
+            fail("the Watch now reads tajweed course fields this script leaves out of it:\n  "
+                 + "\n  ".join(violations)
+                 + "\nTake those fields out of WATCH_HIDDEN_COURSE_FIELDS in Scripts/trim_strings.py so their "
+                   "translations ship to the watch.")
+        shown, hidden = course_fields()
+        left_out = {k for k in hidden - shown if len(k) >= MIN_DROPPED_LENGTH} & manual
+        left_out -= extracted | literal | matched
+        manual -= left_out
     keep = (extracted & catalog_keys) | literal | matched | manual
-    return keep, {"extracted": len(extracted & catalog_keys), "literal": len(literal - extracted),
-                  "pattern": len(matched - extracted - literal),
-                  "data": len(manual - extracted - literal - matched)}
+    counts = {"extracted": len(extracted & catalog_keys), "literal": len(literal - extracted),
+              "pattern": len(matched - extracted - literal),
+              "data": len(manual - extracted - literal - matched)}
+    if watch_course:
+        counts["course text the watch never shows, left out"] = len(left_out)
+    return keep, counts
 
 
 # The phase -----------------------------------------------------------------------------------------------------
@@ -348,12 +434,12 @@ def product_outputs(product):
     return [p for name in OUTPUTS for p in glob.glob(os.path.join(product, "*.lproj", name))]
 
 
-def signature(with_data_keys, stringsdata_files, sources, product):
+def signature(flags, stringsdata_files, sources, product):
     """Everything a run depends on: the catalog, this script, the target's .stringsdata and sources, and
     the product's Localizable files as this script last left them (Xcode rewrites them when it recompiles
     the catalog)."""
-    blob = json.dumps([with_data_keys, os.environ.get("SWIFT_ACTIVE_COMPILATION_CONDITIONS", ""),
-                       file_stats([CATALOG, os.path.abspath(__file__)]),
+    blob = json.dumps([flags, os.environ.get("SWIFT_ACTIVE_COMPILATION_CONDITIONS", ""),
+                       file_stats([CATALOG, COURSE, os.path.abspath(__file__)]),
                        file_stats(stringsdata_files), file_stats(sources),
                        file_stats(product_outputs(product))])
     return hashlib.sha1(blob.encode()).hexdigest()
@@ -398,6 +484,7 @@ def install(compiled, product):
 
 def main(argv):
     with_data_keys = "--with-data-keys" in argv
+    watch_course = "--watch-course" in argv
     report = "--report" in argv
 
     def option(name, env):
@@ -422,7 +509,7 @@ def main(argv):
 
     def plan():
         catalog = json.load(open(CATALOG, encoding="utf-8"))
-        keep, counts = keep_set(catalog["strings"], extracted, sources, with_data_keys, flags, platform)
+        keep, counts = keep_set(catalog["strings"], extracted, sources, with_data_keys, flags, platform, watch_course)
         summary = (f"{target} keeps {len(keep):,} of {len(catalog['strings']):,} keys ("
                    + ", ".join(f"{v:,} {k}" for k, v in counts.items()) + ")")
         return catalog, keep, summary
@@ -442,10 +529,10 @@ def main(argv):
     if not product_outputs(product):
         fail(f"no Localizable.strings in {product}: this phase must come after Copy Bundle Resources")
 
-    sign = signature(with_data_keys, files, sources, product)
+    sign = signature([with_data_keys, watch_course], files, sources, product)
     try:
         if open(stamp).read() == sign:
-            print(f"trim_watch_strings: {target} is up to date")
+            print(f"trim_strings: {target} is up to date")
             return
     except OSError:
         pass
@@ -453,9 +540,9 @@ def main(argv):
     catalog, keep, summary = plan()
     compiled = compile_trimmed(catalog, keep, work, os.environ.get("STRINGS_FILE_OUTPUT_ENCODING", "binary") == "binary")
     before, after = install(compiled, product)
-    print(f"trim_watch_strings: {summary}; Localizable files {before / 1e6:.1f} MB -> {after / 1e6:.1f} MB")
+    print(f"trim_strings: {summary}; Localizable files {before / 1e6:.1f} MB -> {after / 1e6:.1f} MB")
     with open(stamp, "w") as f:
-        f.write(signature(with_data_keys, files, sources, product))
+        f.write(signature([with_data_keys, watch_course], files, sources, product))
 
 
 if __name__ == "__main__":

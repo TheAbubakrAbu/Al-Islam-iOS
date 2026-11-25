@@ -4,6 +4,8 @@ struct HaramView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Masjid al-Haram in Makkah is the holiest mosque in Islam. It surrounds the Kaaba, the House of Allah and the Qiblah toward which all Muslims pray.")
                 }
@@ -18,32 +20,46 @@ struct HaramView: View {
                     ScriptureQuote(hadith: "ibnmajah:1406", cite: "Sunan Ibn Majah 1406; graded sahih by al-Albani", arabic: 32...54, english: 0...30)
                 }
 
-                Section(header: ArticleHeader("SIGNIFICANCE OF THE KA'BAH")) {
-                    ArticleParagraph(articleMarkdown: "The **Ka'bah** (ٱلكَعبَة), meaning “The Cube,” is the symbolic House of Allah. It serves as the **Qiblah** (قِبلَةٌ) (direction of prayer) for Muslims worldwide. Every prayer offered by a Muslim is directed toward the Ka'bah.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("SIGNIFICANCE OF THE KA'BAH")) {
+                        ArticleParagraph(articleMarkdown: "The **Ka'bah** (ٱلكَعبَة), meaning “The Cube,” is the symbolic House of Allah. It serves as the **Qiblah** (قِبلَةٌ) (direction of prayer) for Muslims worldwide. Every prayer offered by a Muslim is directed toward the Ka'bah.")
 
-                    ArticleParagraph(articleMarkdown: "The Ka'bah was built by **Prophet Ibrahim** (Abraham, peace be upon him) and his son **Prophet Isma'il** (Ishmael, peace be upon him) as a place of monotheistic worship. Allah says in the Quran:")
-                    ScriptureQuote(quran: "2:127")
-
-                    ArticleParagraph(articleMarkdown: "The **Black Stone** (ٱلحَجَرُ ٱلأَسوَد, Hajar Al-Aswad), set in one corner of the Ka'bah, came down from Paradise (Jami' at-Tirmidhi 877; graded sahih by al-Albani). Touching or kissing it during **Tawaf** is a Sunnah, but not obligatory, and it is done only to follow the Prophet (peace and blessings be upon him), not to seek benefit from the stone itself. Umar (may Allah be pleased with him) kissed it and said: “No doubt, I know that you are a stone and can neither benefit anyone nor harm anyone. Had I not seen Allah's Messenger (ﷺ) kissing you I would not have kissed you” (Sahih al-Bukhari 1597).")
+                        ArticleParagraph(articleMarkdown: "The Ka'bah was built by **Prophet Ibrahim** (Abraham, peace be upon him) and his son **Prophet Isma'il** (Ishmael, peace be upon him) as a place of monotheistic worship. Allah says in the Quran:")
+                        ScriptureQuote(quran: "2:127")
+                    }
                 }
 
-                Section(header: ArticleHeader("THE WELL OF ZAMZAM")) {
-                    ArticleParagraph(articleMarkdown: "The **Well of Zamzam** (بِئرُ زَمزَم) is located within Masjid Al-Haram. This miraculous water source was provided by Allah for **Hajar** (may Allah be pleased with her) and her son **Isma'il** (peace be upon him) when they were left in the barren desert. The well continues to flow abundantly to this day.")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("SIGNIFICANCE OF THE KA'BAH")) {
+                        ArticleParagraph(articleMarkdown: "The **Ka'bah** (ٱلكَعبَة), meaning “The Cube,” is the symbolic House of Allah. It serves as the **Qiblah** (قِبلَةٌ) (direction of prayer) for Muslims worldwide. Every prayer offered by a Muslim is directed toward the Ka'bah.")
 
-                    ArticleParagraph(verbatim: "Zamzam water is blessed: the Prophet (peace and blessings be upon him) said of it, “It is blessed; it is food that satisfies” (Sahih Muslim 2473).")
-                }
+                        ArticleParagraph(articleMarkdown: "The Ka'bah was built by **Prophet Ibrahim** (Abraham, peace be upon him) and his son **Prophet Isma'il** (Ishmael, peace be upon him) as a place of monotheistic worship. Allah says in the Quran:")
+                        ScriptureQuote(quran: "2:127")
 
-                Section(header: ArticleHeader("SPIRITUAL REWARDS AND IMPORTANCE")) {
-                    ArticleStep("1. **Multiplied Rewards**: Praying in Masjid Al-Haram is rewarded 100,000 times more than praying elsewhere.")
-                    ArticleStep("2. **Forgiveness of Sins**: Performing Hajj or Umrah with sincerity cleanses one’s sins. The Prophet Muhammad (peace and blessings be upon him) said:")
-                    ScriptureQuote(hadith: "bukhari:1521", cite: "Sahih al-Bukhari 1521", arabic: 31...41, english: 4...41)
-                    ArticleStep("3. **Unity of the Ummah**: Millions of Muslims from diverse cultures and backgrounds gather in Masjid Al-Haram, symbolizing the unity and equality of the Muslim Ummah under the worship of Allah.")
-                }
+                        ArticleParagraph(articleMarkdown: "The **Black Stone** (ٱلحَجَرُ ٱلأَسوَد, Hajar Al-Aswad), set in one corner of the Ka'bah, came down from Paradise (Jami' at-Tirmidhi 877; graded sahih by al-Albani). Touching or kissing it during **Tawaf** is a Sunnah, but not obligatory, and it is done only to follow the Prophet (peace and blessings be upon him), not to seek benefit from the stone itself. Umar (may Allah be pleased with him) kissed it and said: “No doubt, I know that you are a stone and can neither benefit anyone nor harm anyone. Had I not seen Allah's Messenger (ﷺ) kissing you I would not have kissed you” (Sahih al-Bukhari 1597).")
+                        ScriptureQuote(hadith: "tirmidhi:877", cite: "Jami' at-Tirmidhi 877; graded sahih by al-Albani", arabic: 25...38, english: 5...30)
+                        ScriptureQuote(hadith: "bukhari:1597", cite: "Sahih al-Bukhari 1597, Sahih Muslim 1270", arabic: 21...46, english: 0...42)
+                    }
 
-                Section(header: ArticleHeader("QURANIC VERSES ABOUT MAKKAH")) {
-                    ArticleParagraph(verbatim: "Allah mentions the sanctity of Makkah and Masjid Al-Haram in several verses:")
-                    ScriptureQuote(quran: "3:96")
-                    ScriptureQuote(quran: "2:125", words: 0...5)
+                    Section(header: ArticleHeader("THE WELL OF ZAMZAM")) {
+                        ArticleParagraph(articleMarkdown: "The **Well of Zamzam** (بِئرُ زَمزَم) is located within Masjid Al-Haram. This miraculous water source was provided by Allah for **Hajar** (may Allah be pleased with her) and her son **Isma'il** (peace be upon him) when they were left in the barren desert. The well continues to flow abundantly to this day.")
+
+                        ArticleParagraph(verbatim: "Zamzam water is blessed: the Prophet (peace and blessings be upon him) said of it, “It is blessed; it is food that satisfies” (Sahih Muslim 2473).")
+                        ScriptureQuote(hadith: "muslim:2473a", cite: "Sahih Muslim 2473", arabic: 552...556, english: 934...945)
+                    }
+
+                    Section(header: ArticleHeader("SPIRITUAL REWARDS AND IMPORTANCE")) {
+                        ArticleStep("1. **Multiplied Rewards**: Praying in Masjid Al-Haram is rewarded 100,000 times more than praying elsewhere.")
+                        ArticleStep("2. **Forgiveness of Sins**: Performing Hajj or Umrah with sincerity cleanses one’s sins. The Prophet Muhammad (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:1521", cite: "Sahih al-Bukhari 1521", arabic: 31...41, english: 4...41)
+                        ArticleStep("3. **Unity of the Ummah**: Millions of Muslims from diverse cultures and backgrounds gather in Masjid Al-Haram, symbolizing the unity and equality of the Muslim Ummah under the worship of Allah.")
+                    }
+
+                    Section(header: ArticleHeader("QURANIC VERSES ABOUT MAKKAH")) {
+                        ArticleParagraph(verbatim: "Allah mentions the sanctity of Makkah and Masjid Al-Haram in several verses:")
+                        ScriptureQuote(quran: "3:96")
+                        ScriptureQuote(quran: "2:125", words: 0...5)
+                    }
                 }
 
                 Section(header: ArticleHeader("MASJID AL-HARAM")) {
@@ -87,12 +103,15 @@ struct NabawiView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Masjid an-Nabawi in Madinah is the Prophet's own mosque and the second holiest in Islam, home to the Rawdah and his resting place.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     ArticleParagraph(articleMarkdown: "Masjid An-Nabawi (ٱلمَسجِد ٱلنَّبَوِي), or “The Prophet’s Mosque,” is located in Madinah, Saudi Arabia. Originally known as Yathrib, the city became known after the migration (Hijrah) of Prophet Muhammad (peace and blessings be upon him) as **Al-Madinah (ٱلمَدِينَة)**, “The City,” and as **Tabah (طَابَة)**, the name the Prophet said Allah gave it (Sahih Muslim 1385); **Al-Madinah Al-Munawwarah (ٱلمَدِينَة ٱلمُنَوَّرَة)**, “The Illuminated City,” is a later honorific.")
+                    ScriptureQuote(hadith: "muslim:1385", cite: "Sahih Muslim 1385", arabic: 33...38, english: 0...4)
 
                     ArticleParagraph(verbatim: "This mosque, built by the Prophet (peace and blessings be upon him) in 622 CE, is the second holiest site in Islam after Masjid Al-Haram. The Prophet (peace and blessings be upon him) made it a center of worship, governance, and community life.")
 
@@ -100,39 +119,54 @@ struct NabawiView: View {
                     ScriptureQuote(hadith: "bukhari:1190", cite: "Sahih Bukhari 1190", arabic: 41...53, english: 4...20)
                 }
 
-                Section(header: ArticleHeader("SIGNIFICANCE")) {
-                    ArticleParagraph(articleMarkdown: "Masjid An-Nabawi is home to the **Rawdah (ٱلرَّوضَة)**, an area between the Prophet's pulpit and his house, which he described as a garden from the gardens of Paradise. The Prophet (peace and blessings be upon him) said:")
-                    ScriptureQuote(hadith: "bukhari:1196", cite: "Sahih al-Bukhari 1196", arabic: 34...44, english: 4...18)
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("A WARNING AGAINST SHIRK")) {
+                        ArticleParagraph(articleMarkdown: "This must be clear, because it is where people fall. You do **not** pray to the Prophet (peace and blessings be upon him). You do **not** pray facing his grave. You do not ask him for anything and you do not seek help or intercession from him: that is **shirk (شِرك)**, associating partners with Allah, the one sin Allah does not forgive if a person dies upon it. Praying toward the grave, circling it, or touching it seeking blessing is forbidden and a doorway to shirk: the Prophet (peace and blessings be upon him) said, “Do not sit on graves and do not pray toward them” (Sahih Muslim 972).")
+                        ScriptureQuote(hadith: "muslim:972a", cite: "Sahih Muslim 972", arabic: 33...39, english: 0...12)
 
-                    ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) is buried in the room of Aisha (may Allah be pleased with her), his own house beside the mosque, with his two companions Abu Bakr As-Siddiq and Umar ibn Al-Khattab (may Allah be pleased with them). That room was brought within the mosque's walls only in the expansion under the Umayyad caliph al-Walid ibn Abd al-Malik, after most of the Companions had died; the mosque was not built over a grave. It is from the Sunnah for a visitor to send salaam upon him and upon his two companions.")
+                        ArticleParagraph(verbatim: "Duaa is worship, and worship belongs to Allah alone:")
+                        ScriptureQuote(quran: "72:18")
+
+                        ArticleParagraph(verbatim: "So love him, follow him, and send salaah and salaam upon him abundantly. But direct every act of worship to Allah alone. That is what he taught, and honouring him means obeying him.")
+                    }
                 }
 
-                Section(header: ArticleHeader("A WARNING AGAINST SHIRK")) {
-                    ArticleParagraph(articleMarkdown: "This must be clear, because it is where people fall. You do **not** pray to the Prophet (peace and blessings be upon him). You do **not** pray facing his grave. You do not ask him for anything and you do not seek help or intercession from him: that is **shirk (شِرك)**, associating partners with Allah, the one sin Allah does not forgive if a person dies upon it. Praying toward the grave, circling it, or touching it seeking blessing is forbidden and a doorway to shirk: the Prophet (peace and blessings be upon him) said, “Do not sit on graves and do not pray toward them” (Sahih Muslim 972).")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("SIGNIFICANCE")) {
+                        ArticleParagraph(articleMarkdown: "Masjid An-Nabawi is home to the **Rawdah (ٱلرَّوضَة)**, an area between the Prophet's pulpit and his house, which he described as a garden from the gardens of Paradise. The Prophet (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:1196", cite: "Sahih al-Bukhari 1196", arabic: 34...44, english: 4...18)
 
-                    ArticleParagraph(verbatim: "Duaa is worship, and worship belongs to Allah alone:")
-                    ScriptureQuote(quran: "72:18")
+                        ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) is buried in the room of Aisha (may Allah be pleased with her), his own house beside the mosque, with his two companions Abu Bakr As-Siddiq and Umar ibn Al-Khattab (may Allah be pleased with them). That room was brought within the mosque's walls only in the expansion under the Umayyad caliph al-Walid ibn Abd al-Malik, after most of the Companions had died; the mosque was not built over a grave. It is from the Sunnah for a visitor to send salaam upon him and upon his two companions.")
+                    }
 
-                    ArticleParagraph(verbatim: "When you pray in Masjid An-Nabawi, you face the Qiblah, towards the Kaaba in Makkah, exactly as you would anywhere else on earth. The grave happens to lie in that direction from parts of the mosque; that is a fact of geography, not a thing to be prayed towards.")
+                    Section(header: ArticleHeader("A WARNING AGAINST SHIRK")) {
+                        ArticleParagraph(articleMarkdown: "This must be clear, because it is where people fall. You do **not** pray to the Prophet (peace and blessings be upon him). You do **not** pray facing his grave. You do not ask him for anything and you do not seek help or intercession from him: that is **shirk (شِرك)**, associating partners with Allah, the one sin Allah does not forgive if a person dies upon it. Praying toward the grave, circling it, or touching it seeking blessing is forbidden and a doorway to shirk: the Prophet (peace and blessings be upon him) said, “Do not sit on graves and do not pray toward them” (Sahih Muslim 972).")
+                        ScriptureQuote(hadith: "muslim:972a", cite: "Sahih Muslim 972", arabic: 33...39, english: 0...12)
 
-                    ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) himself warned against precisely this, in his final illness:")
-                    ScriptureQuote(hadith: "bukhari:435", cite: "Sahih al-Bukhari 435, Sahih Muslim 531", arabic: 48...56, english: 37...67)
+                        ArticleParagraph(verbatim: "Duaa is worship, and worship belongs to Allah alone:")
+                        ScriptureQuote(quran: "72:18")
 
-                    ArticleParagraph(verbatim: "He also said:")
-                    ScriptureQuote(hadith: "abudawud:2042", cite: "Sunan Abi Dawud 2042; graded sahih by al-Albani", arabic: 30...44, english: 4...33)
+                        ArticleParagraph(verbatim: "When you pray in Masjid An-Nabawi, you face the Qiblah, towards the Kaaba in Makkah, exactly as you would anywhere else on earth. The grave happens to lie in that direction from parts of the mosque; that is a fact of geography, not a thing to be prayed towards.")
 
-                    ArticleParagraph(verbatim: "So love him, follow him, and send salaah and salaam upon him abundantly. But direct every act of worship to Allah alone. That is what he taught, and honouring him means obeying him.")
-                }
+                        ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) himself warned against precisely this, in his final illness:")
+                        ScriptureQuote(hadith: "bukhari:435", cite: "Sahih al-Bukhari 435, Sahih Muslim 531", arabic: 48...56, english: 37...67)
 
-                Section(header: ArticleHeader("SPIRITUAL BENEFITS")) {
-                    ArticleStep("1. **Multiplied Rewards**: Prayers in Masjid An-Nabawi are rewarded 1,000 times more than prayers in other mosques (except Masjid Al-Haram).")
-                    ArticleStep("2. **Connection to the Prophet**: Standing in a place where the Prophet Muhammad (peace and blessings be upon him) worshipped and led his companions strengthens one’s faith and love for him.")
-                    ArticleStep("3. **Rawdah Visit**: Visiting the Rawdah and praying there is considered highly virtuous.")
-                }
+                        ArticleParagraph(verbatim: "He also said:")
+                        ScriptureQuote(hadith: "abudawud:2042", cite: "Sunan Abi Dawud 2042; graded sahih by al-Albani", arabic: 30...44, english: 4...33)
 
-                Section(header: ArticleHeader("QURANIC VERSES ABOUT THE MOSQUE")) {
-                    ArticleParagraph(verbatim: "Allah emphasizes the sanctity of mosques, particularly those established on righteousness. He says in the Quran:")
-                    ScriptureQuote(quran: "9:108", words: 4...14)
+                        ArticleParagraph(verbatim: "So love him, follow him, and send salaah and salaam upon him abundantly. But direct every act of worship to Allah alone. That is what he taught, and honouring him means obeying him.")
+                    }
+
+                    Section(header: ArticleHeader("SPIRITUAL BENEFITS")) {
+                        ArticleStep("1. **Multiplied Rewards**: Prayers in Masjid An-Nabawi are rewarded 1,000 times more than prayers in other mosques (except Masjid Al-Haram).")
+                        ArticleStep("2. **Connection to the Prophet**: Standing in a place where the Prophet Muhammad (peace and blessings be upon him) worshipped and led his companions strengthens one’s faith and love for him.")
+                        ArticleStep("3. **Rawdah Visit**: Visiting the Rawdah and praying there is considered highly virtuous.")
+                    }
+
+                    Section(header: ArticleHeader("QURANIC VERSES ABOUT THE MOSQUE")) {
+                        ArticleParagraph(verbatim: "Allah emphasizes the sanctity of mosques, particularly those established on righteousness. He says in the Quran:")
+                        ScriptureQuote(quran: "9:108", words: 4...14)
+                    }
                 }
 
                 Section(header: ArticleHeader("MASJID AN-NABAWI")) {
@@ -176,17 +210,32 @@ struct AqsaView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Masjid al-Aqsa in Jerusalem is the third holiest mosque, the first Qiblah, and the destination of the Prophet's Night Journey (Isra and Mi'raj).")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "Masjid Al-Aqsa (ٱلمَسجِد ٱلأَقصَىٰ), meaning “The Farthest Mosque,” is located in Jerusalem, Palestine, within a compound often called **Al-Haram Ash-Sharif (ٱلحَرَم ٱلشَّرِيف)**, or “The Noble Sanctuary.” That is a later, popular name: the scholars recognise a haram with sacred bounds only at Makkah and Madinah, with a difference over the valley of Wajj at at-Ta'if (Ibn Taymiyyah, Majmu' al-Fatawa 27/14–15), and the whole compound is itself Masjid al-Aqsa. It is the third holiest mosque in Islam after Masjid Al-Haram in Makkah and Masjid An-Nabawi in Madinah.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(verbatim: "Masjid Al-Aqsa (ٱلمَسجِد ٱلأَقصَىٰ), meaning “The Farthest Mosque,” is located in Jerusalem, Palestine. It is the third holiest mosque in Islam after Masjid Al-Haram in Makkah and Masjid An-Nabawi in Madinah.")
 
-                    ArticleParagraph(verbatim: "Masjid Al-Aqsa holds immense historical and spiritual significance in Islam. Allah (Glorified and Exalted be He) mentions it in the Quran:")
-                    ScriptureQuote(quran: "17:1")
+                        ArticleParagraph(verbatim: "Masjid Al-Aqsa holds immense historical and spiritual significance in Islam. Allah (Glorified and Exalted be He) mentions it in the Quran:")
+                        ScriptureQuote(quran: "17:1")
 
-                    ArticleParagraph(articleMarkdown: "It was the first Qiblah (direction of prayer) for Muslims before it was changed to the Ka'bah in Makkah, and it was the destination of the Prophet Muhammad’s (peace and blessings be upon him) Night Journey, **Isra (الإِسرَاء)**, before his Ascension, **Mi'raj (المِعرَاج)**.")
+                        ArticleParagraph(articleMarkdown: "It was the first Qiblah (direction of prayer) for Muslims before it was changed to the Ka'bah in Makkah, and it was the destination of the Prophet Muhammad’s (peace and blessings be upon him) Night Journey, **Isra (الإِسرَاء)**, before his Ascension, **Mi'raj (المِعرَاج)**.")
+                    }
+                }
+
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "Masjid Al-Aqsa (ٱلمَسجِد ٱلأَقصَىٰ), meaning “The Farthest Mosque,” is located in Jerusalem, Palestine, within a compound often called **Al-Haram Ash-Sharif (ٱلحَرَم ٱلشَّرِيف)**, or “The Noble Sanctuary.” That is a later, popular name: the scholars recognise a haram with sacred bounds only at Makkah and Madinah, with a difference over the valley of Wajj at at-Ta'if (Ibn Taymiyyah, Majmu' al-Fatawa 27/14–15), and the whole compound is itself Masjid al-Aqsa. It is the third holiest mosque in Islam after Masjid Al-Haram in Makkah and Masjid An-Nabawi in Madinah.")
+
+                        ArticleParagraph(verbatim: "Masjid Al-Aqsa holds immense historical and spiritual significance in Islam. Allah (Glorified and Exalted be He) mentions it in the Quran:")
+                        ScriptureQuote(quran: "17:1")
+
+                        ArticleParagraph(articleMarkdown: "It was the first Qiblah (direction of prayer) for Muslims before it was changed to the Ka'bah in Makkah, and it was the destination of the Prophet Muhammad’s (peace and blessings be upon him) Night Journey, **Isra (الإِسرَاء)**, before his Ascension, **Mi'raj (المِعرَاج)**.")
+                    }
                 }
 
                 Section(header: ArticleHeader("SPIRITUAL SIGNIFICANCE")) {
@@ -196,25 +245,34 @@ struct AqsaView: View {
                     ScriptureQuote(quran: "21:71")
                 }
 
-                Section(header: ArticleHeader("HISTORICAL AND RELIGIOUS IMPORTANCE")) {
-                    ArticleParagraph(verbatim: "Masjid Al-Aqsa is a place of worship for many prophets, including Ibrahim (Abraham), Dawud (David), and Sulaiman (Solomon) (peace be upon them). Prophet Muhammad (peace and blessings be upon him) led the prophets in prayer there during the Night Journey. He said:")
-                    ScriptureQuote(hadith: "muslim:172", cite: "Sahih Muslim 172", arabic: 77...131, english: 67...156)
-
-                    ArticleParagraph(verbatim: "The Prophet Muhammad (peace and blessings be upon him) said:")
-                    ScriptureQuote(hadith: "bukhari:1189", cite: "Sahih al-Bukhari 1189", arabic: 25...41, english: 4...30)
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("HISTORICAL AND RELIGIOUS IMPORTANCE")) {
+                        ArticleParagraph(verbatim: "The Prophet Muhammad (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:1189", cite: "Sahih al-Bukhari 1189", arabic: 25...41, english: 4...30)
+                    }
                 }
 
-                Section(header: ArticleHeader("REWARDS OF PRAYING IN MASJID AL-AQSA")) {
-                    ArticleParagraph(verbatim: "Prayer in the three sacred mosques carries immense reward. What is established is the authentic narration in which the Prophet Muhammad (peace and blessings be upon him) said:")
-                    ScriptureQuote(hadith: "bukhari:1190", cite: "Sahih al-Bukhari 1190", arabic: 41...53, english: 4...20)
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("HISTORICAL AND RELIGIOUS IMPORTANCE")) {
+                        ArticleParagraph(verbatim: "Masjid Al-Aqsa is a place of worship for many prophets, including Ibrahim (Abraham), Dawud (David), and Sulaiman (Solomon) (peace be upon them). Prophet Muhammad (peace and blessings be upon him) led the prophets in prayer there during the Night Journey. He said:")
+                        ScriptureQuote(hadith: "muslim:172", cite: "Sahih Muslim 172", arabic: 77...131, english: 67...156)
 
-                    ArticleParagraph(verbatim: "A report giving a specific figure for Masjid Al-Aqsa (fifty thousand prayers) is narrated in Sunan Ibn Majah 1413, but its chain is weak (da'if), and its figure for Masjid An-Nabawi contradicts the authentic hadith above, so it is not relied upon.")
-                }
+                        ArticleParagraph(verbatim: "The Prophet Muhammad (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:1189", cite: "Sahih al-Bukhari 1189", arabic: 25...41, english: 4...30)
+                    }
 
-                Section(header: ArticleHeader("STRUCTURE AND FEATURES")) {
-                    ArticleParagraph(articleMarkdown: "Masjid Al-Aqsa is part of a larger compound that includes the **Dome of the Rock (قُبَّة ٱلصَّخرَة)**, the oldest Islamic architectural monument. The entire compound is considered sacred by Muslims, and the name Masjid Al-Aqsa often refers to the entire Noble Sanctuary.")
+                    Section(header: ArticleHeader("REWARDS OF PRAYING IN MASJID AL-AQSA")) {
+                        ArticleParagraph(verbatim: "Prayer in the three sacred mosques carries immense reward. What is established is the authentic narration in which the Prophet Muhammad (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:1190", cite: "Sahih al-Bukhari 1190", arabic: 41...53, english: 4...20)
 
-                    ArticleParagraph(verbatim: "The mosque’s architecture and location reflect centuries of Islamic devotion and heritage.")
+                        ArticleParagraph(verbatim: "A report giving a specific figure for Masjid Al-Aqsa (fifty thousand prayers) is narrated in Sunan Ibn Majah 1413, but its chain is weak (da'if), and its figure for Masjid An-Nabawi contradicts the authentic hadith above, so it is not relied upon.")
+                    }
+
+                    Section(header: ArticleHeader("STRUCTURE AND FEATURES")) {
+                        ArticleParagraph(articleMarkdown: "Masjid Al-Aqsa is part of a larger compound that includes the **Dome of the Rock (قُبَّة ٱلصَّخرَة)**, the oldest Islamic architectural monument. The entire compound is considered sacred by Muslims, and the name Masjid Al-Aqsa often refers to the entire Noble Sanctuary.")
+
+                        ArticleParagraph(verbatim: "The mosque’s architecture and location reflect centuries of Islamic devotion and heritage.")
+                    }
                 }
 
                 Section(header: ArticleHeader("MASJID AL-AQSA")) {
@@ -262,6 +320,8 @@ struct WudhuView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Wudhu is the minor ablution. It is a condition for the validity of the prayer, and it wipes away sins as it is performed.")
                 }
@@ -272,30 +332,49 @@ struct WudhuView: View {
                     ScriptureQuote(hadith: "bukhari:135", cite: "Sahih al-Bukhari 135, Sahih Muslim 225", arabic: 30...36, english: 4...24)
                 }
 
-                Section(header: ArticleHeader("THE COMMAND IN THE QURAN")) {
-                    ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) says:")
-                    ScriptureQuote(quran: "5:6", words: 0...16)
-                    ArticleParagraph(verbatim: "This one verse names the four obligatory parts: the face, the arms to the elbows, wiping the head, and the feet to the ankles. The mouth and nose belong to the face, so rinsing them is part of that obligation in the Hanbali school and in the fatwas of Ibn Baz and Ibn Uthaymeen. The intention is a condition, and the order and continuity of the washing are required; everything else in the description below is Sunnah, following the way the Prophet (peace and blessings be upon him) actually did it.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("HOW TO MAKE WUDHU")) {
+                        ArticleStep("1. Make the **niyyah (نِيَّة)**, the intention, in the heart. It is not said aloud.")
+                        ArticleStep("2. Say **“Bismillah” (بِسمِ اللهِ)**.")
+                        ArticleStep("3. Wash both **hands** up to the wrists, three times.")
+                        ArticleStep("4. **Rinse the mouth** and **sniff water into the nose** and blow it out, three times. Use the right hand to take the water and the left to blow the nose.")
+                        ArticleStep("5. Wash the **face** three times, from the hairline to under the chin and from ear to ear. If you have a thick beard, run wet fingers through it.")
+                        ArticleStep("6. Wash the **right arm** to and including the elbow, three times. Then the **left arm**, three times.")
+                        ArticleStep("7. **Wipe the head once**, not three times: pass wet hands from the front of the head to the back and return them to the front. Then, with the same water, **wipe the ears**, index fingers inside and thumbs behind.")
+                        ArticleStep("8. Wash the **right foot** to and including the ankle, three times, running the fingers between the toes. Then the **left foot**, three times.")
+                        ArticleStep("9. Then say: **“Ash-hadu an la ilaha illa Allah, wahdahu la sharika lah, wa ash-hadu anna Muhammadan abduhu wa rasuluh.”**")
+
+                        ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) said about that closing testimony:")
+                        ScriptureQuote(hadith: "muslim:234a", cite: "Sahih Muslim 234", arabic: 111...144, english: 116...171)
+                    }
                 }
 
-                Section(header: ArticleHeader("HOW TO MAKE WUDHU")) {
-                    ArticleStep("1. Make the **niyyah (نِيَّة)**, the intention, in the heart. It is not said aloud.")
-                    ArticleStep("2. Say **“Bismillah” (بِسمِ اللهِ)**.")
-                    ArticleStep("3. Wash both **hands** up to the wrists, three times.")
-                    ArticleStep("4. **Rinse the mouth** and **sniff water into the nose** and blow it out, three times. Use the right hand to take the water and the left to blow the nose.")
-                    ArticleStep("5. Wash the **face** three times, from the hairline to under the chin and from ear to ear. If you have a thick beard, run wet fingers through it.")
-                    ArticleStep("6. Wash the **right arm** to and including the elbow, three times. Then the **left arm**, three times.")
-                    ArticleStep("7. **Wipe the head once**, not three times: pass wet hands from the front of the head to the back and return them to the front. Then, with the same water, **wipe the ears**, index fingers inside and thumbs behind.")
-                    ArticleStep("8. Wash the **right foot** to and including the ankle, three times, running the fingers between the toes. Then the **left foot**, three times.")
-                    ArticleStep("9. Then say: **“Ash-hadu an la ilaha illa Allah, wahdahu la sharika lah, wa ash-hadu anna Muhammadan abduhu wa rasuluh.”**")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("THE COMMAND IN THE QURAN")) {
+                        ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) says:")
+                        ScriptureQuote(quran: "5:6", words: 0...16)
+                        ArticleParagraph(verbatim: "This one verse names the four obligatory parts: the face, the arms to the elbows, wiping the head, and the feet to the ankles. The mouth and nose belong to the face, so rinsing them is part of that obligation in the Hanbali school and in the fatwas of Ibn Baz and Ibn Uthaymeen. The intention is a condition, and the order and continuity of the washing are required; everything else in the description below is Sunnah, following the way the Prophet (peace and blessings be upon him) actually did it.")
+                    }
 
-                    ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) said about that closing testimony:")
-                    ScriptureQuote(hadith: "muslim:234a", cite: "Sahih Muslim 234", arabic: 111...144, english: 116...171)
+                    Section(header: ArticleHeader("HOW TO MAKE WUDHU")) {
+                        ArticleStep("1. Make the **niyyah (نِيَّة)**, the intention, in the heart. It is not said aloud.")
+                        ArticleStep("2. Say **“Bismillah” (بِسمِ اللهِ)**.")
+                        ArticleStep("3. Wash both **hands** up to the wrists, three times.")
+                        ArticleStep("4. **Rinse the mouth** and **sniff water into the nose** and blow it out, three times. Use the right hand to take the water and the left to blow the nose.")
+                        ArticleStep("5. Wash the **face** three times, from the hairline to under the chin and from ear to ear. If you have a thick beard, run wet fingers through it.")
+                        ArticleStep("6. Wash the **right arm** to and including the elbow, three times. Then the **left arm**, three times.")
+                        ArticleStep("7. **Wipe the head once**, not three times: pass wet hands from the front of the head to the back and return them to the front. Then, with the same water, **wipe the ears**, index fingers inside and thumbs behind.")
+                        ArticleStep("8. Wash the **right foot** to and including the ankle, three times, running the fingers between the toes. Then the **left foot**, three times.")
+                        ArticleStep("9. Then say: **“Ash-hadu an la ilaha illa Allah, wahdahu la sharika lah, wa ash-hadu anna Muhammadan abduhu wa rasuluh.”**")
 
-                    ArticleParagraph(verbatim: "Do not be wasteful with water. Anas (may Allah be pleased with him) described how little the Prophet (peace and blessings be upon him) used:")
-                    ScriptureQuote(hadith: "bukhari:201", cite: "Sahih al-Bukhari 201", arabic: 14...31, english: 0...30)
-                    ArticleParagraph(verbatim: "A mudd is roughly what two cupped hands hold, about two thirds of a litre. The principle itself is explicit in the Quran:")
-                    ScriptureQuote(quran: "7:31", words: 8...15)
+                        ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) said about that closing testimony:")
+                        ScriptureQuote(hadith: "muslim:234a", cite: "Sahih Muslim 234", arabic: 111...144, english: 116...171)
+
+                        ArticleParagraph(verbatim: "Do not be wasteful with water. Anas (may Allah be pleased with him) described how little the Prophet (peace and blessings be upon him) used:")
+                        ScriptureQuote(hadith: "bukhari:201", cite: "Sahih al-Bukhari 201", arabic: 14...31, english: 0...30)
+                        ArticleParagraph(verbatim: "A mudd is roughly what two cupped hands hold, about two thirds of a litre. The principle itself is explicit in the Quran:")
+                        ScriptureQuote(quran: "7:31", words: 8...15)
+                    }
                 }
 
                 Section(header: ArticleHeader("WHAT BREAKS WUDHU")) {
@@ -308,17 +387,19 @@ struct WudhuView: View {
                     ArticleParagraph(verbatim: "Doubt alone does not break it. If you are certain you had wudhu and merely suspect you lost it, you still have it.")
                 }
 
-                Section(header: ArticleHeader("THE REWARD")) {
-                    ArticleParagraph(verbatim: "The Prophet Muhammad (peace and blessings be upon him) said:")
-                    ScriptureQuote(hadith: "muslim:244", cite: "Sahih Muslim 244", arabic: 45...113, english: 4...104)
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("THE REWARD")) {
+                        ArticleParagraph(verbatim: "The Prophet Muhammad (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "muslim:244", cite: "Sahih Muslim 244", arabic: 45...113, english: 4...104)
 
-                    ArticleParagraph(verbatim: "He also said:")
-                    ScriptureQuote(hadith: "muslim:251a", cite: "Sahih Muslim 251", arabic: 35...69, english: 6...62)
+                        ArticleParagraph(verbatim: "He also said:")
+                        ScriptureQuote(hadith: "muslim:251a", cite: "Sahih Muslim 251", arabic: 35...69, english: 6...62)
 
-                    ArticleParagraph(verbatim: "And he said:")
-                    ScriptureQuote(hadith: "bukhari:136", cite: "Sahih al-Bukhari 136", arabic: 37...53, english: 24...57)
+                        ArticleParagraph(verbatim: "And he said:")
+                        ScriptureQuote(hadith: "bukhari:136", cite: "Sahih al-Bukhari 136", arabic: 37...53, english: 24...57)
 
-                    ArticleParagraph(verbatim: "It is also from the Sunnah to make wudhu before sleeping.")
+                        ArticleParagraph(verbatim: "It is also from the Sunnah to make wudhu before sleeping.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -344,6 +425,8 @@ struct GhuslView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Ghusl is the full-body wash that lifts major ritual impurity. Until it is performed, the prayer cannot be prayed.")
                 }
@@ -362,42 +445,61 @@ struct GhuslView: View {
                     ArticleBullet(verbatim: "• Upon death, the deceased is washed by the living.")
                 }
 
-                Section(header: ArticleHeader("WHEN GHUSL IS RECOMMENDED")) {
-                    ArticleBullet("• Before the **Jumuah (جُمُعَة)** prayer.")
-                    ArticleBullet("• Before the two **Eid** prayers.")
-                    ArticleBullet("• Before entering **Ihram (إِحرَام)** for Hajj or Umrah.")
-                    ArticleBullet(verbatim: "• After washing a deceased person.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("HOW TO MAKE GHUSL")) {
+                        ArticleParagraph(verbatim: "This is the way described by Aisha and Maymunah (may Allah be pleased with them), who saw the Prophet (peace and blessings be upon him) perform it (Sahih al-Bukhari 248, 249, 257). Aisha said:")
+                        ScriptureQuote(hadith: "bukhari:248", cite: "Sahih al-Bukhari 248", arabic: 26...60, english: 0...59)
+
+                        ArticleStep("1. Make the **niyyah (نِيَّة)** in the heart to lift the state of janabah.")
+                        ArticleStep("2. Say **“Bismillah”**, and wash both **hands** three times.")
+                        ArticleStep("3. Wash the **private parts** and any impurity from the body with the left hand, then wash the hand.")
+                        ArticleStep("4. Perform a **complete wudhu**, as you would for prayer.")
+                        ArticleStep("5. Pour water over the **head three times**, working the fingers through the hair so the water reaches the roots of every hair.")
+                        ArticleStep("6. Pour water over the **right side** of the body, then the **left side**, ensuring the water reaches every part: under the arms, inside the navel, behind the ears, between the toes.")
+                        ArticleStep("7. Move from your place and **wash the feet**, if you did not wash them during the wudhu.")
+
+                        ArticleParagraph(articleMarkdown: "**The obligation is only two things:** the intention, and that water reaches every part of the body including the mouth and nose. The order and the repetition above are Sunnah. If a person simply immerses fully in water with the intention, the ghusl is valid.")
+                    }
                 }
 
-                Section(header: ArticleHeader("THE COMMAND IN THE QURAN")) {
-                    ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) says:")
-                    ScriptureQuote(quran: "5:6", words: 17...20)
-                    ArticleParagraph(verbatim: "And He says:")
-                    ScriptureQuote(quran: "4:43", words: 0...18)
-                }
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("WHEN GHUSL IS RECOMMENDED")) {
+                        ArticleBullet("• Before the **Jumuah (جُمُعَة)** prayer.")
+                        ArticleBullet("• Before the two **Eid** prayers.")
+                        ArticleBullet("• Before entering **Ihram (إِحرَام)** for Hajj or Umrah.")
+                        ArticleBullet(verbatim: "• After washing a deceased person.")
+                    }
 
-                Section(header: ArticleHeader("HOW TO MAKE GHUSL")) {
-                    ArticleParagraph(verbatim: "This is the way described by Aisha and Maymunah (may Allah be pleased with them), who saw the Prophet (peace and blessings be upon him) perform it (Sahih al-Bukhari 248, 249, 257). Aisha said:")
-                    ScriptureQuote(hadith: "bukhari:248", cite: "Sahih al-Bukhari 248", arabic: 26...60, english: 0...59)
+                    Section(header: ArticleHeader("THE COMMAND IN THE QURAN")) {
+                        ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) says:")
+                        ScriptureQuote(quran: "5:6", words: 17...20)
+                        ArticleParagraph(verbatim: "And He says:")
+                        ScriptureQuote(quran: "4:43", words: 0...18)
+                    }
 
-                    ArticleStep("1. Make the **niyyah (نِيَّة)** in the heart to lift the state of janabah.")
-                    ArticleStep("2. Say **“Bismillah”**, and wash both **hands** three times.")
-                    ArticleStep("3. Wash the **private parts** and any impurity from the body with the left hand, then wash the hand.")
-                    ArticleStep("4. Perform a **complete wudhu**, as you would for prayer.")
-                    ArticleStep("5. Pour water over the **head three times**, working the fingers through the hair so the water reaches the roots of every hair.")
-                    ArticleStep("6. Pour water over the **right side** of the body, then the **left side**, ensuring the water reaches every part: under the arms, inside the navel, behind the ears, between the toes.")
-                    ArticleStep("7. Move from your place and **wash the feet**, if you did not wash them during the wudhu.")
+                    Section(header: ArticleHeader("HOW TO MAKE GHUSL")) {
+                        ArticleParagraph(verbatim: "This is the way described by Aisha and Maymunah (may Allah be pleased with them), who saw the Prophet (peace and blessings be upon him) perform it (Sahih al-Bukhari 248, 249, 257). Aisha said:")
+                        ScriptureQuote(hadith: "bukhari:248", cite: "Sahih al-Bukhari 248", arabic: 26...60, english: 0...59)
 
-                    ArticleParagraph(articleMarkdown: "**The obligation is only two things:** the intention, and that water reaches every part of the body including the mouth and nose. The order and the repetition above are Sunnah. If a person simply immerses fully in water with the intention, the ghusl is valid.")
+                        ArticleStep("1. Make the **niyyah (نِيَّة)** in the heart to lift the state of janabah.")
+                        ArticleStep("2. Say **“Bismillah”**, and wash both **hands** three times.")
+                        ArticleStep("3. Wash the **private parts** and any impurity from the body with the left hand, then wash the hand.")
+                        ArticleStep("4. Perform a **complete wudhu**, as you would for prayer.")
+                        ArticleStep("5. Pour water over the **head three times**, working the fingers through the hair so the water reaches the roots of every hair.")
+                        ArticleStep("6. Pour water over the **right side** of the body, then the **left side**, ensuring the water reaches every part: under the arms, inside the navel, behind the ears, between the toes.")
+                        ArticleStep("7. Move from your place and **wash the feet**, if you did not wash them during the wudhu.")
 
-                    ArticleParagraph(articleMarkdown: "Women do **not** need to undo braided hair for the ghusl of janabah, so long as the water reaches the roots. Umm Salamah (may Allah be pleased with her) asked about this, and the Prophet (peace and blessings be upon him) said:")
-                    ScriptureQuote(hadith: "muslim:330a", cite: "Sahih Muslim 330", arabic: 59...72, english: 34...59)
-                }
+                        ArticleParagraph(articleMarkdown: "**The obligation is only two things:** the intention, and that water reaches every part of the body including the mouth and nose. The order and the repetition above are Sunnah. If a person simply immerses fully in water with the intention, the ghusl is valid.")
 
-                Section(header: ArticleHeader("IF THERE IS NO WATER: TAYAMMUM")) {
-                    ArticleParagraph(articleMarkdown: "If water cannot be found, or using it would cause harm or illness, then **Tayammum (تَيَمُّم)**, dry purification, takes its place for both wudhu and ghusl. Allah says in the same verse:")
-                    ScriptureQuote(quran: "5:6", words: 36...45)
-                    ArticleParagraph(verbatim: "Strike clean earth once with both palms, then wipe the face, then wipe the hands. That is all.")
+                        ArticleParagraph(articleMarkdown: "Women do **not** need to undo braided hair for the ghusl of janabah, so long as the water reaches the roots. Umm Salamah (may Allah be pleased with her) asked about this, and the Prophet (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "muslim:330a", cite: "Sahih Muslim 330", arabic: 59...72, english: 34...59)
+                    }
+
+                    Section(header: ArticleHeader("IF THERE IS NO WATER: TAYAMMUM")) {
+                        ArticleParagraph(articleMarkdown: "If water cannot be found, or using it would cause harm or illness, then **Tayammum (تَيَمُّم)**, dry purification, takes its place for both wudhu and ghusl. Allah says in the same verse:")
+                        ScriptureQuote(quran: "5:6", words: 36...45)
+                        ArticleParagraph(verbatim: "Strike clean earth once with both palms, then wipe the face, then wipe the hands. That is all.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -419,6 +521,8 @@ struct JumuahView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Jumuah is the Friday congregational prayer that takes the place of Dhuhr: two khutbahs, then two rak'ah recited aloud. It is an obligation on every Muslim man who is adult, sane, resident and free of an excuse, and it is only Jumuah when it is prayed in its time, in congregation, in a settled community, after the khutbah.")
                 }
@@ -442,57 +546,96 @@ struct JumuahView: View {
                     ArticleParagraph(verbatim: "Friday is considered the best day of the week in Islam. It unites the community, strengthens social bonds, and serves as a weekly reminder of our responsibilities toward Allah (Glorified and Exalted be He) and humanity.")
                 }
 
-                Section(header: ArticleHeader("WHO MUST ATTEND")) {
-                    ArticleParagraph(verbatim: "Jumuah is an obligation on every Muslim man who is:")
-                    ArticleBullet("• **Adult and sane.**")
-                    ArticleBullet("• **Resident**, not travelling. A traveller prays Dhuhr, shortened; if he attends Jumuah, it counts for him.")
-                    ArticleBullet("• **Free of a real excuse**: an illness that makes going hard, fear for himself or his family, heavy rain or mud, or caring for a sick person who cannot be left.")
-                    ArticleParagraph(verbatim: "As the hadith above says, it is not an obligation on women, children or the sick. Nor is it on travellers: the Prophet did not pray Jumuah on his journeys, and at Arafah, on a Friday, he prayed Dhuhr and Asr (Sahih Muslim 1218). A woman who attends and prays it with the imam has prayed it, and it takes the place of her Dhuhr.")
-                    ArticleParagraph(verbatim: "Leaving it without an excuse is a major sin. The Prophet (peace and blessings be upon him) said from his minbar:")
-                    ScriptureQuote(hadith: "muslim:865", cite: "Sahih Muslim 865", arabic: 45...58, english: 0...21)
-                    ScriptureQuote(hadith: "abudawud:1052", cite: "Sunan Abi Dawud 1052; graded hasan sahih by al-Albani", arabic: 33...42, english: 4...25)
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("WHO MUST ATTEND")) {
+                        ArticleParagraph(verbatim: "Jumuah is an obligation on every Muslim man who is:")
+                        ArticleBullet("• **Adult and sane.**")
+                        ArticleBullet("• **Resident**, not travelling. A traveller prays Dhuhr, shortened; if he attends Jumuah, it counts for him.")
+                        ArticleBullet("• **Free of a real excuse**: an illness that makes going hard, fear for himself or his family, heavy rain or mud, or caring for a sick person who cannot be left.")
+                        ArticleParagraph(verbatim: "Leaving it without an excuse is a major sin. The Prophet (peace and blessings be upon him) said from his minbar:")
+                        ScriptureQuote(hadith: "muslim:865", cite: "Sahih Muslim 865", arabic: 45...58, english: 0...21)
+                    }
+
+                    Section(header: ArticleHeader("WHAT MAKES IT VALID")) {
+                        ArticleParagraph(verbatim: "Four conditions, on top of those of every prayer. If one is missing, what was prayed is not Jumuah, and Dhuhr is prayed instead:")
+                        ArticleStep("1. **Its time.** Jumuah is prayed in the time of Dhuhr, once the sun has passed its height, the time every school accepts.")
+                        ArticleStep("2. **A congregation.** Jumuah is never prayed alone.")
+                        ArticleStep("3. **A settled community.** It is held in a town or village where people live, not by travellers camped on the road.")
+                        ArticleStep("4. **The khutbah before it.** The Prophet never prayed Jumuah without a khutbah. A Jumuah prayed without one is not Jumuah.")
+                        ArticleParagraph(verbatim: "Jumuah is not made up. Whoever misses it, with an excuse or without, prays Dhuhr.")
+                    }
+
+                    Section(header: ArticleHeader("STEP BY STEP")) {
+                        ArticleStep("1. **Take a ghusl**, clean yourself, wear your best clean clothes, use the siwak, and (for men) put on perfume. The Prophet said:")
+                        ScriptureQuote(hadith: "bukhari:879", cite: "Sahih al-Bukhari 879", arabic: 35...41, english: 5...24)
+                        ArticleParagraph(verbatim: "Most scholars took “compulsory” here as strongly emphasised; Ibn al-Uthaymin held it to be obligatory on whoever attends, though the prayer is not void without it. Either way, do not leave it.")
+                        ArticleStep("2. **Go early, walking if you can, and sit near the imam.** The earlier you arrive, the greater the reward.")
+                        ArticleStep("3. **On entering, pray two rak'ah before you sit**, even if the khutbah has begun; then keep them short. The Prophet stopped his khutbah for a man who sat down without them:")
+                        ScriptureQuote(hadith: "muslim:875a", cite: "Sahih Muslim 875", arabic: 26...57, english: 0...19)
+                        ArticleStep("4. **Then pray what you can** until the imam comes out, or recite Quran and remember Allah. There is no fixed sunnah before Jumuah.")
+                        ArticleStep("5. **Do not step over people, and do not move anyone from his place.** Fill the front rows as you arrive, and sit where there is room.")
+                        ArticleStep("6. **Once the imam begins, listen in silence.** Do not talk, do not tell anyone else to be quiet, and leave your phone, your clothes and the carpet alone.")
+                        ScriptureQuote(hadith: "bukhari:934", cite: "Sahih al-Bukhari 934", arabic: 31...40, english: 5...30)
+                        ArticleStep("7. **Pray the two rak'ah behind the imam**, then the sunnah after it, as below.")
+                    }
                 }
 
-                Section(header: ArticleHeader("WHAT MAKES IT VALID")) {
-                    ArticleParagraph(verbatim: "Four conditions, on top of those of every prayer. If one is missing, what was prayed is not Jumuah, and Dhuhr is prayed instead:")
-                    ArticleStep("1. **Its time.** Jumuah is prayed in the time of Dhuhr, once the sun has passed its height. The Hanbali school allows it earlier in the day as well, but praying it after the zawal is the way every school accepts:")
-                    ScriptureQuote(hadith: "bukhari:904", cite: "Sahih al-Bukhari 904", arabic: 30...35, english: 0...11)
-                    ArticleStep("2. **A congregation.** Jumuah is never prayed alone. The scholars differ over the least number: forty in the Shafi'i and Hanbali schools, and three, one to give the khutbah and two to hear it, in the view Ibn Taymiyyah and Ibn al-Uthaymin held strongest.")
-                    ArticleStep("3. **A settled community.** It is held in a town or village where people live, not by travellers camped on the road; that is why the Prophet prayed Dhuhr at Arafah.")
-                    ArticleStep("4. **The khutbah before it.** The Prophet never prayed Jumuah without a khutbah, and the ayah commands hastening to “the remembrance of Allah”, which the scholars explained as the khutbah. A Jumuah prayed without one is not Jumuah.")
-                    ArticleParagraph(verbatim: "Jumuah is not made up. Whoever misses it, with an excuse or without, prays Dhuhr. And it cannot be prayed at home behind a screen: a khutbah followed over a broadcast does not make a congregation.")
-                }
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("WHO MUST ATTEND")) {
+                        ArticleParagraph(verbatim: "Jumuah is an obligation on every Muslim man who is:")
+                        ArticleBullet("• **Adult and sane.**")
+                        ArticleBullet("• **Resident**, not travelling. A traveller prays Dhuhr, shortened; if he attends Jumuah, it counts for him.")
+                        ArticleBullet("• **Free of a real excuse**: an illness that makes going hard, fear for himself or his family, heavy rain or mud, or caring for a sick person who cannot be left.")
+                        ArticleParagraph(verbatim: "As the hadith above says, it is not an obligation on women, children or the sick. Nor is it on travellers: the Prophet did not pray Jumuah on his journeys, and at Arafah, on a Friday, he prayed Dhuhr and Asr (Sahih Muslim 1218). A woman who attends and prays it with the imam has prayed it, and it takes the place of her Dhuhr.")
+                        ScriptureQuote(hadith: "muslim:1218", cite: "Sahih Muslim 1218", arabic: 922...935, english: 1567...1607)
+                        ArticleParagraph(verbatim: "Leaving it without an excuse is a major sin. The Prophet (peace and blessings be upon him) said from his minbar:")
+                        ScriptureQuote(hadith: "muslim:865", cite: "Sahih Muslim 865", arabic: 45...58, english: 0...21)
+                        ScriptureQuote(hadith: "abudawud:1052", cite: "Sunan Abi Dawud 1052; graded hasan sahih by al-Albani", arabic: 33...42, english: 4...25)
+                    }
 
-                Section(header: ArticleHeader("THE ADHAN OF JUMUAH")) {
-                    ArticleParagraph(verbatim: "In the Prophet's time Jumuah had one Adhan, called as the imam sat on the minbar; Uthman (may Allah be pleased with him) added an earlier one when Madinah grew:")
-                    ScriptureQuote(hadith: "bukhari:912", cite: "Sahih al-Bukhari 912", arabic: 14...53, english: 0...45)
-                    ArticleParagraph(verbatim: "The second Adhan, the one called as the imam sits, is the call meant in the ayah: from it, buying and selling stop for those who must attend. How the two calls are given, and what the scholars said about Uthman's, is in the guide to the Adhan.")
-                }
+                    Section(header: ArticleHeader("WHAT MAKES IT VALID")) {
+                        ArticleParagraph(verbatim: "Four conditions, on top of those of every prayer. If one is missing, what was prayed is not Jumuah, and Dhuhr is prayed instead:")
+                        ArticleStep("1. **Its time.** Jumuah is prayed in the time of Dhuhr, once the sun has passed its height. The Hanbali school allows it earlier in the day as well, but praying it after the zawal is the way every school accepts:")
+                        ScriptureQuote(hadith: "bukhari:904", cite: "Sahih al-Bukhari 904", arabic: 30...35, english: 0...11)
+                        ArticleStep("2. **A congregation.** Jumuah is never prayed alone. The scholars differ over the least number: forty in the Shafi'i and Hanbali schools, and three, one to give the khutbah and two to hear it, in the view Ibn Taymiyyah and Ibn al-Uthaymin held strongest.")
+                        ArticleStep("3. **A settled community.** It is held in a town or village where people live, not by travellers camped on the road; that is why the Prophet prayed Dhuhr at Arafah.")
+                        ArticleStep("4. **The khutbah before it.** The Prophet never prayed Jumuah without a khutbah, and the ayah commands hastening to “the remembrance of Allah”, which the scholars explained as the khutbah. A Jumuah prayed without one is not Jumuah.")
+                        ArticleParagraph(verbatim: "Jumuah is not made up. Whoever misses it, with an excuse or without, prays Dhuhr. And it cannot be prayed at home behind a screen: a khutbah followed over a broadcast does not make a congregation.")
+                    }
 
-                Section(header: ArticleHeader("STEP BY STEP")) {
-                    ArticleStep("1. **Take a ghusl**, clean yourself, wear your best clean clothes, use the siwak, and (for men) put on perfume. The Prophet said:")
-                    ScriptureQuote(hadith: "bukhari:879", cite: "Sahih al-Bukhari 879", arabic: 35...41, english: 5...24)
-                    ArticleParagraph(verbatim: "Most scholars took “compulsory” here as strongly emphasised, because he also said that whoever makes wudhu for Jumuah has done well, and the ghusl is better (Sunan Abi Dawud 354; graded hasan by al-Albani). Ibn al-Uthaymin held it to be obligatory on whoever attends, though the prayer is not void without it. Either way, do not leave it.")
-                    ArticleStep("2. **Go early, walking if you can, and sit near the imam.** The earlier you arrive, the greater the reward, and when the imam comes out the angels close their records and sit to listen (Sahih al-Bukhari 881):")
-                    ScriptureQuote(hadith: "abudawud:345", cite: "Sunan Abi Dawud 345; graded sahih by al-Albani", arabic: 34...59, english: 8...67)
-                    ArticleStep("3. **On entering, pray two rak'ah before you sit**, even if the khutbah has begun; then keep them short. The Prophet stopped his khutbah for a man who sat down without them:")
-                    ScriptureQuote(hadith: "muslim:875a", cite: "Sahih Muslim 875", arabic: 26...57, english: 0...19)
-                    ArticleStep("4. **Then pray what you can** until the imam comes out, or recite Quran and remember Allah. There is no fixed sunnah before Jumuah; the hadith says only that he “prayed what was fixed for him”:")
-                    ScriptureQuote(hadith: "muslim:857a", cite: "Sahih Muslim 857", arabic: 29...56, english: 0...51)
-                    ArticleStep("5. **Do not step over people, and do not move anyone from his place.** Fill the front rows as you arrive, and sit where there is room:")
-                    ScriptureQuote(hadith: "abudawud:1118", cite: "Sunan Abi Dawud 1118; graded sahih by al-Albani", arabic: 40...64, english: 32...60)
-                    ArticleStep("6. **Once the imam begins, listen in silence.** Do not talk, do not tell anyone else to be quiet, and leave your phone, your clothes and the carpet alone; he said that whoever fiddles with the pebbles has engaged in idle talk (Sahih Muslim 857).")
-                    ScriptureQuote(hadith: "bukhari:934", cite: "Sahih al-Bukhari 934", arabic: 31...40, english: 5...30)
-                    ArticleStep("7. **Pray the two rak'ah behind the imam**, then the sunnah after it, as below.")
-                }
+                    Section(header: ArticleHeader("THE ADHAN OF JUMUAH")) {
+                        ArticleParagraph(verbatim: "In the Prophet's time Jumuah had one Adhan, called as the imam sat on the minbar; Uthman (may Allah be pleased with him) added an earlier one when Madinah grew:")
+                        ScriptureQuote(hadith: "bukhari:912", cite: "Sahih al-Bukhari 912", arabic: 14...53, english: 0...45)
+                        ArticleParagraph(verbatim: "The second Adhan, the one called as the imam sits, is the call meant in the ayah: from it, buying and selling stop for those who must attend. How the two calls are given, and what the scholars said about Uthman's, is in the guide to the Adhan.")
+                    }
 
-                Section(header: ArticleHeader("THE KHUTBAH AND THE PRAYER")) {
-                    ArticleParagraph(verbatim: "The imam climbs the minbar, greets the people and sits while the Adhan is called. He then stands for the first khutbah, sits briefly, and stands for the second:")
-                    ScriptureQuote(hadith: "muslim:862a", cite: "Sahih Muslim 862", arabic: 27...39, english: 0...18)
-                    ArticleParagraph(verbatim: "When he comes down, the Iqamah is given and he leads two rak'ah, reciting aloud. In both Eids and in Jumuah the Prophet would recite al-A'la and al-Ghashiyah:")
-                    ScriptureQuote(hadith: "muslim:878a", cite: "Sahih Muslim 878", arabic: 40...76, english: 0...43)
-                    ArticleParagraph(verbatim: "Or al-Jumu'ah in the first rak'ah and al-Munafiqun in the second:")
-                    ScriptureQuote(hadith: "muslim:877a", cite: "Sahih Muslim 877", arabic: 73...84, english: 73...86)
+                    Section(header: ArticleHeader("STEP BY STEP")) {
+                        ArticleStep("1. **Take a ghusl**, clean yourself, wear your best clean clothes, use the siwak, and (for men) put on perfume. The Prophet said:")
+                        ScriptureQuote(hadith: "bukhari:879", cite: "Sahih al-Bukhari 879", arabic: 35...41, english: 5...24)
+                        ArticleParagraph(verbatim: "Most scholars took “compulsory” here as strongly emphasised, because he also said that whoever makes wudhu for Jumuah has done well, and the ghusl is better (Sunan Abi Dawud 354; graded hasan by al-Albani). Ibn al-Uthaymin held it to be obligatory on whoever attends, though the prayer is not void without it. Either way, do not leave it.")
+                        ScriptureQuote(hadith: "abudawud:354", cite: "Sunan Abi Dawud 354; graded hasan by al-Albani", arabic: 22...31, english: 0...23)
+                        ArticleStep("2. **Go early, walking if you can, and sit near the imam.** The earlier you arrive, the greater the reward, and when the imam comes out the angels close their records and sit to listen (Sahih al-Bukhari 881):")
+                        ScriptureQuote(hadith: "bukhari:881", cite: "Sahih al-Bukhari 881, Sahih Muslim 850", arabic: 38...88, english: 5...129)
+                        ScriptureQuote(hadith: "abudawud:345", cite: "Sunan Abi Dawud 345; graded sahih by al-Albani", arabic: 34...59, english: 8...67)
+                        ArticleStep("3. **On entering, pray two rak'ah before you sit**, even if the khutbah has begun; then keep them short. The Prophet stopped his khutbah for a man who sat down without them:")
+                        ScriptureQuote(hadith: "muslim:875a", cite: "Sahih Muslim 875", arabic: 26...57, english: 0...19)
+                        ArticleStep("4. **Then pray what you can** until the imam comes out, or recite Quran and remember Allah. There is no fixed sunnah before Jumuah; the hadith says only that he “prayed what was fixed for him”:")
+                        ScriptureQuote(hadith: "muslim:857a", cite: "Sahih Muslim 857", arabic: 29...56, english: 0...51)
+                        ArticleStep("5. **Do not step over people, and do not move anyone from his place.** Fill the front rows as you arrive, and sit where there is room:")
+                        ScriptureQuote(hadith: "abudawud:1118", cite: "Sunan Abi Dawud 1118; graded sahih by al-Albani", arabic: 40...64, english: 32...60)
+                        ArticleStep("6. **Once the imam begins, listen in silence.** Do not talk, do not tell anyone else to be quiet, and leave your phone, your clothes and the carpet alone; he said that whoever fiddles with the pebbles has engaged in idle talk (Sahih Muslim 857).")
+                        ScriptureQuote(hadith: "bukhari:934", cite: "Sahih al-Bukhari 934", arabic: 31...40, english: 5...30)
+                        ArticleStep("7. **Pray the two rak'ah behind the imam**, then the sunnah after it, as below.")
+                    }
+
+                    Section(header: ArticleHeader("THE KHUTBAH AND THE PRAYER")) {
+                        ArticleParagraph(verbatim: "The imam climbs the minbar, greets the people and sits while the Adhan is called. He then stands for the first khutbah, sits briefly, and stands for the second:")
+                        ScriptureQuote(hadith: "muslim:862a", cite: "Sahih Muslim 862", arabic: 27...39, english: 0...18)
+                        ArticleParagraph(verbatim: "When he comes down, the Iqamah is given and he leads two rak'ah, reciting aloud. In both Eids and in Jumuah the Prophet would recite al-A'la and al-Ghashiyah:")
+                        ScriptureQuote(hadith: "muslim:878a", cite: "Sahih Muslim 878", arabic: 40...76, english: 0...43)
+                        ArticleParagraph(verbatim: "Or al-Jumu'ah in the first rak'ah and al-Munafiqun in the second:")
+                        ScriptureQuote(hadith: "muslim:877a", cite: "Sahih Muslim 877", arabic: 73...84, english: 73...86)
+                    }
                 }
 
                 Section(header: ArticleHeader("IF YOU ARRIVE LATE")) {
@@ -501,41 +644,53 @@ struct JumuahView: View {
                     ArticleParagraph(verbatim: "If you join after that bowing, in the prostrations or the tashahhud, you have missed Jumuah: join him with the intention of Dhuhr, and after his taslim complete four rak'ah. If you missed it altogether, pray Dhuhr, four rak'ah.")
                 }
 
-                Section(header: ArticleHeader("AFTER THE PRAYER")) {
-                    ArticleParagraph(verbatim: "Pray four rak'ah in the mosque, or two at home. Both are from him:")
-                    ScriptureQuote(hadith: "muslim:881a", cite: "Sahih Muslim 881", arabic: 26...32, english: 0...19)
-                    ScriptureQuote(hadith: "bukhari:937", cite: "Sahih al-Bukhari 937", arabic: 37...45, english: 38...58)
-                    ArticleParagraph(verbatim: "Ibn Taymiyyah and Ibn al-Qayyim joined the two: four when they are prayed in the mosque, two when they are prayed at home. Do not join the obligatory prayer straight onto the sunnah; speak, or move to another place first, as Mu'awiyah reported the Prophet commanded (Sahih Muslim 883). Then go out and seek Allah's bounty:")
-                    ScriptureQuote(quran: "62:10")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("AFTER THE PRAYER")) {
+                        ArticleParagraph(verbatim: "Pray four rak'ah in the mosque, or two at home. Both are from him:")
+                        ScriptureQuote(hadith: "muslim:881a", cite: "Sahih Muslim 881", arabic: 26...32, english: 0...19)
+                        ScriptureQuote(hadith: "bukhari:937", cite: "Sahih al-Bukhari 937", arabic: 37...45, english: 38...58)
+                    }
                 }
 
-                Section(header: ArticleHeader("RECOMMENDED PRACTICES")) {
-                    ArticleParagraph(verbatim: "Muslims are encouraged to engage in specific acts of worship on Jumuah:")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("AFTER THE PRAYER")) {
+                        ArticleParagraph(verbatim: "Pray four rak'ah in the mosque, or two at home. Both are from him:")
+                        ScriptureQuote(hadith: "muslim:881a", cite: "Sahih Muslim 881", arabic: 26...32, english: 0...19)
+                        ScriptureQuote(hadith: "bukhari:937", cite: "Sahih al-Bukhari 937", arabic: 37...45, english: 38...58)
+                        ArticleParagraph(verbatim: "Ibn Taymiyyah and Ibn al-Qayyim joined the two: four when they are prayed in the mosque, two when they are prayed at home. Do not join the obligatory prayer straight onto the sunnah; speak, or move to another place first, as Mu'awiyah reported the Prophet commanded (Sahih Muslim 883).")
+                        ScriptureQuote(hadith: "muslim:883a", cite: "Sahih Muslim 883", arabic: 61...87, english: 45...88)
+                        ArticleParagraph(verbatim: "Then go out and seek Allah's bounty:")
+                        ScriptureQuote(quran: "62:10")
+                    }
 
-                    ArticleStep("1. **Reciting Surah Al-Kahf (سُورَة ٱلكَهف):** The Prophet Muhammad (peace and blessings be upon him) said:")
+                    Section(header: ArticleHeader("RECOMMENDED PRACTICES")) {
+                        ArticleParagraph(verbatim: "Muslims are encouraged to engage in specific acts of worship on Jumuah:")
 
-                    ScriptureQuote(text: "“Whoever reads Surah Al-Kahf on Friday, a light will shine for him between the two Fridays” (al-Hakim 2/368 and al-Bayhaqi; graded sahih by al-Albani, Sahih al-Jami' 6470).", arabic: "مَن قَرَأَ سُورَةَ الكَهفِ فِي يَومِ الجُمُعَةِ أَضَاءَ لَهُ مِنَ النُّورِ مَا بَينَ الجُمُعَتَينِ", dimmed: true)
+                        ArticleStep("1. **Reciting Surah Al-Kahf (سُورَة ٱلكَهف):** The Prophet Muhammad (peace and blessings be upon him) said:")
 
-                    ArticleStep("2. **Sending Salawat on the Prophet (peace and blessings be upon him):**")
+                        ScriptureQuote(text: "“Whoever reads Surah Al-Kahf on Friday, a light will shine for him between the two Fridays” (al-Hakim 2/368 and al-Bayhaqi; graded sahih by al-Albani, Sahih al-Jami' 6470).", arabic: "مَن قَرَأَ سُورَةَ الكَهفِ فِي يَومِ الجُمُعَةِ أَضَاءَ لَهُ مِنَ النُّورِ مَا بَينَ الجُمُعَتَينِ", dimmed: true)
 
-                    ScriptureQuote(hadith: "abudawud:1047", cite: "Sunan Abi Dawud 1047; graded sahih by al-Albani", arabic: 33...56, english: 4...53)
+                        ArticleStep("2. **Sending Salawat on the Prophet (peace and blessings be upon him):**")
 
-                    ScriptureQuote(hadith: "muslim:408", cite: "Sahih Muslim 408", arabic: 32...39, english: 6...16)
+                        ScriptureQuote(hadith: "abudawud:1047", cite: "Sunan Abi Dawud 1047; graded sahih by al-Albani", arabic: 33...56, english: 4...53)
 
-                    ArticleStep("3. **Making Dua (Supplication)**: There is a special hour on Friday during which all supplications are accepted. The Prophet Muhammad (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "muslim:408", cite: "Sahih Muslim 408", arabic: 32...39, english: 6...16)
 
-                    ScriptureQuote(hadith: "nasai:1389", cite: "Sunan an-Nasa'i 1389; graded sahih by al-Albani", arabic: 53...73, english: 6...38)
-                }
+                        ArticleStep("3. **Making Dua (Supplication)**: There is a special hour on Friday during which all supplications are accepted. The Prophet Muhammad (peace and blessings be upon him) said:")
 
-                Section(header: ArticleHeader("COMMON QUESTIONS")) {
-                    ArticleParagraph(articleMarkdown: "**Eid falls on a Friday.** Whoever prayed the Eid prayer has a concession to leave Jumuah and pray Dhuhr instead; the imam still holds Jumuah for those who come, and attending is better. Zayd ibn Arqam was asked what the Prophet did:")
-                    ScriptureQuote(hadith: "abudawud:1070", cite: "Sunan Abi Dawud 1070; graded sahih by al-Albani", arabic: 47...60, english: 45...68)
-                    ArticleParagraph(articleMarkdown: "**I keep falling asleep in the khutbah.** Move to another place; the movement wakes you:")
-                    ScriptureQuote(hadith: "tirmidhi:526", cite: "Jami' at-Tirmidhi 526; graded sahih by al-Albani", arabic: 29...37, english: 3...21)
-                    ArticleParagraph(articleMarkdown: "**May I say ameen or send blessings during the khutbah?** Under your breath, yes: send blessings on the Prophet when he is mentioned, and say ameen silently to the imam's dua. Do not answer a greeting or start a conversation.")
-                    ArticleParagraph(articleMarkdown: "**Does my job excuse me?** Work alone is not an excuse; arrange to attend, even at the cost of an unpaid hour. The scholars excused only those whose work cannot be left without harm to others, such as a guard on duty or a doctor with a patient, and they pray Dhuhr.")
-                    ArticleParagraph(articleMarkdown: "**Is there a sunnah before Jumuah?** No fixed one. Pray the two rak'ah on entering, then whatever you can until the imam comes out.")
-                    ArticleParagraph(articleMarkdown: "**Can more than one Jumuah be held in a town?** Where one mosque cannot hold everyone, yes. Without that need the scholars disliked dividing a town's Jumuah.")
+                        ScriptureQuote(hadith: "nasai:1389", cite: "Sunan an-Nasa'i 1389; graded sahih by al-Albani", arabic: 53...73, english: 6...38)
+                    }
+
+                    Section(header: ArticleHeader("COMMON QUESTIONS")) {
+                        ArticleParagraph(articleMarkdown: "**Eid falls on a Friday.** Whoever prayed the Eid prayer has a concession to leave Jumuah and pray Dhuhr instead; the imam still holds Jumuah for those who come, and attending is better. Zayd ibn Arqam was asked what the Prophet did:")
+                        ScriptureQuote(hadith: "abudawud:1070", cite: "Sunan Abi Dawud 1070; graded sahih by al-Albani", arabic: 47...60, english: 45...68)
+                        ArticleParagraph(articleMarkdown: "**I keep falling asleep in the khutbah.** Move to another place; the movement wakes you:")
+                        ScriptureQuote(hadith: "tirmidhi:526", cite: "Jami' at-Tirmidhi 526; graded sahih by al-Albani", arabic: 29...37, english: 3...21)
+                        ArticleParagraph(articleMarkdown: "**May I say ameen or send blessings during the khutbah?** Under your breath, yes: send blessings on the Prophet when he is mentioned, and say ameen silently to the imam's dua. Do not answer a greeting or start a conversation.")
+                        ArticleParagraph(articleMarkdown: "**Does my job excuse me?** Work alone is not an excuse; arrange to attend, even at the cost of an unpaid hour. The scholars excused only those whose work cannot be left without harm to others, such as a guard on duty or a doctor with a patient, and they pray Dhuhr.")
+                        ArticleParagraph(articleMarkdown: "**Is there a sunnah before Jumuah?** No fixed one. Pray the two rak'ah on entering, then whatever you can until the imam comes out.")
+                        ArticleParagraph(articleMarkdown: "**Can more than one Jumuah be held in a town?** Where one mosque cannot hold everyone, yes. Without that need the scholars disliked dividing a town's Jumuah.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -563,18 +718,33 @@ struct AdhanOtherView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: the Adhan is the call that announces each of the five daily prayers, first given in Madinah by Bilal ibn Rabah. It counts when it is called after the prayer's time has entered, in its own Arabic words and order, without a break, aloud, by a Muslim man. On Friday it is called as the imam sits on the minbar.")
                 }
 
-                Section(header: ArticleHeader("HISTORY")) {
-                    ArticleParagraph(articleMarkdown: "The Adhan (أَذَان) is the Islamic call to prayer, from the root **a-dh-n (أ ذ ن)** meaning to announce or proclaim.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("HISTORY")) {
+                        ArticleParagraph(articleMarkdown: "The Adhan (أَذَان) is the Islamic call to prayer, from the root **a-dh-n (أ ذ ن)** meaning to announce or proclaim.")
 
-                    ArticleParagraph(verbatim: "It is recited in Arabic to announce the time for each of the five daily prayers.")
+                        ArticleParagraph(verbatim: "The Companions had discussed how to announce the prayer, and some suggested a bell like the Christians or a horn like the Jews. The words of the Adhan were shown to Abdullah ibn Zayd (may Allah be pleased with him) in a dream, which the Prophet confirmed as a true vision, telling him to teach them to Bilal ibn Rabah (may Allah be pleased with him), whose voice was the louder (Sunan Abi Dawud 499; graded hasan sahih by al-Albani).")
+                        ScriptureQuote(hadith: "abudawud:499", cite: "Sunan Abi Dawud 499; graded hasan sahih by al-Albani", arabic: 192...223, english: 229...282)
+                    }
+                }
 
-                    ArticleParagraph(verbatim: "The Adhan originated during the time of Prophet Muhammad (peace and blessings be upon him) in Madinah.")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("HISTORY")) {
+                        ArticleParagraph(articleMarkdown: "The Adhan (أَذَان) is the Islamic call to prayer, from the root **a-dh-n (أ ذ ن)** meaning to announce or proclaim.")
 
-                    ArticleParagraph(verbatim: "The Companions had discussed how to announce the prayer, and some suggested a bell like the Christians or a horn like the Jews. Umar (may Allah be pleased with him) proposed that a man call the people, and the Prophet (peace and blessings be upon him) ordered Bilal to rise and give the call (Sahih al-Bukhari 604). The words of the Adhan were shown to Abdullah ibn Zayd (may Allah be pleased with him) in a dream, which the Prophet confirmed as a true vision, telling him to teach them to Bilal ibn Rabah (may Allah be pleased with him), whose voice was the louder (Sunan Abi Dawud 499; graded hasan sahih by al-Albani).")
+                        ArticleParagraph(verbatim: "It is recited in Arabic to announce the time for each of the five daily prayers.")
+
+                        ArticleParagraph(verbatim: "The Adhan originated during the time of Prophet Muhammad (peace and blessings be upon him) in Madinah.")
+
+                        ArticleParagraph(verbatim: "The Companions had discussed how to announce the prayer, and some suggested a bell like the Christians or a horn like the Jews. Umar (may Allah be pleased with him) proposed that a man call the people, and the Prophet (peace and blessings be upon him) ordered Bilal to rise and give the call (Sahih al-Bukhari 604). The words of the Adhan were shown to Abdullah ibn Zayd (may Allah be pleased with him) in a dream, which the Prophet confirmed as a true vision, telling him to teach them to Bilal ibn Rabah (may Allah be pleased with him), whose voice was the louder (Sunan Abi Dawud 499; graded hasan sahih by al-Albani).")
+                        ScriptureQuote(hadith: "bukhari:604", cite: "Sahih al-Bukhari 604, Sahih Muslim 377", arabic: 20...69, english: 0...99)
+                        ScriptureQuote(hadith: "abudawud:499", cite: "Sunan Abi Dawud 499; graded hasan sahih by al-Albani", arabic: 192...223, english: 229...282)
+                    }
                 }
 
                 Section(header: ArticleHeader("WORDS OF THE ADHAN")) {
@@ -634,75 +804,122 @@ struct AdhanOtherView: View {
                     ArticleCallout("The noon of “an” melts into the laam after it (idgham), so “an la ilaha” is said “allaa ilaaha”, and “illa Allah” runs together as “illallah”: Ashhadu allaa ilaaha illallah. “Rasool Allah” joins the same way, rasoolullah, and so does the closing line, La ilaha illallah.", title: "How it is said", systemImage: "waveform")
                 }
 
-                Section(header: ArticleHeader("ONLY FOR FAJR")) {
-                    ArticleParagraph(articleMarkdown: "**ONLY FOR FAJR:** the following line is added, and it is said in no other Adhan. It comes after “Hayya ala al-falah” and before the closing takbir.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("ONLY FOR FAJR")) {
+                        ArticleParagraph(articleMarkdown: "**ONLY FOR FAJR:** the following line is added, and it is said in no other Adhan. It comes after “Hayya ala al-falah” and before the closing takbir.")
 
-                    Text(articleMarkdown: "**ONLY FOR FAJR:**")
-                        .font(.body)
-                        .foregroundColor(appearance.accent)
+                        Text(articleMarkdown: "**ONLY FOR FAJR:**")
+                            .font(.body)
+                            .foregroundColor(appearance.accent)
 
-                    ArticleArabic(verbatim: "الصَّلَاةُ خَيرٌ مِنَ النَّومِ")
+                        ArticleArabic(verbatim: "الصَّلَاةُ خَيرٌ مِنَ النَّومِ")
 
-                    ArticleParagraph(verbatim: "As-salatu khayrun mina-nawm\n(Prayer is better than sleep)")
+                        ArticleParagraph(verbatim: "As-salatu khayrun mina-nawm\n(Prayer is better than sleep)")
 
-                    ArticleParagraph(verbatim: "This line is said twice, and only in the Adhan for Fajr. It is never said in the Adhan for Dhuhr, Asr, Maghrib, or Isha, and it is never said in the Iqamah. Abu Mahdhurah (may Allah be pleased with him), whom the Prophet (peace and blessings be upon him) taught the Adhan, said:")
-                    ScriptureQuote(hadith: "nasai:647", cite: "Sunan an-Nasa'i 647; graded sahih by al-Albani", arabic: 20...52, english: 0...67)
+                        ArticleParagraph(verbatim: "This line is said twice, and only in the Adhan for Fajr. It is never said in the Adhan for Dhuhr, Asr, Maghrib, or Isha, and it is never said in the Iqamah.")
+                    }
+
+                    Section(header: ArticleHeader("WHAT MAKES IT VALID")) {
+                        ArticleParagraph(verbatim: "The Adhan is an act of worship with conditions of its own. A call that misses one of them is not the Adhan, and it is given again:")
+                        ArticleStep("1. **The time has entered.** The Adhan announces a prayer whose time has come, so a call given before the time is repeated once it begins. The one exception is Fajr, which may have a first call in the last part of the night and a second at true dawn.")
+                        ArticleStep("2. **Its own Arabic words, in their order.** The phrases are said as the Prophet (peace and blessings be upon him) taught them, none dropped and none moved. A translation is not the Adhan.")
+                        ArticleStep("3. **One unbroken call, by one caller.** The phrases follow each other without a long pause, and one person says all of them.")
+                        ArticleStep("4. **The caller is a Muslim man of sound mind.** A boy old enough to understand what he is doing may call it. The Adhan for men is not given by a woman.")
+                        ArticleStep("5. **It is called aloud, by someone present.** It is meant to be heard, so it is raised as far as the voice will carry. A recording played at prayer time is not an Adhan.")
+                    }
+
+                    Section(header: ArticleHeader("THE ADHAN FOR JUMUAH")) {
+                        ArticleParagraph(verbatim: "The Friday Adhan has the same words as the others, without the Fajr line. In the Prophet's time there was one, called when the imam sat on the minbar, and Uthman (may Allah be pleased with him) added an earlier call when Madinah grew. Both are followed among the people of the Sunnah, and neither is a reason to quarrel.")
+                    }
+
+                    Section(header: ArticleHeader("THE VIRTUE OF THE ADHAN")) {
+                        ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:615", cite: "Sahih al-Bukhari 615", arabic: 29...44, english: 4...39)
+                        ArticleParagraph(verbatim: "Answer the muadhin. He said:")
+                        ScriptureQuote(hadith: "muslim:383", cite: "Sahih Muslim 383", arabic: 30...37, english: 0...11)
+                        ArticleParagraph(verbatim: "Except at “Hayya ala as-salah” and “Hayya ala al-falah,” where you say “La hawla wa la quwwata illa billah” (there is no might nor power except with Allah), as Umar (may Allah be pleased with him) reported from him (Sahih Muslim 385).")
+                        ScriptureQuote(hadith: "muslim:385", cite: "Sahih Muslim 385", arabic: 97...123, english: 85...128)
+                        ArticleParagraph(verbatim: "Then send blessings on the Prophet (peace and blessings be upon him), and say:")
+                        ScriptureQuote(hadith: "bukhari:614", cite: "Sahih al-Bukhari 614", arabic: 29...54, english: 4...88)
+                    }
                 }
 
-                Section(header: ArticleHeader("WHAT MAKES IT VALID")) {
-                    ArticleParagraph(verbatim: "The Adhan is an act of worship with conditions of its own. A call that misses one of them is not the Adhan, and it is given again:")
-                    ArticleStep("1. **The time has entered.** The Adhan announces a prayer whose time has come, so a call given before the time is repeated once it begins. The one exception is Fajr, which may have a first call in the last part of the night and a second at true dawn:")
-                    ScriptureQuote(hadith: "bukhari:617", cite: "Sahih al-Bukhari 617", arabic: 27...50, english: 8...47)
-                    ArticleStep("2. **Its own Arabic words, in their order.** The phrases are said as the Prophet (peace and blessings be upon him) taught them, none dropped and none moved. A translation is not the Adhan, and neither is a slip that changes the meaning, such as turning “Allahu” into a question, “Aallahu”, or stretching “Akbar” into “Akbaar”, which means drums.")
-                    ArticleStep("3. **One unbroken call, by one caller.** The phrases follow each other without a long pause, and one person says all of them. Two callers who each say half have not given an Adhan.")
-                    ArticleStep("4. **The caller is a Muslim man of sound mind.** A boy old enough to understand what he is doing may call it. The Adhan for men is not given by a woman.")
-                    ArticleStep("5. **It is called aloud, by someone present.** It is meant to be heard, so it is raised as far as the voice will carry. A recording played at prayer time is not an Adhan, as the Standing Committee and Ibn al-Uthaymin explained: the Adhan is worship a person performs, not a sound that is played.")
-                    ArticleParagraph(verbatim: "In the Hanbali school, and in the fatwas of Ibn Baz and Ibn al-Uthaymin, calling it is a collective obligation (fard kifayah) on the men of a town or a travelling group: once some call it, the rest are free of the duty. The Prophet told a group going home to their people:")
-                    ScriptureQuote(hadith: "bukhari:628", cite: "Sahih al-Bukhari 628", arabic: 46...53, english: 50...79)
-                }
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("ONLY FOR FAJR")) {
+                        ArticleParagraph(articleMarkdown: "**ONLY FOR FAJR:** the following line is added, and it is said in no other Adhan. It comes after “Hayya ala al-falah” and before the closing takbir.")
 
-                Section(header: ArticleHeader("HOW TO CALL IT")) {
-                    ArticleStep("1. **Be in wudhu** if you can. It is the better state for remembering Allah, though an Adhan called without wudhu still counts.")
-                    ArticleStep("2. **Stand, facing the qiblah**, somewhere the call will carry: a raised place, or a loudspeaker. When the Companions settled on calling people to prayer, the Prophet told Bilal to get up and call it (Sahih al-Bukhari 604).")
-                    ArticleStep("3. **Put your index fingers in your ears.** Bilal did, and the scholars mention two benefits: the voice rises further, and someone too far away to hear can see that the Adhan is being called.")
-                    ArticleStep("4. **Turn your face to the right at “Hayya ala as-salah” and to the left at “Hayya ala al-falah”**, keeping your feet and chest toward the qiblah:")
-                    ScriptureQuote(hadith: "tirmidhi:197", cite: "Jami' at-Tirmidhi 197; graded sahih by al-Albani", arabic: 18...30, english: 0...23)
-                    ArticleStep("5. **Raise your voice**, clear and unhurried, pausing after each phrase. Make it beautiful without singing it; the scholars disliked stretching the words into a tune that changes them. Everything that hears it will testify for you:")
-                    ScriptureQuote(hadith: "bukhari:609", cite: "Sahih al-Bukhari 609", arabic: 40...66, english: 14...65)
-                    ArticleStep("6. **For Fajr**, add “As-salatu khayrun mina-nawm” twice after “Hayya ala al-falah”, as above.")
-                    ArticleStep("7. **Add nothing to it.** No recitation or dhikr broadcast before it, no “sayyiduna” inside it, and no blessing on the Prophet chanted over the loudspeaker afterward as though it belonged to the call. After it the muadhin, like everyone who heard it, sends blessings on the Prophet quietly and asks Allah to grant him the Wasilah.")
-                }
+                        Text(articleMarkdown: "**ONLY FOR FAJR:**")
+                            .font(.body)
+                            .foregroundColor(appearance.accent)
 
-                Section(header: ArticleHeader("THE ADHAN FOR JUMUAH")) {
-                    ArticleParagraph(verbatim: "The Friday Adhan has the same words as the others, without the Fajr line. In the Prophet's time there was one, called when the imam sat on the minbar, and Uthman (may Allah be pleased with him) added an earlier call when Madinah grew:")
-                    ScriptureQuote(hadith: "bukhari:912", cite: "Sahih al-Bukhari 912", arabic: 14...53, english: 0...45)
-                    ArticleParagraph(articleMarkdown: "The narration calls Uthman's call the **third** because it counts the Iqamah as a call too. So a Friday runs:")
-                    ArticleStep("1. **The first Adhan**, Uthman's, some time before the khutbah, to tell people that Jumuah is near. Ibn Baz and Ibn al-Uthaymin held it to be a Sunnah of a rightly guided caliph, whose way the Prophet told us to hold to (Sunan Abi Dawud 4607; graded sahih by al-Albani). Al-Albani kept to the single Adhan of the Prophet's time, since the reason Uthman added it, people spread far through the markets, no longer applies where everyone keeps the time. Both are followed among the people of the Sunnah, and neither is a reason to quarrel.")
-                    ArticleStep("2. **The second Adhan**, the one of the Prophet's time: the imam comes out, greets the people and sits on the minbar, and the muadhin calls. This is the call meant in Surat al-Jumu'ah, after which buying and selling stop for those who must attend.")
-                    ArticleStep("3. **The khutbah**, then the **Iqamah** as the imam comes down, then the two rak'ah.")
-                }
+                        ArticleArabic(verbatim: "الصَّلَاةُ خَيرٌ مِنَ النَّومِ")
 
-                Section(header: ArticleHeader("THE VIRTUE OF THE ADHAN")) {
-                    ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) says:")
-                    ScriptureQuote(quran: "62:9", words: 0...14)
-                    ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) said:")
-                    ScriptureQuote(hadith: "bukhari:615", cite: "Sahih al-Bukhari 615", arabic: 29...44, english: 4...39)
-                    ScriptureQuote(hadith: "bukhari:608", cite: "Sahih al-Bukhari 608", arabic: 26...36, english: 4...28)
-                    ArticleParagraph(verbatim: "Answer the muadhin. He said:")
-                    ScriptureQuote(hadith: "muslim:383", cite: "Sahih Muslim 383", arabic: 30...37, english: 0...11)
-                    ArticleParagraph(verbatim: "Except at “Hayya ala as-salah” and “Hayya ala al-falah,” where you say “La hawla wa la quwwata illa billah” (there is no might nor power except with Allah), as Umar (may Allah be pleased with him) reported from him (Sahih Muslim 385).")
-                    ArticleParagraph(verbatim: "Then send blessings on the Prophet (peace and blessings be upon him), and say:")
-                    ScriptureQuote(hadith: "bukhari:614", cite: "Sahih al-Bukhari 614", arabic: 29...54, english: 4...88)
-                }
+                        ArticleParagraph(verbatim: "As-salatu khayrun mina-nawm\n(Prayer is better than sleep)")
 
-                Section(header: ArticleHeader("COMMON QUESTIONS")) {
-                    ArticleParagraph(articleMarkdown: "**I pray alone, at home or on a journey. Do I call the Adhan?** It is Sunnah to call the Adhan and the Iqamah even alone, even where no one will hear but the land and what lives on it:")
-                    ScriptureQuote(hadith: "abudawud:1203", cite: "Sunan Abi Dawud 1203; graded sahih by al-Albani", arabic: 31...60, english: 8...58)
-                    ArticleParagraph(articleMarkdown: "**The mosque's Adhan reaches my home. Must I call again?** No. The town's Adhan covers whoever hears it. Giving the Iqamah before you pray is still the Sunnah.")
-                    ArticleParagraph(articleMarkdown: "**Do women call the Adhan?** It is not required of women. Women praying together may give the Iqamah, and the scholars saw no harm in an Adhan among themselves, in a voice that does not reach men.")
-                    ArticleParagraph(articleMarkdown: "**I am joining two prayers, or making up several.** Call one Adhan, then an Iqamah before each prayer. At Arafah the Prophet had the Adhan called once, with an Iqamah for Dhuhr and another for Asr (Sahih Muslim 1218); and when they slept through Fajr on a journey, Bilal called the Adhan once they woke, and they prayed (Sahih Muslim 681).")
-                    ArticleParagraph(articleMarkdown: "**Bilal's Adhan or Abu Mahdhurah's?** Both are Sunnah. The words above are Bilal's. In Abu Mahdhurah's, whom the Prophet taught in Makkah, the two testimonies are said in a low voice and then repeated aloud, the **tarji'** (Sahih Muslim 379). A muadhin may call either.")
-                    ArticleParagraph(articleMarkdown: "**Can the Adhan be called in English?** No. Its words are fixed Arabic, the same in every land. Teach their meaning beside it, as this page does.")
+                        ArticleParagraph(verbatim: "This line is said twice, and only in the Adhan for Fajr. It is never said in the Adhan for Dhuhr, Asr, Maghrib, or Isha, and it is never said in the Iqamah. Abu Mahdhurah (may Allah be pleased with him), whom the Prophet (peace and blessings be upon him) taught the Adhan, said:")
+                        ScriptureQuote(hadith: "nasai:647", cite: "Sunan an-Nasa'i 647; graded sahih by al-Albani", arabic: 20...52, english: 0...67)
+                    }
+
+                    Section(header: ArticleHeader("WHAT MAKES IT VALID")) {
+                        ArticleParagraph(verbatim: "The Adhan is an act of worship with conditions of its own. A call that misses one of them is not the Adhan, and it is given again:")
+                        ArticleStep("1. **The time has entered.** The Adhan announces a prayer whose time has come, so a call given before the time is repeated once it begins. The one exception is Fajr, which may have a first call in the last part of the night and a second at true dawn:")
+                        ScriptureQuote(hadith: "bukhari:617", cite: "Sahih al-Bukhari 617", arabic: 27...50, english: 8...47)
+                        ArticleStep("2. **Its own Arabic words, in their order.** The phrases are said as the Prophet (peace and blessings be upon him) taught them, none dropped and none moved. A translation is not the Adhan, and neither is a slip that changes the meaning, such as turning “Allahu” into a question, “Aallahu”, or stretching “Akbar” into “Akbaar”, which means drums.")
+                        ArticleStep("3. **One unbroken call, by one caller.** The phrases follow each other without a long pause, and one person says all of them. Two callers who each say half have not given an Adhan.")
+                        ArticleStep("4. **The caller is a Muslim man of sound mind.** A boy old enough to understand what he is doing may call it. The Adhan for men is not given by a woman.")
+                        ArticleStep("5. **It is called aloud, by someone present.** It is meant to be heard, so it is raised as far as the voice will carry. A recording played at prayer time is not an Adhan, as the Standing Committee and Ibn al-Uthaymin explained: the Adhan is worship a person performs, not a sound that is played.")
+                        ArticleParagraph(verbatim: "In the Hanbali school, and in the fatwas of Ibn Baz and Ibn al-Uthaymin, calling it is a collective obligation (fard kifayah) on the men of a town or a travelling group: once some call it, the rest are free of the duty. The Prophet told a group going home to their people:")
+                        ScriptureQuote(hadith: "bukhari:628", cite: "Sahih al-Bukhari 628", arabic: 46...53, english: 50...79)
+                    }
+
+                    Section(header: ArticleHeader("HOW TO CALL IT")) {
+                        ArticleStep("1. **Be in wudhu** if you can. It is the better state for remembering Allah, though an Adhan called without wudhu still counts.")
+                        ArticleStep("2. **Stand, facing the qiblah**, somewhere the call will carry: a raised place, or a loudspeaker. When the Companions settled on calling people to prayer, the Prophet told Bilal to get up and call it (Sahih al-Bukhari 604).")
+                        ArticleStep("3. **Put your index fingers in your ears.** Bilal did, and the scholars mention two benefits: the voice rises further, and someone too far away to hear can see that the Adhan is being called.")
+                        ArticleStep("4. **Turn your face to the right at “Hayya ala as-salah” and to the left at “Hayya ala al-falah”**, keeping your feet and chest toward the qiblah:")
+                        ScriptureQuote(hadith: "tirmidhi:197", cite: "Jami' at-Tirmidhi 197; graded sahih by al-Albani", arabic: 18...30, english: 0...23)
+                        ArticleStep("5. **Raise your voice**, clear and unhurried, pausing after each phrase. Make it beautiful without singing it; the scholars disliked stretching the words into a tune that changes them. Everything that hears it will testify for you:")
+                        ScriptureQuote(hadith: "bukhari:609", cite: "Sahih al-Bukhari 609", arabic: 40...66, english: 14...65)
+                        ArticleStep("6. **For Fajr**, add “As-salatu khayrun mina-nawm” twice after “Hayya ala al-falah”, as above.")
+                        ArticleStep("7. **Add nothing to it.** No recitation or dhikr broadcast before it, no “sayyiduna” inside it, and no blessing on the Prophet chanted over the loudspeaker afterward as though it belonged to the call. After it the muadhin, like everyone who heard it, sends blessings on the Prophet quietly and asks Allah to grant him the Wasilah.")
+                    }
+
+                    Section(header: ArticleHeader("THE ADHAN FOR JUMUAH")) {
+                        ArticleParagraph(verbatim: "The Friday Adhan has the same words as the others, without the Fajr line. In the Prophet's time there was one, called when the imam sat on the minbar, and Uthman (may Allah be pleased with him) added an earlier call when Madinah grew:")
+                        ScriptureQuote(hadith: "bukhari:912", cite: "Sahih al-Bukhari 912", arabic: 14...53, english: 0...45)
+                        ArticleParagraph(articleMarkdown: "The narration calls Uthman's call the **third** because it counts the Iqamah as a call too. So a Friday runs:")
+                        ArticleStep("1. **The first Adhan**, Uthman's, some time before the khutbah, to tell people that Jumuah is near. Ibn Baz and Ibn al-Uthaymin held it to be a Sunnah of a rightly guided caliph, whose way the Prophet told us to hold to (Sunan Abi Dawud 4607; graded sahih by al-Albani). Al-Albani kept to the single Adhan of the Prophet's time, since the reason Uthman added it, people spread far through the markets, no longer applies where everyone keeps the time. Both are followed among the people of the Sunnah, and neither is a reason to quarrel.")
+                        ScriptureQuote(hadith: "abudawud:4607", cite: "Sunan Abi Dawud 4607; graded sahih by al-Albani", arabic: 112...122, english: 159...178)
+                        ArticleStep("2. **The second Adhan**, the one of the Prophet's time: the imam comes out, greets the people and sits on the minbar, and the muadhin calls. This is the call meant in Surat al-Jumu'ah, after which buying and selling stop for those who must attend.")
+                        ArticleStep("3. **The khutbah**, then the **Iqamah** as the imam comes down, then the two rak'ah.")
+                    }
+
+                    Section(header: ArticleHeader("THE VIRTUE OF THE ADHAN")) {
+                        ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) says:")
+                        ScriptureQuote(quran: "62:9", words: 0...14)
+                        ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:615", cite: "Sahih al-Bukhari 615", arabic: 29...44, english: 4...39)
+                        ScriptureQuote(hadith: "bukhari:608", cite: "Sahih al-Bukhari 608", arabic: 26...36, english: 4...28)
+                        ArticleParagraph(verbatim: "Answer the muadhin. He said:")
+                        ScriptureQuote(hadith: "muslim:383", cite: "Sahih Muslim 383", arabic: 30...37, english: 0...11)
+                        ArticleParagraph(verbatim: "Except at “Hayya ala as-salah” and “Hayya ala al-falah,” where you say “La hawla wa la quwwata illa billah” (there is no might nor power except with Allah), as Umar (may Allah be pleased with him) reported from him (Sahih Muslim 385).")
+                        ScriptureQuote(hadith: "muslim:385", cite: "Sahih Muslim 385", arabic: 97...123, english: 85...128)
+                        ArticleParagraph(verbatim: "Then send blessings on the Prophet (peace and blessings be upon him), and say:")
+                        ScriptureQuote(hadith: "bukhari:614", cite: "Sahih al-Bukhari 614", arabic: 29...54, english: 4...88)
+                    }
+
+                    Section(header: ArticleHeader("COMMON QUESTIONS")) {
+                        ArticleParagraph(articleMarkdown: "**I pray alone, at home or on a journey. Do I call the Adhan?** It is Sunnah to call the Adhan and the Iqamah even alone, even where no one will hear but the land and what lives on it:")
+                        ScriptureQuote(hadith: "abudawud:1203", cite: "Sunan Abi Dawud 1203; graded sahih by al-Albani", arabic: 31...60, english: 8...58)
+                        ArticleParagraph(articleMarkdown: "**The mosque's Adhan reaches my home. Must I call again?** No. The town's Adhan covers whoever hears it. Giving the Iqamah before you pray is still the Sunnah.")
+                        ArticleParagraph(articleMarkdown: "**Do women call the Adhan?** It is not required of women. Women praying together may give the Iqamah, and the scholars saw no harm in an Adhan among themselves, in a voice that does not reach men.")
+                        ArticleParagraph(articleMarkdown: "**I am joining two prayers, or making up several.** Call one Adhan, then an Iqamah before each prayer. At Arafah the Prophet had the Adhan called once, with an Iqamah for Dhuhr and another for Asr (Sahih Muslim 1218); and when they slept through Fajr on a journey, Bilal called the Adhan once they woke, and they prayed (Sahih Muslim 681).")
+                        ScriptureQuote(hadith: "muslim:1218", cite: "Sahih Muslim 1218", arabic: 922...935, english: 1567...1607)
+                        ScriptureQuote(hadith: "muslim:681", cite: "Sahih Muslim 681", arabic: 302...322, english: 416...442)
+                        ArticleParagraph(articleMarkdown: "**Bilal's Adhan or Abu Mahdhurah's?** Both are Sunnah. The words above are Bilal's. In Abu Mahdhurah's, whom the Prophet taught in Makkah, the two testimonies are said in a low voice and then repeated aloud, the **tarji'** (Sahih Muslim 379). A muadhin may call either.")
+                        ScriptureQuote(hadith: "muslim:379", cite: "Sahih Muslim 379", arabic: 46...113, english: 0...94)
+                        ArticleParagraph(articleMarkdown: "**Can the Adhan be called in English?** No. Its words are fixed Arabic, the same in every land. Teach their meaning beside it, as this page does.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -724,6 +941,8 @@ struct IqamahView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: the Iqamah is the second, shorter call, given when the imam is ready and the prayer is about to begin. Like the Adhan, it counts only after the time has entered, in its Arabic words and order, without a break; it is joined to the prayer that follows it.")
                 }
@@ -793,44 +1012,69 @@ struct IqamahView: View {
                     ArticleCallout("The noon of “an” melts into the laam after it (idgham), so “an la ilaha” is said “allaa ilaaha”, and “illa Allah” runs together as “illallah”: Ashhadu allaa ilaaha illallah. “Rasool Allah” joins the same way, rasoolullah, and so does the closing line, La ilaha illallah.", title: "How it is said", systemImage: "waveform")
                 }
 
-                Section(header: ArticleHeader("WHAT MAKES IT VALID")) {
-                    ArticleParagraph(verbatim: "The Iqamah keeps the Adhan's conditions and adds one of its own:")
-                    ArticleStep("1. **The time has entered**, with no exception this time: even the Iqamah of Fajr comes after true dawn.")
-                    ArticleStep("2. **Its Arabic words, in their order**, said without a break by one person.")
-                    ArticleStep("3. **A Muslim of sound mind gives it.** For men a man gives it; women praying together may give their own, quietly.")
-                    ArticleStep("4. **It is joined to the prayer.** It announces that the prayer is starting now, so the prayer follows it. A short delay does not undo it:")
-                    ScriptureQuote(hadith: "bukhari:642", cite: "Sahih al-Bukhari 642", arabic: 20...38, english: 0...42)
-                    ArticleParagraph(verbatim: "If a long time passes, or the people leave and come back, the scholars said it is given again before the prayer.")
-                    ArticleParagraph(verbatim: "Its ruling is that of the Adhan: a collective obligation on the men of a town in the Hanbali school and the fatwas of Ibn Baz and Ibn al-Uthaymin, and a confirmed Sunnah for someone praying alone. A prayer prayed without it is still valid.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("WHAT MAKES IT VALID")) {
+                        ArticleParagraph(verbatim: "The Iqamah keeps the Adhan's conditions and adds one of its own:")
+                        ArticleStep("1. **The time has entered**, with no exception this time: even the Iqamah of Fajr comes after true dawn.")
+                        ArticleStep("2. **Its Arabic words, in their order**, said without a break by one person.")
+                        ArticleStep("3. **A Muslim of sound mind gives it.** For men a man gives it; women praying together may give their own, quietly.")
+                        ArticleStep("4. **It is joined to the prayer.** It announces that the prayer is starting now, so the prayer follows it.")
+                    }
+
+                    Section(header: ArticleHeader("WHEN IT IS GIVEN")) {
+                        ArticleParagraph(verbatim: "The scholars put it this way: the muadhin decides the time of the Adhan, and the imam decides the time of the Iqamah. Bilal called the Adhan as soon as the time came in, then waited for the Prophet:")
+                        ScriptureQuote(hadith: "muslim:606", cite: "Sahih Muslim 606", arabic: 19...38, english: 0...28)
+                        ArticleParagraph(verbatim: "So the Iqamah is given when the imam is present and ready, or at the time the mosque has fixed with his consent.")
+                    }
+
+                    Section(header: ArticleHeader("AFTER THE IQAMAH")) {
+                        ArticleParagraph(verbatim: "Once the Iqamah is called, no other prayer is begun. The Prophet (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "muslim:710a", cite: "Sahih Muslim 710", arabic: 32...38, english: 0...13)
+                    }
                 }
 
-                Section(header: ArticleHeader("WHEN IT IS GIVEN")) {
-                    ArticleParagraph(verbatim: "The scholars put it this way: the muadhin decides the time of the Adhan, and the imam decides the time of the Iqamah. Bilal called the Adhan as soon as the time came in, then waited for the Prophet:")
-                    ScriptureQuote(hadith: "muslim:606", cite: "Sahih Muslim 606", arabic: 19...38, english: 0...28)
-                    ArticleParagraph(verbatim: "So the Iqamah is given when the imam is present and ready, or at the time the mosque has fixed with his consent. The time between the two calls is for a voluntary prayer and for dua, which is not turned back then (Sunan Abi Dawud 521; graded sahih by al-Albani):")
-                    ScriptureQuote(hadith: "bukhari:624", cite: "Sahih al-Bukhari 624", arabic: 27...35, english: 5...24)
-                    ArticleParagraph(verbatim: "When the imam is coming from elsewhere, the congregation waits to see him before standing:")
-                    ScriptureQuote(hadith: "bukhari:637", cite: "Sahih al-Bukhari 637", arabic: 29...35, english: 7...26)
-                    ArticleParagraph(articleMarkdown: "On **Friday** there is no waiting: the imam finishes the second khutbah and comes down from the minbar, and the Iqamah is given at once.")
-                }
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("WHAT MAKES IT VALID")) {
+                        ArticleParagraph(verbatim: "The Iqamah keeps the Adhan's conditions and adds one of its own:")
+                        ArticleStep("1. **The time has entered**, with no exception this time: even the Iqamah of Fajr comes after true dawn.")
+                        ArticleStep("2. **Its Arabic words, in their order**, said without a break by one person.")
+                        ArticleStep("3. **A Muslim of sound mind gives it.** For men a man gives it; women praying together may give their own, quietly.")
+                        ArticleStep("4. **It is joined to the prayer.** It announces that the prayer is starting now, so the prayer follows it. A short delay does not undo it:")
+                        ScriptureQuote(hadith: "bukhari:642", cite: "Sahih al-Bukhari 642", arabic: 20...38, english: 0...42)
+                        ArticleParagraph(verbatim: "If a long time passes, or the people leave and come back, the scholars said it is given again before the prayer.")
+                        ArticleParagraph(verbatim: "Its ruling is that of the Adhan: a collective obligation on the men of a town in the Hanbali school and the fatwas of Ibn Baz and Ibn al-Uthaymin, and a confirmed Sunnah for someone praying alone. A prayer prayed without it is still valid.")
+                    }
 
-                Section(header: ArticleHeader("AFTER THE IQAMAH")) {
-                    ArticleParagraph(verbatim: "The Iqamah is said in single phrases, unlike the Adhan, which is said in pairs. Anas (may Allah be pleased with him) said:")
-                    ScriptureQuote(hadith: "bukhari:605", cite: "Sahih al-Bukhari 605, Sahih Muslim 378", arabic: 21...30, english: 0...22)
-                    ArticleParagraph(verbatim: "Once the Iqamah is called, no other prayer is begun. The Prophet (peace and blessings be upon him) said:")
-                    ScriptureQuote(hadith: "muslim:710a", cite: "Sahih Muslim 710", arabic: 32...38, english: 0...13)
-                    ArticleParagraph(verbatim: "And straighten the rows before the imam begins:")
-                    ScriptureQuote(hadith: "bukhari:723", cite: "Sahih al-Bukhari 723, Sahih Muslim 433", arabic: 19...26, english: 4...19)
-                    ArticleParagraph(verbatim: "Walk to the prayer calmly. He said:")
-                    ScriptureQuote(hadith: "bukhari:636", cite: "Sahih al-Bukhari 636, Sahih Muslim 602", arabic: 40...56, english: 4...36)
-                }
+                    Section(header: ArticleHeader("WHEN IT IS GIVEN")) {
+                        ArticleParagraph(verbatim: "The scholars put it this way: the muadhin decides the time of the Adhan, and the imam decides the time of the Iqamah. Bilal called the Adhan as soon as the time came in, then waited for the Prophet:")
+                        ScriptureQuote(hadith: "muslim:606", cite: "Sahih Muslim 606", arabic: 19...38, english: 0...28)
+                        ArticleParagraph(verbatim: "So the Iqamah is given when the imam is present and ready, or at the time the mosque has fixed with his consent. The time between the two calls is for a voluntary prayer and for dua, which is not turned back then (Sunan Abi Dawud 521; graded sahih by al-Albani):")
+                        ScriptureQuote(hadith: "bukhari:624", cite: "Sahih al-Bukhari 624", arabic: 27...35, english: 5...24)
+                        ScriptureQuote(hadith: "abudawud:521", cite: "Sunan Abi Dawud 521; graded sahih by al-Albani", arabic: 26...31, english: 0...11)
+                        ArticleParagraph(verbatim: "When the imam is coming from elsewhere, the congregation waits to see him before standing:")
+                        ScriptureQuote(hadith: "bukhari:637", cite: "Sahih al-Bukhari 637", arabic: 29...35, english: 7...26)
+                        ArticleParagraph(articleMarkdown: "On **Friday** there is no waiting: the imam finishes the second khutbah and comes down from the minbar, and the Iqamah is given at once.")
+                    }
 
-                Section(header: ArticleHeader("COMMON QUESTIONS")) {
-                    ArticleParagraph(articleMarkdown: "**Is the Iqamah said once or twice?** The words above are Bilal's: each phrase once, with “Qad qamatis-salah” twice. The Prophet taught Abu Mahdhurah an Iqamah with its phrases doubled (Sunan Abi Dawud 502; graded hasan sahih by al-Albani). Both are Sunnah.")
-                    ArticleParagraph(articleMarkdown: "**Must the one who called the Adhan give the Iqamah?** No, anyone suitable may give it. The narration “whoever calls the Adhan gives the Iqamah” is weak (Jami' at-Tirmidhi 199), though most scholars still prefer that the muadhin give it when he is there.")
-                    ArticleParagraph(articleMarkdown: "**Do I answer the Iqamah?** Many scholars said to repeat its words as you do the Adhan's, since it is a call too. Saying “Aqamaha Allahu wa adamaha” at “Qad qamatis-salah” comes in a weak narration (Sunan Abi Dawud 528), so it is not relied on.")
-                    ArticleParagraph(articleMarkdown: "**I pray alone. Do I give the Iqamah?** Yes, it is Sunnah, even when you heard the mosque's Adhan and did not call your own.")
-                    ArticleParagraph(articleMarkdown: "**The Iqamah was called while I was praying a sunnah.** Ibn al-Uthaymin's guidance: if you are in the second rak'ah, finish it lightly; if you are still in the first, break it off and join the imam. A new voluntary prayer is never started after the Iqamah.")
+                    Section(header: ArticleHeader("AFTER THE IQAMAH")) {
+                        ArticleParagraph(verbatim: "The Iqamah is said in single phrases, unlike the Adhan, which is said in pairs. Anas (may Allah be pleased with him) said:")
+                        ScriptureQuote(hadith: "bukhari:605", cite: "Sahih al-Bukhari 605, Sahih Muslim 378", arabic: 21...30, english: 0...22)
+                        ArticleParagraph(verbatim: "Once the Iqamah is called, no other prayer is begun. The Prophet (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "muslim:710a", cite: "Sahih Muslim 710", arabic: 32...38, english: 0...13)
+                        ArticleParagraph(verbatim: "And straighten the rows before the imam begins:")
+                        ScriptureQuote(hadith: "bukhari:723", cite: "Sahih al-Bukhari 723, Sahih Muslim 433", arabic: 19...26, english: 4...19)
+                        ArticleParagraph(verbatim: "Walk to the prayer calmly. He said:")
+                        ScriptureQuote(hadith: "bukhari:636", cite: "Sahih al-Bukhari 636, Sahih Muslim 602", arabic: 40...56, english: 4...36)
+                    }
+
+                    Section(header: ArticleHeader("COMMON QUESTIONS")) {
+                        ArticleParagraph(articleMarkdown: "**Is the Iqamah said once or twice?** The words above are Bilal's: each phrase once, with “Qad qamatis-salah” twice. The Prophet taught Abu Mahdhurah an Iqamah with its phrases doubled (Sunan Abi Dawud 502; graded hasan sahih by al-Albani). Both are Sunnah.")
+                        ScriptureQuote(hadith: "abudawud:502", cite: "Sunan Abi Dawud 502; graded hasan sahih by al-Albani", arabic: 121...177, english: 23...114)
+                        ArticleParagraph(articleMarkdown: "**Must the one who called the Adhan give the Iqamah?** No, anyone suitable may give it. The narration “whoever calls the Adhan gives the Iqamah” is weak (Jami' at-Tirmidhi 199), though most scholars still prefer that the muadhin give it when he is there.")
+                        ArticleParagraph(articleMarkdown: "**Do I answer the Iqamah?** Many scholars said to repeat its words as you do the Adhan's, since it is a call too. Saying “Aqamaha Allahu wa adamaha” at “Qad qamatis-salah” comes in a weak narration (Sunan Abi Dawud 528), so it is not relied on.")
+                        ArticleParagraph(articleMarkdown: "**I pray alone. Do I give the Iqamah?** Yes, it is Sunnah, even when you heard the mosque's Adhan and did not call your own.")
+                        ArticleParagraph(articleMarkdown: "**The Iqamah was called while I was praying a sunnah.** Ibn al-Uthaymin's guidance: if you are in the second rak'ah, finish it lightly; if you are still in the first, break it off and join the imam. A new voluntary prayer is never started after the Iqamah.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -852,6 +1096,8 @@ struct TakbiratView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: the Eid prayer is two rak'ah with extra takbirs, prayed in congregation after sunrise with no Adhan and no Iqamah, followed by the khutbah.")
                 }
@@ -894,30 +1140,48 @@ struct TakbiratView: View {
                     ArticleParagraph(verbatim: "If you miss a takbir, or the imam has already begun, join him where he is and do not try to make up the extra takbirs. They are a Sunnah, not a pillar, and forgetting them does not invalidate the prayer or require the prostration of forgetfulness.")
                 }
 
-                Section(header: ArticleHeader("AFTER THE PRAYER: THE KHUTBAH")) {
-                    ArticleParagraph(articleMarkdown: "The khutbah comes **after** the Eid prayer, unlike Jumuah, where it comes before.")
-                    ArticleParagraph(verbatim: "Staying for it is strongly recommended, though it is not obligatory, and one who leaves has not sinned.")
-                    ArticleParagraph(verbatim: "If you missed the congregation entirely, you may pray two rak'ah on your own.")
-                    ArticleParagraph(verbatim: "Greet one another as the Companions did. Jubayr ibn Nufayr said: when the Companions of the Messenger of Allah (peace and blessings be upon him) met on the day of Eid, they would say to one another:")
-                    ScriptureQuote(text: "“Taqabbal Allahu minna wa minka: May Allah accept it from us and from you” (reported by al-Mahamili; Ibn Hajar said its chain is hasan, Fath al-Bari 2/446).", arabic: "تَقَبَّلَ اللَّهُ مِنَّا وَمِنكَ", dimmed: true)
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("AFTER THE PRAYER: THE KHUTBAH")) {
+                        ArticleParagraph(articleMarkdown: "The khutbah comes **after** the Eid prayer, unlike Jumuah, where it comes before.")
+                        ArticleParagraph(verbatim: "Staying for it is strongly recommended, though it is not obligatory, and one who leaves has not sinned.")
+                        ArticleParagraph(verbatim: "If you missed the congregation entirely, you may pray two rak'ah on your own.")
+                    }
+
+                    Section(header: ArticleHeader("TAKBIRAT AL-EID")) {
+                        ArticleParagraph(verbatim: "The Takbirat al-Eid is a special proclamation of Allah’s greatness, recited during the days of Eid.")
+
+                        ArticleParagraph(verbatim: "For Eid al-Fitr, it begins after the new moon confirming the end of Ramadan and continues until the Eid prayer. For Eid al-Adha, the unrestricted takbir runs from the start of Dhu al-Hijjah until sunset on the 13th, and the takbir after the prayers runs from Fajr of Arafah Day (the 9th) for those not on Hajj until Asr of the 13th.")
+                    }
                 }
 
-                Section(header: ArticleHeader("EID OCCASIONS")) {
-                    ArticleParagraph(verbatim: "In Islam, there are two major annual celebrations known as Eid:")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("AFTER THE PRAYER: THE KHUTBAH")) {
+                        ArticleParagraph(articleMarkdown: "The khutbah comes **after** the Eid prayer, unlike Jumuah, where it comes before.")
+                        ArticleParagraph(verbatim: "Staying for it is strongly recommended, though it is not obligatory, and one who leaves has not sinned.")
+                        ArticleParagraph(verbatim: "If you missed the congregation entirely, you may pray two rak'ah on your own.")
+                        ArticleParagraph(verbatim: "Greet one another as the Companions did. Jubayr ibn Nufayr said: when the Companions of the Messenger of Allah (peace and blessings be upon him) met on the day of Eid, they would say to one another:")
+                        ScriptureQuote(text: "“Taqabbal Allahu minna wa minka: May Allah accept it from us and from you” (reported by al-Mahamili; Ibn Hajar said its chain is hasan, Fath al-Bari 2/446).", arabic: "تَقَبَّلَ اللَّهُ مِنَّا وَمِنكَ", dimmed: true)
+                    }
 
-                    ArticleStep("1. **Eid al-Fitr (عِيد الفِطر):** Celebrated at the end of Ramadan (the month of fasting). It is a time of joy, gratitude to Allah (Glorified and Exalted be He), and giving to the needy (Zakat al-Fitr).")
+                    Section(header: ArticleHeader("EID OCCASIONS")) {
+                        ArticleParagraph(verbatim: "In Islam, there are two major annual celebrations known as Eid:")
 
-                    ArticleStep("2. **Eid al-Adha (عِيد الأَضحَى):** Celebrated on the 10th day of Dhu al-Hijjah. It commemorates the willingness of Prophet Ibrahim (peace be upon him) to sacrifice his son Isma'il (peace be upon him). Muslims who are able to do so perform the sacrifice (Qurbani) and distribute the meat to the poor. This Eid coincides with Hajj, the annual pilgrimage to Makkah.")
-                }
+                        ArticleStep("1. **Eid al-Fitr (عِيد الفِطر):** Celebrated at the end of Ramadan (the month of fasting). It is a time of joy, gratitude to Allah (Glorified and Exalted be He), and giving to the needy (Zakat al-Fitr).")
 
-                Section(header: ArticleHeader("TAKBIRAT AL-EID")) {
-                    ArticleParagraph(verbatim: "The Takbirat al-Eid is a special proclamation of Allah’s greatness, recited during the days of Eid.")
+                        ArticleStep("2. **Eid al-Adha (عِيد الأَضحَى):** Celebrated on the 10th day of Dhu al-Hijjah. It commemorates the willingness of Prophet Ibrahim (peace be upon him) to sacrifice his son Isma'il (peace be upon him). Muslims who are able to do so perform the sacrifice (Qurbani) and distribute the meat to the poor. This Eid coincides with Hajj, the annual pilgrimage to Makkah.")
+                    }
 
-                    ArticleParagraph(verbatim: "For Eid al-Fitr, it begins after the new moon confirming the end of Ramadan and continues until the Eid prayer. For Eid al-Adha, the unrestricted takbir runs from the start of Dhu al-Hijjah until sunset on the 13th. Ibn Abbas explained that the “known days” of Quran 22:28 are the ten days and the “numbered days” of Quran 2:203 are the days of Tashriq, and Ibn Umar and Abu Hurayrah would go out to the market in the ten days saying the takbir, and the people said it with them (Sahih al-Bukhari, the chapter on the virtue of deeds in the days of Tashriq). The takbir after the prayers runs from Fajr of Arafah Day (the 9th) for those not on Hajj until Asr of the 13th; Ibn Hajar names the report of Ali and Ibn Mas'ud as the soundest from the Companions on it (Fath al-Bari 2/462).")
+                    Section(header: ArticleHeader("TAKBIRAT AL-EID")) {
+                        ArticleParagraph(verbatim: "The Takbirat al-Eid is a special proclamation of Allah’s greatness, recited during the days of Eid.")
 
-                    ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:")
+                        ArticleParagraph(verbatim: "For Eid al-Fitr, it begins after the new moon confirming the end of Ramadan and continues until the Eid prayer. For Eid al-Adha, the unrestricted takbir runs from the start of Dhu al-Hijjah until sunset on the 13th. Ibn Abbas explained that the “known days” of Quran 22:28 are the ten days and the “numbered days” of Quran 2:203 are the days of Tashriq, and Ibn Umar and Abu Hurayrah would go out to the market in the ten days saying the takbir, and the people said it with them (Sahih al-Bukhari, the chapter on the virtue of deeds in the days of Tashriq). The takbir after the prayers runs from Fajr of Arafah Day (the 9th) for those not on Hajj until Asr of the 13th; Ibn Hajar names the report of Ali and Ibn Mas'ud as the soundest from the Companions on it (Fath al-Bari 2/462).")
+                        ScriptureQuote(quran: "22:28", words: 3...8)
+                        ScriptureQuote(quran: "2:203", words: 1...5)
 
-                    ScriptureQuote(quran: "2:185", words: 35...43)
+                        ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:")
+
+                        ScriptureQuote(quran: "2:185", words: 35...43)
+                    }
                 }
 
                 Section(header: ArticleHeader("SHORT TAKBIRAT")) {
@@ -930,27 +1194,30 @@ struct TakbiratView: View {
                     ArticleParagraph(verbatim: "Allah is the Greatest, Allah is the Greatest. There is no deity but Allah. Allah is the Greatest, Allah is the Greatest, and to Allah belongs all praise.")
                 }
 
-                Section(header: ArticleHeader("THE TAKBIR OF THE COMPANIONS")) {
-                    ArticleParagraph(verbatim: "No fixed wording of the Eid takbir is narrated from the Prophet (peace and blessings be upon him) himself; what is established is the practice of his Companions, and their wording is what Ahl as-Sunnah keep to. Ibn Mas’ud (may Allah be pleased with him) would say:")
-                    ScriptureQuote(text: "“Allahu Akbar, Allahu Akbar, la ilaha illallah, wallahu Akbar, Allahu Akbar, wa lillahil-hamd: Allah is the Greatest, Allah is the Greatest, there is no deity but Allah; and Allah is the Greatest, Allah is the Greatest, and to Allah belongs all praise” (Musannaf Ibn Abi Shaybah; graded sahih by al-Albani, Irwa' al-Ghalil 3/125).", arabic: "اللَّهُ أَكبَرُ اللَّهُ أَكبَرُ، لَا إِلَهَ إِلَّا اللَّهُ، وَاللَّهُ أَكبَرُ اللَّهُ أَكبَرُ وَلِلَّهِ الحَمدُ", dimmed: true)
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("THE TAKBIR OF THE COMPANIONS")) {
+                        ArticleParagraph(verbatim: "No fixed wording of the Eid takbir is narrated from the Prophet (peace and blessings be upon him) himself; what is established is the practice of his Companions, and their wording is what Ahl as-Sunnah keep to. Ibn Mas’ud (may Allah be pleased with him) would say:")
+                        ScriptureQuote(text: "“Allahu Akbar, Allahu Akbar, la ilaha illallah, wallahu Akbar, Allahu Akbar, wa lillahil-hamd: Allah is the Greatest, Allah is the Greatest, there is no deity but Allah; and Allah is the Greatest, Allah is the Greatest, and to Allah belongs all praise” (Musannaf Ibn Abi Shaybah; graded sahih by al-Albani, Irwa' al-Ghalil 3/125).", arabic: "اللَّهُ أَكبَرُ اللَّهُ أَكبَرُ، لَا إِلَهَ إِلَّا اللَّهُ، وَاللَّهُ أَكبَرُ اللَّهُ أَكبَرُ وَلِلَّهِ الحَمدُ", dimmed: true)
 
-                    ArticleParagraph(verbatim: "And from Ibn Abbas (may Allah be pleased with him):")
-                    ScriptureQuote(text: "“Allahu Akbar kabira, Allahu Akbar kabira, Allahu Akbar wa ajall, Allahu Akbar wa lillahil-hamd: Allah is the Greatest, truly great; Allah is the Greatest, truly great; Allah is the Greatest and most Majestic; Allah is the Greatest, and to Allah belongs all praise” (Ibn Abi Shaybah 2/168 and al-Mahamili; graded sahih by al-Albani, Irwa' al-Ghalil 3/126).", arabic: "اللَّهُ أَكبَرُ كَبِيرًا، اللَّهُ أَكبَرُ كَبِيرًا، اللَّهُ أَكبَرُ وَأَجَلُّ، اللَّهُ أَكبَرُ وَلِلَّهِ الحَمدُ", dimmed: true)
+                        ArticleParagraph(verbatim: "And from Ibn Abbas (may Allah be pleased with him):")
+                        ScriptureQuote(text: "“Allahu Akbar kabira, Allahu Akbar kabira, Allahu Akbar wa ajall, Allahu Akbar wa lillahil-hamd: Allah is the Greatest, truly great; Allah is the Greatest, truly great; Allah is the Greatest and most Majestic; Allah is the Greatest, and to Allah belongs all praise” (Ibn Abi Shaybah 2/168 and al-Mahamili; graded sahih by al-Albani, Irwa' al-Ghalil 3/126).", arabic: "اللَّهُ أَكبَرُ كَبِيرًا، اللَّهُ أَكبَرُ كَبِيرًا، اللَّهُ أَكبَرُ وَأَجَلُّ، اللَّهُ أَكبَرُ وَلِلَّهِ الحَمدُ", dimmed: true)
 
-                    ArticleParagraph(verbatim: "Saying it three times (Allahu Akbar, Allahu Akbar, Allahu Akbar) is also reported from the Salaf, and both are fine. Men raise their voices with it in the markets, the mosques and on the way to the prayer ground, as Ibn Umar and Abu Hurayrah used to (Sahih al-Bukhari, Book of the Two Eids, chapter heading).")
-                }
+                        ArticleParagraph(verbatim: "Saying it three times (Allahu Akbar, Allahu Akbar, Allahu Akbar) is also reported from the Salaf, and both are fine. Men raise their voices with it in the markets, the mosques and on the way to the prayer ground, as Ibn Umar and Abu Hurayrah used to (Sahih al-Bukhari, Book of the Two Eids, chapter heading).")
+                    }
 
-                Section(header: ArticleHeader("OTHER WORDS OF REMEMBRANCE FROM THE SUNNAH")) {
-                    ArticleParagraph(verbatim: "Longer chants heard on Eid morning gather phrases that are themselves authentic remembrances, and these may be said. A Companion said this in the prayer, and the Prophet (peace and blessings be upon him) said of it: “I marvelled at it; the gates of heaven were opened for it” (Sahih Muslim 601):")
-                    ScriptureQuote(hadith: "muslim:601", cite: "Sahih Muslim 601", arabic: 42...51, english: 15...34)
+                    Section(header: ArticleHeader("OTHER WORDS OF REMEMBRANCE FROM THE SUNNAH")) {
+                        ArticleParagraph(verbatim: "Longer chants heard on Eid morning gather phrases that are themselves authentic remembrances, and these may be said. A Companion said this in the prayer, and the Prophet (peace and blessings be upon him) said of it: “I marvelled at it; the gates of heaven were opened for it” (Sahih Muslim 601):")
+                        ScriptureQuote(hadith: "muslim:601", cite: "Sahih Muslim 601", arabic: 42...51, english: 15...34)
 
-                    ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) would say on returning from Hajj, Umrah or a campaign:")
-                    ScriptureQuote(hadith: "bukhari:1797", cite: "Sahih al-Bukhari 1797", arabic: 47...77, english: 27...90)
+                        ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) would say on returning from Hajj, Umrah or a campaign:")
+                        ScriptureQuote(hadith: "bukhari:1797", cite: "Sahih al-Bukhari 1797", arabic: 47...77, english: 27...90)
 
-                    ArticleParagraph(verbatim: "And after every obligatory prayer he would say:")
-                    ScriptureQuote(hadith: "muslim:594a", cite: "Sahih Muslim 594", arabic: 27...74, english: 14...98)
+                        ArticleParagraph(verbatim: "And after every obligatory prayer he would say:")
+                        ScriptureQuote(hadith: "muslim:594a", cite: "Sahih Muslim 594", arabic: 27...74, english: 14...98)
 
-                    ArticleParagraph(verbatim: "What has no basis is the composed formula that adds blessings on “our master Muhammad, his companions, his supporters, his wives and his offspring” inside the takbir itself: it is not narrated from the Prophet (peace and blessings be upon him) or from any of his Companions. Sending blessings on him is beloved at all times (Quran 33:56), but the takbir of Eid is kept to the transmitted wording.")
+                        ArticleParagraph(verbatim: "What has no basis is the composed formula that adds blessings on “our master Muhammad, his companions, his supporters, his wives and his offspring” inside the takbir itself: it is not narrated from the Prophet (peace and blessings be upon him) or from any of his Companions. Sending blessings on him is beloved at all times (Quran 33:56), but the takbir of Eid is kept to the transmitted wording.")
+                        ScriptureQuote(quran: "33:56")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -1035,6 +1302,8 @@ struct SacredMonthsView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: four of the twelve Hijri months are sacred (Dhul-Qadah, Dhul-Hijjah, Muharram, and Rajab), and Allah singled them out for honour, forbade fighting in them, and warned against wronging oneself in them.")
                 }
@@ -1047,97 +1316,135 @@ struct SacredMonthsView: View {
                     ScriptureQuote(quran: "9:36", words: 0...24)
                 }
 
-                Section(header: ArticleHeader("WHICH FOUR THEY ARE")) {
-                    ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) named them in his sermon at the Farewell Pilgrimage: three that run together at the turn of the year, and one on its own in the middle.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("WHICH FOUR THEY ARE")) {
+                        ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) named them in his sermon at the Farewell Pilgrimage: three that run together at the turn of the year, and one on its own in the middle.")
 
-                    ScriptureQuote(hadith: "bukhari:3197", cite: "Sahih al-Bukhari 3197", arabic: 34...61, english: 4...63)
+                        ScriptureQuote(hadith: "bukhari:3197", cite: "Sahih al-Bukhari 3197", arabic: 34...61, english: 4...63)
+                    }
 
-                    Text(articleMarkdown: """
-                         The four, in the order of the Hijri year:
-                         1. **Muharram (مُحَرَّم)**: the first month, and the only one Allah's Messenger (peace and blessings be upon him) called “the month of Allah”
-                         2. **Rajab (رَجَب)**: the seventh, alone between Jumada al-Thaniyah and Shaaban
-                         3. **Dhul-Qadah (ذُو ٱلقَعدَة)**: the eleventh, named for the “sitting” that came with laying down weapons
-                         4. **Dhul-Hijjah (ذُو ٱلحِجَّة)**: the twelfth, the month of Hajj
-                         """)
-                    .font(.body)
+                    Section(header: ArticleHeader("WHAT THEIR SANCTITY MEANS")) {
+                        ArticleParagraph(verbatim: "Two things are established. Fighting was forbidden in them so that pilgrims and traders could travel to Makkah and home again in safety: Dhul-Qadah to travel out, Dhul-Hijjah for the Hajj, Muharram to travel home, and Rajab in the middle of the year for those who came for Umrah (Tafsir Ibn Kathir, on Quran 9:36). And sin in them is graver than sin outside them.")
+                    }
 
-                    ArticleParagraph(verbatim: "“Rajab of Mudar” settles which Rajab is meant. The tribe of Mudar kept it in its true place while other tribes shifted it, so the Prophet (peace and blessings be upon him) fixed it to the month Mudar honoured: the one between Jumada al-Thaniyah and Shaaban.")
+                    Section(header: ArticleHeader("MUHARRAM AND THE DAY OF ASHURA")) {
+                        ArticleParagraph(verbatim: "Within Muharram is Ashura, the tenth of the month, the day Allah saved Musa and the Children of Israel from their enemy. Prophet Muhammad (peace and blessings be upon him) fasted it and told the Muslims to fast it, and he named its reward:")
+
+                        ScriptureQuote(hadith: "muslim:1162a", cite: "Sahih Muslim 1162", arabic: 190...200, english: 247...267)
+
+                        ArticleParagraph(verbatim: "What is not from the Sunnah is anything else built onto this day: no mourning, no celebration, no special dish, no gathering. The day is a fast, and that is all that was given.")
+                    }
+
+                    Section(header: ArticleHeader("DHUL-HIJJAH AND ITS FIRST TEN DAYS")) {
+                        ArticleParagraph(verbatim: "Dhul-Hijjah opens with the ten days about which Prophet Muhammad (peace and blessings be upon him) said:")
+
+                        ScriptureQuote(hadith: "bukhari:969", cite: "Sahih al-Bukhari 969", arabic: 28...37, english: 4...23)
+
+                        ArticleParagraph(verbatim: "The ninth is the Day of Arafah, whose fast the Prophet (peace and blessings be upon him) said he hoped would atone for the year before it and the year after it (Sahih Muslim 1162), for anyone not standing at Arafah.")
+                    }
+
+                    Section(header: ArticleHeader("WHAT IS NOT ESTABLISHED IN RAJAB")) {
+                        ArticleParagraph(verbatim: "Rajab is a sacred month, and nothing beyond that is authentically reported about it. Ibn Hajar al-Asqalani (may Allah have mercy on him) wrote a treatise on exactly this question, Tabyin al-Ajab bima Warada fi Fadl Rajab, and concluded that no sound hadith fit to use as evidence exists on the virtue of Rajab, on fasting it specifically, or on praying a particular prayer in it.")
+
+                        ArticleParagraph(verbatim: "That does not diminish the month. The honour Allah gave it is the honour it has, and adding to it is not devotion but innovation.")
+                    }
                 }
 
-                Section(header: ArticleHeader("WHAT THEIR SANCTITY MEANS")) {
-                    ArticleParagraph(verbatim: "Two things are established. Fighting was forbidden in them so that pilgrims and traders could travel to Makkah and home again in safety: Dhul-Qadah to travel out, Dhul-Hijjah for the Hajj, Muharram to travel home, and Rajab in the middle of the year for those who came for Umrah (Tafsir Ibn Kathir, on Quran 9:36). And sin in them is graver than sin outside them.")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("WHICH FOUR THEY ARE")) {
+                        ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) named them in his sermon at the Farewell Pilgrimage: three that run together at the turn of the year, and one on its own in the middle.")
 
-                    ArticleParagraph(verbatim: "Ibn Kathir (may Allah have mercy on him) explains “so do not wrong yourselves during them” to mean: in these months especially, for a sin in a sacred time is heavier, just as a good deed in a sacred time is greater. Qatadah said that wrongdoing in them is a greater burden and a greater sin than wrongdoing in any other month, though wrongdoing is grave in every case (both in Tafsir Ibn Kathir, on Quran 9:36).")
+                        ScriptureQuote(hadith: "bukhari:3197", cite: "Sahih al-Bukhari 3197", arabic: 34...61, english: 4...63)
 
-                    ArticleParagraph(verbatim: "This is a warning against sin, not a licence to invent worship. No prayer, no fast, and no gathering is prescribed for a month merely because it is sacred; what is prescribed in them is what the Quran and the Sunnah actually name, and that is set out below.")
-                }
+                        Text(articleMarkdown: """
+                             The four, in the order of the Hijri year:
+                             1. **Muharram (مُحَرَّم)**: the first month, and the only one Allah's Messenger (peace and blessings be upon him) called “the month of Allah”
+                             2. **Rajab (رَجَب)**: the seventh, alone between Jumada al-Thaniyah and Shaaban
+                             3. **Dhul-Qadah (ذُو ٱلقَعدَة)**: the eleventh, named for the “sitting” that came with laying down weapons
+                             4. **Dhul-Hijjah (ذُو ٱلحِجَّة)**: the twelfth, the month of Hajj
+                             """)
+                        .font(.body)
 
-                Section(header: ArticleHeader("AN-NASI: MOVING THE MONTHS")) {
-                    ArticleParagraph(verbatim: "Before Islam the Arabs would postpone a sacred month when it did not suit a war they wanted to fight, declaring Muharram ordinary that year and making Safar sacred instead, so that the count of four was kept while the months themselves were moved. Allah called this an increase in disbelief.")
+                        ArticleParagraph(verbatim: "“Rajab of Mudar” settles which Rajab is meant. The tribe of Mudar kept it in its true place while other tribes shifted it, so the Prophet (peace and blessings be upon him) fixed it to the month Mudar honoured: the one between Jumada al-Thaniyah and Shaaban.")
+                    }
 
-                    ScriptureQuote(quran: "9:37", words: 0...21)
+                    Section(header: ArticleHeader("WHAT THEIR SANCTITY MEANS")) {
+                        ArticleParagraph(verbatim: "Two things are established. Fighting was forbidden in them so that pilgrims and traders could travel to Makkah and home again in safety: Dhul-Qadah to travel out, Dhul-Hijjah for the Hajj, Muharram to travel home, and Rajab in the middle of the year for those who came for Umrah (Tafsir Ibn Kathir, on Quran 9:36). And sin in them is graver than sin outside them.")
 
-                    ArticleParagraph(verbatim: "This is why the Prophet (peace and blessings be upon him) opened his Farewell Sermon by saying that time had come back round to its original state as it was on the day Allah created the heavens and the earth: the months were back in their true places, and they have stayed there since.")
-                }
+                        ArticleParagraph(verbatim: "Ibn Kathir (may Allah have mercy on him) explains “so do not wrong yourselves during them” to mean: in these months especially, for a sin in a sacred time is heavier, just as a good deed in a sacred time is greater. Qatadah said that wrongdoing in them is a greater burden and a greater sin than wrongdoing in any other month, though wrongdoing is grave in every case (both in Tafsir Ibn Kathir, on Quran 9:36).")
 
-                Section(header: ArticleHeader("MUHARRAM AND THE DAY OF ASHURA")) {
-                    ArticleParagraph(verbatim: "Muharram carries the one virtue the Sunnah states outright for a sacred month as a whole. Asked which fast is best after the month of Ramadan, Prophet Muhammad (peace and blessings be upon him) answered:")
+                        ArticleParagraph(verbatim: "This is a warning against sin, not a licence to invent worship. No prayer, no fast, and no gathering is prescribed for a month merely because it is sacred; what is prescribed in them is what the Quran and the Sunnah actually name, and that is set out below.")
+                    }
 
-                    ScriptureQuote(hadith: "ibnmajah:1742", cite: "Sunan Ibn Majah 1742; graded sahih by al-Albani, and the same report is in Sahih Muslim 1163", arabic: 51...55, english: 20...27)
+                    Section(header: ArticleHeader("AN-NASI: MOVING THE MONTHS")) {
+                        ArticleParagraph(verbatim: "Before Islam the Arabs would postpone a sacred month when it did not suit a war they wanted to fight, declaring Muharram ordinary that year and making Safar sacred instead, so that the count of four was kept while the months themselves were moved. Allah called this an increase in disbelief.")
 
-                    ArticleParagraph(verbatim: "Within it is Ashura, the tenth of Muharram. When Prophet Muhammad (peace and blessings be upon him) came to Madinah he found the Jews fasting it, because it was the day Allah saved Musa and the Children of Israel from their enemy, and he said:")
+                        ScriptureQuote(quran: "9:37", words: 0...21)
 
-                    ScriptureQuote(hadith: "bukhari:2004", cite: "Sahih al-Bukhari 2004", arabic: 59...62, english: 48...55)
+                        ArticleParagraph(verbatim: "This is why the Prophet (peace and blessings be upon him) opened his Farewell Sermon by saying that time had come back round to its original state as it was on the day Allah created the heavens and the earth: the months were back in their true places, and they have stayed there since.")
+                    }
 
-                    ArticleParagraph(verbatim: "He fasted it and told the Muslims to fast it, and he named its reward:")
+                    Section(header: ArticleHeader("MUHARRAM AND THE DAY OF ASHURA")) {
+                        ArticleParagraph(verbatim: "Muharram carries the one virtue the Sunnah states outright for a sacred month as a whole. Asked which fast is best after the month of Ramadan, Prophet Muhammad (peace and blessings be upon him) answered:")
 
-                    ScriptureQuote(hadith: "muslim:1162a", cite: "Sahih Muslim 1162", arabic: 190...200, english: 247...267)
+                        ScriptureQuote(hadith: "ibnmajah:1742", cite: "Sunan Ibn Majah 1742; graded sahih by al-Albani, and the same report is in Sahih Muslim 1163", arabic: 51...55, english: 20...27)
 
-                    ArticleParagraph(verbatim: "In the last year of his life he intended to add the ninth, to differ from the People of the Book:")
+                        ArticleParagraph(verbatim: "Within it is Ashura, the tenth of Muharram. When Prophet Muhammad (peace and blessings be upon him) came to Madinah he found the Jews fasting it, because it was the day Allah saved Musa and the Children of Israel from their enemy, and he said:")
 
-                    ScriptureQuote(hadith: "ibnmajah:1736", cite: "Sunan Ibn Majah 1736; graded sahih by al-Albani, and the same report is in Sahih Muslim 1134", arabic: 37...43, english: 0...14)
+                        ScriptureQuote(hadith: "bukhari:2004", cite: "Sahih al-Bukhari 2004", arabic: 59...62, english: 48...55)
 
-                    ArticleParagraph(verbatim: "He died before that year came, so the scholars hold it recommended to fast the ninth with the tenth. What is not from the Sunnah is anything else built onto this day: no mourning, no celebration, no special dish, no gathering. The day is a fast, and that is all that was given.")
-                }
+                        ArticleParagraph(verbatim: "He fasted it and told the Muslims to fast it, and he named its reward:")
 
-                Section(header: ArticleHeader("DHUL-HIJJAH AND ITS FIRST TEN DAYS")) {
-                    ArticleParagraph(verbatim: "Dhul-Hijjah opens with the ten days about which Prophet Muhammad (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "muslim:1162a", cite: "Sahih Muslim 1162", arabic: 190...200, english: 247...267)
 
-                    ScriptureQuote(hadith: "bukhari:969", cite: "Sahih al-Bukhari 969", arabic: 28...37, english: 4...23)
+                        ArticleParagraph(verbatim: "In the last year of his life he intended to add the ninth, to differ from the People of the Book:")
 
-                    ArticleParagraph(verbatim: "The ninth is the Day of Arafah, whose fast the Prophet (peace and blessings be upon him) said he hoped would atone for the year before it and the year after it (Sahih Muslim 1162), for anyone not standing at Arafah. The tenth is the Day of Sacrifice, Eid al-Adha, and it is not fasted. Hajj itself falls in this month, which is why Dhul-Qadah before it and Muharram after it are sacred alongside it.")
-                }
+                        ScriptureQuote(hadith: "ibnmajah:1736", cite: "Sunan Ibn Majah 1736; graded sahih by al-Albani, and the same report is in Sahih Muslim 1134", arabic: 37...43, english: 0...14)
 
-                Section(header: ArticleHeader("WHAT IS NOT ESTABLISHED IN RAJAB")) {
-                    ArticleParagraph(verbatim: "Rajab is a sacred month, and nothing beyond that is authentically reported about it. Ibn Hajar al-Asqalani (may Allah have mercy on him) wrote a treatise on exactly this question, Tabyin al-Ajab bima Warada fi Fadl Rajab, and concluded that no sound hadith fit to use as evidence exists on the virtue of Rajab, on fasting it specifically, or on praying a particular prayer in it.")
+                        ArticleParagraph(verbatim: "He died before that year came, so the scholars hold it recommended to fast the ninth with the tenth. What is not from the Sunnah is anything else built onto this day: no mourning, no celebration, no special dish, no gathering. The day is a fast, and that is all that was given.")
+                    }
 
-                    Text(articleMarkdown: """
-                         So the following have no authentic basis and are not from the Sunnah:
-                         - **Salat ar-Ragha’ib** on the first Friday night of Rajab, which scholars including an-Nawawi and Ibn as-Salah declared a rejected innovation
-                         - Fasting Rajab in full, or singling out its days for fasting because it is Rajab
-                         - The **Umrah of Rajab** as a special act; Aishah (may Allah be pleased with her) denied that the Prophet (peace and blessings be upon him) ever performed Umrah in Rajab
-                         - Celebrating the twenty-seventh night as the night of al-Isra wal-Miraj; the date itself is not established, and no worship was legislated for it
-                         - The **Atirah**, a sacrifice offered in Rajab in the days of ignorance, which Islam abolished
-                         """)
-                    .font(.body)
+                    Section(header: ArticleHeader("DHUL-HIJJAH AND ITS FIRST TEN DAYS")) {
+                        ArticleParagraph(verbatim: "Dhul-Hijjah opens with the ten days about which Prophet Muhammad (peace and blessings be upon him) said:")
 
-                    ArticleParagraph(verbatim: "None of this diminishes the month. It means the honour Allah gave it is the honour it has, and adding to it is not devotion but innovation. Whoever fasts Mondays and Thursdays, or the three white days, and those days fall in Rajab, is doing what the Sunnah already asks, and there is nothing wrong with that.")
+                        ScriptureQuote(hadith: "bukhari:969", cite: "Sahih al-Bukhari 969", arabic: 28...37, english: 4...23)
+
+                        ArticleParagraph(verbatim: "The ninth is the Day of Arafah, whose fast the Prophet (peace and blessings be upon him) said he hoped would atone for the year before it and the year after it (Sahih Muslim 1162), for anyone not standing at Arafah. The tenth is the Day of Sacrifice, Eid al-Adha, and it is not fasted. Hajj itself falls in this month, which is why Dhul-Qadah before it and Muharram after it are sacred alongside it.")
+                    }
+
+                    Section(header: ArticleHeader("WHAT IS NOT ESTABLISHED IN RAJAB")) {
+                        ArticleParagraph(verbatim: "Rajab is a sacred month, and nothing beyond that is authentically reported about it. Ibn Hajar al-Asqalani (may Allah have mercy on him) wrote a treatise on exactly this question, Tabyin al-Ajab bima Warada fi Fadl Rajab, and concluded that no sound hadith fit to use as evidence exists on the virtue of Rajab, on fasting it specifically, or on praying a particular prayer in it.")
+
+                        Text(articleMarkdown: """
+                             So the following have no authentic basis and are not from the Sunnah:
+                             - **Salat ar-Ragha’ib** on the first Friday night of Rajab, which scholars including an-Nawawi and Ibn as-Salah declared a rejected innovation
+                             - Fasting Rajab in full, or singling out its days for fasting because it is Rajab
+                             - The **Umrah of Rajab** as a special act; Aishah (may Allah be pleased with her) denied that the Prophet (peace and blessings be upon him) ever performed Umrah in Rajab
+                             - Celebrating the twenty-seventh night as the night of al-Isra wal-Miraj; the date itself is not established, and no worship was legislated for it
+                             - The **Atirah**, a sacrifice offered in Rajab in the days of ignorance, which Islam abolished
+                             """)
+                        .font(.body)
+
+                        ArticleParagraph(verbatim: "None of this diminishes the month. It means the honour Allah gave it is the honour it has, and adding to it is not devotion but innovation. Whoever fasts Mondays and Thursdays, or the three white days, and those days fall in Rajab, is doing what the Sunnah already asks, and there is nothing wrong with that.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
                     ArticleClosing("Four months of the twelve are sacred by Allah's decree: Dhul-Qadah, Dhul-Hijjah, Muharram, and Rajab. Fighting in them was forbidden, sin in them is heavier, and moving them, as the Arabs once did, was called an increase in disbelief. What is legislated in them is what the texts name: the fast of Ashura in Muharram, and the ten days, Arafah, and Hajj in Dhul-Hijjah. What is not named, above all in Rajab, is left alone.")
                 }
 
-                Section(header: ArticleHeader("KEY TERMS")) {
-                    ArticleParagraph(articleMarkdown: "**Al-Ashhur al-Hurum (ٱلأَشهُر ٱلحُرُم)**: “the sacred months,” the four Allah set apart in Quran 9:36. Hurum is the plural of haram, meaning inviolable: the same root as the Haram of Makkah and as ihram, the sacred state of a pilgrim.")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("KEY TERMS")) {
+                        ArticleParagraph(articleMarkdown: "**Al-Ashhur al-Hurum (ٱلأَشهُر ٱلحُرُم)**: “the sacred months,” the four Allah set apart in Quran 9:36. Hurum is the plural of haram, meaning inviolable: the same root as the Haram of Makkah and as ihram, the sacred state of a pilgrim.")
 
-                    ArticleParagraph(articleMarkdown: "**An-Nasi (ٱلنَّسِيء)**: “postponement,” the pre-Islamic practice of shifting a sacred month to a different month so that a war could be fought on time, condemned in Quran 9:37.")
+                        ArticleParagraph(articleMarkdown: "**An-Nasi (ٱلنَّسِيء)**: “postponement,” the pre-Islamic practice of shifting a sacred month to a different month so that a war could be fought on time, condemned in Quran 9:37.")
 
-                    ArticleParagraph(articleMarkdown: "**Ashura (عَاشُورَاء)**: the tenth of Muharram, from ashr, ten. The day Allah saved Musa (peace be upon him) and his people; its fast expiates the year before it.")
+                        ArticleParagraph(articleMarkdown: "**Ashura (عَاشُورَاء)**: the tenth of Muharram, from ashr, ten. The day Allah saved Musa (peace be upon him) and his people; its fast expiates the year before it.")
 
-                    ArticleParagraph(articleMarkdown: "**Atirah (عَتِيرَة)**: a sheep the Arabs slaughtered in Rajab for their idols or their customs. Islam abolished it.")
+                        ArticleParagraph(articleMarkdown: "**Atirah (عَتِيرَة)**: a sheep the Arabs slaughtered in Rajab for their idols or their customs. Islam abolished it.")
 
-                    ArticleParagraph(articleMarkdown: "**Rajab of Mudar**: the Rajab kept in its true place by the tribe of Mudar, named by the Prophet (peace and blessings be upon him) so that no one could mistake which month was meant.")
+                        ArticleParagraph(articleMarkdown: "**Rajab of Mudar**: the Rajab kept in its true place by the tribe of Mudar, named by the Prophet (peace and blessings be upon him) so that no one could mistake which month was meant.")
+                    }
                 }
 
                 ArticleSourcesSection(article: "SacredMonthsView")
@@ -1153,75 +1460,120 @@ struct MoonSightingView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: a Hijri month begins when the new crescent is sighted, and if it cannot be seen the month before is completed as thirty days. Sighting, not calculation, is what the Sunnah made the sign.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(verbatim: "A lunar month is the moon's full circuit, a little over twenty-nine and a half days, so a Hijri month is always either twenty-nine or thirty days and never a fixed number. Allah made the moon itself the clock:")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(verbatim: "A lunar month is the moon's full circuit, a little over twenty-nine and a half days, so a Hijri month is always either twenty-nine or thirty days and never a fixed number. Allah made the moon itself the clock:")
 
-                    ScriptureQuote(quran: "10:5", words: 0...12)
+                        ScriptureQuote(quran: "10:5", words: 0...12)
+                    }
 
-                    ArticleParagraph(verbatim: "And when the Companions asked about the crescents themselves, the answer named their purpose:")
+                    Section(header: ArticleHeader("THE RULE")) {
+                        ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) gave the whole rule in one sentence, and it is the rule for every Hijri month, not for Ramadan alone:")
 
-                    ScriptureQuote(quran: "2:189", words: 1...8)
+                        ScriptureQuote(hadith: "bukhari:1909", cite: "Sahih al-Bukhari 1909", arabic: 35...45, english: 6...39)
+
+                        ArticleParagraph(verbatim: "So there are two ways a month can begin and no third: the crescent is seen by a trustworthy witness, or the month in progress reaches thirty days and the next one starts by itself. Doubt never begins a month, which is why fasting the “day of doubt” before Ramadan is forbidden.")
+                    }
+
+                    Section(header: ArticleHeader("WHY SIGHTING AND NOT CALCULATION")) {
+                        ArticleParagraph(verbatim: "Astronomers can compute the moon's conjunction to the second, and Muslim astronomers could do so early. The Sunnah still tied the month to the eye, and the Prophet (peace and blessings be upon him) said why:")
+
+                        ScriptureQuote(hadith: "bukhari:1913", cite: "Sahih al-Bukhari 1913", arabic: 31...40, english: 4...31)
+
+                        ArticleParagraph(verbatim: "Calculation may support a sighting, may show that a claimed sighting was impossible, and may tell an observer where to look, but it does not by itself begin or end a month.")
+                    }
+
+                    Section(header: ArticleHeader("ONE SIGHTING, OR EACH LAND ITS OWN?")) {
+                        ArticleParagraph(verbatim: "The moon does not rise over the whole earth at once, so a crescent visible in one country may be below the horizon in another.")
+
+                        Text(articleMarkdown: """
+                             The scholars hold two positions on it:
+                             - **Each region follows its own sighting** (ikhtilaf al-matali): the practice of Ibn Uthaymin (may Allah have mercy on him)
+                             - **One sighting binds all Muslims**: the view that “fast when you see it” addresses the whole ummah, held by Ibn Baz and by the Permanent Committee
+                             """)
+                        .font(.body)
+
+                        ArticleParagraph(verbatim: "Both are the ijtihad of scholars on a question the texts leave open, and neither side declares the other astray. The practical guidance the scholars of both views give is the same: a Muslim fasts, breaks the fast and prays Eid with the Muslims of the land he is in.")
+                    }
                 }
 
-                Section(header: ArticleHeader("THE RULE")) {
-                    ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) gave the whole rule in one sentence, and it is the rule for every Hijri month, not for Ramadan alone:")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(verbatim: "A lunar month is the moon's full circuit, a little over twenty-nine and a half days, so a Hijri month is always either twenty-nine or thirty days and never a fixed number. Allah made the moon itself the clock:")
 
-                    ScriptureQuote(hadith: "bukhari:1909", cite: "Sahih al-Bukhari 1909", arabic: 35...45, english: 6...39)
+                        ScriptureQuote(quran: "10:5", words: 0...12)
 
-                    ArticleParagraph(verbatim: "The Quran ties the obligation to the same act of witnessing:")
+                        ArticleParagraph(verbatim: "And when the Companions asked about the crescents themselves, the answer named their purpose:")
 
-                    ScriptureQuote(quran: "2:185", words: 12...16)
+                        ScriptureQuote(quran: "2:189", words: 1...8)
+                    }
 
-                    ArticleParagraph(verbatim: "So there are two ways a month can begin and no third: the crescent is seen by a trustworthy witness, or the month in progress reaches thirty days and the next one starts by itself. Doubt never begins a month, which is why fasting the “day of doubt” before Ramadan is forbidden.")
-                }
+                    Section(header: ArticleHeader("THE RULE")) {
+                        ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) gave the whole rule in one sentence, and it is the rule for every Hijri month, not for Ramadan alone:")
 
-                Section(header: ArticleHeader("WHY SIGHTING AND NOT CALCULATION")) {
-                    ArticleParagraph(verbatim: "Astronomers can compute the moon's conjunction to the second, and Muslim astronomers could do so early. The Sunnah still tied the month to the eye, and the Prophet (peace and blessings be upon him) said why:")
+                        ScriptureQuote(hadith: "bukhari:1909", cite: "Sahih al-Bukhari 1909", arabic: 35...45, english: 6...39)
 
-                    ScriptureQuote(hadith: "bukhari:1913", cite: "Sahih al-Bukhari 1913", arabic: 31...40, english: 4...31)
+                        ArticleParagraph(verbatim: "The Quran ties the obligation to the same act of witnessing:")
 
-                    ArticleParagraph(verbatim: "The point is not that arithmetic is blameworthy but that the sign Allah gave is one every believer can use, in every century and in every place, with no instrument and no expert. A conjunction is not the same thing as a visible crescent either: the moon can be astronomically new and still be invisible from the earth that evening.")
+                        ScriptureQuote(quran: "2:185", words: 12...16)
 
-                    ArticleParagraph(verbatim: "This is the position of the great body of scholars, and of the Permanent Committee for Scholarly Research and Ifta and Ibn Baz (may Allah have mercy on him) in our own time: calculation may support a sighting, may show that a claimed sighting was impossible, and may tell an observer where to look, but it does not by itself begin or end a month.")
-                }
+                        ArticleParagraph(verbatim: "So there are two ways a month can begin and no third: the crescent is seen by a trustworthy witness, or the month in progress reaches thirty days and the next one starts by itself. Doubt never begins a month, which is why fasting the “day of doubt” before Ramadan is forbidden.")
+                    }
 
-                Section(header: ArticleHeader("ONE SIGHTING, OR EACH LAND ITS OWN?")) {
-                    ArticleParagraph(verbatim: "The moon does not rise over the whole earth at once, so a crescent visible in one country may be below the horizon in another. The Companions already faced this. Kurayb saw the crescent of Ramadan in Syria on a Friday night and told Ibn Abbas (may Allah be pleased with them) in Madinah, who had seen it on Saturday night. Ibn Abbas kept to the sighting of Madinah and said: this is how Allah's Messenger (peace and blessings be upon him) commanded us (Sahih Muslim 1087).")
+                    Section(header: ArticleHeader("WHY SIGHTING AND NOT CALCULATION")) {
+                        ArticleParagraph(verbatim: "Astronomers can compute the moon's conjunction to the second, and Muslim astronomers could do so early. The Sunnah still tied the month to the eye, and the Prophet (peace and blessings be upon him) said why:")
 
-                    Text(articleMarkdown: """
-                         Two positions have stood since:
-                         - **Each region follows its own sighting** (ikhtilaf al-matali): the view many scholars take from Ibn Abbas's report, and the practice of Ibn Uthaymin (may Allah have mercy on him)
-                         - **One sighting binds all Muslims**: the view that “fast when you see it” addresses the whole ummah, held by Ibn Baz and by the Permanent Committee
-                         """)
-                    .font(.body)
+                        ScriptureQuote(hadith: "bukhari:1913", cite: "Sahih al-Bukhari 1913", arabic: 31...40, english: 4...31)
 
-                    ArticleParagraph(verbatim: "Both are the ijtihad of scholars on a question the texts leave open, and neither side declares the other astray. The practical guidance the scholars of both views give is the same: a Muslim fasts, breaks the fast and prays Eid with the Muslims of the land he is in. Unity in the matter is itself part of the worship, and the Prophet (peace and blessings be upon him) said: “The fast is the day the people fast, the breaking of the fast is the day the people break their fast, and the sacrifice is the day the people sacrifice” (Jami' at-Tirmidhi 697; graded sahih by al-Albani).")
-                }
+                        ArticleParagraph(verbatim: "The point is not that arithmetic is blameworthy but that the sign Allah gave is one every believer can use, in every century and in every place, with no instrument and no expert. A conjunction is not the same thing as a visible crescent either: the moon can be astronomically new and still be invisible from the earth that evening.")
 
-                Section(header: ArticleHeader("WHAT DEPENDS ON IT")) {
-                    ArticleParagraph(verbatim: "Almost every dated act of worship hangs on the crescent: the start and end of Ramadan and so the night of Laylat al-Qadr, Zakat al-Fitr and the Eid prayer, the day of Arafah and the day of Sacrifice, the whole timing of Hajj, the day of Ashura, and the hawl (the full lunar year) after which zakah becomes due on wealth.")
+                        ArticleParagraph(verbatim: "This is the position of the great body of scholars, and of the Permanent Committee for Scholarly Research and Ifta and Ibn Baz (may Allah have mercy on him) in our own time: calculation may support a sighting, may show that a claimed sighting was impossible, and may tell an observer where to look, but it does not by itself begin or end a month.")
+                    }
 
-                    ArticleParagraph(verbatim: "This is also why the Hijri date and the Gregorian date drift apart. A lunar year is about eleven days shorter than a solar one, so Ramadan moves back through the seasons and returns to the same season roughly once in every thirty-three years.")
+                    Section(header: ArticleHeader("ONE SIGHTING, OR EACH LAND ITS OWN?")) {
+                        ArticleParagraph(verbatim: "The moon does not rise over the whole earth at once, so a crescent visible in one country may be below the horizon in another. The Companions already faced this. Kurayb saw the crescent of Ramadan in Syria on a Friday night and told Ibn Abbas (may Allah be pleased with them) in Madinah, who had seen it on Saturday night. Ibn Abbas kept to the sighting of Madinah and said: this is how Allah's Messenger (peace and blessings be upon him) commanded us (Sahih Muslim 1087).")
+                        ScriptureQuote(hadith: "muslim:1087", cite: "Sahih Muslim 1087", arabic: 77...125, english: 0...95)
+
+                        Text(articleMarkdown: """
+                             Two positions have stood since:
+                             - **Each region follows its own sighting** (ikhtilaf al-matali): the view many scholars take from Ibn Abbas's report, and the practice of Ibn Uthaymin (may Allah have mercy on him)
+                             - **One sighting binds all Muslims**: the view that “fast when you see it” addresses the whole ummah, held by Ibn Baz and by the Permanent Committee
+                             """)
+                        .font(.body)
+
+                        ArticleParagraph(verbatim: "Both are the ijtihad of scholars on a question the texts leave open, and neither side declares the other astray. The practical guidance the scholars of both views give is the same: a Muslim fasts, breaks the fast and prays Eid with the Muslims of the land he is in. Unity in the matter is itself part of the worship, and the Prophet (peace and blessings be upon him) said: “The fast is the day the people fast, the breaking of the fast is the day the people break their fast, and the sacrifice is the day the people sacrifice” (Jami' at-Tirmidhi 697; graded sahih by al-Albani).")
+                        ScriptureQuote(hadith: "tirmidhi:697", cite: "Jami' at-Tirmidhi 697; graded sahih by al-Albani", arabic: 39...47, english: 3...32)
+                    }
+
+                    Section(header: ArticleHeader("WHAT DEPENDS ON IT")) {
+                        ArticleParagraph(verbatim: "Almost every dated act of worship hangs on the crescent: the start and end of Ramadan and so the night of Laylat al-Qadr, Zakat al-Fitr and the Eid prayer, the day of Arafah and the day of Sacrifice, the whole timing of Hajj, the day of Ashura, and the hawl (the full lunar year) after which zakah becomes due on wealth.")
+
+                        ArticleParagraph(verbatim: "This is also why the Hijri date and the Gregorian date drift apart. A lunar year is about eleven days shorter than a solar one, so Ramadan moves back through the seasons and returns to the same season roughly once in every thirty-three years.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
                     ArticleClosing("The month begins with the eye, not the calendar: the crescent is sighted, or thirty days are completed. Calculation serves the sighting and does not replace it. Whether one sighting binds the whole ummah or each land follows its own is a real difference among scholars, and in practice a Muslim keeps the fast and the Eid of the people among whom he lives.")
                 }
 
-                Section(header: ArticleHeader("KEY TERMS")) {
-                    ArticleParagraph(articleMarkdown: "**Hilal (هِلاَل)**: the new crescent, the thin arc visible shortly after sunset that begins a Hijri month. The plural, ahillah, is the word Quran 2:189 uses.")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("KEY TERMS")) {
+                        ArticleParagraph(articleMarkdown: "**Hilal (هِلاَل)**: the new crescent, the thin arc visible shortly after sunset that begins a Hijri month. The plural, ahillah, is the word Quran 2:189 uses.")
 
-                    ArticleParagraph(articleMarkdown: "**Ruyah (رُؤيَة)**: sighting with the eye. The phrase of the hadith, li-ruyatihi, means “on account of sighting it.”")
+                        ArticleParagraph(articleMarkdown: "**Ruyah (رُؤيَة)**: sighting with the eye. The phrase of the hadith, li-ruyatihi, means “on account of sighting it.”")
 
-                    ArticleParagraph(articleMarkdown: "**Ikmal (إِكمَال)**: “completing,” the fallback when the sky is overcast: finish the current month at thirty days.")
+                        ArticleParagraph(articleMarkdown: "**Ikmal (إِكمَال)**: “completing,” the fallback when the sky is overcast: finish the current month at thirty days.")
 
-                    ArticleParagraph(articleMarkdown: "**Ikhtilaf al-matali (ٱختِلاَف ٱلمَطَالِع)**: the difference of the places of rising, the reality that a crescent visible in one land may not be visible in another, and the name of the position that each land follows its own sighting.")
+                        ArticleParagraph(articleMarkdown: "**Ikhtilaf al-matali (ٱختِلاَف ٱلمَطَالِع)**: the difference of the places of rising, the reality that a crescent visible in one land may not be visible in another, and the name of the position that each land follows its own sighting.")
 
-                    ArticleParagraph(articleMarkdown: "**Yawm ash-shakk (يَوم ٱلشَّكّ)**: the day of doubt, the thirtieth of Shaaban when the crescent was not seen. It is not fasted as Ramadan.")
+                        ArticleParagraph(articleMarkdown: "**Yawm ash-shakk (يَوم ٱلشَّكّ)**: the day of doubt, the thirtieth of Shaaban when the crescent was not seen. It is not fasted as Ramadan.")
+                    }
                 }
 
                 ArticleSourcesSection(article: "MoonSightingView")
@@ -1237,6 +1589,8 @@ struct CompileView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: the Quran was preserved from the start by mass memorization and careful writing, gathered into one volume under Abu Bakr, and standardized under Uthman.")
                 }
@@ -1251,14 +1605,22 @@ struct CompileView: View {
                     ArticleParagraph(verbatim: "Every year in Ramadan, Jibril (Gabriel) reviewed the Quran with Prophet Muhammad (peace and blessings be upon him); in the final year this review occurred twice (al-Ardah al-Akhirah). Prophet Muhammad (peace and blessings be upon him) taught the Companions the exact wording, pronunciation, and the order in which the surahs and ayat should be recited.")
                 }
 
-                Section(header: ArticleHeader("ALLAH’S PROMISE OF PRESERVATION")) {
-                    ScriptureQuote(quran: "15:9")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("ALLAH’S PROMISE OF PRESERVATION")) {
+                        ScriptureQuote(quran: "15:9")
+                    }
+                }
 
-                    ScriptureQuote(quran: "75:16-19")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("ALLAH’S PROMISE OF PRESERVATION")) {
+                        ScriptureQuote(quran: "15:9")
 
-                    ScriptureQuote(quran: "73:4", words: 3...5)
+                        ScriptureQuote(quran: "75:16-19")
 
-                    ScriptureQuote(quran: "17:106")
+                        ScriptureQuote(quran: "73:4", words: 3...5)
+
+                        ScriptureQuote(quran: "17:106")
+                    }
                 }
 
                 Section(header: ArticleHeader("DURING THE PROPHET’S LIFETIME ﷺ")) {
@@ -1275,59 +1637,82 @@ struct CompileView: View {
                     ArticleParagraph(verbatim: "This compiled mushaf was kept with Abu Bakr, then with Umar, and after Umar with Hafsah bint Umar (may Allah be pleased with them).")
                 }
 
-                Section(header: ArticleHeader("STANDARDIZATION UNDER UTHMAN")) {
-                    ArticleParagraph(verbatim: "As Islam spread, differences in regional reading threatened dispute. Caliph Uthman ibn Affan formed a committee led by Zayd ibn Thabit with senior Qurayshi scholars to copy the Abu Bakr compilation into standardized copies, writing in the dialect of Quraysh wherever the scribes differed (Sahih al-Bukhari 4987). This is the Uthmanic rasm (consonantal skeleton): written without dots or tashkeel (vowel marks), it carries every reading of the final review (al-Ardah al-Akhirah) that fits it.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("STANDARDIZATION UNDER UTHMAN")) {
+                        ArticleParagraph(verbatim: "As Islam spread, differences in regional reading threatened dispute. Caliph Uthman ibn Affan formed a committee led by Zayd ibn Thabit with senior Qurayshi scholars to copy the Abu Bakr compilation into standardized copies, writing in the dialect of Quraysh wherever the scribes differed (Sahih al-Bukhari 4987). This is the Uthmanic rasm (consonantal skeleton): written without dots or tashkeel (vowel marks), it carries every reading of the final review (al-Ardah al-Akhirah) that fits it.")
+                        ScriptureQuote(hadith: "bukhari:4987", cite: "Sahih al-Bukhari 4987", arabic: 71...111, english: 109...169)
 
-                    ArticleParagraph(verbatim: "This was not a limitation of the copies. Dots (i'jam) were rare in the writing of the time and vowel signs had not yet been devised, and the Arabs, masters of their own language, read without them. Ibn al-Jazari explains that the Companions left the copies bare of dots and vowels on purpose, so that one written skeleton could carry every reading authentically received from the Prophet (peace and blessings be upon him) that fit it, since the reliance was on memorization rather than on the writing alone (an-Nashr fi al-Qira'at al-'Ashr, in its introduction). Other scholars hold that the letters were not dotted at all in the Companions' time and that the dots came later: the vowel dots with Abu al-Aswad ad-Du'ali, the letter dots with Nasr ibn Asim and Yahya ibn Ya'mar. On either view the copies were written bare, and the verified oral transmission determined how each word was recited.")
+                        ArticleParagraph(verbatim: "Uthman sent official copies to all the major cities (Makkah, Kufa, Basra, Sham, and others, with one kept in Madinah) and asked that non-verified personal materials be retired to prevent confusion between private notes/duas and the Quranic text. The Companions agreed with this measure, preserving unity upon the authenticated text.")
 
-                    ArticleParagraph(verbatim: "Uthman sent official copies to all the major cities (Makkah, Kufa, Basra, Sham, and others, with one kept in Madinah) and asked that non-verified personal materials be retired to prevent confusion between private notes/duas and the Quranic text. The Companions agreed with this measure, preserving unity upon the authenticated text.")
+                        ArticleParagraph(verbatim: "This standardization lost nothing of the Quran; it unified the community upon the verified mushaf, which holds the whole of the final review, and ensured consistent public recitation.")
+                    }
 
-                    ArticleParagraph(verbatim: "This standardization lost nothing of the Quran; it unified the community upon the verified mushaf, which holds the whole of the final review, and ensured consistent public recitation.")
+                    Section(header: ArticleHeader("CONSENSUS OF THE COMPANIONS")) {
+                        ArticleParagraph(verbatim: "The Companions, foremost memorizers and teachers, accepted the compilation and the Uthmanic copies, and the Ummah has been united upon them ever since. Ali (may Allah be pleased with him) said that Uthman did nothing regarding the copies except in consultation with them (Ibn Abi Dawud, Kitab al-Masahif; Ibn Hajar graded its chain sahih in Fath al-Bari).")
+                    }
+
+                    Section(header: ArticleHeader("MANUSCRIPT EVIDENCE (HISTORICAL NOTES)")) {
+                        ArticleParagraph(verbatim: "Early Quranic manuscripts discovered in different regions (e.g., Hijaz, Yemen, Syria, North Africa, Anatolia) reflect the early Uthmanic rasm and align with the text recited today.")
+                    }
                 }
 
-                Section(header: ArticleHeader("FROM THE PROPHET ﷺ TO THE CITIES")) {
-                    ArticleParagraph(verbatim: "The whole road at a glance, from the revelation to the copies that reached each city and the readers who taught from them:")
-                    ArticleIsnadCard("The Quran, the speech of Allah, brought down by Jibril to the Prophet ﷺ, who taught it to his Companions, among them the four he named (Sahih al-Bukhari 4999) with Zayd ibn Thabit and ‘Ali; gathered into one volume by Zayd at Abu Bakr’s order in 12 AH and kept by Hafsah (Sahih al-Bukhari 4986); copied under ‘Uthman by Zayd, ‘Abdullah ibn az-Zubayr, Sa‘id ibn al-‘As and ‘Abd ar-Rahman ibn al-Harith (Sahih al-Bukhari 4987); and sent to Madinah, Makkah, Sham, Basra and Kufa, where the ten readers taught.", isnad: .quranCompilation)
-                }
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("STANDARDIZATION UNDER UTHMAN")) {
+                        ArticleParagraph(verbatim: "As Islam spread, differences in regional reading threatened dispute. Caliph Uthman ibn Affan formed a committee led by Zayd ibn Thabit with senior Qurayshi scholars to copy the Abu Bakr compilation into standardized copies, writing in the dialect of Quraysh wherever the scribes differed (Sahih al-Bukhari 4987). This is the Uthmanic rasm (consonantal skeleton): written without dots or tashkeel (vowel marks), it carries every reading of the final review (al-Ardah al-Akhirah) that fits it.")
+                        ScriptureQuote(hadith: "bukhari:4987", cite: "Sahih al-Bukhari 4987", arabic: 71...111, english: 109...169)
 
-                Section(header: ArticleHeader("CONSENSUS OF THE COMPANIONS")) {
-                    ArticleParagraph(verbatim: "The Companions, foremost memorizers and teachers, accepted the compilation and the Uthmanic copies, and the Ummah has been united upon them ever since. Ali (may Allah be pleased with him) said that Uthman did nothing regarding the copies except in consultation with them (Ibn Abi Dawud, Kitab al-Masahif; Ibn Hajar graded its chain sahih in Fath al-Bari). Abdullah ibn Mas'ud (may Allah be pleased with him) at first disliked that Zayd ibn Thabit was given the task over him and told the people of Iraq to keep their own copies, and az-Zuhri reports that the most virtuous of the Companions disliked that view of his (Jami' at-Tirmidhi 3104; graded sahih by al-Albani); the scholars report that he later came back to the agreement of the rest.")
+                        ArticleParagraph(verbatim: "This was not a limitation of the copies. Dots (i'jam) were rare in the writing of the time and vowel signs had not yet been devised, and the Arabs, masters of their own language, read without them. Ibn al-Jazari explains that the Companions left the copies bare of dots and vowels on purpose, so that one written skeleton could carry every reading authentically received from the Prophet (peace and blessings be upon him) that fit it, since the reliance was on memorization rather than on the writing alone (an-Nashr fi al-Qira'at al-'Ashr, in its introduction). Other scholars hold that the letters were not dotted at all in the Companions' time and that the dots came later: the vowel dots with Abu al-Aswad ad-Du'ali, the letter dots with Nasr ibn Asim and Yahya ibn Ya'mar. On either view the copies were written bare, and the verified oral transmission determined how each word was recited.")
 
-                    ArticleParagraph(verbatim: "Zayd ibn Thabit led the technical work in both Abu Bakr’s and Uthman’s projects, bringing rigorous verification. Senior scholars, including Quraysh experts, reviewed and approved the copies.")
-                }
+                        ArticleParagraph(verbatim: "Uthman sent official copies to all the major cities (Makkah, Kufa, Basra, Sham, and others, with one kept in Madinah) and asked that non-verified personal materials be retired to prevent confusion between private notes/duas and the Quranic text. The Companions agreed with this measure, preserving unity upon the authenticated text.")
 
-                Section(header: ArticleHeader("THE FOUR MASTERS & LEADING TRANSMITTERS")) {
-                    ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) said:")
-                    ScriptureQuote(hadith: "bukhari:4999", cite: "Sahih al-Bukhari 4999", arabic: 34...47, english: 22...36)
+                        ArticleParagraph(verbatim: "This standardization lost nothing of the Quran; it unified the community upon the verified mushaf, which holds the whole of the final review, and ensured consistent public recitation.")
+                    }
 
-                    ArticleParagraph(verbatim: "These masters, together with others like Zayd ibn Thabit, were key references for wording, recitation, and teaching, anchoring transmission among the Companions and their students.")
-                }
+                    Section(header: ArticleHeader("FROM THE PROPHET ﷺ TO THE CITIES")) {
+                        ArticleParagraph(verbatim: "The whole road at a glance, from the revelation to the copies that reached each city and the readers who taught from them:")
+                        ArticleIsnadCard("The Quran, the speech of Allah, brought down by Jibril to the Prophet ﷺ, who taught it to his Companions, among them the four he named (Sahih al-Bukhari 4999) with Zayd ibn Thabit and ‘Ali; gathered into one volume by Zayd at Abu Bakr’s order in 12 AH and kept by Hafsah (Sahih al-Bukhari 4986); copied under ‘Uthman by Zayd, ‘Abdullah ibn az-Zubayr, Sa‘id ibn al-‘As and ‘Abd ar-Rahman ibn al-Harith (Sahih al-Bukhari 4987); and sent to Madinah, Makkah, Sham, Basra and Kufa, where the ten readers taught.", isnad: .quranCompilation)
+                    }
 
-                Section(header: ArticleHeader("AHRUF, QIRAAT, AND THE UTHMANIC RASM")) {
-                    ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) taught that the Quran was revealed in seven Ahruf (modes) for ease. The Quran was first compiled into one manuscript under Abu Bakr (may Allah be pleased with him), around one year after the Prophet’s death. Under Uthman (may Allah be pleased with him), official copies were sent to all the major cities, written as a skeletal script without dots or tashkeel. The majority of the Salaf and the imams hold that these copies are upon one of the seven Ahruf and contain the final review the Prophet (peace and blessings be upon him) went over with Jibril (Ibn Taymiyyah, Majmu' al-Fatawa 13/389–404); Ibn al-Jazari words it as the copies holding what their skeleton can carry of the seven Ahruf, leaving out nothing of the final review (an-Nashr). The canonical Qiraat, verified by chains, are all read within that skeleton. The 10 Qiraat (with their 20 Riwayaat) are mutawatir and reflect how the prophetic recitation was preserved in writing and oral teaching.")
+                    Section(header: ArticleHeader("CONSENSUS OF THE COMPANIONS")) {
+                        ArticleParagraph(verbatim: "The Companions, foremost memorizers and teachers, accepted the compilation and the Uthmanic copies, and the Ummah has been united upon them ever since. Ali (may Allah be pleased with him) said that Uthman did nothing regarding the copies except in consultation with them (Ibn Abi Dawud, Kitab al-Masahif; Ibn Hajar graded its chain sahih in Fath al-Bari). Abdullah ibn Mas'ud (may Allah be pleased with him) at first disliked that Zayd ibn Thabit was given the task over him and told the people of Iraq to keep their own copies, and az-Zuhri reports that the most virtuous of the Companions disliked that view of his (Jami' at-Tirmidhi 3104; graded sahih by al-Albani); the scholars report that he later came back to the agreement of the rest.")
+                        ScriptureQuote(hadith: "tirmidhi:3104", cite: "Jami' at-Tirmidhi 3104; graded sahih by al-Albani", arabic: 228...311, english: 341...477)
 
-                    ArticleParagraph(verbatim: "Thus, standardization lost nothing of the Quran; it safeguarded it, preventing private notes and unverified materials from being mistaken for the Quran, while preserving the legitimate readings taught by Prophet Muhammad (peace and blessings be upon him).")
-                }
+                        ArticleParagraph(verbatim: "Zayd ibn Thabit led the technical work in both Abu Bakr’s and Uthman’s projects, bringing rigorous verification. Senior scholars, including Quraysh experts, reviewed and approved the copies.")
+                    }
 
-                Section(header: ArticleHeader("KEY REPORTS (BRIEF)")) {
-                    ScriptureQuote(hadith: "bukhari:4992", cite: "Sahih al-Bukhari 4992, Sahih Muslim 818", arabic: 177...187, english: 204...237)
-                    ArticleBullet(verbatim: "• Double review in final Ramadan (al-Ardah al-Akhirah): reported in authentic narrations.")
-                    ArticleBullet(verbatim: "• Abu Bakr’s compilation via Zayd after Yamamah: authentic reports in Sahih collections.")
-                    ArticleBullet(verbatim: "• Uthman’s committee (with Zayd) and distribution of official copies: authentic reports in Sahih collections.")
-                }
+                    Section(header: ArticleHeader("THE FOUR MASTERS & LEADING TRANSMITTERS")) {
+                        ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:4999", cite: "Sahih al-Bukhari 4999", arabic: 34...47, english: 22...36)
 
-                Section(header: ArticleHeader("MANUSCRIPT EVIDENCE (HISTORICAL NOTES)")) {
-                    ArticleParagraph(verbatim: "Early Quranic manuscripts discovered in different regions (e.g., Hijaz, Yemen, Syria, North Africa, Anatolia) reflect the early Uthmanic rasm and align with the text recited today.")
+                        ArticleParagraph(verbatim: "These masters, together with others like Zayd ibn Thabit, were key references for wording, recitation, and teaching, anchoring transmission among the Companions and their students.")
+                    }
 
-                    ArticleParagraph(verbatim: "Examples often cited by historians include: the Birmingham fragments (radiocarbon dated to the earliest period of Islam), folios from Sana’a (whose upper text is Uthmanic; the erased lower text of one palimpsest is a non-Uthmanic, Companion-type codex, the kind of private copy that Uthman's measure retired), and early codices associated with major centers and later libraries (e.g., Topkapi).")
+                    Section(header: ArticleHeader("AHRUF, QIRAAT, AND THE UTHMANIC RASM")) {
+                        ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) taught that the Quran was revealed in seven Ahruf (modes) for ease. The Quran was first compiled into one manuscript under Abu Bakr (may Allah be pleased with him), around one year after the Prophet’s death. Under Uthman (may Allah be pleased with him), official copies were sent to all the major cities, written as a skeletal script without dots or tashkeel. The majority of the Salaf and the imams hold that these copies are upon one of the seven Ahruf and contain the final review the Prophet (peace and blessings be upon him) went over with Jibril (Ibn Taymiyyah, Majmu' al-Fatawa 13/389–404); Ibn al-Jazari words it as the copies holding what their skeleton can carry of the seven Ahruf, leaving out nothing of the final review (an-Nashr). The canonical Qiraat, verified by chains, are all read within that skeleton. The 10 Qiraat (with their 20 Riwayaat) are mutawatir and reflect how the prophetic recitation was preserved in writing and oral teaching.")
 
-                    ArticleParagraph(verbatim: "While scholarly studies analyze paleography, orthography, and dating techniques, the consonantal text aligns with the standardized Uthmanic tradition, and the Quran remains read globally in the same wording preserved by the Ummah.")
-                }
+                        ArticleParagraph(verbatim: "Thus, standardization lost nothing of the Quran; it safeguarded it, preventing private notes and unverified materials from being mistaken for the Quran, while preserving the legitimate readings taught by Prophet Muhammad (peace and blessings be upon him).")
+                    }
 
-                Section(header: ArticleHeader("WHY WERE PRIVATE MATERIALS RETIRED?")) {
-                    ArticleParagraph(verbatim: "Some Companions wrote personal notes (duas, explanations, or hadith) near Quranic passages. To prevent confusion between private annotations and the Quran, and to avoid unchecked variants, Uthman ordered that only the verified official copies be used for public recitation and that other materials be retired.")
+                    Section(header: ArticleHeader("KEY REPORTS (BRIEF)")) {
+                        ScriptureQuote(hadith: "bukhari:4992", cite: "Sahih al-Bukhari 4992, Sahih Muslim 818", arabic: 177...187, english: 204...237)
+                        ArticleBullet(verbatim: "• Double review in final Ramadan (al-Ardah al-Akhirah): reported in authentic narrations.")
+                        ArticleBullet(verbatim: "• Abu Bakr’s compilation via Zayd after Yamamah: authentic reports in Sahih collections.")
+                        ArticleBullet(verbatim: "• Uthman’s committee (with Zayd) and distribution of official copies: authentic reports in Sahih collections.")
+                    }
 
-                    ArticleParagraph(verbatim: "Apart from Ibn Mas'ud's early reservation (described above), no Companion rejected the standardized mushaf. The community recited, taught, and transmitted the same Quran by memorization and writing through every generation.")
+                    Section(header: ArticleHeader("MANUSCRIPT EVIDENCE (HISTORICAL NOTES)")) {
+                        ArticleParagraph(verbatim: "Early Quranic manuscripts discovered in different regions (e.g., Hijaz, Yemen, Syria, North Africa, Anatolia) reflect the early Uthmanic rasm and align with the text recited today.")
+
+                        ArticleParagraph(verbatim: "Examples often cited by historians include: the Birmingham fragments (radiocarbon dated to the earliest period of Islam), folios from Sana’a (whose upper text is Uthmanic; the erased lower text of one palimpsest is a non-Uthmanic, Companion-type codex, the kind of private copy that Uthman's measure retired), and early codices associated with major centers and later libraries (e.g., Topkapi).")
+
+                        ArticleParagraph(verbatim: "While scholarly studies analyze paleography, orthography, and dating techniques, the consonantal text aligns with the standardized Uthmanic tradition, and the Quran remains read globally in the same wording preserved by the Ummah.")
+                    }
+
+                    Section(header: ArticleHeader("WHY WERE PRIVATE MATERIALS RETIRED?")) {
+                        ArticleParagraph(verbatim: "Some Companions wrote personal notes (duas, explanations, or hadith) near Quranic passages. To prevent confusion between private annotations and the Quran, and to avoid unchecked variants, Uthman ordered that only the verified official copies be used for public recitation and that other materials be retired.")
+
+                        ArticleParagraph(verbatim: "Apart from Ibn Mas'ud's early reservation (described above), no Companion rejected the standardized mushaf. The community recited, taught, and transmitted the same Quran by memorization and writing through every generation.")
+                    }
                 }
 
                 Section(header: ArticleHeader("CONTINUITY UNTIL TODAY")) {
@@ -1336,12 +1721,14 @@ struct CompileView: View {
                     ArticleParagraph(verbatim: "Public recitation, prayer, and education remain bound to the verified text. The Ummah’s practice fulfills Allah's (Glorified and Exalted be He) promise: its preservation is both textual and living.")
                 }
 
-                Section(header: ArticleHeader("SELECT VERSES & REMINDERS")) {
-                    ScriptureQuote(quran: "7:204")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("SELECT VERSES & REMINDERS")) {
+                        ScriptureQuote(quran: "7:204")
 
-                    ScriptureQuote(quran: "4:82")
+                        ScriptureQuote(quran: "4:82")
 
-                    ScriptureQuote(quran: "41:42")
+                        ScriptureQuote(quran: "41:42")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -1595,6 +1982,8 @@ struct AhrufView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: the Quran was revealed in seven ahruf (modes of recitation) as a mercy easing its recitation for the different Arab tribes.")
                 }
@@ -1617,26 +2006,40 @@ struct AhrufView: View {
                     ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) did not reveal seven different Qurans; rather, one Quran with divinely allowed flexibility, making memorization and recitation easier.")
                 }
 
-                Section(header: ArticleHeader("THE WISDOM BEHIND THE VARIETY")) {
-                    ArticleParagraph(verbatim: "Classical scholars draw out several wisdoms behind the revealed variety, beyond ease of recitation:")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("PROPHETIC HADITH ON THE SEVEN AHRUF")) {
+                        ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) said:")
 
-                    ArticleParagraph(verbatim: "• Mercy and ease: a largely unlettered nation of many dialects could all recite the Quran as it was revealed, without hardship.\n• A sign of inimitability (i'jaz): the wordings vary, yet the meanings align and complete one another; no mode contradicts another in a single ruling or belief.\n• Proof of its divine origin: had the Quran been from other than Allah (Glorified and Exalted be He), such parallel wordings would inevitably clash. They never do.\n• Extra preservation: every reading was memorized and passed on through its own verified channels, multiplying the independent lines guarding the text.")
+                        ScriptureQuote(hadith: "bukhari:4992", cite: "Sahih al-Bukhari 4992, Sahih Muslim 818", arabic: 177...187, english: 204...225)
 
-                    ArticleParagraph(verbatim: "Ibn Shihab az-Zuhri, a narrator of these hadiths, added after one of them in Sahih Muslim (819): “It has reached me that these seven styles are essentially one, not differing about what is permitted and what is forbidden.” The variation lies in how the words are recited, not in what the Quran commands: no harf permits what another forbids.")
+                        ArticleParagraph(verbatim: "Another narration explains how the Prophet (peace and blessings be upon him) kept asking Jibril for more ease for the Ummah:")
+
+                        ScriptureQuote(hadith: "bukhari:4991", cite: "Sahih al-Bukhari 4991, Sahih Muslim 819", arabic: 39...52, english: 4...48)
+                    }
                 }
 
-                Section(header: ArticleHeader("PROPHETIC HADITH ON THE SEVEN AHRUF")) {
-                    ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) said:")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("THE WISDOM BEHIND THE VARIETY")) {
+                        ArticleParagraph(verbatim: "Classical scholars draw out several wisdoms behind the revealed variety, beyond ease of recitation:")
 
-                    ScriptureQuote(hadith: "bukhari:4992", cite: "Sahih al-Bukhari 4992, Sahih Muslim 818", arabic: 177...187, english: 204...225)
+                        ArticleParagraph(verbatim: "• Mercy and ease: a largely unlettered nation of many dialects could all recite the Quran as it was revealed, without hardship.\n• A sign of inimitability (i'jaz): the wordings vary, yet the meanings align and complete one another; no mode contradicts another in a single ruling or belief.\n• Proof of its divine origin: had the Quran been from other than Allah (Glorified and Exalted be He), such parallel wordings would inevitably clash. They never do.\n• Extra preservation: every reading was memorized and passed on through its own verified channels, multiplying the independent lines guarding the text.")
 
-                    ArticleParagraph(verbatim: "Another narration explains how the Prophet (peace and blessings be upon him) kept asking Jibril for more ease for the Ummah:")
+                        ArticleParagraph(verbatim: "Ibn Shihab az-Zuhri, a narrator of these hadiths, added after one of them in Sahih Muslim (819): “It has reached me that these seven styles are essentially one, not differing about what is permitted and what is forbidden.” The variation lies in how the words are recited, not in what the Quran commands: no harf permits what another forbids.")
+                    }
 
-                    ScriptureQuote(hadith: "bukhari:4991", cite: "Sahih al-Bukhari 4991, Sahih Muslim 819", arabic: 39...52, english: 4...48)
+                    Section(header: ArticleHeader("PROPHETIC HADITH ON THE SEVEN AHRUF")) {
+                        ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) said:")
 
-                    Text(verbatim: "In the famous incident of Umar and Hisham ibn Hakim: both of them recited differently, and Prophet Muhammad (peace and blessings be upon him) said that both were revealed, proving that the variations are not mistakes but revelation (Sahih al-Bukhari 4992; Sahih Muslim 818).")
-                        .font(.title3)
-                        .foregroundColor(appearance.accent.opacity(0.85))
+                        ScriptureQuote(hadith: "bukhari:4992", cite: "Sahih al-Bukhari 4992, Sahih Muslim 818", arabic: 177...187, english: 204...225)
+
+                        ArticleParagraph(verbatim: "Another narration explains how the Prophet (peace and blessings be upon him) kept asking Jibril for more ease for the Ummah:")
+
+                        ScriptureQuote(hadith: "bukhari:4991", cite: "Sahih al-Bukhari 4991, Sahih Muslim 819", arabic: 39...52, english: 4...48)
+
+                        Text(verbatim: "In the famous incident of Umar and Hisham ibn Hakim: both of them recited differently, and Prophet Muhammad (peace and blessings be upon him) said that both were revealed, proving that the variations are not mistakes but revelation (Sahih al-Bukhari 4992; Sahih Muslim 818).")
+                            .font(.title3)
+                            .foregroundColor(appearance.accent.opacity(0.85))
+                    }
                 }
 
                 // The two questions every reader of this page asks next, answered as the Salaf answered
@@ -1645,58 +2048,90 @@ struct AhrufView: View {
                 // Salaf: the Uthmanic mushaf is upon one harf and holds the final review; the "all seven"
                 // view is that of some jurists, reciters and theologians (al-Baqillani). Ibn al-Jazari's
                 // wording of the majority view (an-Nashr): what the rasm can carry of the seven.
-                Section(header: ArticleHeader("ARE THE SEVEN AHRUF THE SEVEN QIRAAT?")) {
-                    ArticleParagraph(verbatim: "No. Ibn Taymiyyah writes that there is no dispute among the scholars whose word counts that the seven Ahruf in which the Prophet (peace and blessings be upon him) said the Quran was revealed are not the readings of the seven famous reciters (Majmu' al-Fatawa 13/389–404). The seven readings were gathered by Ibn Mujahid more than three centuries after the Prophet (peace and blessings be upon him); the shared number led some people to confuse the two, and the scholars warned against it.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("ARE THE SEVEN AHRUF THE SEVEN QIRAAT?")) {
+                        ArticleParagraph(verbatim: "No. Ibn Taymiyyah writes that there is no dispute among the scholars whose word counts that the seven Ahruf in which the Prophet (peace and blessings be upon him) said the Quran was revealed are not the readings of the seven famous reciters (Majmu' al-Fatawa 13/389–404). The seven readings were gathered by Ibn Mujahid more than three centuries after the Prophet (peace and blessings be upon him); the shared number led some people to confuse the two, and the scholars warned against it.")
+                    }
 
-                    ArticleParagraph(verbatim: "What the Ahruf are, exactly, the scholars discussed at length, and the best-known views are three: seven dialects of the Arabs spread through the Quran (Abu Ubayd al-Qasim ibn Sallam); different words for one meaning, as halumma, aqbil and ta'al all mean “come” (at-Tabari, and Ibn Abd al-Barr gives it as the view of most scholars); and seven kinds of difference in wording, such as number, verb form, vowel endings, word order and a letter added or dropped (Ibn Qutaybah, and after him Ibn al-Jazari). What they agree on is enough: each harf is revealed, the wordings may differ while the meaning agrees, and no harf contradicts another.")
+                    Section(header: ArticleHeader("THE AHRUF IN THE UTHMANIC MUSHAF")) {
+                        ArticleParagraph(verbatim: "During the caliphate of Uthman (may Allah be pleased with him), the Ummah was unified upon official copies written in the Uthmanic rasm, a bare skeletal script without dots or tashkeel, and sent to all the major cities.")
+
+                        ArticleParagraph(verbatim: "The majority of the Salaf and the imams hold that the mushaf of Uthman is upon one of the seven Ahruf and contains the final review, the recitation the Prophet (peace and blessings be upon him) went over with Jibril in his last Ramadan; some jurists, reciters and theologians held instead that it contains all seven (Ibn Taymiyyah, Majmu' al-Fatawa 13/389–404).")
+
+                        ArticleParagraph(verbatim: "Either way, nothing of the Quran was lost. Reciting by the seven Ahruf was a permission (rukhsah) and an ease, not an obligation, so when the Companions agreed together on the Uthmanic copies, they kept everything of the final review.")
+                    }
+
+                    Section(header: ArticleHeader("DO THE AHRUF AFFECT PRESERVATION?")) {
+                        ArticleParagraph(verbatim: "No. The Quran remains perfectly preserved: letter for letter, word for word, as it stood in the final review. The Ahruf are part of that preservation, not a contradiction to it.")
+
+                        ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) promised:")
+
+                        ScriptureQuote(quran: "15:9")
+                    }
+
+                    Section(header: ArticleHeader("WHAT ABOUT THE 10 QIRAAT?")) {
+                        ArticleParagraph(verbatim: "The 10 Qiraat are the mass-transmitted (mutawatir) readings of the Uthmanic mushaf, each within its written skeleton, preserved through the teaching tradition.")
+
+                        Text(verbatim: "Learn more in the next section: 10 Qiraat (Canonical Recitations).")
+                            .font(.body)
+                            .foregroundColor(appearance.accent)
+                    }
                 }
 
-                Section(header: ArticleHeader("THE AHRUF IN THE UTHMANIC MUSHAF")) {
-                    ArticleParagraph(verbatim: "The majority of the Salaf and the imams hold that the mushaf of Uthman (may Allah be pleased with him) is upon one of the seven Ahruf and contains the final review, the recitation the Prophet (peace and blessings be upon him) went over with Jibril in his last Ramadan. Ibn Taymiyyah reports this, and reports that some jurists, reciters and theologians, among them al-Baqillani, held instead that the mushaf contains all seven (Majmu' al-Fatawa 13/389–404). Ibn al-Jazari words the majority view as: the Uthmanic copies hold what their written skeleton can carry of the seven Ahruf, and the whole of the final review, leaving out none of it (an-Nashr, in its introduction).")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("ARE THE SEVEN AHRUF THE SEVEN QIRAAT?")) {
+                        ArticleParagraph(verbatim: "No. Ibn Taymiyyah writes that there is no dispute among the scholars whose word counts that the seven Ahruf in which the Prophet (peace and blessings be upon him) said the Quran was revealed are not the readings of the seven famous reciters (Majmu' al-Fatawa 13/389–404). The seven readings were gathered by Ibn Mujahid more than three centuries after the Prophet (peace and blessings be upon him); the shared number led some people to confuse the two, and the scholars warned against it.")
 
-                    ArticleParagraph(verbatim: "Either way, nothing of the Quran was lost. Reciting by the seven Ahruf was a permission (rukhsah) and an ease, not an obligation: the Ummah was given the choice of which harf to recite, as Ibn Jarir at-Tabari explained and Ibn Taymiyyah relates in the same answer. So when the Companions agreed together on the Uthmanic copies, they kept everything of the final review, and every reading that fits their skeleton and reached us by mass transmission is still recited today.")
-                }
+                        ArticleParagraph(verbatim: "What the Ahruf are, exactly, the scholars discussed at length, and the best-known views are three: seven dialects of the Arabs spread through the Quran (Abu Ubayd al-Qasim ibn Sallam); different words for one meaning, as halumma, aqbil and ta'al all mean “come” (at-Tabari, and Ibn Abd al-Barr gives it as the view of most scholars); and seven kinds of difference in wording, such as number, verb form, vowel endings, word order and a letter added or dropped (Ibn Qutaybah, and after him Ibn al-Jazari). What they agree on is enough: each harf is revealed, the wordings may differ while the meaning agrees, and no harf contradicts another.")
+                    }
 
-                Section(header: ArticleHeader("DO THE AHRUF AFFECT PRESERVATION?")) {
-                    ArticleParagraph(verbatim: "No. The Quran remains perfectly preserved: letter for letter, word for word, as it stood in the final review. The Ahruf are part of that preservation, not a contradiction to it.")
+                    Section(header: ArticleHeader("THE AHRUF IN THE UTHMANIC MUSHAF")) {
+                        ArticleParagraph(verbatim: "The majority of the Salaf and the imams hold that the mushaf of Uthman (may Allah be pleased with him) is upon one of the seven Ahruf and contains the final review, the recitation the Prophet (peace and blessings be upon him) went over with Jibril in his last Ramadan. Ibn Taymiyyah reports this, and reports that some jurists, reciters and theologians, among them al-Baqillani, held instead that the mushaf contains all seven (Majmu' al-Fatawa 13/389–404). Ibn al-Jazari words the majority view as: the Uthmanic copies hold what their written skeleton can carry of the seven Ahruf, and the whole of the final review, leaving out none of it (an-Nashr, in its introduction).")
 
-                    ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) promised:")
+                        ArticleParagraph(verbatim: "Either way, nothing of the Quran was lost. Reciting by the seven Ahruf was a permission (rukhsah) and an ease, not an obligation: the Ummah was given the choice of which harf to recite, as Ibn Jarir at-Tabari explained and Ibn Taymiyyah relates in the same answer. So when the Companions agreed together on the Uthmanic copies, they kept everything of the final review, and every reading that fits their skeleton and reached us by mass transmission is still recited today.")
+                    }
 
-                    ScriptureQuote(quran: "15:9")
+                    Section(header: ArticleHeader("DO THE AHRUF AFFECT PRESERVATION?")) {
+                        ArticleParagraph(verbatim: "No. The Quran remains perfectly preserved: letter for letter, word for word, as it stood in the final review. The Ahruf are part of that preservation, not a contradiction to it.")
 
-                    ArticleParagraph(verbatim: "The variations in Ahruf never contradict one another in meaning, belief, or ruling; where the wordings differ, each adds a facet that agrees with the others. They highlight precision and perfection: the Ummah memorized and transmitted every letter exactly as revealed.")
+                        ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) promised:")
 
-                    ArticleParagraph(verbatim: "Each harf is revealed, preserved, and protected by Allah (Glorified and Exalted be He). Muslims do not choose or invent a harf; we only recite what Allah (Glorified and Exalted be He) revealed through His Messenger, Prophet Muhammad (peace and blessings be upon him).")
-                }
+                        ScriptureQuote(quran: "15:9")
 
-                Section(header: ArticleHeader("HOW AHRUF WERE PRESERVED")) {
-                    ArticleParagraph(verbatim: "• Prophet Muhammad (peace and blessings be upon him) taught the Companions each harf personally.\n• Jibril reviewed the Quran with Prophet Muhammad (peace and blessings be upon him) every year in Ramadan.\n• In the year Prophet Muhammad (peace and blessings be upon him) passed away, Jibril reviewed it twice (al-Ardah al-Akhirah).")
+                        ArticleParagraph(verbatim: "The variations in Ahruf never contradict one another in meaning, belief, or ruling; where the wordings differ, each adds a facet that agrees with the others. They highlight precision and perfection: the Ummah memorized and transmitted every letter exactly as revealed.")
 
-                    ArticleParagraph(verbatim: "About one year after the Prophet’s passing, Abu Bakr (may Allah be pleased with him) commissioned the first complete compilation of the Quran into one manuscript. During the caliphate of Uthman (may Allah be pleased with him), the Ummah was then unified upon official copies from that preserved compilation, written in the Uthmanic rasm and sent to all the major cities. The rasm was a bare skeletal script, without dots or tashkeel (vowel marks), which the Arabs read without difficulty, and the Companions left it bare on purpose, so that one written skeleton could be read in every authentically received way that matched it (Ibn al-Jazari, an-Nashr). Other scholars hold that the letters were simply not dotted yet in their time; on either view, the bare skeleton carried the readings.")
+                        ArticleParagraph(verbatim: "Each harf is revealed, preserved, and protected by Allah (Glorified and Exalted be He). Muslims do not choose or invent a harf; we only recite what Allah (Glorified and Exalted be He) revealed through His Messenger, Prophet Muhammad (peace and blessings be upon him).")
+                    }
 
-                    ArticleParagraph(verbatim: "What the copies carry is preserved through oral transmission, ijazahs, and chains of narration (isnad).")
-                }
+                    Section(header: ArticleHeader("HOW AHRUF WERE PRESERVED")) {
+                        ArticleParagraph(verbatim: "• Prophet Muhammad (peace and blessings be upon him) taught the Companions each harf personally.\n• Jibril reviewed the Quran with Prophet Muhammad (peace and blessings be upon him) every year in Ramadan.\n• In the year Prophet Muhammad (peace and blessings be upon him) passed away, Jibril reviewed it twice (al-Ardah al-Akhirah).")
 
-                Section(header: ArticleHeader("AN ANALOGY: SEVEN NUMBERS, MANY PASSWORDS")) {
-                    ArticleParagraph(verbatim: "Think of the seven Ahruf as seven numbers you are handed, and each Qiraah as a password formed from them. The numbers (Ahruf) are the revealed building blocks; a password (Qiraah) is one specific, fixed combination drawn from them, whether it uses one digit, a few, or all seven.")
+                        ArticleParagraph(verbatim: "About one year after the Prophet’s passing, Abu Bakr (may Allah be pleased with him) commissioned the first complete compilation of the Quran into one manuscript. During the caliphate of Uthman (may Allah be pleased with him), the Ummah was then unified upon official copies from that preserved compilation, written in the Uthmanic rasm and sent to all the major cities. The rasm was a bare skeletal script, without dots or tashkeel (vowel marks), which the Arabs read without difficulty, and the Companions left it bare on purpose, so that one written skeleton could be read in every authentically received way that matched it (Ibn al-Jazari, an-Nashr). Other scholars hold that the letters were simply not dotted yet in their time; on either view, the bare skeleton carried the readings.")
 
-                    ArticleParagraph(verbatim: "Seven numbers could form far more than ten passwords, and likewise more readings than ten were transmitted historically. The 10 Qiraat are the combinations preserved with mass transmission (mutawatir): rigorously verified, widely taught, and famous across the Ummah. The picture follows Ibn al-Jazari's wording; the scholars who say the mushaf is upon one harf place every Qiraah within that harf, and both agree that each canonical Qiraah lies within the Uthmanic rasm and is fully Quran.")
+                        ArticleParagraph(verbatim: "What the copies carry is preserved through oral transmission, ijazahs, and chains of narration (isnad).")
+                    }
 
-                    Text(verbatim: "Since every harf is revealed by Allah (Glorified and Exalted be He), every canonical combination of them is fully Quran, and no combination was ever invented: each Qiraah was received from Prophet Muhammad (peace and blessings be upon him) through an unbroken chain and applies its rules with complete consistency, exactly as taught.")
-                        .font(.body)
-                        .foregroundColor(appearance.accent)
-                }
+                    Section(header: ArticleHeader("AN ANALOGY: SEVEN NUMBERS, MANY PASSWORDS")) {
+                        ArticleParagraph(verbatim: "Think of the seven Ahruf as seven numbers you are handed, and each Qiraah as a password formed from them. The numbers (Ahruf) are the revealed building blocks; a password (Qiraah) is one specific, fixed combination drawn from them, whether it uses one digit, a few, or all seven.")
 
-                Section(header: ArticleHeader("WHAT ABOUT THE 10 QIRAAT?")) {
-                    ArticleParagraph(verbatim: "The 10 Qiraat are the mass-transmitted (mutawatir) readings of the Uthmanic mushaf, each within its written skeleton, preserved through the teaching tradition.")
+                        ArticleParagraph(verbatim: "Seven numbers could form far more than ten passwords, and likewise more readings than ten were transmitted historically. The 10 Qiraat are the combinations preserved with mass transmission (mutawatir): rigorously verified, widely taught, and famous across the Ummah. The picture follows Ibn al-Jazari's wording; the scholars who say the mushaf is upon one harf place every Qiraah within that harf, and both agree that each canonical Qiraah lies within the Uthmanic rasm and is fully Quran.")
 
-                    ArticleParagraph(verbatim: "Each Qiraah has an unbroken chain (isnad) from the reciter to his teacher, and his teacher's teacher, back to Prophet Muhammad (peace and blessings be upon him). Here is the chain of the reading of ‘Asim, which divides into his two narrators, Hafs and Shu‘bah:")
+                        Text(verbatim: "Since every harf is revealed by Allah (Glorified and Exalted be He), every canonical combination of them is fully Quran, and no combination was ever invented: each Qiraah was received from Prophet Muhammad (peace and blessings be upon him) through an unbroken chain and applies its rules with complete consistency, exactly as taught.")
+                            .font(.body)
+                            .foregroundColor(appearance.accent)
+                    }
 
-                    ArticleIsnadCard("The reading of ‘Asim: from the Prophet ﷺ through ‘Uthman, ‘Ali, Ibn Mas‘ud, Ubayy and Zayd ibn Thabit, and ‘Asim’s teachers Abu ‘Abd ar-Rahman as-Sulami, Zirr ibn Hubaysh and Abu ‘Amr ash-Shaybani, to ‘Asim (d. 127 AH), where it divides into Hafs (d. 180 AH) and Shu‘bah (d. 193 AH).", isnad: .hafsReading)
+                    Section(header: ArticleHeader("WHAT ABOUT THE 10 QIRAAT?")) {
+                        ArticleParagraph(verbatim: "The 10 Qiraat are the mass-transmitted (mutawatir) readings of the Uthmanic mushaf, each within its written skeleton, preserved through the teaching tradition.")
 
-                    Text(verbatim: "Learn more in the next section: 10 Qiraat (Canonical Recitations).")
-                        .font(.body)
-                        .foregroundColor(appearance.accent)
+                        ArticleParagraph(verbatim: "Each Qiraah has an unbroken chain (isnad) from the reciter to his teacher, and his teacher's teacher, back to Prophet Muhammad (peace and blessings be upon him). Here is the chain of the reading of ‘Asim, which divides into his two narrators, Hafs and Shu‘bah:")
+
+                        ArticleIsnadCard("The reading of ‘Asim: from the Prophet ﷺ through ‘Uthman, ‘Ali, Ibn Mas‘ud, Ubayy and Zayd ibn Thabit, and ‘Asim’s teachers Abu ‘Abd ar-Rahman as-Sulami, Zirr ibn Hubaysh and Abu ‘Amr ash-Shaybani, to ‘Asim (d. 127 AH), where it divides into Hafs (d. 180 AH) and Shu‘bah (d. 193 AH).", isnad: .hafsReading)
+
+                        Text(verbatim: "Learn more in the next section: 10 Qiraat (Canonical Recitations).")
+                            .font(.body)
+                            .foregroundColor(appearance.accent)
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -1776,6 +2211,8 @@ struct QiraatView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: the ten Qiraat are the authentic, mass-transmitted ways of reciting the Quran, each traced through a continuous chain to the Prophet.")
                 }
@@ -1825,51 +2262,80 @@ struct QiraatView: View {
                     ArticleParagraph(verbatim: "This is also why every Qiraah carries a city with it. Uthman (may Allah be pleased with him) sent a mushaf to each major centre and a teacher to recite by it, and the recitation of that centre settled around them, passing from teacher to student until one imam became its recognised authority. A Qiraah is named after that imam, but what he transmitted is the established reading of his city: Madinah (Nafi and, before him, his own teacher Abu Ja'far), Makkah (Ibn Kathir), Basrah (Abu Amr and, after him, Ya'qub), Damascus and greater Sham (Ibn Amir), and Kufah (Asim, Hamzah and al-Kisai, with Khalaf later carrying the Kufan tradition on from Baghdad).")
                 }
 
-                Section(header: ArticleHeader("AN ANALOGY: SEVEN NUMBERS, MANY PASSWORDS")) {
-                    ArticleParagraph(verbatim: "Imagine being handed seven numbers and asked to form passwords from them. The seven numbers are like the seven Ahruf: every one of them revealed by Allah (Glorified and Exalted be He). A password formed from those numbers is like a Qiraah: one specific, fixed combination drawn from the revealed modes.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("WHAT IS A QIRAAH?")) {
+                        ArticleParagraph(verbatim: "A Qiraah (قِرَاءَة) is a canonical, authenticated way of reciting the Quran that meets three criteria: (1) agreement with the Uthmanic rasm (الرَّسم العُثمَانِي), (2) sound Arabic language, and (3) authentic, widespread transmission (tawatur تَوَاتُر).")
 
-                    ArticleParagraph(verbatim: "A password does not have to use all seven digits; it may draw on one, a few, or all of them. In the same way, a Qiraah may reflect one harf, several, or elements of many, and it is fully Quran either way, because every harf on its own is revealed Quran, and any single Qiraah on its own is sufficient, complete Quran.")
+                        Text(verbatim: "All 10 Qiraat return to Prophet Muhammad (peace and blessings be upon him). Every reciter has an unbroken chain of students → teachers → Companions → Prophet Muhammad (peace and blessings be upon him).")
+                            .font(.body)
+                            .foregroundColor(appearance.accent)
 
-                    ArticleParagraph(verbatim: "Just as seven numbers can form far more than ten passwords, the revealed modes could combine into more readings than ten, and other readings were indeed transmitted historically. The 10 Qiraat are the combinations that reached us mutawatir (mass-transmitted): rigorously verified, taught continuously from teacher to student, and famous across the Ummah. Together they carry what the Uthmanic rasm, a skeletal script with no dots or tashkeel, holds of the seven Ahruf. The picture follows Ibn al-Jazari's wording; the scholars who say the mushaf is upon one harf place every Qiraah within that harf, and both agree that each canonical Qiraah lies within the Uthmanic rasm and is fully Quran.")
+                        ArticleParagraph(verbatim: "Most differences are within established rules of tajwid (تَجوِيد), allowable word-forms and vowels, elongation (madd مَدّ), assimilation (idgham إِدغَام), imalah (إِمَالَة), and stopping/continuation, while preserving the same meanings and guidance.")
 
-                    Text(verbatim: "But no one sat down and invented these combinations. Each Qiraah was received, not designed: it descends through an unbroken chain (isnad) from its reciters → their teachers → a Companion → Prophet Muhammad (peace and blessings be upon him), who taught it exactly this way.")
-                        .font(.body)
-                        .foregroundColor(appearance.accent)
+                        ArticleParagraph(verbatim: "Important: The Qiraat are not arbitrary. Each was received, not composed: it reads the Uthmanic rasm exactly as it was taught from Prophet Muhammad (peace and blessings be upon him), preserved through both writing and oral transmission in a rigorously taught, verifiable method of recitation.")
+                    }
 
-                    ArticleParagraph(verbatim: "Because each Qiraah is Quran, reciting one ayah in one Qiraah and the next ayah in another is still reciting nothing but the Book of Allah (Glorified and Exalted be He); the Companions themselves recited in different revealed ways, and Prophet Muhammad (peace and blessings be upon him) approved them all.")
+                    Section(header: ArticleHeader("HOW THE READINGS DIFFER")) {
+                        ArticleParagraph(verbatim: "Imam Ibn al-Jazari (d. 833 AH), the foremost authority of this science, grouped the differences between the canonical readings into three kinds (an-Nashr fi al-Qira'at al-'Ashr, in its introduction):")
 
-                    ArticleParagraph(verbatim: "And like a password that must be entered exactly, each Qiraah keeps its own rules from the Ahruf alive with complete internal consistency: its madd lengths, imalah, assimilations, and word-forms are applied the same way every single time, exactly as transmitted.")
+                        ArticleParagraph(verbatim: "• The same word, pronounced in more than one revealed way, with the meaning unchanged.\n• Different word-forms pointing to the same reality: in Surah al-Fatihah, “Maliki yawmid-din” (King of the Day of Judgment) and “Maaliki yawmid-din” (Owner of the Day of Judgment) are both revealed, and both describe Allah (Glorified and Exalted be He).\n• Different words carrying complementary meanings: each reading adds a facet, and none contradicts another.")
+
+                        Text(verbatim: "There is no fourth category of contradiction. Across all the canonical readings, not a single ayah makes lawful what another forbids or affirms what another denies; the differences enrich the meaning, never oppose it.")
+                            .font(.body)
+                            .foregroundColor(appearance.accent)
+
+                        ArticleParagraph(verbatim: "The mushafs differ on the page too: which readings pronounce the hamzah and which ease or drop it, the Madani dot for hamzat al-wasl, and the dots of imalah and taqlil under the letters.")
+                        ArticleDoorRow(door: .article("RiwayatDifferencesView"))
+                    }
                 }
 
-                Section(header: ArticleHeader("WHAT IS A QIRAAH?")) {
-                    ArticleParagraph(verbatim: "A Qiraah (قِرَاءَة) is a canonical, authenticated way of reciting the Quran that meets three criteria: (1) agreement with the Uthmanic rasm (الرَّسم العُثمَانِي), (2) sound Arabic language, and (3) authentic, widespread transmission (tawatur تَوَاتُر).")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("AN ANALOGY: SEVEN NUMBERS, MANY PASSWORDS")) {
+                        ArticleParagraph(verbatim: "Imagine being handed seven numbers and asked to form passwords from them. The seven numbers are like the seven Ahruf: every one of them revealed by Allah (Glorified and Exalted be He). A password formed from those numbers is like a Qiraah: one specific, fixed combination drawn from the revealed modes.")
 
-                    Text(verbatim: "All 10 Qiraat return to Prophet Muhammad (peace and blessings be upon him). Every reciter has an unbroken chain of students → teachers → Companions → Prophet Muhammad (peace and blessings be upon him).")
-                        .font(.body)
-                        .foregroundColor(appearance.accent)
+                        ArticleParagraph(verbatim: "A password does not have to use all seven digits; it may draw on one, a few, or all of them. In the same way, a Qiraah may reflect one harf, several, or elements of many, and it is fully Quran either way, because every harf on its own is revealed Quran, and any single Qiraah on its own is sufficient, complete Quran.")
 
-                    ArticleParagraph(verbatim: "Most differences are within established rules of tajwid (تَجوِيد), allowable word-forms and vowels, elongation (madd مَدّ), assimilation (idgham إِدغَام), imalah (إِمَالَة), and stopping/continuation, while preserving the same meanings and guidance.")
+                        ArticleParagraph(verbatim: "Just as seven numbers can form far more than ten passwords, the revealed modes could combine into more readings than ten, and other readings were indeed transmitted historically. The 10 Qiraat are the combinations that reached us mutawatir (mass-transmitted): rigorously verified, taught continuously from teacher to student, and famous across the Ummah. Together they carry what the Uthmanic rasm, a skeletal script with no dots or tashkeel, holds of the seven Ahruf. The picture follows Ibn al-Jazari's wording; the scholars who say the mushaf is upon one harf place every Qiraah within that harf, and both agree that each canonical Qiraah lies within the Uthmanic rasm and is fully Quran.")
 
-                    ArticleParagraph(verbatim: "Important: The Qiraat are not arbitrary. Each was received, not composed: it reads the Uthmanic rasm exactly as it was taught from Prophet Muhammad (peace and blessings be upon him), preserved through both writing and oral transmission in a rigorously taught, verifiable method of recitation.")
+                        Text(verbatim: "But no one sat down and invented these combinations. Each Qiraah was received, not designed: it descends through an unbroken chain (isnad) from its reciters → their teachers → a Companion → Prophet Muhammad (peace and blessings be upon him), who taught it exactly this way.")
+                            .font(.body)
+                            .foregroundColor(appearance.accent)
 
-                    ArticleParagraph(verbatim: "This precision goes back to how the Quran was taught from the very beginning: the Companions would take a portion of ayat from Prophet Muhammad (peace and blessings be upon him) and not move past it until they had mastered both its recitation and what it contained (Musnad Ahmad 23482, from Abu Abd ar-Rahman as-Sulami; its chain graded hasan by Shu'ayb al-Arna'ut). The Qiraat continue that discipline, teacher to student, to this day.")
-                }
+                        ArticleParagraph(verbatim: "Because each Qiraah is Quran, reciting one ayah in one Qiraah and the next ayah in another is still reciting nothing but the Book of Allah (Glorified and Exalted be He); the Companions themselves recited in different revealed ways, and Prophet Muhammad (peace and blessings be upon him) approved them all.")
 
-                Section(header: ArticleHeader("HOW THE READINGS DIFFER")) {
-                    ArticleParagraph(verbatim: "Imam Ibn al-Jazari (d. 833 AH), the foremost authority of this science, grouped the differences between the canonical readings into three kinds (an-Nashr fi al-Qira'at al-'Ashr, in its introduction):")
+                        ArticleParagraph(verbatim: "And like a password that must be entered exactly, each Qiraah keeps its own rules from the Ahruf alive with complete internal consistency: its madd lengths, imalah, assimilations, and word-forms are applied the same way every single time, exactly as transmitted.")
+                    }
 
-                    ArticleParagraph(verbatim: "• The same word, pronounced in more than one revealed way, with the meaning unchanged.\n• Different word-forms pointing to the same reality: in Surah al-Fatihah, “Maliki yawmid-din” (King of the Day of Judgment) and “Maaliki yawmid-din” (Owner of the Day of Judgment) are both revealed, and both describe Allah (Glorified and Exalted be He).\n• Different words carrying complementary meanings: each reading adds a facet, and none contradicts another.")
+                    Section(header: ArticleHeader("WHAT IS A QIRAAH?")) {
+                        ArticleParagraph(verbatim: "A Qiraah (قِرَاءَة) is a canonical, authenticated way of reciting the Quran that meets three criteria: (1) agreement with the Uthmanic rasm (الرَّسم العُثمَانِي), (2) sound Arabic language, and (3) authentic, widespread transmission (tawatur تَوَاتُر).")
 
-                    Text(verbatim: "There is no fourth category of contradiction. Across all the canonical readings, not a single ayah makes lawful what another forbids or affirms what another denies; the differences enrich the meaning, never oppose it.")
-                        .font(.body)
-                        .foregroundColor(appearance.accent)
+                        Text(verbatim: "All 10 Qiraat return to Prophet Muhammad (peace and blessings be upon him). Every reciter has an unbroken chain of students → teachers → Companions → Prophet Muhammad (peace and blessings be upon him).")
+                            .font(.body)
+                            .foregroundColor(appearance.accent)
 
-                    // What a reader SEES when they switch riwayah (Abu, 2026-09-29: "mention which
-                    // riwayahs have hamzas, which don't, which have Madani hamzat al-wasl and which
-                    // have dots"), on a page of its own with counts from the app's texts.
-                    ArticleParagraph(verbatim: "The mushafs differ on the page too: which readings pronounce the hamzah and which ease or drop it, the Madani dot for hamzat al-wasl, and the dots of imalah and taqlil under the letters.")
-                    ArticleParagraph(verbatim: "A printed mushaf is set in one riwayah, and many editions note a second narrator’s differences in the margin: Khallad beside Khalaf, Shu’bah beside Hafs. The explorer above does that for all twenty at once.")
-                    ArticleDoorRow(door: .article("RiwayatDifferencesView"))
+                        ArticleParagraph(verbatim: "Most differences are within established rules of tajwid (تَجوِيد), allowable word-forms and vowels, elongation (madd مَدّ), assimilation (idgham إِدغَام), imalah (إِمَالَة), and stopping/continuation, while preserving the same meanings and guidance.")
+
+                        ArticleParagraph(verbatim: "Important: The Qiraat are not arbitrary. Each was received, not composed: it reads the Uthmanic rasm exactly as it was taught from Prophet Muhammad (peace and blessings be upon him), preserved through both writing and oral transmission in a rigorously taught, verifiable method of recitation.")
+
+                        ArticleParagraph(verbatim: "This precision goes back to how the Quran was taught from the very beginning: the Companions would take a portion of ayat from Prophet Muhammad (peace and blessings be upon him) and not move past it until they had mastered both its recitation and what it contained (Musnad Ahmad 23482, from Abu Abd ar-Rahman as-Sulami; its chain graded hasan by Shu'ayb al-Arna'ut). The Qiraat continue that discipline, teacher to student, to this day.")
+                    }
+
+                    Section(header: ArticleHeader("HOW THE READINGS DIFFER")) {
+                        ArticleParagraph(verbatim: "Imam Ibn al-Jazari (d. 833 AH), the foremost authority of this science, grouped the differences between the canonical readings into three kinds (an-Nashr fi al-Qira'at al-'Ashr, in its introduction):")
+
+                        ArticleParagraph(verbatim: "• The same word, pronounced in more than one revealed way, with the meaning unchanged.\n• Different word-forms pointing to the same reality: in Surah al-Fatihah, “Maliki yawmid-din” (King of the Day of Judgment) and “Maaliki yawmid-din” (Owner of the Day of Judgment) are both revealed, and both describe Allah (Glorified and Exalted be He).\n• Different words carrying complementary meanings: each reading adds a facet, and none contradicts another.")
+
+                        Text(verbatim: "There is no fourth category of contradiction. Across all the canonical readings, not a single ayah makes lawful what another forbids or affirms what another denies; the differences enrich the meaning, never oppose it.")
+                            .font(.body)
+                            .foregroundColor(appearance.accent)
+
+                        // What a reader SEES when they switch riwayah (Abu, 2026-09-29: "mention which
+                        // riwayahs have hamzas, which don't, which have Madani hamzat al-wasl and which
+                        // have dots"), on a page of its own with counts from the app's texts.
+                        ArticleParagraph(verbatim: "The mushafs differ on the page too: which readings pronounce the hamzah and which ease or drop it, the Madani dot for hamzat al-wasl, and the dots of imalah and taqlil under the letters.")
+                        ArticleParagraph(verbatim: "A printed mushaf is set in one riwayah, and many editions note a second narrator’s differences in the margin: Khallad beside Khalaf, Shu’bah beside Hafs. The explorer above does that for all twenty at once.")
+                        ArticleDoorRow(door: .article("RiwayatDifferencesView"))
+                    }
                 }
 
                 Section(header: ArticleHeader("QIRAAH (قِرَاءَة) VS RIWAYAH (رِوَايَة)")) {
@@ -1883,18 +2349,20 @@ struct QiraatView: View {
                         .foregroundColor(appearance.accent)
                 }
 
-                Section(header: ArticleHeader("COMMON CLARIFICATIONS")) {
-                    ArticleParagraph(verbatim: "Many people hear about 7 and 10 together. Both references are used by scholars: the famous seven canonical recitations (al-Sab'ah) and the full ten canonical Qiraat (7 + 3), all preserved through reliable transmission.")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("COMMON CLARIFICATIONS")) {
+                        ArticleParagraph(verbatim: "Many people hear about 7 and 10 together. Both references are used by scholars: the famous seven canonical recitations (al-Sab'ah) and the full ten canonical Qiraat (7 + 3), all preserved through reliable transmission.")
 
-                    ArticleParagraph(verbatim: "The original seven were famously codified by Imam Abu Bakr Ibn Mujahid. Their Imams are: Nafi (Madinah), Ibn Kathir (Makkah), Abu Amr (Basra), Ibn Amir (Damascus), Asim (Kufa), Hamzah (Kufa), and al-Kisai (Kufa).")
+                        ArticleParagraph(verbatim: "The original seven were famously codified by Imam Abu Bakr Ibn Mujahid. Their Imams are: Nafi (Madinah), Ibn Kathir (Makkah), Abu Amr (Basra), Ibn Amir (Damascus), Asim (Kufa), Hamzah (Kufa), and al-Kisai (Kufa).")
 
-                    ArticleParagraph(verbatim: "The three that complete the ten, counted with the seven by scholars before him and confirmed by Imam Ibn al-Jazari, are: Abu Ja'far (Madinah), Ya'qub al-Hadrami (Basra), and Khalaf al-Bazzar (Baghdad, transmitting the Kufan tradition he received through Hamzah).")
+                        ArticleParagraph(verbatim: "The three that complete the ten, counted with the seven by scholars before him and confirmed by Imam Ibn al-Jazari, are: Abu Ja'far (Madinah), Ya'qub al-Hadrami (Basra), and Khalaf al-Bazzar (Baghdad, transmitting the Kufan tradition he received through Hamzah).")
 
-                    ArticleParagraph(verbatim: "Hafs is a riwayah from Asim, and Warsh is a riwayah from Nafi. So when people say Hafs or Warsh, they are naming a narration path within the canonical recitation tradition.")
+                        ArticleParagraph(verbatim: "Hafs is a riwayah from Asim, and Warsh is a riwayah from Nafi. So when people say Hafs or Warsh, they are naming a narration path within the canonical recitation tradition.")
 
-                    Text(verbatim: "Today, Hafs an Asim is the most widely recited globally (often estimated around 90%+), while other canonical recitations such as Warsh an Nafi remain authentic and practiced.")
-                        .font(.body)
-                        .foregroundColor(appearance.accent)
+                        Text(verbatim: "Today, Hafs an Asim is the most widely recited globally (often estimated around 90%+), while other canonical recitations such as Warsh an Nafi remain authentic and practiced.")
+                            .font(.body)
+                            .foregroundColor(appearance.accent)
+                    }
                 }
 
                 Section(header: ArticleHeader("AUTHENTICITY & PRESERVATION")) {
@@ -1909,11 +2377,13 @@ struct QiraatView: View {
                         .foregroundColor(appearance.accent)
                 }
 
-                Section(header: ArticleHeader("THE FOUR MASTERS OF THE QURAN")) {
-                    ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) said:")
-                    ScriptureQuote(hadith: "bukhari:4999", cite: "Sahih al-Bukhari 4999", arabic: 34...47, english: 22...36)
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("THE FOUR MASTERS OF THE QURAN")) {
+                        ArticleParagraph(verbatim: "Prophet Muhammad (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:4999", cite: "Sahih al-Bukhari 4999", arabic: 34...47, english: 22...36)
 
-                    ArticleParagraph(verbatim: "These four masters were among the foremost teachers of the Quran among the Companions, and their recitation and teaching shaped subsequent generations of transmitters.")
+                        ArticleParagraph(verbatim: "These four masters were among the foremost teachers of the Quran among the Companions, and their recitation and teaching shaped subsequent generations of transmitters.")
+                    }
                 }
 
                 // The ten as scholars actually count them: the seven of Ibn Mujahid, then the three
@@ -1952,109 +2422,118 @@ struct QiraatView: View {
                     }
                 }
 
-                Section(header: ArticleHeader("THE 14 RIWAYAAT OF THE SEVEN")) {
-                    ArticleParagraph(verbatim: "Each Qiraah (recitation method) has two primary riwayaat (narrations). These are the fourteen transmissions of the seven readings, grouped under their imam in the same order as above, with where each is recited today. Tap any of them to read about the narrator.")
-
-                    ForEach(QiraatProfiles.masters(in: QiraatProfiles.sevenIDs)) { master in
-                        ForEach(QiraatProfiles.narrators(ofMaster: master.id)) { narrator in
-                            NavigationLink(destination: LazyDestination { RiwayahNarratorDetailView(profile: narrator) }) {
-                                QiraatProfileRow(
-                                    title: "\(narrator.name) an \(master.id)",
-                                    arabic: narrator.arabic,
-                                    detail: "\(narrator.city), died \(narrator.diedAH) AH",
-                                    note: QiraatProfiles.recitedTodayShort(narrator: narrator.id),
-                                    systemImage: "link"
-                                )
-                            }
-                        }
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("PRACTICAL STUDY & ADVICE")) {
+                        ArticleBullet(verbatim: "• Learn with a qualified teacher who has ijazah (إِجَازَة) and isnad (إِسنَاد). Do not self-invent pronunciations or rely only on apps without verification.")
+                        ArticleBullet(verbatim: "• Remember: the variety of the readings is a mercy and an ease from Allah, not a contradiction. They illuminate the Quran’s depth and precision.")
                     }
                 }
 
-                Section(header: ArticleHeader("THE 6 RIWAYAAT OF THE THREE")) {
-                    ArticleParagraph(verbatim: "The six transmissions of the three completing readings. All twenty riwayaat together are the canonical transmissions used in teaching and ijazah (chain certification).")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("THE 14 RIWAYAAT OF THE SEVEN")) {
+                        ArticleParagraph(verbatim: "Each Qiraah (recitation method) has two primary riwayaat (narrations). These are the fourteen transmissions of the seven readings, grouped under their imam in the same order as above, with where each is recited today. Tap any of them to read about the narrator.")
 
-                    ForEach(QiraatProfiles.masters(in: QiraatProfiles.threeIDs)) { master in
-                        ForEach(QiraatProfiles.narrators(ofMaster: master.id)) { narrator in
-                            NavigationLink(destination: LazyDestination { RiwayahNarratorDetailView(profile: narrator) }) {
-                                QiraatProfileRow(
-                                    title: "\(narrator.name) an \(master.id)",
-                                    arabic: narrator.arabic,
-                                    detail: "\(narrator.city), died \(narrator.diedAH) AH",
-                                    note: QiraatProfiles.recitedTodayShort(narrator: narrator.id),
-                                    systemImage: "link"
-                                )
+                        ForEach(QiraatProfiles.masters(in: QiraatProfiles.sevenIDs)) { master in
+                            ForEach(QiraatProfiles.narrators(ofMaster: master.id)) { narrator in
+                                NavigationLink(destination: LazyDestination { RiwayahNarratorDetailView(profile: narrator) }) {
+                                    QiraatProfileRow(
+                                        title: "\(narrator.name) an \(master.id)",
+                                        arabic: narrator.arabic,
+                                        detail: "\(narrator.city), died \(narrator.diedAH) AH",
+                                        note: QiraatProfiles.recitedTodayShort(narrator: narrator.id),
+                                        systemImage: "link"
+                                    )
+                                }
                             }
                         }
                     }
-                }
 
-                Section(header: ArticleHeader("THE COMPANIONS BEHIND EACH QIRAAH")) {
-                    ArticleParagraph(verbatim: "Every Qiraah traces back through its Imam and narrators to the Companions (may Allah be pleased with them) who learned the Quran directly from Prophet Muhammad (peace and blessings be upon him). The chains below show which Companions each reading is transmitted from.")
+                    Section(header: ArticleHeader("THE 6 RIWAYAAT OF THE THREE")) {
+                        ArticleParagraph(verbatim: "The six transmissions of the three completing readings. All twenty riwayaat together are the canonical transmissions used in teaching and ijazah (chain certification).")
 
-                    #if os(iOS)
-                    OpenScreenLink(screen: .qiraatIsnadIndex) {
-                        QiraatIsnadIndexView()
-                    } label: {
-                        Label("See every chain as a diagram, link by link", systemImage: "point.3.connected.trianglepath.dotted")
-                            .font(.subheadline.weight(.medium))
+                        ForEach(QiraatProfiles.masters(in: QiraatProfiles.threeIDs)) { master in
+                            ForEach(QiraatProfiles.narrators(ofMaster: master.id)) { narrator in
+                                NavigationLink(destination: LazyDestination { RiwayahNarratorDetailView(profile: narrator) }) {
+                                    QiraatProfileRow(
+                                        title: "\(narrator.name) an \(master.id)",
+                                        arabic: narrator.arabic,
+                                        detail: "\(narrator.city), died \(narrator.diedAH) AH",
+                                        note: QiraatProfiles.recitedTodayShort(narrator: narrator.id),
+                                        systemImage: "link"
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Section(header: ArticleHeader("THE COMPANIONS BEHIND EACH QIRAAH")) {
+                        ArticleParagraph(verbatim: "Every Qiraah traces back through its Imam and narrators to the Companions (may Allah be pleased with them) who learned the Quran directly from Prophet Muhammad (peace and blessings be upon him). The chains below show which Companions each reading is transmitted from.")
+
+                        #if os(iOS)
+                        OpenScreenLink(screen: .qiraatIsnadIndex) {
+                            QiraatIsnadIndexView()
+                        } label: {
+                            Label("See every chain as a diagram, link by link", systemImage: "point.3.connected.trianglepath.dotted")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(appearance.accent)
+                        }
+                        #endif
+
+                        // One card per reading instead of ten paragraphs of run-on names (Abu, 2026-09-26:
+                        // "listing all the qiraat like that looks terrible"), in the order of the lists above:
+                        // the seven, then the three. The Companions are the article's own lists.
+                        lineageRow("Nafi", companions: ["Umar ibn al-Khattab", "Zayd ibn Thabit", "Ubayy ibn Ka‘b", "Abdullah ibn Abbas", "Abdullah ibn Ayyash", "Abu Hurayrah"])
+                        lineageRow("Ibn Kathir", companions: ["Umar ibn al-Khattab", "Zayd ibn Thabit", "Ubayy ibn Ka‘b", "Abdullah ibn Abbas", "Abdullah ibn as-Sa’ib"])
+                        lineageRow("Abu Amr", companions: ["Umar ibn al-Khattab", "Uthman ibn Affan", "Ali ibn Abi Talib", "Abdullah ibn Mas‘ud", "Abu Musa al-Ash‘ari", "Abdullah ibn Abbas", "Abdullah ibn Ayyash", "Abdullah ibn as-Sa’ib", "Ubayy ibn Ka‘b", "Zayd ibn Thabit", "Abu Hurayrah"])
+                        lineageRow("Ibn Amir", companions: ["Uthman ibn Affan", "Abu ad-Darda"])
+                        lineageRow("Asim", companions: ["Uthman ibn Affan", "Ali ibn Abi Talib", "Abdullah ibn Mas‘ud", "Zayd ibn Thabit", "Ubayy ibn Ka‘b"], note: "Most Muslims today recite Hafs from Asim")
+                        lineageRow("Hamzah", companions: ["Uthman ibn Affan", "Ali ibn Abi Talib", "Ubayy ibn Ka‘b", "Zayd ibn Thabit", "Abdullah ibn Mas‘ud", "Husayn ibn Ali"])
+                        lineageRow("al-Kisai", companions: ["Umar ibn al-Khattab", "Uthman ibn Affan", "Ali ibn Abi Talib", "Ubayy ibn Ka‘b", "Zayd ibn Thabit", "Abdullah ibn Mas‘ud", "Abdullah ibn Abbas", "Abdullah ibn Ayyash", "Abu Hurayrah", "Husayn ibn Ali"])
+                        lineageRow("Abu Jafar", companions: ["Zayd ibn Thabit", "Ubayy ibn Ka‘b", "Abdullah ibn Abbas", "Abdullah ibn Ayyash", "Abu Hurayrah"])
+                        lineageRow("Yaqub", companions: ["Umar ibn al-Khattab", "Uthman ibn Affan", "Ali ibn Abi Talib", "Ubayy ibn Ka‘b", "Zayd ibn Thabit", "Abdullah ibn Mas‘ud", "Abu Musa al-Ash‘ari", "Abdullah ibn Abbas", "Abdullah ibn Ayyash", "Abdullah ibn as-Sa’ib", "Abu Hurayrah"])
+                        lineageRow("Khalaf al-Ashir", companions: ["Uthman ibn Affan", "Ali ibn Abi Talib", "Abdullah ibn Mas‘ud", "Zayd ibn Thabit", "Ubayy ibn Ka‘b", "Husayn ibn Ali"])
+                    }
+
+                    Section(header: ArticleHeader("WHAT THIS CHAIN SHOWS")) {
+                        ArticleParagraph(verbatim: "We begin with what Prophet Muhammad (peace and blessings be upon him) began with: the Book of Allah (Glorified and Exalted be He). It is well established that the Quran has reached us by mass transmission (tawatur) through the chains of Ahl as-Sunnah wal-Jama‘ah.")
+
+                        ArticleParagraph(verbatim: "Every one of these narrators of the noble Quran received it, through the chains above, from the Messenger of Allah (peace and blessings be upon him) by way of his Companions (may Allah be pleased with them), the first to learn, gather, preserve, and transmit it.")
+
+                        Text(verbatim: "The ten imams and their twenty narrators are all of Ahl as-Sunnah, and no reading rests on anyone who reviled the Companions. Each imam read on several teachers, so a reading never hangs on one man: Hamzah also read on Humran ibn A'yan, whom Abu Dawud called a Rafidi (adh-Dhahabi, Mizan al-I'tidal), but he read as well on al-A'mash and Ibn Abi Layla, and his reading reaches the Companions through them. The article linked below words it as: not a single Twelver (Ithna Ashari) Shia is among these transmitters. Humran died before that sect took its final form, so the claim holds in that narrow sense; it is worded more carefully here because the Sunni critics already counted him among the Rafidah. This is part of the Quran’s preservation: Allah (Glorified and Exalted be He) kept the transmission of His Book in the hands of those who honoured the Companions of His Prophet (peace and blessings be upon him).")
+                            .font(.body)
                             .foregroundColor(appearance.accent)
+
+                        Link(destination: URL(string: "https://mahajjah.com/the-manner-in-which-the-ahlus-sunnah-and-shia-act-upon-this-hadith/")!) {
+                            Label("Source: Mahajjah, on how Ahlus Sunnah and the Shia act upon this hadith", systemImage: "link")
+                        }
+                        .font(.caption)
                     }
-                    #endif
 
-                    // One card per reading instead of ten paragraphs of run-on names (Abu, 2026-09-26:
-                    // "listing all the qiraat like that looks terrible"), in the order of the lists above:
-                    // the seven, then the three. The Companions are the article's own lists.
-                    lineageRow("Nafi", companions: ["Umar ibn al-Khattab", "Zayd ibn Thabit", "Ubayy ibn Ka‘b", "Abdullah ibn Abbas", "Abdullah ibn Ayyash", "Abu Hurayrah"])
-                    lineageRow("Ibn Kathir", companions: ["Umar ibn al-Khattab", "Zayd ibn Thabit", "Ubayy ibn Ka‘b", "Abdullah ibn Abbas", "Abdullah ibn as-Sa’ib"])
-                    lineageRow("Abu Amr", companions: ["Umar ibn al-Khattab", "Uthman ibn Affan", "Ali ibn Abi Talib", "Abdullah ibn Mas‘ud", "Abu Musa al-Ash‘ari", "Abdullah ibn Abbas", "Abdullah ibn Ayyash", "Abdullah ibn as-Sa’ib", "Ubayy ibn Ka‘b", "Zayd ibn Thabit", "Abu Hurayrah"])
-                    lineageRow("Ibn Amir", companions: ["Uthman ibn Affan", "Abu ad-Darda"])
-                    lineageRow("Asim", companions: ["Uthman ibn Affan", "Ali ibn Abi Talib", "Abdullah ibn Mas‘ud", "Zayd ibn Thabit", "Ubayy ibn Ka‘b"], note: "Most Muslims today recite Hafs from Asim")
-                    lineageRow("Hamzah", companions: ["Uthman ibn Affan", "Ali ibn Abi Talib", "Ubayy ibn Ka‘b", "Zayd ibn Thabit", "Abdullah ibn Mas‘ud", "Husayn ibn Ali"])
-                    lineageRow("al-Kisai", companions: ["Umar ibn al-Khattab", "Uthman ibn Affan", "Ali ibn Abi Talib", "Ubayy ibn Ka‘b", "Zayd ibn Thabit", "Abdullah ibn Mas‘ud", "Abdullah ibn Abbas", "Abdullah ibn Ayyash", "Abu Hurayrah", "Husayn ibn Ali"])
-                    lineageRow("Abu Jafar", companions: ["Zayd ibn Thabit", "Ubayy ibn Ka‘b", "Abdullah ibn Abbas", "Abdullah ibn Ayyash", "Abu Hurayrah"])
-                    lineageRow("Yaqub", companions: ["Umar ibn al-Khattab", "Uthman ibn Affan", "Ali ibn Abi Talib", "Ubayy ibn Ka‘b", "Zayd ibn Thabit", "Abdullah ibn Mas‘ud", "Abu Musa al-Ash‘ari", "Abdullah ibn Abbas", "Abdullah ibn Ayyash", "Abdullah ibn as-Sa’ib", "Abu Hurayrah"])
-                    lineageRow("Khalaf al-Ashir", companions: ["Uthman ibn Affan", "Ali ibn Abi Talib", "Abdullah ibn Mas‘ud", "Zayd ibn Thabit", "Ubayy ibn Ka‘b", "Husayn ibn Ali"])
-                }
+                    Section(header: ArticleHeader("THE TEXTS STUDENTS MEMORISE")) {
+                        ArticleParagraph(verbatim: "The ten are taught from three poems, memorised and recited to a teacher line by line. Ash-Shatibiyyah (Hirz al-Amani wa Wajh at-Tahani), by al-Qasim ibn Firruh ash-Shatibi of Xativa in al-Andalus (d. 590 AH in Cairo), sets out the seven readings and their fourteen riwayaat in 1,173 lines rhyming in lam, which is why it is also called al-Lamiyyah. It opens with the names of the imams and the code letters that stand for them, then the usul (the rules that recur across the whole Quran: the hamzah, madd, idgham, the ha of the pronoun), then the farsh (the word-by-word differences, surah by surah), and closes with notes on writing and pausing.")
 
-                Section(header: ArticleHeader("WHAT THIS CHAIN SHOWS")) {
-                    ArticleParagraph(verbatim: "We begin with what Prophet Muhammad (peace and blessings be upon him) began with: the Book of Allah (Glorified and Exalted be He). It is well established that the Quran has reached us by mass transmission (tawatur) through the chains of Ahl as-Sunnah wal-Jama‘ah.")
+                        ArticleParagraph(verbatim: "Ad-Durrah al-Mudiyyah, by Ibn al-Jazari (d. 833 AH), adds the three completing readings in about 240 lines. Together the two poems are the ‘Ashara Sughra, the ten by the shorter route, where students of the ten begin. His Tayyibat an-Nashr (about 1,015 lines, drawn from his prose an-Nashr fi al-Qira’at al-‘Ashr) is the ‘Ashara Kubra: the same ten readings with many more turuq (routes of transmission) under each narrator, studied after the Sughra.")
 
-                    ArticleParagraph(verbatim: "Every one of these narrators of the noble Quran received it, through the chains above, from the Messenger of Allah (peace and blessings be upon him) by way of his Companions (may Allah be pleased with them), the first to learn, gather, preserve, and transmit it.")
-
-                    Text(verbatim: "The ten imams and their twenty narrators are all of Ahl as-Sunnah, and no reading rests on anyone who reviled the Companions. Each imam read on several teachers, so a reading never hangs on one man: Hamzah also read on Humran ibn A'yan, whom Abu Dawud called a Rafidi (adh-Dhahabi, Mizan al-I'tidal), but he read as well on al-A'mash and Ibn Abi Layla, and his reading reaches the Companions through them. The article linked below words it as: not a single Twelver (Ithna Ashari) Shia is among these transmitters. Humran died before that sect took its final form, so the claim holds in that narrow sense; it is worded more carefully here because the Sunni critics already counted him among the Rafidah. This is part of the Quran’s preservation: Allah (Glorified and Exalted be He) kept the transmission of His Book in the hands of those who honoured the Companions of His Prophet (peace and blessings be upon him).")
-                        .font(.body)
-                        .foregroundColor(appearance.accent)
-
-                    Link(destination: URL(string: "https://mahajjah.com/the-manner-in-which-the-ahlus-sunnah-and-shia-act-upon-this-hadith/")!) {
-                        Label("Source: Mahajjah, on how Ahlus Sunnah and the Shia act upon this hadith", systemImage: "link")
+                        ArticleParagraph(verbatim: "Ibn al-Jazari set three conditions for an accepted reading: a sound chain of transmission, well known among the masters of the craft; agreement with one of the Uthmani mushafs, even if only by what its skeleton can carry; and agreement with Arabic, even in one of its ways. Most of the scholars of usul and fiqh word the first condition as mass transmission (tawatur), as in the criteria near the top of this page; Abu Shamah and Ibn al-Jazari held that a sound, well-known chain is enough when the other two are met. The ten meet the conditions on both views, and the twenty riwayaat in this app follow the Sughra: ash-Shatibiyyah for the seven, ad-Durrah for the three.")
                     }
-                    .font(.caption)
-                }
 
-                Section(header: ArticleHeader("THE TEXTS STUDENTS MEMORISE")) {
-                    ArticleParagraph(verbatim: "The ten are taught from three poems, memorised and recited to a teacher line by line. Ash-Shatibiyyah (Hirz al-Amani wa Wajh at-Tahani), by al-Qasim ibn Firruh ash-Shatibi of Xativa in al-Andalus (d. 590 AH in Cairo), sets out the seven readings and their fourteen riwayaat in 1,173 lines rhyming in lam, which is why it is also called al-Lamiyyah. It opens with the names of the imams and the code letters that stand for them, then the usul (the rules that recur across the whole Quran: the hamzah, madd, idgham, the ha of the pronoun), then the farsh (the word-by-word differences, surah by surah), and closes with notes on writing and pausing.")
+                    Section(header: ArticleHeader("OTHER REPORTED QIRAAT")) {
+                        ArticleParagraph(verbatim: "There are other reported qiraat besides these Ten. Unlike the 10 Qiraat, which are mutawatir and mass attested, those others do not reach mutawatir status, and a reading that fails the conditions above is called shadh (irregular). Some of them have a chain to Prophet Muhammad (peace and blessings be upon him), and the scholars use them to explain meanings and Arabic, but they are not recited as Quran, in prayer or outside it: an-Nawawi gives this as the position of his school and of others (al-Majmu' 3/392), and it is the position of the great majority of the scholars. Ibn Taymiyyah records the other view as well. Of a reading outside the Uthmanic copies that is authentic from a Companion, such as Ibn Mas'ud's, one narration each from Malik and Ahmad permits reciting it in prayer, since the Companions and the Successors did; the other narration, the view of most scholars, forbids it, since it did not come by mass transmission. And a reading beyond the ten that fits the Uthmanic copies with a sound chain, such as al-A'mash's, he says may be recited in prayer and outside it by whoever has it established, and is not shadh in that case (Majmu' al-Fatawa 13/389–404).")
 
-                    ArticleParagraph(verbatim: "Ad-Durrah al-Mudiyyah, by Ibn al-Jazari (d. 833 AH), adds the three completing readings in about 240 lines. Together the two poems are the ‘Ashara Sughra, the ten by the shorter route, where students of the ten begin. His Tayyibat an-Nashr (about 1,015 lines, drawn from his prose an-Nashr fi al-Qira’at al-‘Ashr) is the ‘Ashara Kubra: the same ten readings with many more turuq (routes of transmission) under each narrator, studied after the Sughra.")
+                        ArticleParagraph(verbatim: "The best known are the four readings beyond the ten, called shadh: those of al-Hasan al-Basri, Ibn Muhaysin, Yahya al-Yazidi and al-A’mash. Students of the Kubra sometimes take them up after the ten; with the ten they are called the fourteen.")
 
-                    ArticleParagraph(verbatim: "Ibn al-Jazari set three conditions for an accepted reading: a sound chain of transmission, well known among the masters of the craft; agreement with one of the Uthmani mushafs, even if only by what its skeleton can carry; and agreement with Arabic, even in one of its ways. Most of the scholars of usul and fiqh word the first condition as mass transmission (tawatur), as in the criteria near the top of this page; Abu Shamah and Ibn al-Jazari held that a sound, well-known chain is enough when the other two are met. The ten meet the conditions on both views, and the twenty riwayaat in this app follow the Sughra: ash-Shatibiyyah for the seven, ad-Durrah for the three.")
-                }
+                        ArticleParagraph(verbatim: "We recite what is known with certainty (yaqin يَقِين) to be from Prophet Muhammad (peace and blessings be upon him): the 10 Qiraat and their 20 Riwayaat. This unites the Ummah upon what is rigorously established.")
+                    }
 
-                Section(header: ArticleHeader("OTHER REPORTED QIRAAT")) {
-                    ArticleParagraph(verbatim: "There are other reported qiraat besides these Ten. Unlike the 10 Qiraat, which are mutawatir and mass attested, those others do not reach mutawatir status, and a reading that fails the conditions above is called shadh (irregular). Some of them have a chain to Prophet Muhammad (peace and blessings be upon him), and the scholars use them to explain meanings and Arabic, but they are not recited as Quran, in prayer or outside it: an-Nawawi gives this as the position of his school and of others (al-Majmu' 3/392), and it is the position of the great majority of the scholars. Ibn Taymiyyah records the other view as well. Of a reading outside the Uthmanic copies that is authentic from a Companion, such as Ibn Mas'ud's, one narration each from Malik and Ahmad permits reciting it in prayer, since the Companions and the Successors did; the other narration, the view of most scholars, forbids it, since it did not come by mass transmission. And a reading beyond the ten that fits the Uthmanic copies with a sound chain, such as al-A'mash's, he says may be recited in prayer and outside it by whoever has it established, and is not shadh in that case (Majmu' al-Fatawa 13/389–404).")
+                    Section(header: ArticleHeader("PRACTICAL STUDY & ADVICE")) {
+                        ArticleBullet(verbatim: "• Learn with a qualified teacher who has ijazah (إِجَازَة) and isnad (إِسنَاد). Do not self-invent pronunciations or rely only on apps without verification.")
+                        ArticleBullet(verbatim: "• The usual road: Hafs an Asim with tajweed first; then a second riwayah or the seven, memorising ash-Shatibiyyah; then the ten by the Sughra, adding ad-Durrah; then the Kubra with Tayyibat an-Nashr. At every stage the Quran is read to a teacher who holds ijazah, and books and apps are the supplement.")
+                        ArticleBullet(verbatim: "• Remember: the variety of the readings is a mercy and an ease from Allah, not a contradiction. They illuminate the Quran’s depth and precision.")
+                    }
 
-                    ArticleParagraph(verbatim: "The best known are the four readings beyond the ten, called shadh: those of al-Hasan al-Basri, Ibn Muhaysin, Yahya al-Yazidi and al-A’mash. Students of the Kubra sometimes take them up after the ten; with the ten they are called the fourteen.")
-
-                    ArticleParagraph(verbatim: "We recite what is known with certainty (yaqin يَقِين) to be from Prophet Muhammad (peace and blessings be upon him): the 10 Qiraat and their 20 Riwayaat. This unites the Ummah upon what is rigorously established.")
-                }
-
-                Section(header: ArticleHeader("PRACTICAL STUDY & ADVICE")) {
-                    ArticleBullet(verbatim: "• Learn with a qualified teacher who has ijazah (إِجَازَة) and isnad (إِسنَاد). Do not self-invent pronunciations or rely only on apps without verification.")
-                    ArticleBullet(verbatim: "• The usual road: Hafs an Asim with tajweed first; then a second riwayah or the seven, memorising ash-Shatibiyyah; then the ten by the Sughra, adding ad-Durrah; then the Kubra with Tayyibat an-Nashr. At every stage the Quran is read to a teacher who holds ijazah, and books and apps are the supplement.")
-                    ArticleBullet(verbatim: "• Remember: the variety of the readings is a mercy and an ease from Allah, not a contradiction. They illuminate the Quran’s depth and precision.")
-                }
-
-                Section(header: ArticleHeader("IN-APP AUDIO")) {
-                    ArticleParagraph(verbatim: "In this app, every one of the 20 riwayaat has at least one complete full-surah reciter. Ayah-by-ayah playback remains Hafs-based, so availability varies by full-surah vs. ayah-by-ayah playback.")
+                    Section(header: ArticleHeader("IN-APP AUDIO")) {
+                        ArticleParagraph(verbatim: "In this app, every one of the 20 riwayaat has at least one complete full-surah reciter. Ayah-by-ayah playback remains Hafs-based, so availability varies by full-surah vs. ayah-by-ayah playback.")
+                    }
                 }
 
                 Section(header: ArticleHeader("RECAP")) {
@@ -2170,57 +2649,215 @@ struct QiraatView: View {
     }
 }
 
+/// Whether the readings contradict one another, and how the scholars answer it (Abu, 2026-11-24:
+/// "do the qiraat contradict?", Sunni Salafi). Every example names who reads what, checked against
+/// QiraatVariants.json.xz (the readers of each reading); the explanations are the app's own words.
+struct QiraatContradictView: View {
+    var body: some View {
+        List {
+            Group {
+                ArticleSectionsView(sections: Self.sections)
+
+                ArticleSourcesSection(article: "QiraatContradictView")
+            }
+            .themedListRowBackground()
+        }
+        .navigationTitle("Do the Qiraat Contradict?")
+        .englishArticle().selectableArticleList(article: "QiraatContradictView")
+    }
+
+    static let sections: [ArticleSection] = [
+        ArticleSection("SUMMARY", [
+            .text("In short: no. The canonical readings differ the way two ayat differ, never the way a truth differs from a lie. Some differ only in how a word is pronounced; some give two meanings that are both true of the same thing; and some give two meanings about two different things, both true. Not one reading makes lawful what another forbids, or affirms what another denies. The Prophet (peace be upon him) heard two Companions recite differently and said of each, “Thus it was revealed.”"),
+        ]),
+        ArticleSection("THE QUESTION", [
+            .text("Allah made the absence of contradiction a proof that the Quran is from Him:"),
+            .ayah("4:82"),
+            .markdown("So the question is fair. Muslims today recite the Quran in ten canonical **qira’at (قِرَاءَات)**, readings, each carried by two transmitters, and a Hafs mushaf and a Warsh mushaf differ here and there in a letter or a vowel. If the Quran has no contradiction, how can it be read in more than one way?"),
+            .text("The answer begins with what the Prophet (peace be upon him) himself said when the question first arose, among his own Companions."),
+        ]),
+        ArticleSection("WHAT THE PROPHET SAID", [
+            .text("Umar ibn al-Khattab (may Allah be pleased with him) heard Hisham ibn Hakim recite Surah al-Furqan differently from the way he had learned it from the Prophet, and dragged him to the Prophet by his cloak. The Prophet had each of them recite:"),
+            .hadith("bukhari:4992", cite: "Sahih al-Bukhari 4992, Sahih Muslim 818", arabic: 175...187, english: [198...237]),
+            .markdown("He did not say one of them was right and the other mistaken. He said of both readings, **“Thus it was revealed.”** Abdullah ibn Mas‘ud (may Allah be pleased with him) had the same experience:"),
+            .hadith("bukhari:3476", cite: "Sahih al-Bukhari 3476", arabic: 50...59, english: [54...71]),
+            .longOnly(.text("Ubayy ibn Ka‘b (may Allah be pleased with him) once felt a doubt enter him on hearing two men recite differently, until the Prophet struck his chest and it left him (Sahih Muslim 820).")),
+            .longOnly(.hadith("muslim:820a", cite: "Sahih Muslim 820", arabic: 32...122, english: [0...163])),
+            .longOnly(.text("Ubayy also narrated how the readings were first given:")),
+            .longOnly(.hadith("muslim:821a", cite: "Sahih Muslim 821", arabic: 56...152, english: [0...160])),
+            .text("Three things are settled by these narrations. The readings are from Allah, not from the reciters. They were given as an ease for the ummah. And the response to them is to accept every one, not to argue over which is the Quran; the Prophet warned that this kind of dispute is disbelief:"),
+            .hadith("abudawud:4603", cite: "Sunan Abi Dawud 4603; graded hasan sahih by al-Albani", arabic: 30...33, english: [4...9]),
+        ]),
+        ArticleSection("VARIETY, NOT CONTRADICTION", [
+            .markdown("The scholars name the two kinds of difference. **Ikhtilaf at-tanawwu‘ (اختِلَاف التَّنَوُّع)** is a difference of variety: two things, both true, that sit together. **Ikhtilaf at-tadadd (اختِلَاف التَّضَادّ)** is a difference of contradiction: two claims where one must be false. Every difference between the canonical readings is of the first kind."),
+            .longOnly(.text("Ibn Taymiyyah (may Allah have mercy on him), in his fatwa on the seven ahruf, put the readings in the first kind:")),
+            .longOnly(.quote(text: "“Sometimes the meaning of one is not the meaning of the other, but both meanings are true; and this is a difference of variety and diversity, not a difference of opposition and contradiction” (Ibn Taymiyyah, Majmu' al-Fatawa 13/391).", arabic: "وَقَد يَكُونُ مَعنَى أَحَدِهِمَا لَيسَ هُوَ مَعنَى الآخَرِ، لَكِن كِلَا المَعنَيَينِ حَقٌّ، وَهَذَا اختِلَافُ تَنَوُّعٍ وَتَغَايُرٍ، لَا اختِلَافُ تَضَادٍّ وَتَنَاقُضٍ", dimmed: true)),
+            .longOnly(.text("And he gave the rule for how a Muslim treats them:")),
+            .shortOnly(.text("Ibn Taymiyyah (may Allah have mercy on him), in his fatwa on the seven ahruf, gave the rule for how a Muslim treats them:")),
+            .quote(text: "“These readings in which the meaning differs are all true, and each reading beside another is like an ayah beside an ayah: it is obligatory to believe in all of them and to follow the meaning each contains, in knowledge and in action. It is not permissible to leave what one of them requires for the sake of the other, thinking that to be a contradiction” (Ibn Taymiyyah, Majmu' al-Fatawa 13/391-392).", arabic: "فَهَذِهِ القِرَاءَاتُ الَّتِي يَتَغَايَرُ فِيهَا المَعنَى كُلُّهَا حَقٌّ، وَكُلُّ قِرَاءَةٍ مِنهَا مَعَ القِرَاءَةِ الأُخرَى بِمَنزِلَةِ الآيَةِ مَعَ الآيَةِ، يَجِبُ الإِيمَانُ بِهَا كُلِّهَا، وَاتِّبَاعُ مَا تَضَمَّنَتهُ مِنَ المَعنَى عِلمًا وَعَمَلًا، لَا يَجُوزُ تَركُ مُوجَبِ إِحدَاهُمَا لِأَجلِ الأُخرَى ظَنًّا أَنَّ ذَلِكَ تَعَارُضٌ", dimmed: true),
+            .text("That is the rule the rest of this page applies: a second reading is treated the way a second ayah is treated. It is believed, and what it adds is acted on."),
+        ]),
+        ArticleSection("THE THREE KINDS OF DIFFERENCE", [
+            .text("Imam Ibn al-Jazari (d. 833 AH), the authority of this science, went through every difference between the readings and found that each falls into one of three kinds:"),
+            .quote(text: "“We have examined the differences between all the readings and found that they do not go beyond three cases: first, the wording differs and the meaning is one; second, both differ, and both can still be true of one thing; third, both differ, and they cannot both be true of one thing, but they agree from another angle that does not entail contradiction” (Ibn al-Jazari, an-Nashr fi al-Qira'at al-'Ashr 1/49-50).", arabic: "وَقَد تَدَبَّرنَا اختِلَافَ القِرَاءَاتِ كُلَّهَا فَوَجَدنَاهَا لَا تَخلُو مِن ثَلَاثَةِ أَحوَالٍ: أَحَدُهَا اختِلَافُ اللَّفظِ وَالمَعنَى وَاحِدٌ، الثَّانِي اختِلَافُهُمَا جَمِيعًا مَعَ جَوَازِ اجتِمَاعِهِمَا فِي شَيءٍ وَاحِدٍ، الثَّالِثُ اختِلَافُهُمَا جَمِيعًا مَعَ امتِنَاعِ جَوَازِ اجتِمَاعِهِمَا فِي شَيءٍ وَاحِدٍ، بَل يَتَّفِقَانِ مِن وَجهٍ آخَرَ لَا يَقتَضِي التَّضَادَّ", dimmed: true),
+            .longOnly(.text("The three sections below take each kind in turn, using examples Ibn al-Jazari himself gives where they serve, and naming who reads what. He closes the discussion with the verdict:")),
+            .longOnly(.quote(text: "“So there is no incompatibility, opposition, or contradiction in any of the readings” (Ibn al-Jazari, an-Nashr fi al-Qira'at al-'Ashr 1/51).", arabic: "فَلَيسَ فِي شَيءٍ مِنَ القِرَاءَاتِ تَنَافٍ وَلَا تَضَادٌّ وَلَا تَنَاقُضٌ", dimmed: true)),
+        ]),
+        ArticleSection("1. THE SAME WORD, SAID TWO WAYS", [
+            .markdown("The word and its meaning are one; only its sound differs. In al-Fatihah most of the readers say **aṣ-ṣirāṭ** with a ṣad, while Qunbul from Ibn Kathir and Ruways from Ya‘qub say **as-sirāṭ** with a sin. Ibn Kathir reads **rūḥ al-quds** where the others say **rūḥ al-qudus**, and in “the ignorant would think them self-sufficient” some say **yaḥsabuhum** and others **yaḥsibuhum**. These are among the examples Ibn al-Jazari gives for this kind, which he says are simply dialects: nothing in the meaning moves at all."),
+            .ayah("1:6"),
+        ]),
+        ArticleSection("2. TWO MEANINGS, BOTH TRUE OF ONE THING", [
+            .text("Here the words differ and so does the sense, but both senses describe the same subject, so the second reading adds a meaning instead of opposing the first. It is as though two ayat had been joined in one."),
+            .ayah("1:4"),
+            .markdown("‘Asim, al-Kisa’i, Ya‘qub, and Khalaf read **māliki**, “Owner of the Day of Judgement”; the rest read **maliki**, “King of the Day of Judgement.” Allah is both: He owns that Day and everything in it, and He is its King, whose command alone is obeyed in it."),
+            .longOnly(.ayah("2:10", words: 9...11)),
+            .longOnly(.markdown("The readers of Kufah read **yakdhibūn**, “because they used to lie”; the others read **yukadhdhibūn**, “because they used to deny.” The hypocrites did both: they lied when they said “we believe,” and they denied the Messenger in their hearts.")),
+            .longOnly(.ayah("2:259", words: 48...55)),
+            .longOnly(.markdown("Ibn ‘Amir and the readers of Kufah read **nunshizuhā**, “how We raise them up” and set them in place; the rest read **nunshiruhā**, “how We bring them to life.” Allah did both to the same bones, and the ayah goes on to say He then clothed them with flesh.")),
+            .longOnly(.ayah("49:6", words: 3...7)),
+            .longOnly(.markdown("Most read **fa-tabayyanū**, “investigate”; Hamzah, al-Kisa’i, and Khalaf read **fa-tathabbatū**, “hold firm and verify.” The one command needs both: do not act on a sinner’s report until you have checked it and are sure.")),
+        ]),
+        ArticleSection("3. TWO MEANINGS, BOTH TRUE OF TWO THINGS", [
+            .text("Here the two readings speak of two different things, so they could not be said of one subject, but each is true of its own, and they meet without any clash."),
+            .ayah("2:125", words: 6...10),
+            .markdown("Most read **wa-ttakhidhū**, a command: “And take the standing place of Ibrahim as a place of prayer.” Nafi‘ and Ibn ‘Amir read **wa-ttakhadhū**, a report: “and they took the standing place of Ibrahim as a place of prayer.” One reading gives the command, the other records that it was carried out. Both are true."),
+            .longOnly(.ayah("17:102", words: 0...10)),
+            .longOnly(.markdown("This is one of Ibn al-Jazari’s own examples. Musa (peace be upon him) is answering Pharaoh. Most read **la-qad ‘alimta**, “you have certainly known” that none but the Lord of the heavens and the earth sent these signs down; al-Kisa’i reads **la-qad ‘alimtu**, “I have certainly known.” Pharaoh knew it in himself while denying it, as Allah says of his people that “they rejected them, while their souls were convinced thereof” (Quran 27:14), and Musa knew it with certainty. Each reading is true of its own speaker.")),
+            .longOnly(.ayah("27:14", words: 0...3)),
+            .longOnly(.ayah("3:146", words: 0...6)),
+            .longOnly(.markdown("Most read **qātala**, “how many a prophet fought, with many devoted men beside him”; Nafi‘, Ibn Kathir, Abu ‘Amr, and Ya‘qub read **qutila**, “how many a prophet was killed, with many devoted men beside him.” Some prophets fought alongside their followers and some were killed among them, and in both cases the believers with them did not weaken, as the ayah goes on to say. The two readings together tell the whole history.")),
+        ]),
+        ArticleSection("ONE RASM CARRIES THEM ALL", [
+            .markdown("The copies of the Quran that Uthman (may Allah be pleased with him) sent to the cities were written in the **rasm (رَسم)**, the bare skeleton of the letters, without the dots that tell ba’ from ta’ or ra’ from zay, and without vowel marks. Ibn al-Jazari records that the Companions left the copies bare on purpose, so that one written form would hold the readings the Prophet had taught."),
+            .longOnly(.markdown("Look at the examples above with the dots taken away. **ننشزها** and **ننشرها** are one skeleton, differing only by the dot on the zay. **فتبينوا** and **فتثبتوا** are the same row of teeth. **ملك** is written without its alif, so it carries both **maliki** and **māliki**. The readings are not two texts that have to be reconciled; they are one text, read in the ways it was revealed to be read.")),
+            .shortOnly(.markdown("Look at the example above in the bare skeleton: **ملك** is written without its alif, so it carries both **maliki** and **māliki**. The readings are not two texts that have to be reconciled; they are one text, read in the ways it was revealed to be read.")),
+            .text("That is the opposite of what a corrupted book looks like. When copyists change a text, the result is two texts that disagree, and a later scholar has to decide which one is original. With the Quran the readings were received from the Prophet first, then written in one rasm the Companions agreed on, and every canonical reading fits inside it. A reading that does not fit the rasm is not counted as Quran at all."),
+            .door(.article("CompileView")),
+        ]),
+        ArticleSection("WHEN THE READINGS TOUCH A RULING", only: .long, [
+            .text("The hardest test is an ayah of law, because there a contradiction would show itself as two rulings. Take the ayah about approaching one’s wife after her menses:"),
+            .ayah("2:222", words: 10...20),
+            .markdown("Hafs and most of the readers read **ḥattā yaṭhurna**, “until they are pure,” meaning the bleeding has stopped. Shu‘bah from ‘Asim, Hamzah, al-Kisa’i, and Khalaf read **ḥattā yaṭṭahharna**, “until they have purified themselves,” meaning by the bath. The same ayah then says, in every reading, **“and when they have purified themselves (taṭahharna), then come to them.”** So the two readings do not give two rulings; together they give the one ruling the majority of the scholars hold: the bleeding must stop, and she must take the ritual bath."),
+            .text("Ibn Taymiyyah gives this very ayah, and the two readings of “touched” women in the ayah of wudu, as examples of readings that agree in one respect and differ in another, each adding to the ruling rather than overturning it."),
+            .markdown("The case people raise most is the washing of the feet in wudu. In Surah al-Ma’idah, Hafs and others read **wa-arjulakum**, joining the feet to the washed limbs, while Ibn Kathir, Abu ‘Amr, Hamzah, Abu Ja‘far, Khalaf, and Shu‘bah from ‘Asim read **wa-arjulikum**, beside the wiped head. The Prophet (peace be upon him) washed his feet in every description of his wudu, and warned those who only wiped them:"),
+            .ayah("5:6", words: 12...16),
+            .hadith("bukhari:60", cite: "Sahih al-Bukhari 60, Sahih Muslim 241", arabic: 48...51, english: [53...58]),
+            .text("Ibn Kathir (may Allah have mercy on him) records the scholars’ explanations of the second reading: that its ending follows the neighbouring word, as Arabic allows; that it refers to wiping over leather socks, which ash-Shafi‘i held and which the Sunnah also established; or that it means a light washing. Then he settles the ruling:"),
+            .quote(text: "“On every interpretation, washing the feet is an obligation that cannot be done without, because of the ayah and the hadiths” (Ibn Kathir, Tafsir al-Quran al-'Azim 3/53, on 5:6).", arabic: "وَعَلَى كُلِّ تَقدِيرٍ فَالوَاجِبُ غَسلُ الرِّجلَينِ فَرضًا، لَا بُدَّ مِنهُ لِلآيَةِ وَالأَحَادِيثِ", dimmed: true),
+            .text("So the reading that some have used to drop the washing of the feet is, in the hands of Ahl as-Sunnah, either an extra ruling (the wiping over socks) or a matter of grammar, and never a second wudu that contradicts the first."),
+        ]),
+        ArticleSection("WHY MORE THAN ONE READING?", only: .long, [
+            .markdown("**Ease.** The Prophet (peace be upon him) kept asking for ease for his ummah, as Ubayy’s narration above says, because the Arabs spoke many dialects and many of them were old, unlettered, or unused to the speech of Quraysh."),
+            .markdown("**More meaning in fewer words.** A second reading is a second ayah in the space of one. Instead of “He is King of the Day and He is Owner of the Day,” one word, read two ways, says both."),
+            .markdown("**A proof of preservation.** The readings were carried by different chains, in different cities, by teachers who never met, and they all fit the one rasm and agree in every meaning. A book that men had altered could not survive that test."),
+            .markdown("**An honour for this ummah.** No other people kept their scripture with such care that they can say, for every letter, which reader recited it and from whom he took it, back to the Prophet."),
+        ]),
+        ArticleSection("COMMON QUESTIONS", [
+            .markdown("**Are the ten qira’at ten different Qurans?**"),
+            .text("No. There is one Quran, one rasm, and one meaning; the readings are the ways that one Quran was revealed to be recited. A Hafs mushaf and a Warsh mushaf are the same book, and a scholar of the readings recites all ten."),
+            .markdown("**Is Hafs the “real” Quran and the others variants?**"),
+            .text("No. Hafs is simply the most widespread riwayah today. Warsh is read across North and West Africa, Qalun in Libya and Tunisia, and ad-Duri from Abu ‘Amr in parts of Sudan, and each is as fully the Quran as Hafs. Preferring one in your own recitation is fine; treating the others as less than Quran is not."),
+            .markdown("**Are the qira’at the same as the seven ahruf?**"),
+            .text("No. The seven ahruf are the modes in which the Quran was revealed; the qira’at are the canonical ways of reading the Uthmanic mushaf, drawn from them. The two are explained on their own pages."),
+            .door(.article("AhrufView")),
+            .door(.article("QiraatView")),
+            .longOnly(.markdown("**What about readings outside the ten?**")),
+            .longOnly(.text("A reading that breaks the rasm, or lacks a mass-transmitted chain, is called shadh, irregular. It may be cited in tafsir as an explanation, but it is not recited as Quran, in prayer or outside it (an-Nawawi, al-Majmu‘ 3/392). So the differences that someone might point to in a shadh report do not touch the Quran at all.")),
+            .longOnly(.markdown("**May I reject a reading I was not taught?**")),
+            .longOnly(.text("No. A reading you did not learn is still Quran, as much as the one you recite, provided it is one of the canonical readings. Denying it is denying part of what Allah revealed, which is why the Prophet called disputing over the Quran disbelief, as quoted above. What you may do is keep to the reading you were taught in your own recitation; no one is obliged to learn all ten.")),
+            .longOnly(.markdown("**Why did Uthman unite the people on one mushaf, if the readings are all correct?**")),
+            .longOnly(.text("Because people who did not know that every reading was revealed had begun to call each other wrong, which is exactly the dispute the Prophet forbade. Hudhayfah (may Allah be pleased with him) saw it among the armies:")),
+            .longOnly(.hadith("bukhari:4987", cite: "Sahih al-Bukhari 4987", arabic: 41...51, english: [55...71])),
+            .longOnly(.text("Uthman’s copies did not abolish the readings; they gave every city one agreed rasm that the readings fit inside, and the canonical qira’at were taught from those copies ever after.")),
+        ]),
+        ArticleSection("IN SUMMARY", [
+            .text("The Prophet heard different readings and said of each, “Thus it was revealed.” The scholars found that every difference among the canonical readings is one of three kinds: one word said two ways, two true meanings of one thing, or two true meanings of two things. None is a contradiction; each reading stands beside the others as an ayah stands beside an ayah, all of them inside the one rasm the Companions agreed on, and the Quran remains what Allah said it is: a book with no contradiction in it."),
+        ]),
+        ArticleSection("KEY TERMS", only: .long, [
+            .markdown("**Qira’ah (قِرَاءَة)**, plural **qira’at**: from **ق-ر-أ**, to recite: one of the canonical ways of reciting the Quran, named after the imam who taught it, such as the qira’ah of ‘Asim."),
+            .markdown("**Riwayah (رِوَايَة)**: from **ر-و-ي**, to transmit: one transmitter’s line of a qira’ah, such as Hafs from ‘Asim or Warsh from Nafi‘."),
+            .markdown("**Rasm (رَسم)**: the written skeleton of the Uthmanic mushaf, its letters without later dots and vowels, which every canonical reading must fit."),
+            .markdown("**Ikhtilaf at-tanawwu‘ (اختِلَاف التَّنَوُّع)**: a difference of variety, from **ن-و-ع**, kind: two sayings that are both true and sit together. Every difference between the canonical readings is of this kind."),
+            .markdown("**Ikhtilaf at-tadadd (اختِلَاف التَّضَادّ)**: a difference of contradiction, from **ض-د-د**, opposite: two sayings of which one must be false. It is not found in the speech of Allah."),
+            .markdown("**Mutawatir (مُتَوَاتِر)**: from **و-ت-ر**, to follow one after another: transmitted by so many, at every stage, that error or collusion is ruled out. The canonical readings are carried this way."),
+            .markdown("**Shadh (شَاذّ)**: from **ش-ذ-ذ**, to stand apart: a reading that fails the conditions of the canonical ones and is not recited as Quran."),
+        ]),
+    ]
+}
+
 struct FarewellView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: the Farewell Sermon was the Prophet's final address to the Ummah at Arafat, summarizing the core teachings of Islam for all time.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    Text(verbatim: """
-                         The Farewell Sermon (خُطبَةُ ٱلوَدَاعِ), delivered by Prophet Muhammad (peace be upon him), took place on the 9th of Dhu al-Hijjah in the 10th year of Hijrah (632 CE) in the Uranah Valley near Mount Arafat. This sermon is one of the most significant moments in Islamic history, as it encapsulates key teachings and guidance for Muslims.
-                         """)
-                    .font(.body)
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(verbatim: "The Farewell Sermon (خُطبَةُ ٱلوَدَاعِ), delivered by Prophet Muhammad (peace be upon him), took place on the 9th of Dhu al-Hijjah in the 10th year of Hijrah (632 CE) near Mount Arafat.")
 
-                    ArticleParagraph(verbatim: "During this momentous occasion, Allah (Glorified and Exalted be He) revealed:")
-                    ScriptureQuote(quran: "5:3", words: 39...49)
+                        ArticleParagraph(verbatim: "During this momentous occasion, Allah (Glorified and Exalted be He) revealed:")
+                        ScriptureQuote(quran: "5:3", words: 39...49)
+                    }
+
+                    Section(header: ArticleHeader("TEXT OF THE SERMON")) {
+                        ArticleParagraph(verbatim: "The popular “full text” of the Farewell Sermon is a later composite; these are portions of it as they are actually narrated. He (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 783...796, english: 1277...1304)
+                        ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 842...874, english: 1389...1469)
+                        ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 875...886, english: 1470...1490)
+                        ScriptureQuote(text: "“O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red (light-skinned) person over a black person, nor of a black person over a red person, except by taqwa” (Musnad Ahmad 23489; graded sahih by al-Albani, as-Silsilah as-Sahihah 2700).", arabic: "يَا أَيُّهَا النَّاسُ، أَلَا إِنَّ رَبَّكُم وَاحِدٌ، وَإِنَّ أَبَاكُم وَاحِدٌ، أَلَا لَا فَضلَ لِعَرَبِيٍّ عَلَى عَجَمِيٍّ، وَلَا لِعَجَمِيٍّ عَلَى عَرَبِيٍّ، وَلَا أَحمَرَ عَلَى أَسوَدَ، وَلَا أَسوَدَ عَلَى أَحمَرَ، إِلَّا بِالتَّقوَى", dimmed: true)
+                    }
                 }
 
-                Section(header: ArticleHeader("FINAL DAYS OF THE PROPHET")) {
-                    ArticleParagraph(verbatim: "After delivering this sermon, the Prophet (peace be upon him) continued to guide the Muslim Ummah until his passing in Rabi’ al-Awwal, 11 AH (632 CE); the 12th is the popular date, though the exact day is disputed. He passed away in the home of Aisha (may Allah be pleased with her), his head resting on her lap, and his final words, expressing his longing to meet Allah, were:")
-                    ScriptureQuote(hadith: "bukhari:4463", cite: "Sahih al-Bukhari 4463", arabic: 63...65, english: 111...116)
-                }
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        Text(verbatim: """
+                             The Farewell Sermon (خُطبَةُ ٱلوَدَاعِ), delivered by Prophet Muhammad (peace be upon him), took place on the 9th of Dhu al-Hijjah in the 10th year of Hijrah (632 CE) in the Uranah Valley near Mount Arafat. This sermon is one of the most significant moments in Islamic history, as it encapsulates key teachings and guidance for Muslims.
+                             """)
+                        .font(.body)
 
-                Section(header: ArticleHeader("TEXT OF THE SERMON")) {
-                    ArticleParagraph(verbatim: "The popular “full text” of the Farewell Sermon is a later composite. Below are its portions as they are actually narrated, each with its source: from Jabir ibn Abdullah’s account of the Hajj in Sahih Muslim, from the sermon of the Day of Sacrifice in Sahih al-Bukhari, and from the remaining authentic reports. Every line here is sahih or hasan; lines that circulate as part of the sermon without a chain are not included, even where the words are authentic elsewhere.")
+                        ArticleParagraph(verbatim: "During this momentous occasion, Allah (Glorified and Exalted be He) revealed:")
+                        ScriptureQuote(quran: "5:3", words: 39...49)
+                    }
 
-                    ArticleParagraph(verbatim: "He (peace and blessings be upon him) said:")
-                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 783...796, english: 1277...1304)
-                    ScriptureQuote(hadith: "bukhari:1739", cite: "Sahih al-Bukhari 1739", arabic: 66...80, english: 67...98)
-                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 827...841, english: 1360...1388)
-                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 842...874, english: 1389...1469)
-                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 875...886, english: 1470...1490)
-                    ScriptureQuote(hadith: "tirmidhi:616", cite: "Sunan al-Tirmidhi 616; graded sahih by al-Albani", arabic: 38...53, english: 21...57)
-                    ScriptureQuote(hadith: "tirmidhi:2159", cite: "Sunan al-Tirmidhi 2159; graded sahih by al-Albani", arabic: 72...93, english: 80...112)
-                    ScriptureQuote(text: "“O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red (light-skinned) person over a black person, nor of a black person over a red person, except by taqwa” (Musnad Ahmad 23489; graded sahih by al-Albani, as-Silsilah as-Sahihah 2700).", arabic: "يَا أَيُّهَا النَّاسُ، أَلَا إِنَّ رَبَّكُم وَاحِدٌ، وَإِنَّ أَبَاكُم وَاحِدٌ، أَلَا لَا فَضلَ لِعَرَبِيٍّ عَلَى عَجَمِيٍّ، وَلَا لِعَجَمِيٍّ عَلَى عَرَبِيٍّ، وَلَا أَحمَرَ عَلَى أَسوَدَ، وَلَا أَسوَدَ عَلَى أَحمَرَ، إِلَّا بِالتَّقوَى", dimmed: true)
-                    ScriptureQuote(hadith: "bukhari:1739", cite: "Sahih al-Bukhari 1739", arabic: 113...123, text: "“It is incumbent upon those who are present to convey this information to those who are absent Beware don't renegade (as) disbelievers (turn into infidels) after me, Striking the necks (cutting the throats) of one another”")
+                    Section(header: ArticleHeader("FINAL DAYS OF THE PROPHET")) {
+                        ArticleParagraph(verbatim: "After delivering this sermon, the Prophet (peace be upon him) continued to guide the Muslim Ummah until his passing in Rabi’ al-Awwal, 11 AH (632 CE); the 12th is the popular date, though the exact day is disputed. He passed away in the home of Aisha (may Allah be pleased with her), his head resting on her lap, and his final words, expressing his longing to meet Allah, were:")
+                        ScriptureQuote(hadith: "bukhari:4463", cite: "Sahih al-Bukhari 4463", arabic: 63...65, english: 111...116)
+                    }
 
-                    ArticleParagraph(verbatim: "Then he asked them:")
-                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 888...917, english: 1491...1563)
-                    ScriptureQuote(hadith: "bukhari:1739", cite: "Sahih al-Bukhari 1739", arabic: 89...94, english: 116...130)
-                }
+                    Section(header: ArticleHeader("TEXT OF THE SERMON")) {
+                        ArticleParagraph(verbatim: "The popular “full text” of the Farewell Sermon is a later composite. Below are its portions as they are actually narrated, each with its source: from Jabir ibn Abdullah’s account of the Hajj in Sahih Muslim, from the sermon of the Day of Sacrifice in Sahih al-Bukhari, and from the remaining authentic reports. Every line here is sahih or hasan; lines that circulate as part of the sermon without a chain are not included, even where the words are authentic elsewhere.")
 
-                Section(header: ArticleHeader("KEY MESSAGES OF THE SERMON")) {
-                    Text(verbatim: """
-                         - Sanctity of life, property, and trust.
-                         - Abolition of interest (Riba) and unfair practices.
-                         - Rights and responsibilities within marriage.
-                         - Unity and equality of all humans.
-                         - Adherence to the Quran and Sunnah as guidance.
-                         """)
-                    .font(.body)
+                        ArticleParagraph(verbatim: "He (peace and blessings be upon him) said:")
+                        ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 783...796, english: 1277...1304)
+                        ScriptureQuote(hadith: "bukhari:1739", cite: "Sahih al-Bukhari 1739", arabic: 66...80, english: 67...98)
+                        ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 827...841, english: 1360...1388)
+                        ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 842...874, english: 1389...1469)
+                        ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 875...886, english: 1470...1490)
+                        ScriptureQuote(hadith: "tirmidhi:616", cite: "Sunan al-Tirmidhi 616; graded sahih by al-Albani", arabic: 38...53, english: 21...57)
+                        ScriptureQuote(hadith: "tirmidhi:2159", cite: "Sunan al-Tirmidhi 2159; graded sahih by al-Albani", arabic: 72...93, english: 80...112)
+                        ScriptureQuote(text: "“O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red (light-skinned) person over a black person, nor of a black person over a red person, except by taqwa” (Musnad Ahmad 23489; graded sahih by al-Albani, as-Silsilah as-Sahihah 2700).", arabic: "يَا أَيُّهَا النَّاسُ، أَلَا إِنَّ رَبَّكُم وَاحِدٌ، وَإِنَّ أَبَاكُم وَاحِدٌ، أَلَا لَا فَضلَ لِعَرَبِيٍّ عَلَى عَجَمِيٍّ، وَلَا لِعَجَمِيٍّ عَلَى عَرَبِيٍّ، وَلَا أَحمَرَ عَلَى أَسوَدَ، وَلَا أَسوَدَ عَلَى أَحمَرَ، إِلَّا بِالتَّقوَى", dimmed: true)
+                        ScriptureQuote(hadith: "bukhari:1739", cite: "Sahih al-Bukhari 1739", arabic: 113...123, text: "“It is incumbent upon those who are present to convey this information to those who are absent Beware don't renegade (as) disbelievers (turn into infidels) after me, Striking the necks (cutting the throats) of one another”")
+
+                        ArticleParagraph(verbatim: "Then he asked them:")
+                        ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 888...917, english: 1491...1563)
+                        ScriptureQuote(hadith: "bukhari:1739", cite: "Sahih al-Bukhari 1739", arabic: 89...94, english: 116...130)
+                    }
+
+                    Section(header: ArticleHeader("KEY MESSAGES OF THE SERMON")) {
+                        Text(verbatim: """
+                             - Sanctity of life, property, and trust.
+                             - Abolition of interest (Riba) and unfair practices.
+                             - Rights and responsibilities within marriage.
+                             - Unity and equality of all humans.
+                             - Adherence to the Quran and Sunnah as guidance.
+                             """)
+                        .font(.body)
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -2240,6 +2877,8 @@ struct SahabahView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: the Sahabah are the Companions who accompanied the Prophet, believed in him, and carried Islam to the world, the best generation of this Ummah.")
                 }
@@ -2256,33 +2895,64 @@ struct SahabahView: View {
                     ScriptureQuote(hadith: "bukhari:2652", cite: "Sahih al-Bukhari 2652", arabic: 29...37, english: 4...23)
                 }
 
-                Section(header: ArticleHeader("ABU BAKR AS-SIDDIQ")) {
-                    ArticleParagraph(verbatim: "Abu Bakr (may Allah be pleased with him) was the Prophet’s (peace be upon him) closest friend and the first adult male to embrace Islam.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("ABU BAKR AS-SIDDIQ")) {
+                        ArticleParagraph(verbatim: "Abu Bakr (may Allah be pleased with him) was the Prophet’s (peace be upon him) closest friend and the first adult male to embrace Islam.")
 
-                    ArticleParagraph(verbatim: "The Prophet (peace be upon him) said:")
-                    ScriptureQuote(hadith: "bukhari:3656", cite: "Sahih al-Bukhari 3656", arabic: 27...38, english: 4...26)
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:3656", cite: "Sahih al-Bukhari 3656", arabic: 27...38, english: 4...26)
 
-                    ArticleParagraph(verbatim: "He was known as As-Siddiq (the Truthful) for immediately affirming the Prophet’s Night Journey (Isra’ and Mi’raj). He was chosen as the first Caliph after the Prophet’s death and led the Muslim Ummah with wisdom and justice.")
+                        ArticleParagraph(verbatim: "He was known as As-Siddiq (the Truthful) for immediately affirming the Prophet’s Night Journey (Isra’ and Mi’raj). He was chosen as the first Caliph after the Prophet’s death and led the Muslim Ummah with wisdom and justice.")
+                    }
 
-                    ArticleParagraph(verbatim: "About one year after the Prophet’s passing, he commissioned Zayd ibn Thabit to compile the Quran into a single manuscript, preserving the revelation in written form alongside mass memorization.")
+                    Section(header: ArticleHeader("UMAR IBN AL-KHATTAB")) {
+                        ArticleParagraph(verbatim: "Umar (may Allah be pleased with him) was known for his strength, justice, and piety. He was the second Caliph and expanded the Islamic state significantly.")
+
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) said:")
+                        ScriptureQuote(hadith: "tirmidhi:3686", cite: "Sunan al-Tirmidhi 3686; graded hasan by al-Albani, as-Silsilah as-Sahihah 327", arabic: 33...40, english: 7...22)
+                    }
+
+                    Section(header: ArticleHeader("UTHMAN IBN AFFAN")) {
+                        ArticleParagraph(verbatim: "Uthman (may Allah be pleased with him) was known for his generosity, modesty, and devotion. He unified the Ummah upon official copies of the already compiled Quran, based on the manuscript first compiled under Abu Bakr.")
+
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) climbed Mount Uhud with Abu Bakr, Umar, and Uthman, and when it shook beneath them he said:")
+                        ScriptureQuote(hadith: "bukhari:3675", cite: "Sahih al-Bukhari 3675", arabic: 37...43, english: 27...45)
+                    }
                 }
 
-                Section(header: ArticleHeader("UMAR IBN AL-KHATTAB")) {
-                    ArticleParagraph(verbatim: "Umar (may Allah be pleased with him) was known for his strength, justice, and piety. He was the second Caliph and expanded the Islamic state significantly.")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("ABU BAKR AS-SIDDIQ")) {
+                        ArticleParagraph(verbatim: "Abu Bakr (may Allah be pleased with him) was the Prophet’s (peace be upon him) closest friend and the first adult male to embrace Islam.")
 
-                    ArticleParagraph(verbatim: "The Prophet (peace be upon him) said:")
-                    ScriptureQuote(hadith: "tirmidhi:3686", cite: "Sunan al-Tirmidhi 3686; graded hasan by al-Albani, as-Silsilah as-Sahihah 327", arabic: 33...40, english: 7...22)
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:3656", cite: "Sahih al-Bukhari 3656", arabic: 27...38, english: 4...26)
 
-                    ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) revealed verses agreeing with Umar’s opinions, including the veiling of the Prophet's wives (Sahih al-Bukhari 402) and the prohibition of alcohol (Sunan Abi Dawud 3670; graded sahih by al-Albani).")
-                }
+                        ArticleParagraph(verbatim: "He was known as As-Siddiq (the Truthful) for immediately affirming the Prophet’s Night Journey (Isra’ and Mi’raj). He was chosen as the first Caliph after the Prophet’s death and led the Muslim Ummah with wisdom and justice.")
 
-                Section(header: ArticleHeader("UTHMAN IBN AFFAN")) {
-                    ArticleParagraph(verbatim: "Uthman (may Allah be pleased with him) was known for his generosity, modesty, and devotion. He unified the Ummah upon official copies of the already compiled Quran, based on the manuscript first compiled under Abu Bakr.")
+                        ArticleParagraph(verbatim: "About one year after the Prophet’s passing, he commissioned Zayd ibn Thabit to compile the Quran into a single manuscript, preserving the revelation in written form alongside mass memorization.")
+                    }
 
-                    ArticleParagraph(verbatim: "The Prophet (peace be upon him) climbed Mount Uhud with Abu Bakr, Umar, and Uthman, and when it shook beneath them he said:")
-                    ScriptureQuote(hadith: "bukhari:3675", cite: "Sahih al-Bukhari 3675", arabic: 37...43, english: 27...45)
+                    Section(header: ArticleHeader("UMAR IBN AL-KHATTAB")) {
+                        ArticleParagraph(verbatim: "Umar (may Allah be pleased with him) was known for his strength, justice, and piety. He was the second Caliph and expanded the Islamic state significantly.")
 
-                    ArticleParagraph(verbatim: "He bought the well of Rumah for the Muslims, funded the expansion of Al-Masjid an-Nabawi, and equipped the army of Tabuk (Sahih al-Bukhari 2778 for the well and the army; Sunan an-Nasa'i 3608 for the mosque, graded sahih by al-Albani). His contributions earned him repeated praise from the Prophet (peace be upon him).")
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) said:")
+                        ScriptureQuote(hadith: "tirmidhi:3686", cite: "Sunan al-Tirmidhi 3686; graded hasan by al-Albani, as-Silsilah as-Sahihah 327", arabic: 33...40, english: 7...22)
+
+                        ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) revealed verses agreeing with Umar’s opinions, including the veiling of the Prophet's wives (Sahih al-Bukhari 402) and the prohibition of alcohol (Sunan Abi Dawud 3670; graded sahih by al-Albani).")
+                        ScriptureQuote(hadith: "bukhari:402", cite: "Sahih al-Bukhari 402", arabic: 14...51, english: 0...111)
+                        ScriptureQuote(hadith: "abudawud:3670", cite: "Sunan Abi Dawud 3670; graded sahih by al-Albani", arabic: 24...121, english: 0...143)
+                    }
+
+                    Section(header: ArticleHeader("UTHMAN IBN AFFAN")) {
+                        ArticleParagraph(verbatim: "Uthman (may Allah be pleased with him) was known for his generosity, modesty, and devotion. He unified the Ummah upon official copies of the already compiled Quran, based on the manuscript first compiled under Abu Bakr.")
+
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) climbed Mount Uhud with Abu Bakr, Umar, and Uthman, and when it shook beneath them he said:")
+                        ScriptureQuote(hadith: "bukhari:3675", cite: "Sahih al-Bukhari 3675", arabic: 37...43, english: 27...45)
+
+                        ArticleParagraph(verbatim: "He bought the well of Rumah for the Muslims, funded the expansion of Al-Masjid an-Nabawi, and equipped the army of Tabuk (Sahih al-Bukhari 2778 for the well and the army; Sunan an-Nasa'i 3608 for the mosque, graded sahih by al-Albani). His contributions earned him repeated praise from the Prophet (peace be upon him).")
+                        ScriptureQuote(hadith: "bukhari:2778", cite: "Sahih al-Bukhari 2778", arabic: 13...69, english: 0...84)
+                        ScriptureQuote(hadith: "nasai:3608", cite: "Sunan an-Nasa'i 3608; graded sahih by al-Albani", arabic: 115...156, english: 162...229)
+                    }
                 }
 
                 Section(header: ArticleHeader("ALI IBN ABI TALIB")) {
@@ -2294,19 +2964,21 @@ struct SahabahView: View {
                     ArticleParagraph(verbatim: "He was among the most learned of the Companions, and many later scholars traced their knowledge back to him. He was known for his eloquence, bravery, and deep understanding of Islam.")
                 }
 
-                Section(header: ArticleHeader("MUHAJIREEN & ANSAR")) {
-                    ArticleParagraph(verbatim: "The Muhajireen were those who emigrated with the Prophet (peace be upon him) from Makkah to Madinah, leaving behind their wealth and homes for the sake of Allah.")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("MUHAJIREEN & ANSAR")) {
+                        ArticleParagraph(verbatim: "The Muhajireen were those who emigrated with the Prophet (peace be upon him) from Makkah to Madinah, leaving behind their wealth and homes for the sake of Allah.")
 
-                    ArticleParagraph(verbatim: "The Ansar were the residents of Madinah who welcomed the Prophet (peace be upon him) and his followers with open hearts and supported them in every way.")
+                        ArticleParagraph(verbatim: "The Ansar were the residents of Madinah who welcomed the Prophet (peace be upon him) and his followers with open hearts and supported them in every way.")
 
-                    ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) praised them both:")
-                    ScriptureQuote(quran: "59:9", words: 0...19)
-                }
+                        ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) praised them both:")
+                        ScriptureQuote(quran: "59:9", words: 0...19)
+                    }
 
-                Section(header: ArticleHeader("LEGACY")) {
-                    ArticleParagraph(verbatim: "The Sahabah preserved the Quran and Hadith, established justice and governance, and exemplified the moral and ethical teachings of Islam.")
+                    Section(header: ArticleHeader("LEGACY")) {
+                        ArticleParagraph(verbatim: "The Sahabah preserved the Quran and Hadith, established justice and governance, and exemplified the moral and ethical teachings of Islam.")
 
-                    ArticleParagraph(verbatim: "Their legacy continues to inspire faith, sacrifice, knowledge, and courage in Muslims to this day.")
+                        ArticleParagraph(verbatim: "Their legacy continues to inspire faith, sacrifice, knowledge, and courage in Muslims to this day.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -2328,94 +3000,137 @@ struct WivesView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: the wives of the Prophet are the “Mothers of the Believers,” honored for their faith, and several became key teachers of Islam.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(verbatim: "The wives of Prophet Muhammad (peace be upon him) are honored in Islam as the “Mothers of the Believers” (أُمَّهَاتُ المُؤمِنِين).")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(verbatim: "The wives of Prophet Muhammad (peace be upon him) are honored in Islam as the “Mothers of the Believers” (أُمَّهَاتُ المُؤمِنِين).")
 
-                    ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:")
+                        ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:")
 
-                    ScriptureQuote(quran: "33:6", words: 0...6)
+                        ScriptureQuote(quran: "33:6", words: 0...6)
 
-                    ArticleParagraph(articleMarkdown: "Prophet Muhammad (peace be upon him) married a total of **11 women** throughout his lifetime. At one time, he was married to a maximum of **9 wives** simultaneously: the limit of four that Allah set for his Ummah (Quran 4:3) did not bind him, a ruling particular to him within this Ummah. Earlier prophets also had more than four wives under the laws given to them: Prophet Solomon (peace be upon him) said he would go round to a hundred of his wives in one night (Sahih al-Bukhari 5242).")
-                }
-
-                Section(header: ArticleHeader("SUPPORT & CONTRIBUTION")) {
-                    ArticleParagraph(verbatim: "These women supported the Prophet (peace be upon him) in his mission.")
-
-                    ArticleParagraph(verbatim: "They played vital roles in educating the Muslim community, transmitting Hadith, and exemplifying piety and devotion.")
-
-                    ArticleParagraph(articleMarkdown: "Most of his wives were **widows or divorcees**. These marriages were not driven by desire but by **wisdom, compassion, and community building**.")
-
-                    ArticleParagraph(articleMarkdown: "His marriage to **Khadijah bint Khuwaylid** (may Allah be pleased with her) was monogamous and lasted about 25 years, until her death. She was about 15 years older than him, and he took no other wife during her lifetime.")
-                }
-
-                Section(header: ArticleHeader("KHADIJAH")) {
-                    ArticleParagraph(articleMarkdown: "Khadijah bint Khuwaylid (may Allah be pleased with her) was the first person to believe in Prophet Muhammad (peace be upon him) and thus the **first Muslim**. After his first revelation in the cave of Hira, she comforted him, wrapped him in a cloak, and reassured him with her deep insight and love.")
-
-                    ArticleParagraph(verbatim: "She said:")
-                    ScriptureQuote(hadith: "bukhari:3", cite: "Sahih al-Bukhari 3", arabic: 186...204, english: 314...346)
-
-                    Text(articleMarkdown: "Allah (Glorified and Exalted be He) affirmed the beginning of the Prophet’s (peace be upon him) mission in **Surah Al-Muzzammil (73:1)** and **Surah Al-Muddaththir (74:1)**, moments when Khadijah (may Allah be pleased with her) lovingly wrapped and comforted him.")
-                        .font(.body)
-                        .foregroundColor(appearance.accent)
-
-                    ArticleParagraph(verbatim: "The Prophet (peace be upon him) said of her:")
-                    ScriptureQuote(hadith: "bukhari:3818", cite: "Sahih al-Bukhari 3818", arabic: 71...77, english: 84...92)
-                    ArticleParagraph(verbatim: "Aisha (may Allah be pleased with her) reported that he said:")
-                    ScriptureQuote(hadith: "muslim:2435b", cite: "Sahih Muslim 2435", arabic: 66...69, english: 69...79)
-                }
-
-                Section(header: ArticleHeader("AISHA")) {
-                    ArticleParagraph(verbatim: "Aisha bint Abi Bakr (may Allah be pleased with her) was the daughter of Abu Bakr as-Siddiq (may Allah be pleased with him), the closest companion of the Prophet (peace be upon him). She was among the most knowledgeable of the Companions, especially in Hadith and Islamic jurisprudence, and the Companions would turn to her when a matter was difficult for them.")
-
-                    Text(articleMarkdown: "She was falsely accused in the incident of al-Ifk, but Allah (Glorified and Exalted be He) revealed her innocence in **Surah An-Nur (24:11–26)**, establishing her purity and honor for all time.")
-                        .font(.body)
-                        .foregroundColor(appearance.accent)
-
-                    ArticleParagraph(verbatim: "Amr ibn al-As (may Allah be pleased with him) asked the Prophet (peace be upon him):")
-                    ScriptureQuote(hadith: "bukhari:3662", cite: "Sahih al-Bukhari 3662", arabic: 39...52, english: 17...37)
-
-                    ArticleParagraph(verbatim: "He also said:")
-                    ScriptureQuote(hadith: "muslim:2446a", cite: "Sahih Muslim 2446", arabic: 35...43, english: 0...15)
-
-                    ArticleParagraph(verbatim: "After the Prophet’s (peace be upon him) death, she became one of the greatest scholars of Islam. She taught both men and women and was a source of religious rulings and interpretations.")
-
-                    ArticleParagraph(articleMarkdown: "She narrated **2,210 hadiths**, making her the **fourth-highest hadith narrator** of all time. Most of these relate to the Prophet’s private life, which only she had access to. Without Aisha (may Allah be pleased with her), much of the Prophet’s (peace be upon him) household life, worship, and character would not be known today.")
-                }
-
-                Section(header: ArticleHeader("HOW HE TREATED HIS WIVES")) {
-                    ArticleParagraph(verbatim: "The Prophet (peace be upon him) was the best example of kindness, patience, and love toward his wives. These hadiths reflect his character:")
-
-                    ScriptureQuote(hadith: "tirmidhi:3895", cite: "Sunan al-Tirmidhi 3895; graded sahih by al-Albani", arabic: 30...35, english: 7...34)
-
-                    ArticleParagraph(verbatim: "Aisha (may Allah be pleased with her) said:")
-                    ScriptureQuote(hadith: "muslim:2328a", cite: "Sahih Muslim 2328", arabic: 13...27, english: 3...17)
-
-                    ArticleParagraph(verbatim: "He said:")
-                    ScriptureQuote(hadith: "muslim:1468b", cite: "Sahih Muslim 1468", arabic: 38...48, english: 0...21)
-
-                    ArticleParagraph(verbatim: "And Aisha (may Allah be pleased with her) said of his life at home:")
-                    ScriptureQuote(hadith: "bukhari:6039", cite: "Sahih al-Bukhari 6039", arabic: 26...35, english: 15...37)
-                }
-
-                Section(header: ArticleHeader("THE ELEVEN WIVES")) {
-                    Group {
-                        ArticleBullet(verbatim: "• Khadijah bint Khuwaylid (may Allah be pleased with her)")
-                        ArticleBullet(verbatim: "• Sawdah bint Zam’ah (may Allah be pleased with her)")
-                        ArticleBullet(verbatim: "• Aisha bint Abi Bakr (may Allah be pleased with her)")
-                        ArticleBullet(verbatim: "• Hafsah bint Umar (may Allah be pleased with her)")
-                        ArticleBullet(verbatim: "• Zaynab bint Khuzaymah (may Allah be pleased with her)")
-                        ArticleBullet(verbatim: "• Umm Salamah (Hind bint Abi Umayyah) (may Allah be pleased with her)")
-                        ArticleBullet(verbatim: "• Zaynab bint Jahsh (may Allah be pleased with her)")
-                        ArticleBullet(verbatim: "• Juwayriyah bint al-Harith (may Allah be pleased with her)")
-                        ArticleBullet(verbatim: "• Umm Habibah (Ramlah bint Abi Sufyan) (may Allah be pleased with her)")
-                        ArticleBullet(verbatim: "• Safiyyah bint Huyayy (may Allah be pleased with her)")
-                        ArticleBullet(verbatim: "• Maymunah bint al-Harith (may Allah be pleased with her)")
+                        ArticleParagraph(articleMarkdown: "Prophet Muhammad (peace be upon him) married a total of **11 women** throughout his lifetime. At one time, he was married to a maximum of **9 wives** simultaneously: the limit of four that Allah set for his Ummah did not bind him, a ruling particular to him within this Ummah.")
                     }
-                    .font(.body)
+
+                    Section(header: ArticleHeader("SUPPORT & CONTRIBUTION")) {
+                        ArticleParagraph(articleMarkdown: "Most of his wives were **widows or divorcees**. These marriages were not driven by desire but by **wisdom, compassion, and community building**.")
+
+                        ArticleParagraph(articleMarkdown: "His marriage to **Khadijah bint Khuwaylid** (may Allah be pleased with her) was monogamous and lasted about 25 years, until her death. She was about 15 years older than him, and he took no other wife during her lifetime.")
+                    }
+
+                    Section(header: ArticleHeader("KHADIJAH")) {
+                        ArticleParagraph(articleMarkdown: "Khadijah bint Khuwaylid (may Allah be pleased with her) was the first person to believe in Prophet Muhammad (peace be upon him) and thus the **first Muslim**. After his first revelation in the cave of Hira, she comforted him, wrapped him in a cloak, and reassured him with her deep insight and love.")
+
+                        ArticleParagraph(verbatim: "She said:")
+                        ScriptureQuote(hadith: "bukhari:3", cite: "Sahih al-Bukhari 3", arabic: 186...204, english: 314...346)
+                    }
+
+                    Section(header: ArticleHeader("AISHA")) {
+                        ArticleParagraph(verbatim: "Aisha bint Abi Bakr (may Allah be pleased with her) was the daughter of Abu Bakr as-Siddiq (may Allah be pleased with him), the closest companion of the Prophet (peace be upon him). She was among the most knowledgeable of the Companions, especially in Hadith and Islamic jurisprudence, and the Companions would turn to her when a matter was difficult for them.")
+
+                        Text(articleMarkdown: "She was falsely accused in the incident of al-Ifk, but Allah (Glorified and Exalted be He) revealed her innocence in **Surah An-Nur (24:11–26)**, establishing her purity and honor for all time.")
+                            .font(.body)
+                            .foregroundColor(appearance.accent)
+                        ScriptureQuote(quran: "24:26", words: 8...15)
+                    }
+                }
+
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(verbatim: "The wives of Prophet Muhammad (peace be upon him) are honored in Islam as the “Mothers of the Believers” (أُمَّهَاتُ المُؤمِنِين).")
+
+                        ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:")
+
+                        ScriptureQuote(quran: "33:6", words: 0...6)
+
+                        ArticleParagraph(articleMarkdown: "Prophet Muhammad (peace be upon him) married a total of **11 women** throughout his lifetime. At one time, he was married to a maximum of **9 wives** simultaneously: the limit of four that Allah set for his Ummah (Quran 4:3) did not bind him, a ruling particular to him within this Ummah. Earlier prophets also had more than four wives under the laws given to them: Prophet Solomon (peace be upon him) said he would go round to a hundred of his wives in one night (Sahih al-Bukhari 5242).")
+                        ScriptureQuote(quran: "4:3", words: 6...14)
+                        ScriptureQuote(hadith: "bukhari:5242", cite: "Sahih al-Bukhari 5242, Sahih Muslim 1654", arabic: 17...55, english: 0...81)
+                    }
+
+                    Section(header: ArticleHeader("SUPPORT & CONTRIBUTION")) {
+                        ArticleParagraph(verbatim: "These women supported the Prophet (peace be upon him) in his mission.")
+
+                        ArticleParagraph(verbatim: "They played vital roles in educating the Muslim community, transmitting Hadith, and exemplifying piety and devotion.")
+
+                        ArticleParagraph(articleMarkdown: "Most of his wives were **widows or divorcees**. These marriages were not driven by desire but by **wisdom, compassion, and community building**.")
+
+                        ArticleParagraph(articleMarkdown: "His marriage to **Khadijah bint Khuwaylid** (may Allah be pleased with her) was monogamous and lasted about 25 years, until her death. She was about 15 years older than him, and he took no other wife during her lifetime.")
+                    }
+
+                    Section(header: ArticleHeader("KHADIJAH")) {
+                        ArticleParagraph(articleMarkdown: "Khadijah bint Khuwaylid (may Allah be pleased with her) was the first person to believe in Prophet Muhammad (peace be upon him) and thus the **first Muslim**. After his first revelation in the cave of Hira, she comforted him, wrapped him in a cloak, and reassured him with her deep insight and love.")
+
+                        ArticleParagraph(verbatim: "She said:")
+                        ScriptureQuote(hadith: "bukhari:3", cite: "Sahih al-Bukhari 3", arabic: 186...204, english: 314...346)
+
+                        Text(articleMarkdown: "Allah (Glorified and Exalted be He) affirmed the beginning of the Prophet’s (peace be upon him) mission in **Surah Al-Muzzammil (73:1)** and **Surah Al-Muddaththir (74:1)**, moments when Khadijah (may Allah be pleased with her) lovingly wrapped and comforted him.")
+                            .font(.body)
+                            .foregroundColor(appearance.accent)
+                        ScriptureQuote(quran: "73:1")
+                        ScriptureQuote(quran: "74:1")
+
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) said of her:")
+                        ScriptureQuote(hadith: "bukhari:3818", cite: "Sahih al-Bukhari 3818", arabic: 71...77, english: 84...92)
+                        ArticleParagraph(verbatim: "Aisha (may Allah be pleased with her) reported that he said:")
+                        ScriptureQuote(hadith: "muslim:2435b", cite: "Sahih Muslim 2435", arabic: 66...69, english: 69...79)
+                    }
+
+                    Section(header: ArticleHeader("AISHA")) {
+                        ArticleParagraph(verbatim: "Aisha bint Abi Bakr (may Allah be pleased with her) was the daughter of Abu Bakr as-Siddiq (may Allah be pleased with him), the closest companion of the Prophet (peace be upon him). She was among the most knowledgeable of the Companions, especially in Hadith and Islamic jurisprudence, and the Companions would turn to her when a matter was difficult for them.")
+
+                        Text(articleMarkdown: "She was falsely accused in the incident of al-Ifk, but Allah (Glorified and Exalted be He) revealed her innocence in **Surah An-Nur (24:11–26)**, establishing her purity and honor for all time.")
+                            .font(.body)
+                            .foregroundColor(appearance.accent)
+                        ScriptureQuote(quran: "24:26", words: 8...15)
+
+                        ArticleParagraph(verbatim: "Amr ibn al-As (may Allah be pleased with him) asked the Prophet (peace be upon him):")
+                        ScriptureQuote(hadith: "bukhari:3662", cite: "Sahih al-Bukhari 3662", arabic: 39...52, english: 17...37)
+
+                        ArticleParagraph(verbatim: "He also said:")
+                        ScriptureQuote(hadith: "muslim:2446a", cite: "Sahih Muslim 2446", arabic: 35...43, english: 0...15)
+
+                        ArticleParagraph(verbatim: "After the Prophet’s (peace be upon him) death, she became one of the greatest scholars of Islam. She taught both men and women and was a source of religious rulings and interpretations.")
+
+                        ArticleParagraph(articleMarkdown: "She narrated **2,210 hadiths**, making her the **fourth-highest hadith narrator** of all time. Most of these relate to the Prophet’s private life, which only she had access to. Without Aisha (may Allah be pleased with her), much of the Prophet’s (peace be upon him) household life, worship, and character would not be known today.")
+                    }
+
+                    Section(header: ArticleHeader("HOW HE TREATED HIS WIVES")) {
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) was the best example of kindness, patience, and love toward his wives. These hadiths reflect his character:")
+
+                        ScriptureQuote(hadith: "tirmidhi:3895", cite: "Sunan al-Tirmidhi 3895; graded sahih by al-Albani", arabic: 30...35, english: 7...34)
+
+                        ArticleParagraph(verbatim: "Aisha (may Allah be pleased with her) said:")
+                        ScriptureQuote(hadith: "muslim:2328a", cite: "Sahih Muslim 2328", arabic: 13...27, english: 3...17)
+
+                        ArticleParagraph(verbatim: "He said:")
+                        ScriptureQuote(hadith: "muslim:1468b", cite: "Sahih Muslim 1468", arabic: 38...48, english: 0...21)
+
+                        ArticleParagraph(verbatim: "And Aisha (may Allah be pleased with her) said of his life at home:")
+                        ScriptureQuote(hadith: "bukhari:6039", cite: "Sahih al-Bukhari 6039", arabic: 26...35, english: 15...37)
+                    }
+
+                    Section(header: ArticleHeader("THE ELEVEN WIVES")) {
+                        Group {
+                            ArticleBullet(verbatim: "• Khadijah bint Khuwaylid (may Allah be pleased with her)")
+                            ArticleBullet(verbatim: "• Sawdah bint Zam’ah (may Allah be pleased with her)")
+                            ArticleBullet(verbatim: "• Aisha bint Abi Bakr (may Allah be pleased with her)")
+                            ArticleBullet(verbatim: "• Hafsah bint Umar (may Allah be pleased with her)")
+                            ArticleBullet(verbatim: "• Zaynab bint Khuzaymah (may Allah be pleased with her)")
+                            ArticleBullet(verbatim: "• Umm Salamah (Hind bint Abi Umayyah) (may Allah be pleased with her)")
+                            ArticleBullet(verbatim: "• Zaynab bint Jahsh (may Allah be pleased with her)")
+                            ArticleBullet(verbatim: "• Juwayriyah bint al-Harith (may Allah be pleased with her)")
+                            ArticleBullet(verbatim: "• Umm Habibah (Ramlah bint Abi Sufyan) (may Allah be pleased with her)")
+                            ArticleBullet(verbatim: "• Safiyyah bint Huyayy (may Allah be pleased with her)")
+                            ArticleBullet(verbatim: "• Maymunah bint al-Harith (may Allah be pleased with her)")
+                        }
+                        .font(.body)
+                    }
                 }
 
                 Section(header: ArticleHeader("WHY SO MANY MARRIAGES?")) {
@@ -2430,10 +3145,12 @@ struct WivesView: View {
                     ArticleBullet("• **Setting legal and social precedents** for Muslim family law and ethics.")
                 }
 
-                Section(header: ArticleHeader("LEGACY")) {
-                    ArticleParagraph(verbatim: "The lives of the Prophet’s (peace be upon him) wives highlight the essential role of women in Islamic scholarship and community-building.")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("LEGACY")) {
+                        ArticleParagraph(verbatim: "The lives of the Prophet’s (peace be upon him) wives highlight the essential role of women in Islamic scholarship and community-building.")
 
-                    ArticleParagraph(verbatim: "They are role models for Muslims, inspiring faith, resilience, and devotion.")
+                        ArticleParagraph(verbatim: "They are role models for Muslims, inspiring faith, resilience, and devotion.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -2453,95 +3170,139 @@ struct CaliphatesView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: the Caliphate is the leadership that continued the Prophet's mission, beginning with the Rightly Guided Caliphs Abu Bakr, Umar, Uthman, and Ali.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "The **Caliphate (الخِلَافَة)**, from the root **kh-l-f (خ ل ف)**, meaning succession, refers to the divinely guided system of governance established after the death of Prophet Muhammad (peace be upon him). It aimed to continue his mission of upholding justice, spreading Islam, and preserving the unity of the Ummah.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "The **Caliphate (الخِلَافَة)**, from the root **kh-l-f (خ ل ف)**, meaning succession, refers to the divinely guided system of governance established after the death of Prophet Muhammad (peace be upon him). It aimed to continue his mission of upholding justice, spreading Islam, and preserving the unity of the Ummah.")
 
-                    ArticleParagraph(articleMarkdown: "The Caliph (خَلِيفَة), literally “successor,” was entrusted with political, military, judicial, and spiritual leadership, guided by the Quran and Sunnah. The first four caliphs, known as the **Rightly Guided Caliphs (ٱلخُلَفَاء ٱلرَّاشِدُون)**, are regarded as models of righteous rule.")
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) said:")
+                        ScriptureQuote(hadith: "abudawud:4646", cite: "Sunan Abi Dawud 4646; graded hasan sahih by al-Albani", arabic: 26...39, english: 4...24)
 
-                    ArticleParagraph(verbatim: "The Prophet (peace be upon him) said:")
-                    ScriptureQuote(hadith: "abudawud:4646", cite: "Sunan Abi Dawud 4646; graded hasan sahih by al-Albani", arabic: 26...39, english: 4...24)
+                        ArticleParagraph(articleMarkdown: "These thirty years, known as the **Rashidun Caliphate**, represented the ideal Islamic system. The caliphs were chosen by **consultation (شُورَىٰ)** and the pledge of allegiance (**bay'ah, بَيعَة**) of the community. This model emphasized justice, humility, accountability, and service to the people.")
+                    }
 
-                    ArticleParagraph(articleMarkdown: "These thirty years, known as the **Rashidun Caliphate**, represented the ideal Islamic system. The caliphs were chosen by **consultation (شُورَىٰ)** and the pledge of allegiance (**bay'ah, بَيعَة**) of the community: Abu Bakr at Saqifah and then in the mosque, and Uthman after Abd al-Rahman ibn Awf consulted the Muhajirun, the Ansar, and the commanders for three nights (Sahih al-Bukhari 7207). This model emphasized justice, humility, accountability, and service to the people.")
+                    Section(header: ArticleHeader("ABU BAKR AS-SIDDIQ (632–634 CE)")) {
+                        ArticleParagraph(articleMarkdown: "Abu Bakr (may Allah be pleased with him), the Prophet’s closest companion and the first adult male to accept Islam, was chosen as the **first caliph** immediately after the Prophet’s passing. He was selected through consensus at Saqifah.")
+
+                        ArticleParagraph(articleMarkdown: "He led decisively during a time of crisis, launching the **Riddah Wars** to bring back apostate tribes and false prophets. About one year after the Prophet’s death (12 AH), he initiated the first complete compilation of the Quran into a single manuscript.")
+                    }
+
+                    Section(header: ArticleHeader("UMAR IBN AL-KHATTAB (634–644 CE)")) {
+                        ArticleParagraph(verbatim: "Umar (may Allah be pleased with him) was appointed by Abu Bakr before his death and accepted by the Muslims as the second caliph. He was renowned for justice, strength, and fear of Allah (Glorified and Exalted be He).")
+
+                        ArticleParagraph(articleMarkdown: "His 10-year reign witnessed the rapid expansion of Islam into the **Byzantine and Persian Empires**, including Jerusalem and Egypt. He established **public registers**, **courts**, **salaries for soldiers**, and the **Islamic calendar**.")
+                    }
+
+                    Section(header: ArticleHeader("UTHMAN IBN AFFAN (644–656 CE)")) {
+                        ArticleParagraph(articleMarkdown: "Uthman (may Allah be pleased with him) was chosen through a **council of six** appointed by Umar. Known for his generosity and modesty, he married two daughters of the Prophet Muhammad (peace be upon him) and was called **Dhu al-Nurayn** (ذُو ٱلنُّورَين, the Possessor of Two Lights).")
+
+                        ArticleParagraph(articleMarkdown: "He **standardized official copies of the Quran** from the already compiled manuscript preserved from Abu Bakr’s time, unifying public recitation and preventing disputes over unverified personal materials. He sent official copies to major cities and retired non-verified personal codices used outside official transmission.")
+                    }
+
+                    Section(header: ArticleHeader("ALI IBN ABI TALIB (656–661 CE)")) {
+                        ArticleParagraph(verbatim: "Ali (may Allah be pleased with him), the cousin and son-in-law of the Prophet Muhammad (peace be upon him), was chosen as the fourth caliph after Uthman’s martyrdom.")
+
+                        ArticleParagraph(articleMarkdown: "His caliphate was challenged by internal strife, including the **Battle of the Camel** and **Battle of Siffin**. Despite the trials, he remained committed to justice and truth.")
+                    }
+
+                    Section(header: ArticleHeader("LEGACY OF THE RASHIDUN")) {
+                        ArticleParagraph(articleMarkdown: "Though later caliphates transitioned into **hereditary monarchy**, the Prophet Muhammad (peace be upon him) had foretold this change in the hadith quoted above: thirty years of the caliphate of prophethood, and then kingship given to whomever Allah wills (Sunan Abi Dawud 4646). Safinah (may Allah be pleased with him), who narrated it, counted them: two years for Abu Bakr, ten for Umar, twelve for Uthman, and the remainder for Ali.")
+                    }
                 }
 
-                Section(header: ArticleHeader("ABU BAKR AS-SIDDIQ (632–634 CE)")) {
-                    ArticleParagraph(articleMarkdown: "Abu Bakr (may Allah be pleased with him), the Prophet’s closest companion and the first adult male to accept Islam, was chosen as the **first caliph** immediately after the Prophet’s passing. He was selected through consensus at Saqifah.")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "The **Caliphate (الخِلَافَة)**, from the root **kh-l-f (خ ل ف)**, meaning succession, refers to the divinely guided system of governance established after the death of Prophet Muhammad (peace be upon him). It aimed to continue his mission of upholding justice, spreading Islam, and preserving the unity of the Ummah.")
 
-                    ArticleParagraph(articleMarkdown: "He led decisively during a time of crisis, launching the **Riddah Wars** to bring back apostate tribes and false prophets. About one year after the Prophet’s death (12 AH), he initiated the first complete compilation of the Quran into a single manuscript.")
+                        ArticleParagraph(articleMarkdown: "The Caliph (خَلِيفَة), literally “successor,” was entrusted with political, military, judicial, and spiritual leadership, guided by the Quran and Sunnah. The first four caliphs, known as the **Rightly Guided Caliphs (ٱلخُلَفَاء ٱلرَّاشِدُون)**, are regarded as models of righteous rule.")
 
-                    ArticleParagraph(verbatim: "When some of the Companions were harsh with him, the Prophet (peace be upon him) said:")
-                    ScriptureQuote(hadith: "bukhari:3661", cite: "Sahih al-Bukhari 3661", arabic: 146...163, english: [174...209, 214...221])
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) said:")
+                        ScriptureQuote(hadith: "abudawud:4646", cite: "Sunan Abi Dawud 4646; graded hasan sahih by al-Albani", arabic: 26...39, english: 4...24)
 
-                    ArticleParagraph(verbatim: "His caliphate lasted just over two years but laid the foundation for unity and stability in the Ummah.")
-                }
+                        ArticleParagraph(articleMarkdown: "These thirty years, known as the **Rashidun Caliphate**, represented the ideal Islamic system. The caliphs were chosen by **consultation (شُورَىٰ)** and the pledge of allegiance (**bay'ah, بَيعَة**) of the community: Abu Bakr at Saqifah and then in the mosque, and Uthman after Abd al-Rahman ibn Awf consulted the Muhajirun, the Ansar, and the commanders for three nights (Sahih al-Bukhari 7207). This model emphasized justice, humility, accountability, and service to the people.")
+                        ScriptureQuote(hadith: "bukhari:7207", cite: "Sahih al-Bukhari 7207", arabic: 160...231, english: 263...423)
+                    }
 
-                Section(header: ArticleHeader("UMAR IBN AL-KHATTAB (634–644 CE)")) {
-                    ArticleParagraph(verbatim: "Umar (may Allah be pleased with him) was appointed by Abu Bakr before his death and accepted by the Muslims as the second caliph. He was renowned for justice, strength, and fear of Allah (Glorified and Exalted be He).")
+                    Section(header: ArticleHeader("ABU BAKR AS-SIDDIQ (632–634 CE)")) {
+                        ArticleParagraph(articleMarkdown: "Abu Bakr (may Allah be pleased with him), the Prophet’s closest companion and the first adult male to accept Islam, was chosen as the **first caliph** immediately after the Prophet’s passing. He was selected through consensus at Saqifah.")
 
-                    ArticleParagraph(articleMarkdown: "His 10-year reign witnessed the rapid expansion of Islam into the **Byzantine and Persian Empires**, including Jerusalem and Egypt. He established **public registers**, **courts**, **salaries for soldiers**, and the **Islamic calendar**.")
+                        ArticleParagraph(articleMarkdown: "He led decisively during a time of crisis, launching the **Riddah Wars** to bring back apostate tribes and false prophets. About one year after the Prophet’s death (12 AH), he initiated the first complete compilation of the Quran into a single manuscript.")
 
-                    ArticleParagraph(verbatim: "The Prophet (peace be upon him) said:")
-                    ScriptureQuote(hadith: "tirmidhi:3682", cite: "Sunan al-Tirmidhi 3682; graded sahih by al-Albani", arabic: 30...37, english: 10...24)
+                        ArticleParagraph(verbatim: "When some of the Companions were harsh with him, the Prophet (peace be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:3661", cite: "Sahih al-Bukhari 3661", arabic: 146...163, english: [174...209, 214...221])
 
-                    ArticleParagraph(verbatim: "He was assassinated while praying in the masjid and is buried beside the Prophet Muhammad (peace be upon him).")
-                }
+                        ArticleParagraph(verbatim: "His caliphate lasted just over two years but laid the foundation for unity and stability in the Ummah.")
+                    }
 
-                Section(header: ArticleHeader("UTHMAN IBN AFFAN (644–656 CE)")) {
-                    ArticleParagraph(articleMarkdown: "Uthman (may Allah be pleased with him) was chosen through a **council of six** appointed by Umar. Known for his generosity and modesty, he married two daughters of the Prophet Muhammad (peace be upon him) and was called **Dhu al-Nurayn** (ذُو ٱلنُّورَين, the Possessor of Two Lights).")
+                    Section(header: ArticleHeader("UMAR IBN AL-KHATTAB (634–644 CE)")) {
+                        ArticleParagraph(verbatim: "Umar (may Allah be pleased with him) was appointed by Abu Bakr before his death and accepted by the Muslims as the second caliph. He was renowned for justice, strength, and fear of Allah (Glorified and Exalted be He).")
 
-                    ArticleParagraph(articleMarkdown: "He **standardized official copies of the Quran** from the already compiled manuscript preserved from Abu Bakr’s time, unifying public recitation and preventing disputes over unverified personal materials. He sent official copies to major cities and retired non-verified personal codices used outside official transmission.")
+                        ArticleParagraph(articleMarkdown: "His 10-year reign witnessed the rapid expansion of Islam into the **Byzantine and Persian Empires**, including Jerusalem and Egypt. He established **public registers**, **courts**, **salaries for soldiers**, and the **Islamic calendar**.")
 
-                    ArticleParagraph(verbatim: "The Prophet (peace be upon him) said of him:")
-                    ScriptureQuote(hadith: "muslim:2401", cite: "Sahih Muslim 2401", arabic: 128...134, english: 155...167)
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) said:")
+                        ScriptureQuote(hadith: "tirmidhi:3682", cite: "Sunan al-Tirmidhi 3682; graded sahih by al-Albani", arabic: 30...37, english: 10...24)
 
-                    ArticleParagraph(verbatim: "Due to political unrest and false accusations, he was unjustly besieged and martyred while reciting the Quran.")
-                }
+                        ArticleParagraph(verbatim: "He was assassinated while praying in the masjid and is buried beside the Prophet Muhammad (peace be upon him).")
+                    }
 
-                Section(header: ArticleHeader("ALI IBN ABI TALIB (656–661 CE)")) {
-                    ArticleParagraph(verbatim: "Ali (may Allah be pleased with him), the cousin and son-in-law of the Prophet Muhammad (peace be upon him), was chosen as the fourth caliph after Uthman’s martyrdom.")
+                    Section(header: ArticleHeader("UTHMAN IBN AFFAN (644–656 CE)")) {
+                        ArticleParagraph(articleMarkdown: "Uthman (may Allah be pleased with him) was chosen through a **council of six** appointed by Umar. Known for his generosity and modesty, he married two daughters of the Prophet Muhammad (peace be upon him) and was called **Dhu al-Nurayn** (ذُو ٱلنُّورَين, the Possessor of Two Lights).")
 
-                    ArticleParagraph(articleMarkdown: "His caliphate was challenged by internal strife, including the **Battle of the Camel** and **Battle of Siffin**. Despite the trials, he remained committed to justice and truth.")
+                        ArticleParagraph(articleMarkdown: "He **standardized official copies of the Quran** from the already compiled manuscript preserved from Abu Bakr’s time, unifying public recitation and preventing disputes over unverified personal materials. He sent official copies to major cities and retired non-verified personal codices used outside official transmission.")
 
-                    ArticleParagraph(verbatim: "The Prophet (peace be upon him) said to him:")
-                    ScriptureQuote(hadith: "muslim:2404a", cite: "Sahih Muslim 2404", arabic: 58...68, english: 0...29)
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) said of him:")
+                        ScriptureQuote(hadith: "muslim:2401", cite: "Sahih Muslim 2401", arabic: 128...134, english: 155...167)
 
-                    ArticleParagraph(verbatim: "Ali was struck by Ibn Muljam in Kufah on his way to lead the Fajr prayer, in Ramadan 40 AH, and died of the wound. His legacy lives on in scholarship, courage, and moral leadership.")
-                }
+                        ArticleParagraph(verbatim: "Due to political unrest and false accusations, he was unjustly besieged and martyred while reciting the Quran.")
+                    }
 
-                Section(header: ArticleHeader("LEGACY OF THE RASHIDUN")) {
-                    ArticleParagraph(articleMarkdown: "The Rashidun Caliphs (632–661 CE) ruled with unmatched integrity, transparency, and adherence to prophetic tradition. Their rule was guided by **shura (شُورَىٰ)**, justice, and humility.")
+                    Section(header: ArticleHeader("ALI IBN ABI TALIB (656–661 CE)")) {
+                        ArticleParagraph(verbatim: "Ali (may Allah be pleased with him), the cousin and son-in-law of the Prophet Muhammad (peace be upon him), was chosen as the fourth caliph after Uthman’s martyrdom.")
 
-                    ArticleParagraph(articleMarkdown: "Though later caliphates transitioned into **hereditary monarchy**, the Prophet Muhammad (peace be upon him) had foretold this change in the hadith quoted above: thirty years of the caliphate of prophethood, and then kingship given to whomever Allah wills (Sunan Abi Dawud 4646). Safinah (may Allah be pleased with him), who narrated it, counted them: two years for Abu Bakr, ten for Umar, twelve for Uthman, and the remainder for Ali.")
+                        ArticleParagraph(articleMarkdown: "His caliphate was challenged by internal strife, including the **Battle of the Camel** and **Battle of Siffin**. Despite the trials, he remained committed to justice and truth.")
 
-                    ArticleParagraph(verbatim: "Despite this shift, many later caliphs still contributed greatly to Islamic knowledge, architecture, and global influence.")
-                }
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) said to him:")
+                        ScriptureQuote(hadith: "muslim:2404a", cite: "Sahih Muslim 2404", arabic: 58...68, english: 0...29)
 
-                Section(header: ArticleHeader("THE UMAYYAD CALIPHATE (661–750 CE)")) {
-                    ArticleParagraph(articleMarkdown: "The Umayyads, beginning with Mu'awiyah ibn Abi Sufyan (may Allah be pleased with him), transitioned the caliphate into a **dynastic monarchy**. Their capital was **Damascus (دِمَشق)**.")
+                        ArticleParagraph(verbatim: "Ali was struck by Ibn Muljam in Kufah on his way to lead the Fajr prayer, in Ramadan 40 AH, and died of the wound. His legacy lives on in scholarship, courage, and moral leadership.")
+                    }
 
-                    ArticleParagraph(articleMarkdown: "They expanded Islam into **al-Andalus (Spain)**, **North Africa**, and **Central Asia**, and made **Arabic** the official administrative language.")
+                    Section(header: ArticleHeader("LEGACY OF THE RASHIDUN")) {
+                        ArticleParagraph(articleMarkdown: "The Rashidun Caliphs (632–661 CE) ruled with unmatched integrity, transparency, and adherence to prophetic tradition. Their rule was guided by **shura (شُورَىٰ)**, justice, and humility.")
 
-                    ArticleParagraph(verbatim: "Though less spiritually exemplary than the Rashidun, the Umayyads left a profound legacy in governance, culture, and infrastructure.")
-                }
+                        ArticleParagraph(articleMarkdown: "Though later caliphates transitioned into **hereditary monarchy**, the Prophet Muhammad (peace be upon him) had foretold this change in the hadith quoted above: thirty years of the caliphate of prophethood, and then kingship given to whomever Allah wills (Sunan Abi Dawud 4646). Safinah (may Allah be pleased with him), who narrated it, counted them: two years for Abu Bakr, ten for Umar, twelve for Uthman, and the remainder for Ali.")
 
-                Section(header: ArticleHeader("THE ABBASID CALIPHATE (750–1258 CE)")) {
-                    ArticleParagraph(articleMarkdown: "The Abbasids overthrew the Umayyads and moved the capital to **Baghdad (بَغدَاد)**, initiating the **Golden Age of Islam**.")
+                        ArticleParagraph(verbatim: "Despite this shift, many later caliphs still contributed greatly to Islamic knowledge, architecture, and global influence.")
+                    }
 
-                    ArticleParagraph(articleMarkdown: "They supported **translation**, **science**, **mathematics**, **medicine**, and **philosophy**, and established the renowned **Bayt al-Hikmah (بَيت ٱلحِكمَة, House of Wisdom)**. The same translations also carried Greek philosophy into Muslim thought, and under al-Ma'mun the Mu'tazili doctrine built on it, that the Quran is created, was imposed by force in the Mihnah, against which Imam Ahmad stood firm; the scholars of the Sunnah warned against taking creed from philosophy.")
+                    Section(header: ArticleHeader("THE UMAYYAD CALIPHATE (661–750 CE)")) {
+                        ArticleParagraph(articleMarkdown: "The Umayyads, beginning with Mu'awiyah ibn Abi Sufyan (may Allah be pleased with him), transitioned the caliphate into a **dynastic monarchy**. Their capital was **Damascus (دِمَشق)**.")
 
-                    ArticleParagraph(verbatim: "Although internal divisions weakened the state, their intellectual contributions influenced both the Muslim world and Europe. The empire fell to the Mongols in 1258 CE.")
-                }
+                        ArticleParagraph(articleMarkdown: "They expanded Islam into **al-Andalus (Spain)**, **North Africa**, and **Central Asia**, and made **Arabic** the official administrative language.")
 
-                Section(header: ArticleHeader("THE OTTOMAN CALIPHATE (1517–1924 CE)")) {
-                    ArticleParagraph(articleMarkdown: "The Ottomans, a Turkish dynasty, were the **first non-Arab dynasty** to hold the widely recognised caliphate. After the fall of the Abbasids in Egypt, the caliphate passed to the Ottomans, whose capital was **Istanbul (إِسطَنبُول)**.")
+                        ArticleParagraph(verbatim: "Though less spiritually exemplary than the Rashidun, the Umayyads left a profound legacy in governance, culture, and infrastructure.")
+                    }
 
-                    ArticleParagraph(articleMarkdown: "They ruled a vast empire across **Europe**, **Asia**, and **Africa**, preserved **Islamic law (ٱلشَّرِيعَة)**, and defended the **Two Holy Mosques** in **Makkah (مَكَّة)** and **Madinah (ٱلمَدِينَة)**.")
+                    Section(header: ArticleHeader("THE ABBASID CALIPHATE (750–1258 CE)")) {
+                        ArticleParagraph(articleMarkdown: "The Abbasids overthrew the Umayyads and moved the capital to **Baghdad (بَغدَاد)**, initiating the **Golden Age of Islam**.")
 
-                    ArticleParagraph(articleMarkdown: "The Ottoman Caliphate was officially **abolished in 1924 CE** by Mustafa Kemal Atatürk, ending nearly 1,300 years of Islamic caliphal leadership.")
+                        ArticleParagraph(articleMarkdown: "They supported **translation**, **science**, **mathematics**, **medicine**, and **philosophy**, and established the renowned **Bayt al-Hikmah (بَيت ٱلحِكمَة, House of Wisdom)**. The same translations also carried Greek philosophy into Muslim thought, and under al-Ma'mun the Mu'tazili doctrine built on it, that the Quran is created, was imposed by force in the Mihnah, against which Imam Ahmad stood firm; the scholars of the Sunnah warned against taking creed from philosophy.")
+
+                        ArticleParagraph(verbatim: "Although internal divisions weakened the state, their intellectual contributions influenced both the Muslim world and Europe. The empire fell to the Mongols in 1258 CE.")
+                    }
+
+                    Section(header: ArticleHeader("THE OTTOMAN CALIPHATE (1517–1924 CE)")) {
+                        ArticleParagraph(articleMarkdown: "The Ottomans, a Turkish dynasty, were the **first non-Arab dynasty** to hold the widely recognised caliphate. After the fall of the Abbasids in Egypt, the caliphate passed to the Ottomans, whose capital was **Istanbul (إِسطَنبُول)**.")
+
+                        ArticleParagraph(articleMarkdown: "They ruled a vast empire across **Europe**, **Asia**, and **Africa**, preserved **Islamic law (ٱلشَّرِيعَة)**, and defended the **Two Holy Mosques** in **Makkah (مَكَّة)** and **Madinah (ٱلمَدِينَة)**.")
+
+                        ArticleParagraph(articleMarkdown: "The Ottoman Caliphate was officially **abolished in 1924 CE** by Mustafa Kemal Atatürk, ending nearly 1,300 years of Islamic caliphal leadership.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -2558,6 +3319,33 @@ struct CaliphatesView: View {
 }
 
 struct MadhabView: View {
+    static let sections1: [ArticleSection] = [
+        ArticleSection("SUMMARY", [
+            .text("In short: the four madhahib (Hanafi, Maliki, Shafi'i, and Hanbali) are the accepted schools of fiqh, the practical rulings of Islam, where more than one opinion can be valid. They differ in fiqh and are one in aqeedah."),
+        ]),
+        ArticleSection("OVERVIEW", [
+            .markdown("A **madhhab (مَذهَب)** is a school of Islamic jurisprudence that provides structured guidance on how to derive and apply rulings from the Quran and Sunnah. The plural is **madhahib (مَذَاهِب)**."),
+            .text("Madhahib developed as scholars preserved and codified fiqh (فِقه), or Islamic legal reasoning/jurisprudence, to help Muslims navigate daily life, worship, transactions, and society with clarity and consistency."),
+            .text("Following a madhhab ensures one is following a valid, peer-reviewed methodology developed by righteous scholars deeply rooted in the Quran, Sunnah, consensus (إِجمَاع), and analogy (قِيَاس). It is not blind following; it is trust in generations of qualified scholarship. Allah (Glorified and Exalted be He) commands the one who does not know to ask those who do:"),
+            .ayah("16:43", words: 8...14),
+            .text("And the Prophet Muhammad (peace be upon him) said:"),
+            .hadith("bukhari:71", cite: "Sahih al-Bukhari 71, Sahih Muslim 1037", arabic: 32...39, english: [6...20]),
+        ]),
+        ArticleSection("FIQH IS NOT AQEEDAH", [
+            .markdown("**Fiqh (فِقه)** means “understanding”: the practical rulings of Islam, how to pray, fast, trade, marry, and inherit, derived from the Quran and Sunnah by qualified effort (**ijtihad**). **Aqeedah (عَقِيدَة)**, from “to tie a knot,” is what the heart is bound to: belief about Allah, His angels, books, messengers, the Last Day, and the decree. The madhahib are schools of **fiqh**. There are no “four schools” of aqeedah, because aqeedah is one (see “The Madhahib of Aqeedah”)."),
+            .text("In fiqh more than one answer can be valid, and the Companions (may Allah be pleased with them) themselves differed in it in the Prophet’s own presence. After the Battle of the Trench he said:"),
+            .hadith("bukhari:946", cite: "Sahih al-Bukhari 946", arabic: 16...66, english: [16...93]),
+            .text("One group held to the literal words and prayed late; the other understood the intent and prayed on time. Both reasoned sincerely from his command, and he approved both. This is the root of every difference between the madhahib: the same texts, read by sincere scholars, sometimes yield more than one acceptable ruling."),
+            .text("Aqeedah admits no such range. Abu Bakr, Umar, Uthman, Ali, the Ahlul Bayt, and every Companion believed exactly the same things about Allah, and so did every prophet before them; the Prophet (peace be upon him) said the prophets’ “religion is one” (Sahih al-Bukhari 3443). So a Muslim may be Hanafi or Maliki in fiqh, but in creed there is only the creed of the Salaf."),
+            .hadith("bukhari:3443", cite: "Sahih al-Bukhari 3443, Sahih Muslim 2365", arabic: 31...46, english: [4...39]),
+        ]),
+        ArticleSection("WHY FOLLOW A MADHHAB?", [
+            .text("Islamic rulings are not always black and white. Scholars developed principles to interpret revelation when texts appeared to conflict or were not explicit."),
+            .text("For example, rulings on prayer times, purification, zakah calculation, marriage, and contracts all require detailed interpretation. Madhahib systematize this process based on authentic sources and established rules."),
+            .markdown("Instead of picking rulings randomly or following desire, a madhhab offers **structured, principled, and scholarly guidance**. It helps prevent inconsistency and distortion in religious practice."),
+        ]),
+    ]
+
     var body: some View {
         List {
             Group {
@@ -2623,34 +3411,8 @@ struct MadhabView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    static let sections1: [ArticleSection] = [
-        ArticleSection("SUMMARY", [
-            .text("In short: the four madhahib (Hanafi, Maliki, Shafi'i, and Hanbali) are the accepted schools of fiqh, the practical rulings of Islam, where more than one opinion can be valid. They differ in fiqh and are one in aqeedah."),
-        ]),
-        ArticleSection("OVERVIEW", [
-            .markdown("A **madhhab (مَذهَب)** is a school of Islamic jurisprudence that provides structured guidance on how to derive and apply rulings from the Quran and Sunnah. The plural is **madhahib (مَذَاهِب)**."),
-            .text("Madhahib developed as scholars preserved and codified fiqh (فِقه), or Islamic legal reasoning/jurisprudence, to help Muslims navigate daily life, worship, transactions, and society with clarity and consistency."),
-            .text("Following a madhhab ensures one is following a valid, peer-reviewed methodology developed by righteous scholars deeply rooted in the Quran, Sunnah, consensus (إِجمَاع), and analogy (قِيَاس). It is not blind following; it is trust in generations of qualified scholarship. Allah (Glorified and Exalted be He) commands the one who does not know to ask those who do:"),
-            .ayah("16:43", words: 8...14),
-            .text("And the Prophet Muhammad (peace be upon him) said:"),
-            .hadith("bukhari:71", cite: "Sahih al-Bukhari 71, Sahih Muslim 1037", arabic: 32...39, english: [6...20]),
-        ]),
-        ArticleSection("FIQH IS NOT AQEEDAH", [
-            .markdown("**Fiqh (فِقه)** means “understanding”: the practical rulings of Islam, how to pray, fast, trade, marry, and inherit, derived from the Quran and Sunnah by qualified effort (**ijtihad**). **Aqeedah (عَقِيدَة)**, from “to tie a knot,” is what the heart is bound to: belief about Allah, His angels, books, messengers, the Last Day, and the decree. The madhahib are schools of **fiqh**. There are no “four schools” of aqeedah, because aqeedah is one (see “The Madhahib of Aqeedah”)."),
-            .text("In fiqh more than one answer can be valid, and the Companions (may Allah be pleased with them) themselves differed in it in the Prophet’s own presence. After the Battle of the Trench he said:"),
-            .hadith("bukhari:946", cite: "Sahih al-Bukhari 946", arabic: 16...66, english: [16...93]),
-            .text("One group held to the literal words and prayed late; the other understood the intent and prayed on time. Both reasoned sincerely from his command, and he approved both. This is the root of every difference between the madhahib: the same texts, read by sincere scholars, sometimes yield more than one acceptable ruling."),
-            .text("Aqeedah admits no such range. Abu Bakr, Umar, Uthman, Ali, the Ahlul Bayt, and every Companion believed exactly the same things about Allah, and so did every prophet before them; the Prophet (peace be upon him) said the prophets’ “religion is one” (Sahih al-Bukhari 3443). So a Muslim may be Hanafi or Maliki in fiqh, but in creed there is only the creed of the Salaf."),
-        ]),
-        ArticleSection("WHY FOLLOW A MADHHAB?", [
-            .text("Islamic rulings are not always black and white. Scholars developed principles to interpret revelation when texts appeared to conflict or were not explicit."),
-            .text("For example, rulings on prayer times, purification, zakah calculation, marriage, and contracts all require detailed interpretation. Madhahib systematize this process based on authentic sources and established rules."),
-            .markdown("Instead of picking rulings randomly or following desire, a madhhab offers **structured, principled, and scholarly guidance**. It helps prevent inconsistency and distortion in religious practice."),
-        ]),
-    ]
-
     static let sections2: [ArticleSection] = [
-        ArticleSection("WHEN THE MADHAHIB TOOK SHAPE", [
+        ArticleSection("WHEN THE MADHAHIB TOOK SHAPE", only: .long, [
             .text("None of the four imams formally founded an institution. Each taught a methodology that his students preserved and systematized into a school over the generations, so historians distinguish between the life of the imam and the emergence of the madhhab."),
             .text("The Hanafi school began in Kufa during Abu Hanifa’s lifetime and was firmly established by his students Abu Yusuf (d. 182 AH) and Muhammad al-Shaybani (d. 189 AH). The Maliki school developed in Madinah through Imam Malik’s teaching circle and Al-Muwatta. The Shafi‘i school crystallized in Egypt in Imam al-Shafi‘i’s final years (his “new” madhhab) and spread after him through students like al-Muzani and al-Buwayti. The Hanbali school was collected and systematized after Imam Ahmad’s death by his sons and students such as al-Khallal."),
             .text("The four imams form an unbroken chain of teacher and student: Imam Malik taught al-Shafi‘i, who in turn taught Ahmad ibn Hanbal. Imam Malik was also a contemporary of Abu Hanifa, and al-Shafi‘i was born in the very year Abu Hanifa passed away (150 AH)."),
@@ -2679,90 +3441,98 @@ struct MadhabView: View {
             .text("The best generations did not do it. The Prophet (peace be upon him) said:"),
             .hadith("bukhari:2652", cite: "Sahih al-Bukhari 2652", arabic: 29...37, english: [4...23]),
             .text("The Companions and their students asked whichever scholar was at hand: the people of Madinah asked Zayd ibn Thabit and Ibn Umar, the people of Makkah asked Ibn Abbas, the people of Kufa asked Ibn Mas‘ud and then Ali (may Allah be pleased with them), and none of them said, “I am on the madhhab of so-and-so.” The four imams belong to the generations after the Companions (the earliest of them, Abu Hanifah, saw the Companion Anas ibn Malik as a boy but took his fiqh from the Tabi‘in), so the first generations obviously had no Hanafi or Maliki school. Ibn Taymiyyah (may Allah have mercy on him) writes in Majmu‘ al-Fatawa that following the madhhab of a specific person, because one cannot learn the Shari‘ah (شَرِيعَة, from ش-ر-ع, the path leading down to water, and so the revealed law) except through him, is permitted for such a person but is not obligatory on everyone, and that no one is bound to follow one particular man in everything he says except the Messenger of Allah (peace be upon him). In practice: the scholar follows the evidence, the student learns through a school and checks it against the evidence as he grows, and the layman follows the trustworthy scholars available to him, whether they teach within a madhhab or not."),
-            .markdown("**Can I take a ruling from another madhhab, or change my madhhab?**"),
-            .text("Yes, when it is done for the evidence or on the word of a scholar one trusts more, and not to hunt for the easiest answer. The imams’ own students did it: Abu Yusuf and Muhammad ash-Shaybani differed from Abu Hanifah in many questions, al-Muzani differed from ash-Shafi‘i, and ash-Shafi‘i revised his own madhhab when he moved to Egypt. Every school’s later scholars weighed (tarjih) between the reports from their imam and sometimes preferred another school’s view. Ibn Taymiyyah (may Allah have mercy on him) says in Majmu‘ al-Fatawa that whoever moves from one madhhab to another for a religious reason, because he finds the other closer to the Quran and Sunnah, has done well, and whoever does so for a worldly aim is blamed. What is condemned is tatabbu‘ ar-rukhas (تَتَبُّع الرُّخَص), collecting the most convenient opinion from each school out of desire. Sulayman at-Taymi (may Allah have mercy on him), one of the Tabi‘in, said that if you take the concession of every scholar, all evil gathers in you, and Ibn Abd al-Barr, who reports it in Jami‘ Bayan al-‘Ilm, adds that he knows of no disagreement on this. The touchstone is Quran 4:59 (quoted below): the dispute is referred to Allah and the Messenger, not to one’s ease."),
+            .longOnly(.markdown("**Can I take a ruling from another madhhab, or change my madhhab?**")),
+            .longOnly(.text("Yes, when it is done for the evidence or on the word of a scholar one trusts more, and not to hunt for the easiest answer. The imams’ own students did it: Abu Yusuf and Muhammad ash-Shaybani differed from Abu Hanifah in many questions, al-Muzani differed from ash-Shafi‘i, and ash-Shafi‘i revised his own madhhab when he moved to Egypt. Every school’s later scholars weighed (tarjih) between the reports from their imam and sometimes preferred another school’s view. Ibn Taymiyyah (may Allah have mercy on him) says in Majmu‘ al-Fatawa that whoever moves from one madhhab to another for a religious reason, because he finds the other closer to the Quran and Sunnah, has done well, and whoever does so for a worldly aim is blamed. What is condemned is tatabbu‘ ar-rukhas (تَتَبُّع الرُّخَص), collecting the most convenient opinion from each school out of desire. Sulayman at-Taymi (may Allah have mercy on him), one of the Tabi‘in, said that if you take the concession of every scholar, all evil gathers in you, and Ibn Abd al-Barr, who reports it in Jami‘ Bayan al-‘Ilm, adds that he knows of no disagreement on this. The touchstone is Quran 4:59 (quoted below): the dispute is referred to Allah and the Messenger, not to one’s ease.")),
             .markdown("**What if my madhhab contradicts an authentic hadith?**"),
             .text("Then the hadith is followed, because that is exactly what the four imams commanded. Ash-Shafi‘i and Ahmad are quoted above in “Unity Through Diversity”, and Malik below; Abu Hanifah (may Allah have mercy on him) said:"),
             .quote(text: "“It is not permitted for anyone to take our opinion without knowing where we took it from” (Ibn Abd al-Barr, al-Intiqa’; Ibn al-Qayyim, I‘lam al-Muwaqqi‘in).", arabic: "لَا يَحِلُّ لِأَحَدٍ أَن يَأخُذَ بِقَولِنَا مَا لَم يَعلَم مِن أَينَ أَخَذنَاهُ", dimmed: true),
             .text("Al-Albani (may Allah have mercy on him) gathered these statements of the imams in the introduction to Sifat Salat an-Nabi, and drew the conclusion the imams themselves drew: leaving an imam’s opinion for the authentic hadith is obedience to the imam, not disloyalty to him. Allah says:"),
             .ayah("24:63", words: 15...26),
-            .text("Two cautions keep this honest. First, a hadith may be authentic yet abrogated, restricted by another text, or understood by the Companions differently from its first appearance, so the one who acts on it must be able to verify the chain, the abrogation, and the meaning; a layman who meets such a hadith asks a scholar rather than ruling alone. Second, no scholar may set aside an authentic, unabrogated hadith merely because his imam did not act on it, for the imam had an excuse (the next question) and he does not."),
-            .markdown("**Why do the scholars differ, if the Quran and Sunnah are one?**"),
-            .text("Ibn Taymiyyah (may Allah have mercy on him) answers this in Raf‘ al-Malam ‘an al-A’immah al-A‘lam, beginning with a principle:"),
-            .quote(text: "“There is not one of the imams accepted by the ummah with general acceptance who deliberately opposes the Messenger of Allah (peace be upon him) in anything of his Sunnah, small or great, for they are agreed with certainty upon the obligation of following the Messenger” (Ibn Taymiyyah, Raf‘ al-Malam ‘an al-A’immah al-A‘lam).", arabic: "لَيسَ أَحَدٌ مِنَ الأَئِمَّةِ المَقبُولِينَ عِندَ الأُمَّةِ قَبُولًا عَامًّا يَتَعَمَّدُ مُخَالَفَةَ رَسُولِ اللَّهِ صَلَّى اللَّهُ عَلَيهِ وَسَلَّمَ فِي شَيءٍ مِن سُنَّتِهِ دَقِيقٍ وَلَا جَلِيلٍ، فَإِنَّهُم مُتَّفِقُونَ اتِّفَاقًا يَقِينِيًّا عَلَى وُجُوبِ اتِّبَاعِ الرَّسُولِ", dimmed: true),
-            .text("He then gathers the excuses under three heads: the imam did not believe the Prophet said it (the hadith did not reach him, or reached him through a chain he did not trust), he did not believe the text meant that case (a word with more than one meaning, a general text he thought restricted, a report he understood differently), or he believed the ruling abrogated or outweighed by stronger evidence. Every one of these befell the Companions themselves. When Abu Musa told Umar (may Allah be pleased with them) that the Prophet had commanded whoever asks permission three times without an answer to go back, Umar had never heard it and asked for a witness, then said:"),
-            .hadith("bukhari:2062", cite: "Sahih al-Bukhari 2062", arabic: 88...100, english: [128...149]),
-            .text("Umar likewise did not know the ruling on the Magians until the report reached him:"),
-            .hadith("bukhari:3156", cite: "Sahih al-Bukhari 3156", arabic: 59...82, english: [100...127]),
-            .text("Abrogation caused differences too: Ubayy ibn Ka‘b (may Allah be pleased with him) explained that the early fatwa (فَتوَى, from ف-ت-ي, a considered answer given to a questioner) that a bath is required only when there is emission was a concession from the beginning of Islam which the Prophet later replaced with the command to bathe (Sunan Abi Dawud 215; graded sahih by al-Albani), so whoever knew only the first ruling gave fatwa by it. And understanding differed: Ibn Umar reported that the dead are punished by their family’s weeping, while Aisha (may Allah be pleased with them) held that the report had been misunderstood, for what the Prophet said was that the deceased is punished for his own sin while his family weeps over him (Sahih al-Bukhari 3978). If Umar could miss a hadith and Ibn Umar could misunderstand one, an imam in Kufa or Madinah two generations later could do so more easily. Allah Himself records two prophets judging one case differently, and praises both:"),
-            .ayah("21:78-79", words: 0...19),
-            .text("Add that Arabic words can carry more than one meaning, that texts can appear to conflict, and that the Companions differed in fiqh in the Prophet’s presence and he approved both sides (the Banu Qurayzah report quoted above), and the differences of the madhahib become what they are: sincere ijtihad over probable evidences, rewarded whether it hits or misses."),
-            .markdown("**Is “the differing of my ummah is a mercy” a hadith?**"),
-            .text("No. It has no chain of narration. Al-Albani (may Allah have mercy on him) rules that it has no basis (Silsilat al-Ahadith ad-Da‘ifah 57), citing the Shafi‘i imam as-Subki, who could find for it no chain at all, sound, weak, or fabricated. Long before them Ibn Hazm (may Allah have mercy on him) rejected its very meaning:"),
-            .quote(text: "“If differing were a mercy, then agreement would be a punishment” (Ibn Hazm, al-Ihkam fi Usul al-Ahkam).", arabic: "لَو كَانَ الِاختِلَافُ رَحمَةً لَكَانَ الِاتِّفَاقُ سَخَطًا", dimmed: true),
-            .text("The Quran describes those who are shown mercy as the ones who do not differ:"),
-            .ayah("11:118-119"),
-            .text("Ibn Kathir (may Allah have mercy on him) explains in his Tafsir that those given mercy are the followers of the messengers, who hold to what Allah revealed and are not divided over it. The Prophet (peace be upon him) warned:"),
-            .hadith("bukhari:7288", cite: "Sahih al-Bukhari 7288", arabic: 24...32, english: [11...28]),
-            .text("Ibn Mas‘ud (may Allah be pleased with him) showed how the Companions handled a difference in fiqh: he disapproved of Uthman completing the prayer at Mina, yet prayed the full four behind him rather than split the congregation:"),
-            .hadith("abudawud:1960", cite: "Sunan Abi Dawud 1960; graded sahih by al-Albani", arabic: 86...102, english: [95...114]),
-            .text("What is true is narrower: sincere ijtihad that misses the mark is excused and even rewarded (Sahih al-Bukhari 7352, quoted below), and the range of the Companions’ ijtihad left the ummah room; it is reported from Umar ibn Abd al-Aziz that he would not have loved the Companions to have agreed on everything, since their differing left a concession (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm). The mercy is in the excuse and the ease, not in the differing itself, and what Allah commands is unity (the next question)."),
-            .markdown("**Is following a madhhab a bid‘ah?**"),
-            .text("No. Bid‘ah is introducing into the religion an act of worship that has no basis in it. The Prophet (peace be upon him) said:"),
-            .hadith("bukhari:2697", cite: "Sahih al-Bukhari 2697, Sahih Muslim 1718", arabic: 29...38, english: [4...22]),
-            .text("A madhhab introduces no worship; it is a method of understanding the texts, taught by imams whom the whole of Ahl as-Sunnah honours, and adh-Dhahabi (may Allah have mercy on him) praises each of the four at length in Siyar A‘lam an-Nubala’. What is blameworthy is ta‘assub (تَعَصُّب), fanatical partisanship: treating the imam as infallible, rejecting an authentic hadith for his sake, or making agreement with him the basis of love and enmity among the Muslims. When partisanship goes so far that a scholar’s word overrides the text of Allah and His Messenger, it approaches what the Quran condemned in the People of the Book:"),
-            .ayah("9:31", words: 0...6),
-            .text("Ibn Kathir (may Allah have mercy on him) explains in his Tafsir that they did not pray to them; they obeyed them in making lawful what Allah had forbidden and forbidding what He had allowed. Ibn Taymiyyah (may Allah have mercy on him) writes in Majmu‘ al-Fatawa that whoever sets up any person other than the Messenger and gives loyalty and enmity on the basis of agreeing with him is among those who divided their religion into sects. The Prophet (peace be upon him) told us what to hold to when differences multiply:"),
-            .hadith("tirmidhi:2676", cite: "Sunan al-Tirmidhi 2676; graded sahih by al-Albani", arabic: 69...93, english: [68...114]),
-            .text("And Allah says:"),
-            .ayah("3:103", words: 0...5),
-            .ayah("6:159"),
-            .markdown("**Did the Salafi scholars follow madhhabs?**"),
-            .text("Yes. Ibn Taymiyyah, Ibn al-Qayyim, Ibn Qudamah, and Ibn Rajab were Hanbalis; Ibn Kathir and adh-Dhahabi were Shafi‘is (as were an-Nawawi and Ibn Hajar, who were imams of the Sunnah in fiqh and hadith though they took Ash‘ari positions on some attributes); Ibn Abd al-Barr was a Maliki; at-Tahawi was a Hanafi. Ibn Baz and Ibn al-Uthaymin (may Allah have mercy on them) were trained in Hanbali fiqh and taught from its texts (Ibn al-Uthaymin’s ash-Sharh al-Mumti‘ is a commentary on the Hanbali manual Zad al-Mustaqni‘), and al-Albani (may Allah have mercy on him), raised in a Hanafi household, devoted himself to hadith and weighed the evidence without binding himself to a school. What unites them is the rule, not the label: the madhhab is a ladder to the evidence, never a veil over it. Ibn Taymiyyah left the Hanbali position where he found the evidence against it, Ibn al-Uthaymin’s commentaries repeatedly prefer another school’s view over his own, and al-Albani cited the imams’ own words as his warrant. At the same time, Ibn Rajab (may Allah have mercy on him) wrote a treatise defending adherence to the four schools by those who lack the tools of ijtihad, because unqualified people claiming to derive rulings for themselves harm the religion. Both are the way of the Salaf: the qualified follow the evidence, the untrained follow the qualified, and all honour the imams. Allah praised:"),
-            .ayah("9:100", words: 0...12),
-            .markdown("**Is the Hanbali madhhab “the Salafi madhhab”?**"),
-            .text("No. Salafiyyah is a creed and a methodology (following the Quran and Sunnah as the Companions understood them), not a school of fiqh. All four imams were Salafi in creed, and a Salafi may be Hanafi, Maliki, Shafi‘i, or Hanbali in fiqh, or may follow the evidence across the schools if he is qualified. The Hanbali school is associated with Ahl al-Hadith because Imam Ahmad was their imam and because Ibn Taymiyyah and his students came from it, but the creed of the Salaf is the creed of Abu Hanifah, Malik, and ash-Shafi‘i just as much as it is the creed of Ahmad (see “Salafiyyah” and “The Madhahib of Aqeedah”)."),
-            .markdown("**Can a layman weigh the evidence himself?**"),
-            .text("Not in the sense of deriving rulings, because that requires tools he does not have: Arabic, the grading of chains, knowledge of abrogation, of the general and the specific, and of what the Companions did. The Quran assigns derivation (istinbat) to a particular group:"),
-            .ayah("4:83", words: 9...20),
-            .ayah("21:7"),
-            .ayah("39:9", words: 12...23),
-            .text("The Prophet (peace be upon him) warned of what happens when the untrained give rulings:"),
-            .hadith("bukhari:100", cite: "Sahih al-Bukhari 100", arabic: 32...60, english: [6...71]),
-            .text("Ibn al-Qayyim (may Allah have mercy on him) explains in I‘lam al-Muwaqqi‘in that the layman’s asking a mufti is the very thing Allah commanded, not the blameworthy taqlid (تَقلِيد, from ق-ل-د, to put a collar on an animal: following a man without knowing his evidence). What the layman can and must weigh is the mufti: he chooses the most knowledgeable and most God-fearing scholar he can reach, as he would choose a doctor, and when two trustworthy scholars differ he follows the one whose knowledge and piety he trusts more, or the one who shows him the evidence, without following his own desire. Learning the evidence for what one practises is praiseworthy, and a layman who sees a clear authentic hadith should ask about it rather than ignore it; but being unable to derive rulings is not a deficiency in him, it is the division of labour Allah set out in Quran 9:122 (quoted below), and Allah reminds every scholar that:"),
-            .ayah("12:76", words: 28...32),
-            .markdown("**Did the four imams differ in creed?**"),
-            .text("No. Their differences were in fiqh; in aqeedah they held one creed, the creed of the Salaf. Abu Hanifah and his two companions affirmed the attributes of Allah as revealed, and at-Tahawi (d. 321 AH) wrote his famous creed as their creed. Malik (may Allah have mercy on him), asked how Allah rose over the Throne, answered:"),
-            .quote(text: "“The rising is not unknown, the how is not comprehended, belief in it is obligatory, and asking about it is an innovation” (al-Lalaka’i, Sharh Usul I‘tiqad Ahl as-Sunnah; al-Bayhaqi, al-Asma’ was-Sifat).", arabic: "الِاستِوَاءُ غَيرُ مَجهُولٍ، وَالكَيفُ غَيرُ مَعقُولٍ، وَالإِيمَانُ بِهِ وَاجِبٌ، وَالسُّؤَالُ عَنهُ بِدعَةٌ", dimmed: true),
-            .text("Ash-Shafi‘i (may Allah have mercy on him) said:"),
-            .quote(text: "“I believe in Allah and in what has come from Allah as Allah intended it, and I believe in the Messenger of Allah and in what has come from the Messenger of Allah as the Messenger of Allah intended it” (Ibn Qudamah, Lum‘at al-I‘tiqad).", arabic: "آمَنتُ بِاللَّهِ وَبِمَا جَاءَ عَنِ اللَّهِ عَلَى مُرَادِ اللَّهِ، وَآمَنتُ بِرَسُولِ اللَّهِ وَبِمَا جَاءَ عَن رَسُولِ اللَّهِ عَلَى مُرَادِ رَسُولِ اللَّهِ", dimmed: true),
-            .text("And Ahmad (may Allah have mercy on him) opened his Usul as-Sunnah with the words:"),
-            .quote(text: "“The foundations of the Sunnah with us are: holding fast to what the Companions of the Messenger of Allah (peace be upon him) were upon, taking them as the example, and abandoning innovations, for every innovation is misguidance” (Ahmad ibn Hanbal, Usul as-Sunnah, narrated by ‘Abdus ibn Malik al-‘Attar).", arabic: "أُصُولُ السُّنَّةِ عِندَنَا: التَّمَسُّكُ بِمَا كَانَ عَلَيهِ أَصحَابُ رَسُولِ اللَّهِ صَلَّى اللَّهُ عَلَيهِ وَسَلَّمَ، وَالِاقتِدَاءُ بِهِم، وَتَركُ البِدَعِ، وَكُلُّ بِدعَةٍ فَهِيَ ضَلَالَةٌ", dimmed: true),
-            .text("All four affirmed that the Quran is the speech of Allah, uncreated, that the believers will see their Lord in the Hereafter, that faith is speech and deed, and that the Companions are to be loved and honoured. See “The Madhahib of Aqeedah” for the fuller picture. Allah commanded:"),
-            .ayah("42:13", words: 1...23),
+            .longOnly(.text("Two cautions keep this honest. First, a hadith may be authentic yet abrogated, restricted by another text, or understood by the Companions differently from its first appearance, so the one who acts on it must be able to verify the chain, the abrogation, and the meaning; a layman who meets such a hadith asks a scholar rather than ruling alone. Second, no scholar may set aside an authentic, unabrogated hadith merely because his imam did not act on it, for the imam had an excuse (the next question) and he does not.")),
+            .shortOnly(.text("Two cautions keep this honest. First, a hadith may be authentic yet abrogated, restricted by another text, or understood by the Companions differently from its first appearance, so the one who acts on it must be able to verify the chain, the abrogation, and the meaning; a layman who meets such a hadith asks a scholar rather than ruling alone. Second, no scholar may set aside an authentic, unabrogated hadith merely because his imam did not act on it, for the imam had an excuse and he does not.")),
+            .longOnly(.markdown("**Why do the scholars differ, if the Quran and Sunnah are one?**")),
+            .longOnly(.text("Ibn Taymiyyah (may Allah have mercy on him) answers this in Raf‘ al-Malam ‘an al-A’immah al-A‘lam, beginning with a principle:")),
+            .longOnly(.quote(text: "“There is not one of the imams accepted by the ummah with general acceptance who deliberately opposes the Messenger of Allah (peace be upon him) in anything of his Sunnah, small or great, for they are agreed with certainty upon the obligation of following the Messenger” (Ibn Taymiyyah, Raf‘ al-Malam ‘an al-A’immah al-A‘lam).", arabic: "لَيسَ أَحَدٌ مِنَ الأَئِمَّةِ المَقبُولِينَ عِندَ الأُمَّةِ قَبُولًا عَامًّا يَتَعَمَّدُ مُخَالَفَةَ رَسُولِ اللَّهِ صَلَّى اللَّهُ عَلَيهِ وَسَلَّمَ فِي شَيءٍ مِن سُنَّتِهِ دَقِيقٍ وَلَا جَلِيلٍ، فَإِنَّهُم مُتَّفِقُونَ اتِّفَاقًا يَقِينِيًّا عَلَى وُجُوبِ اتِّبَاعِ الرَّسُولِ", dimmed: true)),
+            .longOnly(.text("He then gathers the excuses under three heads: the imam did not believe the Prophet said it (the hadith did not reach him, or reached him through a chain he did not trust), he did not believe the text meant that case (a word with more than one meaning, a general text he thought restricted, a report he understood differently), or he believed the ruling abrogated or outweighed by stronger evidence. Every one of these befell the Companions themselves. When Abu Musa told Umar (may Allah be pleased with them) that the Prophet had commanded whoever asks permission three times without an answer to go back, Umar had never heard it and asked for a witness, then said:")),
+            .longOnly(.hadith("bukhari:2062", cite: "Sahih al-Bukhari 2062", arabic: 88...100, english: [128...149])),
+            .longOnly(.text("Umar likewise did not know the ruling on the Magians until the report reached him:")),
+            .longOnly(.hadith("bukhari:3156", cite: "Sahih al-Bukhari 3156", arabic: 59...82, english: [100...127])),
+            .longOnly(.text("Abrogation caused differences too: Ubayy ibn Ka‘b (may Allah be pleased with him) explained that the early fatwa (فَتوَى, from ف-ت-ي, a considered answer given to a questioner) that a bath is required only when there is emission was a concession from the beginning of Islam which the Prophet later replaced with the command to bathe (Sunan Abi Dawud 215; graded sahih by al-Albani), so whoever knew only the first ruling gave fatwa by it.")),
+            .longOnly(.hadith("abudawud:215", cite: "Sunan Abi Dawud 215; graded sahih by al-Albani", arabic: 24...48, english: [0...47])),
+            .longOnly(.text("And understanding differed: Ibn Umar reported that the dead are punished by their family’s weeping, while Aisha (may Allah be pleased with them) held that the report had been misunderstood, for what the Prophet said was that the deceased is punished for his own sin while his family weeps over him (Sahih al-Bukhari 3978).")),
+            .longOnly(.hadith("bukhari:3978", cite: "Sahih al-Bukhari 3978, Sahih Muslim 932", arabic: 12...57, english: [0...58])),
+            .longOnly(.text("If Umar could miss a hadith and Ibn Umar could misunderstand one, an imam in Kufa or Madinah two generations later could do so more easily. Allah Himself records two prophets judging one case differently, and praises both:")),
+            .longOnly(.ayah("21:78-79", words: 0...19)),
+            .longOnly(.text("Add that Arabic words can carry more than one meaning, that texts can appear to conflict, and that the Companions differed in fiqh in the Prophet’s presence and he approved both sides (the Banu Qurayzah report quoted above), and the differences of the madhahib become what they are: sincere ijtihad over probable evidences, rewarded whether it hits or misses.")),
+            .longOnly(.markdown("**Is “the differing of my ummah is a mercy” a hadith?**")),
+            .longOnly(.text("No. It has no chain of narration. Al-Albani (may Allah have mercy on him) rules that it has no basis (Silsilat al-Ahadith ad-Da‘ifah 57), citing the Shafi‘i imam as-Subki, who could find for it no chain at all, sound, weak, or fabricated. Long before them Ibn Hazm (may Allah have mercy on him) rejected its very meaning:")),
+            .longOnly(.quote(text: "“If differing were a mercy, then agreement would be a punishment” (Ibn Hazm, al-Ihkam fi Usul al-Ahkam).", arabic: "لَو كَانَ الِاختِلَافُ رَحمَةً لَكَانَ الِاتِّفَاقُ سَخَطًا", dimmed: true)),
+            .longOnly(.text("The Quran describes those who are shown mercy as the ones who do not differ:")),
+            .longOnly(.ayah("11:118-119")),
+            .longOnly(.text("Ibn Kathir (may Allah have mercy on him) explains in his Tafsir that those given mercy are the followers of the messengers, who hold to what Allah revealed and are not divided over it. The Prophet (peace be upon him) warned:")),
+            .longOnly(.hadith("bukhari:7288", cite: "Sahih al-Bukhari 7288", arabic: 24...32, english: [11...28])),
+            .longOnly(.text("Ibn Mas‘ud (may Allah be pleased with him) showed how the Companions handled a difference in fiqh: he disapproved of Uthman completing the prayer at Mina, yet prayed the full four behind him rather than split the congregation:")),
+            .longOnly(.hadith("abudawud:1960", cite: "Sunan Abi Dawud 1960; graded sahih by al-Albani", arabic: 86...102, english: [95...114])),
+            .longOnly(.text("What is true is narrower: sincere ijtihad that misses the mark is excused and even rewarded (Sahih al-Bukhari 7352, quoted below), and the range of the Companions’ ijtihad left the ummah room; it is reported from Umar ibn Abd al-Aziz that he would not have loved the Companions to have agreed on everything, since their differing left a concession (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm). The mercy is in the excuse and the ease, not in the differing itself, and what Allah commands is unity (the next question).")),
+            .longOnly(.markdown("**Is following a madhhab a bid‘ah?**")),
+            .longOnly(.text("No. Bid‘ah is introducing into the religion an act of worship that has no basis in it. The Prophet (peace be upon him) said:")),
+            .longOnly(.hadith("bukhari:2697", cite: "Sahih al-Bukhari 2697, Sahih Muslim 1718", arabic: 29...38, english: [4...22])),
+            .longOnly(.text("A madhhab introduces no worship; it is a method of understanding the texts, taught by imams whom the whole of Ahl as-Sunnah honours, and adh-Dhahabi (may Allah have mercy on him) praises each of the four at length in Siyar A‘lam an-Nubala’. What is blameworthy is ta‘assub (تَعَصُّب), fanatical partisanship: treating the imam as infallible, rejecting an authentic hadith for his sake, or making agreement with him the basis of love and enmity among the Muslims. When partisanship goes so far that a scholar’s word overrides the text of Allah and His Messenger, it approaches what the Quran condemned in the People of the Book:")),
+            .longOnly(.ayah("9:31", words: 0...6)),
+            .longOnly(.text("Ibn Kathir (may Allah have mercy on him) explains in his Tafsir that they did not pray to them; they obeyed them in making lawful what Allah had forbidden and forbidding what He had allowed. Ibn Taymiyyah (may Allah have mercy on him) writes in Majmu‘ al-Fatawa that whoever sets up any person other than the Messenger and gives loyalty and enmity on the basis of agreeing with him is among those who divided their religion into sects. The Prophet (peace be upon him) told us what to hold to when differences multiply:")),
+            .longOnly(.hadith("tirmidhi:2676", cite: "Sunan al-Tirmidhi 2676; graded sahih by al-Albani", arabic: 69...93, english: [68...114])),
+            .longOnly(.text("And Allah says:")),
+            .longOnly(.ayah("3:103", words: 0...5)),
+            .longOnly(.ayah("6:159")),
+            .longOnly(.markdown("**Did the Salafi scholars follow madhhabs?**")),
+            .longOnly(.text("Yes. Ibn Taymiyyah, Ibn al-Qayyim, Ibn Qudamah, and Ibn Rajab were Hanbalis; Ibn Kathir and adh-Dhahabi were Shafi‘is (as were an-Nawawi and Ibn Hajar, who were imams of the Sunnah in fiqh and hadith though they took Ash‘ari positions on some attributes); Ibn Abd al-Barr was a Maliki; at-Tahawi was a Hanafi. Ibn Baz and Ibn al-Uthaymin (may Allah have mercy on them) were trained in Hanbali fiqh and taught from its texts (Ibn al-Uthaymin’s ash-Sharh al-Mumti‘ is a commentary on the Hanbali manual Zad al-Mustaqni‘), and al-Albani (may Allah have mercy on him), raised in a Hanafi household, devoted himself to hadith and weighed the evidence without binding himself to a school. What unites them is the rule, not the label: the madhhab is a ladder to the evidence, never a veil over it. Ibn Taymiyyah left the Hanbali position where he found the evidence against it, Ibn al-Uthaymin’s commentaries repeatedly prefer another school’s view over his own, and al-Albani cited the imams’ own words as his warrant. At the same time, Ibn Rajab (may Allah have mercy on him) wrote a treatise defending adherence to the four schools by those who lack the tools of ijtihad, because unqualified people claiming to derive rulings for themselves harm the religion. Both are the way of the Salaf: the qualified follow the evidence, the untrained follow the qualified, and all honour the imams. Allah praised:")),
+            .longOnly(.ayah("9:100", words: 0...12)),
+            .longOnly(.markdown("**Is the Hanbali madhhab “the Salafi madhhab”?**")),
+            .longOnly(.text("No. Salafiyyah is a creed and a methodology (following the Quran and Sunnah as the Companions understood them), not a school of fiqh. All four imams were Salafi in creed, and a Salafi may be Hanafi, Maliki, Shafi‘i, or Hanbali in fiqh, or may follow the evidence across the schools if he is qualified. The Hanbali school is associated with Ahl al-Hadith because Imam Ahmad was their imam and because Ibn Taymiyyah and his students came from it, but the creed of the Salaf is the creed of Abu Hanifah, Malik, and ash-Shafi‘i just as much as it is the creed of Ahmad (see “Salafiyyah” and “The Madhahib of Aqeedah”).")),
+            .longOnly(.markdown("**Can a layman weigh the evidence himself?**")),
+            .longOnly(.text("Not in the sense of deriving rulings, because that requires tools he does not have: Arabic, the grading of chains, knowledge of abrogation, of the general and the specific, and of what the Companions did. The Quran assigns derivation (istinbat) to a particular group:")),
+            .longOnly(.ayah("4:83", words: 9...20)),
+            .longOnly(.ayah("21:7")),
+            .longOnly(.ayah("39:9", words: 12...23)),
+            .longOnly(.text("The Prophet (peace be upon him) warned of what happens when the untrained give rulings:")),
+            .longOnly(.hadith("bukhari:100", cite: "Sahih al-Bukhari 100", arabic: 32...60, english: [6...71])),
+            .longOnly(.text("Ibn al-Qayyim (may Allah have mercy on him) explains in I‘lam al-Muwaqqi‘in that the layman’s asking a mufti is the very thing Allah commanded, not the blameworthy taqlid (تَقلِيد, from ق-ل-د, to put a collar on an animal: following a man without knowing his evidence). What the layman can and must weigh is the mufti: he chooses the most knowledgeable and most God-fearing scholar he can reach, as he would choose a doctor, and when two trustworthy scholars differ he follows the one whose knowledge and piety he trusts more, or the one who shows him the evidence, without following his own desire. Learning the evidence for what one practises is praiseworthy, and a layman who sees a clear authentic hadith should ask about it rather than ignore it; but being unable to derive rulings is not a deficiency in him, it is the division of labour Allah set out in Quran 9:122 (quoted below), and Allah reminds every scholar that:")),
+            .longOnly(.ayah("12:76", words: 28...32)),
+            .longOnly(.markdown("**Did the four imams differ in creed?**")),
+            .longOnly(.text("No. Their differences were in fiqh; in aqeedah they held one creed, the creed of the Salaf. Abu Hanifah and his two companions affirmed the attributes of Allah as revealed, and at-Tahawi (d. 321 AH) wrote his famous creed as their creed. Malik (may Allah have mercy on him), asked how Allah rose over the Throne, answered:")),
+            .longOnly(.quote(text: "“The rising is not unknown, the how is not comprehended, belief in it is obligatory, and asking about it is an innovation” (al-Lalaka’i, Sharh Usul I‘tiqad Ahl as-Sunnah; al-Bayhaqi, al-Asma’ was-Sifat).", arabic: "الِاستِوَاءُ غَيرُ مَجهُولٍ، وَالكَيفُ غَيرُ مَعقُولٍ، وَالإِيمَانُ بِهِ وَاجِبٌ، وَالسُّؤَالُ عَنهُ بِدعَةٌ", dimmed: true)),
+            .longOnly(.text("Ash-Shafi‘i (may Allah have mercy on him) is reported to have said:")),
+            .longOnly(.quote(text: "“I believe in Allah and in what has come from Allah as Allah intended it, and I believe in the Messenger of Allah and in what has come from the Messenger of Allah as the Messenger of Allah intended it” (Ibn Qudamah, Lum‘at al-I‘tiqad, without a chain; Ibn Taymiyyah: “what ash-Shafi‘i said is true,” Majmu' al-Fatawa 6/354).", arabic: "آمَنتُ بِاللَّهِ وَبِمَا جَاءَ عَنِ اللَّهِ عَلَى مُرَادِ اللَّهِ، وَآمَنتُ بِرَسُولِ اللَّهِ وَبِمَا جَاءَ عَن رَسُولِ اللَّهِ عَلَى مُرَادِ رَسُولِ اللَّهِ", dimmed: true)),
+            .longOnly(.text("And Ahmad (may Allah have mercy on him) opened his Usul as-Sunnah with the words:")),
+            .longOnly(.quote(text: "“The foundations of the Sunnah with us are: holding fast to what the Companions of the Messenger of Allah (peace be upon him) were upon, taking them as the example, and abandoning innovations, for every innovation is misguidance” (Ahmad ibn Hanbal, Usul as-Sunnah, narrated by ‘Abdus ibn Malik al-‘Attar).", arabic: "أُصُولُ السُّنَّةِ عِندَنَا: التَّمَسُّكُ بِمَا كَانَ عَلَيهِ أَصحَابُ رَسُولِ اللَّهِ صَلَّى اللَّهُ عَلَيهِ وَسَلَّمَ، وَالِاقتِدَاءُ بِهِم، وَتَركُ البِدَعِ، وَكُلُّ بِدعَةٍ فَهِيَ ضَلَالَةٌ", dimmed: true)),
+            .longOnly(.text("All four affirmed that the Quran is the speech of Allah, uncreated, that the believers will see their Lord in the Hereafter, that faith is speech and deed, and that the Companions are to be loved and honoured. See “The Madhahib of Aqeedah” for the fuller picture. Allah commanded:")),
+            .longOnly(.ayah("42:13", words: 1...23)),
             .markdown("**Which madhhab is the best?**"),
             .text("On any given question, the best opinion is the one with the strongest evidence, whichever school holds it. No imam is followed absolutely; only the Prophet (peace be upon him) is:"),
             .ayah("4:65"),
             .ayah("33:36", words: 0...15),
-            .text("The hadith of the two rewards (Sahih al-Bukhari 7352, quoted below) proves that even the best mujtahid can err, so no school can be right in everything. Imam Malik (may Allah have mercy on him) said of himself:"),
+            .longOnly(.text("The hadith of the two rewards (Sahih al-Bukhari 7352, quoted below) proves that even the best mujtahid can err, so no school can be right in everything. Imam Malik (may Allah have mercy on him) said of himself:")),
+            .shortOnly(.text("Even the best mujtahid can err, so no school can be right in everything. Imam Malik (may Allah have mercy on him) said of himself:")),
             .quote(text: "“I am only a man; I err and I am right. So look into my opinion: whatever agrees with the Book and the Sunnah, take it, and whatever does not agree with the Book and the Sunnah, leave it” (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm).", arabic: "إِنَّمَا أَنَا بَشَرٌ أُخطِئُ وَأُصِيبُ، فَانظُرُوا فِي رَأيِي، فَكُلُّ مَا وَافَقَ الكِتَابَ وَالسُّنَّةَ فَخُذُوهُ، وَكُلُّ مَا لَم يُوَافِقِ الكِتَابَ وَالسُّنَّةَ فَاترُكُوهُ", dimmed: true),
             .text("The practical answer is to learn from the trustworthy scholars near you, in whichever of the four schools they teach, to learn the evidence for what you practise, and to put the authentic hadith first, as that school’s own imam commanded."),
-            .markdown("**What is the ruling on ijma‘ (إِجمَاع, from ج-م-ع, to gather: the agreement of the scholars), and can the ummah agree on an error?**"),
-            .text("Ijma‘ is a binding proof, and the ummah as a whole is protected from agreeing on misguidance. Allah says:"),
-            .ayah("4:115"),
-            .text("Ibn Kathir (may Allah have mercy on him) records in his Tafsir that Imam ash-Shafi‘i took this ayah as the proof that ijma‘ is binding and that opposing it is forbidden. Allah also says:"),
-            .ayah("2:143", words: 0...11),
-            .text("A community whose testimony Allah accepts over the nations cannot unite on falsehood. The Prophet (peace be upon him) also promised that truth will never be without its bearers:"),
-            .hadith("muslim:1920", cite: "Sahih Muslim 1920; Sahih al-Bukhari 3641 similar", arabic: 37...54, english: [0...50]),
-            .text("So the whole ummah can never unite on an error, because a group upon the truth always remains. The wording “my ummah will not unite upon misguidance” is reported through several chains that the hadith scholars grade individually; its meaning rests securely on the ayat and reports above. Two limits keep ijma‘ sound: it must be real, which is why Imam Ahmad warned against loose claims of it (quoted below), and the ijma‘ known with certainty is that of the Companions and the Salaf; and, as Ibn Taymiyyah notes in Majmu‘ al-Fatawa, every genuine ijma‘ rests on a text, so consensus never opposes the Quran and Sunnah but confirms them."),
-            .markdown("**Is the door of ijtihad closed?**"),
-            .text("No. Some later scholars claimed that no mujtahid could arise after the early centuries, but Ibn Taymiyyah, Ibn al-Qayyim, as-Suyuti, and ash-Shawkani (may Allah have mercy on them) rejected the claim; as-Suyuti wrote a treatise arguing that ijtihad is an obligation of the ummah in every age. Ibn Taymiyyah adds that ijtihad is divisible: a scholar may be qualified to weigh the evidence in one field while following others elsewhere. What is closed is ijtihad without its tools, which the Prophet (peace be upon him) described as ignorant heads giving verdicts without knowledge (Sahih al-Bukhari 100, quoted above). The reward of the qualified mujtahid (Sahih al-Bukhari 7352, quoted below) and the command that a group in every community obtain understanding in the religion (Quran 9:122, quoted below) both assume that the effort continues until the Hour."),
+            .longOnly(.markdown("**What is the ruling on ijma‘ (إِجمَاع, from ج-م-ع, to gather: the agreement of the scholars), and can the ummah agree on an error?**")),
+            .longOnly(.text("Ijma‘ is a binding proof, and the ummah as a whole is protected from agreeing on misguidance. Allah says:")),
+            .longOnly(.ayah("4:115")),
+            .longOnly(.text("Ibn Kathir (may Allah have mercy on him) records in his Tafsir that Imam ash-Shafi‘i took this ayah as the proof that ijma‘ is binding and that opposing it is forbidden. Allah also says:")),
+            .longOnly(.ayah("2:143", words: 0...11)),
+            .longOnly(.text("A community whose testimony Allah accepts over the nations cannot unite on falsehood. The Prophet (peace be upon him) also promised that truth will never be without its bearers:")),
+            .longOnly(.hadith("muslim:1920", cite: "Sahih Muslim 1920; Sahih al-Bukhari 3641 similar", arabic: 37...54, english: [0...50])),
+            .longOnly(.text("So the whole ummah can never unite on an error, because a group upon the truth always remains. The wording “my ummah will not unite upon misguidance” is reported through several chains that the hadith scholars grade individually; its meaning rests securely on the ayat and reports above. Two limits keep ijma‘ sound: it must be real, which is why Imam Ahmad warned against loose claims of it (quoted below), and the ijma‘ known with certainty is that of the Companions and the Salaf; and, as Ibn Taymiyyah notes in Majmu‘ al-Fatawa, every genuine ijma‘ rests on a text, so consensus never opposes the Quran and Sunnah but confirms them.")),
+            .longOnly(.markdown("**Is the door of ijtihad closed?**")),
+            .longOnly(.text("No. Some later scholars claimed that no mujtahid could arise after the early centuries, but Ibn Taymiyyah, Ibn al-Qayyim, as-Suyuti, and ash-Shawkani (may Allah have mercy on them) rejected the claim; as-Suyuti wrote a treatise arguing that ijtihad is an obligation of the ummah in every age. Ibn Taymiyyah adds that ijtihad is divisible: a scholar may be qualified to weigh the evidence in one field while following others elsewhere. What is closed is ijtihad without its tools, which the Prophet (peace be upon him) described as ignorant heads giving verdicts without knowledge (Sahih al-Bukhari 100, quoted above). The reward of the qualified mujtahid (Sahih al-Bukhari 7352, quoted below) and the command that a group in every community obtain understanding in the religion (Quran 9:122, quoted below) both assume that the effort continues until the Hour.")),
         ]),
         ArticleSection("IN SUMMARY", [
             .text("Following a qualified school connects a Muslim to generations of disciplined scholarship; their differences are sincere ijtihad that Allah rewards, all four imams held one creed, and all four schools are within Ahl as-Sunnah."),
         ]),
-        ArticleSection("KEY TERMS", [
-            .markdown("**Fiqh (فِقه)**: “deep understanding,” from the root ف-ق-ه, to grasp the meaning of a thing beneath its surface; the Quran uses the verb when Musa asks that the people “may understand my speech” (Quran 20:28). In the Shari‘ah, fiqh is the knowledge of the practical rulings of Islam (how to purify oneself, pray, fast, trade, marry, and inherit) drawn from their detailed evidences. The Prophet (peace be upon him) tied this understanding to Allah wanting good for a person (Sahih al-Bukhari 71, quoted above), and the Quran made it the purpose of setting out to seek knowledge:"),
+        ArticleSection("KEY TERMS", only: .long, [
+            .markdown("**Fiqh (فِقه)**: “deep understanding,” from the root ف-ق-ه, to grasp the meaning of a thing beneath its surface; the Quran uses the verb when Musa asks that the people “may understand my speech” (Quran 20:28)."),
+            .ayah("20:28"),
+            .markdown("In the Shari‘ah, fiqh is the knowledge of the practical rulings of Islam (how to purify oneself, pray, fast, trade, marry, and inherit) drawn from their detailed evidences. The Prophet (peace be upon him) tied this understanding to Allah wanting good for a person (Sahih al-Bukhari 71, quoted above), and the Quran made it the purpose of setting out to seek knowledge:"),
             .ayah("9:122", words: 6...20),
             .markdown("**Faqih (فَقِيه)**, plural **fuqaha (فُقَهَاء)**: one who possesses fiqh, a jurist. The word is about understanding, not memory alone. The Prophet (peace be upon him) prayed for Ibn Abbas (may Allah be pleased with them) with the verb of this very word, allahumma faqqihhu fid-din:"),
             .hadith("bukhari:143", cite: "Sahih al-Bukhari 143", arabic: 42...45, english: [27...38]),
@@ -2771,7 +3541,9 @@ struct MadhabView: View {
             .text("The Salaf added that fiqh without fear of Allah is not fiqh. When someone objected to al-Hasan al-Basri (may Allah have mercy on him), “The fuqaha do not say that,” he replied:"),
             .hadith("darimi:297", cite: "Sunan al-Darimi 297", arabic: 37...57, text: "“Woe to you! Have you ever seen a faqih? The faqih is only the one who renounces this world, desires the Hereafter, has insight into the affair of his religion, and is constant in the worship of his Lord”"),
             .markdown("**Madhhab (مَذهَب)**, plural **madhahib (مَذَاهِب)**: from ذَهَبَ (dhahaba), “he went”; literally the way one goes, or the place one goes to. In fiqh it is the method an imam used to derive rulings, together with the body of rulings that his students preserved, refined, and passed on. A madhhab is a way to the Quran and Sunnah, not a source alongside them, and the imams themselves said so (see “Unity Through Diversity” above)."),
-            .markdown("**Shari‘ah (شَرِيعَة)**: from ش-ر-ع, the open path that leads down to water; the whole law that Allah revealed, which is why He says of the nations, “To each of you We prescribed a law and a method” (Quran 5:48). The Shari‘ah is one and infallible, because it is from Allah; fiqh is the scholars’ understanding of it, and a scholar can be right or mistaken. Keeping the two apart explains how the schools can differ while the religion stays one:"),
+            .markdown("**Shari‘ah (شَرِيعَة)**: from ش-ر-ع, the open path that leads down to water; the whole law that Allah revealed, which is why He says of the nations, “To each of you We prescribed a law and a method” (Quran 5:48)."),
+            .ayah("5:48", words: 24...28),
+            .markdown("The Shari‘ah is one and infallible, because it is from Allah; fiqh is the scholars’ understanding of it, and a scholar can be right or mistaken. Keeping the two apart explains how the schools can differ while the religion stays one:"),
             .ayah("45:18"),
             .markdown("**Usul al-fiqh (أُصُول الفِقه)**: “the roots of fiqh,” usul being the plural of asl (أَصل), a root or foundation. It is the science of the sources of the law and of the rules for deriving rulings from them: the Quran, the Sunnah, consensus, and analogy, together with the study of commands and prohibitions, the general and the specific, and the abrogating and the abrogated. Imam ash-Shafi‘i’s ar-Risalah (الرِّسَالَة) is the earliest book on it that has reached us. Scholars of usul point to one ayah that gathers the sources in order: obedience to Allah (the Quran), obedience to the Messenger (the Sunnah), the people of authority (whose agreement is consensus), and the referring of new disputes back to the two revelations (analogy):"),
             .ayah("4:59", words: 0...9),
@@ -2801,7 +3573,9 @@ struct MadhabView: View {
             .ayah("4:176", words: 0...5),
             .text("Giving fatwa without knowledge is a grave sin. The Prophet (peace be upon him) said:"),
             .hadith("ibnmajah:53", cite: "Sunan Ibn Majah 53; graded hasan by al-Albani", arabic: 44...53, english: [6...27]),
-            .markdown("**The five rulings (الأَحكَام الخَمسَة)**: every act falls under one of five. **Fard (فَرض)** or **wajib (وَاجِب)**: obligatory. Fard is from ف-ر-ض, to cut or fix definitively (Allah calls the shares of inheritance “an obligation [imposed] by Allah,” Quran 4:11), and wajib is from و-ج-ب, to be binding. Most scholars use the two as synonyms; the Hanafis reserve fard for what is established by definitive proof and wajib for what is established by probable proof. One is rewarded for doing it and punished for leaving it. **Mustahabb (مُستَحَبّ)**, also called sunnah or **mandub (مَندُوب)**: recommended, from ح-ب-ب, to love; rewarded if done, not punished if left. **Mubah (مُبَاح)**: permitted, from ب-و-ح, to be open; neither reward nor punishment in itself. **Makruh (مَكرُوه)**: disliked, from ك-ر-ه, to hate; rewarded for leaving it, not punished for doing it. **Haram (حَرَام)**: forbidden, from ح-ر-م, to be inviolable; punished for doing it and rewarded for leaving it out of obedience. Only Allah assigns these categories:"),
+            .markdown("**The five rulings (الأَحكَام الخَمسَة)**: every act falls under one of five. **Fard (فَرض)** or **wajib (وَاجِب)**: obligatory. Fard is from ف-ر-ض, to cut or fix definitively (Allah calls the shares of inheritance “an obligation [imposed] by Allah,” Quran 4:11), and wajib is from و-ج-ب, to be binding."),
+            .ayah("4:11", words: 63...65),
+            .markdown("Most scholars use the two as synonyms; the Hanafis reserve fard for what is established by definitive proof and wajib for what is established by probable proof. One is rewarded for doing it and punished for leaving it. **Mustahabb (مُستَحَبّ)**, also called sunnah or **mandub (مَندُوب)**: recommended, from ح-ب-ب, to love; rewarded if done, not punished if left. **Mubah (مُبَاح)**: permitted, from ب-و-ح, to be open; neither reward nor punishment in itself. **Makruh (مَكرُوه)**: disliked, from ك-ر-ه, to hate; rewarded for leaving it, not punished for doing it. **Haram (حَرَام)**: forbidden, from ح-ر-م, to be inviolable; punished for doing it and rewarded for leaving it out of obedience. Only Allah assigns these categories:"),
             .ayah("16:116", words: 0...13),
             .markdown("**Halal (حَلَال)** and **haram (حَرَام)**: halal is from ح-ل-ل, to untie or release, hence what is permitted; haram is what is forbidden. Between the two lie doubtful matters, and piety is to keep clear of them. The Prophet (peace be upon him) said:"),
             .hadith("bukhari:52", cite: "Sahih al-Bukhari 52, Sahih Muslim 1599", arabic: 23...39, english: [6...45]),
@@ -2824,6 +3598,8 @@ struct AhlulBaytView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: the Ahlul Bayt are the family of the Prophet; loving, honoring, and upholding their rights is part of the religion.")
                 }
@@ -2838,73 +3614,113 @@ struct AhlulBaytView: View {
                     ArticleParagraph(verbatim: "This is one continuous passage. It is essential to read the verses immediately before and after it to see who is being addressed.")
                 }
 
-                Section(header: ArticleHeader("THE WIVES ARE PART OF THE AHLUL BAYT")) {
-                    ArticleParagraph(verbatim: "The verse of purification (33:33) sits in the middle of a passage directed to the Prophet’s wives (may Allah be pleased with them). The address begins:")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("THE WIVES ARE PART OF THE AHLUL BAYT")) {
+                        ArticleParagraph(verbatim: "The verse of purification (33:33) sits in the middle of a passage directed to the Prophet’s wives (may Allah be pleased with them). The address begins:")
 
-                    ScriptureQuote(quran: "33:32", words: 0...10)
+                        ScriptureQuote(quran: "33:32", words: 0...10)
 
-                    ScriptureQuote(quran: "33:33", words: 15...24)
+                        ArticleParagraph(articleMarkdown: "The phrase “O people of the household” is therefore addressed, first and foremost, to the wives of the Prophet (peace be upon him), the **Mothers of the Believers (أُمَّهَاتُ المُؤمِنِين)**.")
+                    }
 
-                    ScriptureQuote(quran: "33:34")
+                    Section(header: ArticleHeader("THE FAMILY OF THE CLOAK")) {
+                        ArticleParagraph(articleMarkdown: "The Ahlul Bayt also includes the Prophet’s daughter **Fatimah**, his cousin and son-in-law **Ali**, and their sons **al-Hasan** and **al-Husayn** (may Allah be pleased with them all).")
 
-                    ArticleParagraph(articleMarkdown: "The phrase “O people of the household” is therefore addressed, first and foremost, to the wives of the Prophet (peace be upon him), the **Mothers of the Believers (أُمَّهَاتُ المُؤمِنِين)**, whom Allah placed in the position of mothers to every believer (Quran 33:6).")
+                        ArticleParagraph(verbatim: "Aisha (may Allah be pleased with her) narrated:")
+                        ScriptureQuote(hadith: "muslim:2424", cite: "Sahih Muslim 2424", arabic: 35...78, english: 0...19)
 
-                    ArticleParagraph(verbatim: "Allah also called the wife of Ibrahim (peace be upon him) part of the “people of the house” using the very same expression:")
+                        ArticleParagraph(verbatim: "Including these four does not exclude the wives; the Prophet (peace be upon him) was gathering additional members of his household under the cloak, within a passage whose context is already addressing his wives. The two are complementary, not contradictory.")
+                    }
 
-                    ScriptureQuote(quran: "11:73")
+                    Section(header: ArticleHeader("THE COMMAND TO LOVE THEM")) {
+                        ArticleParagraph(verbatim: "At the pool of Khumm, between Makkah and Madinah, the Prophet (peace be upon him) said:")
+                        ScriptureQuote(hadith: "muslim:2408a", cite: "Sahih Muslim 2408", english: [177...211, 226...245], arabicText: "وَأَنَا تَارِكٌ فِيكُم ثَقَلَينِ أَوَّلُهُمَا كِتَابُ اللَّهِ فِيهِ الهُدَى وَالنُّورُ فَخُذُوا بِكِتَابِ اللَّهِ وَاستَمسِكُوا بِهِ … وَأَهلُ بَيتِي أُذَكِّرُكُمُ اللَّهَ فِي أَهلِ بَيتِي أُذَكِّرُكُمُ اللَّهَ فِي أَهلِ بَيتِي أُذَكِّرُكُمُ اللَّهَ فِي أَهلِ بَيتِي")
 
-                    ArticleParagraph(verbatim: "So a prophet’s wives being included in “Ahl al-Bayt” is the established Quranic usage, not an exception.")
+                        ArticleParagraph(verbatim: "Loving the Ahlul Bayt is a sign of faith. It is never in tension with loving the Companions (may Allah be pleased with them): Ali, al-Hasan, al-Husayn, and the Prophet’s wives were themselves among the Companions.")
+                    }
+
+                    Section(header: ArticleHeader("THE BALANCED POSITION")) {
+                        ArticleParagraph(articleMarkdown: "There are two errors regarding the Ahlul Bayt. Some **neglect their rights** and fail to honor them as Allah and His Messenger commanded. Others **exaggerate beyond bounds**, elevating them past the station Allah gave them, or using love of them as a pretext to curse and slander the Companions.")
+
+                        ArticleParagraph(verbatim: "The straight path is between the two: love and honor them without exaggeration, and love all the Companions of the Prophet (peace be upon him) alongside them.")
+
+                        ScriptureQuote(quran: "59:10")
+                    }
                 }
 
-                Section(header: ArticleHeader("THE FAMILY OF THE CLOAK")) {
-                    ArticleParagraph(articleMarkdown: "The Ahlul Bayt also includes the Prophet’s daughter **Fatimah**, his cousin and son-in-law **Ali**, and their sons **al-Hasan** and **al-Husayn** (may Allah be pleased with them all).")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("THE WIVES ARE PART OF THE AHLUL BAYT")) {
+                        ArticleParagraph(verbatim: "The verse of purification (33:33) sits in the middle of a passage directed to the Prophet’s wives (may Allah be pleased with them). The address begins:")
 
-                    ArticleParagraph(verbatim: "Aisha (may Allah be pleased with her) narrated:")
-                    ScriptureQuote(hadith: "muslim:2424", cite: "Sahih Muslim 2424", arabic: 35...78, english: 0...19)
+                        ScriptureQuote(quran: "33:32", words: 0...10)
 
-                    ArticleParagraph(verbatim: "Including these four does not exclude the wives; the Prophet (peace be upon him) was gathering additional members of his household under the cloak, within a passage whose context is already addressing his wives. The two are complementary, not contradictory.")
+                        ScriptureQuote(quran: "33:33", words: 15...24)
 
-                    ArticleParagraph(verbatim: "The Prophet (peace be upon him) said of his grandsons:")
-                    ScriptureQuote(hadith: "tirmidhi:3768", cite: "Sunan al-Tirmidhi 3768; graded sahih by al-Albani", arabic: 37...42, english: 7...17)
+                        ScriptureQuote(quran: "33:34")
 
-                    ArticleParagraph(verbatim: "And of Fatimah (may Allah be pleased with her) he said:")
-                    ScriptureQuote(hadith: "bukhari:3714", cite: "Sahih al-Bukhari 3714", arabic: 28...33, english: 4...18)
-                }
+                        ArticleParagraph(articleMarkdown: "The phrase “O people of the household” is therefore addressed, first and foremost, to the wives of the Prophet (peace be upon him), the **Mothers of the Believers (أُمَّهَاتُ المُؤمِنِين)**, whom Allah placed in the position of mothers to every believer (Quran 33:6).")
+                        ScriptureQuote(quran: "33:6", words: 5...6)
 
-                Section(header: ArticleHeader("THE BANU HASHIM AND THE PROPHET’S KIN")) {
-                    ArticleParagraph(verbatim: "The Ahlul Bayt further includes the relatives of the Prophet (peace be upon him) upon whom charity (sadaqah) is forbidden: the family of Ali, the family of Ja‘far, the family of Aqil, and the family of al-Abbas (may Allah be pleased with them).")
+                        ArticleParagraph(verbatim: "Allah also called the wife of Ibrahim (peace be upon him) part of the “people of the house” using the very same expression:")
 
-                    ArticleParagraph(verbatim: "The Prophet (peace be upon him) said:")
-                    ScriptureQuote(hadith: "muslim:1072b", cite: "Sahih Muslim 1072", arabic: 105...118, english: 80...105)
+                        ScriptureQuote(quran: "11:73")
 
-                    ArticleParagraph(verbatim: "Zayd ibn Arqam (may Allah be pleased with him) was asked, “Who are the people of his household? Are not his wives among the people of his household?” He said:")
-                    ScriptureQuote(hadith: "muslim:2408a", cite: "Sahih Muslim 2408", arabic: 212...222, english: 269...292)
-                }
+                        ArticleParagraph(verbatim: "So a prophet’s wives being included in “Ahl al-Bayt” is the established Quranic usage, not an exception.")
+                    }
 
-                Section(header: ArticleHeader("THE COMMAND TO LOVE THEM")) {
-                    ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) says:")
+                    Section(header: ArticleHeader("THE FAMILY OF THE CLOAK")) {
+                        ArticleParagraph(articleMarkdown: "The Ahlul Bayt also includes the Prophet’s daughter **Fatimah**, his cousin and son-in-law **Ali**, and their sons **al-Hasan** and **al-Husayn** (may Allah be pleased with them all).")
 
-                    ScriptureQuote(quran: "42:23", words: 9...17)
+                        ArticleParagraph(verbatim: "Aisha (may Allah be pleased with her) narrated:")
+                        ScriptureQuote(hadith: "muslim:2424", cite: "Sahih Muslim 2424", arabic: 35...78, english: 0...19)
 
-                    ArticleParagraph(verbatim: "Ibn Abbas (may Allah be pleased with them) explained this ayah: there was no clan of Quraysh to which the Prophet (peace be upon him) was not related, so what he asked of them was to honour the kinship between him and them (Sahih al-Bukhari 4818). The ayah is therefore not itself the command to love his household; that command is in the hadith that follows.")
+                        ArticleParagraph(verbatim: "Including these four does not exclude the wives; the Prophet (peace be upon him) was gathering additional members of his household under the cloak, within a passage whose context is already addressing his wives. The two are complementary, not contradictory.")
 
-                    ArticleParagraph(verbatim: "At the pool of Khumm, between Makkah and Madinah, the Prophet (peace be upon him) said:")
-                    ScriptureQuote(hadith: "muslim:2408a", cite: "Sahih Muslim 2408", english: [177...211, 226...245], arabicText: "وَأَنَا تَارِكٌ فِيكُم ثَقَلَينِ أَوَّلُهُمَا كِتَابُ اللَّهِ فِيهِ الهُدَى وَالنُّورُ فَخُذُوا بِكِتَابِ اللَّهِ وَاستَمسِكُوا بِهِ … وَأَهلُ بَيتِي أُذَكِّرُكُمُ اللَّهَ فِي أَهلِ بَيتِي أُذَكِّرُكُمُ اللَّهَ فِي أَهلِ بَيتِي أُذَكِّرُكُمُ اللَّهَ فِي أَهلِ بَيتِي")
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) said of his grandsons:")
+                        ScriptureQuote(hadith: "tirmidhi:3768", cite: "Sunan al-Tirmidhi 3768; graded sahih by al-Albani", arabic: 37...42, english: 7...17)
 
-                    ArticleParagraph(verbatim: "Every believer sends blessings upon them in each prayer, in the words the Prophet (peace be upon him) taught:")
-                    ScriptureQuote(hadith: "bukhari:3370", cite: "Sahih al-Bukhari 3370", arabic: 79...113, english: 68...137)
+                        ArticleParagraph(verbatim: "And of Fatimah (may Allah be pleased with her) he said:")
+                        ScriptureQuote(hadith: "bukhari:3714", cite: "Sahih al-Bukhari 3714", arabic: 28...33, english: 4...18)
+                    }
 
-                    ArticleParagraph(verbatim: "Loving the Ahlul Bayt is a sign of faith. It is never in tension with loving the Companions (may Allah be pleased with them): Ali, al-Hasan, al-Husayn, and the Prophet’s wives were themselves among the Companions.")
-                }
+                    Section(header: ArticleHeader("THE BANU HASHIM AND THE PROPHET’S KIN")) {
+                        ArticleParagraph(verbatim: "The Ahlul Bayt further includes the relatives of the Prophet (peace be upon him) upon whom charity (sadaqah) is forbidden: the family of Ali, the family of Ja‘far, the family of Aqil, and the family of al-Abbas (may Allah be pleased with them).")
 
-                Section(header: ArticleHeader("THE BALANCED POSITION")) {
-                    ArticleParagraph(articleMarkdown: "There are two errors regarding the Ahlul Bayt. Some **neglect their rights** and fail to honor them as Allah and His Messenger commanded. Others **exaggerate beyond bounds**, elevating them past the station Allah gave them, or using love of them as a pretext to curse and slander the Companions.")
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) said:")
+                        ScriptureQuote(hadith: "muslim:1072b", cite: "Sahih Muslim 1072", arabic: 105...118, english: 80...105)
 
-                    ArticleParagraph(verbatim: "The straight path is between the two: love and honor them without exaggeration, and love all the Companions of the Prophet (peace be upon him) alongside them.")
+                        ArticleParagraph(verbatim: "Zayd ibn Arqam (may Allah be pleased with him) was asked, “Who are the people of his household? Are not his wives among the people of his household?” He said:")
+                        ScriptureQuote(hadith: "muslim:2408a", cite: "Sahih Muslim 2408", arabic: 212...222, english: 269...292)
+                    }
 
-                    ScriptureQuote(quran: "59:10")
+                    Section(header: ArticleHeader("THE COMMAND TO LOVE THEM")) {
+                        ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) says:")
 
-                    ArticleParagraph(verbatim: "Ali, al-Hasan, and al-Husayn (may Allah be pleased with them) themselves loved, prayed behind, married into, and named their children after Abu Bakr, Umar, and Uthman (may Allah be pleased with them): Ali said that the best of this ummah after its Prophet is Abu Bakr, then Umar (Sahih al-Bukhari 3671), Umar married Ali’s daughter Umm Kulthum (Sahih al-Bukhari 2881), and Ali named sons Abu Bakr, Umar, and Uthman (Ibn Sa‘d, at-Tabaqat). Their example is the proof of this unity.")
+                        ScriptureQuote(quran: "42:23", words: 9...17)
+
+                        ArticleParagraph(verbatim: "Ibn Abbas (may Allah be pleased with them) explained this ayah: there was no clan of Quraysh to which the Prophet (peace be upon him) was not related, so what he asked of them was to honour the kinship between him and them (Sahih al-Bukhari 4818). The ayah is therefore not itself the command to love his household; that command is in the hadith that follows.")
+                        ScriptureQuote(hadith: "bukhari:4818", cite: "Sahih al-Bukhari 4818", arabic: 26...73, english: 0...87)
+
+                        ArticleParagraph(verbatim: "At the pool of Khumm, between Makkah and Madinah, the Prophet (peace be upon him) said:")
+                        ScriptureQuote(hadith: "muslim:2408a", cite: "Sahih Muslim 2408", english: [177...211, 226...245], arabicText: "وَأَنَا تَارِكٌ فِيكُم ثَقَلَينِ أَوَّلُهُمَا كِتَابُ اللَّهِ فِيهِ الهُدَى وَالنُّورُ فَخُذُوا بِكِتَابِ اللَّهِ وَاستَمسِكُوا بِهِ … وَأَهلُ بَيتِي أُذَكِّرُكُمُ اللَّهَ فِي أَهلِ بَيتِي أُذَكِّرُكُمُ اللَّهَ فِي أَهلِ بَيتِي أُذَكِّرُكُمُ اللَّهَ فِي أَهلِ بَيتِي")
+
+                        ArticleParagraph(verbatim: "Every believer sends blessings upon them in each prayer, in the words the Prophet (peace be upon him) taught:")
+                        ScriptureQuote(hadith: "bukhari:3370", cite: "Sahih al-Bukhari 3370", arabic: 79...113, english: 68...137)
+
+                        ArticleParagraph(verbatim: "Loving the Ahlul Bayt is a sign of faith. It is never in tension with loving the Companions (may Allah be pleased with them): Ali, al-Hasan, al-Husayn, and the Prophet’s wives were themselves among the Companions.")
+                    }
+
+                    Section(header: ArticleHeader("THE BALANCED POSITION")) {
+                        ArticleParagraph(articleMarkdown: "There are two errors regarding the Ahlul Bayt. Some **neglect their rights** and fail to honor them as Allah and His Messenger commanded. Others **exaggerate beyond bounds**, elevating them past the station Allah gave them, or using love of them as a pretext to curse and slander the Companions.")
+
+                        ArticleParagraph(verbatim: "The straight path is between the two: love and honor them without exaggeration, and love all the Companions of the Prophet (peace be upon him) alongside them.")
+
+                        ScriptureQuote(quran: "59:10")
+
+                        ArticleParagraph(verbatim: "Ali, al-Hasan, and al-Husayn (may Allah be pleased with them) themselves loved, prayed behind, married into, and named their children after Abu Bakr, Umar, and Uthman (may Allah be pleased with them): Ali said that the best of this ummah after its Prophet is Abu Bakr, then Umar (Sahih al-Bukhari 3671), Umar married Ali’s daughter Umm Kulthum (Sahih al-Bukhari 2881), and Ali named sons Abu Bakr, Umar, and Uthman (Ibn Sa‘d, at-Tabaqat). Their example is the proof of this unity.")
+                        ScriptureQuote(hadith: "bukhari:3671", cite: "Sahih al-Bukhari 3671", arabic: 19...53, english: 0...49)
+                        ScriptureQuote(hadith: "bukhari:2881", cite: "Sahih al-Bukhari 2881", arabic: 15...57, english: 0...48)
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -2924,6 +3740,8 @@ struct AhlusSunnahView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Ahl as-Sunnah wal-Jama'ah are those who hold to the Sunnah of the Prophet upon the understanding of his Companions, united in creed.")
                 }
@@ -2940,34 +3758,46 @@ struct AhlusSunnahView: View {
                     ArticleParagraph(verbatim: "“The way of the believers” in this verse is the way of the first believers: the Companions.")
                 }
 
-                Section(header: ArticleHeader("THE THREE FOUNDATIONS")) {
-                    ArticleParagraph(articleMarkdown: "**1. The Quran**: taken as it is, without distortion, denial, or asking “how.”")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("THE THREE FOUNDATIONS")) {
+                        ArticleParagraph(articleMarkdown: "**1. The Quran**: taken as it is, without distortion, denial, or asking “how.”")
 
-                    ArticleParagraph(articleMarkdown: "**2. The authentic Sunnah**: accepted as binding revelation alongside the Quran, whether the report is mutawatir or an authentic single narration (ahad).")
+                        ArticleParagraph(articleMarkdown: "**2. The authentic Sunnah**: accepted as binding revelation alongside the Quran, whether the report is mutawatir or an authentic single narration (ahad).")
 
-                    ArticleParagraph(articleMarkdown: "**3. The understanding of the Salaf**: the Quran and Sunnah are understood the way the first three generations understood them, not according to later opinions or personal reasoning that contradicts them.")
-
-                    ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) says:")
-                    ScriptureQuote(quran: "9:100", words: 0...12)
-
-                    ArticleParagraph(verbatim: "The Prophet (peace be upon him) said:")
-                    ScriptureQuote(hadith: "bukhari:2652", cite: "Sahih al-Bukhari 2652", arabic: 29...37, english: 4...23)
+                        ArticleParagraph(articleMarkdown: "**3. The understanding of the Salaf**: the Quran and Sunnah are understood the way the first three generations understood them, not according to later opinions or personal reasoning that contradicts them.")
+                    }
                 }
 
-                Section(header: ArticleHeader("THEIR CREED (AQEEDAH)")) {
-                    ArticleBullet("• **Tawhid**: Allah alone is worshipped, and He alone is the Lord, and He is called by His beautiful Names and described by His perfect Attributes.")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("THE THREE FOUNDATIONS")) {
+                        ArticleParagraph(articleMarkdown: "**1. The Quran**: taken as it is, without distortion, denial, or asking “how.”")
 
-                    ArticleBullet("• **Names and Attributes**: affirmed as Allah affirmed them for Himself, without likening Him to creation (tashbih) and without stripping the meanings away (ta‘til).")
+                        ArticleParagraph(articleMarkdown: "**2. The authentic Sunnah**: accepted as binding revelation alongside the Quran, whether the report is mutawatir or an authentic single narration (ahad).")
 
-                    ScriptureQuote(quran: "42:11", words: 13...18)
+                        ArticleParagraph(articleMarkdown: "**3. The understanding of the Salaf**: the Quran and Sunnah are understood the way the first three generations understood them, not according to later opinions or personal reasoning that contradicts them.")
 
-                    ArticleBullet("• **Iman** consists of belief in the heart, statement of the tongue, and action of the limbs. It increases with obedience and decreases with disobedience.")
+                        ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) says:")
+                        ScriptureQuote(quran: "9:100", words: 0...12)
 
-                    ArticleBullet("• **Qadar**: everything occurs by Allah’s knowledge, writing, will, and creation, while the servant has real choice and responsibility.")
+                        ArticleParagraph(verbatim: "The Prophet (peace be upon him) said:")
+                        ScriptureQuote(hadith: "bukhari:2652", cite: "Sahih al-Bukhari 2652", arabic: 29...37, english: 4...23)
+                    }
 
-                    ArticleBullet("• **No takfir** of a Muslim for a major sin, so long as he does not deem it lawful. The sinner remains a believer, deficient in faith.")
+                    Section(header: ArticleHeader("THEIR CREED (AQEEDAH)")) {
+                        ArticleBullet("• **Tawhid**: Allah alone is worshipped, and He alone is the Lord, and He is called by His beautiful Names and described by His perfect Attributes.")
 
-                    ArticleBullet("• Love for **all the Companions** (may Allah be pleased with them) and the **Ahlul Bayt**, without exaggeration in either direction.")
+                        ArticleBullet("• **Names and Attributes**: affirmed as Allah affirmed them for Himself, without likening Him to creation (tashbih) and without stripping the meanings away (ta‘til).")
+
+                        ScriptureQuote(quran: "42:11", words: 13...18)
+
+                        ArticleBullet("• **Iman** consists of belief in the heart, statement of the tongue, and action of the limbs. It increases with obedience and decreases with disobedience.")
+
+                        ArticleBullet("• **Qadar**: everything occurs by Allah’s knowledge, writing, will, and creation, while the servant has real choice and responsibility.")
+
+                        ArticleBullet("• **No takfir** of a Muslim for a major sin, so long as he does not deem it lawful. The sinner remains a believer, deficient in faith.")
+
+                        ArticleBullet("• Love for **all the Companions** (may Allah be pleased with them) and the **Ahlul Bayt**, without exaggeration in either direction.")
+                    }
                 }
 
                 Section(header: ArticleHeader("THE SAVED GROUP")) {
@@ -2983,22 +3813,30 @@ struct AhlusSunnahView: View {
                     ScriptureQuote(hadith: "abudawud:4607", cite: "Sunan Abi Dawud 4607; graded sahih by al-Albani", arabic: 112...132, english: 159...192)
                 }
 
-                Section(header: ArticleHeader("UNITY, NOT SECTARIANISM")) {
-                    ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) commands unity upon the truth:")
-
-                    ScriptureQuote(quran: "3:103", words: 0...5)
-
-                    ScriptureQuote(quran: "6:159", words: 0...9)
-
-                    ArticleParagraph(verbatim: "Ahl as-Sunnah wal-Jama‘ah is therefore not a sect among sects. It is the original, undivided Islam of the Prophet (peace be upon him) and his Companions. Its adherents differ in fiqh across the four madhahib, yet stand united in creed.")
-
-                    ArticleParagraph(verbatim: "They are known for mercy toward the believers, honesty toward opponents, obedience to Muslim authority in what is good, and refusal to declare the general body of Muslims outside of Islam.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("UNITY, NOT SECTARIANISM")) {
+                        ArticleParagraph(verbatim: "Ahl as-Sunnah wal-Jama‘ah is not a sect among sects. It is the original, undivided Islam of the Prophet (peace be upon him) and his Companions. Its adherents differ in fiqh across the four madhahib, yet stand united in creed.")
+                    }
                 }
 
-                Section(header: ArticleHeader("CONCLUSION")) {
-                    ArticleParagraph(verbatim: "To be from Ahl as-Sunnah wal-Jama‘ah is to take the Quran and the authentic Sunnah as they came, to understand them as the Companions understood them, to love the Prophet’s family and his Companions together, and to hold to the community of the Muslims.")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("UNITY, NOT SECTARIANISM")) {
+                        ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) commands unity upon the truth:")
 
-                    ScriptureQuote(quran: "2:137", words: 0...7)
+                        ScriptureQuote(quran: "3:103", words: 0...5)
+
+                        ScriptureQuote(quran: "6:159", words: 0...9)
+
+                        ArticleParagraph(verbatim: "Ahl as-Sunnah wal-Jama‘ah is therefore not a sect among sects. It is the original, undivided Islam of the Prophet (peace be upon him) and his Companions. Its adherents differ in fiqh across the four madhahib, yet stand united in creed.")
+
+                        ArticleParagraph(verbatim: "They are known for mercy toward the believers, honesty toward opponents, obedience to Muslim authority in what is good, and refusal to declare the general body of Muslims outside of Islam.")
+                    }
+
+                    Section(header: ArticleHeader("CONCLUSION")) {
+                        ArticleParagraph(verbatim: "To be from Ahl as-Sunnah wal-Jama‘ah is to take the Quran and the authentic Sunnah as they came, to understand them as the Companions understood them, to love the Prophet’s family and his Companions together, and to hold to the community of the Muslims.")
+
+                        ScriptureQuote(quran: "2:137", words: 0...7)
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -3018,6 +3856,8 @@ struct SeerahView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: the Seerah is the life story of Prophet Muhammad: his character, mission, and example, drawn from the Quran and authentic reports.")
                 }
@@ -3031,49 +3871,78 @@ struct SeerahView: View {
                     ScriptureQuote(quran: "33:21")
                 }
 
-                Section(header: ArticleHeader("BEFORE PROPHETHOOD")) {
-                    ArticleParagraph(articleMarkdown: "He was born in the year 570 CE in **Makkah (مَكَّة)**, among the tribe of Quraysh. His father Abdullah died before his birth and his mother Aminah when he was six, so he was raised by his grandfather Abd al-Muttalib and then his uncle Abu Talib.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("BEFORE PROPHETHOOD")) {
+                        ArticleParagraph(articleMarkdown: "He was born in 570 CE in **Makkah (مَكَّة)**, among the tribe of Quraysh, and even before revelation his people called him **Al-Amin (الأَمِين)**, “the Trustworthy.”")
+                    }
 
-                    ArticleParagraph(articleMarkdown: "Even before revelation his people called him **Al-Amin (الأَمِين)**, “the Trustworthy,” for his honesty and noble character. At about twenty-five he married **Khadijah (خَدِيجَة)** (may Allah be pleased with her).")
+                    Section(header: ArticleHeader("THE FIRST REVELATION")) {
+                        ArticleParagraph(articleMarkdown: "At forty, in the cave of **Hira (حِرَاء)**, the angel **Jibril (جِبرِيل)** brought him the first revelation:")
+                        ScriptureQuote(quran: "96:1")
+                    }
+
+                    Section(header: ArticleHeader("THE MAKKAN PERIOD")) {
+                        ArticleParagraph(articleMarkdown: "For about thirteen years in Makkah he called people to **Tawhid (تَوحِيد)**, the worship of Allah alone, and bore persecution with patience.")
+                    }
+
+                    Section(header: ArticleHeader("THE HIJRAH")) {
+                        ArticleParagraph(articleMarkdown: "In 622 CE he made the **Hijrah (هِجرَة)** to **Madinah (المَدِينَة)**, and the Hijri calendar begins from it.")
+                    }
+
+                    Section(header: ArticleHeader("THE MADINAN PERIOD")) {
+                        ArticleParagraph(articleMarkdown: "In Madinah he built the first Muslim community, tested at **Badr (بَدر)** and **Uhud (أُحُد)**, and in 630 CE Makkah was entered peacefully.")
+                    }
+
+                    Section(header: ArticleHeader("THE FAREWELL AND HIS PASSING")) {
+                        ArticleParagraph(verbatim: "After the Farewell Pilgrimage of 10 AH he passed away in Madinah in 11 AH / 632 CE, aged sixty-three, leaving the Quran and his Sunnah as guidance.")
+                    }
                 }
 
-                Section(header: ArticleHeader("THE FIRST REVELATION")) {
-                    ArticleParagraph(articleMarkdown: "At the age of forty, while worshipping alone in the cave of **Hira (حِرَاء)** near Makkah, the angel **Jibril (جِبرِيل)** brought him the first revelation, beginning with **Iqra (اِقرَأ)**:")
-                    ScriptureQuote(quran: "96:1")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("BEFORE PROPHETHOOD")) {
+                        ArticleParagraph(articleMarkdown: "He was born in the year 570 CE in **Makkah (مَكَّة)**, among the tribe of Quraysh. His father Abdullah died before his birth and his mother Aminah when he was six, so he was raised by his grandfather Abd al-Muttalib and then his uncle Abu Talib.")
 
-                    ArticleParagraph(verbatim: "This began twenty-three years of the revelation of the Quran, which continued until shortly before his death.")
-                }
+                        ArticleParagraph(articleMarkdown: "Even before revelation his people called him **Al-Amin (الأَمِين)**, “the Trustworthy,” for his honesty and noble character. At about twenty-five he married **Khadijah (خَدِيجَة)** (may Allah be pleased with her).")
+                    }
 
-                Section(header: ArticleHeader("THE MAKKAN PERIOD")) {
-                    ArticleParagraph(articleMarkdown: "For about thirteen years in Makkah he called people to **Tawhid (تَوحِيد)**, the worship of Allah alone, through his **Dawah (دَعوَة)**, his call to Islam. He and the early believers met mockery, boycott, and severe persecution, yet remained patient.")
+                    Section(header: ArticleHeader("THE FIRST REVELATION")) {
+                        ArticleParagraph(articleMarkdown: "At the age of forty, while worshipping alone in the cave of **Hira (حِرَاء)** near Makkah, the angel **Jibril (جِبرِيل)** brought him the first revelation, beginning with **Iqra (اِقرَأ)**:")
+                        ScriptureQuote(quran: "96:1")
 
-                    ArticleParagraph(articleMarkdown: "In this period he was honoured with the **Isra and Mi'raj (الإِسرَاء وَالمِعرَاج)**, the night journey to Jerusalem and the ascension through the heavens, during which the five daily prayers were made obligatory.")
-                }
+                        ArticleParagraph(verbatim: "This began twenty-three years of the revelation of the Quran, which continued until shortly before his death.")
+                    }
 
-                Section(header: ArticleHeader("THE HIJRAH")) {
-                    ArticleParagraph(articleMarkdown: "In 622 CE, by Allah’s command, the Prophet (peace be upon him) made the **Hijrah (هِجرَة)**, the migration from Makkah to **Madinah (المَدِينَة)**. This event was so pivotal that the Islamic (Hijri) calendar begins from it.")
-                }
+                    Section(header: ArticleHeader("THE MAKKAN PERIOD")) {
+                        ArticleParagraph(articleMarkdown: "For about thirteen years in Makkah he called people to **Tawhid (تَوحِيد)**, the worship of Allah alone, through his **Dawah (دَعوَة)**, his call to Islam. He and the early believers met mockery, boycott, and severe persecution, yet remained patient.")
 
-                Section(header: ArticleHeader("THE MADINAN PERIOD")) {
-                    ArticleParagraph(verbatim: "In Madinah he established the first Muslim community: building the mosque, joining the emigrants (Muhajirun) and the helpers (Ansar) in brotherhood, and governing by revelation.")
+                        ArticleParagraph(articleMarkdown: "In this period he was honoured with the **Isra and Mi'raj (الإِسرَاء وَالمِعرَاج)**, the night journey to Jerusalem and the ascension through the heavens, during which the five daily prayers were made obligatory.")
+                    }
 
-                    ArticleParagraph(articleMarkdown: "The community was tested and defended in major events such as **Badr (بَدر)**, **Uhud (أُحُد)**, and the Battle of the Trench, **Al-Khandaq (الخَندَق)**. The **Treaty of Hudaybiyyah (الحُدَيبِيَة)** opened the way for peace, and in 630 CE Makkah was entered peacefully and cleansed of idols.")
-                }
+                    Section(header: ArticleHeader("THE HIJRAH")) {
+                        ArticleParagraph(articleMarkdown: "In 622 CE, by Allah’s command, the Prophet (peace be upon him) made the **Hijrah (هِجرَة)**, the migration from Makkah to **Madinah (المَدِينَة)**. This event was so pivotal that the Islamic (Hijri) calendar begins from it.")
+                    }
 
-                Section(header: ArticleHeader("THE FAREWELL AND HIS PASSING")) {
-                    ArticleParagraph(articleMarkdown: "In 10 AH he performed the Farewell Pilgrimage, **Hajjat al-Wada (حَجَّة الوَدَاع)**, and delivered his Farewell Sermon before a great gathering of believers.")
+                    Section(header: ArticleHeader("THE MADINAN PERIOD")) {
+                        ArticleParagraph(verbatim: "In Madinah he established the first Muslim community: building the mosque, joining the emigrants (Muhajirun) and the helpers (Ansar) in brotherhood, and governing by revelation.")
 
-                    ArticleParagraph(verbatim: "He passed away in Madinah in 11 AH / 632 CE, at the age of sixty-three, and is buried there. He left behind the Quran and his Sunnah as guidance for all who came after.")
-                }
+                        ArticleParagraph(articleMarkdown: "The community was tested and defended in major events such as **Badr (بَدر)**, **Uhud (أُحُد)**, and the Battle of the Trench, **Al-Khandaq (الخَندَق)**. The **Treaty of Hudaybiyyah (الحُدَيبِيَة)** opened the way for peace, and in 630 CE Makkah was entered peacefully and cleansed of idols.")
+                    }
 
-                Section(header: ArticleHeader("HIS CHARACTER")) {
-                    ArticleParagraph(articleMarkdown: "He was sent as a mercy to all creation, **Rahmatan lil-Alamin (رَحمَة لِلعَالَمِين)**.")
+                    Section(header: ArticleHeader("THE FAREWELL AND HIS PASSING")) {
+                        ArticleParagraph(articleMarkdown: "In 10 AH he performed the Farewell Pilgrimage, **Hajjat al-Wada (حَجَّة الوَدَاع)**, and delivered his Farewell Sermon before a great gathering of believers.")
 
-                    ScriptureQuote(quran: "21:107")
+                        ArticleParagraph(verbatim: "He passed away in Madinah in 11 AH / 632 CE, at the age of sixty-three, and is buried there. He left behind the Quran and his Sunnah as guidance for all who came after.")
+                    }
 
-                    ArticleParagraph(verbatim: "When Aishah (may Allah be pleased with her) was asked about his character, she said:")
-                    ScriptureQuote(hadith: "muslim:746a", cite: "Sahih Muslim 746", arabic: 232...241, english: 293...303)
-                    ArticleParagraph(verbatim: "He embodied its teachings in the most complete way.")
+                    Section(header: ArticleHeader("HIS CHARACTER")) {
+                        ArticleParagraph(articleMarkdown: "He was sent as a mercy to all creation, **Rahmatan lil-Alamin (رَحمَة لِلعَالَمِين)**.")
+
+                        ScriptureQuote(quran: "21:107")
+
+                        ArticleParagraph(verbatim: "When Aishah (may Allah be pleased with her) was asked about his character, she said:")
+                        ScriptureQuote(hadith: "muslim:746a", cite: "Sahih Muslim 746", arabic: 232...241, english: 293...303)
+                        ArticleParagraph(verbatim: "He embodied its teachings in the most complete way.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -3093,6 +3962,8 @@ struct TafsirView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: Tafsir is the explanation of the Quran's meanings, soundest when the Quran is explained by the Quran, the Sunnah, and the understanding of the early generations.")
                 }
@@ -3119,34 +3990,38 @@ struct TafsirView: View {
                     ArticleParagraph(articleMarkdown: "**4. The statements of the Successors (Tabi'un)**: the students of the Companions, followed by explanation through the Arabic language.")
                 }
 
-                Section(header: ArticleHeader("CONDITIONS OF THE MUFASSIR")) {
-                    ArticleParagraph(verbatim: "Explaining the Quran is not by desire or guesswork. It requires sound belief, knowledge of the Arabic language, the Sunnah, the sayings of the early scholars, and the sciences of the Quran.")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("CONDITIONS OF THE MUFASSIR")) {
+                        ArticleParagraph(verbatim: "Explaining the Quran is not by desire or guesswork. It requires sound belief, knowledge of the Arabic language, the Sunnah, the sayings of the early scholars, and the sciences of the Quran.")
 
-                    ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) warned:")
+                        ArticleParagraph(verbatim: "Allah (Glorified and Exalted be He) warned:")
 
-                    ScriptureQuote(quran: "17:36")
+                        ScriptureQuote(quran: "17:36")
 
-                    ArticleParagraph(verbatim: "And He counted among what He has forbidden:")
-                    ScriptureQuote(quran: "7:33", words: 22...28)
+                        ArticleParagraph(verbatim: "And He counted among what He has forbidden:")
+                        ScriptureQuote(quran: "7:33", words: 22...28)
 
-                    ArticleParagraph(verbatim: "Claiming that the Prophet (peace and blessings be upon him) explained an ayah in a way he did not is a lie against him, and he said:")
-                    ScriptureQuote(hadith: "bukhari:108", cite: "Sahih al-Bukhari 108", arabic: 27...34, english: 20...35)
-                }
+                        ArticleParagraph(verbatim: "Claiming that the Prophet (peace and blessings be upon him) explained an ayah in a way he did not is a lie against him, and he said:")
+                        ScriptureQuote(hadith: "bukhari:108", cite: "Sahih al-Bukhari 108", arabic: 27...34, english: 20...35)
+                    }
 
-                Section(header: ArticleHeader("WELL-KNOWN WORKS")) {
-                    ArticleParagraph(articleMarkdown: "Among the most trusted classical works of tafsir are those of **al-Tabari (الطَّبَرِي)**, **Ibn Kathir (اِبن كَثِير)**, and **al-Baghawi (البَغَوِي)**, and among later concise works, that of **al-Sa'di (السَّعدِي)**. They are prized for explaining the Quran by the Quran, the Sunnah, and the understanding of the early generations.")
+                    Section(header: ArticleHeader("WELL-KNOWN WORKS")) {
+                        ArticleParagraph(articleMarkdown: "Among the most trusted classical works of tafsir are those of **al-Tabari (الطَّبَرِي)**, **Ibn Kathir (اِبن كَثِير)**, and **al-Baghawi (البَغَوِي)**, and among later concise works, that of **al-Sa'di (السَّعدِي)**. They are prized for explaining the Quran by the Quran, the Sunnah, and the understanding of the early generations.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
                     ArticleClosing("True Tafsir rests on knowledge, not opinion; through it the guidance of the Quran becomes clear and livable for every generation.")
                 }
 
-                Section(header: ArticleHeader("KEY TERMS")) {
-                    ArticleParagraph(articleMarkdown: "**Asbab al-Nuzul (أَسبَاب النُّزُول)**: the reasons or occasions of revelation, i.e. the events a verse was revealed about.")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("KEY TERMS")) {
+                        ArticleParagraph(articleMarkdown: "**Asbab al-Nuzul (أَسبَاب النُّزُول)**: the reasons or occasions of revelation, i.e. the events a verse was revealed about.")
 
-                    ArticleParagraph(articleMarkdown: "**Muhkam (مُحكَم)**: verses clear and decisive in meaning; **Mutashabih (مُتَشَابِه)**: verses whose full meaning is not entirely apparent, referred back to the clear ones.")
+                        ArticleParagraph(articleMarkdown: "**Muhkam (مُحكَم)**: verses clear and decisive in meaning; **Mutashabih (مُتَشَابِه)**: verses whose full meaning is not entirely apparent, referred back to the clear ones.")
 
-                    ArticleParagraph(articleMarkdown: "**An-Nasikh wal-Mansukh (النَّاسِخ وَالمَنسُوخ)**: the abrogating and abrogated; a later ruling that replaces an earlier one within the revelation.")
+                        ArticleParagraph(articleMarkdown: "**An-Nasikh wal-Mansukh (النَّاسِخ وَالمَنسُوخ)**: the abrogating and abrogated; a later ruling that replaces an earlier one within the revelation.")
+                    }
                 }
 
                 ArticleSourcesSection(article: "TafsirView")
@@ -3162,42 +4037,71 @@ struct FiqhAqeedahManhajView: View {
     var body: some View {
         List {
             Group {
+                ArticleLengthSection()
+
                 Section(header: ArticleHeader("SUMMARY")) {
                     ArticleLead("In short: aqeedah is what you believe, fiqh is what you do, and manhaj is how you understand and derive both from revelation.")
                 }
 
-                Section(header: ArticleHeader("OVERVIEW")) {
-                    ArticleParagraph(articleMarkdown: "Three words describe how a Muslim believes, acts, and understands the religion: **Aqeedah (عَقِيدَة)**, **Fiqh (فِقه)**, and **Manhaj (مَنهَج)**.")
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("AQEEDAH (BELIEF)")) {
+                        ArticleParagraph(articleMarkdown: "**Aqeedah (عَقِيدَة)** is creed: the beliefs the heart is bound to with certainty. Its core is **Tawhid (تَوحِيد)**, singling out Allah alone in worship, lordship, and His names and attributes.")
 
-                    ArticleParagraph(verbatim: "In short: aqeedah is what you believe, fiqh is what you do, and manhaj is how you understand and derive both.")
+                        ArticleParagraph(articleMarkdown: "It includes the six pillars of faith: belief in Allah, His angels, His books, His messengers, the Last Day, and **Al-Qadar (القَدَر)**, the divine decree. Aqeedah does not change with time or place and is one for all the believers.")
+                    }
+
+                    Section(header: ArticleHeader("FIQH (JURISPRUDENCE)")) {
+                        ArticleParagraph(articleMarkdown: "**Fiqh (فِقه)** is the understanding of the practical rulings of Islam derived from the Quran and Sunnah: the “how” of worship, **Ibadah (عِبَادَة)**, and of dealings, **Muamalat (مُعَامَلَات)**, such as prayer, fasting, trade, and marriage.")
+
+                        ArticleParagraph(articleMarkdown: "Because deriving detailed rulings involves **Ijtihad (اِجتِهَاد)**, qualified scholarly effort, sincere scholars sometimes differ, and such differences are excused; they are not division in the religion.")
+                    }
+
+                    Section(header: ArticleHeader("MANHAJ (METHODOLOGY)")) {
+                        ArticleParagraph(articleMarkdown: "**Manhaj (مَنهَج)** is methodology: the path by which one understands, prioritizes, and applies the religion, and deals with knowledge and people.")
+
+                        ArticleParagraph(articleMarkdown: "The sound manhaj is to take the Quran and the authentic Sunnah upon the understanding of the **Salaf (السَّلَف)**, the first righteous generations, rather than by later opinions that contradict them.")
+                    }
+
+                    Section(header: ArticleHeader("HOW THEY RELATE")) {
+                        ArticleParagraph(verbatim: "Aqeedah is the foundation, fiqh is the practice built upon it, and manhaj is the method that keeps both tied to revelation as it was first understood.")
+                    }
                 }
 
-                Section(header: ArticleHeader("AQEEDAH (BELIEF)")) {
-                    ArticleParagraph(articleMarkdown: "**Aqeedah (عَقِيدَة)** is creed: the beliefs the heart is bound to with certainty. Its core is **Tawhid (تَوحِيد)**, singling out Allah alone in worship, lordship, and His names and attributes.")
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("OVERVIEW")) {
+                        ArticleParagraph(articleMarkdown: "Three words describe how a Muslim believes, acts, and understands the religion: **Aqeedah (عَقِيدَة)**, **Fiqh (فِقه)**, and **Manhaj (مَنهَج)**.")
 
-                    ArticleParagraph(articleMarkdown: "It includes the six pillars of faith: belief in Allah, His angels, His books, His messengers, the Last Day, and **Al-Qadar (القَدَر)**, the divine decree. Aqeedah does not change with time or place and is one for all the believers.")
+                        ArticleParagraph(verbatim: "In short: aqeedah is what you believe, fiqh is what you do, and manhaj is how you understand and derive both.")
+                    }
 
-                    ScriptureQuote(quran: "2:285", words: 0...13)
-                }
+                    Section(header: ArticleHeader("AQEEDAH (BELIEF)")) {
+                        ArticleParagraph(articleMarkdown: "**Aqeedah (عَقِيدَة)** is creed: the beliefs the heart is bound to with certainty. Its core is **Tawhid (تَوحِيد)**, singling out Allah alone in worship, lordship, and His names and attributes.")
 
-                Section(header: ArticleHeader("FIQH (JURISPRUDENCE)")) {
-                    ArticleParagraph(articleMarkdown: "**Fiqh (فِقه)** is the understanding of the practical rulings of Islam derived from the Quran and Sunnah: the “how” of worship, **Ibadah (عِبَادَة)**, and of dealings, **Muamalat (مُعَامَلَات)**, such as prayer, fasting, trade, and marriage.")
+                        ArticleParagraph(articleMarkdown: "It includes the six pillars of faith: belief in Allah, His angels, His books, His messengers, the Last Day, and **Al-Qadar (القَدَر)**, the divine decree. Aqeedah does not change with time or place and is one for all the believers.")
 
-                    ArticleParagraph(articleMarkdown: "Because deriving detailed rulings involves **Ijtihad (اِجتِهَاد)**, qualified scholarly effort, sincere scholars sometimes differ. This is the source of the accepted schools of fiqh, and such differences are excused and even rewarded (Sahih al-Bukhari 7352); they are not division in the religion.")
-                }
+                        ScriptureQuote(quran: "2:285", words: 0...13)
+                    }
 
-                Section(header: ArticleHeader("MANHAJ (METHODOLOGY)")) {
-                    ArticleParagraph(articleMarkdown: "**Manhaj (مَنهَج)** is methodology: the path by which one understands, prioritizes, and applies the religion, and deals with knowledge and people.")
+                    Section(header: ArticleHeader("FIQH (JURISPRUDENCE)")) {
+                        ArticleParagraph(articleMarkdown: "**Fiqh (فِقه)** is the understanding of the practical rulings of Islam derived from the Quran and Sunnah: the “how” of worship, **Ibadah (عِبَادَة)**, and of dealings, **Muamalat (مُعَامَلَات)**, such as prayer, fasting, trade, and marriage.")
 
-                    ArticleParagraph(articleMarkdown: "The sound manhaj is to take the Quran and the authentic Sunnah upon the understanding of the **Salaf (السَّلَف)**, the first righteous generations, rather than by later opinions that contradict them.")
+                        ArticleParagraph(articleMarkdown: "Because deriving detailed rulings involves **Ijtihad (اِجتِهَاد)**, qualified scholarly effort, sincere scholars sometimes differ. This is the source of the accepted schools of fiqh, and such differences are excused and even rewarded (Sahih al-Bukhari 7352); they are not division in the religion.")
+                        ScriptureQuote(hadith: "bukhari:7352", cite: "Sahih al-Bukhari 7352, Sahih Muslim 1716", arabic: 46...60, english: 7...71)
+                    }
 
-                    ScriptureQuote(quran: "9:100", words: 0...12)
-                }
+                    Section(header: ArticleHeader("MANHAJ (METHODOLOGY)")) {
+                        ArticleParagraph(articleMarkdown: "**Manhaj (مَنهَج)** is methodology: the path by which one understands, prioritizes, and applies the religion, and deals with knowledge and people.")
 
-                Section(header: ArticleHeader("HOW THEY RELATE")) {
-                    ArticleParagraph(verbatim: "Aqeedah is the foundation, fiqh is the practice built upon it, and manhaj is the method that keeps both tied to revelation as it was first understood.")
+                        ArticleParagraph(articleMarkdown: "The sound manhaj is to take the Quran and the authentic Sunnah upon the understanding of the **Salaf (السَّلَف)**, the first righteous generations, rather than by later opinions that contradict them.")
 
-                    ArticleParagraph(verbatim: "The believers may differ in points of fiqh while remaining one in aqeedah and united upon a sound manhaj.")
+                        ScriptureQuote(quran: "9:100", words: 0...12)
+                    }
+
+                    Section(header: ArticleHeader("HOW THEY RELATE")) {
+                        ArticleParagraph(verbatim: "Aqeedah is the foundation, fiqh is the practice built upon it, and manhaj is the method that keeps both tied to revelation as it was first understood.")
+
+                        ArticleParagraph(verbatim: "The believers may differ in points of fiqh while remaining one in aqeedah and united upon a sound manhaj.")
+                    }
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {

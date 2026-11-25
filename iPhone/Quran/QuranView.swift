@@ -80,12 +80,13 @@ private struct QuranTrailingToolbar: ViewModifier {
 /// The leading slot: the one ⋯ More menu (`TabMoreMenu`), in both modes (Abu, 2026-10-11: "always have
 /// the top left button just be a more button that contains grid and everything else"). Until then Full
 /// Mode showed the reading-mode toggle and the Quran Planner here as two buttons, and the grid switch
-/// at the trailing edge; all three are items of the menu now, with the summary doors.
+/// at the trailing edge. The reading mode and the grid are items of the menu; the planner and the other
+/// summary doors are capsules under the summary since 2026-11-24 (`QuranView.summaryDoorCapsules`).
 ///
 /// The grid switch is the menu's HOLD shortcut, never a double tap (2026-10-26). A double-tap shortcut
 /// makes every single tap wait out the double-tap interval before the menu opens (`ShortcutMenu`), and
 /// that wait is what Abu felt as lag on this tab and the Hadith tab beside the Adhan tab's shortcut-free
-/// ⋯ ("why so laggy?"). The planner gave the hold up to it: it is one tap further, under Explore.
+/// ⋯ ("why so laggy?"). The planner gave the hold up to it.
 private struct QuranLeadingToolbar: ViewModifier {
     private let settings = Settings.shared
     @ObservedObject private var quranDisplay = QuranDisplay.shared
@@ -99,7 +100,7 @@ private struct QuranLeadingToolbar: ViewModifier {
     /// The More menu's items (`QuranView.moreMenuItems`).
     let moreMenuItems: AnyView
     let gridShortcut: MenuShortcut
-    /// The More menu's Quran Planner item, for the planner that stays mounted without its button.
+    /// The summary's Quran Planner capsule, for the planner that stays mounted without its button.
     @Binding var plannerRequest: Bool
 
     func body(content: Content) -> some View {
@@ -112,7 +113,7 @@ private struct QuranLeadingToolbar: ViewModifier {
                 ToolbarItem(placement: .navigationBarLeading) {
                     TabMoreMenu(isBusy: isPreparingPageMode, hold: gridShortcut) { moreMenuItems }
                         // The planner without its button: its settle hooks keep stamping a finished
-                        // plan, and its sheet opens from the menu (`plannerRequest`).
+                        // plan, and its sheet opens from the summary's capsule (`plannerRequest`).
                         .background {
                             if settings.isHafsDisplay {
                                 QuranPlannerToolbarButton(openReader: { surahID, ayahID in
@@ -275,7 +276,7 @@ struct QuranView: View {
     /// Choose Surah's open-time scroll target (see the `onChange` on the list).
     @State private var scrollPickerToCurrent: Int = -1
     @State private var showingSettingsSheet = false
-    /// Simple Mode's More menu asking the (buttonless) planner to open; see `QuranPlannerToolbarButton`.
+    /// The Quran Planner capsule asking the (buttonless) planner to open; see `QuranPlannerToolbarButton`.
     @State private var plannerRequest = false
     /// Which summary door was tapped. One piece of state driving one destination: two hidden links in
     /// the same List row both fired on any tap (Abu, 2026-09-19).
@@ -2104,9 +2105,9 @@ struct QuranView: View {
         }
         .navigationTitle(isPicker ? "Choose Surah" : "Al-Quran")
         #if os(iOS)
-        // The leading ⋯ More menu (reading mode, the planner, the grid, the summary doors), in both
-        // modes. Choose Surah wears the sheet's X there instead: flipping the reading mode or opening
-        // the planner from a sheet over the reader is the tab's business.
+        // The leading ⋯ More menu (the sort, the reading mode, the grid), in both modes. Choose Surah
+        // wears the sheet's X there instead: flipping the reading mode or opening the planner from a
+        // sheet over the reader is the tab's business.
         .modifier(QuranLeadingToolbar(
             isPicker: isPicker,
             showReadingModeConfirm: $showReadingModeConfirm,
@@ -2978,9 +2979,9 @@ struct QuranView: View {
         // accessibility text sizes, where the tiles simply take their own.
         let rowHeight = dynamicTypeSize.isAccessibilitySize ? nil : summaryTileHeights.values.max()
         // What the grid holds right now, resolved once so the Word of the Day can count it: with 1 or 3
-        // history tiles the word takes the empty slot beside them; with 0, 2 or 4 it stays in the ⋯
-        // More menu (it was a chip beside the Browse by Theme and History doors until 2026-10-11, and
-        // a row above them before 2026-09-16): never a fifth tile alone on its own row, never a hole
+        // history tiles the word takes the empty slot beside them; with 0, 2 or 4 it is a capsule under
+        // the tiles (`summaryDoorCapsules`; an item of the ⋯ menu from 2026-10-11 to 2026-11-24, a chip
+        // before that, a row before 2026-09-16): never a fifth tile alone on its own row, never a hole
         // beside three.
         // Simple Mode keeps the two tiles a reader comes back for, Last Read and the Ayah of the Day;
         // the listening tiles, the Word of the Day and the history expanders step aside (the play menu
@@ -3001,6 +3002,8 @@ struct QuranView: View {
         let word = settings.showWordOfTheDay && !wordHidden ? wordOfTheDay : nil
         let wordSurah = word.flatMap { quranData.surah($0.surah) }
         let wordFillsGrid = historyTileCount % 2 == 1
+        // The tab's doors, as capsules at the foot of the section (`summaryDoorCapsules`).
+        let doors = summaryDoorCapsules(wordIsTile: wordFillsGrid && word != nil && wordSurah != nil)
         // The whole section's hide follows the listening tiles' trim alone, since the three trims above flip together.
         if !(listenedHidden && historyTileCount == 0) {
             Section(header: summaryHeader) {
@@ -3045,7 +3048,7 @@ struct QuranView: View {
                         // Pushed through `openWordOfDay` rather than `push(surahID:)`: the word's page lists
                         // every ayah it appears in and pushes the reader itself.
                         SummaryWordTile(word: word, surahName: wordSurah.displayName, rowHeight: rowHeight) {
-                            // Through the doors' guard, like the More menu's items.
+                            // Through the doors' guard, like the capsules under the tiles.
                             guard !anyDoorOpen, path.isEmpty else { return }
                             openWordOfDay = true
                         }
@@ -3067,14 +3070,72 @@ struct QuranView: View {
                         .transition(.opacity)
                 }
 
-                // No door chips under the tiles since 2026-10-11 (Abu: "put these top left no matter
-                // simple or normal and remove it from summary"): Browse by Theme, History, the Qiraat
-                // Explorer and the Word of the Day's chip live in the ⋯ More menu (`moreMenuItems`) in
-                // both modes. They had shared one row here from 2026-09-16, two rows before that. (The
-                // "-openThemes" launch hook pushes the theme screen from `pathNavigation`, never from a
-                // hidden link row here: a zero-height row is still a List row that draws its band, and an
-                // isActive link inside the path stack crashed against the mushaf auto-open.)
+                // The doors under everything else in the section, in both modes (Abu, 2026-11-24: "put
+                // it in summary underneath the bottom as a bunch of capsule buttons"). They were chips
+                // here until 2026-10-11, then items of the ⋯ menu until this. (The "-openThemes" launch
+                // hook pushes the theme screen from `pathNavigation`, never from a hidden link row here:
+                // a zero-height row is still a List row that draws its band, and an isActive link inside
+                // the path stack crashed against the mushaf auto-open.)
+                if !doors.isEmpty {
+                    TabDoorCapsules(doors: doors, underTiles: true)
+                }
             }
+        } else if !doors.isEmpty {
+            // Simple Mode with no tile to show: the doors keep the top of the tab, without the
+            // summary's header.
+            Section {
+                TabDoorCapsules(doors: doors)
+            }
+        }
+    }
+
+    /// The summary's doors in their order: History, Topics (Browse by Theme), the Word of the Day while
+    /// it is not a tile, the Qiraat Explorer while "Show Riwayah / Qiraah" is on, the Planner, then a
+    /// random surah while the surah list's own shuffle is not on screen (`surahsHeaderShuffles`). Each
+    /// goes through the doors' one guard (`anyDoorOpen`).
+    private func summaryDoorCapsules(wordIsTile: Bool) -> [TabDoorCapsule] {
+        var doors: [TabDoorCapsule] = [
+            TabDoorCapsule(String(localized: "History"), systemImage: "clock.arrow.circlepath") { raiseSummaryDoor(.history) }
+        ]
+        if ThematicTopicsStore.isBundled {
+            // "Topics", the Hadith tab's word for its own door (Abu, 2026-11-24: "browse by theme can be
+            // topics like for Hadith for consistency"); the screen it opens keeps its title.
+            doors.append(TabDoorCapsule(String(localized: "Topics"), systemImage: "tag.fill") { raiseSummaryDoor(.themes) })
+        }
+        if settings.showWordOfTheDay, wordOfTheDay != nil, !wordIsTile {
+            doors.append(TabDoorCapsule(SummaryWordTile.title, systemImage: "character.book.closed.fill") {
+                guard !anyDoorOpen, path.isEmpty else { return }
+                openWordOfDay = true
+            })
+        }
+        if settings.showQiraahDetails {
+            doors.append(TabDoorCapsule(String(localized: "Qiraat Explorer"), systemImage: "arrow.left.and.right.text.vertical") { raiseSummaryDoor(.qiraat) })
+        }
+        if settings.isHafsDisplay {
+            // "Planner" on the capsule (Abu: "call Quran planner just planner"); the sheet keeps its title.
+            doors.append(TabDoorCapsule(String(localized: "Planner"), systemImage: "calendar.badge.clock") {
+                plannerRequest = true
+            })
+        }
+        if !surahsHeaderShuffles {
+            doors.append(TabDoorCapsule(String(localized: "Random Surah"), systemImage: "shuffle") {
+                guard !anyDoorOpen, path.isEmpty, let surah = quranData.quran.randomElement() else { return }
+                push(surahID: surah.id)
+            })
+        }
+        return doors
+    }
+
+    /// Whether the list under the summary leads with `SurahsHeader` and its shuffle, which already opens
+    /// a random surah a little further down the same screen: the sorts that list the surahs one by one,
+    /// outside Simple Mode (`.surahShuffle`). The Juz, Pages, Sajdah and Broken Letters sorts head their
+    /// sections otherwise.
+    private var surahsHeaderShuffles: Bool {
+        guard !settings.hides(.surahShuffle) else { return false }
+        switch settings.quranSortMode {
+        case .surah, .ayahs, .page, .revelation, .words, .letters: return true
+        case .khatm: return !settings.khatmGroupByJuz
+        case .juz, .simpleJuz, .pages, .sajdah, .muqattaat: return false
         }
     }
 
@@ -3096,52 +3157,17 @@ struct QuranView: View {
         }
     }
 
-    /// The tab's ⋯ More menu (Docs/Product/Simple Mode Guide.md), the same in both modes: the summary doors
-    /// (Browse by Theme, History, the Qiraat Explorer while "Show Riwayah / Qiraah" is on, and the
-    /// Word of the Day when it is not a tile), the Today pill, the planner and Random Surah, then the
-    /// reading mode and the grid. The menu is the doors' only door since 2026-10-11: the chips under
-    /// the summary tiles are gone in both modes (Abu: "put these top left no matter simple or normal
-    /// and remove it from summary"). Every item drives the same state as the control it stands in for,
-    /// through the doors' one guard. Items, not NavigationLinks: a link activates with every OTHER link
-    /// in the same List row (Abu, 2026-09-19), so one `@State` + one destination on the List pushes
-    /// the door; see `summaryDoorDestination`.
+    /// The tab's ⋯ More menu (Docs/Product/Simple Mode Guide.md): how the tab is shown (the sort, the
+    /// reading mode, the grid) and the tutorial. The doors left it on 2026-11-24 for the capsules under
+    /// the summary (`summaryDoorCapsules`; Abu: "so the top left ellipses has as little options as
+    /// possible"). Today stays only while Simple Mode hides the summary's Today pill, so the day's screen
+    /// is never more than a tap away and never offered twice. Items, not NavigationLinks: a link
+    /// activates with every OTHER link in the same List row (Abu, 2026-09-19), so one `@State` + one
+    /// destination on the List pushes the door; see `summaryDoorDestination`.
     @ViewBuilder
     var moreMenuItems: some View {
-        TabMoreMenuItem(String(localized: "Today"), systemImage: "sun.horizon.fill") { openMenuDoor(.daily) }
-        TabMoreMenuItem(String(localized: "History"), systemImage: "clock.arrow.circlepath") { openMenuDoor(.history) }
-        TabMoreMenuItem(String(localized: "Open a Random Surah"), systemImage: "shuffle") {
-            settings.hapticFeedback()
-            guard !anyDoorOpen, path.isEmpty, let surah = quranData.quran.randomElement() else { return }
-            push(surahID: surah.id)
-        }
-
-        // The four feature doors behind one Explore submenu (Abu, 2026-10-21: "make sure not too long if
-        // need be put menus in menus"): ten rows were this tab's longest menu.
-        let offersWordOfDay = settings.showWordOfTheDay && wordOfTheDay != nil
-        if ThematicTopicsStore.isBundled || offersWordOfDay || settings.showQiraahDetails || settings.isHafsDisplay {
-            Menu {
-                if ThematicTopicsStore.isBundled {
-                    TabMoreMenuItem(String(localized: "Browse by Theme"), systemImage: "rectangle.stack.fill") { openMenuDoor(.themes) }
-                }
-                if offersWordOfDay {
-                    TabMoreMenuItem(SummaryWordTile.title, systemImage: "character.book.closed.fill") {
-                        settings.hapticFeedback()
-                        guard !anyDoorOpen, path.isEmpty else { return }
-                        openWordOfDay = true
-                    }
-                }
-                if settings.showQiraahDetails {
-                    TabMoreMenuItem(String(localized: "Qiraat Explorer"), systemImage: "arrow.left.and.right.text.vertical") { openMenuDoor(.qiraat) }
-                }
-                if settings.isHafsDisplay {
-                    TabMoreMenuItem(String(localized: "Quran Planner"), systemImage: "calendar.badge.clock") {
-                        settings.hapticFeedback()
-                        plannerRequest = true
-                    }
-                }
-            } label: {
-                Label("Explore", systemImage: "safari")
-            }
+        if settings.hides(.quranTodayPill) {
+            TabMoreMenuItem(String(localized: "Today"), systemImage: "sun.horizon.fill") { openMenuDoor(.daily) }
         }
         TutorialMenuItem(tab: .quran)
 
@@ -3192,9 +3218,14 @@ struct QuranView: View {
         }
     }
 
-    /// One of the summary doors, raised from the More menu through the same guard as a chip.
+    /// One of the summary doors, raised from the More menu: the tap's haptic, then the capsules' guard.
     private func openMenuDoor(_ door: SummaryDoor) {
         settings.hapticFeedback()
+        raiseSummaryDoor(door)
+    }
+
+    /// One of the summary doors, and only if no other is in flight (a capsule gives its own haptic).
+    private func raiseSummaryDoor(_ door: SummaryDoor) {
         guard !anyDoorOpen, path.isEmpty else { return }
         openSummaryDoor = door
     }

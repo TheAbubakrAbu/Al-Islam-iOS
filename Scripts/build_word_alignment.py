@@ -67,6 +67,9 @@ from collections import Counter, defaultdict
 from functools import lru_cache
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from compress_shipped import read_shipped, write_shipped  # noqa: E402
+
 REPO = Path(__file__).resolve().parent.parent
 QURAN_JSON = REPO.parent / "Quran-Tajweed-Engine" / "sources" / "Quran.json"
 DATA = REPO / "Resources" / "Data" / "Quran"
@@ -909,16 +912,17 @@ def main() -> None:
 
     failed = problems(numbers)
     if arguments.check:
-        if not PACK.exists():
-            failed.append(f"no pack at {PACK}")
-        elif PACK.read_bytes() != data:
+        shipped = read_shipped(PACK)
+        if shipped is None:
+            failed.append(f"no pack at {PACK} (or its compressed form)")
+        elif shipped != data:
             failed.append("the pack on disk is not what these inputs build: rerun without --check")
     for line in failed:
         print("FAIL", line)
     if failed:
         sys.exit(1)
     if not arguments.check and not arguments.dry_run:
-        PACK.write_bytes(data)
+        write_shipped(PACK, data)  # ships compressed (Scripts/compress_shipped.py)
         print(f"wrote {PACK.relative_to(REPO)} ({len(data):,} bytes, {len(rows)} ayahs)")
     print("OK")
 

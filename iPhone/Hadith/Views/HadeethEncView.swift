@@ -74,6 +74,38 @@ struct HadeethEncHadith: Identifiable {
         parts.append(String(localized: "Hadith Encyclopedia (hadeethenc.com), via \(AppIdentifiers.displayName)"))
         return parts.joined(separator: "\n\n")
     }
+
+    /// The page as the AI reads it (Summarize with AI, Ask AI): the narration with its grading, the
+    /// explanation and the benefits, in English, the language the on-device model reads.
+    func aiArticle(entry: HadeethEncEntry) -> IslamArticle {
+        let grading = [english.attribution, english.grade].filter { !$0.isEmpty }.joined(separator: " \u{00B7} ")
+        return .built(id: IslamArticle.encyclopediaPrefix + entry.id, title: entry.title, passages: [
+            ("The Hadith", [english.body, grading].filter { !$0.isEmpty }.joined(separator: "\n")),
+            ("Explanation", english.explanation),
+            ("Benefits", english.benefits.map { "\u{2022} \($0)" }.joined(separator: "\n")),
+        ])
+    }
+
+    /// The anchor on a part of the page (`articleAnchor`), for its search to land on.
+    static func anchor(_ part: String) -> String { "hadeethEnc-\(part)" }
+
+    /// The page as its search bar reads it (Abu, 2026-11-24: "add a search bar to ... Hadith
+    /// explanations"): each part under the heading the page shows it with, landing on that heading.
+    /// The narration in both languages; the explanation and the benefits in the language the page
+    /// shows them in (English, or the Arabic where the encyclopedia has no English).
+    func searchPage(entry: HadeethEncEntry) -> IslamArticle {
+        let benefits = english.benefits.isEmpty ? arabic.benefits : english.benefits
+        return .searchable(id: IslamArticle.encyclopediaPrefix + entry.id, title: entry.title, passages: [
+            .init(heading: "", anchor: Self.anchor("top"),
+                  text: [entry.title, entry.grade, entry.attribution].filter { !$0.isEmpty }.joined(separator: "\n")),
+            .init(heading: String(localized: "THE HADITH"), anchor: Self.anchor("hadith"),
+                  text: [english.body, arabic.body].filter { !$0.isEmpty }.joined(separator: "\n")),
+            .init(heading: String(localized: "EXPLANATION"), anchor: Self.anchor("explanation"),
+                  text: english.explanation.isEmpty ? arabic.explanation : english.explanation),
+            .init(heading: String(localized: "BENEFITS"), anchor: Self.anchor("benefits"), text: benefits.joined(separator: "\n")),
+            .init(heading: String(localized: "SOURCES"), anchor: Self.anchor("sources"), text: arabic.reference),
+        ])
+    }
 }
 
 // MARK: - Store
@@ -395,6 +427,9 @@ final class HadeethEncStore: @unchecked Sendable {
                 case 0x61...0x7A, 0x30...0x39: out.append(UInt8(value))
                 default: out.append(0x20)
                 }
+            } else if let arabic = IslamArticles.arabicSearchScalar(value) {
+                // The article fold's Arabic rule (2026-11-24), so the two stay one rule.
+                if arabic != 0, let folded = Unicode.Scalar(arabic) { UTF8.encode(folded) { out.append($0) } }
             } else if LatinFold.isDropped(scalar) {
                 continue
             } else if let plain = LatinFold.base(scalar) {
@@ -947,10 +982,12 @@ struct HadeethEncHadithView: View {
     /// The title a host gives the screen instead of the encyclopedia's own number: the hadith
     /// row's Explanation sheet (HadithExplanationSheet) opens this page under that name.
     var titleOverride: String? = nil
+    /// The narration on the shelf this page explains, when it was opened as its Explanation: the
+    /// share link then opens the narration in its book with this page over it.
+    var shelfHadith: (slug: String, idInBook: Int)? = nil
 
     @State private var hadith: HadeethEncHadith?
     @State private var showArabicExplanation = false
-    @State private var copied = false
     @State private var topics: [HadeethEncCategory] = []
 
     private var arabicFont: Font {
@@ -995,10 +1032,11 @@ struct HadeethEncHadithView: View {
                         }
                     }
                     .padding(.vertical, 2)
+                    .articleAnchor(HadeethEncHadith.anchor("top"))
                 }
 
                 if let hadith {
-                    Section(header: Text("THE HADITH")) {
+                    Section(header: Text("THE HADITH").articleAnchor(HadeethEncHadith.anchor("hadith"))) {
                         HadithArabicText(text: hadith.arabic.body, term: "", font: arabicFont, lineSpacing: 6)
                             .textSelection(.enabled)
                         Text(hadith.english.body)
@@ -1013,7 +1051,7 @@ struct HadeethEncHadithView: View {
                     }
 
                     if !hadith.english.explanation.isEmpty || !hadith.arabic.explanation.isEmpty {
-                        Section(header: Text("EXPLANATION")) {
+                        Section(header: Text("EXPLANATION").articleAnchor(HadeethEncHadith.anchor("explanation"))) {
                             if !hadith.english.explanation.isEmpty {
                                 ForEach(Array(paragraphs(hadith.english.explanation).enumerated()), id: \.offset) { _, paragraph in
                                     Text(paragraph)
@@ -1058,7 +1096,8 @@ struct HadeethEncHadithView: View {
                     let benefits = hadith.english.benefits.isEmpty ? hadith.arabic.benefits : hadith.english.benefits
                     if !benefits.isEmpty {
                         let arabicBenefits = hadith.english.benefits.isEmpty
-                        Section(header: SectionPillHeader(title: String(localized: "BENEFITS"), count: benefits.count)) {
+                        Section(header: SectionPillHeader(title: String(localized: "BENEFITS"), count: benefits.count)
+                                    .articleAnchor(HadeethEncHadith.anchor("benefits"))) {
                             ForEach(Array(benefits.enumerated()), id: \.offset) { index, benefit in
                                 HStack(alignment: .top, spacing: 10) {
                                     if arabicBenefits {
@@ -1091,7 +1130,7 @@ struct HadeethEncHadithView: View {
                     }
 
                     if !hadith.arabic.reference.isEmpty {
-                        Section(header: Text("SOURCES")) {
+                        Section(header: Text("SOURCES").articleAnchor(HadeethEncHadith.anchor("sources"))) {
                             ForEach(Array(paragraphs(hadith.arabic.reference, separator: "\n").enumerated()), id: \.offset) { _, line in
                                 // `arabicFontDesign` is an availability branch: as a row of its
                                 // own the text goes in `OneRow`.
@@ -1141,34 +1180,22 @@ struct HadeethEncHadithView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        // The page's search bar at the foot, its share circle beside it (the link, the hadith as
+        // text) and the AI alone at the top right, the narration and its explanation in English
+        // (Abu, 2026-11-24: "add a search bar to those pages with no search bar like ... Hadith
+        // explanations"). Both read from the store when first needed (it keeps what this screen's
+        // task inflated), never this screen's state: a closure holding the state holds the value
+        // from when it was made.
+        .searchablePage(id: IslamArticle.encyclopediaPrefix + entry.id,
+                        share: PageShare(link: shareLink, title: titleOverride.map { "\($0): \(entry.title)" } ?? entry.title,
+                                         text: { [entry] in HadeethEncStore.shared.hadith(for: entry)?.plainText },
+                                         textLabel: String(localized: "Share Hadith"),
+                                         copyLabel: String(localized: "Copy Hadith")),
+                        page: { [entry] in HadeethEncStore.shared.hadith(for: entry)?.searchPage(entry: entry) },
+                        ai: { [entry] in HadeethEncStore.shared.hadith(for: entry)?.aiArticle(entry: entry) })
         .navigationTitle(titleOverride ?? "Hadith \(entry.id.localizedDigits)")
         .openScreen(.hadeethEncHadith, id: entry.id)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                ShortcutMenu(
-                    hold: MenuShortcut(String(localized: "Share Hadith"), action: shareHadith)
-                ) {
-                    Button {
-                        copyHadith()
-                    } label: {
-                        Label(copied ? "Copied" : "Copy Hadith", systemImage: copied ? "checkmark" : "doc.on.doc")
-                    }
-                    Button {
-                        shareHadith()
-                    } label: {
-                        Label("Share Hadith", systemImage: "square.and.arrow.up")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .tint(appearance.accent)
-                .disabled(hadith == nil)
-            }
-        }
         .task {
             guard hadith == nil else { return }
             let entry = self.entry
@@ -1183,19 +1210,15 @@ struct HadeethEncHadithView: View {
         }
     }
 
-    private func copyHadith() {
-        guard let hadith else { return }
-        Settings.shared.hapticFeedback()
-        UIPasteboard.general.string = hadith.plainText
-        CopyConfirmation.shared.show()
-        withAnimation { copied = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { withAnimation { copied = false } }
-    }
-
-    private func shareHadith() {
-        guard let hadith else { return }
-        Settings.shared.hapticFeedback()
-        presentSystemShareSheet(items: [hadith.plainText])
+    /// The link this page shares: the narration's explanation when it is one of the shelf's (it
+    /// opens the narration in its book, this page over it), otherwise the encyclopedia entry.
+    private var shareLink: AppLink {
+        if let shelfHadith, let book = HadithCatalogBook.bySlug[shelfHadith.slug],
+           let data = HadithStore.shared.book(book), let row = data.hadith(numbered: shelfHadith.idInBook),
+           case .hadith(let slug, let reference) = AppLink.hadith(row, in: book, data: data) {
+            return .explanation(slug: slug, reference: reference)
+        }
+        return .encyclopedia(entry.id)
     }
 
     private func paragraphs(_ text: String, separator: String = "\n\n") -> [String] {

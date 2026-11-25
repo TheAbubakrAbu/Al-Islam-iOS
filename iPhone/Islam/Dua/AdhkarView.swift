@@ -4,34 +4,87 @@ struct CommonDhikr: Identifiable {
     let arabicText: String
     let transliteration: String
     let translation: String
+    /// Where the words come from, in the dua rows' house style ("Bukhari 6405; Muslim 2691", "Tirmidhi
+    /// 3383, hasan"): sahih or hasan only, with the grading named outside the two Sahihs.
+    let source: String?
     let searchBlob: String
 
     var id: String { transliteration }
 
-    init(arabicText: String, transliteration: String, translation: String) {
+    init(arabicText: String, transliteration: String, translation: String, source: String? = nil) {
         self.arabicText = arabicText
         self.transliteration = transliteration
         self.translation = translation
-        self.searchBlob = Self.searchBlob(arabicText: arabicText, transliteration: transliteration, translation: translation)
+        self.source = source
+        self.searchBlob = Self.searchBlob(arabicText: arabicText, transliteration: transliteration, translation: translation,
+                                          source: source)
     }
 
-    private static func searchBlob(arabicText: String, transliteration: String, translation: String) -> String {
-        [arabicText, transliteration, translation]
+    private static func searchBlob(arabicText: String, transliteration: String, translation: String, source: String?) -> String {
+        [arabicText, transliteration, translation, source ?? ""]
             .joined(separator: " ")
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
     }
 }
 
+/// The remembrances, in a FIXED order: the Tasbih Counter keeps each preset's count by its index in
+/// this list (`TasbihCounters`), so a new dhikr is only ever appended, never inserted or reordered.
+/// The second group (Abu, 2026-11-24: "More dhikr") is the Sunnah's best-known remembrances, each
+/// from a sahih or hasan narration, spelled in the same style as the first nine.
 let commonDhikrItems: [CommonDhikr] = [
-    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ", transliteration: "SubhanAllah", translation: "Glory be to Allah"),
-    CommonDhikr(arabicText: "ٱلحَمدُ لِلَّهِ", transliteration: "Alhamdulillah", translation: "Praise be to Allah"),
-    CommonDhikr(arabicText: "اللَّهُ أَكبَرُ", transliteration: "Allahu Akbar", translation: "Allah is the Greatest"),
-    CommonDhikr(arabicText: "لَا إِلَٰهَ إِلَّا اللَّهُ", transliteration: "La ilaha illallah", translation: "There is no deity worthy of worship except Allah"),
-    CommonDhikr(arabicText: "أَستَغفِرُ اللَّهَ", transliteration: "Astaghfirullah", translation: "I seek forgiveness from Allah"),
-    CommonDhikr(arabicText: "لَا حَولَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ", transliteration: "La hawla wala quwwata illa billah", translation: "There is no power or might except with Allah"),
-    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ وَبِحَمدِهِ سُبحَانَ اللَّهِ العَظِيمِ", transliteration: "SubhanAllahi wa bihamdihi, SubhanAllahil Adheem", translation: "Glory be to Allah and praise be to Him; Glory be to Allah, the Most Great"),
-    CommonDhikr(arabicText: "اللَّهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ وَعَلَىٰ آلِ مُحَمَّدٍ", transliteration: "Allahumma salli 'ala Muhammad wa 'ala ali Muhammad", translation: "O Allah, send blessings upon Muhammad and his family"),
-    CommonDhikr(arabicText: "لَا إِلَٰهَ إِلَّا اللَّهُ وَحدَهُ لَا شَرِيكَ لَهُ لَهُ ٱلمُلكُ وَلَهُ ٱلحَمدُ وَهُوَ عَلَىٰ كُلِّ شَيءٍ قَدِيرٌ", transliteration: "La ilaha illallah wahdahu la sharika lah, lahul-mulk wa lahul-hamd, wa huwa 'ala kulli shayin qadir", translation: "There is no deity worthy of worship except Allah, alone, without any partner. His is the sovereignty and His is the praise, and He is capable of all things")
+    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ", transliteration: "SubhanAllah", translation: "Glory be to Allah",
+                source: "Muslim 2698"),
+    CommonDhikr(arabicText: "ٱلحَمدُ لِلَّهِ", transliteration: "Alhamdulillah", translation: "Praise be to Allah",
+                source: "Muslim 223"),
+    CommonDhikr(arabicText: "اللَّهُ أَكبَرُ", transliteration: "Allahu Akbar", translation: "Allah is the Greatest",
+                source: "Muslim 597"),
+    CommonDhikr(arabicText: "لَا إِلَٰهَ إِلَّا اللَّهُ", transliteration: "La ilaha illallah", translation: "There is no deity worthy of worship except Allah",
+                source: "Tirmidhi 3383, hasan"),
+    CommonDhikr(arabicText: "أَستَغفِرُ اللَّهَ", transliteration: "Astaghfirullah", translation: "I seek forgiveness from Allah",
+                source: "Muslim 591"),
+    CommonDhikr(arabicText: "لَا حَولَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ", transliteration: "La hawla wala quwwata illa billah", translation: "There is no power or might except with Allah",
+                source: "Bukhari 6384; Muslim 2704"),
+    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ وَبِحَمدِهِ سُبحَانَ اللَّهِ العَظِيمِ", transliteration: "SubhanAllahi wa bihamdihi, SubhanAllahil Adheem", translation: "Glory be to Allah and praise be to Him; Glory be to Allah, the Most Great",
+                source: "Bukhari 6682; Muslim 2694"),
+    CommonDhikr(arabicText: "اللَّهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ وَعَلَىٰ آلِ مُحَمَّدٍ", transliteration: "Allahumma salli 'ala Muhammad wa 'ala ali Muhammad", translation: "O Allah, send blessings upon Muhammad and his family",
+                source: "Bukhari 3370"),
+    CommonDhikr(arabicText: "لَا إِلَٰهَ إِلَّا اللَّهُ وَحدَهُ لَا شَرِيكَ لَهُ لَهُ ٱلمُلكُ وَلَهُ ٱلحَمدُ وَهُوَ عَلَىٰ كُلِّ شَيءٍ قَدِيرٌ", transliteration: "La ilaha illallah wahdahu la sharika lah, lahul-mulk wa lahul-hamd, wa huwa 'ala kulli shayin qadir", translation: "There is no deity worthy of worship except Allah, alone, without any partner. His is the sovereignty and His is the praise, and He is capable of all things",
+                source: "Bukhari 6403; Muslim 2691"),
+    // 2026-11-24: appended (the order above is the Tasbih Counter's key).
+    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ وَبِحَمدِهِ", transliteration: "SubhanAllahi wa bihamdihi", translation: "Glory be to Allah and praise be to Him",
+                source: "Bukhari 6405; Muslim 2691"),
+    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ، وَالحَمدُ لِلَّهِ، وَلَا إِلَٰهَ إِلَّا اللَّهُ، وَاللَّهُ أَكبَرُ", transliteration: "SubhanAllah, walhamdulillah, wa la ilaha illallah, wallahu akbar", translation: "Glory be to Allah, praise be to Allah, there is no deity worthy of worship except Allah, and Allah is the Greatest",
+                source: "Muslim 2137"),
+    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ وَبِحَمدِهِ، عَدَدَ خَلقِهِ، وَرِضَا نَفسِهِ، وَزِنَةَ عَرشِهِ، وَمِدَادَ كَلِمَاتِهِ", transliteration: "SubhanAllahi wa bihamdihi, 'adada khalqihi, wa rida nafsihi, wa zinata 'arshihi, wa midada kalimatihi", translation: "Glory be to Allah and praise be to Him, as many times as the number of His creation, as much as pleases Him, as much as the weight of His Throne, and as much as the ink of His words",
+                source: "Muslim 2726"),
+    CommonDhikr(arabicText: "أَستَغفِرُ اللَّهَ وَأَتُوبُ إِلَيهِ", transliteration: "Astaghfirullaha wa atubu ilayh", translation: "I seek the forgiveness of Allah and turn to Him in repentance",
+                source: "Bukhari 6307"),
+    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ وَبِحَمدِهِ، أَستَغفِرُ اللَّهَ وَأَتُوبُ إِلَيهِ", transliteration: "SubhanAllahi wa bihamdihi, astaghfirullaha wa atubu ilayh", translation: "Glory be to Allah and praise be to Him; I seek the forgiveness of Allah and turn to Him in repentance",
+                source: "Muslim 484"),
+    CommonDhikr(arabicText: "رَبِّ اغفِر لِي وَتُب عَلَيَّ، إِنَّكَ أَنتَ التَّوَّابُ الرَّحِيمُ", transliteration: "Rabbighfir li wa tub 'alayya, innaka antat-Tawwabur-Rahim", translation: "My Lord, forgive me and accept my repentance; indeed, You are the Accepter of repentance, the Most Merciful",
+                source: "Abu Dawud 1516, sahih"),
+    CommonDhikr(arabicText: "لَا إِلَٰهَ إِلَّا أَنتَ سُبحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ", transliteration: "La ilaha illa anta subhanaka inni kuntu minaz-zalimin", translation: "There is no deity except You; glory be to You. Indeed, I have been of the wrongdoers",
+                source: "Quran 21:87; Tirmidhi 3505, sahih"),
+    CommonDhikr(arabicText: "حَسبُنَا اللَّهُ وَنِعمَ الوَكِيلُ", transliteration: "Hasbunallahu wa ni'mal-wakil", translation: "Allah is sufficient for us, and He is the best Disposer of affairs",
+                source: "Quran 3:173; Bukhari 4563"),
+    CommonDhikr(arabicText: "رَضِيتُ بِاللَّهِ رَبًّا، وَبِالإِسلَامِ دِينًا، وَبِمُحَمَّدٍ رَسُولًا", transliteration: "Raditu billahi rabban, wa bil-Islami dinan, wa bi-Muhammadin rasula", translation: "I am pleased with Allah as my Lord, with Islam as my religion, and with Muhammad as Messenger",
+                source: "Abu Dawud 1529, sahih; Muslim 1884"),
+    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ العَظِيمِ وَبِحَمدِهِ", transliteration: "SubhanAllahil-'Adheemi wa bihamdihi", translation: "Glory be to Allah, the Most Great, and praise be to Him",
+                source: "Tirmidhi 3464, sahih"),
+    CommonDhikr(arabicText: "الحَمدُ لِلَّهِ حَمدًا كَثِيرًا طَيِّبًا مُبَارَكًا فِيهِ", transliteration: "Alhamdulillahi hamdan kathiran tayyiban mubarakan fih", translation: "Praise be to Allah, abundant, good and blessed praise",
+                source: "Bukhari 799"),
+    CommonDhikr(arabicText: "اللَّهُ أَكبَرُ كَبِيرًا، وَالحَمدُ لِلَّهِ كَثِيرًا، وَسُبحَانَ اللَّهِ بُكرَةً وَأَصِيلًا", transliteration: "Allahu akbaru kabira, walhamdulillahi kathira, wa subhanallahi bukratan wa asila", translation: "Allah is the Greatest, truly great; abundant praise be to Allah; and glory be to Allah, morning and evening",
+                source: "Muslim 601"),
+    CommonDhikr(arabicText: "سُبحَانَ المَلِكِ القُدُّوسِ", transliteration: "Subhanal-Malikil-Quddus", translation: "Glory be to the King, the Most Holy",
+                source: "Abu Dawud 1430, sahih"),
+    CommonDhikr(arabicText: "سُبحَانَكَ اللَّهُمَّ وَبِحَمدِكَ، أَشهَدُ أَن لَا إِلَٰهَ إِلَّا أَنتَ، أَستَغفِرُكَ وَأَتُوبُ إِلَيكَ", transliteration: "Subhanakallahumma wa bihamdika, ashhadu an la ilaha illa anta, astaghfiruka wa atubu ilayk", translation: "Glory be to You, O Allah, and praise be to You. I bear witness that there is no deity worthy of worship except You. I seek Your forgiveness and turn to You in repentance",
+                source: "Tirmidhi 3433, sahih"),
+    CommonDhikr(arabicText: "اللَّهُمَّ أَعِنِّي عَلَىٰ ذِكرِكَ وَشُكرِكَ وَحُسنِ عِبَادَتِكَ", transliteration: "Allahumma a'inni 'ala dhikrika wa shukrika wa husni 'ibadatik", translation: "O Allah, help me to remember You, to thank You, and to worship You well",
+                source: "Abu Dawud 1522, sahih"),
+    CommonDhikr(arabicText: "بِسمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسمِهِ شَيءٌ فِي الأَرضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ العَلِيمُ", transliteration: "Bismillahil-ladhi la yadurru ma'asmihi shay'un fil-ardi wa la fis-sama'i, wa huwas-Sami'ul-'Alim", translation: "In the name of Allah, with whose name nothing on earth or in the heavens can cause harm, and He is the All-Hearing, the All-Knowing",
+                source: "Abu Dawud 5088; Tirmidhi 3388, hasan sahih"),
+    CommonDhikr(arabicText: "أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِن شَرِّ مَا خَلَقَ", transliteration: "A'udhu bikalimatillahit-tammati min sharri ma khalaq", translation: "I seek refuge in the perfect words of Allah from the evil of what He has created",
+                source: "Muslim 2708"),
 ]
 
 /// Measured height of the Arabic block, so a dhikr can decide for itself how to sit on the row.
@@ -96,11 +149,10 @@ private struct SpokenRowWashModifier: ViewModifier {
     }
 }
 
-/// The Listen/Stop control - the other speech-reactive piece, split out for the same reason.
+/// The Listen/Stop control - the other speech-reactive piece, split out for the same reason. Drawn
+/// as a `ListenChipLabel`, the section header's Listen All pill's twin.
 private struct AdhkarListenButton: View {
     private let settings = Settings.shared
-    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
-    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var speech = ArabicSpeech.shared
     let text: String
 
@@ -115,13 +167,9 @@ private struct AdhkarListenButton: View {
                 speech.speak(text, rate: 0.4)
             }
         } label: {
-            Label(isBeingSpoken ? String(localized: "Stop") : String(localized: "Listen"),
-                  systemImage: isBeingSpoken ? "stop.fill" : "speaker.wave.2")
-                .font(.caption.weight(.semibold))
-                .foregroundColor(settings.accentColor.color)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .conditionalGlassEffect()
+            ListenChipLabel(title: isBeingSpoken ? String(localized: "Stop") : String(localized: "Listen"),
+                            systemImage: isBeingSpoken ? "stop.fill" : "speaker.wave.2.fill",
+                            active: isBeingSpoken)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(isBeingSpoken ? String(localized: "Stop the recitation") : String(localized: "Hear the Arabic read aloud"))
@@ -317,8 +365,9 @@ struct AdhkarRow: View, Equatable {
             // speech engine, and the voice resolves after the first rows draw, so a plain check here
             // left those rows with no Listen button. Without a citation, the gate holds the whole row,
             // so a device with no Arabic voice still spends no space on it.
-            if let source {
+            if let source = source.map(QuranSurahNames.naming) {
                 HStack(spacing: 8) {
+                    // A verse names its surah: "Quran Al-Anbya 21:87" (`QuranSurahNames.naming`).
                     HighlightedSnippet(
                         source: source,
                         term: searchQuery,
@@ -351,6 +400,11 @@ struct AdhkarRow: View, Equatable {
         // ellipsized line; it lets each block claim the height its text actually needs.
         .fixedSize(horizontal: false, vertical: true)
         .padding(.vertical, 4)
+        #if os(iOS)
+        // The line between two rows spans the row. Left to the List, it started at the row's first
+        // plain `Text`, the Listen button's word, and drew a short dash under each button.
+        .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
+        #endif
         // The row being read aloud carries a soft accent wash; during Listen All it walks down the
         // section one row at a time as the queue advances. (Its own observing view - see SpokenRowWash.)
         // On the phone it is the row's whole cell, applied where the List holds the row (`spokenRowWash`).
@@ -583,7 +637,8 @@ struct AdhkarView: View {
                                 translation: dhikr.translation,
                                 useQuranicFont: settings.useFontArabic,
                                 searchQuery: searchText,
-                                speechEnabled: true
+                                speechEnabled: true,
+                                source: dhikr.source
                             )
                             .equatable()
                             .spokenRowWash(dhikr.arabicText)
@@ -622,7 +677,9 @@ struct AdhkarView: View {
                         headline: String(localized: "Unquestionably, by the remembrance of Allah hearts are assured."),
                         source: String(localized: "Quran 13:28"),
                         message: String(localized: "Words of praise, thanks and glorification from the Quran and the Sunnah, each in Arabic with its transliteration and meaning, to keep on your tongue through the day.")
-                    ))
+                    ) {
+                        DhikrFourWordsArt()
+                    })
                 }
                 #endif
                 introductionSection
@@ -736,6 +793,7 @@ struct AdhkarView: View {
             useQuranicFont: settings.useFontArabic,
             searchQuery: searchText,
             speechEnabled: true,
+            source: dhikr.source,
             rowID: dhikr.id,
             // Only while searching: with the full list showing, the row is already where it lives.
             onScrollTo: searching ? {

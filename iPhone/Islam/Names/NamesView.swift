@@ -694,7 +694,9 @@ struct NamesView: View {
                                 ResourceHeroStat("\(favoriteSet.count)".localizedDigits,
                                                  favoriteSet.count == 1 ? String(localized: "favorite") : String(localized: "favorites")),
                             ]
-                        ))
+                        ) {
+                            NamesRosetteArt(favorites: favoriteSet)
+                        })
                     }
                     #endif
                     descriptionSection

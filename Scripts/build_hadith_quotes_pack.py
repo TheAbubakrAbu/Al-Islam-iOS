@@ -34,7 +34,10 @@ SOURCES = [ROOT / "iPhone/Islam" / name for name in (
     "Beliefs/SalafiyyahViews.swift", "Beliefs/AnswersViews.swift", "Beliefs/ScholarsViews.swift", "Dua/DuaView.swift",
     # The Watch compiles these too (2026-09-29): the Hadith & Its Sciences articles and the Proving
     # Islam chapters, so their narrations must be in its copy of the shelf.
-    "Content/HadithSciencesViews.swift", "Proofs/ProvingIslamChapters.swift")]
+    "Content/HadithSciencesViews.swift", "Proofs/ProvingIslamChapters.swift",
+    # The six reading libraries of 2026-11-24 compile for the Watch too.
+    "Library/StoriesOfTheProphets.swift", "Library/SahabahAndSalaf.swift", "Library/RefutingReligions.swift",
+    "Library/PreservationOfTheQuran.swift", "Library/ScienceOfHadith.swift", "Library/DominoProcess.swift")]
 OUT = ROOT / "Resources/Data/Islam/HadithQuotes.json.deflate"
 # `hadith: "slug:citation"` (ScriptureQuote, DuaItem) and `.hadith("slug:citation"` (article blocks).
 LINK_RE = re.compile(r'(?:hadith:\s*|(?<!\w)\.hadith\(\s*)"([a-z_0-9]+:(?:\d+[a-z]?|#\d+))"')

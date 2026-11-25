@@ -2,16 +2,30 @@
 
 The app speaks English, Arabic (since 2026-10-24), Urdu (since 2026-10-26), Indonesian, Malay and Turkish
 (since 2026-11-19), French, Bangla, Russian, Hindi, German and Spanish (since 2026-11-20), and Malayalam,
-Tamil and Dutch (since 2026-11-21). Everything is translated, the Islam tab included, except the Islam tab's ARTICLES: Faith &
-Proofs (the pillars, beliefs, How-To Guides, miracles, prophecies, the prophets' miracles, the Sunnahs of the
-Prophet, Proving Islam), Hadith & Its Sciences and the riwayat differences page. Those stay English, and read
-left to right inside the Arabic and Urdu interfaces.
+Tamil and Dutch (since 2026-11-21). Everything is translated, the Islam tab included, except the Islam tab's ARTICLES:
+the seven Faith & Proofs resources (Pillars and Beliefs, How-To Guides, Miracles of the Quran, Prophecies of the
+Prophet, Miracles of the Prophets, Sunnahs of the Prophet, Proving Islam). Those stay English, and read left to
+right inside the Arabic and Urdu interfaces. Hadith & Its Sciences and the riwayat differences page are not a
+separate set: they are groups and pages INSIDE Pillars and Beliefs. The Hadith tab's "About Hadith & the Sunnah"
+section and Quran Words only link into them.
+
+Scripture and its meanings are data, not interface, and stay as shipped in every language: the Quran
+translations (Saheeh International, the Clear Quran), the hadiths' English, the hadith explanations, the
+English tafsir, the duas' and dhikr's meanings, the 99 Names' meanings and explanations, the daily reminders
+and the word-by-word meanings. The Arabic is always beside them. Other languages would need a published
+translation chosen for each, never a machine one.
+
+Outside English the app says so (2026-11-24, Abu: "say it only supports English clearly"; `EnglishOnly` in
+ArticleDesign.swift): every Faith & Proofs tile carries "EN" in its corner, its rows and banners an "English
+only" tag, the FAITH & PROOFS header the same tag, and each of the seven pages opens with "Available in
+English only" at the top of its card (`ResourceHero` reads `isEnglishArticle`, which `englishArticle()` sets).
+The Hadith tab's section of article links says it in its footer. In English none of it is drawn.
 
 ## Where things live
 
 | What | Where |
 | --- | --- |
-| Interface strings and every translation | `Resources/Localizable.xcstrings` (iPhone, Widget, Watch, Complication; the two watch targets ship only their share, see "The watch's share") |
+| Interface strings and every translation | `Resources/Localizable.xcstrings` (iPhone, Widget, Watch, Complication; the three extensions ship only their share, see "Each extension's share") |
 | Permission prompts, the home-screen name | `Resources/InfoPlist.xcstrings` (iPhone, Watch) |
 | Siri and Shortcuts phrases | `Resources/<ar, ms, tr, fr, ru, de, es, nl>.lproj/AppShortcuts.strings` (iPhone), `Resources/Watch/<same>.lproj/AppShortcuts.strings` (Watch); none for Urdu, Indonesian, Bangla, Hindi, Malayalam or Tamil (Siri has none of them) |
 | Helpers | `iPhone/Helpers/System/Localization.swift` (every target) |
@@ -246,38 +260,47 @@ is a manual key, so rebuilding that pack with different English needs those keys
 Tilawa (the sister React Native app) carries Arabic for much of the same content (its tajweed course, its UI
 dictionary): align by position or by identical English before translating from scratch.
 
-## The watch's share
+## Each extension's share
 
 App Store Connect refuses a watch app over 75 MB after thinning (ITMS-90389). Xcode compiles every key of a
-catalog into every target that carries it, so with one catalog for the whole app each language cost the watch
-about 3 MB twice (Watch.app and Complication.appex): build 271 (4.6.7, 11 languages) came to 95 MB and was
-refused on 2026-11-23. Each new language would have added about 6 MB more.
+catalog into every target that carries it, so with one catalog for the whole app each language cost about
+3 MB per target: twice on the watch (Watch.app and Complication.appex), where build 271 (4.6.7, 11 languages)
+came to 95 MB and was refused on 2026-11-23, and once more for the Widget inside the iPhone app.
 
-The Watch and Complication targets therefore end with a Run Script phase, "Trim Watch Strings"
-(`Scripts/trim_watch_strings.py`), that compiles a copy of the catalog holding only the keys the target can
-reach and puts its Localizable.strings and Localizable.stringsdict in place of the full ones. A key is kept
-when the compiler extracted it from that target's own Swift files, when one of them (or the Adhan package)
-holds it as a plain string literal (a prayer name, an enum's raw value shown through `.localizedDisplay`), when
-it matches an interpolated literal there (`"surah.meaning.\(id)"`), and, for the Watch app only, when it is a
-manual key: the Watch ships the tajweed course, surah info, the Names and the hadith quotes and shows their
-text through `.localizedDisplay`. The catalog itself is never changed, and translating needs no extra step:
-the next build trims the new translations too. Literals inside branches the watch does not compile
-(`#if os(iOS)`, a compilation condition the target lacks) are left out of the scan; a condition the script
-cannot decide (`canImport`) counts as compiled.
+The Watch, Complication and Widget targets therefore end with a Run Script phase, "Trim Strings"
+(`Scripts/trim_strings.py`), that compiles a copy of the catalog holding only the keys the target can reach
+and puts its Localizable.strings and Localizable.stringsdict in place of the full ones. A key is kept when the
+compiler extracted it from that target's own Swift files, when one of them (or the Adhan package) holds it as
+a plain string literal (a prayer name, an enum's raw value shown through `.localizedDisplay`), when it matches
+an interpolated literal there (`"surah.meaning.\(id)"`), and, for the Watch app only, when it is a manual
+key: the Watch ships the tajweed course, surah info, the Names and the hadith quotes and shows their text
+through `.localizedDisplay`. Literals inside branches the target does not compile (`#if os(iOS)` on the watch,
+a compilation condition the target lacks) are left out of the scan; a condition the script cannot decide
+(`canImport`) counts as compiled. The catalog itself is never changed, and translating needs no extra step:
+the next build trims the new translations too. The iPhone app keeps the whole catalog.
 
-Measured 2026-11-23 with 14 languages: the Watch app keeps 8,885 of 14,195 keys (32.5 MB of tables instead of
-44.4 MB), the Complication 1,230 (2.1 MB), and the thinned watch app comes to about 61 MB of the 75. Every
-string the watch code extracts keeps all its translations. The tajweed course is most of what is left (its
-lesson text is about 20 MB of the Watch's tables); each new language adds about 2.3 MB.
+The tajweed course is the one data source cut by field. The watch's lesson page (`TajweedLessonWatchView`)
+shows titles, summary, definition, rule card, letter sets, body, word groups, key points and the mistakes'
+wrong and right forms; the examples, quizzes, the mistakes' "why", tables, drills, images, rule-card
+fragments, mnemonics, counts, chapter subtitles and stage blurbs stay on the phone, so the Watch leaves their
+text out (`WATCH_HIDDEN_COURSE_FIELDS`, sentences of 16 characters or more only). The build FAILS if watch
+code that touches the course reads one of those fields (`lesson.quiz`, `card.fragments`): take the field out
+of that list and its translations ship again.
 
-What this means when writing watch code:
-- A literal the watch shows is kept automatically, wherever its key came from.
+Measured 2026-11-23 with 14 languages: the Watch app keeps 7,091 of 14,195 keys (25.8 MB of tables instead of
+44.4 MB), the Complication 1,230 (2.1 MB), the Widget 1,485 (2.6 MB), and the thinned watch app comes to about
+54 MB of the 75. Every string a target's code extracts keeps all its translations. Each new language adds
+about 1.9 MB to the watch app and about 3.3 MB to the iPhone app.
+
+What this means when writing extension code:
+- A literal the extension shows is kept automatically, wherever its key came from.
 - A key built at runtime from pieces with no literal behind it ("\(prefix).\(suffix)") is not: give it a
-  literal pattern in a watch-compiled file, or register it as a manual key.
-- `./Scripts/trim_watch_strings.py --report --objects <the target's Objects-normal> [--with-data-keys]` prints
-  what a build would keep. The phase needs `SWIFT_EMIT_LOC_STRINGS = YES` (it reads the compiler's
-  `.stringsdata`) and script sandboxing off in the two watch targets (it reads the sources); it fails the
-  build, rather than ship the full tables, when it finds no `.stringsdata`.
+  literal pattern in a file that target compiles, or (watch) register it as a manual key.
+- `./Scripts/trim_strings.py --report --objects <the target's Objects-normal> --conditions "<its
+  SWIFT_ACTIVE_COMPILATION_CONDITIONS>" [--with-data-keys [--watch-course]]` prints what a build would keep.
+  The phase needs `SWIFT_EMIT_LOC_STRINGS = YES` (it reads the compiler's `.stringsdata`) and script
+  sandboxing off in the three targets (it reads the sources); it fails the build, rather than ship the full
+  tables, when it finds no `.stringsdata`.
 
 ## Indonesian, Malay and Turkish
 

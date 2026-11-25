@@ -147,6 +147,15 @@ struct HamzatulWaslView: View {
 
             Text("The mushaf marks it with a small saad over the alif, ٱ, from صِلَة (\u{201C}joining\u{201D}). It only ever begins a word: the article ٱلۡ, a handful of nouns, and many verbs.")
                 .font(.body)
+
+            // Abu, 2026-11-23: "outside of the Quran hamzatul wasl is generally written with an alif but
+            // an alif can never really start at the beginning of the word". The two words are the hadith
+            // of intentions' own (Sahih al-Bukhari 1 on the shelf). The same text is on the ٱ letter page.
+            Text("Outside the Quran it is generally written as a plain alif, ا, with no mark: the hadith in this app write امْرِئٍ (a man) and الْأَعْمَالُ (the deeds) this way. It is still easy to spot. An alif is a long vowel, and no word can begin on a vowel, so a plain alif can never really start a word: when one does, it is hamzatul waSl. A hamza that is always said is written أ or إ.")
+                .font(.body)
+
+            Text("Some mushafs, in the Maghribi tradition of Warsh and Qaloon, mark it with a dot instead of the saad. You can switch the app's Quran to either: Quran Settings → Arabic Text → Hamzat al-Wasl.")
+                .font(.body)
         }
     }
 

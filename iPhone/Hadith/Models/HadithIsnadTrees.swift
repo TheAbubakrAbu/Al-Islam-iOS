@@ -184,8 +184,9 @@ struct HadithIsnadTree {
 /// HadithIsnadTrees.qpk in the app's pack container (`QuranPackContainer`); the layout is in
 /// `write_pack` of the script. The eager section names the books (a compiler's book byte) and the
 /// counts; block n (one per book) maps the book's rows to their trees (a `HadithRowBlock` by
-/// idInBook: varint tree id, narrations, books); the blocks after hold the trees, `shardSize` to a
-/// block by tree id. Mapped, not read; a block is decompressed the first time a page asks.
+/// idInBook: varint tree id, narrations, books, chains); the blocks after hold the trees,
+/// `shardSize` to a block by tree id; the last block lists the rows with the most chains, the
+/// shelf's and each book's. Mapped, not read; a block is decompressed the first time a page asks.
 final class HadithIsnadTreesPack: @unchecked Sendable {
     /// What a row's door says before the tree is read.
     struct Summary: Equatable {
@@ -193,6 +194,20 @@ final class HadithIsnadTreesPack: @unchecked Sendable {
         /// The narrations whose chains the tree merges, and the books they are from.
         let narrations: Int
         let books: Int
+        /// How many different chains the hadith comes down by on the shelf: a chain is the
+        /// narrators as written down to one compiler, counted once however many narrations repeat
+        /// it. Zero for a row whose own text only points at another narration ("مثله"). The script
+        /// counts it over a narrower family than the tree's (its header says which rows it leaves
+        /// out and why), so it can be less than `narrations`.
+        let chains: Int
+
+        /// The order of a list sorted by the most chains: the script's own (`rank`), so a list the
+        /// app sorts stands as the lists the pack ships do.
+        static func mostChainsFirst(_ a: Summary?, _ b: Summary?) -> Bool? {
+            let left = (a?.chains ?? 0, a?.books ?? 0, a?.narrations ?? 0)
+            let right = (b?.chains ?? 0, b?.books ?? 0, b?.narrations ?? 0)
+            return left == right ? nil : left > right
+        }
     }
 
     let slugs: [String]
@@ -202,6 +217,8 @@ final class HadithIsnadTreesPack: @unchecked Sendable {
     let treeCount: Int
     let shardSize: Int
     let shardCount: Int
+    /// How many hadiths the shelf's list of the most chains holds (`mostChains`).
+    let rankedCount: Int
     private let container: QuranPackContainer
 
     static func bundledURL() -> URL? {
@@ -230,8 +247,10 @@ final class HadithIsnadTreesPack: @unchecked Sendable {
         let trees = reader.u32()
         let shard = reader.u32()
         let shards = reader.u32()
+        let ranked = reader.u32()
         guard reader.remaining == 0, rows > 0, trees > 0, shard > 0, shards == (trees + shard - 1) / shard,
-              container.blockCount == books + shards, container.recordCount == container.blockCount,
+              ranked >= 0, ranked <= rows,
+              container.blockCount == books + shards + 1, container.recordCount == container.blockCount,
               container.unitCount == rows, counts.reduce(0, +) == rows else { return nil }
         self.slugs = slugs
         self.counts = counts
@@ -239,6 +258,7 @@ final class HadithIsnadTreesPack: @unchecked Sendable {
         self.treeCount = trees
         self.shardSize = shard
         self.shardCount = shards
+        self.rankedCount = ranked
         self.container = container
     }
 
@@ -251,23 +271,56 @@ final class HadithIsnadTreesPack: @unchecked Sendable {
             else { return nil }
             var at = payload.startIndex
             var values: [Int] = []
-            for _ in 0..<3 {
-                var value = 0
-                var shift = 0
-                var done = false
-                while at < payload.endIndex, shift < 35 {
-                    let byte = Int(payload[at])
-                    at += 1
-                    value |= (byte & 0x7F) << shift
-                    if byte & 0x80 == 0 { done = true; break }
-                    shift += 7
-                }
-                guard done else { return nil }
+            for _ in 0..<4 {
+                guard let value = Self.varint(payload, &at) else { return nil }
                 values.append(value)
             }
             guard at == payload.endIndex, values[0] >= 1, values[0] <= treeCount else { return nil }
-            return Summary(tree: values[0], narrations: values[1], books: values[2])
+            return Summary(tree: values[0], narrations: values[1], books: values[2], chains: values[3])
         } ?? nil
+    }
+
+    /// The rows with the most chains, most first, one row for each hadith: a book's own list, or
+    /// with no book the whole shelf's. The script chose and ordered them (`rank`); nothing is
+    /// counted here. Empty for a book the pack does not name.
+    func mostChains(slug: String?) -> [(slug: String, idInBook: Int)] {
+        var row = 0
+        if let slug {
+            guard let book = slugs.firstIndex(of: slug) else { return [] }
+            row = book + 1
+        }
+        return withBlock(slugs.count + shardCount, count: slugs.count + 1) { block, count -> [(slug: String, idInBook: Int)] in
+            guard let index = block.index(of: row, count: count), let payload = block.payload(at: index, count: count)
+            else { return [] }
+            var at = payload.startIndex
+            var out: [(slug: String, idInBook: Int)] = []
+            while at < payload.endIndex {
+                var named = slug
+                if named == nil {
+                    let book = Int(payload[at])
+                    at += 1
+                    guard slugs.indices.contains(book) else { return [] }
+                    named = slugs[book]
+                }
+                guard let named, let idInBook = Self.varint(payload, &at) else { return [] }
+                out.append((named, idInBook))
+            }
+            return out
+        } ?? []
+    }
+
+    /// One LEB128 number at `at`, which moves past it; nil when the bytes end inside it.
+    private static func varint(_ payload: ArraySlice<UInt8>, _ at: inout Int) -> Int? {
+        var value = 0
+        var shift = 0
+        while at < payload.endIndex, shift < 35 {
+            let byte = Int(payload[at])
+            at += 1
+            value |= (byte & 0x7F) << shift
+            if byte & 0x80 == 0 { return value }
+            shift += 7
+        }
+        return nil
     }
 
     /// Every row of a book that has a tree, in `idInBook` order: for the tests.
@@ -329,10 +382,31 @@ final class HadithIsnadTreeStore: @unchecked Sendable {
 
     func tree(id: Int) -> HadithIsnadTree? { pack?.tree(id: id) }
 
+    /// The hadiths with the most chains, most first: a book's, or with no book the shelf's
+    /// (`HadithIsnadTreesPack.mostChains`). Read once and kept: a door asks before its page does.
+    func mostChains(slug: String? = nil) -> [(slug: String, idInBook: Int)] {
+        let key = slug ?? ""
+        lock.lock()
+        let kept = ranked[key]
+        lock.unlock()
+        if let kept { return kept }
+        let found = pack?.mostChains(slug: slug) ?? []
+        lock.lock()
+        ranked[key] = found
+        lock.unlock()
+        return found
+    }
+
+    /// How many hadiths the shelf's list holds, from the pack's header: nothing is decompressed.
+    var mostChainsCount: Int { pack?.rankedCount ?? 0 }
+
+    private var ranked: [String: [(slug: String, idInBook: Int)]] = [:]
+
     /// Memory pressure (`MemoryTrim`): the decompressed blocks go; the next page inflates its own again.
     func purge() {
         lock.lock()
         let loaded = openedPack
+        ranked = [:]
         lock.unlock()
         loaded?.purge()
     }

@@ -189,6 +189,8 @@ extension View {
     /// Lists mirrored, letters backwards (2026-10-24). A no-op in English.
     func englishArticle() -> some View {
         leftToRightContent(AppLanguage.pinsArticlesEnglish)
+            // So the page's opening card can say so (`EnglishOnlyNotice`, in every language but English).
+            .environment(\.isEnglishArticle, true)
     }
 
     /// `leftToRightContent()` only while `isEnglish`: for a view that shows English or Arabic content by a
@@ -196,6 +198,19 @@ extension View {
     /// keeps the direction it inherits, and the view's structure is the same either way.
     func leftToRightContent(_ isEnglish: Bool) -> some View {
         modifier(LeftToRightContentModifier(isEnglish: isEnglish))
+    }
+}
+
+/// Set by `englishArticle()`: the screen is one of the articles that stay English in every interface
+/// language. `ResourceHero` reads it to put "Available in English only" at the top of the page.
+private struct IsEnglishArticleKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var isEnglishArticle: Bool {
+        get { self[IsEnglishArticleKey.self] }
+        set { self[IsEnglishArticleKey.self] = newValue }
     }
 }
 

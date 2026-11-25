@@ -37,6 +37,9 @@ struct IslamView: View {
     /// Where `scrollTarget` lands on screen: the top, unless a DEBUG scroll asked for the bottom.
     @State private var scrollAnchor: UnitPoint = .top
     @StateObject private var articleSearch = IslamArticleSearchModel()
+    /// The filter row over the search results (`IslamSearchFilterBar`, 2026-11-24): Search In, Topics,
+    /// Match, Words, Without, Best Match and which kinds of result show.
+    @State private var searchFilters = IslamSearchFilters.remembered()
     /// A shared link's page (an article, a sunnah, a prophecy), pushed on the tab: the iPhone stack
     /// pushes it over the list, the iPad over the resource it belongs to (`openLinkedPage`).
     @State private var linkedPage: IslamLinkedPage?
@@ -133,6 +136,17 @@ struct IslamView: View {
         case propheciesOfProphet
         case sunnahsOfProphet
         case provingIslam
+        // KNOWLEDGE & DAWAH (2026-11-24, Abu: "Add these new Islamic resources": stories of the prophets;
+        // Sahaba, Ahlul Bayt, Salaf; refuting religions; preservation/compilation of the Quran; science of
+        // hadiths; the Domino Process): six reading libraries, two rows of tiles, in the order the subject
+        // runs: the prophets and the generations after them, how the Quran and the Sunnah reached us,
+        // then the other paths and the case for Islam. Each is an `IslamLibraryView` over its catalog home.
+        case prophetStories
+        case sahabahAndSalaf
+        case quranPreservation
+        case hadithScience
+        case refutingReligions
+        case dominoProcess
         case askAI
         /// Simple Mode's one row standing in for the sections it folds (TOOLS, ASK AI;
         /// Docs/Product/Simple Mode Guide.md). A destination like any resource, so a tile opened from its
@@ -178,6 +192,12 @@ struct IslamView: View {
             case .miraclesOfProphets: return "Miracles of the Prophets"
             case .sunnahsOfProphet: return "Sunnahs of the Prophet"
             case .provingIslam: return "Proving Islam"
+            case .prophetStories: return "Stories of the Prophets"
+            case .sahabahAndSalaf: return "Sahabah, Ahlul Bayt & Salaf"
+            case .quranPreservation: return "Preservation of the Quran"
+            case .hadithScience: return "Science of Hadith"
+            case .refutingReligions: return "Refuting Religions"
+            case .dominoProcess: return "The Domino Process"
             case .journal: return "Islamic Journal"
             }
         }
@@ -209,6 +229,12 @@ struct IslamView: View {
             case .miraclesOfProphets: return String(localized: "Miracles of the Prophets")
             case .sunnahsOfProphet: return String(localized: "Sunnahs of the Prophet")
             case .provingIslam: return String(localized: "Proving Islam")
+            case .prophetStories: return String(localized: "Stories of the Prophets")
+            case .sahabahAndSalaf: return String(localized: "Sahabah, Ahlul Bayt & Salaf")
+            case .quranPreservation: return String(localized: "Preservation of the Quran")
+            case .hadithScience: return String(localized: "Science of Hadith")
+            case .refutingReligions: return String(localized: "Refuting Religions")
+            case .dominoProcess: return String(localized: "The Domino Process")
             case .journal: return String(localized: "Islamic Journal")
             }
         }
@@ -239,6 +265,9 @@ struct IslamView: View {
             case .miraclesOfProphets: return "staroflife"
             case .sunnahsOfProphet: return "sun.horizon"
             case .provingIslam: return "checkmark.shield"
+            case .prophetStories, .sahabahAndSalaf, .quranPreservation, .hadithScience, .refutingReligions,
+                 .dominoProcess:
+                return libraryHome?.systemImage ?? "book"
             case .journal: return "square.and.pencil"
             }
         }
@@ -271,6 +300,12 @@ struct IslamView: View {
             case .miraclesOfProphets: return "The signs given to the prophets, and to him"
             case .sunnahsOfProphet: return "What he did each day, from waking to sleeping"
             case .provingIslam: return "The complete case that Islam is true, one line of evidence at a time"
+            case .prophetStories: return "From Adam to Isa, told from the Quran and sound hadith"
+            case .sahabahAndSalaf: return "The Companions, the Prophet\u{2019}s household, and the early generations"
+            case .quranPreservation: return "How the Quran was revealed, memorised, written, and kept"
+            case .hadithScience: return "How every narration is checked, graded, and preserved"
+            case .refutingReligions: return "Other faiths and worldviews, answered fairly"
+            case .dominoProcess: return "From reality to a Creator, to revelation, to Islam"
             case .journal: return "Notes from khutbahs, classes, and your reading"
             }
         }
@@ -303,6 +338,12 @@ struct IslamView: View {
             case .miraclesOfProphets: return String(localized: "The signs given to the prophets, and to him")
             case .sunnahsOfProphet: return String(localized: "What he did each day, from waking to sleeping")
             case .provingIslam: return String(localized: "The complete case that Islam is true, one line of evidence at a time")
+            case .prophetStories: return String(localized: "From Adam to Isa, told from the Quran and sound hadith")
+            case .sahabahAndSalaf: return String(localized: "The Companions, the Prophet\u{2019}s household, and the early generations")
+            case .quranPreservation: return String(localized: "How the Quran was revealed, memorised, written, and kept")
+            case .hadithScience: return String(localized: "How every narration is checked, graded, and preserved")
+            case .refutingReligions: return String(localized: "Other faiths and worldviews, answered fairly")
+            case .dominoProcess: return String(localized: "From reality to a Creator, to revelation, to Islam")
             case .journal: return String(localized: "Notes from khutbahs, classes, and your reading")
             }
         }
@@ -342,6 +383,12 @@ struct IslamView: View {
             case .miraclesOfProphets: return String(localized: "Miracles of\nthe Prophets")
             case .sunnahsOfProphet: return String(localized: "Sunnahs of\nthe Prophet")
             case .provingIslam: return String(localized: "Proving\nIslam")
+            case .prophetStories: return String(localized: "Stories of\nthe Prophets")
+            case .sahabahAndSalaf: return String(localized: "Sahabah, Ahlul\nBayt & Salaf")
+            case .quranPreservation: return String(localized: "Preservation\nof the Quran")
+            case .hadithScience: return String(localized: "Science of\nHadith")
+            case .refutingReligions: return String(localized: "Refuting\nReligions")
+            case .dominoProcess: return String(localized: "The Domino\nProcess")
             case .journal: return String(localized: "Islamic\nJournal")
             }
         }
@@ -392,6 +439,25 @@ struct IslamView: View {
                                             "siwak", "miswak", "rawatib", "witr", "duha", "right hand", "bismillah", "waking", "sleep",
                                             "eating", "drinking", "fasting", "monday", "thursday", "friday", "salam", "wudu", "adhkar"]
             case .journal: return ["journal", "notes", "note", "diary", "khutbah", "lecture", "class", "study", "reflection", "write"]
+            case .prophetStories: return ["stories", "story", "qisas", "qasas", "qisas al-anbiya", "prophets", "anbiya", "messengers",
+                                          "adam", "nuh", "noah", "ibrahim", "abraham", "yusuf", "joseph", "musa", "moses", "isa", "jesus",
+                                          "maryam", "mary", "sulayman", "solomon", "dawud", "david", "yunus", "jonah", "khidr", "pharaoh"]
+            case .sahabahAndSalaf: return ["sahabah", "sahaba", "companions", "ahlul bayt", "ahl al-bayt", "family of the prophet",
+                                           "salaf", "tabiun", "tabi'in", "abu bakr", "umar", "uthman", "ali", "khadijah", "aishah",
+                                           "fatimah", "hasan", "husayn", "abu hurayrah", "four imams", "caliphs", "khulafa"]
+            case .quranPreservation: return ["preservation", "preserved", "compilation", "compiled", "mushaf", "uthman", "abu bakr",
+                                             "memorisation", "memorization", "hafiz", "huffaz", "scribes", "manuscripts", "birmingham",
+                                             "sanaa", "naskh", "abrogation", "corruption", "tahrif", "rasm", "dots", "harakat"]
+            case .hadithScience: return ["mustalah", "ulum al-hadith", "hadith science", "isnad", "chain", "narrators", "rijal",
+                                         "jarh", "tadil", "sahih", "hasan", "daif", "weak", "fabricated", "mawdu", "grading",
+                                         "mutawatir", "ahad", "qudsi", "orientalists", "goldziher", "schacht"]
+            case .refutingReligions: return ["religions", "comparative religion", "other religions", "answering", "refutation",
+                                             "christianity", "judaism", "hinduism", "buddhism", "sikhism", "zoroastrianism",
+                                             "atheism", "secularism", "liberalism", "ahmadiyya", "qadiani", "bahai", "nation of islam",
+                                             "shia", "sufism", "pluralism", "dawah"]
+            case .dominoProcess: return ["domino", "dominoes", "domino effect", "dawah", "does god exist", "existence of god",
+                                         "which religion", "why islam", "proof", "contingency", "necessary being", "creator",
+                                         "revelation", "workshop"]
             }
         }
 
@@ -402,6 +468,38 @@ struct IslamView: View {
         private static let searchBlobs: [IslamDestination: String] = Dictionary(uniqueKeysWithValues: allCases.map {
             ($0, IslamArticles.fold(([$0.title, $0.subtitle] + $0.searchKeywords + $0.localizedSearchNames).joined(separator: " ")))
         })
+
+        /// The resource is one of the articles that read English in every interface language: all of
+        /// FAITH & PROOFS (`EnglishOnly`). Its tile, row and header carry the "English only" tag.
+        var readsEnglishOnly: Bool { group.readsEnglishOnly }
+
+        /// The catalog home a library resource draws (`IslamLibraryView`); nil for every other resource.
+        var libraryHome: IslamArticleHome? {
+            switch self {
+            case .prophetStories: return .stories
+            case .sahabahAndSalaf: return .companions
+            case .quranPreservation: return .preservation
+            case .hadithScience: return .hadithScience
+            case .refutingReligions: return .religions
+            case .dominoProcess: return .domino
+            default: return nil
+            }
+        }
+
+        /// The resource that shows a catalog home's index.
+        static func resource(for home: IslamArticleHome) -> IslamDestination {
+            switch home {
+            case .pillars: return .pillarsAndBasics
+            case .guides: return .howToGuides
+            case .proving: return .provingIslam
+            case .stories: return .prophetStories
+            case .companions: return .sahabahAndSalaf
+            case .religions: return .refutingReligions
+            case .preservation: return .quranPreservation
+            case .hadithScience: return .hadithScience
+            case .domino: return .dominoProcess
+            }
+        }
 
         /// The section the resource is listed under (`ResourceGroup`).
         var group: ResourceGroup {
@@ -414,6 +512,8 @@ struct IslamView: View {
             case .commonAdhkar, .commonDuas, .tasbihCounter, .namesOfAllah: return .remembrance
             case .pillarsAndBasics, .howToGuides, .miraclesOfQuran, .miraclesOfProphets,
                  .propheciesOfProphet, .sunnahsOfProphet, .provingIslam: return .faith
+            case .prophetStories, .sahabahAndSalaf, .quranPreservation, .hadithScience, .refutingReligions,
+                 .dominoProcess: return .study
             case .zakahCalculator, .inheritanceCalculator, .hijriCalendarConverter, .islamicWallpapers: return .tools
             // The two location tools come with the prayer times' location (not in Al-Quran).
             #if HAS_ADHAN
@@ -480,12 +580,14 @@ struct IslamView: View {
     /// Learn, Remembrance, Tools, then the reading library you sit down with (Faith & Practice and
     /// Signs & Proofs until 2026-10-24, one Faith & Proofs since). Ask AI stays last, alone.
     private enum ResourceGroup: CaseIterable {
-        case learn, remembrance, tools, faith, assistant
+        // KNOWLEDGE & DAWAH after FAITH & PROOFS (2026-11-24): the six reading libraries, two rows of three.
+        case learn, remembrance, tools, faith, study, assistant
 
         var title: String {
             switch self {
             case .learn: return "LEARN"
             case .faith: return "FAITH & PROOFS"
+            case .study: return "KNOWLEDGE & DAWAH"
             case .remembrance: return "REMEMBRANCE"
             case .tools: return "TOOLS"
             case .assistant: return "ASK AI"
@@ -497,6 +599,7 @@ struct IslamView: View {
             switch self {
             case .learn: return String(localized: "LEARN")
             case .faith: return String(localized: "FAITH & PROOFS")
+            case .study: return String(localized: "KNOWLEDGE & DAWAH")
             case .remembrance: return String(localized: "REMEMBRANCE")
             case .tools: return String(localized: "TOOLS")
             case .assistant: return String(localized: "ASK AI")
@@ -507,6 +610,7 @@ struct IslamView: View {
             switch self {
             case .learn: return "graduationcap"
             case .faith: return "moon.stars"
+            case .study: return "books.vertical"
             case .remembrance: return "heart.text.square"
             case .tools: return "wrench.and.screwdriver"
             case .assistant: return "sparkles"
@@ -525,6 +629,12 @@ struct IslamView: View {
         var foldsInSimpleMode: Bool {
             self == .tools || self == .assistant
         }
+
+        /// The groups whose pages read English in every interface language (`EnglishOnly`): the
+        /// articles of FAITH & PROOFS and the six libraries of KNOWLEDGE & DAWAH.
+        var readsEnglishOnly: Bool {
+            self == .faith || self == .study
+        }
     }
 
     /// One section of resources as drawn: a subject group, or the single ISLAMIC RESOURCES section.
@@ -534,6 +644,8 @@ struct IslamView: View {
         let title: String
         let systemImage: String
         let items: [IslamDestination]
+        /// FAITH & PROOFS, whose pages read English in every language: the header says so.
+        var englishOnly = false
     }
 
     /// The resource sections, in order. One per subject by default (`islamGroupResources`, on since
@@ -545,7 +657,8 @@ struct IslamView: View {
     private func resourceSections(foldsSimple: Bool) -> [ResourceSection] {
         let groups = ResourceGroup.allCases.filter { !(foldsSimple && settings.hides(.foldedGroups) && $0.foldsInSimpleMode) }
         guard !settings.islamGroupResources else {
-            return groups.map { ResourceSection(id: $0.title, title: $0.displayTitle, systemImage: $0.systemImage, items: $0.resources) }
+            return groups.map { ResourceSection(id: $0.title, title: $0.displayTitle, systemImage: $0.systemImage, items: $0.resources,
+                                                englishOnly: $0.readsEnglishOnly) }
                 .filter { !$0.items.isEmpty }
         }
         let all = groups.flatMap(\.resources)
@@ -833,6 +946,8 @@ struct IslamView: View {
                     }
                 }
             }
+            .islamSearchFilterChrome($searchFilters, isSearching: !query.isEmpty, homes: Self.searchedHomes,
+                                     kinds: IslamSearchFilters.Kind.allCases, translated: true)
             // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
             .collapseBarsOnScroll($barsCollapsed)
             .adaptiveSafeArea(edge: .bottom) {
@@ -893,8 +1008,11 @@ struct IslamView: View {
             #endif
         }
         .onChange(of: searchText) { text in
-            articleSearch.update(query: text, homes: [.pillars, .guides, .proving])
+            articleSearch.update(query: text, homes: searchFilters.searchedHomes(Set(Self.searchedHomes)), filters: searchFilters)
             if !text.isEmpty { scrollTarget = nil }
+        }
+        .onChange(of: searchFilters) { filters in
+            articleSearch.update(query: searchText, homes: filters.searchedHomes(Set(Self.searchedHomes)), filters: filters)
         }
         #else
         return List {
@@ -907,13 +1025,16 @@ struct IslamView: View {
     }
 
     #if os(iOS)
-    /// The resources whose title, subtitle or keywords carry every word of the query.
+    /// The article libraries the root searches.
+    private static let searchedHomes: [IslamArticleHome] = IslamArticleHome.allCases
+
+    /// The resources whose title, subtitle or keywords carry the query, under the filters' Match,
+    /// Words and Without.
     private func matchingResources(_ query: String) -> [IslamDestination] {
-        let terms = IslamArticleSearch.words(query)
-        guard !terms.isEmpty else { return [] }
+        let compiled = IslamSearchQuery(query, filters: searchFilters)
+        guard !compiled.words.isEmpty else { return [] }
         let matched = IslamDestination.available.filter { item in
-            let blob = item.searchBlob
-            return terms.allSatisfy { blob.contains($0) }
+            compiled.matches(item.searchBlob)
         }
         // A resource NAMED for the query leads the ones that carry it as a keyword. The translated names
         // come after the English ones, so an English query ranks exactly as it always did.
@@ -924,9 +1045,11 @@ struct IslamView: View {
     /// Pillars & Beliefs and the How-to guides, each labelled with where it lives.
     @ViewBuilder
     private func searchResultSections(query: String) -> some View {
-        let resources = matchingResources(query)
+        let resources = searchFilters.shows(.resources) ? matchingResources(query) : []
         Group {
-            AskAISearchSection(query: query, translated: true)
+            if searchFilters.shows(.askAI) {
+                AskAISearchSection(query: query, translated: true)
+            }
 
             if !resources.isEmpty {
                 Section(header: SectionPillHeader(title: String(localized: "RESOURCES"), count: resources.count, icon: "magnifyingglass")) {
@@ -938,7 +1061,7 @@ struct IslamView: View {
 
             IslamArticleSearchSections(
                 query: query,
-                homes: [.pillars, .guides, .proving],
+                homes: Set(Self.searchedHomes),
                 contentHits: articleSearch.contentHits,
                 isSearching: articleSearch.isSearching,
                 showHome: true,
@@ -952,17 +1075,16 @@ struct IslamView: View {
                     case .pillars: return String(localized: "Scroll To Pillars & Beliefs")
                     case .guides: return String(localized: "Scroll To How-To Guides")
                     case .proving: return String(localized: "Scroll To Proving Islam")
+                    default: return String(localized: "Scroll To \(IslamDestination.resource(for: entry.home).displayTitle)")
                     }
                 },
                 onScrollTo: { entry in
                     // The article's own row is inside its resource; the nearest thing on THIS screen is
                     // the resource row, so that is where the list scrolls.
-                    switch entry.home {
-                    case .pillars: scrollToResource(.pillarsAndBasics)
-                    case .guides: scrollToResource(.howToGuides)
-                    case .proving: scrollToResource(.provingIslam)
-                    }
-                }
+                    scrollToResource(IslamDestination.resource(for: entry.home))
+                },
+                filters: searchFilters,
+                reference: articleSearch.reference
             )
         }
         .themedListRowBackground()
@@ -989,8 +1111,13 @@ struct IslamView: View {
             AccentIconChip(systemImage: item.systemImage)
 
             VStack(alignment: .leading, spacing: 1) {
-                HighlightedSnippet(source: item.displayTitle, term: query, font: .body,
-                                   accent: settings.accentColor.color, fg: .primary)
+                HStack(spacing: 6) {
+                    HighlightedSnippet(source: item.displayTitle, term: query, font: .body,
+                                       accent: settings.accentColor.color, fg: .primary)
+                    if item.readsEnglishOnly && EnglishOnly.isShown {
+                        EnglishOnlyTag()
+                    }
+                }
 
                 HighlightedSnippet(source: item.displaySubtitle, term: query, font: .caption,
                                    accent: settings.accentColor.color, fg: .secondary)
@@ -1063,7 +1190,8 @@ struct IslamView: View {
         }
 
         ForEach(resourceSections(foldsSimple: true)) { section in
-            Section(header: SectionPillHeader(title: section.title, count: section.items.count, icon: section.systemImage)) {
+            Section(header: SectionPillHeader(title: section.title, count: section.items.count, icon: section.systemImage,
+                                              englishOnly: section.englishOnly)) {
                 if settings.islamGridMode {
                     resourceItems(section.items)
                         // The section's one grid row, so a scroll can land on a section that the lazy
@@ -1126,7 +1254,8 @@ struct IslamView: View {
             ForEach(ResourceGroup.allCases.filter(\.foldsInSimpleMode), id: \.self) { group in
                 let items = group.resources
                 if !items.isEmpty {
-                    Section(header: SectionPillHeader(title: group.displayTitle, count: items.count, icon: group.systemImage)) {
+                    Section(header: SectionPillHeader(title: group.displayTitle, count: items.count, icon: group.systemImage,
+                                                      englishOnly: group.readsEnglishOnly)) {
                         resourceItems(items)
                     }
                     // On the rows, not the List: `.listRowBackground` reaches the cells only from row
@@ -1208,7 +1337,8 @@ struct IslamView: View {
         } else {
             ForEach(items, id: \.self) { item in
                 NavigationLink(value: item) {
-                    toolLabel(item.displayTitle, systemImage: item.systemImage, subtitle: item.displaySubtitle)
+                    toolLabel(item.displayTitle, systemImage: item.systemImage, subtitle: item.displaySubtitle,
+                              englishOnly: item.readsEnglishOnly)
                 }
                 .id(Self.rowID(item))
                 .contextMenu { favoriteToggleButton(item) }
@@ -1243,9 +1373,14 @@ struct IslamView: View {
             AccentIconChip(systemImage: item.systemImage, size: 32)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(item.displayTitle)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.primary)
+                HStack(spacing: 6) {
+                    Text(item.displayTitle)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.primary)
+                    if item.readsEnglishOnly && EnglishOnly.isShown {
+                        EnglishOnlyTag()
+                    }
+                }
 
                 Text(item.displaySubtitle)
                     .font(.caption)
@@ -1286,6 +1421,13 @@ struct IslamView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
         .padding(.horizontal, 4)
+        // The leading corner, across from the favorite star: "EN" where the page reads English only.
+        .overlay(alignment: .topLeading) {
+            if item.readsEnglishOnly && EnglishOnly.isShown {
+                EnglishOnlyTag(compact: true)
+                    .padding(7)
+            }
+        }
         .contentShape(Rectangle())
         // Favorites are accent-tinted, everything else is clear - the same pattern as the surah, 99 Names,
         // and Arabic letter grids, so a favorite reads the same way everywhere.
@@ -1485,16 +1627,20 @@ struct IslamView: View {
         }
     }
 
-    /// The More menu's items: the grid or list switch, worded and drawn as the other tabs' are, and
-    /// the resources in one section or one per subject (`islamGroupResources`).
+    /// The More menu's items: the tutorial, the grid or list switch, worded and drawn as the other tabs'
+    /// are, and the resources in one section or one per subject (`islamGroupResources`). Kept as short
+    /// as the tab allows (Abu, 2026-11-24: "so the top left ellipses has as little options as possible").
     @ViewBuilder
     private var islamMoreMenuItems: some View {
-        // The Today pills on the cards hide in Simple (`.cardTodayPills`), so the Daily Hub keeps a door
-        // here in both modes. It pushes through the same state the Reminder of the Day card uses.
-        TabMoreMenuItem(String(localized: "Today"), systemImage: "sun.horizon.fill") {
-            settings.hapticFeedback()
-            guard islamPath.isEmpty else { return }
-            reminderDoor = .hub
+        // Today only while Simple Mode hides the cards' Today pills (`.cardTodayPills`): otherwise the
+        // Reminder of the Day card carries it, and the menu would offer it twice. It pushes through the
+        // same state the card uses.
+        if settings.hides(.cardTodayPills) {
+            TabMoreMenuItem(String(localized: "Today"), systemImage: "sun.horizon.fill") {
+                settings.hapticFeedback()
+                guard islamPath.isEmpty else { return }
+                reminderDoor = .hub
+            }
         }
         TutorialMenuItem(tab: .islam)
         Divider()
@@ -1546,6 +1692,10 @@ struct IslamView: View {
                 if case .miracle = page {
                     _ = await Task.detached(priority: .userInitiated) { MiraclesStore.shared.library() }.value
                 }
+                // The course pack likewise, so a lesson opens on its page.
+                if case .lesson = page {
+                    _ = await Task.detached(priority: .userInitiated) { TajweedLessonsStore.shared.course() }.value
+                }
                 if settles { try? await Task.sleep(nanoseconds: 450_000_000) }
                 linkedPage = page
             }
@@ -1555,15 +1705,13 @@ struct IslamView: View {
     private static func resource(owning page: IslamLinkedPage) -> IslamDestination {
         switch page {
         case .article(let id):
-            switch IslamArticleCatalog.byID[id]?.home {
-            case .guides: return .howToGuides
-            case .proving: return .provingIslam
-            case .pillars, .none: return .pillarsAndBasics
-            }
+            return IslamArticleCatalog.byID[id].map { IslamDestination.resource(for: $0.home) } ?? .pillarsAndBasics
         case .sunnah: return .sunnahsOfProphet
         case .prophecy: return .propheciesOfProphet
         case .prophetMiracle: return .miraclesOfProphets
         case .miracle: return .miraclesOfQuran
+        case .tajweed: return .tajweedFoundations
+        case .lesson: return .tajweedCourse
         }
     }
 
@@ -1617,6 +1765,15 @@ struct IslamView: View {
             } else {
                 MiraclesView().openScreen(.miraclesLibrary).islamSettingsToolbar()
             }
+        case .tajweed(let raw):
+            if let topic = TajweedTopic(rawValue: raw) {
+                topic.destination
+            } else {
+                TajweedFoundationsView().islamSettingsToolbar()
+            }
+        case .lesson(let id):
+            // A lesson this build does not carry says so over the course (`TajweedLessonScreen`).
+            TajweedLessonScreen(lessonID: id)
         }
     }
 
@@ -1706,6 +1863,10 @@ struct IslamView: View {
             SunnahView().openScreen(.sunnahLibrary)
         case .provingIslam:
             ProvingIslamView().openScreen(.provingIslamLibrary)
+        case .prophetStories, .sahabahAndSalaf, .quranPreservation, .hadithScience, .refutingReligions, .dominoProcess:
+            if let home = destination.libraryHome {
+                IslamLibraryView(home: home).openScreen(.articleLibrary, id: home.rawValue)
+            }
         case .journal:
             JournalView()
         }
@@ -1784,6 +1945,12 @@ struct IslamView: View {
             resourceLink(title: String(localized: "Proving Islam"), systemImage: "checkmark.shield") {
                 ProvingIslamView()
             }
+
+            ForEach(IslamArticleHome.allCases.filter(\.isLibrary), id: \.self) { home in
+                resourceLink(title: IslamDestination.resource(for: home).displayTitle, systemImage: home.systemImage) {
+                    IslamLibraryView(home: home)
+                }
+            }
             #endif
 
             resourceLink(title: String(localized: "Islamic Wallpapers"), systemImage: "photo.on.rectangle") {
@@ -1813,7 +1980,13 @@ struct IslamView: View {
         }
 
         ForEach(resourceSections(foldsSimple: false)) { section in
-            Section(header: SectionIconHeader(section.title, icon: section.systemImage)) {
+            Section(header: HStack(spacing: 8) {
+                SectionIconHeader(section.title, icon: section.systemImage)
+                if section.englishOnly && EnglishOnly.isShown {
+                    Spacer(minLength: 4)
+                    EnglishOnlyTag()
+                }
+            }) {
                 splitResourceItems(section.items)
             }
         }
@@ -1895,7 +2068,7 @@ struct IslamView: View {
             // Re-tapping the selected row must still LAND - see `selectSplitResource`.
             selectSplitResource(value)
         } label: {
-            toolLabel(value.displayTitle, systemImage: value.systemImage)
+            toolLabel(value.displayTitle, systemImage: value.systemImage, englishOnly: value.readsEnglishOnly)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
@@ -1939,7 +2112,7 @@ struct IslamView: View {
         #endif
     }
 
-    private func toolLabel(_ title: String, systemImage: String, subtitle: String? = nil) -> some View {
+    private func toolLabel(_ title: String, systemImage: String, subtitle: String? = nil, englishOnly: Bool = false) -> some View {
         #if os(watchOS)
         // The 40 mm face leaves about 103 pt beside the standard chip, and "Remembrances" (108 pt at
         // its body size) broke as "Remem-" / "brances"; a smaller chip and gap there give the title
@@ -1954,8 +2127,18 @@ struct IslamView: View {
             AccentIconChip(systemImage: systemImage, size: chipSize)
 
             VStack(alignment: .leading, spacing: 1) {
+                #if os(iOS)
+                HStack(spacing: 6) {
+                    Text(title)
+                        .foregroundColor(.primary)
+                    if englishOnly && EnglishOnly.isShown {
+                        EnglishOnlyTag()
+                    }
+                }
+                #else
                 Text(title)
                     .foregroundColor(.primary)
+                #endif
 
                 // The caption column is an iPhone luxury - the 40mm screen has no room for it.
                 #if os(iOS)

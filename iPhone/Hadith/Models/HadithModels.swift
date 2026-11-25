@@ -465,6 +465,65 @@ struct HadithCatalogBook: Identifiable, Hashable {
     }
 }
 
+// MARK: - What the book's card leaves unsaid
+
+// The book's card (HadithBookView.swift, Show More) writes the short title, its Arabic and the
+// compiler's name in both scripts before it opens. These two say what would only repeat them.
+extension HadithCatalogBook {
+    /// Whether the title its compiler gave the book says more than the one the shelf knows it by.
+    /// Mishkat al-Masabih and al-Adab al-Mufrad are their full titles already: the card then shows
+    /// what the name means and no FULL TITLE under it, which was the same words three times over.
+    var hasOwnFullTitle: Bool {
+        Self.bareArabicWords(name.fullArabic) != Self.bareArabicWords(arabicTitle)
+    }
+
+    /// `story` without the compiler's Arabic name in brackets ("Imam al-Bukhari (الإِمَامُ
+    /// البُخَارِيُّ), who sifted ..." reads "Imam al-Bukhari, who sifted ..."): the card has just
+    /// written it, in full, under his English name. Only a bracket that is Arabic alone, of two
+    /// words or more, all but at most one of them words of `authorArabic`, goes; a term the story
+    /// teaches ("A hadith qudsi (حَدِيثٌ قُدسِيٌّ) is ...") and every bracket of figures stays. The
+    /// translations keep the same bracket, so it leaves them the same way.
+    static func droppingAuthorInBrackets(_ story: String, authorArabic: String) -> String {
+        let author = Set(bareArabicWords(authorArabic))
+        guard !author.isEmpty else { return story }
+        var out = ""
+        var rest = Substring(story)
+        while let open = rest.firstIndex(of: "("), let close = rest[open...].firstIndex(of: ")") {
+            let inside = rest[rest.index(after: open)..<close]
+            let words = bareArabicWords(String(inside))
+            let arabicOnly = !inside.isEmpty && inside.unicodeScalars.allSatisfy { scalar in
+                scalar.properties.isWhitespace || (0x0600...0x06FF).contains(scalar.value)
+                    || (0xFB50...0xFDFF).contains(scalar.value) || (0xFE70...0xFEFF).contains(scalar.value)
+            }
+            let named = words.filter(author.contains).count
+            if arabicOnly, words.count >= 2, named >= words.count - 1 {
+                // The bracket goes with the space before it.
+                var kept = rest[..<open]
+                if kept.last == " " { kept = kept.dropLast() }
+                out += kept
+            } else {
+                out += rest[...close]
+            }
+            rest = rest[rest.index(after: close)...]
+        }
+        return out + rest
+    }
+
+    /// Arabic words with their marks, the tatweel and the hamza seats set aside, and ابن read as بن:
+    /// "الإِمَامُ ابنُ مَاجَه" and "الإمام بن ماجه" are the same three words.
+    private static func bareArabicWords(_ text: String) -> [String] {
+        var bare = String.UnicodeScalarView()
+        for scalar in text.unicodeScalars {
+            switch scalar.value {
+            case 0x064B...0x065F, 0x0670, 0x0640: continue
+            case 0x0623, 0x0625, 0x0622, 0x0671: bare.append(UnicodeScalar(0x0627)!)
+            default: bare.append(scalar)
+            }
+        }
+        return String(bare).split(whereSeparator: \.isWhitespace).map { $0 == "ابن" ? "بن" : String($0) }
+    }
+}
+
 // MARK: - Display names (the Arabic interface)
 
 // What the reader SEES of a book's name. The Arabic interface shows the catalog's own Arabic

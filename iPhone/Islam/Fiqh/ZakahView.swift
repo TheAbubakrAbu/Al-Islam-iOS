@@ -180,7 +180,9 @@ struct ZakahCalculatorView: View {
                             ResourceHeroStat(String(localized: "1 year"), String(localized: "held (hawl)")),
                             ResourceHeroStat("8".localizedDigits, String(localized: "recipient groups")),
                         ]
-                    ))
+                    ) {
+                        ZakahQuarterTenthArt()
+                    })
                 }
                 #endif
                 if shows("result") { resultSection }

@@ -97,4 +97,135 @@ struct TabMoreMenuItem: View {
     }
 }
 
+/// One door of a tab, drawn as a capsule under the tab's summary (`TabDoorCapsules`).
+struct TabDoorCapsule: Identifiable {
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+
+    var id: String { title }
+
+    init(_ title: String, systemImage: String, action: @escaping () -> Void) {
+        self.title = title
+        self.systemImage = systemImage
+        self.action = action
+    }
+}
+
+/// A tab's doors as a row of capsules at the foot of its summary (Abu, 2026-11-24: "Instead of hiding
+/// explore and history in top left put it in summary underneath the bottom as a bunch of capsule
+/// buttons. Do that for all tabs so the top left ellipses has as little options as possible"). The
+/// Quran tab's History, Topics and the rest, and the Hadith tab's Topics, Encyclopedia and History. The ⋯
+/// menu keeps how the tab is shown (sort, grid) and the tutorial. The Adhan tab has no summary of this kind
+/// and kept its two calendars in its menu (Abu: "for Adhan we should probably just keep that the top left").
+///
+/// ONE line (Abu, the same day: "try to fit it in one row"), centered, in the first form that fits:
+/// the capsules as drawn; then names only with less padding (the Quran summary's four with the Qiraat
+/// Explorer, which ran one capsule past the edge with nothing to say it was there); then, last, the full
+/// line scrolling sideways (five or more, the accessibility text sizes, a long translation). Every form
+/// is the same height, so `ViewThatFits` is safe in a List row here: its trap is a TALLER option being
+/// measured while the shorter one draws.
+///
+/// `underTiles`: the row closes a summary whose tiles sit right above it, so it sits closer than the
+/// List's default (Abu: "less vertical padding by a little"). He first asked for the separator above it
+/// hidden, then, seeing it gone: "maybe there should be a line divider... hmmm", and after a side-by-side
+/// of the two (2026-11-24): "lets do divider". So the line stays, with the tighter spacing on both sides
+/// of it. A row standing alone keeps the List's own spacing.
+///
+/// Every capsule is a Button that raises its tab's door through the tab's own guard: never a
+/// NavigationLink, since every link in one List row fires on any tap in that row (`one-link-per-list-row`).
+struct TabDoorCapsules: View {
+    let doors: [TabDoorCapsule]
+    var underTiles: Bool = false
+
+    private static let spacing: CGFloat = 7
+    /// The List's own leading and trailing row inset here (measured: 16 pt from the card's edge to a
+    /// summary tile's), restated because `listRowInsets` sets all four sides at once.
+    private static let sideInset: CGFloat = 16
+
+    var body: some View {
+        // A real container round the branch, so the row's type stays one view (`OneRow`).
+        OneRow {
+            if #available(iOS 16.0, *) {
+                ViewThatFits(in: .horizontal) {
+                    line(compact: false)
+                    line(compact: true)
+                    scrollingLine
+                }
+            } else {
+                // The siblings' iOS 15 floor.
+                scrollingLine
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .modifier(UnderTilesRow(isOn: underTiles, sideInset: Self.sideInset))
+    }
+
+    private func line(compact: Bool) -> some View {
+        HStack(spacing: compact ? 6 : Self.spacing) {
+            ForEach(doors) { door in TabDoorCapsuleButton(door: door, compact: compact) }
+        }
+    }
+
+    /// The line in a sideways scroll that reaches the card's edges, so a capsule slides out under the
+    /// card's rim rather than being cut short of it; the first one still starts at the row's inset.
+    private var scrollingLine: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            line(compact: false).padding(.horizontal, Self.sideInset)
+        }
+        .padding(.horizontal, -Self.sideInset)
+    }
+}
+
+/// The row's cell settings while it closes a summary: less air above and below than the List's default,
+/// the separator above it kept, the space on its two sides about even (about 18 pt from the tiles' row
+/// above it to the line, 12 from the line to the capsules). A ViewModifier with no branch, so the row
+/// stays one view.
+private struct UnderTilesRow: ViewModifier {
+    let isOn: Bool
+    let sideInset: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .listRowInsets(isOn ? EdgeInsets(top: 12, leading: sideInset, bottom: 12, trailing: sideInset) : nil)
+    }
+}
+
+/// One capsule: the accent symbol and the name on the summary tiles' own surface; `compact`, the name
+/// alone with less padding, for a line that would not fit otherwise.
+private struct TabDoorCapsuleButton: View {
+    @Environment(\.appearance) private var appearance
+    let door: TabDoorCapsule
+    var compact: Bool = false
+
+    var body: some View {
+        Button {
+            Settings.shared.hapticFeedback()
+            door.action()
+        } label: {
+            HStack(spacing: 6) {
+                if !compact {
+                    Image(systemName: door.systemImage)
+                        .foregroundStyle(appearance.accent)
+                }
+                Text(door.title)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+            }
+            .font(.footnote.weight(.semibold))
+            .fixedSize()
+            .padding(.horizontal, compact ? 10 : 12)
+            .padding(.vertical, 9)
+            .contentSurface(clear: true)
+            .contentShape(Capsule())
+            // Named by what it says; the symbol is decoration. On the LABEL, as `DailyHubDoorLabel`
+            // does: on the Button these made a second element round it, so VoiceOver (and the UI
+            // tests) found two buttons for each capsule.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(door.title))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 #endif

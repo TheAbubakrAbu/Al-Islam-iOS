@@ -190,12 +190,19 @@ struct ArticleParagraph: View {
         // 4 pt reproduces the `Text` line pitch (measured 2026-10-19 on the Shahadah page: SwiftUI
         // sets body at 24.0 pt a line and the title3 lead at 28.0 pt; the text view's own line height
         // is 20.3 / 23.9, so the same 4 pt lands within 0.3 pt of both and page heights do not move).
+        // The ayahs and hadiths the paragraph cites open in their tabs (`ScriptureCitations`): a
+        // tap opens one, a long press offers its link too. A paragraph that cites nothing is drawn
+        // as it always was, with no link handling at all.
+        let base = attributed
+        let linked = ScriptureCitations.linked(base, accent: appearance.accent)
         SelectableAttributedProse(
-            attributed: attributed,
+            attributed: linked ?? base,
             textStyle: Self.uiTextStyle(textStyle),
             weight: Self.uiWeight(weight),
             secondary: secondary,
-            lineSpacing: 4
+            lineSpacing: 4,
+            onLink: linked == nil ? nil : { url in ScriptureCitations.open(url) },
+            linkMenu: linked == nil ? nil : { url in ScriptureCitations.menu(for: url) }
         )
         #else
         Group {
@@ -1221,6 +1228,8 @@ struct ResourceHeroStat: Hashable {
 /// watch compiles every resource that carries one, and a card this size would be the whole screen there.
 struct ResourceHero<Footer: View>: View {
     @Environment(\.appearance) private var appearance
+    /// An English article page (`englishArticle()`): outside English, the card opens by saying so.
+    @Environment(\.isEnglishArticle) private var isEnglishArticle
 
     let eyebrow: String
     let systemImage: String
@@ -1296,6 +1305,10 @@ struct ResourceHero<Footer: View>: View {
     var body: some View {
         let accent = appearance.accent
         VStack(alignment: .leading, spacing: 12) {
+            if isEnglishArticle && EnglishOnly.isShown {
+                EnglishOnlyNotice()
+            }
+
             HStack(spacing: 6) {
                 Image(systemName: systemImage)
                 Text(eyebrow.articleDisplayDigits)
@@ -1321,7 +1334,8 @@ struct ResourceHero<Footer: View>: View {
                 }
 
                 if let source {
-                    Text(source.articleDisplayDigits)
+                    // A verse names its surah: "Quran Ar-Ra'd 13:28" (`QuranSurahNames.naming`).
+                    Text(QuranSurahNames.naming(source).articleDisplayDigits)
                         .font(.caption.weight(.semibold))
                         .foregroundColor(accent)
                 }
@@ -1360,6 +1374,82 @@ struct ResourceHero<Footer: View>: View {
         // One element when it is all words; a container when the footer holds buttons (the pillars,
         // the How-to steps), which VoiceOver must still reach one by one.
         .accessibilityElement(children: Footer.self == EmptyView.self ? .combine : .contain)
+    }
+}
+
+// MARK: - English only
+
+/// What still reads English in every interface language: the Islam tab's ARTICLES, which are Faith &
+/// Proofs (the pillars and beliefs, How-To Guides, the miracles, the prophecies, the Sunnahs, Proving
+/// Islam), the Hadith tab's pages about the Sunnah and its sciences, and the riwayat page
+/// (Docs/Engineering/Localization Guide.md). Abu, 2026-11-24: "For those that don't support other
+/// languages ... say it only supports English clearly." So the tiles and rows that open them carry an
+/// "English only" tag, and each page's opening card says it in a line of its own. Nothing is drawn in
+/// English, where there is nothing to warn about.
+enum EnglishOnly {
+    static var isShown: Bool { AppLanguage.pinsArticlesEnglish }
+}
+
+/// "English only" as a small tinted capsule with a globe: beside a section title or a row's title, and
+/// as "EN" in a grid tile's corner, where the words do not fit.
+struct EnglishOnlyTag: View {
+    @Environment(\.appearance) private var appearance
+    var compact = false
+
+    var body: some View {
+        HStack(spacing: 3) {
+            if compact {
+                // A tile's corner has room for the two letters alone (the globe ran into its icon).
+                Text(verbatim: "EN")
+            } else {
+                Image(systemName: "globe")
+                    .imageScale(.small)
+                Text("English only")
+            }
+        }
+        .font(.caption2.weight(.bold))
+        .foregroundColor(appearance.accent)
+        .lineLimit(1)
+        .fixedSize()
+        .padding(.horizontal, compact ? 5 : 7)
+        .padding(.vertical, 2)
+        .background(Capsule().fill(appearance.accent.opacity(0.14)))
+        .overlay(Capsule().strokeBorder(appearance.accent.opacity(0.3), lineWidth: 0.5))
+        // The words, never "EN": a screen reader spells the corner tag out.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("English only"))
+    }
+}
+
+/// The opening line of an English page's card, in the reader's own language and direction (the page
+/// around it is pinned left to right for its English): a globe, "Available in English only", and why.
+struct EnglishOnlyNotice: View {
+    @Environment(\.appearance) private var appearance
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: "globe")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(appearance.accent)
+                .frame(width: 30, height: 30)
+                .background(Circle().fill(appearance.accent.opacity(0.16)))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Available in English only")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+                Text("This page has not been translated yet, so it reads in English.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(appearance.accent.opacity(0.1)))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(appearance.accent.opacity(0.25), lineWidth: 1))
+        .environment(\.layoutDirection, AppLanguage.isRightToLeft ? .rightToLeft : .leftToRight)
+        .accessibilityElement(children: .combine)
     }
 }
 

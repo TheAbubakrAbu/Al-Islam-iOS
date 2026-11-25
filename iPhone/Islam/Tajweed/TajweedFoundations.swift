@@ -140,6 +140,62 @@ enum TajweedTopic: String, CaseIterable, Identifiable {
         }
     }
 
+    /// What a shared link calls this page (`AppLink.tajweed`, "?tajweed=hamzatul-wasl"). A key that has
+    /// shipped is never renamed: links already sent carry it.
+    var linkKey: String {
+        switch self {
+        case .heavyLight: return "heavy-light"
+        case .shamsQamar: return "shams-qamar"
+        case .noonSakinah: return "noon-sakinah"
+        case .meemSakinah: return "meem-sakinah"
+        case .mushafHints: return "mushaf-hints"
+        case .hamzatulWasl: return "hamzatul-wasl"
+        default: return rawValue
+        }
+    }
+
+    /// The page a shared link names: its `linkKey`, or its raw value, in any case.
+    init?(linkKey: String) {
+        guard let topic = Self.allCases.first(where: {
+            $0.linkKey.caseInsensitiveCompare(linkKey) == .orderedSame
+                || $0.rawValue.caseInsensitiveCompare(linkKey) == .orderedSame
+        }) else { return nil }
+        self = topic
+    }
+
+    /// The page's article in the Ask AI corpus (`IslamArticles`): its view's type name, the id
+    /// Scripts/build_islam_corpus.py gives every page it reads (2026-11-23: the Foundations pages are
+    /// read for the chat and for "Summarize with AI"). Nil for Sifaat, the alphabet's qualities shelf,
+    /// which is a set of letter cards rather than prose.
+    var articleID: String? {
+        switch self {
+        case .overview: return "TajweedOverviewView"
+        case .improving: return "TajweedImprovingRecitationView"
+        case .lips: return "TajweedLipMovementView"
+        case .makharij: return "TajweedMakharijView"
+        case .sifaat: return nil
+        case .heavyLight: return "TajweedHeavyLightView"
+        case .shamsQamar: return "TajweedShamsQamarView"
+        case .madd: return "TajweedMaddView"
+        case .qalqalah: return "TajweedQalqalahView"
+        case .noonSakinah: return "TajweedIdghamIkhfaView"
+        case .meemSakinah: return "TajweedMeemSakinahView"
+        case .mushafHints: return "TajweedInMushafView"
+        case .sukoon: return "TajweedSukoonView"
+        case .hamzatulWasl: return "TajweedHamzatulWaslView"
+        case .waqf: return "TajweedWaqfView"
+        }
+    }
+
+    /// The id the page hands `selectableArticleList(article:)` for its Share and AI buttons: its corpus
+    /// id, or "Tajweed-sifaat" for the one page the corpus does not carry (a link, no AI).
+    var pageID: String { articleID ?? "Tajweed-\(linkKey)" }
+
+    /// The page an article id or a page id belongs to (`AppLink.articlePage(id:)`, the Ask AI sources).
+    static func topic(pageID: String) -> TajweedTopic? {
+        allCases.first { $0.pageID == pageID }
+    }
+
     @ViewBuilder
     var destination: some View {
         switch self {
@@ -150,8 +206,15 @@ enum TajweedTopic: String, CaseIterable, Identifiable {
         case .sifaat:
             // The qualities shelf of the alphabet's Letter Families: the five opposing pairs and the
             // qualities with no opposite, every one named in Arabic and English (Abu, 2026-09-20).
+            // A page of Foundations all the same, so it shares like them, from beside its search bar.
+            #if os(iOS)
+            LetterFamiliesView(title: String(localized: "Sifaat"), axes: LetterAxis.Shelf.qualities.axes,
+                               shareArticle: pageID)
+                .openScreen(.letterFamilies, id: "sifaat")
+            #else
             LetterFamiliesView(title: String(localized: "Sifaat"), axes: LetterAxis.Shelf.qualities.axes)
                 .openScreen(.letterFamilies, id: "sifaat")
+            #endif
         case .heavyLight: TajweedHeavyLightView()
         case .shamsQamar: TajweedShamsQamarView()
         case .madd: TajweedMaddView()
@@ -280,8 +343,9 @@ struct TajweedFoundationsView: View {
         .applyConditionalListStyle()
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
-            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
-                      placeholder: String(localized: "Search tajweed"))
+            SearchBarWithShare(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
+                               placeholder: String(localized: "Search tajweed"),
+                               share: PageShare(link: .resource("tajweedFoundations"), title: String(localized: "Tajweed Foundations")))
                 .minimizedBarStyle(barsCollapsed)
                 .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
                 .padding(.horizontal, 24)
@@ -703,7 +767,7 @@ struct TajweedOverviewView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TajweedOverviewView", kind: .page)
         .navigationTitle("Overview")
     }
 }
@@ -818,7 +882,8 @@ struct TajweedWordCard: View {
 }
 
 /// A line of the Quran set on its own card, centered, under an optional label and with how it reads
-/// under it.
+/// under it. `quranic` false sets a line from outside the Quran (a hadith) in the face the Hadith tab
+/// reads it in, for the pages that set the two side by side (the 4 Sukoon page's two sukoons).
 struct TajweedArabicLine: View {
     @Environment(\.appearance) private var appearance
 
@@ -826,24 +891,29 @@ struct TajweedArabicLine: View {
     var title: String? = nil
     var caption: String? = nil
     var size: CGFloat = 26
+    var quranic: Bool = true
 
-    init(_ arabic: String, title: String? = nil, caption: String? = nil, size: CGFloat = 26) {
+    init(_ arabic: String, title: String? = nil, caption: String? = nil, size: CGFloat = 26, quranic: Bool = true) {
         self.arabic = arabic
         self.title = title
         self.caption = caption
         self.size = size
+        self.quranic = quranic
     }
 
     var body: some View {
         VStack(spacing: 8) {
             if let title, !title.isEmpty {
-                TajweedCardTitle(title)
+                // A title can cite a reference ("In the Quran: 98:8"): in the reader's digits, as every
+                // other reference in an Arabic or Urdu interface is.
+                TajweedCardTitle(title.localizedDigits)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             Text(arabic.decomposingAlefMadda)
-                .font(appearance.quranArabicFont(size: size, relativeTo: .title2))
-                .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
+                .font(quranic ? appearance.quranArabicFont(size: size, relativeTo: .title2)
+                              : appearance.islamArabicFont(base: size, relativeTo: .title2))
+                .arabicFontDesign(custom: quranic ? appearance.quranUsesCustomArabicFace : appearance.islamUsesCustomArabicFace)
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)

@@ -539,33 +539,100 @@ struct SpeechQualityHint: View {
 }
 
 /// The "Listen All" pill for section headers: plays every Arabic text in the section in order, and turns
-/// into a Stop button while the queue is speaking. Renders nothing when the device has no Arabic voice.
+/// into a Stop button while the queue is speaking, counting where it is ("Stop 3/9"). Renders nothing
+/// when the device has no Arabic voice. Drawn as a `ListenChipLabel`, the same family as each row's
+/// Listen button.
 struct ListenAllPill: View {
     @ObservedObject private var speech = ArabicSpeech.shared
-    @Environment(\.appearance) private var appearance
 
     let texts: [String]
 
     var body: some View {
         if speech.isAvailable {
-            HStack(spacing: 4) {
-                Image(systemName: speech.isSpeakingQueue ? "stop.fill" : "play.fill")
-                Text(speech.isSpeakingQueue ? String(localized: "Stop") : String(localized: "Listen All"))
-            }
-            .font(.caption.weight(.semibold))
-            .foregroundColor(appearance.accent)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .contentSurface()
-            .onTapGesture {
-                Settings.shared.hapticFeedback()
-                if speech.isSpeakingQueue {
-                    speech.stop()
-                } else {
-                    speech.speakAll(texts)
+            let playing = speech.isSpeakingQueue
+            ListenChipLabel(title: playing ? String(localized: "Stop") : String(localized: "Listen All"),
+                            systemImage: playing ? "stop.fill" : "play.fill",
+                            active: playing,
+                            detail: playing ? progress : nil)
+                .onTapGesture {
+                    Settings.shared.hapticFeedback()
+                    if speech.isSpeakingQueue {
+                        speech.stop()
+                    } else {
+                        speech.speakAll(texts)
+                    }
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityLabel(playing ? String(localized: "Stop listening") : String(localized: "Listen to every item in order"))
+        }
+    }
+
+    /// "3/9": the item being read and the section's count, while the queue plays.
+    private var progress: String? {
+        guard let current = speech.currentText, let index = texts.firstIndex(of: current) else { return nil }
+        return "\(index + 1)/\(texts.count)".localizedDigits
+    }
+}
+
+/// The look of the Listen and Listen All buttons (Abu, 2026-11-24: "Make the listen and listen all
+/// buttons look better"). They were a glass capsule with a wide gap between the speaker and the word,
+/// each row's on a line of its own; now both are one family: a capsule tinted in the accent with the
+/// glyph in its own disc, so they read as buttons and as the same kind of button. While speaking the
+/// capsule deepens, the glyph turns to stop and a small waveform moves beside the word (still where
+/// decorative animation is off). A content surface, not glass: it sits in a row, it does not float.
+struct ListenChipLabel: View {
+    @Environment(\.appearance) private var appearance
+    @ScaledMetric(relativeTo: .caption) private var disc: CGFloat = 20
+
+    let title: String
+    let systemImage: String
+    var active: Bool = false
+    /// Small figures after the title ("3/9").
+    var detail: String? = nil
+
+    var body: some View {
+        let accent = appearance.accent
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.system(size: disc * 0.45, weight: .bold))
+                .frame(width: disc, height: disc)
+                .background(Circle().fill(accent.opacity(active ? 0.3 : 0.18)))
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+            if let detail {
+                Text(detail)
+                    .font(.caption2.weight(.semibold))
+                    .monospacedDigit()
+                    .opacity(0.75)
             }
-            .accessibilityLabel(speech.isSpeakingQueue ? String(localized: "Stop listening") : String(localized: "Listen to every item in order"))
+            if active {
+                SpeakingWave(animated: !appearance.reduceAnimations)
+            }
+        }
+        .foregroundColor(accent)
+        .padding(.leading, 4)
+        .padding(.trailing, 11)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(accent.opacity(active ? 0.2 : 0.1)))
+        .overlay(Capsule().strokeBorder(accent.opacity(active ? 0.5 : 0.28), lineWidth: 1))
+        .contentShape(Capsule())
+        .animation(appearance.reduceAnimations ? nil : .easeInOut(duration: 0.2), value: active)
+    }
+}
+
+/// The waveform beside a speaking chip's word: its bars light in turn (iOS 17 / watchOS 10 symbol
+/// effect), a still glyph before that or where decorative animation is off.
+private struct SpeakingWave: View {
+    let animated: Bool
+
+    var body: some View {
+        let glyph = Image(systemName: "waveform").font(.caption2.weight(.semibold))
+        if animated, #available(iOS 17.0, watchOS 10.0, *) {
+            glyph.symbolEffect(.variableColor.iterative, options: .repeating)
+        } else {
+            glyph
         }
     }
 }

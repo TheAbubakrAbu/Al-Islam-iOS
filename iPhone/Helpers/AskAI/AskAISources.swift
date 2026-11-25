@@ -1,5 +1,8 @@
 import SwiftUI
 import Foundation
+import CoreLocation
+import MapKit
+import NaturalLanguage
 
 // Ask AI - the SOURCES an answer is built on, and where each one comes from.
 //
@@ -27,6 +30,10 @@ struct AskAISource: Identifiable, Equatable, Codable {
         case article(id: String, heading: String)
         /// Today's prayer schedule as THIS app computed it. Not a link: there is no screen for a time.
         case prayer
+        /// A day's prayer times for a place the question named, or for another day here (Abu,
+        /// 2026-11-24: "can it use prayer city times map so it can look at prayer times at other times
+        /// and places?"). Opens City Prayer Times on that place and day.
+        case cityPrayer(latitude: Double, longitude: Double, city: String, day: Date)
         /// One of the 99 Names of Allah, by its number.
         case name(number: Int)
         /// A dua of the app's authored collections (collection title + the item's identity).
@@ -142,7 +149,7 @@ struct AskAISource: Identifiable, Equatable, Codable {
     var isQuotable: Bool {
         switch kind {
         case .ayah, .hadith, .dua, .hisnDua, .name: return true
-        case .tafsir, .surah, .article, .prayer, .tip, .setting: return false
+        case .tafsir, .surah, .article, .prayer, .cityPrayer, .tip, .setting: return false
         }
     }
 
@@ -166,7 +173,7 @@ struct AskAISource: Identifiable, Equatable, Codable {
         case .surah: return String(localized: "Surah")
         // Its own key: "Article" is also the definite article in the tajweed course (لام التعريف).
         case .article: return String(localized: "askai.article", defaultValue: "Article")
-        case .prayer: return String(localized: "Prayer times")
+        case .prayer, .cityPrayer: return String(localized: "Prayer times")
         case .name: return String(localized: "Name of Allah")
         case .dua, .hisnDua: return String(localized: "Dua")
         case .tip: return String(localized: "App tip")
@@ -182,6 +189,7 @@ struct AskAISource: Identifiable, Equatable, Codable {
         case .surah: return "book.pages.fill"
         case .article: return "doc.text.fill"
         case .prayer: return "clock.fill"
+        case .cityPrayer: return "globe.europe.africa.fill"
         case .name: return "sparkle"
         case .dua, .hisnDua: return "hands.and.sparkles.fill"
         case .tip: return "lightbulb.fill"
@@ -402,8 +410,14 @@ enum AskAISourceFactory {
     #endif
 
     static func article(_ article: IslamArticle, section: IslamArticle.Section, maxCharacters: Int = 700) -> AskAISource {
+        // The Tajweed Foundations pages and the course's lessons are no catalog article, but the
+        // reference is their home. A Hadith Encyclopedia page is not the app's own writing at all.
         let home = IslamArticleCatalog.all.first(where: { $0.id == article.id })?.home.title
-        var provenance = ["\(AppIdentifiers.appName)\u{2019}s own article \u{201C}\(article.title)\u{201D}" + (home.map { " in \($0)" } ?? "")]
+            ?? (TajweedTopic.topic(pageID: article.id) != nil ? "Tajweed Foundations"
+                : article.id.hasPrefix(IslamArticle.lessonPrefix) ? "the Tajweed Course" : nil)
+        var provenance = article.id.hasPrefix(IslamArticle.encyclopediaPrefix)
+            ? ["The Hadith Encyclopedia (hadeethenc.com), its page \u{201C}\(article.title)\u{201D}"]
+            : ["\(AppIdentifiers.appName)\u{2019}s own article \u{201C}\(article.title)\u{201D}" + (home.map { " in \($0)" } ?? "")]
         if !section.heading.isEmpty { provenance.append("Section: \(section.heading.capitalized)") }
         let text = section.heading.isEmpty ? section.text : "\(section.heading.capitalized): \(section.text)"
         // The reference names the SECTION too: two sections of one guide ("Nisab" and "Calculate
@@ -531,17 +545,7 @@ enum AskAISourceFactory {
         if pinsEnglish { clock.locale = Locale(identifier: "en_US") }
         clock.timeStyle = .short
         clock.dateStyle = .none
-        var lines: [String] = []
-        for prayer in today.fullPrayers {
-            var line = "\(prayer.nameCustom ?? prayer.nameTransliteration) \(clock.string(from: prayer.time))"
-            var counts: [String] = []
-            if prayer.rakah != "0" { counts.append("\(prayer.rakah) fard") }
-            if prayer.sunnahBefore != "0" { counts.append("\(prayer.sunnahBefore) sunnah before") }
-            if prayer.sunnahAfter != "0" { counts.append("\(prayer.sunnahAfter) sunnah after") }
-            if !counts.isEmpty { line += " (" + counts.joined(separator: ", ") + ")" }
-            if let note = prayer.sunnahNote { line += ". " + note }
-            lines.append(line)
-        }
+        let lines = today.fullPrayers.map { prayerLine($0, clock: clock) }
         let day = pinsEnglish
             ? today.day.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: Locale(identifier: "en_US"),
                                                    calendar: Calendar(identifier: .gregorian)))
@@ -566,7 +570,266 @@ enum AskAISourceFactory {
             maxCharacters: 900,
             isSubject: true)
     }
+
+    /// One prayer's line for the model: "Asr 2:31 PM (4 fard)", with its sunnah counts and note.
+    private static func prayerLine(_ prayer: Prayer, clock: DateFormatter) -> String {
+        var line = "\(prayer.nameCustom ?? prayer.nameTransliteration) \(clock.string(from: prayer.time))"
+        var counts: [String] = []
+        if prayer.rakah != "0" { counts.append("\(prayer.rakah) fard") }
+        if prayer.sunnahBefore != "0" { counts.append("\(prayer.sunnahBefore) sunnah before") }
+        if prayer.sunnahAfter != "0" { counts.append("\(prayer.sunnahAfter) sunnah after") }
+        if !counts.isEmpty { line += " (" + counts.joined(separator: ", ") + ")" }
+        if let note = prayer.sunnahNote { line += ". " + note }
+        return line
+    }
+
+    /// A day's times for a place the question named, or for another day where the reader is, computed
+    /// the way City Prayer Times computes them: a named place with the method of its own country, the
+    /// reader's place with the reader's own method, every time in the place's local clock. Nil for the
+    /// plain "today, here" question (`prayerTimes()` answers that), or when nothing can be computed.
+    static func prayerTimes(for request: AskAIPrayerRequest) async -> AskAISource? {
+        guard !request.isPlainToday else { return nil }
+        let settings = Settings.shared
+        let place: AskAIPrayerRequest.Place
+        if let named = request.place {
+            guard let found = await AskAIPrayerRequest.locate(named) else {
+                // Said plainly, so the answer says it rather than giving the times of somewhere else.
+                return AskAISource(
+                    kind: .prayer,
+                    reference: "Prayer times: place not found",
+                    title: "Prayer times \u{00B7} \(named)",
+                    text: "The reader asked for the prayer times in \u{201C}\(named)\u{201D}, but this app could not find that place on the map (looking a place up needs an internet connection). Say so, suggest checking the spelling or adding the country, and mention City Prayer Times in the Adhan tab, where any city can be chosen on a map.",
+                    provenance: ["Looked up by this app on Apple Maps"],
+                    aliases: ["prayer times", "the prayer times"],
+                    maxCharacters: 600,
+                    isSubject: true)
+            }
+            place = found
+        } else {
+            guard let here = settings.currentLocation, here.latitude != 1000, here.longitude != 1000 else { return nil }
+            let name = here.city.isMostlyArabicScript || here.city.isEmpty ? "your current location" : here.city
+            place = .init(location: here, name: name, timeZone: .current, countryCode: nil, isHere: true)
+        }
+
+        let day = request.day ?? Date()
+        // The reader's own method where the reader is; the country's own method elsewhere (the City
+        // Prayer Times rule), so Makkah reads Umm al-Qura and London the method used in Britain.
+        let method = place.isHere ? nil : place.countryCode.map { settings.recommendedCalculationMethod(forCountryCode: $0) }
+        guard let prayers = settings.getPrayerTimes(for: day, at: place.location, fullPrayers: true, calculationOverride: method),
+              !prayers.isEmpty else { return nil }
+
+        // English for the model, as in `prayerTimes()`, and the PLACE's clock and calendar day.
+        let english = Locale(identifier: "en_US")
+        let clock = DateFormatter()
+        clock.locale = english
+        clock.timeZone = place.timeZone
+        clock.timeStyle = .short
+        clock.dateStyle = .none
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = place.timeZone
+        let longDay = day.formatted(Date.FormatStyle(date: .complete, time: .omitted, locale: english, calendar: calendar,
+                                                     timeZone: place.timeZone))
+        let shortDay = day.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: english, calendar: calendar,
+                                                      timeZone: place.timeZone))
+        let isTodayThere = calendar.isDate(day, inSameDayAs: Date())
+        let methodName = method ?? settings.prayerCalculation
+        var text = "Prayer times in \(place.name) for \(longDay), computed by this app with the \(methodName) method"
+        text += place.isHere ? "." : ", in the local time of \(place.name)."
+        if isTodayThere { text += " It is now \(clock.string(from: Date())) there." }
+        if let phrase = request.dayPhrase { text += " (The reader said \u{201C}\(phrase)\u{201D}.)" }
+        // The times alone: the rakah counts are the same in every city, and beside them the model
+        // read Fajr's "2 sunnah before" back as "2 sunnah after" for a question that asked only the time.
+        text += "\n" + prayers.map { "\($0.nameCustom ?? $0.nameTransliteration) \(clock.string(from: $0.time))" }
+            .joined(separator: "\n")
+
+        return AskAISource(
+            kind: .cityPrayer(latitude: place.location.latitude, longitude: place.location.longitude,
+                              city: place.location.city, day: day),
+            reference: "Prayer times in \(place.name) on \(shortDay)",
+            title: "Prayer times \u{00B7} \(place.isHere ? place.location.city : place.name) \u{00B7} \(shortDay)",
+            text: text,
+            provenance: ["Computed by this app for \(place.name) on \(longDay)",
+                         "Calculation method: \(methodName)",
+                         "Times in local time (\(place.timeZone.identifier))"],
+            aliases: ["prayer times", "the prayer times", "prayer times in \(place.name.lowercased())"],
+            maxCharacters: 1_000,
+            isSubject: true)
+    }
     #endif
 }
+
+#if HAS_ADHAN
+/// What a prayer-times question asks beyond "today, here": a PLACE ("in London", "for Makkah",
+/// "Irvine, CA") and a DAY ("tomorrow", "next Friday", "on December 25", "in 3 days"). The day is read
+/// by Foundation's date detector; the place by the language tagger's place names, then by the words
+/// after "in", "at", "for" or "of" (the tagger misses a lowercase "cairo"), and is checked on the map.
+struct AskAIPrayerRequest: Equatable {
+    /// The place as written, nil for where the reader is.
+    var place: String?
+    /// The day asked about, nil for today.
+    var day: Date?
+    /// The day's words as written, so the model can say "tomorrow" back.
+    var dayPhrase: String?
+
+    var isPlainToday: Bool { place == nil && day == nil }
+
+    /// A place found on the map.
+    struct Place {
+        let location: Location
+        /// In English, for the model: "London, United Kingdom".
+        let name: String
+        let timeZone: TimeZone
+        let countryCode: String?
+        let isHere: Bool
+    }
+
+    static func parse(_ raw: String, now: Date = Date()) -> AskAIPrayerRequest {
+        var request = AskAIPrayerRequest()
+        var remainder = raw
+        let ns = raw as NSString
+        if let match = dateDetector?.matches(in: raw, range: NSRange(location: 0, length: ns.length)).first(where: { $0.date != nil }),
+           let date = match.date {
+            // "tonight", "now" and "today" are today.
+            if !Calendar.current.isDate(date, inSameDayAs: now) {
+                request.day = date
+                request.dayPhrase = ns.substring(with: match.range)
+            }
+            remainder = ns.replacingCharacters(in: match.range, with: " ")
+        }
+        request.place = place(in: remainder)
+        return request
+    }
+
+    private static let dateDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
+
+    /// The place the words name, or nil.
+    static func place(in text: String) -> String? {
+        let candidates = phraseCandidates(in: text)
+        let tagger = NLTagger(tagSchemes: [.nameType])
+        tagger.string = text
+        var tagged: [String] = []
+        tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word, scheme: .nameType,
+                             options: [.omitPunctuation, .omitWhitespace, .joinNames]) { tag, range in
+            if tag == .placeName { tagged.append(String(text[range])) }
+            return true
+        }
+        tagged = tagged.filter { !isNotAPlace($0) }
+        // "Irvine, CA": the phrase that holds the tagged name says more than the name alone.
+        if let name = tagged.last {
+            return candidates.last(where: { $0.localizedCaseInsensitiveContains(name) }) ?? name
+        }
+        return candidates.last
+    }
+
+    /// "in <words>", "at <words>", "for <words>", "of <words>", each cut at the next joining word,
+    /// with the words that are never places dropped ("in Ramadan", "for Fajr", "in the morning").
+    private static func phraseCandidates(in text: String) -> [String] {
+        let tokens = text.split(whereSeparator: \.isWhitespace).map(String.init)
+        var out: [String] = []
+        for (index, token) in tokens.enumerated() where prepositions.contains(bare(token)) {
+            var kept: [String] = []
+            for word in tokens.dropFirst(index + 1) {
+                let plain = bare(word)
+                // Each "in" starts its own phrase: "in Ramadan in Istanbul" is two.
+                if plain.isEmpty || stopWords.contains(plain) || prepositions.contains(plain) { break }
+                guard word.first?.isLetter == true else { break }
+                kept.append(word)
+                if word.last.map({ ".?!;:".contains($0) }) == true { break }
+            }
+            let candidate = kept.joined(separator: " ").trimmingCharacters(in: CharacterSet(charactersIn: " ,.;:!?"))
+            guard !candidate.isEmpty, kept.count <= 5, !isNotAPlace(candidate) else { continue }
+            out.append(candidate)
+        }
+        return out
+    }
+
+    private static func bare(_ word: String) -> String {
+        word.lowercased().trimmingCharacters(in: .punctuationCharacters)
+    }
+
+    private static let prepositions: Set<String> = ["in", "at", "for", "of", "near"]
+
+    /// Words that end a place phrase: "London on Friday", "Cairo this week".
+    private static let stopWords: Set<String> = [
+        "on", "this", "next", "last", "and", "or", "please", "today", "tonight", "tomorrow", "yesterday",
+        "now", "time", "times", "prayer", "prayers", "salah", "when", "what", "is", "are", "will", "be", "during",
+    ]
+
+    /// What follows "in" or "for" but is never a place.
+    static func isNotAPlace(_ candidate: String) -> Bool {
+        var folded = candidate.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        // "the UK" is a place, "the morning" is not: the article is weighed on what follows it.
+        if folded.hasPrefix("the ") { folded = String(folded.dropFirst(4)) }
+        if folded.count < 2 || folded.first?.isNumber == true { return true }
+        let words = folded.split(separator: " ").map(String.init)
+        if !Set(words).isDisjoint(with: AskAILexicon.prayerNames) { return true }
+        if let first = words.first, ["a", "an", "my", "your", "our", "this", "that", "general", "order", "congregation",
+                                     "jamaah", "jamaat", "advance", "case", "sha", "shaa"].contains(first) {
+            return true
+        }
+        return notPlaces.contains(folded)
+    }
+
+    private static let notPlaces: Set<String> = [
+        "ramadan", "shaban", "muharram", "dhul hijjah", "dhul-hijjah", "hajj", "umrah", "morning", "evening", "afternoon",
+        "night", "masjid", "mosque", "here", "home", "travel", "traveling", "travelling", "winter", "summer", "spring",
+        "autumn", "fall", "minutes", "hours", "days", "weeks", "quran", "sunnah", "hadith", "islam", "jumuah", "jummah",
+    ]
+
+    /// The place on the map, in English, with its time zone and country (Apple Maps; needs a connection).
+    /// The reader's saved cities answer first and offline.
+    @MainActor
+    static func locate(_ name: String) async -> Place? {
+        let folded = name.lowercased()
+        let saved = Settings.shared.favoriteLocations.first { location in
+            let short = location.city.split(separator: ",").first.map { $0.trimmingCharacters(in: .whitespaces).lowercased() } ?? ""
+            return !short.isEmpty && (folded == short || folded.hasPrefix(short + ","))
+        }
+        let english = Locale(identifier: "en_US")
+        let geocoder = CLGeocoder()
+        let placemarks: [CLPlacemark] = await withTaskGroup(of: [CLPlacemark]?.self) { group in
+            group.addTask {
+                // Apple Maps over the whole world first: it ranks by prominence, where the geocoder
+                // ranks by nearness, and "cairo" asked in New York came back as Cairo, NY. The place it
+                // finds is then named in English, with its zone and country, by a reverse lookup.
+                let request = MKLocalSearch.Request()
+                request.naturalLanguageQuery = name
+                request.resultTypes = .address
+                request.region = MKCoordinateRegion(MKMapRect.world)
+                if let found = try? await MKLocalSearch(request: request).start().mapItems.first,
+                   let named = try? await geocoder.reverseGeocodeLocation(
+                       CLLocation(latitude: found.placemark.coordinate.latitude,
+                                  longitude: found.placemark.coordinate.longitude),
+                       preferredLocale: english),
+                   !named.isEmpty {
+                    return named
+                }
+                return (try? await geocoder.geocodeAddressString(name, in: nil, preferredLocale: english)) ?? []
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: 8_000_000_000)
+                return nil
+            }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            geocoder.cancelGeocode()
+            return first ?? []
+        }
+        if let mark = placemarks.first, let coordinate = mark.location?.coordinate {
+            let parts = [mark.locality ?? mark.name, mark.locality == nil ? nil : mark.administrativeArea, mark.country]
+                .compactMap { $0 }.filter { !$0.isEmpty }
+            var seen = Set<String>()
+            let english = parts.filter { seen.insert($0).inserted }.joined(separator: ", ")
+            let label = english.isEmpty ? name : english
+            return Place(location: saved ?? Location(city: label, latitude: coordinate.latitude, longitude: coordinate.longitude),
+                         name: label, timeZone: mark.timeZone ?? .current, countryCode: mark.isoCountryCode, isHere: false)
+        }
+        if let saved {
+            return Place(location: saved, name: saved.city, timeZone: .current, countryCode: nil, isHere: false)
+        }
+        return nil
+    }
+}
+#endif
 
 #endif

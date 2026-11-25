@@ -146,7 +146,9 @@ struct SunnahView: View {
                             ResourceHeroStat("\(grouped.count)", "groups"),
                             ResourceHeroStat("\(Self.emphasised.count)", "emphasised"),
                         ]
-                    ))
+                    ) {
+                        SunnahDayDialArt()
+                    })
 
                     StrongestSection(
                         title: "MOST EMPHASISED",

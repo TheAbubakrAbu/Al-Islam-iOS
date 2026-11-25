@@ -43,6 +43,8 @@ struct ProphetMiraclesView: View {
         enum Group: String, CaseIterable, Identifiable {
             case why = "Why prophets are given signs"
             case before = "The prophets before him"
+            /// What the earlier scriptures say of him (2026-11-24).
+            case foretold = "Foretold before him"
             case his = "His greatest signs"
             case provision = "Food and water multiplied"
             case creation = "Creation answered him"
@@ -54,6 +56,7 @@ struct ProphetMiraclesView: View {
                 switch self {
                 case .why:        return "questionmark.circle"
                 case .before:     return "person.3"
+                case .foretold:   return "scroll"
                 case .his:        return "sparkles"
                 case .provision:  return "drop"
                 case .creation:   return "leaf"
@@ -131,7 +134,9 @@ struct ProphetMiraclesView: View {
                             ResourceHeroStat("\(grouped.count)", "groups"),
                             ResourceHeroStat("\(Self.strongest.count)", "strongest"),
                         ]
-                    ))
+                    ) {
+                        ProphetsLastBrickArt()
+                    })
 
                     StrongestSection(
                         items: Self.strongest,
