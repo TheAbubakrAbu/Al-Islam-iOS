@@ -298,6 +298,25 @@ struct SkyView: View {
     #endif
 }
 
+/// Whether VoiceOver is on the sky's arc, and what to do when it leaves. The focus state lives here and
+/// not on `SkyCard`: SwiftUI wakes every view that holds an `@AccessibilityFocusState` whenever focus
+/// moves anywhere in the app, and a sheet opening or closing on ANOTHER tab moves it. With the state on
+/// the card, the whole card's body ran three times for each sheet opened on the Islam tab and six for
+/// each one closed (`-renderCounter -printChanges`, 2026-11-25: "SkyCard: _dayPreviewFocused changed").
+/// Here that wakes one modifier with nothing to redraw.
+private struct DayPreviewFocus: ViewModifier {
+    @AccessibilityFocusState private var focused: Bool
+    let onLeave: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .accessibilityFocused($focused)
+            .onChange(of: focused) { focused in
+                if !focused { onLeave() }
+            }
+    }
+}
+
 /// The sky card's drawing, for one moment `now`. See `SkyView`.
 struct SkyCard: View {
     @Environment(\.appearance) private var appearance
@@ -404,9 +423,7 @@ struct SkyCard: View {
     /// When the touch now on the card began: a TAP on the night's moon opens the viewer, while a hold
     /// or a drag that starts on it scrubs as it always has.
     @State private var touchBegan: Date?
-    /// Whether VoiceOver is on the arc (see `stepDayPreview`): leaving it returns the sky to now, the
-    /// way lifting a finger does.
-    @AccessibilityFocusState private var dayPreviewFocused: Bool
+    // (VoiceOver's focus on the arc is `DayPreviewFocus`'s, not the card's: see it for why.)
     /// The night's trough never dips closer than this to the card's bottom edge.
     private static let troughInset: CGFloat = 8
 
@@ -1062,10 +1079,10 @@ struct SkyCard: View {
             .accessibilityHint("Swipe up or down to move the sun to each prayer time.")
             .accessibilityAdjustableAction { direction in stepDayPreview(direction) }
             .accessibilityAction(named: "Back to Now") { scrubber.end() }
-            .accessibilityFocused($dayPreviewFocused)
-        }
-        .onChange(of: dayPreviewFocused) { focused in
-            if !focused, scrubber.isScrubbing { scrubber.end() }
+            // Leaving the arc returns the sky to now, the way lifting a finger does (`stepDayPreview`).
+            .modifier(DayPreviewFocus {
+                if scrubber.isScrubbing { scrubber.end() }
+            })
         }
     }
 

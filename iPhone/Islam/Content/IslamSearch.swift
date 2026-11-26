@@ -133,6 +133,9 @@ struct IslamArticleEntry: Identifiable, Hashable {
     var emphasized: Bool = false
     /// Spellings the row title does not carry but a searcher will type ("wudu", "ablution").
     var aliases: [String] = []
+    /// The home the article's shared link still names, for a page that moved: the 25 prophets' pages
+    /// left Pillars & Beliefs for Stories of the Prophets on 2026-11-25, and "pillars.adam" has shipped.
+    var linkHome: IslamArticleHome? = nil
 
     /// The row id in the index list, the target of "Scroll To Article".
     var listID: String { "article_\(id)" }
@@ -140,7 +143,7 @@ struct IslamArticleEntry: Identifiable, Hashable {
     /// What a shared link calls this article (AppLink.swift): "pillars.shahadah", "guides.wudhu".
     /// The home comes first because four keys ("god", "zakah", "hajj", "evil-eye") name a page in
     /// two homes.
-    var linkKey: String { "\(home.rawValue).\(debugKey)" }
+    var linkKey: String { "\((linkHome ?? home).rawValue).\(debugKey)" }
 }
 
 struct IslamArticleGroup: Identifiable {
@@ -242,16 +245,19 @@ struct IslamArticleOpenRequest: Hashable {
 
 enum IslamArticleCatalog {
     private static func entry(_ id: String, _ title: String, _ group: String, _ home: IslamArticleHome,
-                              key: String, emphasized: Bool = false, aliases: [String] = []) -> IslamArticleEntry {
+                              key: String, emphasized: Bool = false, aliases: [String] = [],
+                              linkHome: IslamArticleHome? = nil) -> IslamArticleEntry {
         IslamArticleEntry(id: id, title: title, group: group, home: home, debugKey: key,
-                          emphasized: emphasized, aliases: aliases)
+                          emphasized: emphasized, aliases: aliases, linkHome: linkHome)
     }
 
     private static func group(_ title: String, _ home: IslamArticleHome,
                               _ rows: [(id: String, title: String, key: String, aliases: [String])],
-                              emphasized: Bool = false, foldedCount: Int? = nil) -> IslamArticleGroup {
+                              emphasized: Bool = false, foldedCount: Int? = nil,
+                              linkHome: IslamArticleHome? = nil) -> IslamArticleGroup {
         IslamArticleGroup(title: title, home: home, entries: rows.map {
-            entry($0.id, $0.title, title, home, key: $0.key, emphasized: emphasized, aliases: $0.aliases)
+            entry($0.id, $0.title, title, home, key: $0.key, emphasized: emphasized, aliases: $0.aliases,
+                  linkHome: linkHome)
         }, foldedCount: foldedCount)
     }
 
@@ -274,9 +280,10 @@ enum IslamArticleCatalog {
         })
     }
 
-    /// The articles a library may list from the other homes, by id.
+    /// The articles a library may list from the other homes, by id (and the prophets' own pages, which
+    /// Stories of the Prophets lists in THE SEAL OF THE PROPHETS as well as in its Prophets view).
     private static let borrowable: [String: IslamArticleEntry] = Dictionary(
-        (pillarsGroups + guidesGroups + provingGroups).flatMap(\.entries).map { ($0.id, $0) },
+        (pillarsGroups + guidesGroups + provingGroups + prophetGroups).flatMap(\.entries).map { ($0.id, $0) },
         uniquingKeysWith: { a, _ in a })
 
     /// Pillars & Beliefs, in the order the index shows them.
@@ -332,35 +339,6 @@ enum IslamArticleCatalog {
               "where is allah", "above the throne", "uluw", "tahrif", "tatil", "takyif", "tamthil", "tafwid",
               "tawil", "hand of allah", "seeing allah", "ruyah", "tadmuriyyah", "qawaid al-muthla"]),
         ]),
-        group("THE 25 PROPHETS NAMED IN THE QURAN", .pillars, [
-            ("ProphetAdamView", "Adam", "adam", ["first man", "father of mankind"]),
-            ("ProphetIdrisView", "Idris", "idris", ["enoch"]),
-            ("ProphetNuhView", "Nuh", "nuh", ["noah", "ark", "flood"]),
-            ("ProphetHudView", "Hud", "hud", ["aad", "ad", "ahqaf"]),
-            ("ProphetSalihView", "Salih", "salih", ["saleh", "thamud", "she-camel", "hijr"]),
-            ("ProphetIbrahimView", "Ibrahim", "ibrahim", ["abraham", "khalil", "kabah", "sacrifice"]),
-            ("ProphetLutView", "Lut", "lut", ["lot", "sodom"]),
-            ("ProphetIsmailView", "Ismail", "ismail", ["ishmael", "zamzam", "hajar"]),
-            ("ProphetIshaqView", "Ishaq", "ishaq", ["isaac", "sarah"]),
-            ("ProphetYaqubView", "Yaqub / Israil", "yaqub", ["jacob", "israil", "israel", "twelve tribes"]),
-            ("ProphetYusufView", "Yusuf", "yusuf", ["joseph", "egypt", "well", "dream"]),
-            ("ProphetAyyubView", "Ayyub", "ayyub", ["job", "patience", "illness"]),
-            ("ProphetShuaybView", "Shu\u{2019}ayb", "shuayb", ["shuaib", "jethro", "madyan", "midian", "weights", "measures"]),
-            ("ProphetMusaView", "Musa", "musa", ["moses", "pharaoh", "firaun", "torah", "tuwa", "staff"]),
-            ("ProphetHarunView", "Harun", "harun", ["aaron", "calf"]),
-            ("ProphetDhulKiflView", "Dhul-Kifl", "dhulkifl", ["dhu al-kifl", "zulkifl", "ezekiel"]),
-            ("ProphetDawudView", "Dawud", "dawud", ["david", "zabur", "psalms", "jalut", "goliath"]),
-            ("ProphetSulaymanView", "Sulayman", "sulayman", ["solomon", "sulaiman", "jinn", "sheba", "saba", "hoopoe", "ant"]),
-            ("ProphetIlyasView", "Ilyas", "ilyas", ["elias", "elijah", "bal"]),
-            ("ProphetAlyasaView", "Alyasa", "alyasa", ["elisha", "al-yasa"]),
-            ("ProphetYunusView", "Yunus", "yunus", ["jonah", "whale", "dhun-nun", "nineveh"]),
-            ("ProphetZakariyaView", "Zakariya", "zakariya", ["zachariah", "zakariyya"]),
-            ("ProphetYahyaView", "Yahya", "yahya", ["john the baptist"]),
-            ("ProphetIsaView", "Isa", "isa", ["jesus", "masih", "messiah", "injil", "maryam", "mary"]),
-            ("ProphetMuhammadView", "Muhammad", "muhammad-prophet", ["final messenger", "seal of the prophets", "khatam"]),
-        // Folded to the first five (Abu, 2026-09-29: "shrink it and have a show more"): all 25 rows
-        // pushed the Holy Mosques and everything after them far down the index.
-        ], foldedCount: 5),
         group("THE THREE HOLY MOSQUES", .pillars, [
             ("HaramView", "Masjid Al-Haram (The Holy Mosque)", "haram", ["makkah", "mecca", "kaaba", "kabah"]),
             ("NabawiView", "Masjid An-Nabawi (The Prophet\u{2019}s Mosque)", "nabawi", ["madinah", "medina", "prophet's mosque"]),
@@ -496,6 +474,14 @@ enum IslamArticleCatalog {
         ]),
         group("PRAYER IN SPECIAL CASES", .guides, [
             ("TravelPrayerView", "How to Pray While Traveling", "travel", ["traveler", "qasr", "shorten", "combine", "jam", "journey", "plane"]),
+            // Abu, 2026-11-25: "a how to guide how to combine prayers when traveling and a how to guide
+            // on how to pray on a plane". The overview above opens both.
+            ("CombinePrayersView", "How to Combine Prayers While Traveling", "combine",
+             ["jam", "jam'", "combining", "combine", "join", "joining", "taqdim", "takhir", "dhuhr and asr",
+              "maghrib and isha", "qasr", "traveler", "two prayers together"]),
+            ("PlanePrayerView", "How to Pray on a Plane", "plane",
+             ["plane", "airplane", "aeroplane", "flight", "flying", "airport", "in the air", "seat", "qiblah",
+              "time zones", "long haul", "wudu on a plane", "fasting on a plane"]),
             ("SickPrayerView", "How to Pray When Sick", "sick", ["illness", "sitting", "chair", "lying down", "hospital", "disabled"]),
             ("MissedPrayerView", "How to Make Up Missed Prayers", "missed", ["qada", "make up", "forgot", "slept", "overslept"]),
             ("SujudSahwView", "How to Perform Sujud as-Sahw", "sahw", ["sujud sahw", "forgetfulness", "prostration of forgetfulness", "doubt", "mistake in prayer"]),
@@ -569,6 +555,42 @@ enum IslamArticleCatalog {
             ("ProvingQuestionsView", "Six Hard Questions", "questions", ["questions", "sceptic", "skeptic", "critic"]),
             ("ProvingClosingView", "The Converging Case", "closing", ["conclusion", "closing", "verdict", "invitation"]),
         ]),
+    ]
+
+    /// The 25 prophets the Quran names, a page each: who he was, his story in short, and every ayah that
+    /// names him. They were a section of Pillars & Beliefs until 2026-11-25 (Abu: "Remove 25 prophets
+    /// mentioned in Quran in pillars and beliefs", and of Stories of the Prophets, "allow me to click on a
+    /// button or picker and it just shows me prophets rather than stories"): Stories of the Prophets owns
+    /// them now and lists them in its Prophets view (`IslamLibraryView`), so its search and the tab's
+    /// reach them there. Their shared links keep the name they shipped with ("pillars.adam").
+    static let prophetGroups: [IslamArticleGroup] = [
+        group("THE 25 PROPHETS NAMED IN THE QURAN", .stories, [
+            ("ProphetAdamView", "Adam", "adam", ["first man", "father of mankind"]),
+            ("ProphetIdrisView", "Idris", "idris", ["enoch"]),
+            ("ProphetNuhView", "Nuh", "nuh", ["noah", "ark", "flood"]),
+            ("ProphetHudView", "Hud", "hud", ["aad", "ad", "ahqaf"]),
+            ("ProphetSalihView", "Salih", "salih", ["saleh", "thamud", "she-camel", "hijr"]),
+            ("ProphetIbrahimView", "Ibrahim", "ibrahim", ["abraham", "khalil", "kabah", "sacrifice"]),
+            ("ProphetLutView", "Lut", "lut", ["lot", "sodom"]),
+            ("ProphetIsmailView", "Ismail", "ismail", ["ishmael", "zamzam", "hajar"]),
+            ("ProphetIshaqView", "Ishaq", "ishaq", ["isaac", "sarah"]),
+            ("ProphetYaqubView", "Yaqub / Israil", "yaqub", ["jacob", "israil", "israel", "twelve tribes"]),
+            ("ProphetYusufView", "Yusuf", "yusuf", ["joseph", "egypt", "well", "dream"]),
+            ("ProphetAyyubView", "Ayyub", "ayyub", ["job", "patience", "illness"]),
+            ("ProphetShuaybView", "Shu\u{2019}ayb", "shuayb", ["shuaib", "jethro", "madyan", "midian", "weights", "measures"]),
+            ("ProphetMusaView", "Musa", "musa", ["moses", "pharaoh", "firaun", "torah", "tuwa", "staff"]),
+            ("ProphetHarunView", "Harun", "harun", ["aaron", "calf"]),
+            ("ProphetDhulKiflView", "Dhul-Kifl", "dhulkifl", ["dhu al-kifl", "zulkifl", "ezekiel"]),
+            ("ProphetDawudView", "Dawud", "dawud", ["david", "zabur", "psalms", "jalut", "goliath"]),
+            ("ProphetSulaymanView", "Sulayman", "sulayman", ["solomon", "sulaiman", "jinn", "sheba", "saba", "hoopoe", "ant"]),
+            ("ProphetIlyasView", "Ilyas", "ilyas", ["elias", "elijah", "bal"]),
+            ("ProphetAlyasaView", "Alyasa", "alyasa", ["elisha", "al-yasa"]),
+            ("ProphetYunusView", "Yunus", "yunus", ["jonah", "whale", "dhun-nun", "nineveh"]),
+            ("ProphetZakariyaView", "Zakariya", "zakariya", ["zachariah", "zakariyya"]),
+            ("ProphetYahyaView", "Yahya", "yahya", ["john the baptist"]),
+            ("ProphetIsaView", "Isa", "isa", ["jesus", "masih", "messiah", "injil", "maryam", "mary"]),
+            ("ProphetMuhammadView", "Muhammad", "muhammad-prophet", ["final messenger", "seal of the prophets", "khatam"]),
+        ], linkHome: .pillars),
     ]
 
     // BEGIN LIBRARY GROUPS: generated from the libraries' plan (2026-11-24); the order inside a
@@ -870,7 +892,8 @@ enum IslamArticleCatalog {
         case .pillars: return pillarsGroups
         case .guides: return guidesGroups
         case .proving: return provingGroups
-        case .stories: return storiesGroups
+        // The stories, then the prophets' own pages (the library's Prophets view).
+        case .stories: return storiesGroups + prophetGroups
         case .companions: return companionsGroups
         case .religions: return religionsGroups
         case .preservation: return preservationGroups
@@ -880,9 +903,13 @@ enum IslamArticleCatalog {
     }
 
     /// Every article once, under the home that owns it: a library's borrowed rows are counted where
-    /// they live.
-    static let all: [IslamArticleEntry] = (pillarsGroups + guidesGroups + provingGroups).flatMap(\.entries)
-        + libraryGroups.flatMap { group in group.entries.filter { $0.home == group.home } }
+    /// they live. (Once by id: Stories of the Prophets lists Muhammad's page in two of its own groups.)
+    static let all: [IslamArticleEntry] = {
+        var seen: Set<String> = []
+        let owned = (pillarsGroups + guidesGroups + provingGroups).flatMap(\.entries)
+            + (libraryGroups + prophetGroups).flatMap { group in group.entries.filter { $0.home == group.home } }
+        return owned.filter { seen.insert($0.id).inserted }
+    }()
 
     /// The article ids each home LISTS, its own and the ones it borrows: what a search scoped to that
     /// home covers (`covers`), so Refuting Religions' search finds Answering Christianity.
@@ -3855,6 +3882,28 @@ enum ArticleSources {
             ArticleSource(title: "Risalah fi Sujud as-Sahw", subtitle: "Ibn al-Uthaymin"),
             ArticleSource(title: "Ruling on Shortening Prayers when Travelling", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/82751"),
             ArticleSource(title: "Is Combining Prayers when Travelling Permissible?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49885"),
+        ],
+        "CombinePrayersView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Mawaqit as-Salah", subtitle: "Ibn al-Uthaymin, on the times of the prayers"),
+            ArticleSource(title: "Al-Mughni", subtitle: "Ibn Qudamah"),
+            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, on joining and shortening"),
+            ArticleSource(title: "Fatawa al-Lajnah ad-Da'imah", subtitle: "The Standing Committee, volume 8"),
+            ArticleSource(title: "How to Combine Maghrib and Isha Prayers when Travelling", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/153665"),
+            ArticleSource(title: "The difference between joining and shortening prayers", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/105109"),
+            ArticleSource(title: "Can You Combine Prayers before Travelling?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/20017"),
+            ArticleSource(title: "Ruling on Returning Home after Joining Prayers", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/22387"),
+        ],
+        "PlanePrayerView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Fatawa al-Lajnah ad-Da'imah", subtitle: "The Standing Committee, volumes 8 and 10, on prayer and fasting in an aircraft"),
+            ArticleSource(title: "I'lam al-Musafirin", subtitle: "Ibn al-Uthaymin, on the manners of travel and what concerns those who fly"),
+            ArticleSource(title: "Al-Mughni", subtitle: "Ibn Qudamah"),
+            ArticleSource(title: "How to Pray on a Plane", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/82536"),
+            ArticleSource(title: "Praying on board an airplane", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/21874"),
+            ArticleSource(title: "How should a passenger on an airplane do wudu if there is no water?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10798"),
+            ArticleSource(title: "When a Traveler By Plane Breaks the Fast", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/37670"),
         ],
         "SickPrayerView": [
             ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),

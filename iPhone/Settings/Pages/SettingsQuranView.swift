@@ -106,7 +106,7 @@ struct SettingsQuranView: View {
         .debugPushDestination(isPresented: $autoOpenSunnah) { SunnahRemindersView() }
         .debugPushDestination(isPresented: $autoOpenThemes) { ThemeHighlightsView() }
         #endif
-        .navigationTitle("Al-Quran Settings")
+        .navigationTitle("Quran Settings")
         #if os(iOS)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
@@ -380,17 +380,23 @@ struct SettingsQuranView: View {
         }
     }
 
+    /// Two cards (2026-11-25): who recites, a door, with the note on streaming and downloads under
+    /// it; then how a recitation plays. One card held the door, a picker and a switch.
+    @ViewBuilder
     private var recitationSection: some View {
         Section {
             reciterSelection
+        } header: {
+            Text("RECITER")
+        } footer: {
+            recitationCaption
+        }
+
+        Section(header: Text("RECITATION")) {
             recitationEndingPicker
             SettingsToggle(String(localized: "Highlight Words While Playing"),
                            caption: String(localized: "The word being recited lights up as the reciter reaches it, in the list, on the page and on an ayah's card. Uses the reciter's word timings from quran.com, fetched once per surah; a reciter without them keeps the ayah highlight alone."),
                            isOn: $quranDisplay.highlightPlayingWords)
-        } header: {
-            Text("RECITATION")
-        } footer: {
-            recitationCaption
         }
     }
 
@@ -456,38 +462,38 @@ struct SettingsQuranView: View {
     /// The ayah actions sheet's three switches. Keep Sheet Open: whether a sheet opened FROM it stacks
     /// on top of it or replaces it. The other two are also in the sheet itself (Abu, 2026-10-25): whether
     /// playing from it closes it, and whether the screen stays awake while it is up.
+    /// A row each (2026-11-25, Design Grammar section 3): the three shared one row, so no line ran
+    /// between them, while the switches of the section above each had their own.
     @ViewBuilder
     private var keepAyahSheetOpenGroup: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SettingsToggle(String(localized: "Keep Sheet Open"), caption: String(localized: "Opening Tafsir or another action from an ayah keeps its actions underneath; closing the new sheet returns to them. Off, the actions close as the new sheet opens."), isOn: $quranDisplay.keepAyahSheetOpen)
+        SettingsToggle(String(localized: "Keep Sheet Open"), caption: String(localized: "Opening Tafsir or another action from an ayah keeps its actions underneath; closing the new sheet returns to them. Off, the actions close as the new sheet opens."), isOn: $quranDisplay.keepAyahSheetOpen)
 
-            #if os(iOS)
-            SettingsToggle(String(localized: "Keep Sheet Open While Playing"), caption: String(localized: "Play This Ayah and Repeat Ayah in an ayah's actions leave the sheet up so you can keep reading. Play From Ayah and Play Custom Range still close it."), isOn: $quranDisplay.keepAyahSheetOpenOnPlay)
+        #if os(iOS)
+        SettingsToggle(String(localized: "Keep Sheet Open While Playing"), caption: String(localized: "Play This Ayah and Repeat Ayah in an ayah's actions leave the sheet up so you can keep reading. Play From Ayah and Play Custom Range still close it."), isOn: $quranDisplay.keepAyahSheetOpenOnPlay)
 
-            SettingsToggle(String(localized: "Keep Screen On"), caption: String(localized: "The screen stays awake while an ayah's actions sheet is open. To keep it awake whenever a surah is open, use Keep Screen On in Appearance, Look and Feel."), isOn: $quranDisplay.ayahSheetKeepsScreenOn)
-            #endif
-        }
+        SettingsToggle(String(localized: "Keep Screen On"), caption: String(localized: "The screen stays awake while an ayah's actions sheet is open. To keep it awake whenever a surah is open, use Keep Screen On in Appearance, Look and Feel."), isOn: $quranDisplay.ayahSheetKeepsScreenOn)
+        #endif
     }
 
     /// The daily cards. The three Show Last Listened / Last Read switches that followed them are gone
     /// (Abu, 2026-10-25: "get rid of all of those settings, too many things"): the cards are always on,
     /// and each card's own Remove clears it until the next listen or read.
+    /// A row each, like every switch on these pages (2026-11-25).
+    @ViewBuilder
     private var dailyCardsGroup: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SettingsToggle(String(localized: "Show Ayah of the Day"), caption: String(localized: "Shows a different ayah each day at the top of the Quran tab."), isOn: $quranDisplay.showAyahOfTheDay)
+        SettingsToggle(String(localized: "Show Ayah of the Day"), caption: String(localized: "Shows a different ayah each day at the top of the Quran tab."), isOn: $quranDisplay.showAyahOfTheDay)
 
-            #if os(iOS)
-            if WordOfDayStore.isBundled {
-                SettingsToggle(String(localized: "Show Word of the Day"), caption: String(localized: "Shows a piece of Quranic vocabulary each day at the top of the Quran tab, with every ayah it appears in."), isOn: $quranDisplay.showWordOfTheDay)
-            }
-
-            // Fajr comes from the prayer calculation, which only an app with prayer times has.
-            #if HAS_ADHAN
-            SettingsToggle(String(localized: "Daily Cards Turn Over at Fajr"), caption: String(localized: "The daily cards change at Fajr from your prayer times instead of at midnight, so the night still belongs to the day before. Off, or without a location, midnight."), isOn: $systemSettings.dailyRolloverAtFajr)
-                .onChange(of: settings.dailyRolloverAtFajr) { _ in settings.dailyRolloverSwitchChanged() }
-            #endif
-            #endif
+        #if os(iOS)
+        if WordOfDayStore.isBundled {
+            SettingsToggle(String(localized: "Show Word of the Day"), caption: String(localized: "Shows a piece of Quranic vocabulary each day at the top of the Quran tab, with every ayah it appears in."), isOn: $quranDisplay.showWordOfTheDay)
         }
+
+        // Fajr comes from the prayer calculation, which only an app with prayer times has.
+        #if HAS_ADHAN
+        SettingsToggle(String(localized: "Daily Cards Turn Over at Fajr"), caption: String(localized: "The daily cards change at Fajr from your prayer times instead of at midnight, so the night still belongs to the day before. Off, or without a location, midnight."), isOn: $systemSettings.dailyRolloverAtFajr)
+            .onChange(of: settings.dailyRolloverAtFajr) { _ in settings.dailyRolloverSwitchChanged() }
+        #endif
+        #endif
     }
 
     /// The List's alone (`ReaderLayout`): a page is its own divider, and its chrome names the page and juz.
@@ -569,6 +575,14 @@ struct SettingsQuranView: View {
                 arabicFontSizeControls
             }
 
+            // The two switches the Pages layout alone reads, in a section named for it (2026-11-25):
+            // they closed the SIZE card, under the slider and its device-size switch.
+            #if os(iOS)
+            Section(header: Text("PAGES")) {
+                fitPageControls
+            }
+            #endif
+
             Section(header: Text("LETTERS AND MARKS")) {
                 waslSignPicker
                 beginnerModeGroup
@@ -618,82 +632,77 @@ struct SettingsQuranView: View {
 
     /// The study layout, and the two lines it can write under each word. The List's alone
     /// (`ReaderLayout`): the page keeps the mushaf's lines, so in Pages the whole group goes dead.
+    /// A row each (2026-11-25): the two lines hang under the switch on the dependent rail, as
+    /// Remind a Day Before hangs under its switch on the Notifications page. Each line is disabled
+    /// while it is the only one still on: a word-by-word layout with neither line is the ayah with
+    /// gaps in it, so the switch that would empty it does not move.
+    @ViewBuilder
     private var wordByWordGroup: some View {
         let inList = ReaderLayout.list.isOnScreen(settings)
-        return VStack(alignment: .leading) {
-            let canRenderNow = wordFeaturesAvailable
-            let inlineBinding = Binding<Bool>(
-                get: { settings.wordByWordInline && canRenderNow },
-                set: { settings.wordByWordInline = $0 }
-            )
+        let canRenderNow = wordFeaturesAvailable
+        let inlineBinding = Binding<Bool>(
+            get: { settings.wordByWordInline && canRenderNow },
+            set: { settings.wordByWordInline = $0 }
+        )
 
-            SettingsToggle(String(localized: "Word by Word"),
-                           caption: !inList
-                               ? ReaderLayout.list.elsewhereCaption
-                               : canRenderNow || !settings.showArabicText
-                                   ? String(localized: "Lays the ayah out word by word, each word's meaning and pronunciation beneath it. List mode only: page mode keeps the mushaf layout.")
-                                   : String(localized: "Available in Hafs an Asim, with beginner mode off: the meanings are counted word by word against that text."),
-                           isOn: inlineBinding)
-                .disabled(!canRenderNow)
-                .onChange(of: settings.wordByWordInline) { enabled in
-                    if !enabled && !settings.wordByWordMeanings { WordByWordStore.shared.unload() }
-                    if enabled { WordByWordStore.shared.prewarm() }
-                }
-
-            if settings.wordByWordInline && canRenderNow {
-                wordByWordLineToggles
+        SettingsToggle(String(localized: "Word by Word"),
+                       caption: !inList
+                           ? ReaderLayout.list.elsewhereCaption
+                           : canRenderNow || !settings.showArabicText
+                               ? String(localized: "Lays the ayah out word by word, each word's meaning and pronunciation beneath it. List mode only: page mode keeps the mushaf layout.")
+                               : String(localized: "Available in Hafs an Asim, with beginner mode off: the meanings are counted word by word against that text."),
+                       isOn: inlineBinding)
+            .disabled(!canRenderNow || !inList)
+            .onChange(of: settings.wordByWordInline) { enabled in
+                if !enabled && !settings.wordByWordMeanings { WordByWordStore.shared.unload() }
+                if enabled { WordByWordStore.shared.prewarm() }
             }
-        }
-        .disabled(!inList)
-    }
 
-    /// The two lines the study layout can write under each word. Each is disabled while it is the
-    /// only one still on: a word-by-word layout with neither line is the ayah with gaps in it, so
-    /// the switch that would empty it does not move.
-    private var wordByWordLineToggles: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        if settings.wordByWordInline && canRenderNow {
             SettingsToggle(String(localized: "Translation"), caption: String(localized: "What each word means on its own, from the Quranic Arabic Corpus via Quran.com. Literal and in place, so it reads differently from the flowing translation of the whole ayah."), isOn: $quranDisplay.wordByWordInlineTranslation)
-                .disabled(!settings.wordByWordInlineTransliteration)
+                .disabled(!settings.wordByWordInlineTransliteration || !inList)
+                .settingsDependent()
 
             SettingsToggle(String(localized: "Transliteration"), caption: String(localized: "How each word is pronounced, written above its meaning. Independent of the ayah's own transliteration line."), isOn: $quranDisplay.wordByWordInlineTransliteration)
-                .disabled(!settings.wordByWordInlineTranslation)
+                .disabled(!settings.wordByWordInlineTranslation || !inList)
+                .settingsDependent()
         }
-        .settingsDependent()
     }
     #endif
 
     private var arabicVisibilityToggle: some View {
-        SettingsToggle(String(localized: "Show Arabic Quran Text"), isOn: $quranDisplay.showArabicText)
+        SettingsToggle(String(localized: "Show Arabic"), isOn: $quranDisplay.showArabicText)
             .disabled(!settings.showTransliteration && !settings.showEnglishSaheeh && !settings.showEnglishMustafa)
     }
 
     private var highlightAllahGroup: some View {
-        SettingsToggle(String(localized: "Highlight Allah"), caption: String(localized: "Colors the majestic and glorius name الله (Allah) in red throughout the Quran."), isOn: $quranDisplay.highlightAllahNames)
+        SettingsToggle(String(localized: "Highlight Allah"), caption: String(localized: "Colors the majestic and glorious name الله (Allah) in red throughout the Quran."), isOn: $quranDisplay.highlightAllahNames)
             .disabled(!settings.showArabicText)
     }
 
+    /// The switch, then the door to its colors, a row each (2026-11-25: they shared one row, so the
+    /// door had no line above it and no row of its own to tap).
+    @ViewBuilder
     private var tajweedSettingsGroup: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Hafs paints from the computed rule tree; every other riwayah paints the
-            // word colors of its own printed mushaf (QiraahTajweedStore pack).
-            let tajweedCanRenderNow = settings.showArabicText
-                && (settings.isHafsDisplay || settings.riwayahTajweedPackTag != nil)
-            let tajweedToggleBinding = Binding<Bool>(
-                get: { settings.showTajweedColors && tajweedCanRenderNow },
-                set: { settings.showTajweedColors = $0 }
-            )
+        // Hafs paints from the computed rule tree; every other riwayah paints the
+        // word colors of its own printed mushaf (QiraahTajweedStore pack).
+        let tajweedCanRenderNow = settings.showArabicText
+            && (settings.isHafsDisplay || settings.riwayahTajweedPackTag != nil)
+        let tajweedToggleBinding = Binding<Bool>(
+            get: { settings.showTajweedColors && tajweedCanRenderNow },
+            set: { settings.showTajweedColors = $0 }
+        )
 
-            SettingsToggle(String(localized: "Show Tajweed Colors"), isOn: tajweedToggleBinding)
-                .disabled(!tajweedCanRenderNow)
+        SettingsToggle(String(localized: "Show Tajweed Colors"), isOn: tajweedToggleBinding)
+            .disabled(!tajweedCanRenderNow)
 
-            #if os(iOS)
-            NavigationLink(destination: LazyDestination { TajweedLegendView(showsDismissButton: false, opensFullLegend: true) }) {
-                SettingsRowLabel(title: String(localized: "Customize Tajweed Colors"), systemImage: "paintpalette.fill", tint: SettingsTint.quran)
-            }
-            .tint(settings.accentColor.color)
-            .disabled(!settings.showTajweedColors)
-            #endif
+        #if os(iOS)
+        NavigationLink(destination: LazyDestination { TajweedLegendView(showsDismissButton: false, opensFullLegend: true) }) {
+            SettingsRowLabel(title: String(localized: "Customize Tajweed Colors"), systemImage: "paintpalette.fill", tint: SettingsTint.quran)
         }
+        .tint(settings.accentColor.color)
+        .disabled(!settings.showTajweedColors)
+        #endif
     }
 
     /// The TAJWEED section's footer: how a riwayah other than Hafs is colored, for readers who have
@@ -728,16 +737,20 @@ struct SettingsQuranView: View {
     // screen as two independent switches.
     //
     // No `.disabled(!showArabicText)` on either: the LETTERS AND MARKS section already renders this
-    // whole group only while Show Arabic Quran Text is on, so the modifier could never fire and only
+    // whole group only while Show Arabic is on, so the modifier could never fire and only
     // suggested that a disabled-but-ticked state existed somewhere.
+    //
+    // A row each, and the names the reader's own menus use for the same two things (the ayah's
+    // display menu, the comparison sheet, Share Ayah): "Hide Tashkeel and Signs" and "Hide Dots".
+    // They were "Hide Arabic Tashkeel (Vowel Diacritics) and Signs", two lines of title, and
+    // "Hide Arabic Dots" until 2026-11-25.
+    @ViewBuilder
     private var cleanArabicTextToggles: some View {
-        VStack(alignment: .leading) {
-            SettingsToggle(String(localized: "Hide Arabic Tashkeel (Vowel Diacritics) and Signs"), caption: String(localized: "Removes the tashkeel (fatha, damma, kasra and the rest) and the small signs: madd marks, hamzat al-wasl, tiny vowel letters, stop signs and markers. The vowel letters stay. Not recommended."), isOn: $quranDisplay.cleanArabicText)
-            
-            // No `.settingsDependent()` rail any more: that indent marks a row as belonging to the
-            // one above it, which is exactly the relationship this row no longer has.
-            SettingsToggle(String(localized: "Hide Arabic Dots"), caption: String(localized: "Removes the dots, turning ب into ٮ, the way the earliest manuscripts such as the Birmingham folios were written. Hard to read; not for beginners."), isOn: $quranDisplay.removeArabicDots)
-        }
+        SettingsToggle(String(localized: "Hide Tashkeel and Signs"), caption: String(localized: "Removes the tashkeel (fatha, damma, kasra and the rest) and the small signs: madd marks, hamzat al-wasl, tiny vowel letters, stop signs and markers. The vowel letters stay. Not recommended."), isOn: $quranDisplay.cleanArabicText)
+
+        // No `.settingsDependent()` rail any more: that indent marks a row as belonging to the
+        // one above it, which is exactly the relationship this row no longer has.
+        SettingsToggle(String(localized: "Hide Dots"), caption: String(localized: "Removes the dots, turning ب into ٮ, the way the earliest manuscripts such as the Birmingham folios were written. Hard to read; not for beginners."), isOn: $quranDisplay.removeArabicDots)
     }
 
     private var arabicFontPicker: some View {
@@ -882,23 +895,20 @@ struct SettingsQuranView: View {
             #endif
 
             SettingsToggle(String(localized: "Use Device Text Size"), isOn: useSystemArabicFontSize)
-
-            #if os(iOS)
-            fitPageControls
-            #endif
         }
     }
 
     #if os(iOS)
     /// The Pages' alone (`ReaderLayout`): in the List both go dead, keeping the value they hold.
+    @ViewBuilder
     private var fitPageControls: some View {
         let inPages = ReaderLayout.pages.isOnScreen(settings)
-        return VStack(alignment: .leading) {
-            SettingsToggle(String(localized: "Fit Page to Screen"),
-                           caption: inPages
-                               ? String(localized: "Each page laid out as this riwayah's printed mushaf is, at the largest size that fits the screen. Off, the size above applies and the page scrolls.")
-                               : ReaderLayout.pages.elsewhereCaption,
-                           isOn: $quranDisplay.mushafFitPage)
+        SettingsToggle(String(localized: "Fit Page to Screen"),
+                       caption: inPages
+                           ? String(localized: "Each page laid out as this riwayah's printed mushaf is, at the largest size that fits the screen. Off, the size above applies and the page scrolls.")
+                           : ReaderLayout.pages.elsewhereCaption,
+                       isOn: $quranDisplay.mushafFitPage)
+            .disabled(!inPages)
 
             // An @AppStorage flip that changes the READER's page layout behind this sheet. It used to
             // be the one switch here with NO `.animation` on its binding, because an animated write
@@ -906,13 +916,12 @@ struct SettingsQuranView: View {
             // `page-mode-chrome-bands`). Every switch is a `SettingsToggle` now: its write is flagged
             // and the pager strips the animation from it (`ignoresSettingsPageAnimation`), so this
             // row animates the sheet like its neighbours while the reader animates its own spread change.
-            SettingsToggle(String(localized: "Two-Page Spread"),
-                           caption: inPages
-                               ? String(localized: "Two facing pages, like an open mushaf, whenever the page area is wider than it is tall: landscape, an iPad, a wide Mac window. Portrait shows one.")
-                               : ReaderLayout.pages.elsewhereCaption,
-                           isOn: $quranDisplay.mushafTwoPageSpread)
-        }
-        .disabled(!inPages)
+        SettingsToggle(String(localized: "Two-Page Spread"),
+                       caption: inPages
+                           ? String(localized: "Two facing pages, like an open mushaf, whenever the page area is wider than it is tall: landscape, an iPad, a wide Mac window. Portrait shows one.")
+                           : ReaderLayout.pages.elsewhereCaption,
+                       isOn: $quranDisplay.mushafTwoPageSpread)
+            .disabled(!inPages)
     }
     #endif
 
@@ -1022,7 +1031,7 @@ struct SettingsQuranView: View {
     }
 
     private var includeEnglishToggle: some View {
-        SettingsToggle(String(localized: "Include English"), isOn: includeEnglish)
+        SettingsToggle(String(localized: "Show English"), isOn: includeEnglish)
             .disabled(!settings.isHafsDisplay)
     }
 
@@ -1062,78 +1071,66 @@ struct SettingsQuranView: View {
         }
     }
 
+    /// Two sections (2026-11-25). The riwayah's own controls: the switch that brings the riwayat
+    /// into the app, the riwayah on screen, Comparison Mode and, under it, the beta text. Then
+    /// ABOUT QIRAAT: the three doors. What a qiraah is reads as the first section's footer, directly
+    /// over the doors it sends the reader to; the app's own notes close the second.
+    ///
+    /// It was one card: an accent row with an arrow, the picker, a switch, three paragraphs of
+    /// caption, the three doors, a bold line, another switch, and three more paragraphs under it.
+    @ViewBuilder
     private var qiraahSection: some View {
         Section {
+            SettingsToggle(String(localized: "Show Riwayah / Qiraah"), isOn: showQiraahDetailsBinding)
+
             if settings.showQiraahDetails {
-                Button {
-                    settings.hapticFeedback()
-                    hideQiraahDetails()
-                } label: {
-                    HStack {
-                        Label("Hide Riwayah / Qiraah", systemImage: "character.book.closed.fill.ar")
-                        Spacer()
-                        Image(systemName: "chevron.up")
-                    }
-                    .foregroundColor(settings.accentColor.color)
-                }
-                                
                 qiraahPicker
+                comparisonModeGroup
                 // The beta-TEXT switch only surfaces for comparison users: everyone else reads a beta
                 // riwayah through its exact printed mushaf and is never pitched the beta text at all
                 // (user rule: "only show the beta toggle if comparison mode is on - otherwise just PDFs").
                 if settings.qiraatComparisonMode {
                     betaQiraatGroup
                 }
-                qiraahExplanation
-                qiraahLinks
-                qiraahHighlight
-                comparisonModeGroup
-            } else {
-                Button {
-                    settings.hapticFeedback()
-                    withAnimation(.easeInOut) {
-                        settings.showQiraahDetails = true
-                    }
-                } label: {
-                    HStack {
-                        Label("Show Riwayah / Qiraah", systemImage: "character.book.closed.fill.ar")
-                        Spacer()
-                        Image(systemName: "chevron.down")
-                    }
-                    .foregroundColor(settings.accentColor.color)
-                }
             }
         } header: {
-            // With riwayah/qiraah hidden the header carries no riwayah caption and the footer stays
-            // empty: the collapsed section is just the "Show Riwayah / Qiraah" entry point, not a pitch.
-            HStack(spacing: 6) {
-                Text("RIWAYAH / QIRAAH")
-                if settings.showQiraahDetails {
-                    Text("- \(settings.displayQiraahArabicCaption)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.65)
-                        .padding(.vertical, 2)
-                }
-                Spacer(minLength: 0)
-            }
+            Text("RIWAYAH / QIRAAH")
         } footer: {
+            // With riwayah/qiraah hidden the footer stays empty: the section is just the switch,
+            // not a pitch.
             if settings.showQiraahDetails {
-                Text(String(localized: "This app supports all 20 riwayat, 12 of them in beta.\n\nThe riwayat printed in the Maghribi script use the official King Fahd Complex Warsh typeface; the others share the Uthmani (Madani) script typeface. You can override this under Arabic Text → Uthmani Script.\n\nPlay Ayahs is unsupported for other qiraat. For full surahs, you can choose reciters by riwayah. If you play a surah while viewing a different qiraah on screen, the reciter may be in another riwayah, so the audio may not match the text you see. For beginners, staying with Hafs an Asim for both reading and listening is recommended.").localizedDigits)
+                qiraahExplanation
+            }
+        }
+
+        if settings.showQiraahDetails {
+            Section {
+                qiraahLinks
+            } header: {
+                Text("ABOUT QIRAAT")
+            } footer: {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(String(localized: "This app supports all 20 riwayat, 12 of them in beta.\n\nThe riwayat printed in the Maghribi script use the official King Fahd Complex Warsh typeface; the others share the Uthmani (Madani) script typeface. You can override this under Arabic Text → Uthmani Script.\n\nPlay Ayahs is unsupported for other qiraat. For full surahs, you can choose reciters by riwayah. If you play a surah while viewing a different qiraah on screen, the reciter may be in another riwayah, so the audio may not match the text you see. For beginners, staying with Hafs an Asim for both reading and listening is recommended.").localizedDigits)
+                    qiraahHighlight
+                }
             }
         }
     }
 
-    private func hideQiraahDetails() {
-        if settings.isHafsDisplay {
-            withAnimation(.easeInOut) {
-                settings.showQiraahDetails = false
+    /// The switch that shows the riwayat across the app. Turning it off while another riwayah is on
+    /// screen asks first (the page's dialog), because it also takes the text back to Hafs an Asim:
+    /// the switch stays on until that is answered.
+    private var showQiraahDetailsBinding: Binding<Bool> {
+        Binding(
+            get: { settings.showQiraahDetails },
+            set: { show in
+                if show || settings.isHafsDisplay {
+                    settings.showQiraahDetails = show
+                } else {
+                    confirmHideQiraahDetails = true
+                }
             }
-        } else {
-            settings.showQiraahDetails = true
-            confirmHideQiraahDetails = true
-        }
+        )
     }
 
     private var qiraahPicker: some View {
@@ -1154,7 +1151,6 @@ struct SettingsQuranView: View {
     private var betaQiraatGroup: some View {
         SettingsToggle(String(localized: "Beta Text (12 Riwayat, 6 Qiraat)"),
                        caption: String(localized: "Selectable text for Ibn Amir, Hamzah, al-Kisai, Abu Jafar, Yaqub and Khalaf al-Ashir. Their printed mushafs are exact and always available in page mode; only this machine-extracted text is beta."),
-                       systemImage: "flask",
                        isOn: Binding(
                            get: { settings.betaQiraatEnabled },
                            set: { newValue in
@@ -1193,9 +1189,6 @@ struct SettingsQuranView: View {
 
         To learn more about the 7 Ahruf and the 10 Qiraat, see below and in Al-Islam View > Islamic Pillars and Basics.
         """)
-            .font(.caption)
-            .foregroundColor(.primary)
-            .padding(.vertical, 2)
     }
 
     /// Three doors in the row grammar every settings link uses (they were caption-sized text links).
@@ -1224,14 +1217,10 @@ struct SettingsQuranView: View {
 
     private var qiraahHighlight: some View {
         Text("***Hafs an Asim* is the most common and widespread Qiraah in the world today.**")
-            .font(.caption)
-            .foregroundColor(.primary)
-            .padding(.top, 4)
-            .padding(.vertical, 2)
     }
 
     private var comparisonModeGroup: some View {
-        SettingsToggle(String(localized: "Comparison mode"), caption: String(localized: "Shows the riwayah picker above the search bar on Hafs too, so you can switch and compare there. Every other riwayah always shows it."), isOn: $quranDisplay.qiraatComparisonMode)
+        SettingsToggle(String(localized: "Comparison Mode"), caption: String(localized: "Shows the riwayah picker above the search bar on Hafs too, so you can switch and compare there. Every other riwayah always shows it."), isOn: $quranDisplay.qiraatComparisonMode)
     }
 
 }
@@ -1412,7 +1401,7 @@ extension SettingsSearchEntry {
         .init(title: "Reciter", path: "Quran Settings → Recitation", keywords: "reciters audio download favorite minshawi husary sudais qari listen", destination: .reciters),
         .init(title: "Recitation Type & Random Reciter", path: "Quran Settings → Recitation", keywords: "murattal mujawwad muallim random ayah recitation", destination: .quranPage(.recitation)),
         .init(title: "After Surah Recitation Ends", path: "Quran Settings → Recitation", keywords: "next surah previous end stop continue autoplay recitation end", destination: .quranPage(.recitation)),
-        .init(title: "Reading View (List / Pages)", path: "Quran Settings → Reading View", keywords: "page mode mushaf list mode grid last read", destination: .quranPage(.readingView)),
+        .init(title: "Reading View (List / Pages)", path: "Quran Settings", keywords: "page mode mushaf list mode grid last read layout", destination: .quranSettings),
         .init(title: "Show Full Surah Details", path: "Quran Settings → Reading View", keywords: "revelation type ayah count page count surah list details", destination: .quranPage(.readingView)),
         .init(title: "Ayah of the Day & Word of the Day", path: "Quran Settings → Reading View", keywords: "daily ayah word vocabulary quran tab summary tiles", destination: .quranPage(.readingView)),
         .init(title: "Daily Cards Turn Over at Fajr", path: "Quran Settings → Reading View", keywords: "midnight fajr rollover day change hadith dua reminder name", destination: .quranPage(.readingView)),
@@ -1423,7 +1412,7 @@ extension SettingsSearchEntry {
         .init(title: "Tajweed Colors", path: "Quran Settings → Arabic Text", keywords: "tajwid rules colors ghunnah qalqalah madd legend", destination: .quranPage(.arabicText)),
         .init(title: "Tap a Word & Word by Word", path: "Quran Settings → Arabic Text", keywords: "word by word gloss meaning pronunciation transliteration inline tap", destination: .quranPage(.arabicText)),
         .init(title: "Hide Tashkeel & Dots", path: "Quran Settings → Arabic Text", keywords: "clean arabic tashkeel harakat diacritics dots beginner spacing", destination: .quranPage(.arabicText)),
-        .init(title: "Highlight Allah (Quran)", path: "Quran Settings → Arabic Text", keywords: "highlight name of allah red color quran", destination: .quranPage(.arabicText)),
+        .init(title: "Highlight Allah (Quran)", path: "Quran Settings → Reading View", keywords: "highlight name of allah red color quran", destination: .quranPage(.readingView)),
         .init(title: "Riwayah & Qiraat", path: "Quran Settings → Arabic Text", keywords: "hafs warsh qaloon riwayah qiraat ahruf readings", destination: .quranPage(.arabicText)),
         .init(title: "Test Mode", path: "Quran Settings → Test Mode", keywords: "test memorize memorization hifz hide text recite from memory quiz check reveal tap ayah", destination: .quranPage(.testMode)),
         .init(title: "Transliteration & English Translations", path: "Quran Settings → English Text", keywords: "saheeh international mustafa khattab translation english transliteration", destination: .quranPage(.englishText)),

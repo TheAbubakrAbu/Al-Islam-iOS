@@ -93,6 +93,44 @@ final class IslamLibraryCatalogTests: XCTestCase {
         }
     }
 
+    // MARK: The prophets' own pages (2026-11-25)
+
+    /// The 25 prophets' pages left Pillars & Beliefs for Stories of the Prophets (its Prophets view). They
+    /// are searched and opened there, and a link shared before the move still opens its page.
+    func testTheProphetsPagesLiveInStoriesAndKeepTheirLinks() {
+        let pages = IslamArticleCatalog.prophetGroups.flatMap(\.entries)
+        XCTAssertEqual(pages.count, 25)
+        XCTAssertFalse(IslamArticleCatalog.pillarsGroups.contains { $0.title.contains("PROPHETS NAMED") })
+        for page in pages {
+            XCTAssertEqual(IslamArticleCatalog.byID[page.id]?.home, .stories, page.id)
+            XCTAssertTrue(page.linkKey.hasPrefix("pillars."), "\(page.id) lost its shared link: \(page.linkKey)")
+            XCTAssertEqual(IslamArticleCatalog.entry(linkKey: page.linkKey)?.id, page.id)
+            XCTAssertFalse(LibraryTags.tags(for: page.id).isEmpty, "\(page.id) has no tags for its row")
+        }
+        XCTAssertEqual(IslamArticleCatalog.entry(linkKey: "pillars.adam")?.id, "ProphetAdamView")
+        XCTAssertEqual(IslamArticleCatalog.entry(linkKey: "stories.adam")?.id, "StoryAdamView")
+        XCTAssertFalse(IslamArticleSearch.titleHits("adam", homes: [.pillars]).contains { $0.id == "ProphetAdamView" })
+        XCTAssertTrue(IslamArticleSearch.titleHits("adam", homes: [.stories]).contains { $0.id == "ProphetAdamView" })
+        // The stories' own index is the stories alone.
+        XCTAssertFalse(IslamArticleCatalog.storiesGroups.contains { $0.title.contains("PROPHETS NAMED") })
+    }
+
+    /// Each name the Prophets view lists after the 25 opens a real page on a heading that page has.
+    func testEveryNameBeyondTheTwentyFiveOpensARealHeading() {
+        let headings: [String: [String]] = [
+            "StoryIsraeliyyatView": StoryIsraeliyyatView.sections.map(\.heading),
+            "StoryKhidrView": StoryKhidrView.sections.map(\.heading),
+        ]
+        XCTAssertEqual(Set(OtherProphet.all.map(\.id)).count, OtherProphet.all.count)
+        for prophet in OtherProphet.all {
+            XCTAssertNotNil(IslamArticleCatalog.byID[prophet.article], "\(prophet.id): \(prophet.article)")
+            XCTAssertNotNil(headings[prophet.article], "\(prophet.id) opens a page this test does not know")
+            if let section = prophet.section {
+                XCTAssertTrue(headings[prophet.article]?.contains(section) == true, "\(prophet.id): no heading \(section)")
+            }
+        }
+    }
+
     func testTheRootSearchStillFindsEachPageOnce() {
         let hits = IslamArticleSearch.titleHits("hadith", homes: Set(IslamArticleHome.allCases))
         let ids = hits.map(\.id)

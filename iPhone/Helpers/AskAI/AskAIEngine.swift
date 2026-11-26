@@ -509,8 +509,18 @@ enum AskAIPrompt {
 
     /// The prompt for a turn: the numbered sources with their origins, the recent conversation
     /// clipped to the profile's budget (the most recent turn fullest), the task line, the question.
+    /// How a turn that looks for a passage by its description went (`AskAIQuestion.findsPassage`).
+    enum Finding {
+        /// Not that kind of question.
+        case none
+        /// The app found it and has written its reference and words itself: the model explains it.
+        case found
+        /// Nothing carries enough of the description: the model says so and answers on the subject.
+        case missed
+    }
+
     static func build(question: AskAIQuestion, sources: [AskAISource], history: [Turn],
-                      profile: AskAIProfile, scope: AskAIScope = .everything) -> String {
+                      profile: AskAIProfile, scope: AskAIScope = .everything, finding: Finding = .none) -> String {
         var prompt = ""
         if !sources.isEmpty {
             let lines = sources.enumerated().map { index, source in
@@ -547,7 +557,13 @@ enum AskAIPrompt {
         if [.reference, .define].contains(question.intent), let subject = sources.first(where: \.isSubject) {
             task = referenceTask(for: subject)
         }
-        if question.isFollowUp, !history.isEmpty {
+        // (A passage that was found is asked about with `passagePrompt`, not this prompt.)
+        if finding == .missed { task += " " + missedTask }
+        if question.isFollowUp, !history.isEmpty, question.intent == .prayerTimes {
+            // The same question for another place, day or prayer: the times ARE the new material.
+            // Told to add something new and repeat nothing, the model named the place and stopped.
+            task += " This follows the conversation above: answer what it asked, for the place and the day this source gives."
+        } else if question.isFollowUp, !history.isEmpty {
             task += " This is a follow-up to the conversation above: \u{201C}that\u{201D}, \u{201C}it\u{201D} and \u{201C}he\u{201D} refer to what was just discussed. Add new material (the reasoning, a source not yet used, the context); do not repeat the earlier answer or its quotations."
         }
         // The reader's choice of library (`AskAIScope`), for any question that searched.
@@ -556,6 +572,40 @@ enum AskAIPrompt {
         prompt += "User: \(question.raw)"
         return prompt
     }
+
+    /// What the model is asked once the app has FOUND the passage a reader described
+    /// (`AskAIRetriever.Outcome.passageSources`). The app writes where it is and its words itself,
+    /// above what the model writes (`AskAIConversation.PassageAnswer`), and the model does the one
+    /// thing it does well here: reading one passage and saying what it is about, under plain
+    /// instructions of its own, the way a summary is asked for.
+    ///
+    /// Everything else was tried the same day (2026-11-25) and failed on the 3B model. Asked which
+    /// verse it is, it gives a reference and a quotation of its own making. Given twelve candidates
+    /// to choose from, it passed over the first three, which were the passage, for one that shared
+    /// a word. Told to present the first candidate itself, it introduced a hadith as "the words of
+    /// Allah in the surah of Al-Ma'idah, verse 11" and pasted the source's provenance line into the
+    /// answer. Asked only to explain it, but under the chat's own instructions (which teach it to
+    /// say "the words of Allah in Surah ..."), it explained a hadith about a cat with "the words of
+    /// Allah in Surah Al-Baqarah, 20".
+    static let passageInstructions = "You explain a passage of the Quran or a hadith to a reader who has the passage in front of them. Use only the passage and the commentary you are given. Write two or three plain sentences of your own that say what the passage is about and what it teaches. Do not quote it, give no reference, no surah name and no number, write no list and no heading, and add nothing the texts do not say."
+
+    /// The prompt that goes with `passageInstructions`: the passage's own words, and beneath them
+    /// the commentary the app holds on it (a tafsir, a hadith's explanation).
+    static func passagePrompt(_ sources: [AskAISource], profile: AskAIProfile) -> String {
+        var prompt = ""
+        for source in sources {
+            let what = source.kind.isAyah ? "a verse of the Quran" : "a hadith"
+            prompt += "PASSAGE (\(what)):\n\(AskAISource.clip(source.text, to: profile.subjectCharacters))\n\n"
+            for note in source.notes where [.tafsir, .explanation, .benefits].contains(note.kind) {
+                prompt += "COMMENTARY ON IT (a scholar\u{2019}s words, not the passage\u{2019}s):\n\(AskAISource.clip(note.text, to: 900))\n\n"
+            }
+        }
+        return prompt + "TASK: In two or three sentences, say what this passage is about and what it teaches."
+    }
+
+    /// Added to the turn's own task when a reader described a passage and nothing found carries
+    /// enough of the description to be called it.
+    static let missedTask = "The reader is looking for one particular passage, and the app\u{2019}s search found none that fits the description: open by saying so plainly, in one sentence, then say what the sources below do say that is nearest to it."
 
     /// The task line for a question that names its subject, by what the subject is.
     private static func referenceTask(for subject: AskAISource) -> String {

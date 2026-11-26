@@ -82,8 +82,17 @@ final class AskAIPromptTests: XCTestCase {
         XCTAssertFalse(instructions.contains("Prayer times today"))
         // Since 2026-11-24 the source can be any place and any day (`AskAIPrayerRequest`): the task
         // names the source by its mark, and says what to do with a place that could not be found.
-        XCTAssertTrue(AskAIIntent.prayerTimes.taskLine.contains("prayer times source marked SUBJECT OF THE QUESTION"))
+        // Since 2026-11-25 that source may be the Hijri date, the coming Islamic dates or the qibla
+        // as well, so the task names it by its mark alone; every countdown in it is worked out by the
+        // app (the model copies), and it is the app's calculation, never introduced as a verse (given
+        // that one source alone, the model once opened "The words of Allah in Surah Al-Baqarah").
+        XCTAssertTrue(AskAIIntent.prayerTimes.taskLine.contains("source marked SUBJECT OF THE QUESTION"))
         XCTAssertTrue(AskAIIntent.prayerTimes.taskLine.contains("could not be found"))
+        XCTAssertTrue(AskAIIntent.prayerTimes.taskLine.contains("never calculate"))
+        XCTAssertTrue(AskAIIntent.prayerTimes.taskLine.contains("not scripture"))
+        // No way out for an answer that is there: told to say when the source lacks something, the
+        // model said so about times written in front of it.
+        XCTAssertFalse(AskAIIntent.prayerTimes.taskLine.contains("does not include"))
         // Rule 6 forbids invented clock times only: "How many rakahs is Fajr?" and "How many days is
         // Ramadan?" still get their numbers.
         XCTAssertTrue(instructions.contains("time of day"))

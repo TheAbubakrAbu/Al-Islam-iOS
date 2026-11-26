@@ -31,8 +31,17 @@ struct IslamLibraryView: View {
     @State private var scrollTarget: String?
     @StateObject private var search = IslamArticleSearchModel()
     @State private var searchFilters = IslamSearchFilters.remembered()
+    /// Stories of the Prophets: the stories, or the prophets themselves (`StoriesListing`).
+    @AppStorage(StoriesListing.storageKey) private var storiesListingRaw = StoriesListing.stories.rawValue
 
-    private var groups: [IslamArticleGroup] { IslamArticleCatalog.groups(for: home).filter { !$0.entries.isEmpty } }
+    private var storiesListing: StoriesListing { StoriesListing(rawValue: storiesListingRaw) ?? .stories }
+
+    /// The chapters the index lists. Stories of the Prophets also owns the prophets' own pages
+    /// (`IslamArticleCatalog.prophetGroups`), which its Prophets view lists and this one does not.
+    private var groups: [IslamArticleGroup] {
+        (home == .stories ? IslamArticleCatalog.storiesGroups : IslamArticleCatalog.groups(for: home))
+            .filter { !$0.entries.isEmpty }
+    }
 
     var body: some View {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -42,7 +51,22 @@ struct IslamLibraryView: View {
                     if query.isEmpty {
                         ResourceHeroSection(hero)
 
-                        chapterSections
+                        if home == .stories {
+                            Section {
+                                StoriesListingSwitch(listing: storiesListing,
+                                                     stories: groups.reduce(0) { $0 + $1.entries.count },
+                                                     prophets: IslamArticleCatalog.prophetGroups.reduce(0) { $0 + $1.entries.count }
+                                                        + OtherProphet.all.count) { chosen in
+                                    withAnimation(.easeInOut(duration: 0.2)) { storiesListingRaw = chosen.rawValue }
+                                }
+                            }
+                        }
+
+                        if home == .stories && storiesListing == .prophets {
+                            prophetSections
+                        } else {
+                            chapterSections
+                        }
 
                         relatedSection
                     } else {
@@ -57,6 +81,11 @@ struct IslamLibraryView: View {
                             isSearching: search.isSearching,
                             onScrollTo: { entry in
                                 withAnimation { searchText = "" }
+                                // A prophet's own page is a row of the Prophets view, a story of the other.
+                                if home == .stories {
+                                    let isProphet = IslamArticleCatalog.prophetGroups.contains { $0.entries.contains(entry) }
+                                    storiesListingRaw = (isProphet ? StoriesListing.prophets : .stories).rawValue
+                                }
                                 scrollTarget = entry.listID
                             },
                             filters: searchFilters,
@@ -173,6 +202,76 @@ struct IslamLibraryView: View {
         .islamArticleRowActions(title: entry.title, copyText: nil, onScrollTo: nil)
     }
 
+    // MARK: Prophets
+
+    /// Stories of the Prophets as a list of the prophets themselves (Abu, 2026-11-25: "allow me to click
+    /// on a button or picker and it just shows me prophets rather than stories like it shows 25 prophets
+    /// plus other prophets one for each"): the 25 the Quran names, a page each, numbered in the order
+    /// they were sent, then the names known from outside it, each with how his prophethood is known.
+    @ViewBuilder
+    private var prophetSections: some View {
+        ForEach(IslamArticleCatalog.prophetGroups) { group in
+            // The group's own title ("THE 25 PROPHETS NAMED IN THE QURAN") wraps to two lines beside the
+            // count pill, which says the 25 already.
+            Section(header: SectionPillHeader(title: "NAMED IN THE QURAN", count: group.entries.count, icon: group.systemImage)) {
+                ForEach(Array(group.entries.enumerated()), id: \.element.id) { position, entry in
+                    chapterRow(entry, number: position + 1)
+                }
+            }
+        }
+
+        Section(
+            header: SectionPillHeader(title: "BEYOND THE 25", count: OtherProphet.all.count, icon: "person.fill.questionmark"),
+            // An English page, like every library: said as written, not looked up in the catalog.
+            footer: Text(verbatim: "A Muslim believes in every prophet Allah sent, named or not, and calls a particular person a prophet only on evidence. Each name here says how it is known: from the Quran, from the sound Sunnah, or only from the People of the Book, whose reports are neither believed nor denied.")
+        ) {
+            ForEach(OtherProphet.all) { prophet in
+                otherProphetRow(prophet)
+            }
+        }
+    }
+
+    private func otherProphetRow(_ prophet: OtherProphet) -> some View {
+        NavigationLink(destination: LazyDestination {
+            IslamArticleCatalog.destination(id: prophet.article, section: prophet.section)
+        }) {
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: "person.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(appearance.accent)
+                    .frame(width: 32, height: 32)
+                    .background(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .fill(appearance.accent.opacity(0.16))
+                    )
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(prophet.name)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 6)
+                        Text(prophet.arabic)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(appearance.accent)
+                    }
+
+                    Text(prophet.line)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    LibraryTagFlow(tags: [prophet.standing.tag])
+                        .padding(.top, 3)
+                }
+            }
+            .padding(.vertical, 3)
+        }
+        .id("other_prophet_\(prophet.id)")
+    }
+
     // MARK: Beside it
 
     /// The libraries and pages that carry the subject on: one section, a door each.
@@ -283,6 +382,131 @@ struct IslamLibraryView: View {
                                 message: home.subtitle) { AnyView(EmptyView()) }
         }
     }
+}
+
+/// What Stories of the Prophets lists under its hero: the stories in their parts, or the prophets
+/// themselves, a row each. Remembered, so the library reopens the way it was left.
+enum StoriesListing: String, CaseIterable {
+    case stories, prophets
+
+    static let storageKey = "storiesOfTheProphetsListing"
+}
+
+/// The two listings side by side across the page, the one on screen filled: the article pages' Short /
+/// Full Article switch (`ArticleLengthSection`), so the two read alike.
+private struct StoriesListingSwitch: View {
+    @Environment(\.appearance) private var appearance
+
+    let listing: StoriesListing
+    let stories: Int
+    let prophets: Int
+    let choose: (StoriesListing) -> Void
+
+    var body: some View {
+        let accent = appearance.accent
+        HStack(spacing: 3) {
+            ForEach(StoriesListing.allCases, id: \.self) { segment($0, accent: accent) }
+        }
+        .padding(3)
+        .background(Capsule(style: .continuous).fill(accent.opacity(0.08)))
+        .overlay(Capsule(style: .continuous).strokeBorder(accent.opacity(0.16), lineWidth: 0.5))
+        .padding(.vertical, 2)
+        .frame(maxWidth: .infinity)
+        .articleCardRow()
+    }
+
+    private func segment(_ option: StoriesListing, accent: Color) -> some View {
+        let selected = listing == option
+        return Button {
+            guard !selected else { return }
+            Settings.shared.hapticFeedback()
+            choose(option)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: option == .stories ? "book.pages" : "person.2.fill")
+                    .font(.footnote.weight(.semibold))
+                Text(verbatim: AppLanguage.article(option == .stories ? "Stories" : "Prophets"))
+                    .font(.subheadline.weight(.semibold))
+                Text(verbatim: "\(option == .stories ? stories : prophets)")
+                    .font(.footnote.monospacedDigit())
+                    .foregroundColor(selected ? accent.opacity(0.85) : .secondary)
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .foregroundColor(selected ? accent : .secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(Capsule(style: .continuous).fill(selected ? accent.opacity(0.18) : Color.clear))
+            .contentShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.borderless)
+        .accessibilityLabel(Text(verbatim: AppLanguage.article(option == .stories ? "Stories" : "Prophets")))
+        .accessibilityValue(Text(verbatim: "\(option == .stories ? stories : prophets)"))
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+/// A name the Prophets view lists after the 25 the Quran names: who he is, how his prophethood is known,
+/// and the page that says so. Every line is that page's own verdict (StoriesOfTheProphets.swift,
+/// "Prophets Named Only Outside the Quran" and "Musa and al-Khidr"), never more than it says.
+struct OtherProphet: Identifiable {
+    /// How the name is known, in the chapter's own words.
+    enum Standing {
+        case sunnah, strongerView, unnamedInQuran, leftOpen, reported, neither
+
+        var tag: ProphetFacts.Tag {
+            switch self {
+            case .sunnah: return ProphetFacts.Tag(kind: .rank, text: "Named in the sound Sunnah")
+            case .strongerView: return ProphetFacts.Tag(kind: .rank, text: "A prophet in the stronger view")
+            case .unnamedInQuran: return ProphetFacts.Tag(kind: .surah, text: "A prophet in the Quran, unnamed there")
+            case .leftOpen: return ProphetFacts.Tag(kind: .known, text: "Left open by the Prophet ﷺ")
+            case .reported: return ProphetFacts.Tag(kind: .known, text: "Reported, not established")
+            case .neither: return ProphetFacts.Tag(kind: .known, text: "Neither affirmed nor denied")
+            }
+        }
+    }
+
+    let id: String
+    let name: String
+    let arabic: String
+    let line: String
+    let standing: Standing
+    /// The catalog id of the page that tells of him, and the heading it opens on.
+    let article: String
+    var section: String? = nil
+
+    private static let chapter = "StoryIsraeliyyatView"
+
+    static let all: [OtherProphet] = [
+        OtherProphet(id: "yusha", name: "Yusha\u{2018} ibn Nun", arabic: "يُوشَع بن نُون",
+                     line: "Musa\u{2019}s young companion at the two seas, for whom the sun was held back",
+                     standing: .sunnah, article: chapter, section: "YUSHA' IBN NUN"),
+        OtherProphet(id: "khidr", name: "al-Khidr", arabic: "الخَضِر",
+                     line: "The servant Musa travelled to learn from: the ship, the boy and the wall",
+                     standing: .strongerView, article: "StoryKhidrView"),
+        OtherProphet(id: "shamwil", name: "Shamwil", arabic: "شَمْوِيل",
+                     line: "The prophet who told Bani Isra\u{2019}il that Allah had chosen Talut as their king",
+                     standing: .unnamedInQuran, article: chapter, section: "THE PROPHET WHO CHOSE TALUT"),
+        OtherProphet(id: "uzayr", name: "\u{2018}Uzayr", arabic: "عُزَيْر",
+                     line: "Named in the Quran as the man some called the son of Allah; identified with Ezra",
+                     standing: .leftOpen, article: chapter, section: "'UZAYR, IRMIYA, HIZQIL AND THE OTHERS"),
+        OtherProphet(id: "shith", name: "Shith", arabic: "شِيث",
+                     line: "The son of Adam through whom the generations to Nuh run, as the People of the Book relate",
+                     standing: .reported, article: chapter, section: "SHITH, SON OF ADAM"),
+        OtherProphet(id: "danyal", name: "Danyal", arabic: "دَانْيَال",
+                     line: "Known from the Book of Daniel, and from the grave the Companions hid at Tustar",
+                     standing: .neither, article: chapter, section: "DANYAL AND THE GRAVE AT TUSTAR"),
+        OtherProphet(id: "irmiya", name: "Irmiya", arabic: "إِرْمِيَا",
+                     line: "Jeremiah, in the histories of the fall of Jerusalem",
+                     standing: .neither, article: chapter, section: "'UZAYR, IRMIYA, HIZQIL AND THE OTHERS"),
+        OtherProphet(id: "hizqil", name: "Hizqil", arabic: "حِزْقِيل",
+                     line: "Ezekiel; some identify him with Dhul-Kifl, which is not established",
+                     standing: .neither, article: chapter, section: "'UZAYR, IRMIYA, HIZQIL AND THE OTHERS"),
+        OtherProphet(id: "shaya", name: "Sha\u{2018}ya", arabic: "شَعْيَا",
+                     line: "Isaiah, among the prophets of Bani Isra\u{2019}il in the histories",
+                     standing: .neither, article: chapter, section: "'UZAYR, IRMIYA, HIZQIL AND THE OTHERS"),
+    ]
 }
 #endif
 

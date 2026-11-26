@@ -113,8 +113,17 @@ struct SelectableTextView: UIViewRepresentable {
         // every render of the enclosing view. Find-in-page on a long tafsir re-renders every block on
         // each keystroke, so re-laying out the blocks whose text didn't actually change was the
         // difference between a smooth search field and a stuttering one.
-        if textView.attributedText != attributed {
-            textView.attributedText = attributed
+        let storage = textView.textStorage
+        if !attributed.isEqual(to: storage) {
+            // A text that only GREW (an answer being written): the new words are appended, so TextKit lays out the last paragraph and not the whole text again,
+            // and a selection the reader has begun stays where it is.
+            let had = storage.length
+            if had > 0, attributed.length > had,
+               attributed.attributedSubstring(from: NSRange(location: 0, length: had)).isEqual(to: storage) {
+                storage.append(attributed.attributedSubstring(from: NSRange(location: had, length: attributed.length - had)))
+            } else {
+                textView.attributedText = attributed
+            }
             // New text = new height at the same width.
             textView.invalidateIntrinsicContentSize()
         }

@@ -440,7 +440,9 @@ struct AyahTafsirSheet: View {
                 if !OnDeviceAsk.supportsArabic {
                     NSLog("SUMMARIZE TAFSIR: Arabic unsupported on this model")
                 }
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                // "-summarizeDelay <seconds>": how long the tafsir is "read" first (default 1).
+                let delay = args.firstIndex(of: "-summarizeDelay").flatMap { $0 + 1 < args.count ? Double(args[$0 + 1]) : nil } ?? 1
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 if args[i + 1] == "all" {
                     showSummarize = true
                 } else {

@@ -92,7 +92,7 @@ enum AskAIIntent: String, Codable, CaseIterable {
         case .appHelp:
             return "The question is about using THIS app (\(AppIdentifiers.appName)). Answer only from the setting and tip sources: name the exact place (the tab, then the screen, then the setting, in the app's own words, for example Settings, then Quran Settings, then Recitation) and what the control does, as short steps if there are several. Do not invent screens or controls. If no source covers it, say you are not sure the app has that and suggest searching in Settings."
         case .prayerTimes:
-            return "The question is about prayer times. Answer from the prayer times source marked SUBJECT OF THE QUESTION exactly as written: say which place and which day it gives, then the times asked for (and their rakah counts when asked), doing any arithmetic the question needs from the current time it states. If the source says a place could not be found, say so plainly and do not give another place\u{2019}s times as if they were its."
+            return "The question is about prayer times, the Islamic date or the qibla, which this app computes. Answer from the source marked SUBJECT OF THE QUESTION exactly as written: say which place and which day it is for, then what was asked. That source is the app\u{2019}s own calculation, not scripture: never introduce it as a verse or a hadith, and name no surah. Every countdown, date and number of days in it is already worked out: copy it, never calculate one yourself, and state no time or date that is not written there. Give only what was asked: one prayer\u{2019}s time or countdown when one prayer is asked about, and every prayer with its time, one to a line, only when the prayer times are asked for as a whole. If the source says a place could not be found, say so plainly and do not give another place\u{2019}s times as if they were its."
         case .reference:
             return "The question names a specific verse, surah, hadith or Name, marked SUBJECT OF THE QUESTION. Explain that one: what it says, its context, and its meaning, drawing on the tafsir or background source when there is one, and say where each point comes from. Do not describe some other verse instead."
         case .scripture:
@@ -209,6 +209,37 @@ struct AskAIQuestion {
     }
 
     /// The same question, read as another intent (Prayer Times chosen above the composer).
+    /// Whether the reader is LOOKING FOR a passage and describing it ("the verse about fathers
+    /// killing their children out of shame", "which hadith mentions the woman and the cat", "where
+    /// does the Quran say the two seas do not mix"), not asking what scripture teaches on a
+    /// subject. The search then trusts the described-passage lanes, hands the model more candidates
+    /// to read, and the task is to pick the one described (`AskAIPrompt.findTask`). A question that
+    /// names its verse or hadith by number is a reference, never this.
+    var findsPassage: Bool {
+        #if DEBUG
+        if Self.describedSearchOff { return false }
+        #endif
+        guard !isArabic, !isFollowUp, [.scripture, .hadith, .general, .story, .define].contains(intent) else { return false }
+        let lowered = AskAILexicon.fold(raw)
+        let whole = NSRange(location: 0, length: (lowered as NSString).length)
+        return Self.findShapes.contains { $0.firstMatch(in: lowered, range: whole) != nil }
+    }
+
+    #if DEBUG
+    /// "-askAINoDescribed": the search as it was before 2026-11-25 (no described-passage lanes, no
+    /// passage-finding shape), to score the two against the same questions.
+    static let describedSearchOff = ProcessInfo.processInfo.arguments.contains("-askAINoDescribed")
+    #endif
+
+    private static let findShapes: [NSRegularExpression] = [
+        // "(what is / which is / is there) (the / a) verse about ...", at the start.
+        #"^(?:(?:what|which|where)(?: is| was|s)? |is there |are there |i (?:am |m )?(?:looking for|trying to find) |find (?:me )?|show me |give me )?(?:the |that |a |an |any |one )?(?:verse|verses|ayah|ayat|aya|hadith|hadiths|hadeeth|narration|passage)s? (?:about|where|that|which|when|in which|on|of|saying|says|mentioning|mentions|with|talking|describing|regarding)\b"#,
+        #"\b(?:which|what) (?:verse|ayah|ayat|aya|hadith|hadeeth|narration|surah|sura|passage)\b"#,
+        #"\bwhere (?:does|did|do|in|is it in) (?:the )?(?:quran|koran|allah|prophet|hadith|sunnah)\b.*\b(?:say|says|said|mention|mentions|mentioned|talk|talks|tell|tells|describe|describes)\b"#,
+        #"\bis there (?:a|an|any) (?:verse|ayah|aya|hadith|narration)\b"#,
+        #"\b(?:find|looking for|trying to find|remember|recall|forgot) (?:me )?(?:the|a|that|an|which) (?:verse|ayah|aya|hadith|narration|surah)\b"#,
+    ].map { try! NSRegularExpression(pattern: $0) }
+
     func with(intent: AskAIIntent) -> AskAIQuestion {
         AskAIQuestion(raw: raw, intent: intent, isFollowUp: isFollowUp, contentWords: contentWords,
                       searchText: searchText, searchTerms: searchTerms, hintTerms: hintTerms, isArabic: isArabic,
@@ -291,6 +322,11 @@ struct AskAIQuestion {
         // tomorrow?" wants the time).
         let asksTheClock = !prayerFiqh || (clockQuestion && schedule)
         #if HAS_ADHAN
+        // Today's Hijri date, when Ramadan or an Eid falls, the qibla's bearing: computed by the app
+        // like the times, and answered from the same source.
+        if AskAIPrayerRequest.asksDateOrDirection(lowered) || AskAIPrayerRequest.asksRakahCount(lowered) { return .prayerTimes }
+        // "Did I pray Fajr today?", "Did I miss Dhuhr?": the reader's own Prayer Tracker and the clock.
+        if AskAIPrayerRequest.asksTracker(lowered) { return .prayerTimes }
         if asksTheClock, (namedPrayer && (clockQuestion || schedule)) || (prayerGeneral && schedule)
             || (namedPrayer && wordCount <= 2) || lowered.contains("prayer times") {
             return .prayerTimes

@@ -162,6 +162,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         #endif
         #if HAS_ADHAN
         let request = response.notification.request
+        // "Traveling Mode On": open the Adhan tab, where its card is waiting with the two answers
+        // and, the first time, the explanation. From any other tab the card never came up at all.
+        // "Are You on a Flight?" the same: its card is the Adhan tab's.
+        if request.identifier == Settings.travelingNotificationId || request.identifier == Settings.flightNotificationId {
+            DispatchQueue.main.async { AppNavigation.shared.openAdhan(.tab) }
+            completionHandler()
+            return
+        }
         guard let moment = Settings.tappedPrayerNotification(from: request, deliveredAt: response.notification.date) else {
             completionHandler()
             return

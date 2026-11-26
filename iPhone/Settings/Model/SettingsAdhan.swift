@@ -343,6 +343,10 @@ extension Settings {
         }
     }
 
+    /// When the phone's place was last committed from a fix: how fresh "where the phone last was"
+    /// is, for a flight that starts from it (`FlightMode.turnOn`).
+    static var lastLocationFixAt: Date? { lastLocationCommitAt }
+
     /// Stop the high-accuracy burst once a fix this good arrives.
     private static let refinementTargetAccuracy: CLLocationDistance = 12   // m
     /// Hard cap on how long the burst runs, in case a good fix never arrives.
@@ -594,6 +598,9 @@ extension Settings {
             mgr.requestLocation()
             #if os(iOS)
             mgr.startMonitoringSignificantLocationChanges()
+            // Visits: iOS's own low-power notice that the phone has settled somewhere. At an
+            // airport that is the moment to offer Flight Mode (`FlightMode.noteArrival`).
+            mgr.startMonitoringVisits()
             #endif
             
         case .denied where !locationNeverAskAgain:
@@ -632,6 +639,18 @@ extension Settings {
             }
         }
 
+        #if os(iOS)
+        // Flight Mode reads the fix first (speed and height: in an aircraft, landed, held at the
+        // gate), so the commit below already schedules against the re-anchored flight.
+        FlightMode.shared.note(fix: loc)
+        // Standing still, with a sharp fix: if that is an airport, Flight Mode offers itself.
+        if loc.speed >= 0, loc.speed < 2, loc.horizontalAccuracy <= 100 {
+            FlightMode.shared.noteArrival(
+                at: FlightCoordinate(latitude: loc.coordinate.latitude, longitude: loc.coordinate.longitude),
+                accuracy: loc.horizontalAccuracy, time: loc.timestamp)
+        }
+        #endif
+
         if Self.isRefiningLocation {
             commitLocation(loc, refining: true)
             let elapsed = Date().timeIntervalSince(Self.refinementStartedAt ?? Date())
@@ -642,6 +661,18 @@ extension Settings {
             commitLocation(loc, refining: false)
         }
     }
+
+    #if os(iOS)
+    /// The phone has settled somewhere, or left (iOS decides; delivered in the background too, to
+    /// an app allowed Always). Only an arrival matters, and only to Flight Mode.
+    func locationManager(_ mgr: CLLocationManager, didVisit visit: CLVisit) {
+        guard visit.departureDate == .distantFuture, visit.horizontalAccuracy > 0 else { return }
+        FlightMode.shared.noteArrival(
+            at: FlightCoordinate(latitude: visit.coordinate.latitude, longitude: visit.coordinate.longitude),
+            accuracy: visit.horizontalAccuracy,
+            time: visit.arrivalDate == .distantPast ? Date() : visit.arrivalDate)
+    }
+    #endif
 
     /// Seeds the home location from the current location the first time we have a valid fix.
     /// A freshly installed app - or an existing user who never set a home - automatically adopts the
@@ -976,6 +1007,7 @@ extension Settings {
                 Self.locationManager.requestAlwaysAuthorization()
             }
             Self.locationManager.startMonitoringSignificantLocationChanges()
+            Self.locationManager.startMonitoringVisits()
             #endif
 
             // The watch takes only this one-shot fix (see `didChangeAuthorization`).
@@ -1181,7 +1213,11 @@ extension Settings {
         }
     }
     
-    private static let travelingNotificationId = "\(AppIdentifiers.appName).TravelingMode"
+    /// Read by the tap handler too (AppDelegate): a tap on this banner opens the Adhan tab, where
+    /// the "Traveling Mode On" card is waiting.
+    static let travelingNotificationId = "\(AppIdentifiers.appName).TravelingMode"
+    /// The "are you on a flight?" banner; a tap opens the Adhan tab too, where its card is.
+    static let flightNotificationId = "\(AppIdentifiers.appName).FlightMode"
     private static let calculationNotificationId = "\(AppIdentifiers.appName).CalculationMode"
 
     /// Which method a country uses, derived from the catalogue so the mapping can never disagree with the
@@ -1389,6 +1425,7 @@ extension Settings {
         // can't ring on every flip.
         if postAutoChangeNotification(
             id: Self.calculationNotificationId,
+            title: String(localized: "Calculation Method Updated"),
             body: String(localized: "Prayer calculation switched to \(detectedMethod.localizedDisplay) for \(Self.spokenPlace(currentLocation.city))."),
             lastAnnouncedAt: lastCalculationNotificationAt
         ) {
@@ -1474,7 +1511,7 @@ extension Settings {
                 withAnimation { travelingMode = true }
                 travelTurnOffAutomatic = false
                 travelTurnOnAutomatic  = true
-                notifyTravelingModeChanged(body: String(localized: "Traveling mode automatically turned on at \(hereName), away from \(homeName)"))
+                notifyTravelingModeChanged(turnedOn: true, body: travelingTurnOnAnnouncement(hereName: hereName, homeName: homeName))
                 return true
             }
             // Already on: a standing "turned off" flag can only be stale (the mode is on), and its card
@@ -1486,7 +1523,7 @@ extension Settings {
                 withAnimation { travelingMode = false }
                 travelTurnOnAutomatic  = false
                 travelTurnOffAutomatic = true
-                notifyTravelingModeChanged(body: String(localized: "Traveling mode automatically turned off at \(hereName), near \(homeName)"))
+                notifyTravelingModeChanged(turnedOn: false, body: String(localized: "Traveling mode automatically turned off at \(hereName), near \(homeName)"))
                 return true
             }
             if travelTurnOnAutomatic { travelTurnOnAutomatic = false }
@@ -1501,14 +1538,177 @@ extension Settings {
         city.contains("(") ? String(localized: "your current location") : city.cityDisplay
     }
 
-    /// The auto-toggle's announcement. See `postAutoChangeNotification` for the rate limit.
-    private func notifyTravelingModeChanged(body: String) {
+    /// The auto-toggle's announcement. See `postAutoChangeNotification` for the rate limit. Titled
+    /// with what happened ("Traveling Mode On"): the app's name, which it used to carry, is already
+    /// printed above every banner.
+    private func notifyTravelingModeChanged(turnedOn: Bool, body: String) {
         #if os(iOS)
-        if postAutoChangeNotification(id: Self.travelingNotificationId, body: body, lastAnnouncedAt: lastTravelingNotificationAt) {
+        let title = turnedOn ? String(localized: "Traveling Mode On") : String(localized: "Traveling Mode Off")
+        if postAutoChangeNotification(id: Self.travelingNotificationId, title: title, body: body, lastAnnouncedAt: lastTravelingNotificationAt) {
             lastTravelingNotificationAt = Date()
         }
         #endif
     }
+
+    // MARK: - Traveling Mode, explained as it turns on
+
+    /// What the automatic turn-on says, a line each:
+    ///
+    /// 1. what happened and where, as always;
+    /// 2. between a pair (see `travelingGapPrayer`): that the second prayer still gets its notification;
+    /// 3. the FIRST time only, the whole story: where the home city came from, how far this is, what
+    ///    the mode changes and where to turn it off (Abu, 2026-11-25: people met four combined
+    ///    prayers with no idea why). Marked sent only when a banner can actually go out.
+    func travelingTurnOnAnnouncement(hereName: String, homeName: String, now: Date = Date()) -> String {
+        var lines = [String(localized: "Traveling mode automatically turned on at \(hereName), away from \(homeName)")]
+        if let gap = travelingGapPrayer(now: now) {
+            lines.append(String(localized: "\(gap.gap.displayName) still gets its own notification this time, at \(formatDate(gap.gap.time))."))
+        }
+        if !travelingIntroNotified {
+            lines.append(Self.travelingIntroduction)
+            if notificationsEnabled, Self.notificationsDeliverable != false { travelingIntroNotified = true }
+        }
+        return lines.joined(separator: "\n").localizedDigits
+    }
+
+    /// The first-time paragraph of the turn-on banner.
+    static var travelingIntroduction: String {
+        String(localized: "Your home city was saved when you first opened the app, and you are now more than 48 mi (77 km) from it, so you can pray as a traveler. Dhuhr and Asr now arrive as one notification and so do Maghrib and Isha, and the 4-rakah prayers are shortened to 2. Open the app to learn more, change your home city or turn Traveling Mode off.")
+    }
+
+    /// The pairs Traveling Mode joins: the prayer whose time carries the pair's one notification, and
+    /// the prayer that rides with it. Friday's Jumuah stands where Dhuhr does.
+    private static let travelingPairs: [(first: [String], second: String)] = [
+        (["Dhuhr", "Jumuah"], "Asr"), (["Maghrib"], "Isha"),
+    ]
+
+    /// The prayer a turn-on at `stamp` leaves without a notification, from that day's FULL list.
+    ///
+    /// A pair has ONE notification while traveling, at the first prayer's time. Turned on between
+    /// the two (after Dhuhr came in, before Asr), that moment is already behind: Dhuhr went out
+    /// under the home list, alone, and the combined list has nothing more to say until Maghrib.
+    /// Someone who does not know the mode waits for an Asr that never comes (Abu, 2026-11-25). So
+    /// the second prayer of THAT pair keeps its own notification, that one time.
+    static func travelingGapPrayer(turnedOnAt stamp: Date, in fullDay: [Prayer]) -> (gap: Prayer, first: Prayer)? {
+        for pair in travelingPairs {
+            guard let first = fullDay.first(where: { pair.first.contains($0.nameTransliteration) }),
+                  let second = fullDay.first(where: { $0.nameTransliteration == pair.second }),
+                  first.time <= stamp, stamp < second.time
+            else { continue }
+            return (second, first)
+        }
+        return nil
+    }
+
+    /// The same for the mode as it stands: nil while it is off, when it came on outside a pair, and
+    /// once that prayer's time has come. A stamp older than a day cannot have a prayer still ahead,
+    /// so a long trip never computes its first day again on every pass.
+    ///
+    /// Three days' lists, not one: a list is computed for a civil DATE at the prayer location, and a
+    /// traveler's clock is often still in the zone he left (measured 2026-11-25: Tokyo on a Central
+    /// clock, where the Dhuhr and Asr around "now" belong to tomorrow's date). The same reason
+    /// `askedPrayer` reads three.
+    func travelingGapPrayer(now: Date = Date()) -> (gap: Prayer, first: Prayer)? {
+        guard travelingMode, let since = travelingModeOnSince, since <= now,
+              now.timeIntervalSince(since) < 24 * 60 * 60
+        else { return nil }
+        for offset in [0, 1, -1] {
+            guard let day = Calendar.current.date(byAdding: .day, value: offset, to: since),
+                  let fullDay = getPrayerTimes(for: day, fullPrayers: true),
+                  let found = Self.travelingGapPrayer(turnedOnAt: since, in: fullDay)
+            else { continue }
+            return found.gap.time > now ? found : nil
+        }
+        return nil
+    }
+
+    // MARK: - Flight Mode (FlightMode.swift)
+
+    #if os(iOS)
+    /// The traveler's calculation settings in the form the flight solver takes, and a stamp of them:
+    /// a timeline worked out under one stamp is rebuilt when it changes.
+    ///
+    /// The same choices `_computeRawPrayers` makes for a place on the ground: the method's angles
+    /// and the minutes its publisher adds, the madhab's Asr, the manual offsets, Umm al-Qura's longer
+    /// Isha in Ramadan, and the high-latitude rule (resolved per night, at the latitude the aircraft
+    /// is at when the sun sets).
+    func flightPrayerRules(on date: Date) -> (rules: FlightPrayerRules, signature: String) {
+        let method = prayerCalculation
+        let params = calculationParameters(forStoredLabel: method)
+        var ishaExtra = 0
+        if usesUmmAlQuraRamadanExtension(method) {
+            let reference = date.addingTimeInterval(86_400)
+            let adjusted = Self.hijriCalendarAR.date(byAdding: .day, value: hijriOffset, to: reference) ?? reference
+            if Self.hijriCalendarAR.dateComponents([.month], from: adjusted).month == 9 { ishaExtra = 30 }
+        }
+        func seconds(_ method: Int, _ manual: Int) -> TimeInterval { Double(method + manual) * 60 }
+        let rules = FlightPrayerRules(
+            fajrAngle: params.fajrAngle,
+            ishaAngle: params.ishaAngle,
+            ishaInterval: Double(params.ishaInterval) * 60,
+            maghribAngle: params.maghribAngle,
+            asrShadow: hanafiMadhab ? 2 : 1,
+            adjustments: [
+                .fajr: seconds(params.adjustments.fajr, offsetFajr),
+                .sunrise: seconds(params.adjustments.sunrise, offsetSunrise),
+                .dhuhr: seconds(params.adjustments.dhuhr, offsetDhuhr),
+                .asr: seconds(params.adjustments.asr, offsetAsr),
+                .maghrib: seconds(params.adjustments.maghrib, offsetMaghrib),
+                .isha: seconds(params.adjustments.isha + ishaExtra, offsetIsha),
+            ],
+            nightPortions: { [self] latitude in
+                switch resolvedHighLatitudeRule(latitude: latitude, parameters: params) {
+                case .middleOfTheNight: return (0.5, 0.5)
+                case .seventhOfTheNight: return (1.0 / 7, 1.0 / 7)
+                case .twilightAngle: return (params.fajrAngle / 60, params.ishaAngle / 60)
+                }
+            })
+        let stamp: [String] = [
+            method, hanafiMadhab ? "h" : "s", highLatitudeRule,
+            "\(offsetFajr),\(offsetSunrise),\(offsetDhuhr),\(offsetAsr),\(offsetMaghrib),\(offsetIsha)",
+            "\(customFajrAngle),\(customIshaAngle)", "\(ishaExtra)",
+        ]
+        return (rules, stamp.joined(separator: "|"))
+    }
+
+    /// A row of the flight's board: the solver's event as the `Prayer` every other surface draws
+    /// (the names, the custom spelling, the symbol, the rakahs).
+    func flightPrayer(for event: FlightPrayerEvent) -> Prayer {
+        prayer(from: event.kind == .sunrise ? "Sunrise" : event.kind.name, time: event.time)
+    }
+
+    /// A fix said "aircraft" and no flight is on: the banner behind the Adhan tab's card, for
+    /// whoever has the app open on another tab. Rate limited like the traveling one.
+    func notifyFlightDetected() {
+        let body = String(localized: "It looks like you are on a flight. Open the app to turn on Flight Mode and get each prayer's time for where the plane will be.")
+        if postAutoChangeNotification(id: Self.flightNotificationId, title: String(localized: "Are You on a Flight?"),
+                                      body: body, lastAnnouncedAt: flightLastNotificationAt) {
+            flightLastNotificationAt = Date()
+        }
+    }
+
+    /// The phone has settled at an airport and no flight is on: the banner behind the card that
+    /// asks before the flight, sent while there is still a signal to send it with.
+    func notifyFlightSuggested(at airport: FlightPlace) {
+        let body = String(localized: "You are at \(airport.name). If you are flying, turn on Flight Mode before you board and each prayer's time will follow the plane.")
+        if postAutoChangeNotification(id: Self.flightNotificationId, title: String(localized: "Flying Today?"),
+                                      body: body, lastAnnouncedAt: flightLastNotificationAt) {
+            flightLastNotificationAt = Date()
+        }
+    }
+
+    /// The flight is over and the phone has not said where it is (airplane mode, no GPS yet): the
+    /// destination stands in as the place, so the list and the notifications are the arrival
+    /// city's from the first minute. `FlightMode.settleByClock` decides when; a real fix replaces it.
+    func adoptFlightDestination(_ place: FlightPlace) {
+        withAnimation {
+            currentLocation = Location(city: place.spokenCity, latitude: place.latitude, longitude: place.longitude)
+            currentCountryCode = place.country
+        }
+        Self.cityAnchor = CLLocation(latitude: place.latitude, longitude: place.longitude)
+        reloadWidgets(deferred: true)
+    }
+    #endif
 
     #if os(iOS)
     /// Posts an auto-change announcement (traveling mode, calculation method). EVERY change is posted, so
@@ -1522,7 +1722,7 @@ extension Settings {
     /// clock set back) counts as expired rather than silencing every announcement until the clock catches
     /// up. Returns whether the announcement was audible, i.e. whether the caller should refresh its stamp.
     @discardableResult
-    private func postAutoChangeNotification(id: String, body: String, lastAnnouncedAt: Date?) -> Bool {
+    private func postAutoChangeNotification(id: String, title: String? = nil, body: String, lastAnnouncedAt: Date?) -> Bool {
         // Allow Notifications off: the verdict still applies (the mode or method changed), only the banner
         // is withheld, and the stamp stays so the next one while it is on is audible.
         guard notificationsEnabled else { return false }
@@ -1533,9 +1733,16 @@ extension Settings {
         }()
 
         let content = UNMutableNotificationContent()
-        content.title = AppIdentifiers.displayName
+        content.title = title ?? AppIdentifiers.displayName
         content.body  = body
         content.sound = inCooldown ? nil : .default
+        #if DEBUG
+        // "-dumpNotifications": the banner as written, since a simulator without notification
+        // permission never shows it.
+        if ProcessInfo.processInfo.arguments.contains("-dumpNotifications") {
+            NSLog("AUTOCHANGENOTIF %@ | %@ | %@", id, content.title, body.replacingOccurrences(of: "\n", with: " // "))
+        }
+        #endif
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
         let req = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
         let center = UNUserNotificationCenter.current()
@@ -1606,6 +1813,16 @@ extension Settings {
 
     func formatDate(_ date: Date) -> String {
         DateFormatter.timeEN.string(from: date)
+    }
+
+    /// The same short time on another place's clock: a prayer at the destination of a flight is
+    /// announced after landing, when the phone's clock has moved to that zone (nil = this one's).
+    func formatDate(_ date: Date, in zone: TimeZone?) -> String {
+        guard let zone, zone.identifier != TimeZone.current.identifier else { return formatDate(date) }
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        formatter.timeZone = zone
+        return formatter.string(from: date)
     }
 
     func effectiveHijriReferenceDate(now: Date = Date()) -> Date {
@@ -3081,8 +3298,41 @@ extension Settings {
         // The city as the notification text shows it (`Location.displayCity`): it is only ever read
         // into the bodies below.
         if let city = currentLocation?.displayCity, let prayerObj = prayers {
+            // A flight changes whose times are announced (FlightMode.swift): its own prayers in
+            // the air, the departure city's only up to takeoff, the arrival city's from landing.
+            #if os(iOS)
+            let flight = Self.isAppProcess ? FlightMode.shared.currentTimeline() : nil
+            let arrivalPlace = flight?.plan.destination
+            let arrivalLocation = arrivalPlace.map {
+                Location(city: $0.spokenCity, latitude: $0.latitude, longitude: $0.longitude)
+            }
+            /// The prayers taken from the arrival city's list, which name that city on that city's clock.
+            var arrivalPrayerIDs: Set<UUID> = []
+            func journeyList(_ own: [Prayer], for date: Date) -> [Prayer] {
+                guard let flight else { return own }
+                var list = own.filter { flight.keepsOriginPrayer(named: $0.nameTransliteration, at: $0.time) }
+                if let arrivalLocation, let there = getPrayerTimes(for: date, at: arrivalLocation) {
+                    let landed = there.filter { flight.keepsDestinationPrayer(named: $0.nameTransliteration, at: $0.time) }
+                    landed.forEach { arrivalPrayerIDs.insert($0.id) }
+                    list = (list + landed).sorted { $0.time < $1.time }
+                }
+                return list
+            }
+            #else
+            func journeyList(_ own: [Prayer], for date: Date) -> [Prayer] { own }
+            #endif
+
             func collectPrayer(_ prayer: Prayer, _ minutes: Int?, extended: Bool = false) {
-                guard let built = makePrayerNotificationRequest(for: prayer, preNotificationTime: minutes, city: city) else { return }
+                #if os(iOS)
+                let atArrival = arrivalPrayerIDs.contains(prayer.id)
+                let built = makePrayerNotificationRequest(
+                    for: prayer, preNotificationTime: minutes,
+                    city: atArrival ? (arrivalLocation?.displayCity ?? city) : city,
+                    timeZone: atArrival ? arrivalPlace?.timeZone : nil)
+                #else
+                let built = makePrayerNotificationRequest(for: prayer, preNotificationTime: minutes, city: city)
+                #endif
+                guard let built else { return }
                 if built.isAdhan {
                     extended ? extendedAdhanRequests.append((built.spec, built.date))
                              : adhanRequests.append((built.spec, built.date))
@@ -3092,7 +3342,7 @@ extension Settings {
                 }
             }
 
-            let todayList = prayersIncludingNaggedTimes(prayerObj.prayers, for: prayerObj.day)
+            let todayList = journeyList(prayersIncludingNaggedTimes(prayerObj.prayers, for: prayerObj.day), for: prayerObj.day)
             for prayer in todayList {
                 guard let prefs = Self.notifTable[prayer.nameTransliteration] else { continue }
                 let includeNags = !nagCascadeIsAnswered(for: prayer, in: todayList, on: prayerObj.day)
@@ -3103,6 +3353,39 @@ extension Settings {
                     reminderRequests.append(followUp)
                 }
             }
+
+            // Traveling Mode came on between a pair: the second prayer still announces itself, this
+            // once, at its own time and under its own switch (see `travelingGapPrayer`). An at-time
+            // adhan like any other, so it sits in tier 1 and its id ("Asr-0-...") is one the prune owns.
+            if let found = travelingGapPrayer(),
+               journeyList([found.gap], for: prayerObj.day).contains(where: { $0.id == found.gap.id }),
+               let prefs = Self.notifTable[found.gap.nameTransliteration], self[keyPath: prefs.enabled] {
+                let note = String(localized: "2 rakahs; after this it arrives with \(found.first.displayName)")
+                if let built = makePrayerNotificationRequest(for: found.gap, preNotificationTime: nil, city: city, note: note) {
+                    adhanRequests.append((built.spec, built.date))
+                }
+            }
+
+            // The flight's own prayers: one notification each, at the minute the sun reaches the
+            // angle for the aircraft, under that prayer's own switch. Never paired, even in Traveling
+            // Mode: in the air it is each prayer's own time that the traveler is waiting to know.
+            #if os(iOS)
+            if let flight {
+                for event in flight.inFlight {
+                    guard let prefs = Self.notifTable[event.kind.name], self[keyPath: prefs.enabled] else { continue }
+                    let notice = FlightNotice(
+                        destination: flight.plan.destination?.spokenCity.cityDisplay,
+                        isEstimate: flight.isEstimate(event),
+                        // Fajr's notification says when it ends: the flight's own sunrise.
+                        endsAt: event.kind == .fajr
+                            ? flight.events.first(where: { $0.kind == .sunrise && $0.time > event.time })?.time : nil)
+                    if let built = makePrayerNotificationRequest(for: flightPrayer(for: event), preNotificationTime: nil,
+                                                                 city: city, flight: notice) {
+                        adhanRequests.append((built.spec, built.date))
+                    }
+                }
+            }
+            #endif
 
             // The near window keeps its full fidelity (pre-reminders + nag cascades); nagging mode stays
             // at 1 day because its cascades are budget-hungry and go stale as tracker answers land.
@@ -3121,7 +3404,7 @@ extension Settings {
                 let extended = dayOffset > futureDays
                 let date = Calendar.current.date(byAdding: .day, value: dayOffset, to: prayerObj.day) ?? Date()
                 guard let list = getPrayerTimes(for: date) else { continue }
-                let dayList = prayersIncludingNaggedTimes(list, for: date)
+                let dayList = journeyList(prayersIncludingNaggedTimes(list, for: date), for: date)
                 for prayer in dayList {
                     guard let prefs = Self.notifTable[prayer.nameTransliteration] else { continue }
                     let includeNags = !extended && !nagCascadeIsAnswered(for: prayer, in: dayList, on: date)
@@ -3362,7 +3645,7 @@ extension Settings {
         }
 
         guard let next = candidates
-            .filter({ $0.date > now && isForegroundAdhanEligible($0.name) })
+            .filter({ $0.date > now && isForegroundAdhanEligible($0.name) && !flightReplaces($0.name, at: $0.date) })
             .min(by: { $0.date < $1.date })
         else { return nil }
 
@@ -3410,7 +3693,8 @@ extension Settings {
         }
 
         guard let recent = candidates
-            .filter({ $0.date <= now && now.timeIntervalSince($0.date) < window && isForegroundAdhanEligible($0.name) })
+            .filter({ $0.date <= now && now.timeIntervalSince($0.date) < window && isForegroundAdhanEligible($0.name)
+                      && !flightReplaces($0.name, at: $0.date) })
             .max(by: { $0.date < $1.date })
         else { return nil }
 
@@ -3427,6 +3711,14 @@ extension Settings {
         let comps = Calendar.current.dateComponents([.year, .month, .day], from: date)
         return "\(name)-0-\(comps.year ?? 0)-\(comps.month ?? 0)-\(comps.day ?? 0)"
             + notificationContentSignature(.shared)
+    }
+
+    /// Whether a time from this place's list falls inside a flight, which announces its own
+    /// (FlightMode.swift): the full adhan must not sound for a prayer that, for the aircraft, has
+    /// not come in or came in an hour ago.
+    private func flightReplaces(_ name: String, at time: Date) -> Bool {
+        guard Self.isAppProcess, let flight = FlightMode.shared.currentTimeline() else { return false }
+        return !flight.keepsOriginPrayer(named: name, at: time)
     }
 
     private func isForegroundAdhanEligible(_ name: String) -> Bool {
@@ -3449,20 +3741,51 @@ extension Settings {
     /// "15m until Shurooq" told you a time was coming; it never said why you were being nagged. The
     /// cascade before Shurooq exists because FAJR's window closes then, so the notification now
     /// reads "Did you pray Fajr? Shurooq in 15m ..." - the question first, the deadline as context.
-    private func nagBody(asked: String, cascade: Prayer, minutes: Int, city: String) -> String {
+    private func nagBody(asked: String, cascade: Prayer, minutes: Int, city: String, timeZone: TimeZone? = nil) -> String {
         // The gloss goes on the prayer being ASKED about, not on the deadline: "Did you pray Maghrib
         // (sunset)? Isha in 30m" reads as one question, where glossing both would read as two.
         let askedPart = prayerNotificationEnglishNames
             ? asked.localizedDisplay + (Self.prayerEnglishMeanings[asked].map { " (\($0))" } ?? "")
             : asked.localizedDisplay
         let deadline = String(localized: "\(cascade.displayName) in \(minutes)m")
-        let when = "[\(formatDate(cascade.time))]"
+        let when = "[\(formatDate(cascade.time, in: timeZone))]"
         return String(localized: "Did you pray \(askedPart)? \(deadline) in \(city)")
              + (travelingMode ? " " + String(localized: "(traveling)") : "")
              + " \(when)"
     }
 
-    private func buildBody(prayer: Prayer, minutesBefore: Int?, city: String) -> String {
+    /// A flight's prayer: "Time for Asr at about 3:42 PM on your flight to London". "About" while
+    /// the time rests on the timetable alone; without it once a GPS fix within two hours stands
+    /// behind it.
+    private func flightBody(prayer: Prayer, notice: FlightNotice) -> String {
+        let name = prayer.displayName + englishGloss(for: prayer)
+        let time = formatDate(prayer.time)
+        var body: String
+        switch (notice.destination, notice.isEstimate) {
+        case let (city?, true): body = String(localized: "Time for \(name) at about \(time) on your flight to \(city)")
+        case let (city?, false): body = String(localized: "Time for \(name) at \(time) on your flight to \(city)")
+        case (nil, true): body = String(localized: "Time for \(name) at about \(time) on your flight")
+        case (nil, false): body = String(localized: "Time for \(name) at \(time) on your flight")
+        }
+        if let endsAt = notice.endsAt, endsAt > prayer.time {
+            body += " [\(String(localized: "ends at \(formatDate(endsAt))"))]"
+        }
+        return body.localizedDigits
+    }
+
+    /// " (sunset)": the prayer's meaning, for the notifications that carry it (see `buildBody`).
+    private func englishGloss(for prayer: Prayer) -> String {
+        switch prayer.nameTransliteration {
+        case "Shurooq": return " (\(String(localized: "end of Fajr")))"
+        case "Jumuah": return " (\(String(localized: "Friday")))"
+        default: break
+        }
+        guard prayerNotificationEnglishNames,
+              let meaning = Self.prayerEnglishMeanings[prayer.nameTransliteration] else { return "" }
+        return " (\(meaning))"
+    }
+
+    private func buildBody(prayer: Prayer, minutesBefore: Int?, city: String, timeZone: TimeZone? = nil) -> String {
         let englishPart: String = {
             // Shurooq and Jumuah have always carried their gloss, switch or no switch: "Shurooq" alone
             // does not say that Fajr's window just closed, and "Jumuah" is the one whose day matters.
@@ -3486,8 +3809,8 @@ extension Settings {
             // “n m until …”
             return String(localized: "\(m)m until \(prayer.displayName)\(englishPart) in \(city)")
                  + (travelingMode ? " " + String(localized: "(traveling)") : "")
-                 + " [\(formatDate(prayer.time))]"
-        } else if prayer.nameTransliteration == "Fajr",
+                 + " [\(formatDate(prayer.time, in: timeZone))]"
+        } else if prayer.nameTransliteration == "Fajr", timeZone == nil,
                   // Fajr ends at sunrise - found by name, because a manual offset can move Sunrise off index 1.
                   // The sunrise of the Fajr's OWN day: read from the stored (today's) list, it was
                   // before every later day's Fajr, so only today's notification ever said when it ends.
@@ -3498,7 +3821,9 @@ extension Settings {
                  + (travelingMode ? " " + String(localized: "(traveling)") : "")
                  + " [\(String(localized: "ends at \(formatDate(sunrise))"))]"
         } else {
-            return String(localized: "Time for \(prayer.displayName)\(englishPart) at \(formatDate(prayer.time)) in \(city)")
+            // (A Fajr in another place, `timeZone` set, comes here: the sunrise this list knows is
+            // not that place's.)
+            return String(localized: "Time for \(prayer.displayName)\(englishPart) at \(formatDate(prayer.time, in: timeZone)) in \(city)")
                  + (travelingMode ? " " + String(localized: "(traveling)") : "")
         }
     }
@@ -4867,7 +5192,22 @@ extension Settings {
 
     /// Builds an at-time / pre-notification prayer request. `isAdhan` marks the at-time notification of a
     /// main prayer (the one that carries the adhan sound) so the scheduler can prioritize it.
-    private func makePrayerNotificationRequest(for prayer: Prayer, preNotificationTime minutes: Int?, city: String) -> (spec: PendingNotificationSpec, date: Date, isAdhan: Bool)? {
+    ///
+    /// `note` is a bracketed aside after the body, like Fajr's "[ends at 6:12 AM]": the one prayer
+    /// Traveling Mode announces apart from its pair says so there (`travelingGapPrayer`).
+    /// What makes a prayer notification one of a flight's (`FlightTimeline.inFlight`): where the
+    /// flight is going, whether the time rests on the timetable or on a recent fix, and for Fajr
+    /// the flight's own sunrise.
+    struct FlightNotice {
+        var destination: String?
+        var isEstimate: Bool
+        var endsAt: Date?
+    }
+
+    /// `timeZone`: the clock the body's times are printed on, for a prayer in another place (the
+    /// arrival city of a flight). `flight`: the prayer comes in aboard an aircraft.
+    private func makePrayerNotificationRequest(for prayer: Prayer, preNotificationTime minutes: Int?, city: String, note: String? = nil,
+                                               timeZone: TimeZone? = nil, flight: FlightNotice? = nil) -> (spec: PendingNotificationSpec, date: Date, isAdhan: Bool)? {
         let triggerTime: Date = {
             if let m = minutes, m != 0 {
                 return Calendar.current.date(byAdding: .minute, value: -m, to: prayer.time) ?? prayer.time
@@ -4896,7 +5236,13 @@ extension Settings {
         let nag = nagDelivery(minutes: minutes, before: prayer, firingAt: triggerTime)
         #if os(iOS)
         let moment = PrayerNotificationMoment(name: prayer.nameTransliteration, minutesBefore: minutes ?? 0, prayerTime: prayer.time)
-        if let question = prayerQuestion(for: moment) {
+        // A time that is not itself one of the five (Shurooq) asks about "the prayer before it", and
+        // that is read off THIS place's list. Aboard a flight or in the arrival city the prayer
+        // before it is another one (measured: a sunrise over the Atlantic asked "Did you pray
+        // Isha?", Irvine's current prayer at that instant), so such a notification asks nothing.
+        let asksAboutAnotherPlace = (flight != nil || timeZone != nil)
+            && !Self.trackablePrayerNames.contains(prayer.nameTransliteration)
+        if !asksAboutAnotherPlace, let question = prayerQuestion(for: moment) {
             categoryIdentifier = Self.prayerCategoryIdentifier(
                 asking: question.prayerName,
                 offersLate: question.allowsLateAnswer(at: triggerTime)
@@ -4931,8 +5277,11 @@ extension Settings {
         //
         // Folding the body-affecting settings into the id means those stale requests no longer match
         // anything desired, so the prune deletes them and the new wording is added in their place.
+        // A flight's prayer carries "f": its time is the aircraft's, so it must never share an
+        // identifier with (and be replaced by, or replace) the ground list's prayer of that day.
+        let signature = Self.notificationContentSignature(self)
         let id = "\(prayer.nameTransliteration)-\(minutes ?? 0)-\(comps.year ?? 0)-\(comps.month ?? 0)-\(comps.day ?? 0)"
-            + Self.notificationContentSignature(self)
+            + (flight == nil ? signature : (signature.isEmpty ? "~f" : signature + "f"))
         // `intendedFireDate` is the absolute instant this notification is FOR. The foreground delegate
         // reads it and silences any delivery that arrives well past its moment - an adhan belongs to its
         // prayer time, never to "whenever the system got around to it".
@@ -4941,15 +5290,19 @@ extension Settings {
             body: {
                 #if os(iOS)
                 if let asked = nagAskedName, let m = minutes {
-                    let question = nagBody(asked: asked, cascade: prayer, minutes: m, city: city)
+                    let question = nagBody(asked: asked, cascade: prayer, minutes: m, city: city, timeZone: timeZone)
                     guard nag.isLastCall, naggingAyahInLastCall else { return question }
                     let ayah = Self.nagAyah(for: prayer.time)
                     return question + "\n\u{201C}\(ayah.text)\u{201D} (\(ayah.reference))"
                 }
                 #endif
-                return buildBody(prayer: prayer, minutesBefore: minutes, city: city)
+                if let flight { return flightBody(prayer: prayer, notice: flight) }
+                let body = buildBody(prayer: prayer, minutesBefore: minutes, city: city, timeZone: timeZone)
+                return note.map { "\(body) [\($0.localizedDigits)]" } ?? body
             }(),
-            soundFile: prayerNotificationSoundFile(for: prayer, minutesBefore: minutes, nag: nag),
+            // In a cabin the adhan is not this phone's to sound: a flight's prayers arrive with the
+            // system's short tone, whatever the adhan settings say.
+            soundFile: flight == nil ? prayerNotificationSoundFile(for: prayer, minutesBefore: minutes, nag: nag) : nil,
             categoryIdentifier: categoryIdentifier,
             intendedFireDate: triggerTime,
             trigger: comps
@@ -5204,6 +5557,14 @@ extension Settings {
         let confirmTitle: String
         /// Puts it back (the second button).
         let overrideTitle: String
+        /// A third button that opens the explanation instead of answering: on the first
+        /// "Traveling Mode On" card only (`travelingModeExplained`). Its page carries the same two
+        /// answers, so nothing is lost by taking it.
+        var explainTitle: String? = nil
+
+        /// The name the explanation goes by: the card's button, the settings page's door and the
+        /// page's own title.
+        static var explainerTitle: String { String(localized: "How Traveling Mode Works") }
 
         /// The country a region code names, in the user's language ("SA" is "Saudi Arabia").
         static func countryName(forRegionCode code: String) -> String? {
@@ -5246,7 +5607,12 @@ extension Settings {
 
     func autoChangeCard(_ kind: AutoChangeCard.Kind) -> AutoChangeCard {
         switch kind {
-        case .travelOn: return .travel(turnOn: true, homeCity: homeLocation?.displayCity)
+        case .travelOn:
+            var card = AutoChangeCard.travel(turnOn: true, homeCity: homeLocation?.displayCity)
+            #if os(iOS)
+            if !travelingModeExplained { card.explainTitle = AutoChangeCard.explainerTitle }
+            #endif
+            return card
         case .travelOff: return .travel(turnOn: false, homeCity: homeLocation?.displayCity)
         case .calculation:
             return .calculation(previous: calculationAutoPreviousMethod, detected: calculationAutoDetectedMethod,
@@ -5293,6 +5659,7 @@ extension Settings {
     }
 
     func overrideTravelingMode(keepOn: Bool) {
+        noteTravelCardAnswered()
         withAnimation {
             travelingMode = keepOn
         }
@@ -5302,7 +5669,14 @@ extension Settings {
     }
 
     func confirmTravelAutomaticChange() {
+        noteTravelCardAnswered()
         resetTravelAutomaticFlags()
+    }
+
+    /// The first "Traveling Mode On" card has been answered (either button, the explanation, or a
+    /// tap outside): later cards are the two plain answers. Guarded, so the write is one publish.
+    private func noteTravelCardAnswered() {
+        if travelTurnOnAutomatic, !travelingModeExplained { travelingModeExplained = true }
     }
 
     func overrideAutomaticCalculationKeepingPrevious() {

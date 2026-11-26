@@ -1356,13 +1356,18 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         "currentLocation", "homeLocationData", "favoriteLocations", "prayersData", "currentPrayerData",
         "nextPrayerData", "currentCountryCode", "lastLocationFixAt", "cityAnchorLatitude", "cityAnchorLongitude",
         "currentLocationLabelLanguage", "homeLocationLabelLanguage",
-        "travelingMode", "travelTurnOffAutomatic", "travelTurnOnAutomatic",
+        "travelingMode", "travelTurnOffAutomatic", "travelTurnOnAutomatic", "travelingModeOnSince",
         "calculationAutoAnsweredCountryCode", "calculationAutoAnsweredMethod", "calculationAutoChanged",
         "calculationAutoDetectedCountryCode", "calculationAutoDetectedMethod", "calculationAutoPreviousMethod",
         // Onboarding and permission prompts this install has already been through.
         "THEfirstLaunch", "aboutYouVersionSeen", "tutorialNudgesSeen",
         "locationNeverAskAgain", "notificationNeverAskAgain", "showLocationAlert", "showNotificationAlert",
         "locationAlertSnoozedUntil", "notificationAlertSnoozedUntil",
+        "travelingIntroNotified", "travelingModeExplained",
+        // The flight under way is this phone's journey; the Automatic switch is the preference.
+        "flightPlanData", "flightAskSnoozedUntil", "flightLastNotificationAt",
+        // The question asked at an airport (FlightMode.swift keeps these three itself).
+        "flightPendingAirport", "flightLastAirportQuestionAt", "flightDeclinedAirports",
         // The last Apple Weather reading for the sky (SkyWeather.swift): this place, this hour.
         "skyWeather",
         // Migrations and one-time seeds.
@@ -1717,6 +1722,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
             guard Self.isAppProcess else { return }
             appGroupUserDefaults?.setValue(travelingMode, forKey: "travelingMode")
             markExplicitlySet("travelingMode")
+            // When it came on, for the one prayer a turn-on between a pair leaves unannounced
+            // (`travelingGapPrayer`). Every path lands here: the automatic check, the switch, a sync.
+            if travelingMode != oldValue { travelingModeOnSince = travelingMode ? Date() : nil }
         }
     }
 
@@ -2462,6 +2470,45 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     var lastTravelingNotificationAt: Date? {
         get { lastTravelingNotificationStamp > 0 ? Date(timeIntervalSince1970: lastTravelingNotificationStamp) : nil }
         set { lastTravelingNotificationStamp = newValue?.timeIntervalSince1970 ?? 0 }
+    }
+
+    /// When Traveling Mode last turned ON, by any path (the automatic check, the switch, a sync). The
+    /// scheduler reads it to find the one prayer a turn-on between a pair leaves unannounced (see
+    /// `travelingGapPrayer`). Stamped in `noteTravelingModeChanged`, cleared when the mode turns off.
+    @Setting("travelingModeOnSince") private var travelingModeOnSinceStamp: Double = 0
+    var travelingModeOnSince: Date? {
+        get { travelingModeOnSinceStamp > 0 ? Date(timeIntervalSince1970: travelingModeOnSinceStamp) : nil }
+        set { travelingModeOnSinceStamp = newValue?.timeIntervalSince1970 ?? 0 }
+    }
+
+    /// The first automatic turn-on tells the whole story in its notification: where the home city
+    /// came from, how far away this is, what combining changes (Abu, 2026-11-25). Every later one is
+    /// the one line. Set once that long form has actually been posted.
+    @Setting("travelingIntroNotified") var travelingIntroNotified: Bool = false
+
+    /// The "Traveling Mode On" card offers "How Traveling Mode Works" until it has been answered
+    /// once; after that the explanation lives on the Traveling Mode settings page.
+    @Setting("travelingModeExplained") var travelingModeExplained: Bool = false
+
+    // Flight Mode (iPhone/Adhan/Prayers/FlightMode.swift): prayer times that follow an aircraft.
+
+    /// Ask about Flight Mode when a GPS fix shows airliner speed and height. On by default, as
+    /// Automatic Traveling Mode is: the question is a card, never a change made unasked.
+    @Setting("flightAutomatic") var flightAutomatic: Bool = true
+
+    /// The flight being followed (`FlightPlan`, JSON); empty when there is none. Owned by
+    /// `FlightMode`, which is the only writer.
+    @Setting("flightPlanData") var flightPlanData: Data = Data()
+
+    /// "Not Now" on the card, or a flight ended by hand: no question before this moment (seconds
+    /// since 1970).
+    @Setting("flightAskSnoozedUntil") var flightAskSnoozedUntil: Double = 0
+
+    /// When the "are you on a flight?" banner last went out: the same cooldown as the traveling one.
+    @Setting("flightLastNotificationAt") private var flightLastNotificationStamp: Double = 0
+    var flightLastNotificationAt: Date? {
+        get { flightLastNotificationStamp > 0 ? Date(timeIntervalSince1970: flightLastNotificationStamp) : nil }
+        set { flightLastNotificationStamp = newValue?.timeIntervalSince1970 ?? 0 }
     }
 
     /// When the automatic-calculation switch last announced itself. Persisted for the same reason as
@@ -3517,8 +3564,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         set { gridModeIslamRaw = newValue ? 1 : 0 }
     }
 
-    /// The Islam tab's resources split into subject sections (Learn, Remembrance, Tools, Faith & Proofs,
-    /// Ask AI), the default since 2026-10-26 (Abu: "by default for al islam tab group by subject"), or
+    /// The Islam tab's resources split into subject sections (Quran & Arabic, Worship & Remembrance, Tools,
+    /// Faith & Knowledge, Proofs & Dawah, Ask AI), the default since 2026-10-26 (Abu: "by default for al islam tab group by subject"), or
     /// all of them in one ISLAMIC RESOURCES section (the default from 2026-10-18 until then: "add an
     /// option to not group for islamic resources ... make that default where it is one section"). The
     /// ⋯ More menu switches it.

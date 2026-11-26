@@ -279,4 +279,29 @@ final class PrayerTimesTests: XCTestCase {
         }
         XCTAssertEqual(events.filter { Settings.nightEventTitles.contains($0.0) }.count, 2)
     }
+
+    // MARK: - The Prayer Ring widgets
+
+    /// The ring fills as the next prayer comes: nearly empty with hours to go, nearly whole in the
+    /// last half hour, and never outside its track. It emptied until 2026-11-26, which on a ring
+    /// that reads as progress was backwards (Abu: "if im 5 hours away from a prayer it's almost full
+    /// if im like 30 minutes it's empty").
+    @available(iOS 16.0, *)
+    func testThePrayerRingFillsAsTheNextPrayerNears() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let end = start.addingTimeInterval(6 * 3600)
+        func filled(minutesBeforeNext minutes: Double) -> Double {
+            PrayerWindowRing.elapsedFraction(from: start, to: end, at: end.addingTimeInterval(-minutes * 60))
+        }
+        XCTAssertEqual(filled(minutesBeforeNext: 360), 0, accuracy: 0.0001, "empty as the current prayer comes in")
+        XCTAssertEqual(filled(minutesBeforeNext: 300), 1.0 / 6, accuracy: 0.0001, "five hours away: a sixth")
+        XCTAssertEqual(filled(minutesBeforeNext: 30), 11.0 / 12, accuracy: 0.0001, "half an hour away: nearly whole")
+        XCTAssertEqual(filled(minutesBeforeNext: 0), 1, accuracy: 0.0001, "whole when the next prayer is in")
+        XCTAssertGreaterThan(filled(minutesBeforeNext: 30), filled(minutesBeforeNext: 300))
+        // An entry drawn before its window opens or after it closes stays on the track.
+        XCTAssertEqual(filled(minutesBeforeNext: 400), 0)
+        XCTAssertEqual(filled(minutesBeforeNext: -10), 1)
+        // A window with no length (two prayers at one instant) draws nothing, not a division by zero.
+        XCTAssertEqual(PrayerWindowRing.elapsedFraction(from: start, to: start, at: start), 0)
+    }
 }

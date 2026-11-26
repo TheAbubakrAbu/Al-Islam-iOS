@@ -268,10 +268,14 @@ Al-Quran and Al-Adhan use ordinary Settings tabs. Do not assign the Settings tab
 `.prominent` or `.search` `TabRole` in either companion app. Al-Islam may keep its
 own role behavior when that behavior is intentionally different.
 
-Al-Adhan's Learn section has exactly three grid tiles: Arabic Alphabet, Tajweed
-Foundations, and Islamic Journal. Al-Adhan does not currently ship the Tajweed Course.
-Islamic Journal should not be rendered as a separate full-width Learn banner. Keep this
-rule synchronized if the companion Islam resource catalog is copied or regenerated.
+Al-Adhan's Quran & Arabic section (Learn until 2026-11-25) has exactly three grid tiles:
+Arabic Alphabet, Tajweed Foundations, and Islamic Journal. Al-Adhan does not currently ship
+the Tajweed Course. Islamic Journal should not be rendered as a separate full-width banner.
+Keep this rule synchronized if the companion Islam resource catalog is copied or regenerated.
+`IslamDestination.group` carries it: the journal is a Faith & Knowledge tile where the course
+is bundled and a Quran & Arabic tile where it is not. No section has a banner of its own any
+more; a count that is not a multiple of three closes its grid with a row of two, or one full
+row (`resourceRows`).
 
 ## 9. The 2026-10-29 prep: what the next port starts from
 
@@ -375,9 +379,9 @@ differences: Al-Quran 4 CONFLICT / 4 MERGE (Globals, Settings, CreditsView, Sunn
   compiled out and the empty enum raised 16 "will never be executed" warnings.
 - `WelcomePages.swift`: the Simple or Full question on the Discover page is `#if HAS_ICLOUD_BACKUP`, the flag
   Abu's own 2026-10-14 sibling gate used (both siblings skipped the question at first launch).
-- `IslamView.swift`: `bannerResources` and `closingRowResources` follow `TajweedLessonsStore.isBundled`. Without
-  the course (Al-Adhan) the journal is a Learn tile, not a banner, per "Target-specific navigation chrome"
-  above, and the ungrouped grid keeps its banners rather than close on a ragged row of two.
+- `IslamView.swift`: `bannerResources` and `closingRowResources` followed `TajweedLessonsStore.isBundled`
+  until 2026-11-25; both are gone. `IslamDestination.group` follows it now: without the course (Al-Adhan)
+  the journal is a Quran & Arabic tile, per "Target-specific navigation chrome" above.
 - `NamesDepth.swift`: the verse list is `#if HAS_QURAN`, with Al-Adhan's by-reference rows as the `#else`.
 - `StudyKit.swift`: the unused `withAnimation` result (an old warning in all three apps).
 

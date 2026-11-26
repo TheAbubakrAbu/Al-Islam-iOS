@@ -242,6 +242,8 @@ struct PrayersProvider: TimelineProvider {
         // The sky's weather (SkyWeather.swift): the app's cached reading and its switch.
         var weather: Data?
         var showsWeather: Bool
+        // The flight being followed, if any (FlightMode.swift): its list replaces the ground's.
+        var flight: Data?
     }
     private static var memo: (inputs: Inputs, builtAt: Date, entries: [PrayersEntry])?
     private static let memoMaxAge: TimeInterval = 5 * 60
@@ -265,7 +267,8 @@ struct PrayersProvider: TimelineProvider {
             customPrayerNames: (store?.dictionary(forKey: "customPrayerNames") as? [String: String]) ?? [:],
             travelingShowFullPrayers: store?.bool(forKey: "travelingShowFullPrayers") ?? false,
             weather: store?.data(forKey: SkyWeather.storageKey),
-            showsWeather: store?.bool(forKey: "skyShowsWeather") ?? false
+            showsWeather: store?.bool(forKey: "skyShowsWeather") ?? false,
+            flight: flightPlanData()
         )
     }
 
@@ -278,6 +281,55 @@ struct PrayersProvider: TimelineProvider {
         return SkyWeather.freshCached(in: store)
         #else
         return nil
+        #endif
+    }
+
+    /// The flight Flight Mode is following (iOS: the watch has no Flight Mode), as the app
+    /// mirrored it into the App Group.
+    private func flightPlanData() -> Data? {
+        #if os(iOS)
+        return FlightWidgetFeed.planData(in: store)
+        #else
+        return nil
+        #endif
+    }
+
+    /// An entry as a passenger needs it: while a flight is in the air (and after it lands, until
+    /// the app has heard where the phone is), the list, the current and next prayer and the place
+    /// are the flight's own (`FlightTimeline.widgetDay`), exactly as the app's board has them. The
+    /// ground's entry is returned untouched before takeoff and when no flight is on.
+    private func inFlight(_ entry: PrayersEntry, timeline: Any?) -> PrayersEntry {
+        #if os(iOS)
+        guard let timeline = timeline as? FlightTimeline,
+              let day = timeline.widgetDay(at: entry.date, settings: settings) else { return entry }
+        let weather: SkyWeather? = nil   // the weather was the ground's
+        return PrayersEntry(
+            date: entry.date,
+            accentColor: entry.accentColor,
+            currentCity: day.city.cityDisplay.localizedDigits,
+            prayers: day.prayers,
+            fullPrayers: day.prayers,
+            currentPrayer: day.current,
+            nextPrayer: day.next,
+            hijriOffset: entry.hijriOffset,
+            switchHijriDateAtMaghrib: entry.switchHijriDateAtMaghrib,
+            skyPeriod: day.skyPeriod,
+            skyColors: settings.skyGradientColors(forPrayer: day.skyPeriod, weather: weather),
+            weather: weather,
+            isPreview: entry.isPreview)
+        #else
+        return entry
+        #endif
+    }
+
+    /// The flight's timeline for this build, and the instants its entries must flip at.
+    private func flightTimeline() -> (timeline: Any?, flips: [Date]) {
+        #if os(iOS)
+        guard let timeline = FlightWidgetFeed.timeline(in: store, settings: settings) else { return (nil, []) }
+        // Takeoff and landing are flips too: the list changes hands at each.
+        return (timeline, timeline.events.map(\.time) + [timeline.takeoff, timeline.landing.addingTimeInterval(1)])
+        #else
+        return (nil, [])
         #endif
     }
 
@@ -345,8 +397,11 @@ struct PrayersProvider: TimelineProvider {
     /// the next prayer time; when the system deferred it, the widget kept naming the old current prayer.
     /// Pre-built entries flip on time with no reload at all - reloads only refresh the underlying data.
     private func makeTimelineEntriesOnMain() -> [PrayersEntry] {
-        let first = makeEntryOnMain()
-        guard !first.fullPrayers.isEmpty else {
+        let ground = makeEntryOnMain()
+        // After the seed above, so the flight is worked out with the app's calculation settings.
+        let flight = flightTimeline()
+        let first = inFlight(ground, timeline: flight.timeline)
+        guard !ground.fullPrayers.isEmpty else {
             // No prayers to flip on, but the Hijri date widgets read `entry.date`: one more entry at
             // midnight, or they showed yesterday until WidgetKit next granted a reload.
             let calendar = Calendar.current
@@ -382,10 +437,12 @@ struct PrayersProvider: TimelineProvider {
         // ...plus the moment the cached weather goes stale (`SkyWeather.freshFor` after it was read): the
         // entries past it paint a plain sky, as the app's card does, instead of carrying the evening's
         // rain into the morning (a widget never fetches, and an unopened app writes no newer reading).
-        if let expiry = first.weather.map({ $0.fetchedAt.addingTimeInterval(SkyWeather.freshFor) }),
+        if let expiry = ground.weather.map({ $0.fetchedAt.addingTimeInterval(SkyWeather.freshFor) }),
            expiry > now, expiry <= horizon {
             flipTimes.append(expiry)
         }
+        // ...plus the flight's own prayers, its takeoff and its landing.
+        flipTimes += flight.flips.filter { $0 > now && $0 <= horizon }
         #if os(watchOS)
         // ...plus one entry shortly BEFORE each boundary, where the countdown complication's bar
         // turns red (`lowTimeWarningWindow`). Watch only: nothing on iOS reads it (every iOS
@@ -403,7 +460,7 @@ struct PrayersProvider: TimelineProvider {
         // horizon, so a phone left closed overnight showed the evening's rain and temperature over Fajr
         // while the app's own card had long dropped them.
         func weather(at moment: Date) -> SkyWeather? {
-            guard let reading = first.weather, reading.isFresh(at: moment) else { return nil }
+            guard let reading = ground.weather, reading.isFresh(at: moment) else { return nil }
             return reading
         }
 
@@ -419,7 +476,7 @@ struct PrayersProvider: TimelineProvider {
             skyColorsByKey[key] = colors
             return colors
         }
-        skyColorsByKey[SkyPalette.editableKey(for: first.skyPeriod) + (first.weather == nil ? "" : "|weather")] = first.skyColors
+        skyColorsByKey[SkyPalette.editableKey(for: ground.skyPeriod) + (ground.weather == nil ? "" : "|weather")] = ground.skyColors
 
         // The sky period per entry moment, off the full set (see `skyBoundaries`). Resolved from the same
         // list the flip instants came from rather than by re-deriving prayer tables per entry.
@@ -436,9 +493,9 @@ struct PrayersProvider: TimelineProvider {
             if let cached = tablesByDay[day] { return cached }
             let result: (normal: [Prayer], full: [Prayer])
             if Calendar.current.isDate(date, inSameDayAs: now) {
-                result = (first.prayers, first.fullPrayers)
+                result = (ground.prayers, ground.fullPrayers)
             } else {
-                result = settings.getPrayerTimesNormalAndFull(for: date) ?? (first.prayers, first.fullPrayers)
+                result = settings.getPrayerTimesNormalAndFull(for: date) ?? (ground.prayers, ground.fullPrayers)
             }
             tablesByDay[day] = result
             return result
@@ -451,20 +508,20 @@ struct PrayersProvider: TimelineProvider {
             let table = tables(for: t)
             let period = skyPeriod(at: t)
             let weatherAt = weather(at: t)
-            entries.append(PrayersEntry(
+            entries.append(inFlight(PrayersEntry(
                 date:                       t,
-                accentColor:                first.accentColor,
-                currentCity:                first.currentCity,
+                accentColor:                ground.accentColor,
+                currentCity:                ground.currentCity,
                 prayers:                    table.normal,
                 fullPrayers:                table.full,
                 currentPrayer:              current,
                 nextPrayer:                 next,
-                hijriOffset:                first.hijriOffset,
-                switchHijriDateAtMaghrib:   first.switchHijriDateAtMaghrib,
+                hijriOffset:                ground.hijriOffset,
+                switchHijriDateAtMaghrib:   ground.switchHijriDateAtMaghrib,
                 skyPeriod:                  period,
                 skyColors:                  skyColors(forPeriod: period, weather: weatherAt),
                 weather:                    weatherAt
-            ))
+            ), timeline: flight.timeline))
         }
         return entries
     }
@@ -564,9 +621,12 @@ struct PrayersProvider: TimelineProvider {
         let accent = AccentColor(rawValue: store?.string(forKey: "accentColor") ?? AppIdentifiers.mainColorString) ?? AppIdentifiers.mainColor
         let cal = Calendar.current
         let now = Date()
-        func at(_ h: Int, _ m: Int) -> Date { cal.date(bySettingHour: h, minute: m, second: 0, of: now) ?? now }
-        func prayer(_ ar: String, _ tr: String, _ en: String, _ img: String, _ h: Int, _ m: Int) -> Prayer {
-            Prayer(nameArabic: ar, nameTransliteration: tr, nameEnglish: en, time: at(h, m),
+        func at(_ h: Int, _ m: Int, day: Int = 0) -> Date {
+            let time = cal.date(bySettingHour: h, minute: m, second: 0, of: now) ?? now
+            return cal.date(byAdding: .day, value: day, to: time) ?? time
+        }
+        func prayer(_ ar: String, _ tr: String, _ en: String, _ img: String, _ h: Int, _ m: Int, day: Int = 0) -> Prayer {
+            Prayer(nameArabic: ar, nameTransliteration: tr, nameEnglish: en, time: at(h, m, day: day),
                    image: img, rakah: "", sunnahBefore: "", sunnahAfter: "")
         }
         let prayers = [
@@ -577,7 +637,11 @@ struct PrayersProvider: TimelineProvider {
             prayer("المَغرِب", "Maghrib", "Sunset", "sunset", 18, 30),
             prayer("العِشَاء", "Isha", "Night", "moon", 20, 0),
         ]
-        let current = prayers.last { $0.time <= now } ?? prayers.first
+        // Through the night the current prayer is LAST night's Isha and the next is the coming Fajr,
+        // as they are for a real day. Both used to fall back to today's Fajr, so from Isha until dawn
+        // the sample's window had no length: every progress bar in the picker stood empty and the
+        // Prayer Ring's preview read "Open app to get prayer times" (seen 2026-11-26, 1:38 AM).
+        let current = prayers.last { $0.time <= now } ?? prayer("العِشَاء", "Isha", "Night", "moon", 20, 0, day: -1)
         return PrayersEntry(
             date: now,
             accentColor: accent,
@@ -585,11 +649,11 @@ struct PrayersProvider: TimelineProvider {
             prayers: prayers,
             fullPrayers: prayers,
             currentPrayer: current,
-            nextPrayer: prayers.first { $0.time > now } ?? prayers.first,
+            nextPrayer: prayers.first { $0.time > now } ?? prayer("الفَجر", "Fajr", "Dawn", "sun.horizon", 5, 30, day: 1),
             hijriOffset: 0,
             switchHijriDateAtMaghrib: false,
-            skyPeriod: current?.nameTransliteration,
-            skyColors: settings.skyGradientColors(forPrayer: current?.nameTransliteration),
+            skyPeriod: current.nameTransliteration,
+            skyColors: settings.skyGradientColors(forPrayer: current.nameTransliteration),
             isPreview: true
         )
     }

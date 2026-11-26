@@ -39,6 +39,128 @@ struct PlaceLocatorKind: Identifiable, Hashable {
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
+/// The places a locator never lists, whatever MapKit returned for the search (Abu, 2026-11-25: "Hide
+/// Shia and Sufi masaajid if it says that in the name or description"). MapKit hands a place no
+/// description, so the two texts it does carry are read: the NAME and the WEBSITE address.
+///
+/// Only words that say what the place IS count: "Shia", "Ja'fari", "Imambargah", "Hussainiya",
+/// "Jamatkhana", "Sufi", "Zawiya", "Khanqah", "Dargah", a tariqa's name. A Companion's or a
+/// Household member's name alone never hides a masjid ("Masjid Ali", "Al-Husayn Mosque" stay); the
+/// Shia imams' TITLES do ("Imam Hussain Center", "Imam Reza", "Imam-e-Zamana"). Ahmadiyya and Nation of
+/// Islam places are hidden on the same terms. The address is never read: a Sunni masjid on Imam Ali
+/// Street stays.
+struct PlaceLocatorExclusion: Sendable {
+    /// Folded words and phrases (`folded(_:)`'s form), matched whole in the name and in the website.
+    let terms: [String]
+    /// Lowercased stems matched anywhere in the website's host and path, where words run together
+    /// ("shiacenter.org"). Only stems no Sunni masjid's address would contain.
+    let websiteStems: [String]
+    /// Whole sites (and their subdomains) that belong to a hidden group: "alislam.org" is a stem inside
+    /// "daralislam.org", so it is matched as a host, never as a stem.
+    let websiteHosts: [String]
+
+    static let none = PlaceLocatorExclusion(terms: [], websiteStems: [], websiteHosts: [])
+
+    func excludes(name: String?, website: URL? = nil) -> Bool {
+        guard !terms.isEmpty else { return false }
+        if let name, Self.containsTerm(terms, in: Self.folded(name)) { return true }
+        guard let website else { return false }
+        let host = (website.host ?? "").lowercased()
+        let bareHost = host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+        if websiteHosts.contains(where: { bareHost == $0 || bareHost.hasSuffix("." + $0) }) { return true }
+        let raw = host + " " + website.path
+        if Self.containsTerm(terms, in: Self.folded(raw)) { return true }
+        let lowered = raw.lowercased()
+        if websiteStems.contains(where: lowered.contains) { return true }
+        // "shiacenter", "islamicshia": the word at either end of a run-together host word.
+        return Self.folded(raw).split(separator: " ").contains { $0.hasPrefix("shia") || $0.hasSuffix("shia") }
+    }
+
+    private static func containsTerm(_ terms: [String], in folded: String) -> Bool {
+        terms.contains { folded.contains(" \($0) ") }
+    }
+
+    /// Lowercased, accents and Arabic vowel marks gone, apostrophes and ʿayn marks dropped
+    /// ("Shi'a", "Shiʿa" -> "shia"), every other mark a space ("Ahl-ul-Bayt" -> "ahl ul bayt"), padded
+    /// with a space at each end so a term matches only as whole words.
+    static func folded(_ text: String) -> String {
+        let lowered = text.folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: nil)
+        var out = String.UnicodeScalarView()
+        var pendingSpace = false
+        for scalar in lowered.unicodeScalars {
+            switch scalar.properties.generalCategory {
+            case .modifierLetter, .nonspacingMark, .spacingMark, .enclosingMark:
+                continue
+            case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .otherLetter, .decimalNumber:
+                if pendingSpace, !out.isEmpty { out.append(" ") }
+                pendingSpace = false
+                out.append(scalar)
+            default:
+                if "'’‘`´".unicodeScalars.contains(scalar) { continue }
+                pendingSpace = true
+            }
+        }
+        return " " + String(out) + " "
+    }
+
+    static let shiaSufiAndOthers = PlaceLocatorExclusion(
+        terms: [
+            // Shia, Twelver and Ja'fari
+            "shia", "shiah", "shiite", "shiites", "shiism", "ithna ashari", "ithna asheri", "ithna ashri",
+            "ithnaashari", "ithnaasheri", "isna ashari", "twelver", "jafari", "jafaria", "jafariya",
+            "jafariyya", "jafariyah", "jaffari", "jaffaria", "jafria", "jafriya", "imamia", "imamiya", "imamiyya",
+            "imamiyah", "imambargah", "imambargha", "imambara", "imambarah", "imambada", "imam bargah",
+            "imam bargha", "imam bara", "imam bada", "hussainiya", "hussainiyah", "hussainia", "hussainiyya",
+            "husainiya", "husainiyah", "husainia", "husseiniya", "husseiniyah", "husseinia", "husayniyya",
+            "husayniyyah", "husayniya", "hussainiyat", "husainiyat", "husseiniyat", "husayniyyat", "hosseinieh", "hoseinieh", "hosseiniyeh", "huseyniye", "zainabia",
+            "zainabiya", "zainabiyya", "zaynabiya", "zaynabiyya", "ahlul bayt", "ahl ul bayt", "ahl al bayt",
+            "ahlulbayt", "ahlulbait", "ahlul bait", "ahl ul bait", "ahle bait", "ahle bayt", "ahl e bait",
+            "ahl e bayt", "ahlebait", "ahlebayt", "panjtan", "panjetan", "al khoei", "alkhoei", "khoei",
+            "imam hussain", "imam husain", "imam hussein", "imam husayn", "imam hossein", "imam hosein",
+            "imam ali", "imam reza", "imam rida", "imam ridha", "imam mahdi",
+            "imam al mahdi", "imam e zamana", "imam e zaman", "imam zamana", "imam zaman", "imam sadiq",
+            "imam al sadiq", "imam jafar", "imam baqir", "imam al baqir", "imam kazim", "imam kadhim",
+            "imam musa kazim", "imam sajjad", "imam zainul abideen", "imam zain ul abideen", "imam taqi",
+            "imam naqi", "imam askari", "masoomeen", "masumeen", "masoomin", "maasoomeen",
+            // Isma'ili, Bohra, Alevi
+            "ismaili", "ismailis", "ismaeli", "nizari", "jamatkhana", "jamat khana", "jamaatkhana",
+            "jamaat khana", "aga khan", "bohra", "bohras", "alevi", "alevis", "cemevi", "cem evi",
+            // The Dawoodi Bohra jamaats take these names ("Anjuman-e-Burhani", "Saifee Masjid")
+            "anjuman e burhani", "anjumane burhani", "anjuman e saifee", "anjuman e najmi", "anjuman e ezzi",
+            "anjuman e fakhri", "anjuman e hakimi", "anjuman e taiyebi", "anjuman e shujaee", "anjuman e jamali",
+            "anjuman e qutbi", "anjuman e zainee", "burhani masjid", "masjid e burhani", "saifee masjid",
+            "saifiyah masjid",
+            // Sufi: the word, its lodges and shrines, and the orders by name
+            "sufi", "sufis", "sufism", "sufiyya", "tasawwuf", "tariqa", "tariqah", "tariqat", "tarikat",
+            "tarekat", "zawiya", "zawiyah", "zawiyya", "zaouia", "zaouiya", "khanqah", "khanqa", "khanaqah",
+            "khanaqa", "khaneqah", "khankah", "dargah", "dargha", "durgah", "darbar", "tekke", "tekija",
+            "tekiya", "tekkesi", "dergah", "dergahi", "naqshbandi", "naqshbandiya", "naqshbandiyya",
+            "naqshbandia", "nakshbandi", "nakshibendi", "naksibendi", "qadiriyya", "qadiriya", "qadiriyyah",
+            "qadria", "qadriya", "ghousia", "ghousiya", "ghausia", "ghausiya", "gausia", "gausiya", "chishti",
+            "chishtiya", "chishtiyya", "chishtia", "chisti", "tijaniyya", "tijaniya", "tidjania", "shadhiliyya",
+            "shadhiliya", "rifaiyya", "rifaiya", "mevlevi", "mevlevihane", "halveti", "khalwati", "jerrahi", "cerrahi", "bektashi",
+            "bektasi", "ba alawi", "baalawi", "alawiyya", "mouride", "mourides", "muridiyya", "qalandar",
+            "qalandari", "suhrawardi", "suhrawardiyya",
+            // Ahmadiyya and the Nation of Islam
+            "ahmadiyya", "ahmadiya", "ahmadiyyah", "ahmadiyyat", "ahmadi muslim", "ahmadi muslims", "qadiani",
+            "qadiyani", "mirzai", "nation of islam", "moorish science",
+            // Arabic, Persian, Urdu
+            "شيعة", "الشيعة", "شيعي", "الشيعي", "الشيعية", "شیعه", "شیعہ", "الجعفرية", "جعفرية", "جعفریہ",
+            "حسينية", "الحسينية", "حسينيه", "حسینیه", "حسینیہ", "امامباره", "امامبارگاه", "امام بارگاه",
+            "امام بارگاہ", "امامبارگاہ", "امام باڑہ", "امامباڑہ",
+            "صوفي", "الصوفي", "الصوفية", "صوفية", "صوفیہ", "صوفیه", "زاوية", "الزاوية", "خانقاه", "خانقاہ",
+            "درگاه", "درگاہ", "دربار", "الطريقة", "تكية", "التكية", "الأحمدية", "الاحمدية", "احمدیہ", "قادیانی",
+        ].map { folded($0).trimmingCharacters(in: .whitespaces) },
+        websiteStems: [
+            "shiite", "ithnaashari", "ithnaasheri", "jafaria", "imamia", "imambargah", "imambara", "hussainia",
+            "hussainiy", "husainia", "husainiy", "husseinia", "husseiniy", "husayniy", "hosseinieh", "zainabia", "zainabiya", "ahlulbayt", "ahlulbait",
+            "alkhoei", "jamatkhana", "jamaatkhana", "dawoodibohra", "sufism", "sufiorder", "tariqa", "zawiya",
+            "khanqah", "dargah", "naqshbandi", "chishtiya", "tijaniyya", "shadhiliyya", "ahmadiyya", "nationofislam",
+        ],
+        websiteHosts: ["alislam.org", "ahmadiyya.us", "ahmadiyya.ca", "ahmadiyya.org.uk", "noi.org", "finalcall.com"]
+    )
+}
+
 /// A search the halal side offers in one tap ("Shawarma"): its label, and the words MapKit is given.
 struct PlaceLocatorQuickSearch: Identifiable, Hashable {
     let title: String
@@ -67,6 +189,8 @@ struct PlaceLocatorProfile {
     /// Where the home-area results are cached, so each locator remembers its own neighbourhood; the
     /// distance and sort choices are kept under keys made from it too.
     let homeCacheKey: String
+    /// Places never listed, whatever the search found.
+    var exclusion: PlaceLocatorExclusion = .none
 
     /// Mosques have no MKPointOfInterestCategory, so the masjid profile filters by name instead,
     /// including the Arabic spellings: a masjid named only مسجد… never matched the Latin-only keyword
@@ -104,9 +228,9 @@ struct PlaceLocatorProfile {
                 poiCategories: nil),
             PlaceLocatorKind(
                 id: "prayerRooms", title: String(localized: "Prayer Rooms"), systemImage: "house",
-                baseQueries: ["musalla", "musallah", "muslim prayer room", "prayer room", "jamatkhana"],
+                baseQueries: ["musalla", "musallah", "muslim prayer room", "prayer room"],
                 queries: { text in unique(["\(text) musalla", "\(text) prayer room", text]) },
-                nameKeywords: ["musalla", "musallah", "prayer room", "prayer space", "jamatkhana", "jamaat khana", "مصلى"],
+                nameKeywords: ["musalla", "musallah", "prayer room", "prayer space", "مصلى"],
                 poiCategories: nil),
             PlaceLocatorKind(
                 id: "schools", title: String(localized: "Islamic Schools"), systemImage: "graduationcap",
@@ -116,7 +240,8 @@ struct PlaceLocatorProfile {
                 poiCategories: nil),
         ],
         quickSearches: [],
-        homeCacheKey: "masjidLocatorHomeCacheData"
+        homeCacheKey: "masjidLocatorHomeCacheData",
+        exclusion: .shiaSufiAndOthers
     )
 
     /// Food is the opposite shape from mosques: the category filter does the narrowing (restaurants,
@@ -1400,6 +1525,7 @@ struct PlaceLocatorView: View {
         let items = await performPlaceSearch(
             queries: trimmed.isEmpty ? kind.baseQueries : kind.queries(trimmed),
             nameKeywords: kind.nameKeywords,
+            exclusion: profile.exclusion,
             poiFilter: kind.poiFilter,
             in: searchRegion,
             sortOrigin: sortOrigin,
@@ -1444,7 +1570,11 @@ struct PlaceLocatorView: View {
               let cache = decodeHomeCache(),
               isSameHome(cache.homeLocation, settings.homeLocation) else { return }
 
-        let cachedItems = arranged(cache.items.map { $0.mapItem() }.withoutDuplicatePlaces())
+        // A cache written before a place was hidden still holds it; only the name was cached.
+        let cachedItems = arranged(cache.items
+            .filter { !profile.exclusion.excludes(name: $0.name) }
+            .map { $0.mapItem() }
+            .withoutDuplicatePlaces())
         guard !cachedItems.isEmpty else { return }
 
         results = cachedItems
@@ -1472,6 +1602,7 @@ struct PlaceLocatorView: View {
             let items = await performPlaceSearch(
                 queries: base.baseQueries,
                 nameKeywords: base.nameKeywords,
+                exclusion: profile.exclusion,
                 poiFilter: base.poiFilter,
                 in: homeRegion,
                 sortOrigin: nil,
@@ -1548,6 +1679,7 @@ struct PlaceLocatorView: View {
 private func performPlaceSearch(
     queries: [String],
     nameKeywords: [String],
+    exclusion: PlaceLocatorExclusion,
     poiFilter: MKPointOfInterestFilter?,
     in searchRegion: MKCoordinateRegion,
     sortOrigin: CLLocationCoordinate2D?,
@@ -1587,6 +1719,7 @@ private func performPlaceSearch(
     guard !Task.isCancelled else { return [] }
 
     let matching = buckets.joined().filter { item in
+        if exclusion.excludes(name: item.name, website: item.url) { return false }
         guard !nameKeywords.isEmpty else { return true }
         let name = (item.name ?? "").lowercased()
         let title = (item.placemark.title ?? "").lowercased()

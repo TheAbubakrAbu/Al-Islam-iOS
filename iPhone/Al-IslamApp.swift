@@ -579,6 +579,8 @@ private struct MainTabView: View {
             // see DebugSelfShot.
             .task { await DebugSelfShot.handleLaunchArguments() }
             #if DEBUG
+            // "-artGallery": every Islam resource's hero drawing as a PNG in Documents/art.
+            .task { await ResourceArtGallery.exportIfAsked() }
             // "-tsanSelfTest": prove a Thread Sanitizer build reports (see SanitizerSelfTest).
             .task {
                 guard ProcessInfo.processInfo.arguments.contains("-tsanSelfTest") else { return }
@@ -889,7 +891,7 @@ private struct MainTabView: View {
     @ViewBuilder
     private var adhanTab: some View {
         if initialTabMounted {
-            AdhanView()
+            AdhanTabRoot()
         } else {
             Color.clear
                 .task {
@@ -924,22 +926,22 @@ private struct MainTabView: View {
                 }
 
                 Tab("Quran", systemImage: "character.book.closed.ar", value: AppTab.quran) {
-                    QuranView(isActiveTab: selectedTab == .quran)
+                    QuranTabRoot(isActive: selectedTab == .quran)
                 }
 
                 Tab("Hadith", systemImage: "books.vertical", value: AppTab.hadith) {
-                    HadithView()
+                    HadithTabRoot()
                 }
 
                 Tab("Islam", systemImage: "moon.stars", value: AppTab.islam) {
-                    IslamView()
+                    IslamTabRoot()
                 }
 
                 // Settings stands alone at the trailing end of the bar. iOS 26 gave that place to the
                 // search role; iOS 27 keeps the search role in the row and moved the standalone slot
                 // to `.prominent` (Abu, 2026-09-16: the tab had slid back into the row).
                 Tab("Settings", systemImage: "gearshape", value: AppTab.settings, role: settingsTabRole) {
-                    SettingsView()
+                    SettingsTabRoot()
                 }
             }
         } else {
@@ -951,28 +953,28 @@ private struct MainTabView: View {
                     }
                     .tag(AppTab.adhan)
 
-                QuranView(isActiveTab: selectedTab == .quran)
+                QuranTabRoot(isActive: selectedTab == .quran)
                     .tabItem {
                         Image(systemName: "character.book.closed.ar")
                         Text("Quran")
                     }
                     .tag(AppTab.quran)
 
-                HadithView()
+                HadithTabRoot()
                     .tabItem {
                         Image(systemName: "books.vertical")
                         Text("Hadith")
                     }
                     .tag(AppTab.hadith)
 
-                IslamView()
+                IslamTabRoot()
                     .tabItem {
                         Image(systemName: "moon.stars")
                         Text("Islam")
                     }
                     .tag(AppTab.islam)
 
-                SettingsView()
+                SettingsTabRoot()
                     .tabItem {
                         Image(systemName: "gearshape")
                         Text("Settings")
@@ -981,6 +983,42 @@ private struct MainTabView: View {
             }
         }
     }
+}
+
+// MARK: - Tab roots
+
+// Each tab's root behind a view that takes nothing (the Quran tab: one Bool). `MainTabView.body` runs
+// again on every tab switch, because the selection is its state, and it used to build the five roots
+// in place: `AdhanView()`, `HadithView()` and the rest. A root made that way is a NEW value each time,
+// and SwiftUI could not tell it from the old one (their property wrappers do not compare equal), so it
+// ran the body of every tab on every switch. Going from Islam to Settings rebuilt the Adhan tab (its
+// sky, its prayer list), the Quran tab and the Hadith tab as well (Abu, 2026-11-25: "Lag sometimes when
+// going from Islam to settings"; `-renderCounter -printChanges` named them, "AdhanView: @self changed").
+//
+// A view with no stored properties is the same value every time, so SwiftUI stops here and never asks
+// for its body again: the tab under it only ever answers to its own state and what it observes.
+
+private struct AdhanTabRoot: View {
+    var body: some View { AdhanView() }
+}
+
+private struct QuranTabRoot: View {
+    /// Whether the Quran tab is the one on screen: the only thing the root is told.
+    let isActive: Bool
+
+    var body: some View { QuranView(isActiveTab: isActive) }
+}
+
+private struct HadithTabRoot: View {
+    var body: some View { HadithView() }
+}
+
+private struct IslamTabRoot: View {
+    var body: some View { IslamView() }
+}
+
+private struct SettingsTabRoot: View {
+    var body: some View { SettingsView() }
 }
 
 #if DEBUG

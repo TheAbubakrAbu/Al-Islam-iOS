@@ -123,6 +123,39 @@ final class SimpleModeUITests: XCTestCase {
         }
     }
 
+    /// YOUR SUMMARY is full-width lines since 2026-11-25, where four half-width tiles stood (Abu:
+    /// "Summary tiles are so ugly with inconsistencies 2 lines for headers and the actual verses are
+    /// too small"). The Ayah of the Day leads with its verse under it; the places to pick up from are
+    /// one bare 44 pt line each, every one the same height whatever the length of its name ("Last
+    /// Listened Ayah" was the title that wrapped); and a line opens what it names.
+    func testQuranSummaryIsLinesThatOpen() {
+        let app = launch(["-launchTabQuran", "-lastRead", "2:255",
+                          "-seedBool", "simpleMode=0,quranPageMode=0,THEfirstLaunch=0,saveLastReadAyah=1,showAyahOfTheDay=1"])
+        let daily = app.buttons["summaryLine.ayahOfTheDay"]
+        let lastRead = app.buttons["summaryLine.reading"]
+        XCTAssertTrue(lastRead.waitForExistence(timeout: 15), "no Last Read line in YOUR SUMMARY")
+        XCTAssertTrue(daily.exists, "no Ayah of the Day line in YOUR SUMMARY")
+        if !daily.exists || lastRead.frame.height > 50 { attachScreenshot("Summary lines") }
+
+        XCTAssertTrue(lastRead.label.contains("Al-Baqarah 2:255"), "the Last Read line does not name its ayah: \(lastRead.label)")
+        XCTAssertLessThan(daily.frame.minY, lastRead.frame.minY, "the Ayah of the Day does not lead the summary")
+        XCTAssertGreaterThan(daily.frame.height, lastRead.frame.height + 30, "the Ayah of the Day shows no verse under its line")
+        XCTAssertEqual(lastRead.frame.height, 44, accuracy: 1, "a bare summary line is not 44 pt")
+        XCTAssertGreaterThan(lastRead.frame.width, app.frame.width * 0.75, "a summary line is not the screen's width")
+        // Every bare line is the same height: no name wraps.
+        for kind in ["listenedAyah", "listenedSurah"] {
+            let line = app.buttons["summaryLine.\(kind)"]
+            if line.exists {
+                XCTAssertEqual(line.frame.height, lastRead.frame.height, accuracy: 0.5, "the \(kind) line is not the Last Read line's height")
+            }
+        }
+
+        lastRead.tap()
+        let opened = app.staticTexts["2:255"].waitForExistence(timeout: 10)
+        if !opened { attachScreenshot("Summary line tap") }
+        XCTAssertTrue(opened, "the Last Read line did not open its ayah")
+    }
+
     /// The sort row hides in Simple while the sort is the default, so the ⋯ menu carries a Sort submenu in
     /// both modes (Simple Mode v2, Task 6).
     func testQuranMoreMenuHasSort() {
@@ -659,11 +692,11 @@ final class SimpleModeUITests: XCTestCase {
         let app = launch(["-launchTabSettings", "-seedBool", "simpleMode=0,gridModeSettingsRaw=1"])
         XCTAssertTrue(app.staticTexts["SETTINGS"].waitForExistence(timeout: 15), "the Settings tab did not show its hub")
         var report: [String] = []
-        // Each tile's label and the title of the page it pushes (Prayer Settings' page is "Al-Adhan
-        // Settings"); the grid door, the profile door and the appearance pages are all covered.
-        for (label, title) in [("Prayer Settings", "Al-Adhan Settings"), ("Your Progress", "Your Progress"),
+        // Each tile's label and the title of the page it pushes (a page is titled as its door is
+        // named); the grid door, the profile door and the appearance pages are all covered.
+        for (label, title) in [("Prayer Settings", "Prayer Settings"), ("Your Progress", "Your Progress"),
                                ("Custom Colors", "Custom Colors"), ("Look and Feel", "Look and Feel"),
-                               ("Prayer Settings", "Al-Adhan Settings")] {
+                               ("Prayer Settings", "Prayer Settings")] {
             let tile = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", label)).firstMatch
             tile.scrollIntoViewIfNeeded(in: app)
             guard tile.exists else { report.append("\(label): no tile"); continue }
@@ -1177,6 +1210,45 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertTrue(menu.waitForExistence(timeout: 5), "Done did not bring the rows' controls back")
         Thread.sleep(forTimeInterval: 0.6)
         XCTAssertEqual(next.frame.minY, before.minY, accuracy: 0.5, "leaving select mode moved the next ayah")
+    }
+
+    /// Select Ayahs in the page reader (Abu, 2026-11-25: "it repositions the page and that makes it
+    /// annoying cause its hard to refind the ayahs"). The bulk-action bar takes the controls row's
+    /// place at the row's own size, so the page keeps the band it was fitted into: its frame, read
+    /// off the spine that runs the page's full height, is the same before, in and after select mode.
+    /// The bar used to come in taller than the row (the band 19 pt shorter on the 17 Pro) and the
+    /// page re-fitted itself into it, every line landing somewhere else.
+    func testSelectAyahsLeavesThePageStill() {
+        // Select mode starts 14 s after the reader appears: after `launch`'s own 8 s wait, so the
+        // "before" frame below is read in the plain reading state.
+        let app = launch(["-launchTabQuran", "-quranPageMode", "-mushafPageLanguage", "arabic",
+                          "-lastRead", "2:30", "-selectAyahsAt", "14",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0,saveLastReadAyah=1"])
+        let search = app.buttons["Search this page"]
+        XCTAssertTrue(search.waitForExistence(timeout: 15), "the page reader never showed its controls row")
+        let spine = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label ENDSWITH %@", "-hand page")).firstMatch
+        XCTAssertTrue(spine.waitForExistence(timeout: 5), "the page is not on screen")
+        let page = spine.frame
+        let row = search.frame
+
+        let copy = app.buttons["Copy"]
+        XCTAssertTrue(copy.waitForExistence(timeout: 30), "select mode never started")
+        Thread.sleep(forTimeInterval: 0.6)
+        if abs(spine.frame.height - page.height) > 0.5 { attachScreenshot("Select mode page band") }
+        XCTAssertEqual(spine.frame.minY, page.minY, accuracy: 0.5, "entering select mode moved the page")
+        XCTAssertEqual(spine.frame.height, page.height, accuracy: 0.5, "entering select mode resized the page")
+        // The bar stands exactly where the row stood, at its height.
+        XCTAssertEqual(copy.frame.minY, row.minY, accuracy: 1, "the bar is not in the controls row's place")
+        XCTAssertEqual(copy.frame.height, row.height, accuracy: 1, "the bar is not the controls row's height")
+        XCTAssertFalse(search.exists && search.isHittable, "the controls row under the bar still takes taps")
+
+        app.buttons["Done"].tap()
+        XCTAssertTrue(search.waitForExistence(timeout: 5), "Done did not bring the controls row back")
+        Thread.sleep(forTimeInterval: 0.6)
+        XCTAssertTrue(search.isHittable, "the controls row came back unusable")
+        XCTAssertEqual(spine.frame.minY, page.minY, accuracy: 0.5, "leaving select mode moved the page")
+        XCTAssertEqual(spine.frame.height, page.height, accuracy: 0.5, "leaving select mode resized the page")
     }
 
     /// A hold in select mode selects the run from the ayah checked last through the held one

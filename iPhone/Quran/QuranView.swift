@@ -207,7 +207,9 @@ struct QuranView: View {
     @ObservedObject private var playbackAlerts = QuranPlayer.shared.alerts
     @ObservedObject private var playbackHistory = QuranPlayer.shared.history
     @ObservedObject private var searchHandoff = QuranSearchHandoff.shared
-    @Environment(\.dismiss) private var dismiss
+    /// The sheet's `dismiss`, for Choose Surah's one use of it, held without reading the environment
+    /// here (`DismissHandle`): the Quran tab's whole body is not the place to depend on it.
+    @State private var dismiss = DismissHandle()
     #if os(iOS)
     // Split-view multitasking (Slide Over, 1/3 Split View, narrow Stage Manager windows) makes an iPad
     // window compact - the column layout must collapse to the iPhone shape there, so the layout is keyed
@@ -341,14 +343,11 @@ struct QuranView: View {
     }
 
     #if os(iOS)
-    /// Which summary tile's recents are unfolded BELOW the tile grid. The rows can't unfold inside a
-    /// half-width grid cell, so they open as ordinary list rows under the summary - and because this is one
-    /// value rather than four booleans, opening a tile's recents closes whichever was open before.
+    /// Which summary line's recents are unfolded BELOW the lines, as ordinary list rows under the
+    /// summary. One value rather than four booleans, so opening one item's recents closes whichever
+    /// was open before.
     @State private var summaryHistoryExpansion: SummaryHistoryKind?
-    /// Natural content height per summary tile, keyed by title - the grid gives all of them the max.
-    @State private var summaryTileHeights: [String: CGFloat] = [:]
-    /// The summary tiles skip the height equalization at the accessibility text sizes (one long ayah
-    /// would drag every tile to its height there).
+    /// The tab's grids go to one column, and the summary's header stacks, at the accessibility text sizes.
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
 
@@ -1339,6 +1338,7 @@ struct QuranView: View {
         #endif
         RenderCounter.hit("QuranView")
         return navigationContainer
+        .capturingDismiss(into: dismiss)
         .confirmationDialog(
             playbackAlerts.playbackAlertTitle,
             isPresented: $playbackAlerts.showInternetAlert,
@@ -2795,9 +2795,9 @@ struct QuranView: View {
     @ViewBuilder
     private func primaryHistorySections(context: SearchDisplayContext) -> some View {
         #if os(iOS)
-        // Summary mode is always on: the compact "Your Summary" tiles are the one history presentation.
+        // Summary mode is always on: the compact "Your Summary" lines are the one history presentation.
         if context.isSearching == false {
-            boxed(summaryTilesSection(context: context))
+            boxed(summarySection(context: context))
         }
         #else
         NowPlayingView(quranView: true)
@@ -2847,7 +2847,7 @@ struct QuranView: View {
         }
     }
 
-    /// The rows a summary tile's plus unfolds, rendered as ordinary list rows directly below the tile grid -
+    /// The rows a summary line's plus unfolds, rendered as ordinary list rows directly below the lines -
     /// the summary-mode analogue of the inline expansion the full-size rows have.
     @ViewBuilder
     private func summaryHistoryRows(kind: SummaryHistoryKind) -> some View {
@@ -2963,108 +2963,51 @@ struct QuranView: View {
         .buttonStyle(.plain)
     }
 
-    /// Whether a fresh tile measurement differs from the stored one by more than layout jitter.
-    private static func summaryHeightsChanged(_ new: [String: CGFloat], from old: [String: CGFloat]) -> Bool {
-        guard Set(new.keys) == Set(old.keys) else { return true }
-        return new.contains { key, value in abs((old[key] ?? 0) - value) > 0.5 }
-    }
-
-    /// Compact "summary mode": all enabled history items as tappable tiles in a single section.
-    /// Order: Last Read Ayah · Ayah of the Day, then Last Listened Ayah · Last Listened Surah - and
-    /// the Word of the Day as the closing tile whenever those leave the grid one short of even.
+    /// YOUR SUMMARY: today's ayah first, whole and at reading size, then the places to pick up from
+    /// (the last ayah read, the last ayah and the last surah listened to) on one line each, and the
+    /// tab's doors under them. Full-width lines since 2026-11-25, where a 2x2 grid of half-width
+    /// tiles stood (`SummaryLineLabel` has the why).
     @ViewBuilder
-    private func summaryTilesSection(context: SearchDisplayContext) -> some View {
+    private func summarySection(context: SearchDisplayContext) -> some View {
         let showAyah = settings.showAyahOfTheDay && settings.isAyahOfTheDayHiddenToday == false
-        // Every tile gets the tallest tile's natural height (see `SummaryTileHeightKey`) - except at the
-        // accessibility text sizes, where the tiles simply take their own.
-        let rowHeight = dynamicTypeSize.isAccessibilitySize ? nil : summaryTileHeights.values.max()
-        // What the grid holds right now, resolved once so the Word of the Day can count it: with 1 or 3
-        // history tiles the word takes the empty slot beside them; with 0, 2 or 4 it is a capsule under
-        // the tiles (`summaryDoorCapsules`; an item of the ⋯ menu from 2026-10-11 to 2026-11-24, a chip
-        // before that, a row before 2026-09-16): never a fifth tile alone on its own row, never a hole
-        // beside three.
-        // Simple Mode keeps the two tiles a reader comes back for, Last Read and the Ayah of the Day;
-        // the listening tiles, the Word of the Day and the history expanders step aside (the play menu
-        // resumes listening). Docs/Product/Simple Mode Guide.md.
-        // Three trims, one per thing the old single flag hid: the listening tiles, the Word of the Day
-        // tile and the +/- history expanders (all three step aside together in Simple today).
+        // Simple Mode keeps the two lines a reader comes back for, the Ayah of the Day and Last Read;
+        // the listening lines and the history expanders step aside (the play menu resumes
+        // listening). Docs/Product/Simple Mode Guide.md.
         let listenedHidden = settings.hides(.lastListenedTiles)
-        let wordHidden = settings.hides(.wordOfDayTile)
         let expandersHidden = settings.hides(.historyExpanders)
-        let hasLastRead = settings.saveLastReadAyah && lastReadSurah != nil && lastReadAyah != nil
-        let ayahOfTheDay = showAyah ? ayahOfTheDayPair : nil
-        let lastListenedAyah = settings.saveLastListenedAyah && !listenedHidden ? lastListenedAyahPair : nil
         let lastListened = settings.saveLastListenedSurah && !listenedHidden ? settings.lastListenedSurah : nil
-        let lastListenedSurah = lastListened.flatMap { quranData.surah($0.surahNumber) }
-        let historyTileCount = [hasLastRead, ayahOfTheDay != nil, lastListenedAyah != nil, lastListenedSurah != nil]
-            .filter { $0 }
-            .count
-        let word = settings.showWordOfTheDay && !wordHidden ? wordOfTheDay : nil
-        let wordSurah = word.flatMap { quranData.surah($0.surah) }
-        let wordFillsGrid = historyTileCount % 2 == 1
+        let entries = summaryEntries(
+            lastRead: settings.saveLastReadAyah ? lastReadSurah.flatMap { surah in lastReadAyah.map { (surah: surah, ayah: $0) } } : nil,
+            ayahOfTheDay: showAyah ? ayahOfTheDayPair : nil,
+            lastListenedAyah: settings.saveLastListenedAyah && !listenedHidden ? lastListenedAyahPair : nil,
+            lastListenedSurah: lastListened.flatMap { last in quranData.surah(last.surahNumber).map { (surah: $0, last: last) } },
+            expandersHidden: expandersHidden
+        )
         // The tab's doors, as capsules at the foot of the section (`summaryDoorCapsules`).
-        let doors = summaryDoorCapsules(wordIsTile: wordFillsGrid && word != nil && wordSurah != nil)
-        // The whole section's hide follows the listening tiles' trim alone, since the three trims above flip together.
-        if !(listenedHidden && historyTileCount == 0) {
+        let doors = summaryDoorCapsules()
+        // The whole section's hide follows the listening lines' trim alone, since Simple Mode's trims flip together.
+        if !(listenedHidden && entries.isEmpty) {
             Section(header: summaryHeader) {
-                SummaryTileGrid(columns: quranGridColumns.count) {
-                    if hasLastRead, let lastReadSurah, let lastReadAyah {
-                        SummaryAyahTile(title: String(localized: "Last Read Ayah"), icon: "book", surah: lastReadSurah, ayah: lastReadAyah, titleColor: .secondaryOnGlass,
-                                        rowHeight: rowHeight,
-                                        isExpanded: summaryHistoryExpansion == .reading,
-                                        onExpand: expandersHidden || playbackHistory.readingHistory.isEmpty ? nil : { toggleSummaryExpansion(.reading) }) {
-                            push(surahID: lastReadSurah.id, ayahID: lastReadAyah.id)
+                // ONE List row holding every line, with its own hairlines between them: a List row
+                // per line is at least the system's 52 pt on iOS 26, and four of them gave back most
+                // of the height the lines save. In a ForEach of one or none, so a summary with
+                // nothing in it is no row at all, and the row is never a bare branch (`OneRow`).
+                ForEach(entries.isEmpty ? [] : ["lines"], id: \.self) { _ in
+                    VStack(spacing: 0) {
+                        ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                            if index > 0 {
+                                SummaryLineDivider()
+                            }
+                            summaryLine(entry, expandersHidden: expandersHidden)
                         }
-                        .animation(.easeInOut, value: reading.lastReadSurah * 1000 + reading.lastReadAyah)
                     }
-                    if let pair = ayahOfTheDay {
-                        SummaryAyahTile(title: String(localized: "Ayah of the Day"), icon: "sparkles", surah: pair.surah, ayah: pair.ayah, titleColor: .secondaryOnGlass,
-                                        rowHeight: rowHeight,
-                                        isExpanded: summaryHistoryExpansion == .ayahOfTheDay,
-                                        onExpand: expandersHidden ? nil : { toggleSummaryExpansion(.ayahOfTheDay) }) {
-                            push(surahID: pair.surah.id, ayahID: pair.ayah.id)
-                        }
-                        .animation(.easeInOut, value: pair.surah.id * 1000 + pair.ayah.id)
-                    }
-                    if let pair = lastListenedAyah {
-                        SummaryAyahTile(title: String(localized: "Last Listened Ayah"), icon: "headphones.circle", surah: pair.surah, ayah: pair.ayah, titleColor: .secondaryOnGlass,
-                                        rowHeight: rowHeight,
-                                        isExpanded: summaryHistoryExpansion == .listenedAyah,
-                                        onExpand: playbackHistory.ayahListeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedAyah) }) {
-                            push(surahID: pair.surah.id, ayahID: pair.ayah.id)
-                        }
-                        .animation(.easeInOut, value: pair.surah.id * 1000 + pair.ayah.id)
-                    }
-                    if let last = lastListened, let surah = lastListenedSurah {
-                        SummarySurahTile(title: String(localized: "Last Listened Surah"), icon: "headphones", surah: surah, lastListenedSurah: last, titleColor: .secondaryOnGlass,
-                                         rowHeight: rowHeight,
-                                        isExpanded: summaryHistoryExpansion == .listenedSurah,
-                                         onExpand: playbackHistory.listeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedSurah) }) {
-                            push(surahID: surah.id, ayahID: nil)
-                        }
-                        .animation(.easeInOut, value: last.surahNumber)
-                    }
-                    if wordFillsGrid, let word, let wordSurah {
-                        // Pushed through `openWordOfDay` rather than `push(surahID:)`: the word's page lists
-                        // every ayah it appears in and pushes the reader itself.
-                        SummaryWordTile(word: word, surahName: wordSurah.displayName, rowHeight: rowHeight) {
-                            // Through the doors' guard, like the capsules under the tiles.
-                            guard !anyDoorOpen, path.isEmpty else { return }
-                            openWordOfDay = true
-                        }
-                        .equatable()
-                    }
-                }
-                .padding(.vertical, 4)
-                .onPreferenceChange(SummaryTileHeightKey.self) { heights in
-                    // Only a real change re-runs the equalization: a tile re-measuring a fraction of a point
-                    // differently once its frame is set is layout noise, and this grid feeds its measurements
-                    // back into its own frames (see `SummarySurahTile.oneLineReciterHeight` for the loop that
-                    // once froze the tab at the largest text size).
-                    if Self.summaryHeightsChanged(heights, from: summaryTileHeights) { summaryTileHeights = heights }
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    // The line that closes the block, over the doors, runs the row's whole width:
+                    // left to itself the List starts it at the row's first text.
+                    .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                 }
 
-                // The one open expansion, unfolded as plain rows right under the tiles.
+                // The one open expansion, unfolded as plain rows right under the lines.
                 if !expandersHidden, let kind = summaryHistoryExpansion {
                     summaryHistoryRows(kind: kind)
                         .transition(.opacity)
@@ -3081,7 +3024,7 @@ struct QuranView: View {
                 }
             }
         } else if !doors.isEmpty {
-            // Simple Mode with no tile to show: the doors keep the top of the tab, without the
+            // Simple Mode with no line to show: the doors keep the top of the tab, without the
             // summary's header.
             Section {
                 TabDoorCapsules(doors: doors)
@@ -3089,11 +3032,95 @@ struct QuranView: View {
         }
     }
 
-    /// The summary's doors in their order: History, Topics (Browse by Theme), the Word of the Day while
-    /// it is not a tile, the Qiraat Explorer while "Show Riwayah / Qiraah" is on, the Planner, then a
-    /// random surah while the surah list's own shuffle is not on screen (`surahsHeaderShuffles`). Each
-    /// goes through the doors' one guard (`anyDoorOpen`).
-    private func summaryDoorCapsules(wordIsTile: Bool) -> [TabDoorCapsule] {
+    /// One summary line: the item's name and reference, the play button before the last listened
+    /// surah's name, and under the Ayah of the Day its verse. A tap opens the ayah (or the surah).
+    private func summaryLine(_ entry: SummaryEntry, expandersHidden: Bool) -> some View {
+        let showsVerse = entry.kind == .ayahOfTheDay && entry.ayah != nil
+        return SummaryLine(
+            title: entry.title,
+            icon: entry.icon,
+            reference: entry.ayah.map { "\(entry.surah.displayName) \(entry.surah.id):\($0.id)" } ?? entry.surah.displayName,
+            hasDetail: showsVerse,
+            keepsExpanderSlot: !expandersHidden,
+            isExpanded: summaryHistoryExpansion == entry.kind,
+            onExpand: entry.onExpand,
+            onTap: { push(surahID: entry.surah.id, ayahID: entry.ayah?.id) },
+            accessory: {
+                if let last = entry.lastListened {
+                    SummarySurahPlayButton(surah: entry.surah, lastListenedSurah: last)
+                }
+            },
+            detail: {
+                if showsVerse, let ayah = entry.ayah {
+                    SummaryVerseLines(surah: entry.surah, ayah: ayah)
+                }
+            }
+        )
+        // What the line names changing (a new last read, a shuffled Ayah of the Day) cross-fades.
+        .animation(.easeInOut, value: entry.surah.id * 1000 + (entry.ayah?.id ?? 0))
+        // "summaryLine.reading", "summaryLine.ayahOfTheDay", ...: what the UI tests find a line by.
+        .accessibilityIdentifier("summaryLine.\(entry.kind.rawValue)")
+    }
+
+    /// One item of YOUR SUMMARY, resolved for its line (`summaryLine`).
+    private struct SummaryEntry: Identifiable {
+        let kind: SummaryHistoryKind
+        let title: String
+        let icon: String
+        let surah: Surah
+        var ayah: Ayah? = nil
+        var lastListened: LastListenedSurah? = nil
+        let onExpand: (() -> Void)?
+        var id: String { kind.rawValue }
+    }
+
+    /// The summary's items in their order: today's ayah first, then the three places to pick up
+    /// from. An item with no history to unfold has no expander.
+    private func summaryEntries(
+        lastRead: (surah: Surah, ayah: Ayah)?,
+        ayahOfTheDay: (surah: Surah, ayah: Ayah)?,
+        lastListenedAyah: (surah: Surah, ayah: Ayah)?,
+        lastListenedSurah: (surah: Surah, last: LastListenedSurah)?,
+        expandersHidden: Bool
+    ) -> [SummaryEntry] {
+        var entries: [SummaryEntry] = []
+        if let pair = ayahOfTheDay {
+            entries.append(SummaryEntry(
+                kind: .ayahOfTheDay, title: String(localized: "Ayah of the Day"), icon: "sparkles",
+                surah: pair.surah, ayah: pair.ayah,
+                onExpand: expandersHidden ? nil : { toggleSummaryExpansion(.ayahOfTheDay) }
+            ))
+        }
+        if let pair = lastRead {
+            entries.append(SummaryEntry(
+                kind: .reading, title: String(localized: "Last Read Ayah"), icon: "book",
+                surah: pair.surah, ayah: pair.ayah,
+                onExpand: expandersHidden || playbackHistory.readingHistory.isEmpty ? nil : { toggleSummaryExpansion(.reading) }
+            ))
+        }
+        if let pair = lastListenedAyah {
+            entries.append(SummaryEntry(
+                kind: .listenedAyah, title: String(localized: "Last Listened Ayah"), icon: "headphones.circle",
+                surah: pair.surah, ayah: pair.ayah,
+                onExpand: playbackHistory.ayahListeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedAyah) }
+            ))
+        }
+        if let pair = lastListenedSurah {
+            entries.append(SummaryEntry(
+                kind: .listenedSurah, title: String(localized: "Last Listened Surah"), icon: "headphones",
+                surah: pair.surah, lastListened: pair.last,
+                onExpand: playbackHistory.listeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedSurah) }
+            ))
+        }
+        return entries
+    }
+
+    /// The summary's doors in their order: History, Topics (Browse by Theme), the Word of the Day,
+    /// the Qiraat Explorer while "Show Riwayah / Qiraah" is on, the Planner, then a random surah
+    /// while the surah list's own shuffle is not on screen (`surahsHeaderShuffles`). Each goes
+    /// through the doors' one guard (`anyDoorOpen`). (The Word of the Day was a fifth tile here
+    /// whenever the old tile grid was one short of even; the lines have no grid to even out.)
+    private func summaryDoorCapsules() -> [TabDoorCapsule] {
         var doors: [TabDoorCapsule] = [
             TabDoorCapsule(String(localized: "History"), systemImage: "clock.arrow.circlepath") { raiseSummaryDoor(.history) }
         ]
@@ -3102,8 +3129,8 @@ struct QuranView: View {
             // topics like for Hadith for consistency"); the screen it opens keeps its title.
             doors.append(TabDoorCapsule(String(localized: "Topics"), systemImage: "tag.fill") { raiseSummaryDoor(.themes) })
         }
-        if settings.showWordOfTheDay, wordOfTheDay != nil, !wordIsTile {
-            doors.append(TabDoorCapsule(SummaryWordTile.title, systemImage: "character.book.closed.fill") {
+        if settings.showWordOfTheDay, wordOfTheDay != nil {
+            doors.append(TabDoorCapsule(String(localized: "Word of the Day"), systemImage: "character.book.closed.fill") {
                 guard !anyDoorOpen, path.isEmpty else { return }
                 openWordOfDay = true
             })
@@ -6303,3 +6330,38 @@ private struct ClipWhenStacked: ViewModifier {
     }
 }
 #endif
+
+// MARK: - Dismiss without the dependency
+
+/// The environment's `dismiss`, kept where calling it costs nothing. A view that declares
+/// `@Environment(\.dismiss)` depends on the presentation state around it, and SwiftUI runs its body
+/// again whenever a sheet is presented or dismissed anywhere over the same root: with that on
+/// `QuranView`, opening Islam Settings from the Islam tab ran the whole Quran tab's body, and closing
+/// it ran it twice (`-renderCounter`, 2026-11-25). The Quran tab calls `dismiss` in one place, the
+/// Choose Surah sheet's pick, so the dependency sits on `DismissCapture`, a view with nothing to draw,
+/// and the tab holds this handle to it.
+final class DismissHandle {
+    fileprivate var action: () -> Void = {}
+
+    func callAsFunction() { action() }
+}
+
+private struct DismissCapture: View {
+    @Environment(\.dismiss) private var dismiss
+    let handle: DismissHandle
+
+    var body: some View {
+        // Kept current on every evaluation: the action belongs to the presentation this view is in.
+        handle.action = { dismiss() }
+        return Color.clear
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
+    }
+}
+
+extension View {
+    /// Keeps `handle` pointed at this view's `dismiss`, from a background that draws nothing.
+    func capturingDismiss(into handle: DismissHandle) -> some View {
+        background(DismissCapture(handle: handle))
+    }
+}

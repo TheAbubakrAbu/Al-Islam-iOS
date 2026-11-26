@@ -174,3 +174,44 @@ was tried and fades the rows only near the screen's edge, which leaves text behi
    (`conditionalGlassEffect`) is for what floats and for a button that acts (section 4a).
 6. Options live in a toolbar menu; modes in a segmented control.
 7. Nothing reads smaller than `.caption`; no literal colour outside the semantic set.
+
+## 8. Settings pages (2026-11-25)
+
+Every settings page is built from sections 1 to 3. These rules are about how the pages relate to each other, so
+that the four areas (Prayer, Quran, Hadith, Islam) read as one screen with different content.
+
+- **A page is titled as its door is named.** The Prayer Settings door opens "Prayer Settings" (it read "Al-Adhan
+  Settings"), Quran Settings opens "Quran Settings", Notifications opens "Notifications". The search breadcrumbs
+  and the page's own search field use the same name.
+- **One order on the four area pages.** The doors, in cards under plain headers: the area's main group first
+  (PRAYER TIMES, READING), then MORE for what belongs to the area but not to that group. Then the page's own
+  controls: LAYOUT (the layout choice, where the tab has one), ON THE ... TAB (`TabSectionsSettingsSection`).
+  Then DISCOVER and NEED A HAND?. A section a tab has nothing for is left out; the order never changes.
+
+  | Page | Doors | Controls |
+  | --- | --- | --- |
+  | Prayer Settings | NOTIFICATIONS, PRAYER TIMES, MORE | LAYOUT, ON THE ADHAN TAB |
+  | Quran Settings | READING, MORE | LAYOUT |
+  | Hadith Settings | READING | ON THE HADITH TAB |
+  | Islam Settings | READING, MORE | |
+
+- **A card holds doors or controls, never both.** A door among switches moves to the page's door card (Sunnah
+  Reminders on Notifications, beside Prayer Notifications and Nagging Mode under REMINDERS) or gets a section of
+  its own (RECITER over Choose Reciter, with RECITATION under it). The one exception is a door that only
+  customises the switch directly above it (Customize Tajweed Colors under Show Tajweed Colors).
+- **One control a row.** Two switches never share a row in a `VStack`: the List draws its line between rows, so a
+  shared row is a pair with no line between them beside pairs that have one. A switch that belongs to the one
+  above it is still its own row, with `.settingsDependent()` (Remind a Day Before, the word-by-word lines, Show
+  Full Prayers, Liquid Glass Everywhere). A size block is one control and stays one row: the preview, the
+  `FontSizeSlider` and Use Device Text Size.
+- **The same switch has the same name on every page:** Show Arabic, Show English, Highlight Allah, Use Device Text
+  Size, and SIZE over every size block. A switch the reader's own menus also offer takes their name (Hide
+  Tashkeel and Signs, Hide Dots). Row titles are in Title Case (Comparison Mode, Add a Reminder).
+- **Explanations are footers.** No paragraphs inside a card: what a riwayah is reads under the RIWAYAH / QIRAAH
+  card, and the three doors it points to are the next card, ABOUT QIRAAT.
+- **A setting only one reader layout reads sits in a section named for that layout** (PAGES holds Fit Page to
+  Screen and Two-Page Spread), and goes dead with its reason in the other layout (section 2).
+- **Everything about one thing is one section.** Manual Offsets is PRAYER OFFSETS, then HIJRI DATE (the day
+  offset, today's date, the Maghrib switch); it was HIJRI OFFSET, HIJRI DATE and PRAYER OFFSETS.
+- **Short sections lead, a long list follows.** Prayer Calculation is AUTOMATIC, MADHAB, then the twenty METHODS.
+

@@ -76,22 +76,25 @@ struct SettingsIslamView: View {
                 islamPageLink(.alphabet) { alphabetDestination }
             }
 
-            Section(header: Text("ISLAM TAB")) {
+            // READING, then MORE, as on Quran Settings (2026-11-25, Design Grammar section 8). The
+            // second card was headed ISLAM TAB, the words the Adhan and Hadith pages use for their
+            // section of switches (ON THE ADHAN TAB), over a card of doors; and Sunnah Reminders
+            // stood alone under REMINDERS, a header for one row.
+            Section(header: Text("MORE")) {
                 islamPageLink(.libraries) { librariesDestination }
+
+                // The same screen Quran Settings and Notifications open (Abu, 2026-09-20: "sunnah
+                // reminders should also be in islam settings"). The reminders are acts of worship
+                // across the whole day, not only Quran reading, so this is a door they were missing,
+                // not a copy: one `SunnahRemindersView`, three ways in.
+                #if HAS_QURAN
+                islamPageLink(.sunnahReminders) { SunnahRemindersView() }
+                #endif
+
                 // The same screen the Settings tab opens from its top card: the welcome's answer,
                 // the Start Here guide it switches on at the top of the Islam tab, and the replay.
                 AboutYouSettingsRow(tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary)
             }
-
-            // The same screen Quran Settings and Notifications open (Abu, 2026-09-20: "sunnah
-            // reminders should also be in islam settings"). The reminders are acts of worship
-            // across the whole day, not only Quran reading, so this is a door they were missing,
-            // not a copy: one `SunnahRemindersView`, three ways in.
-            #if HAS_QURAN
-            Section(header: Text("REMINDERS")) {
-                islamPageLink(.sunnahReminders) { SunnahRemindersView() }
-            }
-            #endif
 
             // Last on the page (Abu, 2026-10-10): a page opens on its own settings, and the tips and
             // the Need a Hand? switch wait at the foot.
@@ -178,7 +181,7 @@ struct SettingsIslamView: View {
                 // (`AlphabetReadingPreview`, moving with the thumb), the slider and its read-out, then
                 // the device-size switch. The alphabet screens keep their own glass pill, where watching
                 // the letters grow is the point.
-                Section(header: Text("ARABIC SIZE"),
+                Section(header: Text("SIZE"),
                         footer: Text("How much larger the Arabic reads on the alphabet screens. A floor: the letters never render smaller than your device's own text size.")) {
                     VStack(alignment: .leading, spacing: 12) {
                         AlphabetReadingPreview(size: letterTypeSize(steps: liveLetterSteps ?? settings.arabicLetterSizeIndex))
@@ -389,7 +392,7 @@ struct IslamTextSizeSettingsView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("TEXT SIZE"),
+                Section(header: Text("SIZE"),
                         footer: Text("Applies to everything on the Al-Islam tab: the articles and guides, the duas and dhikr, the 99 Names and the libraries. \(IslamSettingsCopy.ownTextSizes)")) {
                     VStack(alignment: .leading, spacing: 12) {
                         // An article of the tab as the preview (`IslamReadingPreview`), moving with the

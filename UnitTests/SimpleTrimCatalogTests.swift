@@ -72,10 +72,12 @@ final class SimpleTrimCatalogTests: XCTestCase {
         XCTAssertFalse(settings.hides(.playTestMode, unless: false))
     }
 
-    /// Pinned on purpose: a new hide is a new catalog case, and the number moves with it. 45 since
+    /// Pinned on purpose: a new hide is a new catalog case, and the number moves with it. 45 from
     /// 2026-11-18, when the Hadith tab's NARRATORS section got its case (`.hadithNarrators`): it had
-    /// been reading the flag raw, which Scripts/check_simple_trims.py fails.
+    /// been reading the flag raw, which Scripts/check_simple_trims.py fails. 44 since 2026-11-25:
+    /// `.wordOfDayTile` went with the tile it hid, when YOUR SUMMARY became lines and the Word of the
+    /// Day stayed the capsule under them in both modes.
     func testCatalogCount() {
-        XCTAssertEqual(SimpleTrim.allCases.count, 45)
+        XCTAssertEqual(SimpleTrim.allCases.count, 44)
     }
 }

@@ -104,7 +104,7 @@ final class IslamSearchFilterTests: XCTestCase {
 
     func testTopicsNarrowTheArticles() {
         var filters = IslamSearchFilters()
-        filters.groups = ["pillars/THE 25 PROPHETS NAMED IN THE QURAN"]
+        filters.groups = ["stories/THE 25 PROPHETS NAMED IN THE QURAN"]
         let found = hits("mercy", filters)
         XCTAssertFalse(found.isEmpty)
         XCTAssertTrue(found.allSatisfy { $0.entry?.group == "THE 25 PROPHETS NAMED IN THE QURAN" })

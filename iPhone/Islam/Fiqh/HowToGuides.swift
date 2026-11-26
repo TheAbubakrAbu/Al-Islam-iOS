@@ -1612,6 +1612,8 @@ struct TravelPrayerView: View {
                         ScriptureQuote(hadith: "bukhari:1107", cite: "Sahih al-Bukhari 1107", arabic: 23...43, english: 0...24)
                         ArticleParagraph(verbatim: "Combining is also allowed for a resident in hard rain, illness, or a genuine hardship, by the report of Ibn Abbas that the Prophet combined in Madinah without fear or travel so that his ummah not be put to difficulty (Sahih Muslim 705).")
                         ScriptureQuote(hadith: "muslim:705b", cite: "Sahih Muslim 705", arabic: 28...66, english: 0...72)
+                        ArticleParagraph(verbatim: "How to join the two prayers step by step, and the questions that come with it, have their own guide:")
+                        ArticleDoorRow(door: .article("CombinePrayersView"))
                     }
                 }
 
@@ -1638,12 +1640,16 @@ struct TravelPrayerView: View {
                         ArticleParagraph(verbatim: "Combining is a concession for hardship while actually on the move, not a fixed rule of travel. Dhuhr may be brought to Asr's time or Asr brought forward to Dhuhr's; Maghrib and Isha likewise. Each prayer is prayed complete in itself, one after the other, with one adhan and two iqamahs.")
                         ScriptureQuote(hadith: "bukhari:1107", cite: "Sahih al-Bukhari 1107", arabic: 23...43, english: 0...24)
                         ArticleParagraph(verbatim: "Combining is also allowed for a resident in hard rain, illness, or a genuine hardship.")
+                        ArticleParagraph(verbatim: "How to join the two prayers step by step has its own guide:")
+                        ArticleDoorRow(door: .article("CombinePrayersView"))
                     }
                 }
 
                 Section(header: ArticleHeader("PRAYING IN A VEHICLE")) {
                     ArticleParagraph(verbatim: "Obligatory prayers are prayed standing on the ground facing the qiblah wherever stopping is possible. When it is not (an aircraft or train, with the time about to pass), pray as you are able: standing if you can, otherwise seated, facing the qiblah throughout as far as you can, turning with the vehicle if it turns. Voluntary prayers may be offered seated facing the direction of travel, as the Prophet prayed on his mount:")
                     ScriptureQuote(hadith: "bukhari:1094", cite: "Sahih al-Bukhari 1094", arabic: 19...32, english: 0...18)
+                    ArticleParagraph(verbatim: "Flying has its own guide: planning the prayers around a flight, reading the times in the air, and praying on board:")
+                    ArticleDoorRow(door: .article("PlanePrayerView"))
                 }
 
                 ArticleOnly(.long) {
@@ -1666,6 +1672,269 @@ struct TravelPrayerView: View {
         }
         .englishArticle().selectableArticleList(article: "TravelPrayerView")
         .navigationTitle("How to Pray While Traveling")
+    }
+}
+
+/// How the two prayers of a pair are joined, step by step (Abu, 2026-11-25: "a how to guide how to
+/// combine prayers when traveling"). `TravelPrayerView` stays the overview and opens this page from
+/// its COMBINING section; Traveling Mode's explainer opens it by id.
+struct CombinePrayersView: View {
+    var body: some View {
+        List {
+            Group {
+                ArticleLengthSection()
+
+                Section(header: ArticleHeader("SUMMARY")) {
+                    ArticleLead(articleMarkdown: "In short: a traveler may join Dhuhr with Asr, and Maghrib with Isha (**jam', جَمع**), praying the pair one after the other in the time of either one. Fajr is never joined to anything, and Asr is never joined to Maghrib. Each prayer keeps its own rak'ah and its own iqamah: joining changes only the time.")
+                }
+
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("WHICH PRAYERS")) {
+                        ArticleParagraph(verbatim: "Only two pairs are ever joined: Dhuhr with Asr, and Maghrib with Isha. Ibn Abbas (may Allah be pleased with him) said:")
+                        ScriptureQuote(hadith: "bukhari:1107", cite: "Sahih al-Bukhari 1107", arabic: 23...43, english: 0...24)
+                        ArticleParagraph(verbatim: "The pairs are fixed by what the Prophet (peace and blessings be upon him) did. No report joins Fajr to the Isha before it or to the Dhuhr after it, and none joins Asr to Maghrib, so each of those is prayed in its own time on every journey.")
+                    }
+
+                    Section(header: ArticleHeader("EARLY OR LATE")) {
+                        ArticleParagraph(articleMarkdown: "The pair may be prayed in the time of the first (**jam' taqdim**, early joining) or in the time of the second (**jam' ta'khir**, late joining). The Prophet (peace and blessings be upon him) chose by where the journey found him. Anas (may Allah be pleased with him) said:")
+                        ScriptureQuote(hadith: "bukhari:1112", cite: "Sahih al-Bukhari 1112", arabic: 17...48, english: 0...55)
+                        ArticleParagraph(verbatim: "That is late joining: on the move when Dhuhr came in, he prayed both at the next stop. Mu'adh ibn Jabal (may Allah be pleased with him) described the other form at Tabuk, Asr brought forward to Dhuhr and Isha brought forward to Maghrib before setting off:")
+                        ScriptureQuote(hadith: "tirmidhi:553", cite: "Jami' at-Tirmidhi 553; graded sahih by al-Albani", arabic: 48...82, english: [31...51, 73...93])
+                        ArticleParagraph(verbatim: "Early joining is also what every pilgrim does at Arafah, and late joining what he does at Muzdalifah, by agreement of the scholars. So do whichever is easier: if you are stopped when the first time comes in and will be moving through the second, join early; if you are moving through the first, delay it and join when you stop.")
+                    }
+
+                    Section(header: ArticleHeader("STEP BY STEP")) {
+                        ArticleStep("1. **Know which form you are praying.** Joining early, the time of the first prayer must have come in. Joining late, decide to delay before the time of the first prayer runs out, so that it is delayed by intention and not by neglect.")
+                        ArticleStep("2. **One adhan, and an iqamah for each prayer.** That is how the Prophet (peace and blessings be upon him) joined Dhuhr and Asr at Arafah, as Jabir (may Allah be pleased with him) described:")
+                        ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 922...935, english: 1567...1607)
+                        ArticleStep("3. **Pray the first prayer and give the salam.** Dhuhr is two rak'ah when you are shortening. Maghrib is always three.")
+                        ArticleStep("4. **Stand again without a long gap**, give the iqamah, and pray the second: Asr as two rak'ah, Isha as two.")
+                        ArticleStep("5. **Keep the order** in both forms: Dhuhr before Asr, Maghrib before Isha, even when you are praying them in the time of the second. The Standing Committee ruled the order obligatory whichever time is used.")
+                        ArticleStep("6. **Nothing voluntary between the two.** Ibn Umar (may Allah be pleased with him) said of the night at Muzdalifah:")
+                        ScriptureQuote(hadith: "bukhari:1673", cite: "Sahih al-Bukhari 1673", arabic: 22...44, english: 0...36)
+                        ArticleStep("7. **Witr may follow at once.** Once Isha has been prayed, the time of Witr has begun, even when Isha was joined in the time of Maghrib (the Standing Committee; Ibn al-Uthaymin).")
+                    }
+                }
+
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("WHICH PRAYERS")) {
+                        ArticleBullet("• **Dhuhr with Asr**, and **Maghrib with Isha**. Nothing else.")
+                        ArticleBullet(verbatim: "• Fajr is never joined to anything, and Asr is never joined to Maghrib.")
+                        ScriptureQuote(hadith: "bukhari:1107", cite: "Sahih al-Bukhari 1107", arabic: 23...43, english: 0...24)
+                    }
+
+                    Section(header: ArticleHeader("EARLY OR LATE")) {
+                        ArticleParagraph(articleMarkdown: "Pray the pair in the time of the first (**jam' taqdim**) or in the time of the second (**jam' ta'khir**), whichever is easier: join early if you are stopped now and will be moving later, join late if you are moving now. Anas (may Allah be pleased with him) said:")
+                        ScriptureQuote(hadith: "muslim:704b", cite: "Sahih Muslim 704", arabic: 21...44, english: 0...32)
+                    }
+
+                    Section(header: ArticleHeader("STEP BY STEP")) {
+                        ArticleStep("1. **Know which form you are praying.** Early: the time of the first prayer has come in. Late: you decided to delay before the first prayer's time ran out.")
+                        ArticleStep("2. **One adhan, and an iqamah for each prayer**, as the Prophet (peace and blessings be upon him) joined Dhuhr and Asr at Arafah:")
+                        ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 922...935, english: 1567...1607)
+                        ArticleStep("3. **Pray the first prayer and give the salam.** Dhuhr is two rak'ah when you are shortening. Maghrib is always three.")
+                        ArticleStep("4. **Stand again without a long gap**, give the iqamah, and pray the second: Asr as two rak'ah, Isha as two.")
+                        ArticleStep("5. **Keep the order** in both forms: Dhuhr before Asr, Maghrib before Isha.")
+                        ArticleStep("6. **Nothing voluntary between the two.** Witr may be prayed as soon as Isha is done, even in the time of Maghrib.")
+                    }
+                }
+
+                Section(header: ArticleHeader("HOW MANY RAK'AH")) {
+                    ArticleBullet("• **Dhuhr and Asr**: two and two.")
+                    ArticleBullet("• **Maghrib and Isha**: three and two. Maghrib is never shortened.")
+                    ArticleBullet("• **Fajr**: two, in its own time.")
+                    ArticleBullet(verbatim: "• Joining without traveling, in illness or a resident's real hardship, leaves every prayer at its full length: four and four, three and four.")
+                }
+
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("SHORTENING IS NOT COMBINING")) {
+                        ArticleParagraph(verbatim: "The two concessions are often taken for one. Shortening belongs to travel itself: a traveler shortens every four-rak'ah prayer from the time he leaves his town until he returns to it, and most scholars hold that it is better for him than praying in full. Combining belongs to need: it is for whoever would find it hard to pray each prayer in its own time, traveler or not.")
+                        ArticleParagraph(verbatim: "So on the road, join. Settled at your destination, in a hotel or a relative's home, it is better to pray each prayer in its time, shortened. Joining stays allowed there, and the reason Mu'adh gave for it at Tabuk is ease:")
+                        ScriptureQuote(hadith: "muslim:706b", cite: "Sahih Muslim 706", arabic: 29...58, english: 0...56)
+                        ArticleParagraph(verbatim: "The Prophet (peace and blessings be upon him) did not join on every journey. At Mina during the Farewell Hajj he shortened and, as the scholars point out, prayed each prayer in its own time. Abdullah ibn Umar (may Allah be pleased with him) said:")
+                        ScriptureQuote(hadith: "bukhari:1082", cite: "Sahih al-Bukhari 1082", arabic: 20...31, english: 0...18)
+                        ArticleParagraph(verbatim: "Ibn al-Uthaymin put it in one line: for the traveler on the road joining is better, in whichever time is easier; for the traveler who has stopped, not joining is better, unless he is tired, short of water, or otherwise in need of it.")
+                    }
+
+                    Section(header: ArticleHeader("COMMON QUESTIONS")) {
+                        ArticleParagraph(articleMarkdown: "**I prayed Dhuhr at home and then set off. May I pray Asr early, on the road?** Pray Asr in its own time, shortened if you are a traveler by then. Early joining is the two prayers offered back to back, and the majority of scholars make that continuity a condition; Ibn Taymiyyah did not. With Dhuhr long finished, leave the difference alone and wait for Asr's time.")
+                        ArticleParagraph(articleMarkdown: "**My journey leaves after Dhuhr and I will not be able to stop for Asr.** Join Asr to Dhuhr before you leave. Joining is open to a resident who would otherwise lose the second prayer's time, so this is allowed even at home. Whoever is still inside his town prays both in full, four and four, because shortening begins only once its buildings are behind him; at an airport outside the town he shortens as well (Ibn al-Uthaymin).")
+                        ArticleParagraph(articleMarkdown: "**Must I intend to join when I begin the first prayer?** The Shafi'i and Hanbali schools require the intention within the first prayer when joining early, the Hanbalis at its opening takbir. Ibn Taymiyyah, Ibn Baz and Ibn al-Uthaymin held that it is not a condition: if the reason is there, you may decide after the first prayer is finished. Intend it from the start and you are clear of the difference.")
+                        ArticleParagraph(articleMarkdown: "**How long a gap may come between the two?** When joining early, a short one: about the time of an iqamah and a quick wudhu, as the Hanbali jurists put it. The majority hold that a long gap breaks the joining; Ibn Taymiyyah held that it does not. When joining late there is more room, since the second prayer is in its own time either way, but praying them together is still the Sunnah.")
+                        ArticleParagraph(articleMarkdown: "**May Asr be joined to Jumu'ah?** Ibn Baz and Ibn al-Uthaymin said no: Jumu'ah is a prayer of its own and no text joins Asr to it, so a traveler who prays Jumu'ah with the people prays Asr in its time. The Shafi'i school allows it. A traveler is not obliged to attend Jumu'ah, and if he prays Dhuhr instead he may join Asr to it as on any other day.")
+                        ArticleParagraph(articleMarkdown: "**I delayed Dhuhr to join it with Asr, then reached home before Asr came in.** Pray Dhuhr now, and in full: you are a resident again and its time has not ended. Pray Asr in its own time, also in full. Had Asr already come in, you would pray Dhuhr and then Asr, both in full, since shortening ended when you arrived.")
+                        ArticleParagraph(articleMarkdown: "**I joined Asr early and reached home before Asr came in.** The prayer stands and is not repeated: it was valid when you prayed it, and the excuse ending afterward does not undo it (Ibn Qudamah in al-Mughni; an-Nawawi in al-Majmu'; the Standing Committee). Ibn al-Uthaymin added that if you expect to arrive before Asr, it is better not to join in the first place.")
+                        ArticleParagraph(articleMarkdown: "**I am praying behind an imam who is a resident.** Pray four with him, whichever of your prayers it is. That was the practice of Ibn Umar (may Allah be pleased with him):")
+                        ScriptureQuote(hadith: "muslim:694c", cite: "Sahih Muslim 694", arabic: 45...58, english: 34...54)
+                    }
+                }
+
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("SHORTENING IS NOT COMBINING")) {
+                        ArticleParagraph(verbatim: "Shortening belongs to travel itself: every four-rak'ah prayer is two from the time you leave your town until you return. Combining belongs to need. On the road, join; settled at your destination, it is better to pray each prayer in its own time, shortened, though joining stays allowed.")
+                    }
+
+                    Section(header: ArticleHeader("COMMON QUESTIONS")) {
+                        ArticleParagraph(articleMarkdown: "**I prayed Dhuhr at home and then set off.** Pray Asr in its own time, shortened if you are a traveler by then. Early joining is the two prayers offered back to back.")
+                        ArticleParagraph(articleMarkdown: "**My journey leaves after Dhuhr and I will not be able to stop for Asr.** Join Asr to Dhuhr before you leave. Inside your own town pray both in full; shortening begins once its buildings are behind you.")
+                        ArticleParagraph(articleMarkdown: "**I joined Asr early and reached home before Asr came in.** The prayer stands and is not repeated.")
+                        ArticleParagraph(articleMarkdown: "**I am praying behind an imam who is a resident.** Pray four with him, whichever of your prayers it is.")
+                    }
+                }
+
+                Section(header: ArticleHeader("IN SUMMARY")) {
+                    ArticleClosing("Dhuhr with Asr, Maghrib with Isha: one adhan, an iqamah for each, the first and then the second with nothing between them, in the time of whichever is easier. Shorten because you are traveling; join because you need to.")
+                    ArticleDoorRow(door: .article("TravelPrayerView"))
+                    ArticleDoorRow(door: .article("PlanePrayerView"))
+                }
+
+                ArticleSourcesSection(article: "CombinePrayersView")
+            }
+            .themedListRowBackground()
+        }
+        .englishArticle().selectableArticleList(article: "CombinePrayersView")
+        .navigationTitle("How to Combine Prayers While Traveling")
+    }
+}
+
+/// Praying around and during a flight (Abu, 2026-11-25: "a how to guide on how to pray on a plane").
+/// `TravelPrayerView` opens it from PRAYING IN A VEHICLE; Traveling Mode's explainer opens it by id.
+struct PlanePrayerView: View {
+    var body: some View {
+        List {
+            Group {
+                ArticleLengthSection()
+
+                Section(header: ArticleHeader("SUMMARY")) {
+                    ArticleLead("In short: pray on the ground when the journey allows it, before boarding or after landing, joining Dhuhr with Asr or Maghrib with Isha if that is what makes it possible. If a prayer's time will end while you are in the air, pray it on the plane: standing and facing the qiblah if you can, seated in your place if you cannot. The time must not pass.")
+                }
+
+                ArticleOnly(.long) {
+                    Section(header: ArticleHeader("PLAN BEFORE YOU FLY")) {
+                        ArticleParagraph(verbatim: "A prayer belongs to its time, in the air as on the ground:")
+                        ScriptureQuote(quran: "4:103", words: 13...19)
+                        ArticleStep("1. **Set the prayer times beside the flight.** For each prayer between leaving home and arriving, ask where you will be when its time comes in and where you will be when it ends.")
+                        ArticleStep("2. **Use the pairs.** Dhuhr and Asr can be prayed together before boarding or together after landing, and so can Maghrib and Isha, as long as you are on the ground inside the time of one of the two. A pair joined before you leave your own town is prayed in full; past its buildings, as at an airport outside the town, you shorten as well.")
+                        ArticleStep("3. **Know what cannot be joined.** Fajr is joined to nothing, Asr is not joined to Maghrib, and Isha is not joined to Fajr. A flight that covers the whole of such a prayer's time means praying it in the air.")
+                        ArticleStep("4. **Board in wudhu, with your socks on.** Socks put on while in wudhu may be wiped over in place of washing the feet, and the traveler's allowance is three days and nights. Ali (may Allah be pleased with him) said:")
+                        ScriptureQuote(hadith: "muslim:276a", cite: "Sahih Muslim 276", arabic: 54...67, english: 37...63)
+                        ArticleStep("5. **Find the qiblah before you need it.** Note the direction of travel and where Makkah lies from the route, so that in the air you only have to check the flight map.")
+                    }
+
+                    Section(header: ArticleHeader("THE TIME IN THE AIR")) {
+                        ArticleParagraph(verbatim: "The times of prayer are signs in the sky, and they are read from where you are. In the air that means the sun as you see it from the plane, not the timetable of the city below and not the clock of the city you left. Maghrib comes in when the sun's disc has gone from your horizon:")
+                        ScriptureQuote(hadith: "bukhari:561", cite: "Sahih al-Bukhari 561", arabic: 13...24, english: 0...17)
+                        ArticleParagraph(verbatim: "Fajr comes in when the true dawn spreads along the horizon and ends when the sun's edge appears; Dhuhr comes in when the sun passes its highest point. Height changes what you see: at cruising altitude the sun sets later and rises earlier than it does for the people beneath you. Direction changes it more: flying west you follow the sun and the day stretches; flying east you meet the night early.")
+                        ArticleParagraph(verbatim: "The scholars gave the same rule for the fast, which ends with the same sunset. Ibn Baz and the Standing Committee ruled that a fasting passenger who can still see the sun does not break his fast, even when he knows the city below has broken theirs, and Ibn al-Uthaymin said of a traveler heading west that he keeps fasting until the sun sets where he is, however long that takes. The Prophet (peace and blessings be upon him) tied it to the sun itself:")
+                        ScriptureQuote(hadith: "bukhari:1954", cite: "Sahih al-Bukhari 1954", arabic: 35...50, english: 4...28)
+                        ArticleParagraph(verbatim: "In practice: look out of the window, check the flight map for where you are and the local time there, and when the sign is in doubt wait until you are sure the time has come in. A prayer offered before its time does not count.")
+                    }
+
+                    Section(header: ArticleHeader("FLIGHT MODE IN THIS APP")) {
+                        ArticleParagraph(verbatim: "Reading those signs from a seat is hard. The plane crosses a time zone an hour, the window may face away from the sun, and the timetable in your pocket is for a city you have left. Flight Mode does the working out, and needs nothing typed: turn it on, and it starts from where your phone last was. In the air the phone's GPS, which works in airplane mode, follows the plane, and Flight Mode finds the minute each prayer's sign reaches it.")
+                        ArticleParagraph(verbatim: "GPS needs a view of the sky, so it reaches a phone beside a window and seldom one in an aisle seat. For that, and for a flight you want worked out before you board, add where you land, and the two times on your ticket if you have them: the whole route is then known in advance.")
+                        ArticleBullet(verbatim: "• Each prayer is timed for where the plane will be when it comes in, not for the ground beneath you now. Once the route is known, a notification is set for each one, so it arrives in airplane mode.")
+                        ArticleBullet(verbatim: "• The times allow for your height. From cruising altitude the horizon lies about three and a half degrees lower, so the sun sets about a quarter of an hour later than for the people beneath you and rises as much earlier, and the dawn and the end of the dusk move with them.")
+                        ArticleBullet(verbatim: "• Beside each prayer that comes in on board it follows the plan above: whether it may be joined to the prayer before it on the ground before you board, whether its time lasts until after you land, alone or joined to the next, so that it can wait for the ground, or whether it ends in the air, so that it is prayed on board.")
+                        ArticleBullet(verbatim: "• It shows the qiblah from your seat, as so many degrees to the right or left of the plane's nose. That comes from the route: a phone's compass cannot be trusted inside an aircraft.")
+                        ArticleBullet(verbatim: "• After landing, the times and the notifications are the arrival city's.")
+                        ArticleParagraph(verbatim: "The app also asks by itself, with a notification: when your phone settles at an airport, and again if its GPS shows a plane's speed and height. An iPhone does not wake an app in the air in airplane mode, so the question at the airport is the one that reaches you in time.")
+                        ArticleParagraph(verbatim: "These times are a calculation, and a calculation serves the signs; it does not replace them. From a ticket alone they are good to about ten minutes, because a flight may leave late or fly around weather. Each GPS fix corrects them, and between fixes they rest on the course the plane was last seen to keep. Where the app and the sky disagree, the sky decides: do not pray Maghrib or break a fast while the sun is still in sight, and give a prayer a few minutes after its time before you begin.")
+                        #if os(iOS) && HAS_ADHAN
+                        FlightModeDoorRow()
+                        #endif
+                    }
+
+                    Section(header: ArticleHeader("HOW TO PRAY ON BOARD")) {
+                        ArticleStep("1. **Ask for a place to stand.** A galley or the space by a door is enough for one person. Ask the crew, choose a quiet stretch of the flight, and do not pray where you have been told it is unsafe.")
+                        ArticleStep("2. **Stand, bow and prostrate if you can.** These are pillars of an obligatory prayer for whoever is able, and the Standing Committee ruled that shyness is no excuse for sitting. Allah says:")
+                        ScriptureQuote(quran: "2:238", words: 5...7)
+                        ArticleParagraph(verbatim: "And the Prophet (peace and blessings be upon him) said to Imran ibn Husayn (may Allah be pleased with him):")
+                        ScriptureQuote(hadith: "bukhari:1117", cite: "Sahih al-Bukhari 1117", arabic: 40...50, english: 13...35)
+                        ArticleStep("3. **Face the qiblah.** Find it from the flight map, a compass, or the crew: Ibn al-Uthaymin ruled that a passenger must ask when the direction is not shown, and that his prayer is not valid if he could have asked and did not. Begin facing it, and if the plane turns, turn with it as far as you are able.")
+                        ArticleStep("4. **If you truly cannot stand or cannot face it**, because the seat-belt sign is on, the aisles are in use, or there is no space at all, pray in your seat. Bow by leaning forward and make the prostration lower than the bowing. What you cannot do falls away, and what you can do remains:")
+                        ScriptureQuote(quran: "64:16", words: 0...3)
+                        ScriptureQuote(hadith: "muslim:1337", cite: "Sahih Muslim 1337", arabic: 82...88, english: 106...123)
+                        ArticleStep("5. **Shorten.** You are a traveler: Dhuhr, Asr and Isha are two rak'ah each, Maghrib three, Fajr two.")
+                        ArticleStep("6. **Voluntary prayers are easier still.** They may be prayed seated, facing wherever the plane is heading, with a nod for the bowing and a lower one for the prostration. Amir ibn Rabi'ah (may Allah be pleased with him) said:")
+                        ScriptureQuote(hadith: "bukhari:1097", cite: "Sahih al-Bukhari 1097", arabic: 25...54, english: 0...30)
+                    }
+
+                    Section(header: ArticleHeader("WUDHU ON BOARD")) {
+                        ArticleBullet(verbatim: "• Use the basin in the lavatory, with little water, and dry what you splash. Wudhu done with care takes very little.")
+                        ArticleBullet(verbatim: "• Wipe over your socks instead of washing your feet, if you put them on while in wudhu.")
+                        ArticleBullet(verbatim: "• If the prayer can be joined to the next and you will land inside the second one's time, delay it with the intention of joining and pray both on the ground with wudhu (Ibn al-Uthaymin).")
+                        ArticleBullet(verbatim: "• If water cannot be used at all (none left, frozen, or not permitted), make tayammum on a surface that carries dust; Ibn al-Uthaymin mentioned the seats.")
+                        ArticleBullet(verbatim: "• If there is neither water nor dust and the prayer cannot wait for the ground, pray as you are. Ibn al-Uthaymin ruled so for the passenger, and Ibn Qudamah and Ibn al-Qayyim held that such a prayer is not repeated, since its owner did what he was commanded as far as he could. The proof is the Companions who prayed with no water before tayammum was revealed and were not told to repeat:")
+                        ScriptureQuote(hadith: "bukhari:336", cite: "Sahih al-Bukhari 336", arabic: 34...52, english: 27...57)
+                    }
+
+                    Section(header: ArticleHeader("COMMON QUESTIONS")) {
+                        ArticleParagraph(articleMarkdown: "**May I wait and pray after landing?** If you will land with enough of the prayer's time left, yes; and if you could not have stood or faced the qiblah on board, you must, because those are dropped only when the time would otherwise be lost. The same holds when the prayer can be joined to the next and you will land inside the second one's time: delay it and pray the two together on the ground (Ibn al-Uthaymin). If you are able to pray it whole on board, standing and facing the qiblah, the Standing Committee held with the majority that you may pray it there in its own time. What is never allowed is to let the time run out: Fajr is not left until after sunrise, nor Asr until after sunset, on the excuse of a flight.")
+                        ArticleParagraph(articleMarkdown: "**I prayed seated when I could have stood.** Then the prayer has to be repeated. The Standing Committee was asked about a passenger who sat out of shyness and answered that sitting is not allowed in an obligatory prayer for one who is able to stand. If you sat, or faced another way, because you truly could not do otherwise, the prayer is valid.")
+                        ArticleParagraph(articleMarkdown: "**The day, or the night, never seems to end.** It ends when the sun sets or rises for you, not when a clock says it should. Flying west, each prayer comes in later than it would have at home, and you pray it when its sign arrives for you; flying east the prayers come quickly, and you pray each as it comes in. A prayer you have already prayed in its time is not repeated because you land somewhere its time has only just begun.")
+                        ArticleParagraph(articleMarkdown: "**I am fasting. When do I break my fast in the air?** When the sun sets for you. If you can still see it from the plane you are still fasting, even if the city below has broken its fast (Ibn Baz; the Standing Committee). If you broke your fast on the ground at sunset and then took off and saw the sun again, your fast is complete and you do not resume it. A traveler may also use his concession, break the fast, and make the day up.")
+                        ArticleParagraph(articleMarkdown: "**Is a prayer in the air valid at all?** Yes. The Standing Committee recorded the agreement of the scholars that when the time would otherwise pass, the prayer is obligatory on board and is prayed as far as one is able. Where there is still time to pray on the ground, the majority allow praying on board as well; a few later Maliki jurists held that a prayer must be on the ground or on something resting on it, and the Committee judged the majority's view correct.")
+                    }
+                }
+
+                ArticleOnly(.short) {
+                    Section(header: ArticleHeader("PLAN BEFORE YOU FLY")) {
+                        ArticleStep("1. **Set the prayer times beside the flight**: where will you be when each one comes in, and when it ends?")
+                        ArticleStep("2. **Use the pairs.** Dhuhr and Asr can be prayed together before boarding or after landing, and so can Maghrib and Isha, as long as you are on the ground inside the time of one of the two.")
+                        ArticleStep("3. **Know what cannot be joined.** Fajr is joined to nothing. A flight that covers all of its time means Fajr in the air.")
+                        ArticleStep("4. **Board in wudhu, with your socks on**, so that you can wipe over them instead of washing your feet. Ali (may Allah be pleased with him) gave the traveler's allowance:")
+                        ScriptureQuote(hadith: "muslim:276a", cite: "Sahih Muslim 276", arabic: 54...67, english: 37...63)
+                    }
+
+                    Section(header: ArticleHeader("THE TIME IN THE AIR")) {
+                        ArticleParagraph(verbatim: "The times of prayer are read from the sky where you are: the sun as you see it from the plane, not the timetable of the city below or the clock of the city you left. Maghrib comes in when the sun's disc is gone from your horizon, and Fajr when the true dawn shows. Flying west stretches the day and flying east shortens it. When the sign is in doubt, wait until you are sure the time has come in.")
+                        ScriptureQuote(hadith: "bukhari:561", cite: "Sahih al-Bukhari 561", arabic: 13...24, english: 0...17)
+                    }
+
+                    Section(header: ArticleHeader("FLIGHT MODE IN THIS APP")) {
+                        ArticleParagraph(verbatim: "Flight Mode works those times out for you, with nothing to type: turn it on, and in the air your phone's GPS follows the plane and gives the minute each prayer comes in for it, allowing for its height. Add where you land and the whole flight is worked out before you board, with a notification at each prayer, even in airplane mode. It also says which prayers can be joined before you board or can wait for the ground, and shows the qiblah from your seat. Its times are a calculation: where they and the sky disagree, the sky decides.")
+                        #if os(iOS) && HAS_ADHAN
+                        FlightModeDoorRow()
+                        #endif
+                    }
+
+                    Section(header: ArticleHeader("HOW TO PRAY ON BOARD")) {
+                        ArticleStep("1. **Ask for a place to stand**: a galley or the space by a door, when the crew say it is safe.")
+                        ArticleStep("2. **Stand, bow and prostrate if you can.** They are pillars of an obligatory prayer for whoever is able:")
+                        ScriptureQuote(hadith: "bukhari:1117", cite: "Sahih al-Bukhari 1117", arabic: 40...50, english: 13...35)
+                        ArticleStep("3. **Face the qiblah**, from the flight map or by asking the crew, and turn with the plane if you are able.")
+                        ArticleStep("4. **If you truly cannot stand or cannot face it**, pray in your seat: bow by leaning forward and make the prostration lower. What you cannot do falls away:")
+                        ScriptureQuote(quran: "64:16", words: 0...3)
+                        ArticleStep("5. **Shorten**: Dhuhr, Asr and Isha are two rak'ah each.")
+                        ArticleStep("6. **Voluntary prayers** may be prayed seated, facing wherever the plane is heading.")
+                    }
+
+                    Section(header: ArticleHeader("WUDHU ON BOARD")) {
+                        ArticleBullet(verbatim: "• Use the basin, with little water, and wipe over your socks instead of washing your feet.")
+                        ArticleBullet(verbatim: "• If water cannot be used at all, make tayammum on a surface that carries dust.")
+                        ArticleBullet(verbatim: "• If there is neither, pray as you are before you let the time pass.")
+                    }
+
+                    Section(header: ArticleHeader("COMMON QUESTIONS")) {
+                        ArticleParagraph(articleMarkdown: "**May I wait and pray after landing?** Yes, if you will land with enough of the prayer's time left, or if it can be joined to the next prayer and you will land inside the second one's time. Never when the time would run out.")
+                        ArticleParagraph(articleMarkdown: "**I prayed seated when I could have stood.** The prayer has to be repeated. If you truly could not stand or face the qiblah, it is valid.")
+                        ArticleParagraph(articleMarkdown: "**I am fasting. When do I break my fast in the air?** When the sun sets for you: while you can still see it from the plane, you are still fasting.")
+                    }
+                }
+
+                Section(header: ArticleHeader("IN SUMMARY")) {
+                    ArticleClosing("Plan the prayers around the flight and pray on the ground whenever the pairs allow it. In the air, read the time from the sun where you are; stand and face the qiblah if you can, sit if you cannot; shorten, and never let a prayer's time pass.")
+                    ArticleDoorRow(door: .article("TravelPrayerView"))
+                    ArticleDoorRow(door: .article("CombinePrayersView"))
+                }
+
+                ArticleSourcesSection(article: "PlanePrayerView")
+            }
+            .themedListRowBackground()
+        }
+        .englishArticle().selectableArticleList(article: "PlanePrayerView")
+        .navigationTitle("How to Pray on a Plane")
     }
 }
 

@@ -796,6 +796,48 @@ check the decoded peak before keeping an HE-AAC encode of a loud master.
 .xz/.solidpack files, Assets.car (actool already LZFSE; the 1024 px app icon in three appearances is most of
 it), fonts (UIAppFonts needs them plain).
 
+## 21. Phase 15: tab switches and sheets (2026-11-25)
+
+Abu: "Lag sometimes when going from Islam to settings I don't know about other views to settings but it's
+annoying." Measured first, Debug build on the iPhone 17 Pro simulator, with `-stallWatch` (every main run-loop
+pass over 40 ms; a pass logged "after beforeWaiting" is the loop asleep, not work) and the tab switches made
+by `-stressScript "tab:settings;wait:3;tab:islam;..."` and by real taps, which agreed.
+
+**What it was.** `MainTabView.body` runs again on every tab switch (the selection is its state) and built the
+five tab roots in place. A root made that way is a new value each time and never compares equal to the last
+one, so SwiftUI ran the body of EVERY tab on every switch: going from Islam to Settings rebuilt the Adhan tab
+(its sky and prayer list), the Quran tab and the Hadith tab too (`-renderCounter -printChanges`: "AdhanView:
+@self changed"). How long that took depended on what those tabs were holding, which is the "sometimes".
+
+**The fix.** Each root sits behind a view with no stored properties (`AdhanTabRoot`, `HadithTabRoot`,
+`IslamTabRoot`, `SettingsTabRoot`; `QuranTabRoot` takes the one Bool the Quran tab is told), in
+Al-IslamApp.swift. An empty view is the same value every time, so SwiftUI never asks for its body again.
+
+| Longest busy pass per switch | Before | After |
+|---|---|---|
+| Islam to Settings | 100 to 125 ms | 56 to 87 ms |
+| Settings to Islam | 88 to 144 ms | 58 to 78 ms |
+| Islam to Settings, al-Baqarah open on the Quran tab | 148 to 155 ms | 66 to 68 ms |
+| Quran to Settings (two passes, summed) | 243 to 284 ms | 234 to 239 ms |
+
+The render counter is empty across a switch now: no tab but the two involved runs a body.
+
+**Sheets.** Opening a sheet on one tab woke two views on others. `QuranView` declared
+`@Environment(\.dismiss)`, which makes a view depend on the presentation state around it: every sheet opened
+or closed anywhere ran the Quran tab's whole body (once on open, twice on close). It calls `dismiss` in one
+place (Choose Surah), so the dependency moved to a background view that draws nothing (`DismissHandle`,
+`capturingDismiss(into:)`, QuranView.swift). `SkyCard` held an `@AccessibilityFocusState`, which SwiftUI wakes
+whenever focus moves, and a sheet moves it: three card bodies per sheet opened, six per sheet closed. The
+state is `DayPreviewFocus`'s now, a modifier with nothing to redraw. After both, a sheet opening on the Islam
+tab runs no body on another tab. The Islam Settings sheet itself is barely faster for it: three opens took
+323, 248 and 219 ms before and 349, 220 and 161 ms after, three closes 208, 246 and 251 ms before and 234,
+227 and 208 ms after (Debug). What is left is UIKit laying the sheet out and SwiftUI building its list, and
+the Quran and Hadith gears cost the same or more (Quran: opens 413, 267, 246 ms before; 339, 245, 234 after).
+
+**Rules that fall out.** A view built in a body that runs often should either be cheap to rebuild or sit
+behind an input-free wrapper. `@Environment(\.dismiss)` and the focus-state wrappers belong on the smallest
+view that uses them, never on a tab root or a large card. Not measured: a phone, a Release build.
+
 ## Appendix: acceptance checklist per phase
 
 Paste this, with the boxes ticked or explicitly marked "needs real device", into the closing report of every phase session.
@@ -858,3 +900,4 @@ Append one entry per session, newest last. Format: date, phase, steps done (numb
 - 2026-10-21, later (Phase 12, Abu: "Refactor settings to make it more efficient and so it doesn't constantly update everywhere", "do it as long as you don't affect any functionality"): section 18, all four stages, behavior-preserving by contract. Order of work: `UnitTests/SettingPublishTests` RED against `@AppStorage` (which measured 3-4 publishes per changed write, 2 per unchanged, 1 per raw write of ANY key), `@Setting` in Globals.swift and a scripted rewrite of the 238 declarations in Settings.swift (`settingWillChange(key)` is the one publish; `-publishTrace` prints the key), GREEN; `UnitTests/SettingsSliceTests` then `Scripts/gen_settings_slices.py` -> iPhone/Settings/Model/SettingsSlices.swift (8 slices, four targets, `--check` for CI) with routing from `settingWillChange`, the 14 `@Published` willSets, the manual publishes and `storedContentWasReplaced`; `RootAppearance` subscribes to the five slices that feed the snapshot; `Scripts/qa/settings_observers.py` (per-struct audit, resolves computed members through the fields their bodies read, `MANUAL` for the delegating ones, `--stale` exits 1 on a read outside the observed slices) and `Scripts/migrate_settings_observers.py` rewrote the 255 view observers (`private let settings` + slice observers, 260 bindings moved; `QuranPlayer`'s was a class). Verified: Debug build of all four targets, 390 unit tests (the one failure predates this work), `settings_actions.sh` (new, flips at 20 s, reports slice publishes), `settings_probeshots.sh` (new, screenshot pairs around a flip), `idle.sh` zero everywhere, the 95-screen sweep (alive/crash status only: no pre-change screenshots existed to diff against), a Release build. Files: Globals.swift, Settings.swift, SettingsQuran.swift, SettingsAdhan.swift (comments), SettingsSlices.swift (new), ViewExtensions.swift (RootAppearance), QuranPlayer.swift, SettingsView.swift (one binding), the 101 view files the migration touched, Scripts/gen_settings_slices.py, Scripts/migrate_settings_observers.py, Scripts/qa/{settings_observers.py, settings_slices.json, settings_actions.sh, settings_probeshots.sh, README.md}, UnitTests/{SettingPublishTests, SettingsSliceTests}.swift (registered), project.pbxproj (the new files). Everything uncommitted. Next: split the appearance snapshot's reading faces from its chrome; `_printChanges()` on QuranView / HadithView.content for the one evaluation an Adhan key still costs them; check the sibling build before the next `sync_from_islam.sh --apply` (the generated forwarders name every domain's fields).
 - 2026-11-13 (Phase 13, Abu: "can we make all scrolling things efficient whether list of quran or hadith or chapters or whatever"): section 19. Measured first: a scroll stopwatch (`ScrollProbe` in iPhone/Helpers/System/StressWalker.swift, hooked from `StressWalker.runIfRequested`; `Scripts/qa/scroll.sh`, `Scripts/qa/scroll-screens.txt`, a row in Scripts/qa/README.md) and a 67-screen baseline on an optimized build that keeps the DEBUG probes. One change kept: the reader's Arabic runs on `OwnedTextContainer` (iPhone/Quran/Words/WordByWord.swift: the container class, `WordByWordTextView.makeUIView` / `updateUIView` / `sizeThatFits`, the coordinator holding the storage, one comment on `ArabicInkBleedHost.keepsContainerOpen`), so an ayah is typeset once per row build, not three times: 8 to 12% less main thread per second scrolled in four surahs, pixel-identical on 11 reader screens, `UnitTests/WordByWordWidthTests` +2 tests (a frame change and a measurement leave the typesetting alone; the row height is the text view's own answer at 320, 402 and 800 pt, on 2:255 read from the app's text). Five ideas measured and reverted (UIKit glass, recycled tile hosts, a glass container per grid row, decoration a frame late, one Text per tile) and one suspect cleared by timing it (`juzStats`, 0.2 ms): the ledger in section 19. Every temporary switch is out of the tree (ViewExtensions, QuranView, SurahRows, Highlighted and GlassEffect are byte-identical to HEAD). Pending Abu: Liquid Glass inside scrolling rows (the top of this file). Unit tests: 660 run, 4 skipped by design; the only two failures were Friday-only test bugs with no part in this work (`PrayerNotificationCategoryTests` looked for a prayer named Dhuhr, which is Jumuah on a Friday; both now resolve the midday name and pass). Not verified: a real device. Everything uncommitted.
 - 2026-11-13, later (Phase 13, Abu's two decisions: "sure do the third option", then "we should use grid everywhere except for maybe quran"): section 19, "Decided the same day". Glass that repeats down a scrolling list draws the Classic Look's fill on a hot or 3 GB phone: `inRow` on `ConditionalGlassEffect` (GlassEffect.swift), `rowLiquidGlass` on the appearance snapshot (ViewExtensions.swift), `shouldPlainRowGlass` on `PerformanceProfile` (Globals.swift), and `inRow: true` at 44 sites in SurahRows, QuranView, AyahRow, ContextMenu, SurahView, SurahHeaders, QuranHistoryRows, WordOfDay, HadithView, HadithBookView, HadithComponents, HadithResolvedList, IslamView, NamesView, ArabicLetterViews and ArabicView. Measured before and after on the optimized build with `-perfTierReduced`, three runs each: 21 to 34% less main thread per second scrolled on the four screens timed (the table in section 19); without the flag, unchanged. The Quran tab's default is a list (`Settings.gridMode`, Settings.swift); `-seedClear` added beside the launch seeds; `Scripts/qa/scroll-screens.txt` resets by unsetting. Verified: `GridModeMigrationTests` (10, two new); screenshots of the defaults (the Quran tab with its choice unset opens as a list, the other tabs as grids) and of the weak-phone look on the 17 Pro simulator; the full unit suite, 662 run, 4 skipped by design, 2 failed on timeouts while other work held the Mac at a load average over 80 (`SearchFixTests.testIndexArrivesForTheRiwayahOnScreenAfterASwitch`, `ViewedLogDeadlockTests.testDebouncedWriteLandsOnMainThread`) and both passed when rerun on a quiet Mac (8 s and 1 s). Not run: the UI tests, which seed or accept either layout. Not verified: a real 3 GB or hot phone, where the fill is drawn for real. Everything uncommitted.
+- 2026-11-25 (Phase 15, Abu: "Lag sometimes when going from Islam to settings"): section 21. Tab roots behind input-free wrappers (Al-IslamApp.swift), `DismissHandle` in QuranView.swift, `DayPreviewFocus` in SkyView.swift. Islam to Settings: longest pass 100 to 125 ms down to 56 to 87 ms in Debug on the simulator; no off-screen tab runs a body on a switch or under a sheet any more. Not measured on a phone.

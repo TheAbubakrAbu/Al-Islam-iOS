@@ -700,6 +700,7 @@ struct SettingsView: View {
         case "prayerNames": return .prayerPage(.customPrayerNames)
         case "skyColors": return .skyColors
         case "travelingMode": return .prayerPage(.travelingMode)
+        case "flightMode": return .prayerPage(.flightMode)
         case "notifications": return .notifications
         case "prayerReminders": return .notificationsPage(.prayerReminders)
         case "nagging": return .notificationsPage(.naggingMode)
@@ -1107,15 +1108,14 @@ struct SettingsView: View {
     #if os(iOS)
     /// The hub in grid mode: Notifications across the top as a banner, because it spans every area,
     /// then the four areas two by two in the tab bar's order (Prayer, Quran / Hadith, Islam). The same
-    /// five pages as the rows, each keeping its caption: it is how people find where a setting lives.
-    /// The captions are short enough for a tile's one line at its 0.75 scale floor (Abu, 2026-10-11:
-    /// "line limit 1 looks chopped so shorten the actual text"); the rows say the same words.
+    /// five pages as the rows, by name alone: the lines that said what each page holds are the list's
+    /// (Abu, 2026-11-25: "Get rid of grid mode descriptions for settings like calculation, offsets,
+    /// etc"). A tile is a name under its symbol, as on the Islam tab.
     private var settingsHubGridSection: some View {
         Section(header: SectionIconHeader(String(localized: "SETTINGS"), icon: "gearshape.fill")) {
             VStack(spacing: 8) {
                 #if HAS_ADHAN
                 SettingsGridBanner(title: String(localized: "Notifications"), systemImage: "bell.badge.fill",
-                                   caption: String(localized: "Prayer alerts, adhan sounds, reminders"),
                                    tint: SettingsTint.notifications) { openGrid(.notifications) }
                 #endif
 
@@ -1127,7 +1127,6 @@ struct SettingsView: View {
 
                 SettingsGridTileRow {
                     SettingsGridTile(title: String(localized: "Hadith Settings"), systemImage: "text.book.closed.fill",
-                                     caption: String(localized: "Arabic and English, reading view"),
                                      tint: SettingsTint.hadith, prominent: true) { openGrid(.hadith) }
                     islamGridTile
                 }
@@ -1151,7 +1150,6 @@ struct SettingsView: View {
     #if HAS_ADHAN
     private var prayerGridTile: some View {
         SettingsGridTile(title: String(localized: "Prayer Settings"), systemImage: "safari.fill",
-                         caption: String(localized: "Calculation, offsets, travel, sky"),
                          tint: SettingsTint.prayer, prominent: true) { openGrid(.prayer) }
     }
     #endif
@@ -1159,7 +1157,6 @@ struct SettingsView: View {
     #if HAS_QURAN
     private var quranGridTile: some View {
         SettingsGridTile(title: String(localized: "Quran Settings"), systemImage: "character.book.closed.ar",
-                         caption: String(localized: "Fonts, tajweed, reciters, themes"),
                          tint: SettingsTint.quran, prominent: true) { openGrid(.quran) }
     }
     #endif
@@ -1167,7 +1164,6 @@ struct SettingsView: View {
     /// Both brand colours, as on its row (see `SettingsTint.islam`).
     private var islamGridTile: some View {
         SettingsGridTile(title: String(localized: "Islam Settings"), systemImage: "moon.stars.fill",
-                         caption: String(localized: "Arabic font, libraries, reminders"),
                          tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary,
                          prominent: true) { openGrid(.islam) }
     }
@@ -1783,14 +1779,14 @@ struct AppearancePageView: View {
             Text("YOUR OWN COLORS")
         }
 
+        // A row each (2026-11-25, Design Grammar section 3): a switch and the switch that hangs
+        // under it shared one row here and under Show Liquid Glass, so no line ran between them.
         Section {
-            VStack(alignment: .leading) {
-                SettingsToggle(String(localized: "Top Accent Glow"), caption: String(localized: "A soft wash of your accent color at the top of each screen. Turn it off for a flat background."), isOn: $appearanceSettings.showAccentGlow)
+            SettingsToggle(String(localized: "Top Accent Glow"), caption: String(localized: "A soft wash of your accent color at the top of each screen. Turn it off for a flat background."), isOn: $appearanceSettings.showAccentGlow)
 
-                if settings.showAccentGlow {
-                    SettingsToggle(String(localized: "Al-Islam Glow"), caption: String(localized: "Color the glow with Al-Islam's yellow and green (yellow from the left, green from the right) instead of your accent color."), isOn: $appearanceSettings.alIslamGlow)
-                    .settingsDependent()
-                }
+            if settings.showAccentGlow {
+                SettingsToggle(String(localized: "Al-Islam Glow"), caption: String(localized: "Color the glow with Al-Islam's yellow and green (yellow from the left, green from the right) instead of your accent color."), isOn: $appearanceSettings.alIslamGlow)
+                .settingsDependent()
             }
         } header: {
             Text("THE GLOW")
@@ -1815,18 +1811,16 @@ struct AppearancePageView: View {
             SettingsToggle(String(localized: "Default List View"), caption: String(localized: "Apple's standard list look, as in Notes. Screens already open switch the next time they open."), isOn: $appearanceSettings.defaultView)
 
             if #available(iOS 26.0, *) {
-                VStack(alignment: .leading) {
-                    SettingsToggle(String(localized: "Show Liquid Glass"), caption: String(localized: "Off is the Classic Look from before iOS 26: faster and easier on the battery. iOS's own bars, sheets and search field keep Liquid Glass either way."), isOn: $appearanceSettings.showLiquidGlass)
+                SettingsToggle(String(localized: "Show Liquid Glass"), caption: String(localized: "Off is the Classic Look from before iOS 26: faster and easier on the battery. iOS's own bars, sheets and search field keep Liquid Glass either way."), isOn: $appearanceSettings.showLiquidGlass)
 
-                    if settings.showLiquidGlass {
-                        SettingsToggle(String(localized: "Automatically in Low Power Mode"), caption: String(localized: "Turns Liquid Glass off while Low Power Mode is on and brings it back when Low Power Mode is off."), isOn: $appearanceSettings.classicLookInLowPower)
-                        .settingsDependent()
+                if settings.showLiquidGlass {
+                    SettingsToggle(String(localized: "Automatically in Low Power Mode"), caption: String(localized: "Turns Liquid Glass off while Low Power Mode is on and brings it back when Low Power Mode is off."), isOn: $appearanceSettings.classicLookInLowPower)
+                    .settingsDependent()
 
-                        // The look before 2026-11-22: glass on the content too, not only on what
-                        // floats (`Settings.liquidGlassEverywhere`, `contentSurface`). Off by default.
-                        SettingsToggle(String(localized: "Liquid Glass Everywhere"), caption: String(localized: "Also draws the tiles, cards and small buttons on each screen in Liquid Glass, as the app did before. Off keeps it to the bars and the main buttons."), isOn: $appearanceSettings.liquidGlassEverywhere)
-                        .settingsDependent()
-                    }
+                    // The look before 2026-11-22: glass on the content too, not only on what
+                    // floats (`Settings.liquidGlassEverywhere`, `contentSurface`). Off by default.
+                    SettingsToggle(String(localized: "Liquid Glass Everywhere"), caption: String(localized: "Also draws the tiles, cards and small buttons on each screen in Liquid Glass, as the app did before. Off keeps it to the bars and the main buttons."), isOn: $appearanceSettings.liquidGlassEverywhere)
+                    .settingsDependent()
                 }
             }
 
@@ -2005,7 +1999,8 @@ struct SettingsAppearanceView: View {
         if let openPage {
             SettingsGridTileRow {
                 ForEach(SettingsAppearancePage.allCases, id: \.self) { page in
-                    SettingsGridTile(title: page.title, systemImage: page.systemImage, caption: page.caption,
+                    // By name alone, like the hub's tiles: the list's rows keep the caption.
+                    SettingsGridTile(title: page.title, systemImage: page.systemImage,
                                      tint: SettingsTint.appearance, prominent: true) { openPage(page) }
                 }
             }
@@ -2106,7 +2101,8 @@ struct SettingsGridTile: View {
 struct SettingsGridBanner: View {
     let title: String
     let systemImage: String
-    let caption: String
+    /// A line under the title; the Settings hub's banner has none (the grid's tiles are names alone).
+    var caption: String? = nil
     var tint: Color? = nil
     let action: () -> Void
 
@@ -2123,10 +2119,12 @@ struct SettingsGridBanner: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(.primary)
 
-                    Text(caption)
-                        .font(.caption)
-                        .foregroundColor(.secondaryOnGlass)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if let caption {
+                        Text(caption)
+                            .font(.caption)
+                            .foregroundColor(.secondaryOnGlass)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
 
                 Spacer(minLength: 8)
@@ -2139,7 +2137,7 @@ struct SettingsGridBanner: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title). \(caption)")
+        .accessibilityLabel(caption.map { "\(title). \($0)" } ?? title)
         .accessibilityAddTraits(.isButton)
     }
 }

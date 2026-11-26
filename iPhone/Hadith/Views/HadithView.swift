@@ -1143,13 +1143,13 @@ struct HadithView: View {
 
     // MARK: Summary tiles + last read
 
-    /// Compact "summary mode", the Quran tab's pattern: Hadith of the Day and Last Read as two tappable
-    /// tiles in one section. On by default; the full rows return when it's off (Hadith settings).
+    /// Compact "summary mode", the Quran tab's pattern: the Hadith of the Day and Last Read as two
+    /// tappable lines in one section, the day's hadith with its opening under it.
     @ViewBuilder
     private var summaryTilesSection: some View {
         // The Quran tab's header, to the letter: the accent icon header, the Today pill at the
         // trailing edge, the two dropping onto separate lines where they do not fit (an iPad sidebar
-        // broke it into "YOUR / SUM- / MARY" beside "To- / da / y"). Simple Mode keeps the tiles alone:
+        // broke it into "YOUR / SUM- / MARY" beside "To- / da / y"). Simple Mode keeps the lines alone:
         // Today moves into the More menu, and the history expanders step aside
         // (Docs/Product/Simple Mode Guide.md).
         // The fold arrow and, folded, the trash sit after the Today pill (`TabSectionHeader`); folded,
@@ -1167,15 +1167,19 @@ struct HadithView: View {
                 }
             }
         ) {
-            // The grid only when there is something in it: an empty grid would still draw its own
-            // padded row.
-            if expanded && showSummaryTiles {
-                // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height
-                // on each self-sizing pass, which iOS 26 traps on.
-                SummaryTileGrid(columns: 2) {
+            // The Quran tab's summary, line for line (`SummaryLineLabel` has the why): the Hadith of
+            // the Day first, its opening at reading size, then the hadith to pick up from on one
+            // line. ONE List row holding both, with its own hairline between them, in a ForEach of
+            // one or none so that a folded or empty summary is no row at all and the row is never a
+            // bare branch (`OneRow`). It was a 2x2-style grid of two half-width tiles until 2026-11-25.
+            ForEach(expanded && showSummaryTiles ? ["lines"] : [], id: \.self) { _ in
+                VStack(spacing: 0) {
                     if let dailyHadith {
-                        // The Ayah of the Day tile's long-press menu (Hide for Today, Delete Forever,
-                        // then the hadith's own actions) - a GridTileMenu, like every other grid tile.
+                        // The previews were captured when the pick was made: the line never touches a pack.
+                        let arabic = settings.showHadithArabic ? dailyHadith.arabicPreview : ""
+                        let english = settings.showHadithEnglish ? dailyHadith.englishPreview : ""
+                        // The Ayah of the Day's long-press menu (Hide for Today, Delete Forever, then
+                        // the hadith's own actions): a GridTileMenu, as it was on the tile.
                         GridTileMenu(primaryAction: {
                             settings.hapticFeedback()
                             pushedReference = HadithBookmark(
@@ -1185,15 +1189,16 @@ struct HadithView: View {
                         }) {
                             dailyMenuItems(dailyHadith)
                         } label: {
-                            summaryTileLabel(
+                            SummaryLineLabel(
                                 title: String(localized: "Hadith of the Day"),
                                 icon: "sparkles",
                                 reference: dailyHadith.book.displayReference(dailyHadith.hadith.displayNumber),
-                                // The previews were captured when the pick was made - the tile never touches a pack.
-                                arabic: settings.showHadithArabic ? dailyHadith.arabicPreview : "",
-                                english: settings.showHadithEnglish ? dailyHadith.englishPreview : "",
+                                hasDetail: !arabic.isEmpty || !english.isEmpty,
+                                keepsExpanderSlot: !expandersHidden,
                                 isExpanded: summaryHistoryExpansion == .daily,
-                                onExpand: expandersHidden || dailyHistory.isEmpty ? nil : { toggleSummaryExpansion(.daily) }
+                                onExpand: expandersHidden || dailyHistory.isEmpty ? nil : { toggleSummaryExpansion(.daily) },
+                                accessory: { EmptyView() },
+                                detail: { HadithSummaryNarration(arabic: arabic, english: english) }
                             )
                         }
                         .confirmationDialog("Are you sure?", isPresented: $confirmDeleteDailyForever, titleVisibility: .visible) {
@@ -1207,30 +1212,38 @@ struct HadithView: View {
                         }
                     }
 
+                    if dailyHadith != nil, store.lastRead != nil {
+                        SummaryLineDivider()
+                    }
+
                     if let lastRead = store.lastRead {
-                        summaryTile(
+                        SummaryLine(
                             title: String(localized: "Last Read Hadith"),
                             icon: "book",
                             reference: lastRead.displayReference,
-                            arabic: settings.showHadithArabic ? lastRead.arabicPreview : "",
-                            english: settings.showHadithEnglish ? lastRead.englishPreview : "",
+                            keepsExpanderSlot: !expandersHidden,
                             isExpanded: summaryHistoryExpansion == .leftOff,
                             // Where every other book was left: only once a second book has a position.
-                            onExpand: expandersHidden || leftOffEntries.count < 2 ? nil : { toggleSummaryExpansion(.leftOff) }
-                        ) {
-                            pushedReference = HadithBookmark(
-                                slug: lastRead.slug, idInBook: lastRead.idInBook,
-                                reference: lastRead.reference, preview: ""
-                            )
-                        }
+                            onExpand: expandersHidden || leftOffEntries.count < 2 ? nil : { toggleSummaryExpansion(.leftOff) },
+                            onTap: {
+                                pushedReference = HadithBookmark(
+                                    slug: lastRead.slug, idInBook: lastRead.idInBook,
+                                    reference: lastRead.reference, preview: ""
+                                )
+                            },
+                            accessory: { EmptyView() },
+                            detail: { EmptyView() }
+                        )
                     }
                 }
-                .padding(.vertical, 4)
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                // The line that closes the block, over the doors, runs the row's whole width.
+                .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
             }
 
-            // The one open expansion, unfolded as plain rows right under the tiles (the Quran tab's
+            // The one open expansion, unfolded as plain rows right under the lines (the Quran tab's
             // `summaryHistoryRows`). "Today" and the current book keep full brightness: they ARE the
-            // tile's own hadith, not history.
+            // line's own hadith, not history.
             if expanded, !expandersHidden, let kind = summaryHistoryExpansion {
                 switch kind {
                 case .daily:
@@ -1294,18 +1307,6 @@ struct HadithView: View {
         }
     }
 
-    private func summaryTile(title: String, icon: String, reference: String, arabic: String, english: String,
-                             isExpanded: Bool = false, onExpand: (() -> Void)? = nil, onTap: @escaping () -> Void) -> some View {
-        Button {
-            settings.hapticFeedback()
-            onTap()
-        } label: {
-            summaryTileLabel(title: title, icon: icon, reference: reference, arabic: arabic, english: english,
-                             isExpanded: isExpanded, onExpand: onExpand)
-        }
-        .buttonStyle(.plain)
-    }
-
     /// The Ayah of the Day card's own items, for the hadith: Hide for Today and Delete Forever lead
     /// (destructive, then a divider), then the shuffle the today row already offers, and the bookmark.
     @ViewBuilder
@@ -1339,80 +1340,6 @@ struct HadithView: View {
             settings.hapticFeedback()
             Task { await store.shuffleDailyHadith() }
         } label: { Label("Pick a Random Hadith", systemImage: "shuffle") }
-    }
-
-    /// `onExpand` grows the Quran tile's small +/- in the corner, which unfolds this tile's recents
-    /// under the grid (`summaryHistoryExpansion`).
-    private func summaryTileLabel(title: String, icon: String, reference: String, arabic: String, english: String,
-                                  isExpanded: Bool = false, onExpand: (() -> Void)? = nil) -> some View {
-            // Tight on purpose (Abu, 2026-09-16), the Quran tab's tiles' exact grammar: 4 pt between
-            // lines, 10 pt of padding, one line of each script, a small chip for the icon.
-            // LEADING, unlike the short-label tiles elsewhere in the app, which centre (Abu,
-            // 2026-10-05: "summary tiles and hadiths/ayahs should be leading everything else
-            // centered"). These tiles carry PROSE - a narration's opening, a translation - and a
-            // straight left edge is what you read down; a centred paragraph ragged on both sides is
-            // not. The Arabic keeps its own RTL side.
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    AccentIconChip(systemImage: icon, size: 18)
-                    // The label in the quiet glass tone, the reference in the accent, as on the Quran
-                    // tab's tiles (2026-09-27): all accent read as one block with no hierarchy.
-                    Text(title)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundColor(.secondaryOnGlass)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .layoutPriority(1)
-
-                    if let onExpand {
-                        Spacer(minLength: 0)
-
-                        Image(systemName: isExpanded ? "minus.circle" : "plus.circle")
-                            .font(.caption)
-                            .foregroundColor(settings.accentColor.color)
-                            .contentShape(Rectangle().inset(by: -8))
-                            .onTapGesture {
-                                settings.hapticFeedback()
-                                onExpand()
-                            }
-                            .accessibilityLabel("Show recent \(title)")
-                    }
-                }
-
-                Text(reference)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(settings.accentColor.color)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-
-                // Each visible language reserves its own two lines whether or not this hadith HAS
-                // that language - an empty string still reserves them - so the two tiles sitting
-                // side by side in the grid are the same height even when one has no Arabic or no
-                // translation. Giving the surviving language four lines instead does NOT square
-                // them: four Arabic lines are taller than two Arabic plus two English, and four
-                // English lines are shorter. The toggles gate the slots, not the content, because a
-                // toggle applies to both tiles at once and so cannot make them ragged.
-                if settings.showHadithArabic {
-                    HadithArabicPreview(text: arabic, lineLimit: 1)
-                }
-
-                if settings.showHadithEnglish {
-                    Text(english)
-                        .font(.caption)
-                        .foregroundColor(.secondaryOnGlass)
-                        .reservedLineLimit(1)
-                        // The narration's English keeps the left edge in the Arabic interface, like
-                        // the Quran tab's ayah tile.
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .leftToRightContent()
-                }
-            }
-            // Hug the content - stretching to fill the row's height (maxHeight + a Spacer) parked
-            // all the slack as dead space under the English line.
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
-            .contentSurface(clear: true, rectangle: true, inRow: true)
-            .contentShape(Rectangle())
     }
 
 

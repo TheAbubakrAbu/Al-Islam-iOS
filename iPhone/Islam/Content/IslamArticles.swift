@@ -287,6 +287,8 @@ enum IslamArticles {
         case "IstikharahView": return AnyView(IstikharahView())
         case "KhutbahView": return AnyView(KhutbahView())
         case "TravelPrayerView": return AnyView(TravelPrayerView())
+        case "CombinePrayersView": return AnyView(CombinePrayersView())
+        case "PlanePrayerView": return AnyView(PlanePrayerView())
         case "SickPrayerView": return AnyView(SickPrayerView())
         case "MissedPrayerView": return AnyView(MissedPrayerView())
         case "SujudSahwView": return AnyView(SujudSahwView())

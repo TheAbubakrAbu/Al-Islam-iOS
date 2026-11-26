@@ -13,7 +13,8 @@ struct PillarsView: View {
         self.openArticle = openArticle
     }
 
-    /// The folded groups opened with "Show All" (the 25 prophets). See `IslamArticleIndexSections`.
+    /// The folded groups opened with "Show All". See `IslamArticleIndexSections`. (None folds since the
+    /// 25 prophets' pages moved to Stories of the Prophets, 2026-11-25; the index keeps the mechanism.)
     @State private var unfoldedGroups: Set<String> = []
 
     #if os(iOS)
@@ -54,8 +55,8 @@ struct PillarsView: View {
                             isSearching: search.isSearching,
                             onScrollTo: { entry in
                                 withAnimation { searchText = "" }
-                                // A prophet past the first five is folded away: open the group so the
-                                // row is there to scroll to.
+                                // A row folded away behind "Show All": open its group so it is there
+                                // to scroll to.
                                 unfoldedGroups.insert("\(entry.home.rawValue)/\(entry.group)")
                                 scrollTarget = entry.listID
                             },
@@ -149,9 +150,12 @@ struct ArticleAutoOpen: ViewModifier {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         let argument = home.debugArticleArgument
+        // By key ("adam"), or by link key where two pages of one home share a key: Stories of the
+        // Prophets has Adam's story and his own page ("pillars.adam").
+        let rows = IslamArticleCatalog.groups(for: home).flatMap(\.entries)
         guard let idx = arguments.firstIndex(of: argument), arguments.indices.contains(idx + 1),
-              let entry = IslamArticleCatalog.groups(for: home).flatMap(\.entries)
-                .first(where: { $0.debugKey == arguments[idx + 1] }) else { return nil }
+              let entry = rows.first(where: { $0.debugKey == arguments[idx + 1] })
+                ?? rows.first(where: { $0.linkKey == arguments[idx + 1] }) else { return nil }
         var section: String?
         if let sectionIdx = arguments.firstIndex(of: "-articleSection"), arguments.indices.contains(sectionIdx + 1) {
             section = arguments[sectionIdx + 1]
@@ -713,7 +717,7 @@ struct IslamPillarsHero: View {
             headline: "Indeed, the religion in the sight of Allah is Islam.",
             source: "Quran 3:19",
             // No figures: the building under it already counts the five and the six.
-            message: "The five pillars of Islam and the six of iman, then the prophets, the Quran and the hadith, the scholars and the answers to other paths. Tap a pillar to open it."
+            message: "The five pillars of Islam, the six of iman and the three of tawhid, then the Quran and the hadith, the scholars and the answers to other paths. Tap a pillar to open it."
         ) {
             building
         }

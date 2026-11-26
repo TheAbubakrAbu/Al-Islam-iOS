@@ -16,6 +16,8 @@ struct SettingsAdhanView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showingMap = false
+    /// "How Traveling Mode Works", raised by the first Traveling Mode On card's third button.
+    @State private var showTravelingExplainer = false
 
     @State private var showAlert: AlertType?
     enum AlertType: Identifiable {
@@ -68,7 +70,7 @@ struct SettingsAdhanView: View {
                 rootList
             }
         }
-        .navigationTitle(standalonePage?.title ?? String(localized: "Al-Adhan Settings"))
+        .navigationTitle(standalonePage?.title ?? String(localized: "Prayer Settings"))
         #if os(iOS)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
@@ -172,6 +174,18 @@ struct SettingsAdhanView: View {
                 settings.overrideTravelingMode(keepOn: false)
             }
 
+            // The first card only: the explanation, which ends in these same two answers (see the
+            // Adhan tab's copy of this card). Asking keeps the mode on, as "Keep On" does.
+            #if os(iOS)
+            if let explain = settings.autoChangeCard(.travelOn).explainTitle {
+                Button(explain) {
+                    settings.hapticFeedback()
+                    settings.confirmTravelAutomaticChange()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { showTravelingExplainer = true }
+                }
+            }
+            #endif
+
         case .travelTurnOffAutomatic:
             Button(settings.autoChangeCard(.travelOff).confirmTitle) {
                 settings.hapticFeedback()
@@ -245,6 +259,14 @@ struct SettingsAdhanView: View {
         } message: {
             autoChangeDialogMessage
         }
+        #if os(iOS)
+        .sheet(isPresented: $showTravelingExplainer) {
+            SheetNavigationContainer {
+                TravelingModeExplainer(answersCard: true)
+            }
+            .smallMediumSheetPresentation()
+        }
+        #endif
     }
 
     private var optionalTimesDestination: some View {
@@ -280,15 +302,45 @@ struct SettingsAdhanView: View {
         #endif
     }
 
-    /// One card per area (2026-09-16): the door to Notifications, the five prayer-time screens, and
-    /// the sky. Every row carries its caption, so the screen reads as a table of contents.
+    /// The page in the order every area's settings page keeps (2026-11-25, Docs/Engineering/Design
+    /// Grammar.md section 8): the doors, grouped, each card holding doors alone; then LAYOUT, the tab's
+    /// one layout choice; then ON THE ADHAN TAB, DISCOVER and NEED A HAND?. Notifications still leads,
+    /// as it has since 2026-09-16: it is what the Adhan tab's gear is opened for most.
     @ViewBuilder
     private var rootSections: some View {
         notificationsSection
 
         Section(header: Text("PRAYER TIMES")) {
+            adhanPageLink(.prayerCalculation) { prayerCalculationDestination }
+            adhanPageLink(.travelingMode) { travelingModeDestination }
             #if os(iOS)
-            // The watch always draws tiles, so the choice is the phone's alone.
+            adhanPageLink(.flightMode) { FlightModeView() }
+            #endif
+            adhanPageLink(.optionalPrayers) { optionalTimesDestination }
+            adhanPageLink(.manualOffsets) { prayerOffsetsDestination }
+            adhanPageLink(.customPrayerNames) { customPrayerNamesDestination }
+        }
+
+        #if os(iOS)
+        // What is neither a prayer time nor a notification, as on Quran Settings: the sky, and the
+        // tracker's own page (History & Insights). Simple Mode shows the tab's tracker only to
+        // someone who marked a prayer in the last fourteen days, and ON THE ADHAN TAB below can put
+        // it away in either mode, so this is its door the rest of the time (Docs/Product/Simple Mode
+        // Guide.md, rule 3); with the tracker on the tab it is a second way in.
+        Section(header: Text("MORE")) {
+            adhanPageLink(.sky, tint: SettingsTint.sky) { skyDestination }
+
+            NavigationLink(destination: LazyDestination { PrayerTrackerView() }) {
+                SettingsRowLabel(title: String(localized: "Prayer Tracker"), systemImage: "checklist",
+                                 subtitle: String(localized: "History, streaks and insights"), tint: SettingsTint.prayer)
+            }
+            .tint(settings.accentColor.color)
+        }
+
+        // The watch always draws tiles, so the choice is the phone's alone. A section of its own,
+        // where Quran Settings keeps its List or Pages choice: it was the first row of PRAYER TIMES,
+        // a control leading a card of doors.
+        Section(header: Text("LAYOUT")) {
             Picker(selection: $prayerDisplayModeRawValue) {
                 ForEach(PrayerList.PrayerDisplayMode.allCases) { mode in
                     Text(mode.displayName.capitalized).tag(mode.rawValue)
@@ -298,31 +350,6 @@ struct SettingsAdhanView: View {
             }
             .tint(settings.accentColor.color)
             .onChange(of: prayerDisplayModeRawValue) { _ in settings.hapticFeedback() }
-            #endif
-
-            adhanPageLink(.prayerCalculation) { prayerCalculationDestination }
-            #if os(iOS)
-            // The tracker's own page (History & Insights). Simple Mode shows the tab's tracker only to
-            // someone who marked a prayer in the last fourteen days, and ON THE ADHAN TAB below can put
-            // it away in either mode, so this is its door the rest of the time (Docs/Product/Simple Mode
-            // Guide.md, rule 3); with the tracker on the tab it is a second way in.
-            NavigationLink(destination: LazyDestination { PrayerTrackerView() }) {
-                SettingsRowLabel(title: String(localized: "Prayer Tracker"), systemImage: "checklist",
-                                 subtitle: String(localized: "History, streaks and insights"), tint: SettingsTint.prayer)
-            }
-            .tint(settings.accentColor.color)
-            #endif
-            adhanPageLink(.travelingMode) { travelingModeDestination }
-            adhanPageLink(.optionalPrayers) { optionalTimesDestination }
-            adhanPageLink(.manualOffsets) { prayerOffsetsDestination }
-            adhanPageLink(.customPrayerNames) { customPrayerNamesDestination }
-        }
-
-        #if os(iOS)
-        // One row, like every other area on this page (Abu, 2026-09-20): the sky's switches were the
-        // only controls sitting loose on a screen that is otherwise a table of contents.
-        Section(header: Text("SKY")) {
-            adhanPageLink(.sky, tint: SettingsTint.sky) { skyDestination }
         }
 
         // The tab's foldable sections, a switch each (TabSections.swift): PRAYER TRACKER and AT A
@@ -460,6 +487,12 @@ struct SettingsAdhanView: View {
         switch page {
         case .prayerCalculation: prayerCalculationDestination
         case .travelingMode: travelingModeDestination
+        case .flightMode:
+            #if os(iOS)
+            FlightModeView()
+            #else
+            EmptyView()
+            #endif
         case .optionalPrayers: optionalTimesDestination
         case .manualOffsets: prayerOffsetsDestination
         case .customPrayerNames: customPrayerNamesDestination
@@ -498,7 +531,7 @@ struct SettingsAdhanView: View {
         #if os(iOS)
         Section(header: Text("NOTIFICATIONS")) {
             NavigationLink(destination: LazyDestination { NotificationView() }) {
-                SettingsRowLabel(title: String(localized: "Notification Settings"), systemImage: "bell.badge.fill",
+                SettingsRowLabel(title: String(localized: "Notifications"), systemImage: "bell.badge.fill",
                                  subtitle: NotificationView.doorSubtitle, tint: SettingsTint.notifications)
             }
             .tint(settings.accentColor.color)
@@ -540,17 +573,43 @@ struct SettingsAdhanView: View {
     // choices; inline on this root they read as a stray orphan section). Kept nowhere else - the
     // settings-search index deep-links both to that screen.
 
+    /// Three groups, each with the sentence that explains it as its footer (Abu, 2026-11-25:
+    /// "make sure there's transparency and explanation for combined traveling prayers"):
+    /// HOME CITY says where the city came from and how far away this is, TRAVELING MODE says what
+    /// the mode does to the list and to the notifications, and LEARN MORE holds the explanation
+    /// page and the three guides, over the ruling itself. The watch has no home city and never
+    /// decides the mode for itself, so it keeps the one group.
+    @ViewBuilder
     private var travelingModeSection: some View {
-        // The fiqh of the choice is the section's footer, not the switch's caption: eight lines
-        // beside a switch read as a wall (2026-10-21 settings pass).
-        Section(header: Text("TRAVELING MODE"), footer: Text(Self.travelingFooter.localizedDigits)) {
+        #if os(iOS)
+        Section(header: Text("HOME CITY"), footer: TravelingHomeCityFooter()) {
             homeCityButton
+        }
+
+        Section(header: Text("TRAVELING MODE"), footer: Text(Self.travelingModeFooter.localizedDigits)) {
             automaticTravelToggle
             travelingModeGroup
         }
+
+        TravelingGuideDoors(includesExplainer: true, footer: Self.travelingFooter)
+        #else
+        Section(header: Text("TRAVELING MODE"), footer: Text(Self.travelingFooter.localizedDigits)) {
+            travelingModeGroup
+        }
+        #endif
     }
 
-    private static let travelingFooter = String(localized: "More than 48 mi (77.25 km) from home, it is obligatory to pray Qasr: Dhuhr and Asr combined at 2 rakahs each, Maghrib and Isha at 3 and 2. Allah said in the Quran, \u{201C}When you travel through the land, it is permissible for you to shorten the prayer\u{201D} [Quran 4:101].")
+    /// The ruling, in the guides' own terms: shortening (Qasr) is one thing and combining another.
+    /// It used to read "it is obligatory to pray Qasr: Dhuhr and Asr combined", which ran the two
+    /// together and stated as settled what the app's own travel guide gives as a difference among
+    /// the scholars. The ayah is Saheeh International's wording, as everywhere else in the app.
+    private static let travelingFooter = String(localized: "More than 48 mi (77 km) from home you are a traveler: Dhuhr, Asr and Isha are shortened to 2 rakahs (Qasr), and Dhuhr may be combined with Asr and Maghrib with Isha. Allah says, \u{201C}And when you travel throughout the land, there is no blame upon you for shortening the prayer\u{201D} [Quran 4:101].")
+
+    #if os(iOS)
+    /// What the mode does in THIS app, which no ruling tells a reader: one row and one notification
+    /// for each pair, and at whose time.
+    private static let travelingModeFooter = String(localized: "While Traveling Mode is on, Dhuhr and Asr share one row and one notification, at Dhuhr's time, and Maghrib and Isha share another, at Maghrib's. Asr and Isha do not ring on their own.")
+    #endif
 
     @ViewBuilder
     private var homeCityButton: some View {
@@ -596,27 +655,41 @@ struct SettingsAdhanView: View {
     @ViewBuilder
     private var automaticTravelToggle: some View {
         #if os(iOS)
-        SettingsToggle(String(localized: "Automatic Traveling Mode"), isOn: $adhanSettings.travelAutomatic)
+        SettingsToggle(String(localized: "Automatic Traveling Mode"),
+                       caption: String(localized: "Turns Traveling Mode on more than 48 mi (77 km) from your home city, and off again once you are back."),
+                       isOn: $adhanSettings.travelAutomatic)
         #endif
     }
 
+    /// A row each (2026-11-25): the two shared one row, so no line ran between them, unlike every
+    /// other pair of switches on the settings pages.
+    @ViewBuilder
     private var travelingModeGroup: some View {
-        VStack(alignment: .leading) {
-            SettingsToggle(String(localized: "Traveling Mode"),
-                           caption: settings.travelAutomatic
-                               ? String(localized: "Shortens and combines the prayers while you are away from home. Turns on and off by itself; you can also set it here.")
-                               : String(localized: "Shortens and combines the prayers while you are away from home."),
-                           isOn: travelingModeBinding)
-                .disabled(settings.travelAutomatic && !isWatch)
+        SettingsToggle(String(localized: "Traveling Mode"),
+                       caption: travelingModeCaption,
+                       isOn: travelingModeBinding)
+            .disabled(settings.travelAutomatic && !isWatch)
 
-            // The only door to full prayers for a Simple traveler: Simple hides the prayer list's travel
-            // footer, which held the View Full / View Qasr button. Same key the footer writes.
-            #if os(iOS)
-            if settings.travelingMode {
-                SettingsToggle(String(localized: "Show Full Prayers"), caption: String(localized: "Every prayer at its full time while traveling, instead of the shortened and combined Qasr list. You may still shorten and combine."), isOn: $adhanSettings.travelingShowFullPrayers)
-            }
-            #endif
+        // The only door to full prayers for a Simple traveler: Simple hides the prayer list's travel
+        // footer, which held the View Full / View Qasr button. Same key the footer writes.
+        #if os(iOS)
+        if settings.travelingMode {
+            SettingsToggle(String(localized: "Show Full Prayers"), caption: String(localized: "Every prayer at its full time while traveling, instead of the shortened and combined Qasr list. You may still shorten and combine."), isOn: $adhanSettings.travelingShowFullPrayers)
+                .settingsDependent()
         }
+        #endif
+    }
+
+    /// What the switch does, and who holds it. On the phone the automatic switch locks this one
+    /// (`.disabled` above), so the caption says how to free it: it used to read "you can also set
+    /// it here" beside a switch that would not move. The watch's is never locked, and keeps those words.
+    private var travelingModeCaption: String {
+        guard settings.travelAutomatic else {
+            return String(localized: "Shortens and combines the prayers while you are away from home.")
+        }
+        return isWatch
+            ? String(localized: "Shortens and combines the prayers while you are away from home. Turns on and off by itself; you can also set it here.")
+            : String(localized: "Shortens and combines the prayers while you are away from home. Automatic Traveling Mode sets it; turn that off to set it yourself.")
     }
 
     private var travelingModeBinding: Binding<Bool> {
@@ -649,9 +722,14 @@ struct SettingsAdhanView: View {
 
     @ViewBuilder
     private var prayerOffsetsSection: some View {
-        // The Hijri day offset used to live in its own top-level "Manual Offsets" screen; it now sits here
-        // alongside the prayer-time offsets so every manual adjustment is in one place.
-        Section(header: Text("HIJRI OFFSET")) {
+        // The prayers lead, as the page's name and its door's caption have them ("Nudge each prayer
+        // and the Hijri date"), then everything about the Hijri date in ONE section (2026-11-25): the
+        // day offset, today's date as it leaves it, and the switch for when the date turns over. They
+        // were two sections, HIJRI OFFSET above the prayers and HIJRI DATE under it.
+        PrayerOffsetsView()
+
+        Section(header: Text("HIJRI DATE"),
+                footer: Text("In Islam, the day begins at sunset (Maghrib). Keeping this on follows that Islamic tradition, while turning it off matches the usual midnight-to-midnight day.")) {
             #if os(watchOS)
             // Watch: one short line ("+2 days") in small type - the phone's "Hijri Offset: X days" row
             // truncated to a couple of letters on the small screen.
@@ -700,12 +778,12 @@ struct SettingsAdhanView: View {
                 .padding(.vertical, 2)
             }
             #endif
+
+            SettingsToggle(String(localized: "Switch Hijri Date at Maghrib"), caption: String(localized: "When enabled, the displayed Hijri date changes at the calculated Maghrib time instead of at midnight. Off by default."), isOn: $adhanSettings.switchHijriDateAtMaghrib)
         }
         .onAppear {
             settings.fetchPrayerTimes()
         }
-
-        PrayerOffsetsView()
     }
 
     private var isWatch: Bool {
@@ -775,11 +853,6 @@ struct PrayerOffsetsView: View {
     }
 
     var body: some View {
-        Section(header: Text("HIJRI DATE"),
-                footer: Text("In Islam, the day begins at sunset (Maghrib). Keeping this on follows that Islamic tradition, while turning it off matches the usual midnight-to-midnight day.")) {
-            SettingsToggle(String(localized: "Switch Hijri Date at Maghrib"), caption: String(localized: "When enabled, the displayed Hijri date changes at the calculated Maghrib time instead of at midnight. Off by default."), isOn: $adhanSettings.switchHijriDateAtMaghrib)
-        }
-
         Section(header: Text("PRAYER OFFSETS"), footer: offsetsFooter) {
             offsetStepper(title: String(localized: "Fajr"), icon: "sunrise", value: $adhanSettings.offsetFajr)
             offsetStepper(title: String(localized: "Sunrise"), icon: "sunrise.fill", value: $adhanSettings.offsetSunrise)
@@ -870,7 +943,7 @@ struct NotificationView: View {
         #if !os(iOS)
         .applyConditionalListStyle()
         #endif
-        .navigationTitle("Notification Settings")
+        .navigationTitle("Notifications")
     }
 
     /// The sections on the page-search scaffold (iOS) or a plain list (the watch).
@@ -931,9 +1004,11 @@ struct NotificationView: View {
                 }
                 #endif
 
-                // The two doors first: they are what most people come here for. Each row says
-                // where it stands, so the common check needs no push.
-                Section(header: Text("PRAYERS")) {
+                // The doors first, in a card of their own: they are what most people come here
+                // for. Each row says where it stands, so the common check needs no push. Sunnah
+                // Reminders is the third (2026-11-25): it sat under the calendar's two switches, a
+                // door closing a card of controls.
+                Section(header: Text(Self.doorsHeader)) {
                     NavigationLink(destination: LazyDestination { MoreNotificationView() }) {
                         SettingsRowLabel(title: String(localized: "Prayer Notifications"), systemImage: "bell.fill",
                                          subtitle: prayerNotificationsSummary.localizedDigits, tint: SettingsTint.notifications)
@@ -950,6 +1025,15 @@ struct NotificationView: View {
                                          value: NaggingModeView.statusValue(settings))
                     }
                     .tint(settings.accentColor.color)
+
+                    #if os(iOS) && HAS_QURAN
+                    // The Sunnah Reminders schedule recitations in the Quran reader, so they ship with it.
+                    NavigationLink(destination: LazyDestination { SunnahRemindersView() }) {
+                        SettingsRowLabel(title: String(localized: "Sunnah Reminders"), systemImage: "bell.and.waves.left.and.right.fill",
+                                         subtitle: String(localized: "Al-Kahf on Friday, al-Mulk before sleep, and more"), tint: SettingsTint.notifications)
+                    }
+                    .tint(settings.accentColor.color)
+                    #endif
                 }
 
                 #if os(iOS)
@@ -1053,22 +1137,13 @@ struct NotificationView: View {
                 }
                 #endif
 
-                Section(header: Text("MORE REMINDERS")) {
+                Section(header: Text("THE ISLAMIC CALENDAR")) {
                     SettingsToggle(String(localized: "Islamic Calendar Notifications"), isOn: $adhanSettings.dateNotifications)
 
                     if settings.dateNotifications {
                         SettingsToggle(String(localized: "Remind a Day Before"), caption: String(localized: "A heads-up the evening before each Islamic date."), isOn: $adhanSettings.dateNotificationsDayBefore)
                         .settingsDependent()
                     }
-
-                    #if os(iOS) && HAS_QURAN
-                    // The Sunnah Reminders schedule recitations in the Quran reader, so they ship with it.
-                    NavigationLink(destination: LazyDestination { SunnahRemindersView() }) {
-                        SettingsRowLabel(title: String(localized: "Sunnah Reminders"), systemImage: "bell.and.waves.left.and.right.fill",
-                                         subtitle: String(localized: "Al-Kahf on Friday, al-Mulk before sleep, and more"), tint: SettingsTint.notifications)
-                    }
-                    .tint(settings.accentColor.color)
-                    #endif
                 }
 
                 #if os(iOS)
@@ -1076,6 +1151,16 @@ struct NotificationView: View {
                 // 2026-10-25: it hid the alert tone and the day-before reminder, three rows.
                 TipsSection(area: .notifications, resolve: resolveSearchDestination)
                 #endif
+    }
+
+    /// The header over the page's doors: REMINDERS where Sunnah Reminders is one of them, PRAYERS
+    /// where the two prayer doors stand alone (the watch, and Al-Adhan, which has no Quran reader).
+    private static var doorsHeader: String {
+        #if os(iOS) && HAS_QURAN
+        return String(localized: "REMINDERS")
+        #else
+        return String(localized: "PRAYERS")
+        #endif
     }
 
     /// What the Prayer Notifications door leads to, at a glance: "All 5 prayers \u{00B7} 10 min before",
@@ -1727,6 +1812,12 @@ struct PrayerNotificationDetailView: View {
             return String(localized: "Also the combined traveling Dhuhr/Asr prayer.")
         case "Maghrib":
             return String(localized: "Also the combined traveling Maghrib/Isha prayer.")
+        // The other half of each pair: its own switch rests while traveling, which nothing said
+        // (2026-11-25). The one exception is the turn-on between a pair (`travelingGapPrayer`).
+        case "Asr":
+            return String(localized: "While traveling, Asr arrives with Dhuhr's notification, not on its own.")
+        case "Isha":
+            return String(localized: "While traveling, Isha arrives with Maghrib's notification, not on its own.")
         default:
             return nil
         }
@@ -1818,7 +1909,7 @@ struct PrayerNotificationDetailView: View {
 // MARK: - Settings-search entries (kept in THIS file, next to the screens they describe)
 extension SettingsSearchEntry {
     static let notificationEntries: [SettingsSearchEntry] = sunnahReminderEntries + [
-        .init(title: "Notification Settings", path: "Notifications", keywords: "alerts permission bell", destination: .notifications),
+        .init(title: "Notifications", path: "Al-Adhan", keywords: "notification settings alerts permission bell", destination: .notifications),
         .init(title: "Allow Notifications", path: "Notifications", keywords: "all notifications off on master switch mute silence everything turn off disable stop none", destination: .notifications),
         .init(title: "Notification Permission", path: "Notifications", keywords: "allow access permission status sounds badges denied", destination: .notifications),
         .init(title: "Adhan Sound", path: "Notifications", keywords: "athan azan sound mecca madinah preview", destination: .notifications),
@@ -1865,6 +1956,13 @@ extension SettingsSearchEntry {
         .init(title: "Prayer Times Layout", path: "Prayer Settings", keywords: "tiles grid list split layout columns prayer times view display", destination: .prayerSettings),
         .init(title: "Traveling Mode (Qasr)", path: "Prayer Settings → Traveling Mode", keywords: "travel shorten combine journey safar 48 miles automatic", destination: .prayerPage(.travelingMode)),
         .init(title: "Show Full Prayers", path: "Prayer Settings → Traveling Mode", keywords: "full prayers qasr shorten combine traveling travel", destination: .prayerPage(.travelingMode)),
+        .init(title: "Automatic Traveling Mode", path: "Prayer Settings → Traveling Mode", keywords: "automatic auto detect 48 miles 77 km home city away location turn on by itself", destination: .prayerPage(.travelingMode)),
+        .init(title: "Set Home City", path: "Prayer Settings → Traveling Mode", keywords: "home city hometown where i live change home location traveling distance", destination: .prayerPage(.travelingMode)),
+        .init(title: "Flight Mode", path: "Prayer Settings → Flight Mode", keywords: "plane airplane aeroplane flying flight in the air prayer times on a plane airport takeoff landing altitude sunset later qibla seat", destination: .prayerPage(.flightMode)),
+        .init(title: "Turn On Flight Mode", path: "Prayer Settings → Flight Mode", keywords: "start flight plane flying now gps follow no airport one tap", destination: .prayerPage(.flightMode)),
+        .init(title: "Add Your Flight", path: "Prayer Settings → Flight Mode", keywords: "flight plane airport departure arrival ticket boarding pass destination from to where you land set up", destination: .prayerPage(.flightMode)),
+        .init(title: "Ask When I Am Flying", path: "Prayer Settings → Flight Mode", keywords: "automatic detect flight plane gps speed altitude ask turn on by itself airport notification", destination: .prayerPage(.flightMode)),
+        .init(title: "How Traveling Mode Works", path: "Prayer Settings → Traveling Mode", keywords: "explain why combined dhuhr asr maghrib isha one notification missing asr isha notification qasr jam plane guide learn", destination: .prayerPage(.travelingMode)),
         .init(title: "Optional Prayer Times", path: "Prayer Settings → Optional Prayers", keywords: "duha duhaa islamic midnight last third night tahajjud suhoor", destination: .prayerPage(.optionalPrayers)),
         .init(title: "Manual Prayer Offsets", path: "Prayer Settings → Manual Offsets", keywords: "adjust minutes plus minus tune offset", destination: .prayerPage(.manualOffsets)),
         .init(title: "Hijri Date Offset", path: "Prayer Settings → Manual Offsets", keywords: "hijri adjust day moon date calendar", destination: .prayerPage(.manualOffsets)),
@@ -1945,6 +2043,10 @@ struct PrayerCalculationListView: View {
                         if matches(customMethod) { customSection }
                     }
                 } else {
+                    // Above the methods (2026-11-25): the madhab is one switch, and it sat under a
+                    // list of twenty methods, three screens down.
+                    madhabAndHighLatitudeSection
+
                     Section(header: Text("METHODS")) {
                         ForEach(PrayerCalculationCatalog.methods) { methodRow($0) }
                     }
@@ -1954,7 +2056,6 @@ struct PrayerCalculationListView: View {
                     if settings.advanced(.prayerCalculation) || selectedID == PrayerCalculationCatalog.customID {
                         customSection
                     }
-                    madhabAndHighLatitudeSection
                     if settings.advanced(.prayerCalculation) {
                         explanationSection
                     }

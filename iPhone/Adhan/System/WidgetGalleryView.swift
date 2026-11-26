@@ -6,7 +6,7 @@ import WidgetKit
 ///
 /// WidgetKit can't be driven from simctl (nothing places a widget on the simulator's home or lock screen
 /// headlessly), so this is how a layout change gets looked at before it ships: `-widgetGallery <page>`
-/// opens a page after the reveal (pages: glance, solar, day, grid, tiles, large, largesky, small, lock, dates, tracker)
+/// opens a page after the reveal (pages: glance, solar, day, grid, tiles, large, largesky, small, lock, ring, dates, tracker)
 /// and `-widgetCity "<name>"` swaps in a city, since long names are what break footers. The layouts are
 /// the widget files' own entry views (the Widget/Adhan sources compile into the app for this), fed an
 /// entry built from the app's live prayers the way the provider builds one.
@@ -38,7 +38,8 @@ struct WidgetGalleryView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if items.isEmpty {
-                        Text("No page named \"\(page)\". Pages: glance, solar, day, grid, tiles, large, largesky, small, lock, dates, tracker.")
+                        // Verbatim: a DEBUG line, not for the string catalog or its translators.
+                        Text(verbatim: "No page named \"\(page)\". Pages: glance, solar, day, grid, tiles, large, largesky, small, lock, ring, dates, tracker.")
                             .font(.footnote)
                             .foregroundColor(.secondary)
                     }
@@ -86,6 +87,23 @@ struct WidgetGalleryView: View {
         #else
         let weather: SkyWeather? = nil
         #endif
+        // In the air the widgets show the flight's list (`PrayersProvider.inFlight`): the gallery does too.
+        if let day = FlightMode.shared.currentTimeline()?.widgetDay(at: now, settings: settings) {
+            return PrayersEntry(
+                date: now,
+                accentColor: settings.accentColor,
+                currentCity: day.city.cityDisplay.localizedDigits,
+                prayers: day.prayers,
+                fullPrayers: day.prayers,
+                currentPrayer: day.current,
+                nextPrayer: day.next,
+                hijriOffset: settings.hijriOffset,
+                switchHijriDateAtMaghrib: settings.switchHijriDateAtMaghrib,
+                skyPeriod: day.skyPeriod,
+                skyColors: settings.skyGradientColors(forPrayer: day.skyPeriod, weather: nil),
+                weather: nil
+            )
+        }
         return PrayersEntry(
             date: now,
             accentColor: settings.accentColor,
@@ -112,7 +130,9 @@ struct WidgetGalleryView: View {
 
     /// Apple's published widget dimensions by screen width: the 390-402pt class is the 15, 16 and 17 Pro,
     /// the 428+ class the Max and Plus phones, 375 the SE-style widths. Accessory sizes are the lock
-    /// screen's; the inline one is only a width to check truncation against.
+    /// screen's; the inline one is only a width to check truncation against. The 390-402pt class's
+    /// rectangular widget is 160 x 72, measured off a 17 Pro's own lock screen (2026-11-26): this table
+    /// had the Max's 172 x 76 there, which flattered every line that was short of room.
     private struct WidgetSizes {
         let small: CGSize
         let medium: CGSize
@@ -129,8 +149,8 @@ struct WidgetGalleryView: View {
             }
             if width >= 390 {
                 return WidgetSizes(small: CGSize(width: 158, height: 158), medium: CGSize(width: 338, height: 158),
-                                   large: CGSize(width: 338, height: 354), circular: CGSize(width: 76, height: 76),
-                                   rectangular: CGSize(width: 172, height: 76), inline: CGSize(width: 257, height: 26))
+                                   large: CGSize(width: 338, height: 354), circular: CGSize(width: 72, height: 72),
+                                   rectangular: CGSize(width: 160, height: 72), inline: CGSize(width: 234, height: 26))
             }
             if width >= 375 {
                 return WidgetSizes(small: CGSize(width: 155, height: 155), medium: CGSize(width: 329, height: 155),
@@ -248,6 +268,8 @@ struct WidgetGalleryView: View {
                 Item("Prayer Progress Ring", .accessoryCircular) { PrayerProgressRingView(entry: entry) },
                 Item("Current Prayer Countdown", .accessoryCircular) { PrayerCountdownCircularView(entry: entry) },
             ]
+        case "ring":
+            return ringItems
         case "tracker":
             return [
                 Item("Prayer Tracker", .systemSmall) { PrayerTrackerSmallView(entry: entry) },
@@ -271,6 +293,58 @@ struct WidgetGalleryView: View {
         default:
             return []
         }
+    }
+
+    // MARK: The Prayer Ring through a day
+
+    /// `entry` as it would stand `minutes` before `next` comes in, `current` having come in `window`
+    /// minutes before that. Both prayers are moved so that the moment is NOW: the countdown beside
+    /// the ring ticks from the real clock here, and has to agree with the ring.
+    private func ringEntry(current: Prayer, next: Prayer, window: Double, minutesLeft: Double) -> PrayersEntry {
+        func moved(_ prayer: Prayer, to time: Date) -> Prayer {
+            Prayer(nameArabic: prayer.nameArabic, nameTransliteration: prayer.nameTransliteration,
+                   nameEnglish: prayer.nameEnglish, time: time, image: prayer.image, rakah: prayer.rakah,
+                   sunnahBefore: prayer.sunnahBefore, sunnahAfter: prayer.sunnahAfter,
+                   nameCustom: prayer.nameCustom, sunnahNote: prayer.sunnahNote)
+        }
+        let now = Date()
+        let comes = now.addingTimeInterval(minutesLeft * 60)
+        return PrayersEntry(
+            date: now,
+            accentColor: entry.accentColor,
+            currentCity: entry.currentCity,
+            prayers: entry.prayers,
+            fullPrayers: entry.fullPrayers,
+            currentPrayer: moved(current, to: comes.addingTimeInterval(-window * 60)),
+            nextPrayer: moved(next, to: comes),
+            hijriOffset: entry.hijriOffset,
+            switchHijriDateAtMaghrib: entry.switchHijriDateAtMaghrib,
+            skyPeriod: entry.skyPeriod,
+            skyColors: entry.skyColors,
+            weather: entry.weather
+        )
+    }
+
+    /// `-widgetGallery ring`: the Prayer Ring five hours and half an hour before a prayer (the ring
+    /// fills as the prayer nears), then before each of the day's prayers in turn, since the name and
+    /// its time share one line and the longest name is what that line has to hold.
+    private var ringItems: [Item] {
+        let day = entry.prayers.sorted { $0.time < $1.time }
+        guard day.count >= 2, let first = day.first, let last = day.last else { return [] }
+        let night = ringEntry(current: last, next: first, window: 600, minutesLeft: 300)
+        let soon = ringEntry(current: last, next: first, window: 600, minutesLeft: 30)
+        var items = [
+            Item("5 hours away", .accessoryRectangular) { PrayerRingLockView(entry: night) },
+            Item("30 minutes away", .accessoryRectangular) { PrayerRingLockView(entry: soon) },
+            Item("5 hours away", .systemSmall) { PrayerRingSmallView(entry: night) },
+            Item("30 minutes away", .systemSmall, sky: true) { PrayerRingSmallView(entry: soon, skyStyle: true) },
+        ]
+        for (current, next) in zip(day, day.dropFirst()) {
+            let window = max(next.time.timeIntervalSince(current.time) / 60, 2)
+            let sample = ringEntry(current: current, next: next, window: window, minutesLeft: window / 2)
+            items.append(Item("Before \(next.nameTransliteration)", .accessoryRectangular) { PrayerRingLockView(entry: sample) })
+        }
+        return items
     }
 
     // MARK: The lock screen's date line

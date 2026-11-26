@@ -160,180 +160,72 @@ private struct PieSlice: Shape {
     }
 }
 
-/// An arc of a ring between two clock angles (degrees clockwise from twelve).
-private struct RingArc: Shape {
-    let from: Double
-    let to: Double
-    let radius: CGFloat
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.addArc(center: CGPoint(x: rect.midX, y: rect.midY), radius: radius,
-                    startAngle: .degrees(from - 90), endAngle: .degrees(to - 90), clockwise: false)
-        return path
-    }
-}
-
 // MARK: - Dua & Supplications
 
-/// Dua & Supplications (Abu, 2026-11-24: "Each Islamic resource should get one"): the hours a dua is
-/// most hoped to be answered, as three lines of time with the hour lit on each.
-/// - The night, Maghrib to Fajr in thirds, the last lit: Allah descends when the last third remains and
-///   asks who is calling on Him (Sahih al-Bukhari 1145).
-/// - The prayer: between the adhan and the iqamah (Sunan Abi Dawud 521, Jami at-Tirmidhi 212, sahih),
-///   then the prayer with its prostrations lit, the nearest a servant is to his Lord (Sahih Muslim 482).
-/// - Friday: the other six days, then Friday's twelve hours with the last lit, the hour of answer
-///   sought "in the last hour after 'Asr" (Sunan Abi Dawud 1048, sahih; the hour itself, Sahih
-///   al-Bukhari 935).
+/// Dua & Supplications (Abu, 2026-11-24: "Each Islamic resource should get one"): the four times a dua
+/// is most hoped to be answered, each said in words with the narration it rests on.
+/// - The last third of the night: Allah descends when it remains and asks who is calling on Him
+///   (Sahih al-Bukhari 1145).
+/// - Between the adhan and the iqamah (Sunan Abi Dawud 521, Jami at-Tirmidhi 212, sahih).
+/// - In prostration, the nearest a servant is to his Lord (Sahih Muslim 482).
+/// - The last hour of Friday: the hour of answer sought "in the last hour after 'Asr" (Sunan Abi Dawud
+///   1048, sahih; the hour itself, Sahih al-Bukhari 935).
+///
+/// Three bars of time with the hour lit on each until 2026-11-25 (Abu: "Make each artwork for each
+/// Islamic resources informative and pretty"): the bars had to be decoded, and their tick labels were
+/// too small to read. The times are named now.
 struct DuaAnswerHoursArt: View {
     @Environment(\.appearance) private var appearance
 
-    /// Saturday to Thursday by the Calendar's weekday numbers (Sunday is 1): the week the way the
-    /// Arabic calendar runs it, so it ends on Friday.
-    private static let daysBeforeFriday = [7, 1, 2, 3, 4, 5]
-
     var body: some View {
         let accent = appearance.accent
-        return VStack(alignment: .leading, spacing: 10) {
+        return VStack(alignment: .leading, spacing: 6) {
             ArtCaption("THE HOURS OF ANSWER")
 
-            line(symbol: "moon.stars.fill", title: Text("Night"), accent: accent) {
-                night(accent)
+            VStack(spacing: 5) {
+                HStack(spacing: 5) {
+                    hour("moon.stars.fill", Text("Last Third of the Night"), source: "Al-Bukhari 1145", accent: accent)
+                    hour("speaker.wave.2.fill", Text("Between the adhan and the iqamah"), source: "Abu Dawud 521", accent: accent)
+                }
+                HStack(spacing: 5) {
+                    hour("arrow.down.to.line", Text("Prostration"), source: "Muslim 482", accent: accent)
+                    hour("calendar", Text("The last hour of Friday"), source: "Abu Dawud 1048", accent: accent)
+                }
             }
-            line(symbol: "speaker.wave.2.fill", title: Text("Prayer"), accent: accent) {
-                prayer(accent)
-            }
-            line(symbol: "calendar", title: Text("Friday"), accent: accent) {
-                friday(accent)
-            }
+            // The two rows as one block, each tile as tall as the tallest beside it.
+            .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(12)
-        .artPanel(accent)
         .artFrame(Text("When a dua is most hoped to be answered: in the last third of the night, between the adhan and the iqamah, in prostration, and in the last hour of Friday, after Asr."))
     }
 
-    private func line<Bar: View>(symbol: String, title: Text, accent: Color, @ViewBuilder bar: () -> Bar) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            VStack(spacing: 2) {
-                Image(systemName: symbol)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(accent)
+    private func hour(_ symbol: String, _ title: Text, source: String, accent: Color) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            Image(systemName: symbol)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(LinearGradient(colors: [accent.opacity(0.95), accent.opacity(0.7)],
+                                                         startPoint: .topLeading, endPoint: .bottomTrailing)))
+
+            VStack(alignment: .leading, spacing: 1) {
                 title
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.primary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(verbatim: source.localizedDigits)
+                    .font(.system(size: 9.5, weight: .medium))
+                    .foregroundColor(.secondary)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                    .minimumScaleFactor(0.8)
             }
-            .frame(width: 52)
-
-            bar()
+            Spacer(minLength: 0)
         }
-    }
-
-    private func tick(_ text: Text) -> some View {
-        text
-            .font(.system(size: 9, weight: .semibold))
-            .foregroundColor(.secondary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.7)
-    }
-
-    private func night(_ accent: Color) -> some View {
-        VStack(spacing: 3) {
-            HStack(spacing: 3) {
-                ForEach(0..<3, id: \.self) { third in
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(third == 2 ? accent.opacity(0.9) : accent.opacity(0.13))
-                        .overlay(
-                            Group {
-                                if third == 2 {
-                                    Text(verbatim: "1/3".localizedDigits)
-                                        .font(.system(size: 9, weight: .heavy, design: .rounded))
-                                        .foregroundColor(.white)
-                                }
-                            }
-                        )
-                }
-            }
-            .frame(height: 18)
-
-            HStack {
-                tick(Text("Maghrib"))
-                Spacer(minLength: 4)
-                tick(Text("Fajr"))
-            }
-        }
-    }
-
-    private func prayer(_ accent: Color) -> some View {
-        VStack(spacing: 3) {
-            HStack(spacing: 3) {
-                // Between the adhan and the iqamah.
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(accent.opacity(0.9))
-                // The prayer, its prostrations lit.
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(accent.opacity(0.13))
-                    .overlay(
-                        HStack(spacing: 9) {
-                            ForEach(0..<4, id: \.self) { _ in
-                                Circle()
-                                    .fill(accent.opacity(0.9))
-                                    .frame(width: 6, height: 6)
-                            }
-                        }
-                    )
-            }
-            .frame(height: 18)
-
-            HStack(spacing: 3) {
-                HStack {
-                    tick(Text("Adhan"))
-                    Spacer(minLength: 2)
-                    tick(Text("Iqamah"))
-                }
-                .frame(maxWidth: .infinity)
-                tick(Text("Prostration"))
-                    .frame(maxWidth: .infinity)
-            }
-        }
-    }
-
-    private func friday(_ accent: Color) -> some View {
-        let symbols = Calendar.current.veryShortWeekdaySymbols
-        return VStack(spacing: 3) {
-            HStack(spacing: 3) {
-                ForEach(Self.daysBeforeFriday, id: \.self) { weekday in
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(accent.opacity(0.07))
-                        .overlay(
-                            Text(verbatim: symbols.indices.contains(weekday - 1) ? symbols[weekday - 1] : "")
-                                .font(.system(size: 8, weight: .semibold))
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.5)
-                        )
-                        .frame(width: 15)
-                }
-
-                // Friday's twelve hours, the last lit.
-                HStack(spacing: 1.5) {
-                    ForEach(0..<12, id: \.self) { hour in
-                        Capsule()
-                            .fill(hour == 11 ? accent.opacity(0.95) : accent.opacity(0.25))
-                    }
-                }
-                .padding(.horizontal, 4)
-                .padding(.vertical, 4)
-                .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(accent.opacity(0.13)))
-            }
-            .frame(height: 18)
-
-            HStack {
-                Spacer(minLength: 4)
-                tick(Text("Asr"))
-            }
-        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .artPanel(accent, radius: 10)
     }
 }
 
@@ -689,97 +581,121 @@ struct InheritanceSharesArt: View {
 
 // MARK: - Hijri Date Converter
 
-/// Hijri Date Converter: the twelve lunar months as new crescents round a ring, Muharram at the top.
-/// "The number of months with Allah is twelve; of these, four are sacred" (Quran 9:36), and the ring
-/// shows where they fall: Dhul-Qa'dah, Dhul-Hijjah and Muharram in a row, and Rajab, alone, straight
-/// across from Muharram ("three in succession ... and Rajab of Mudar, between Jumada and Sha'ban",
-/// Sahih al-Bukhari 3197). Ramadan carries its star; the month of the date on the converter is ringed.
-struct HijriMonthsRingArt: View {
+/// Hijri Date Converter: the twelve lunar months as a calendar of twelve tiles, in order, each with its
+/// number, its Arabic name and its name in the reader's language. "The number of months with Allah is
+/// twelve; of these, four are sacred" (Quran 9:36), and the four are the filled tiles: Muharram, then
+/// Rajab alone, then Dhul-Qa'dah and Dhul-Hijjah together at the year's end ("three in succession ...
+/// and Rajab of Mudar, between Jumada and Sha'ban", Sahih al-Bukhari 3197). Each says "Sacred" in words
+/// too, Ramadan carries its star, and the month of the date on the converter is ringed.
+///
+/// A ring of crescents with small Arabic labels until 2026-11-25 (Abu: "show all 12 months clearly and
+/// which ones are sacred"): the ring could not hold the names at a size anyone could read, and it gave
+/// them in Arabic alone.
+struct HijriMonthsGridArt: View {
     @Environment(\.appearance) private var appearance
 
     /// The Hijri month (1...12) of the date on the converter, ringed; nil rings none.
     let month: Int?
 
-    private static let names = [
-        "مُحَرَّم", "صَفَر", "رَبِيع الأَوَّل", "رَبِيع الآخِر", "جُمَادَى الأُولَى", "جُمَادَى الآخِرَة",
-        "رَجَب", "شَعْبَان", "رَمَضَان", "شَوَّال", "ذُو القَعْدَة", "ذُو الحِجَّة",
-    ]
-    private static let sacred: Set<Int> = [1, 7, 11, 12]
-    private static let ring: CGFloat = 58
-    private static let labelRadius: CGFloat = 80
-    private static let labelWidth: CGFloat = 66
-
-    private static func degrees(_ month: Int) -> Double { Double(month - 1) * 30 }
+    /// The months' names in the interface language: the app's own spellings in English ("Rabi
+    /// al-Awwal"), the calendar's standalone names anywhere else.
+    private static let names: [String] = {
+        if AppLanguage.code.hasPrefix("en") { return hijriMonths.map(\.english) }
+        let formatter = DateFormatter()
+        var calendar = Calendar(identifier: .islamicUmmAlQura)
+        calendar.locale = Locale(identifier: AppLanguage.code)
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: AppLanguage.code)
+        let symbols = formatter.standaloneMonthSymbols ?? []
+        return symbols.count == 12 ? symbols : hijriMonths.map(\.english)
+    }()
 
     var body: some View {
         let accent = appearance.accent
-        return VStack(alignment: .leading, spacing: 4) {
-            ArtCaption("TWELVE MONTHS, FOUR SACRED")
-
-            ZStack {
-                // The three sacred months in a row, and Rajab on its own across the ring.
-                RingArc(from: Self.degrees(11), to: Self.degrees(13), radius: Self.ring)
-                    .stroke(accent.opacity(0.16), style: StrokeStyle(lineWidth: 28, lineCap: .round))
-                Circle()
-                    .fill(accent.opacity(0.16))
-                    .frame(width: 28, height: 28)
-                    .offset(artPoint(degrees: Self.degrees(7), radius: Self.ring))
-
-                Circle()
-                    .stroke(accent.opacity(0.25), lineWidth: 1)
-                    .frame(width: 2 * Self.ring, height: 2 * Self.ring)
-
-                ForEach(1...12, id: \.self) { month in
-                    crescent(month, accent: accent)
-                        .offset(artPoint(degrees: Self.degrees(month), radius: Self.ring))
-                }
-
-                ForEach(1...12, id: \.self) { month in
-                    label(month, accent: accent)
-                }
-
-                VStack(spacing: 0) {
-                    Text(verbatim: "12".localizedDigits)
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundColor(accent)
-                    ArtArabic("أَرۡبَعَةٌ حُرُمٞ", size: 10, quran: true, color: .secondary)
-                        .frame(width: 70)
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                ArtCaption("TWELVE MONTHS, FOUR SACRED")
+                Spacer(minLength: 4)
+                HStack(spacing: 4) {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(accent)
+                        .frame(width: 10, height: 10)
+                    Text("Sacred")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
             }
-            .frame(width: 2 * (Self.labelRadius + Self.labelWidth), height: 2 * Self.labelRadius + 18)
-            // A drawing, not a layout: the ring keeps its clockwise order in every language.
-            .environment(\.layoutDirection, .leftToRight)
-            .frame(maxWidth: .infinity)
+
+            // Four rows of three, a quarter of the year to a row, read the way the interface reads:
+            // Muharram opens the first row on the side the date picker under it opens its week on.
+            VStack(spacing: 5) {
+                ForEach(0..<4, id: \.self) { row in
+                    HStack(spacing: 5) {
+                        ForEach(1...3, id: \.self) { column in
+                            tile(hijriMonths[row * 3 + column - 1], accent: accent)
+                        }
+                    }
+                }
+            }
         }
-        .artFrame(Text("The twelve lunar months in a ring. Four are sacred: Dhul-Qa'dah, Dhul-Hijjah and Muharram in a row, and Rajab, alone, across the ring from Muharram."))
+        .artFrame(Text("The twelve lunar months in order. Four are sacred: Muharram, Rajab, Dhul-Qa'dah and Dhul-Hijjah."))
     }
 
-    private func crescent(_ month: Int, accent: Color) -> some View {
-        let sacred = Self.sacred.contains(month)
-        return ZStack {
-            Circle()
-                .fill(sacred ? accent : accent.opacity(month == 9 ? 0.25 : 0.1))
-            Image(systemName: month == 9 ? "moon.stars.fill" : "moon.fill")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(sacred ? .white : accent)
+    private func tile(_ item: HijriMonth, accent: Color) -> some View {
+        let sacred = item.isSacred
+        let ink: Color = sacred ? .white : .primary
+        let faint: Color = sacred ? Color.white.opacity(0.85) : .secondary
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: 3) {
+                Text(verbatim: "\(item.number)".localizedDigits)
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundColor(sacred ? .white : accent)
+                if item.number == 9 {
+                    Image(systemName: "moon.stars.fill")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundColor(accent)
+                }
+                Spacer(minLength: 2)
+                // The name as it is written, unless the line under it already is Arabic script.
+                if !AppLanguage.isArabicScript {
+                    ArtArabic(item.arabic, size: 12, color: ink, highlightAllah: false)
+                        .fixedSize()
+                }
+            }
+            // A set height: an Arabic face's line box is far taller than its letters, and twelve
+            // tiles a few points taller each made the calendar longer than the ring it replaced.
+            // The name keeps its size (`fixedSize`); only the empty part of its line is given up.
+            .frame(height: 15)
+
+            Text(verbatim: Self.names[item.number - 1])
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            // The same line on every tile, so the twelve are one height: the word on the four.
+            Text("Sacred")
+                .font(.system(size: 8, weight: .heavy))
+                .tracking(AppLanguage.letterSpacing(0.8))
+                .textCase(.uppercase)
+                .foregroundColor(faint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .opacity(sacred ? 1 : 0)
         }
-        .frame(width: 22, height: 22)
-        .overlay(
-            Circle()
-                .strokeBorder(Color.primary.opacity(month == self.month ? 0.85 : 0), lineWidth: 1.5)
-                .padding(-4)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(sacred ? accent.opacity(0.92) : accent.opacity(0.08))
         )
-    }
-
-    private func label(_ month: Int, accent: Color) -> some View {
-        let point = artPoint(degrees: Self.degrees(month), radius: Self.labelRadius)
-        let side = point.width / Self.labelRadius
-        let alignment: Alignment = abs(side) < 0.3 ? .center : (side > 0 ? .leading : .trailing)
-        let shift: CGFloat = abs(side) < 0.3 ? 0 : (side > 0 ? Self.labelWidth / 2 - 6 : -Self.labelWidth / 2 + 6)
-        return ArtArabic(Self.names[month - 1], size: 10,
-                         color: Self.sacred.contains(month) ? accent : .secondary)
-            .frame(width: Self.labelWidth, alignment: alignment)
-            .offset(x: point.width + shift, y: point.height)
+        .overlay(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .strokeBorder(item.number == month ? Color.primary.opacity(0.9) : accent.opacity(sacred ? 0 : 0.2),
+                              lineWidth: item.number == month ? 1.8 : 0.5)
+        )
     }
 }
 
@@ -1128,30 +1044,36 @@ private struct HorizonGround: Shape {
 /// armour, Sulayman's birds, Yunus's fish, Zakariya's son, 'Isa's healing of the blind. The corner
 /// brick is the Prophet ﷺ, with the revelation: "Every prophet was given signs ... what I was given is
 /// revelation" (Sahih al-Bukhari 4981). English, like the page (`AppLanguage.article`).
+///
+/// Each brick says who and what in words since 2026-11-25 ("informative and pretty"): it carried the
+/// prophet's name in Arabic alone beside a symbol, on a page that reads English, so the signs had to
+/// be guessed from their symbols.
 struct ProphetsLastBrickArt: View {
     @Environment(\.appearance) private var appearance
 
     private struct Brick {
-        let arabic: String
+        let name: String
+        let sign: String
         let symbol: String
     }
 
     private static let top = [
-        Brick(arabic: "يُونُس", symbol: artSymbol("fish", or: "drop")),
-        Brick(arabic: "زَكَرِيَّا", symbol: artSymbol("figure.and.child.holdinghands", or: "person.2")),
-        Brick(arabic: "عِيسَى", symbol: "eye"),
+        Brick(name: "Yunus", sign: "The fish", symbol: artSymbol("fish", or: "drop")),
+        Brick(name: "Zakariyya", sign: "A son", symbol: artSymbol("figure.and.child.holdinghands", or: "person.2")),
+        Brick(name: "\u{2018}Isa", sign: "Healing", symbol: "eye"),
     ]
     private static let middle = [
-        Brick(arabic: "مُوسَى", symbol: artSymbol("water.waves", or: "drop")),
-        Brick(arabic: "دَاوُود", symbol: "shield"),
-        Brick(arabic: "سُلَيْمَان", symbol: artSymbol("bird", or: "leaf")),
+        Brick(name: "Musa", sign: "The sea", symbol: artSymbol("water.waves", or: "drop")),
+        Brick(name: "Dawud", sign: "The armour", symbol: "shield"),
+        Brick(name: "Sulayman", sign: "The birds", symbol: artSymbol("bird", or: "leaf")),
     ]
     private static let bottom = [
-        Brick(arabic: "نُوح", symbol: artSymbol("sailboat", or: "drop")),
-        Brick(arabic: "هُود", symbol: "wind"),
-        Brick(arabic: "إِبْرَاهِيم", symbol: "flame"),
-        Brick(arabic: "يُوسُف", symbol: "moon.stars"),
+        Brick(name: "Nuh", sign: "The ark", symbol: artSymbol("sailboat", or: "drop")),
+        Brick(name: "Hud", sign: "The wind", symbol: "wind"),
+        Brick(name: "Ibrahim", sign: "The fire", symbol: "flame"),
+        Brick(name: "Yusuf", sign: "The dream", symbol: "moon.stars"),
     ]
+    private static let brickHeight: CGFloat = 34
 
     var body: some View {
         let accent = appearance.accent
@@ -1165,12 +1087,14 @@ struct ProphetsLastBrickArt: View {
             VStack(spacing: 4) {
                 HStack(spacing: 4) {
                     ForEach(Self.top.indices, id: \.self) { brick(Self.top[$0], accent: accent) }
+                    // Wider than the rest: it carries his name with the salawat.
                     lastBrick(accent)
+                        .frame(width: 100)
                 }
                 HStack(spacing: 4) {
-                    plain(accent).frame(width: 34)
+                    plain(accent).frame(width: 30)
                     ForEach(Self.middle.indices, id: \.self) { brick(Self.middle[$0], accent: accent) }
-                    plain(accent).frame(width: 34)
+                    plain(accent).frame(width: 30)
                 }
                 HStack(spacing: 4) {
                     ForEach(Self.bottom.indices, id: \.self) { brick(Self.bottom[$0], accent: accent) }
@@ -1187,35 +1111,44 @@ struct ProphetsLastBrickArt: View {
     }
 
     private func brick(_ brick: Brick, accent: Color) -> some View {
+        words(name: brick.name, sign: brick.sign, symbol: brick.symbol, ink: .primary, faint: .secondary, symbolInk: accent)
+            .background(plain(accent))
+    }
+
+    /// A brick's face: the sign's symbol, then the prophet over his sign.
+    private func words(name: String, sign: String, symbol: String, ink: Color, faint: Color, symbolInk: Color) -> some View {
         HStack(spacing: 4) {
-            Image(systemName: brick.symbol)
+            Image(systemName: symbol)
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(accent)
-            ArtArabic(brick.arabic, size: 12)
+                .foregroundColor(symbolInk)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: AppLanguage.article(name))
+                    .font(.system(size: 10.5, weight: .bold))
+                    .foregroundColor(ink)
+                Text(verbatim: AppLanguage.article(sign))
+                    .font(.system(size: 8.5, weight: .medium))
+                    .foregroundColor(faint)
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 4)
+        .padding(.horizontal, 5)
         .frame(maxWidth: .infinity)
-        .frame(height: 30)
-        .background(plain(accent))
+        .frame(height: Self.brickHeight)
     }
 
     private func plain(_ accent: Color) -> some View {
         RoundedRectangle(cornerRadius: 4, style: .continuous)
             .fill(accent.opacity(0.1))
             .overlay(RoundedRectangle(cornerRadius: 4, style: .continuous).strokeBorder(accent.opacity(0.28), lineWidth: 1))
-            .frame(height: 30)
+            .frame(height: Self.brickHeight)
     }
 
     private func lastBrick(_ accent: Color) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: "book.closed.fill")
-                .font(.system(size: 10, weight: .semibold))
-            ArtArabic("مُحَمَّد ﷺ", size: 12, color: .white, highlightAllah: false)
-        }
-        .foregroundColor(.white)
-        .padding(.horizontal, 4)
-        .frame(maxWidth: .infinity)
-        .frame(height: 30)
+        words(name: "Muhammad \u{FDFA}", sign: "The Quran", symbol: "book.closed.fill",
+              ink: .white, faint: Color.white.opacity(0.85), symbolInk: .white)
         .background(
             RoundedRectangle(cornerRadius: 4, style: .continuous)
                 .fill(LinearGradient(colors: [accent.opacity(0.95), accent.opacity(0.7)],
@@ -1245,15 +1178,19 @@ struct PropheciesTimelineArt: View {
         let label: String
         let symbol: String
         let kind: Kind
+        /// What came true at this stop, in a word, above its node; empty shows the symbol instead.
+        var name = ""
     }
 
+    // Each fulfilled stop is named since 2026-11-25 ("informative and pretty"): a year under a symbol
+    // said when, and left the reader to guess what.
     private static let stops: [Stop] = [
         Stop(label: "610", symbol: "book.closed", kind: .origin),
-        Stop(label: "624", symbol: "book", kind: .fulfilled),
-        Stop(label: "630", symbol: "book", kind: .fulfilled),
-        Stop(label: "651", symbol: "crown", kind: .fulfilled),
-        Stop(label: "657", symbol: "person.2", kind: .fulfilled),
-        Stop(label: "661", symbol: "person.2", kind: .fulfilled),
+        Stop(label: "624", symbol: "book", kind: .fulfilled, name: "Badr"),
+        Stop(label: "630", symbol: "book", kind: .fulfilled, name: "Makkah"),
+        Stop(label: "651", symbol: "crown", kind: .fulfilled, name: "Persia"),
+        Stop(label: "657", symbol: "person.2", kind: .fulfilled, name: "Siffin"),
+        Stop(label: "661", symbol: "person.2", kind: .fulfilled, name: "Peace"),
         Stop(label: "", symbol: "", kind: .gap),
         Stop(label: "Today", symbol: "hourglass", kind: .now),
         Stop(label: "", symbol: "hourglass.bottomhalf.filled", kind: .awaited),
@@ -1263,8 +1200,10 @@ struct PropheciesTimelineArt: View {
 
     private static var gapIndex: Int { stops.firstIndex { $0.kind == .gap } ?? 0 }
     private static var nowIndex: Int { stops.firstIndex { $0.kind == .now } ?? 0 }
-    /// The rail runs through the nodes' centres: the symbol row, its spacing and half a node down.
-    private static let railY: CGFloat = 18 + 5 + 11
+    /// The row above the nodes: a symbol, or a stop's name on one of two steps.
+    private static let topRow: CGFloat = 24
+    /// The rail runs through the nodes' centres: the top row, its spacing and half a node down.
+    private static let railY: CGFloat = topRow + 5 + 11
 
     var body: some View {
         let accent = appearance.accent
@@ -1286,12 +1225,12 @@ struct PropheciesTimelineArt: View {
 
                 HStack(spacing: 0) {
                     ForEach(Self.stops.indices, id: \.self) { index in
-                        column(Self.stops[index], accent: accent)
+                        column(Self.stops[index], steppedUp: index.isMultiple(of: 2), accent: accent)
                             .frame(maxWidth: .infinity)
                     }
                 }
             }
-            .frame(height: 18 + 5 + 22 + 5 + 13)
+            .frame(height: Self.topRow + 5 + 22 + 5 + 13)
         }
         .padding(12)
         .artPanel(accent)
@@ -1300,10 +1239,19 @@ struct PropheciesTimelineArt: View {
         .artFrame(Text(verbatim: AppLanguage.article("A timeline from the first revelation in 610: prophecies fulfilled at Badr in 624, at the return to Makkah in 630, in the end of the Persian kings in 651, in 'Ammar's death in 657 and al-Hasan's peace in 661, signs seen in our own day, and a dashed line on to the signs still to come.")))
     }
 
-    private func column(_ stop: Stop, accent: Color) -> some View {
+    private func column(_ stop: Stop, steppedUp: Bool, accent: Color) -> some View {
         VStack(spacing: 5) {
             Group {
-                if stop.symbol.isEmpty {
+                if !stop.name.isEmpty {
+                    // Wider than its column, so it keeps its size (`fixedSize`), and on the step its
+                    // neighbours are not on, so two names never run into one word.
+                    Text(verbatim: AppLanguage.article(stop.name))
+                        .font(.system(size: 9.5, weight: .bold))
+                        .foregroundColor(accent)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .frame(maxHeight: .infinity, alignment: steppedUp ? .top : .bottom)
+                } else if stop.symbol.isEmpty {
                     Color.clear
                 } else {
                     Image(systemName: stop.symbol)
@@ -1311,7 +1259,7 @@ struct PropheciesTimelineArt: View {
                         .foregroundColor(stop.kind == .awaited ? .secondary : accent)
                 }
             }
-            .frame(height: 18)
+            .frame(height: Self.topRow)
 
             node(stop.kind, accent: accent)
                 .frame(width: 22, height: 22)
@@ -1763,66 +1711,71 @@ private struct Winding: Shape {
 
 /// Dhikr & Remembrances: "The dearest words to Allah are four: Subhan Allah, Alhamdulillah, La ilaha
 /// illa Allah and Allahu Akbar. It does not matter which of them you begin with" (Sahih Muslim 2137).
-/// The four sit round a ring with the number four at its heart, and the ring has no first.
+/// The four as four tiles, each in Arabic with how it is said beneath, and the hadith's own last
+/// words closing them: in any order.
+///
+/// A ring with the four in Arabic alone until 2026-11-25 ("informative and pretty"): a reader who
+/// cannot yet read the script learned nothing from it.
 struct DhikrFourWordsArt: View {
     @Environment(\.appearance) private var appearance
 
-    private static let words = ["سُبْحَانَ اللَّهِ", "الْحَمْدُ لِلَّهِ", "لَا إِلَهَ إِلَّا اللَّهُ", "اللَّهُ أَكْبَرُ"]
-    private static let rx: CGFloat = 92
-    private static let ry: CGFloat = 44
+    private static let words: [(arabic: String, said: String)] = [
+        ("سُبْحَانَ اللَّهِ", "Subhan Allah"),
+        ("الْحَمْدُ لِلَّهِ", "Alhamdulillah"),
+        ("لَا إِلَهَ إِلَّا اللَّهُ", "La ilaha illa Allah"),
+        ("اللَّهُ أَكْبَرُ", "Allahu Akbar"),
+    ]
 
     var body: some View {
         let accent = appearance.accent
         return VStack(alignment: .leading, spacing: 6) {
-            ArtCaption("MOST BELOVED TO ALLAH")
+            HStack(spacing: 8) {
+                ArtCaption("MOST BELOVED TO ALLAH")
+                Spacer(minLength: 4)
+                ArtCaption("IN ANY ORDER", color: .secondary)
+            }
 
-            ZStack {
-                Ellipse()
-                    .stroke(accent.opacity(0.3), style: StrokeStyle(lineWidth: 1.2, dash: [3, 3]))
-                    .frame(width: 2 * Self.rx, height: 2 * Self.ry)
-
-                ZStack {
-                    Circle()
-                        .fill(LinearGradient(colors: [accent.opacity(0.95), accent.opacity(0.7)],
-                                             startPoint: .topLeading, endPoint: .bottomTrailing))
-                    Text(verbatim: "4".localizedDigits)
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
+            VStack(spacing: 5) {
+                HStack(spacing: 5) {
+                    word(0, accent: accent)
+                    word(1, accent: accent)
                 }
-                .frame(width: 42, height: 42)
-
-                ForEach(Self.words.indices, id: \.self) { index in
-                    word(Self.words[index], accent: accent)
-                        .offset(position(index))
+                HStack(spacing: 5) {
+                    word(2, accent: accent)
+                    word(3, accent: accent)
                 }
             }
-            .frame(height: 2 * Self.ry + 34)
-            .frame(maxWidth: .infinity)
-
-            ArtCaption("IN ANY ORDER", color: .secondary)
-                .frame(maxWidth: .infinity)
         }
         .artFrame(Text("The four words most beloved to Allah, round a ring with no first: Subhan Allah, Alhamdulillah, La ilaha illa Allah and Allahu Akbar. It does not matter which you begin with."))
     }
 
-    private func position(_ index: Int) -> CGSize {
-        switch index {
-        case 0: return CGSize(width: 0, height: -Self.ry)
-        case 1: return CGSize(width: Self.rx, height: 0)
-        case 2: return CGSize(width: 0, height: Self.ry)
-        default: return CGSize(width: -Self.rx, height: 0)
-        }
-    }
+    private func word(_ index: Int, accent: Color) -> some View {
+        let item = Self.words[index]
+        return HStack(spacing: 8) {
+            Text(verbatim: "\(index + 1)".localizedDigits)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+                .frame(width: 20, height: 20)
+                .background(Circle().fill(LinearGradient(colors: [accent.opacity(0.95), accent.opacity(0.7)],
+                                                         startPoint: .topLeading, endPoint: .bottomTrailing)))
 
-    private func word(_ arabic: String, accent: Color) -> some View {
-        ArtArabic(arabic, size: 14)
-            .padding(.horizontal, 10)
-            .frame(width: 106, height: 30)
-            .background(
-                Capsule()
-                    .fill(accent.opacity(0.14))
-                    .overlay(Capsule().strokeBorder(accent.opacity(0.35), lineWidth: 1))
-            )
+            VStack(alignment: .leading, spacing: 0) {
+                ArtArabic(item.arabic, size: 15)
+                    .frame(height: 22)
+                // How it is said, for a reader who cannot read the script yet: the same in every language.
+                Text(verbatim: item.said)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .opacity(AppLanguage.isArabicScript ? 0 : 1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .artPanel(accent, radius: 10)
     }
 }
 
@@ -2576,4 +2529,62 @@ struct DominoesArt: View {
         )
     }
 }
+
+#if DEBUG
+/// `-artGallery` (DEBUG): every hero drawing rendered on its own into Documents/art/<scheme>-<name>.png,
+/// at the width a drawing has inside a hero card on an iPhone, in the dark and the light appearance.
+/// The way to look at all of them in one launch: on their screens each sits a scroll apart, and a
+/// simulator screenshot shows one at a time.
+enum ResourceArtGallery {
+    @MainActor
+    static func exportIfAsked() async {
+        guard ProcessInfo.processInfo.arguments.contains("-artGallery") else { return }
+        guard #available(iOS 16.0, *) else { return }
+        try? await Task.sleep(nanoseconds: 5_000_000_000)
+        let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("art")
+        try? FileManager.default.removeItem(at: folder)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let pieces: [(String, AnyView)] = [
+            ("01-alphabet", AnyView(ArabicSunMoonLettersArt())),
+            ("02-course", AnyView(TajweedCoursePathArt(stages: TajweedPathStage.placeholder))),
+            ("03-dhikr", AnyView(DhikrFourWordsArt())),
+            ("04-dua", AnyView(DuaAnswerHoursArt())),
+            ("05-tasbih", AnyView(TasbihBeadsArt())),
+            ("06-names", AnyView(NamesRosetteArt(favorites: [1, 2, 33]))),
+            ("07-zakah", AnyView(ZakahQuarterTenthArt())),
+            ("08-inheritance", AnyView(InheritanceSharesArt())),
+            ("09-hijri", AnyView(HijriMonthsGridArt(month: 6))),
+            ("10-wallpapers", AnyView(WallpaperFormatsArt(phones: 3))),
+            ("11-journal", AnyView(JournalNotebookArt(entries: 4, notes: 7))),
+            ("12-stories", AnyView(ProphetStoriesArt())),
+            ("13-generations", AnyView(BestGenerationsArt())),
+            ("14-preservation", AnyView(QuranTwoWaysArt())),
+            ("15-hadith", AnyView(SahihConditionsArt())),
+            ("16-proving", AnyView(ProvingFingerprintsArt())),
+            ("17-domino", AnyView(DominoesArt())),
+            ("18-religions", AnyView(StraightPathArt())),
+            ("19-miracles", AnyView(MiraclesHorizonsArt())),
+            ("20-prophets", AnyView(ProphetsLastBrickArt())),
+            ("21-prophecies", AnyView(PropheciesTimelineArt())),
+            ("22-sunnahs", AnyView(SunnahDayDialArt())),
+        ]
+        var written = 0
+        for scheme in [ColorScheme.dark, .light] {
+            for (name, piece) in pieces {
+                let card = piece
+                    .frame(width: 335)
+                    .padding(14)
+                    .background(scheme == .dark ? Color(white: 0.09) : Color(white: 0.96))
+                    .environment(\.colorScheme, scheme)
+                let renderer = ImageRenderer(content: card)
+                renderer.scale = 2
+                guard let data = renderer.uiImage?.pngData() else { continue }
+                let label = scheme == .dark ? "dark" : "light"
+                if (try? data.write(to: folder.appendingPathComponent("\(label)-\(name).png"))) != nil { written += 1 }
+            }
+        }
+        NSLog("ARTGALLERY wrote %d drawings to %@", written, folder.path)
+    }
+}
+#endif
 #endif

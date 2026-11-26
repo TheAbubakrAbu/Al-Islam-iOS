@@ -10,6 +10,11 @@ struct AdhanView: View {
     @ObservedObject private var systemSettings = SystemSettings.shared
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
+    #if os(iOS)
+    /// The flight being followed, if any (FlightMode.swift): in the air its board stands where the
+    /// sky and the prayer list do.
+    @ObservedObject private var flight = FlightMode.shared
+    #endif
 
     @Environment(\.scenePhase) private var scenePhase
     // False while this view is being built behind the launch/splash cover; holds prompts until we're on screen.
@@ -60,12 +65,14 @@ struct AdhanView: View {
         case calculationAutomaticChanged
         case locationAlert
         case notificationAlert
+        /// "Are you on a flight?": a GPS fix showed a plane's speed and height (`FlightMode.detection`).
+        case flightDetected
 
         /// The cards that answer a standing auto-change flag (as opposed to the permission nags).
         var isAutoChangeCard: Bool {
             switch self {
             case .travelTurnOnAutomatic, .travelTurnOffAutomatic, .calculationAutomaticChanged: return true
-            case .locationAlert, .notificationAlert: return false
+            case .locationAlert, .notificationAlert, .flightDetected: return false
             }
         }
 
@@ -76,6 +83,7 @@ struct AdhanView: View {
             case .calculationAutomaticChanged: return 3
             case .locationAlert: return 4
             case .notificationAlert: return 5
+            case .flightDetected: return 6
             }
         }
     }
@@ -152,7 +160,7 @@ struct AdhanView: View {
                     // (Clearing again after an action button is a harmless no-op.)
                     switch showAlert {
                     case .travelTurnOnAutomatic, .travelTurnOffAutomatic:
-                        settings.resetTravelAutomaticFlags()
+                        settings.confirmTravelAutomaticChange()
                     case .calculationAutomaticChanged:
                         settings.confirmAutomaticCalculationChange()
                     // Ignore, Open Settings or a tap outside: quiet for a day, not until the next
@@ -161,6 +169,13 @@ struct AdhanView: View {
                         settings.snoozePermissionAlert(location: true)
                     case .notificationAlert:
                         settings.snoozePermissionAlert(location: false)
+                    case .flightDetected:
+                        // Cancel or a tap outside is "not now". After "Turn On" the question is
+                        // already gone and this is a no-op.
+                        #if os(iOS)
+                        if flight.detection != nil { flight.declineDetection() }
+                        #endif
+                        break
                     default:
                         break
                     }
@@ -257,25 +272,33 @@ struct AdhanView: View {
                     DateAndLocationSection(showBigQibla: $showBigQibla)
                 }
 
-                if settings.showSkyView, live.prayers != nil, live.currentLocation != nil {
-                    Section {
-                        SkyView(pageSky: fillsSky)
-                            .listRowBackground(Color.clear)
+                if let board = flightBoard {
+                    // In the air (FlightMode.swift): the sky, the countdown and the list below are
+                    // all drawn for a place on the ground, and the aircraft is not at it. The
+                    // flight's own board stands in their place until it lands.
+                    FlightBoardSections(timeline: board, open: openFlightMode)
+                    if showsTracker { PrayerTrackerSection() }
+                } else {
+                    if settings.showSkyView, live.prayers != nil, live.currentLocation != nil {
+                        Section {
+                            SkyView(pageSky: fillsSky)
+                                .listRowBackground(Color.clear)
+                        }
                     }
-                }
 
-                // The tracker is its own section directly beneath the times: marking prayers is a
-                // different activity from reading them, and it carries its own header, streak and
-                // history entry point (see PrayerTrackerView.swift). The DEBUG launch argument
-                // `-adhanTrackerFirst` hoists it above the times, so the card can be screenshotted
-                // without scrolling (there is no scroll tooling for the simulator).
-                Group {
-                    if hoistsTrackerForDebug {
-                        if showsTracker { PrayerTrackerSection() }
-                        prayersSection
-                    } else {
-                        prayersSection
-                        if showsTracker { PrayerTrackerSection() }
+                    // The tracker is its own section directly beneath the times: marking prayers is a
+                    // different activity from reading them, and it carries its own header, streak and
+                    // history entry point (see PrayerTrackerView.swift). The DEBUG launch argument
+                    // `-adhanTrackerFirst` hoists it above the times, so the card can be screenshotted
+                    // without scrolling (there is no scroll tooling for the simulator).
+                    Group {
+                        if hoistsTrackerForDebug {
+                            if showsTracker { PrayerTrackerSection() }
+                            prayersSection
+                        } else {
+                            prayersSection
+                            if showsTracker { PrayerTrackerSection() }
+                        }
                     }
                 }
 
@@ -387,6 +410,11 @@ struct AdhanView: View {
         .onChange(of: settings.travelTurnOnAutomatic) { _ in autoChangeFlagsDidChange() }
         .onChange(of: settings.travelTurnOffAutomatic) { _ in autoChangeFlagsDidChange() }
         .onChange(of: settings.calculationAutoChanged) { _ in autoChangeFlagsDidChange() }
+        #if os(iOS)
+        // A fix that looks like an aircraft raises the question here, on the tab whose times it is
+        // about, and only while the tab is in front (`flightDetectionDidChange`).
+        .onReceive(flight.$detection) { found in flightDetectionDidChange(found) }
+        #endif
         .navigationTitle("Al-Adhan")
         #if os(iOS)
         .toolbar {
@@ -422,11 +450,15 @@ struct AdhanView: View {
             // up. Pushed onto the settings root a beat after appear, the root showed first and the page
             // switched in mid-slide (Abu, 2026-10-31: "it opens glitchy").
             SheetNavigationContainer {
-                SettingsAdhanView(
-                    showNotifications: true,
-                    presentedAsSheet: true,
-                    standalonePage: target.page
-                )
+                if target == .travelingExplainer {
+                    TravelingModeExplainer(answersCard: true)
+                } else {
+                    SettingsAdhanView(
+                        showNotifications: true,
+                        presentedAsSheet: true,
+                        standalonePage: target.page
+                    )
+                }
             }
             .smallMediumSheetPresentation()
         }
@@ -579,6 +611,7 @@ struct AdhanView: View {
             // a loud card leading the whole tab). With the sky on, the countdown rides in the sky
             // card, so this is the first row beneath it either way.
             travelingSection
+            flightSection
             // Simple Mode's tutorial nudge (elsewhere the nudge is the door leading Need a Hand?), in the
             // notices' slot above the list it explains (and, before there are times to show, where the
             // list would be): TabTutorials.swift.
@@ -642,6 +675,64 @@ struct AdhanView: View {
             }
             .transition(.opacity.combined(with: .move(edge: .top)))
         }
+    }
+    #endif
+
+    #if os(iOS)
+    /// The flight's board, while the aircraft is in the air and there is a timeline to show.
+    private var flightBoard: FlightTimeline? {
+        flight.status == .inFlight ? flight.timeline : nil
+    }
+
+    /// Flight Mode outside the flight itself: one row for a flight set up and still to leave (within
+    /// a day: a flight typed in a week ahead says nothing until then), and one for the landing.
+    @ViewBuilder
+    private var flightSection: some View {
+        if flight.status == .waiting, let plan = flight.plan {
+            // On with nothing typed, and no fix in the air yet: the list below is still the
+            // ground's, and this row says so and opens the page.
+            Section {
+                FlightModeBanner(kind: .waiting(plan), action: openFlightMode)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
+            .transition(.opacity.combined(with: .move(edge: .top)))
+        } else if flight.status == .upcoming, let timeline = flight.timeline,
+           timeline.takeoff.timeIntervalSinceNow < 24 * 60 * 60 {
+            Section {
+                FlightModeBanner(kind: .upcoming(timeline), action: openFlightMode)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
+            .transition(.opacity.combined(with: .move(edge: .top)))
+        } else if flight.status == .off, let arrival = flight.arrival {
+            Section {
+                FlightModeBanner(kind: .arrived(arrival)) {
+                    withAnimation(.easeInOut) { flight.arrival = nil }
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+            }
+            .transition(.opacity.combined(with: .move(edge: .top)))
+        }
+    }
+
+    /// Opens the Flight Mode page in the tab's settings sheet. One sheet at a time, as everywhere here.
+    private func openFlightMode() {
+        guard settingsSheet == nil, glanceSheet == nil else { return }
+        settingsSheet = .flightMode
+    }
+
+    /// `FlightMode.detection` changed: raise the question if nothing else is being asked, and take
+    /// it down if it was answered elsewhere (the Flight Mode page, a flight set up by hand).
+    private func flightDetectionDidChange(_ found: FlightMode.Detection?) {
+        if found == nil {
+            if showAlert?.id == AlertType.flightDetected.id { showAlert = nil }
+            return
+        }
+        guard isOnScreen, appRevealed, scenePhase == .active, showAlert == nil,
+              settingsSheet == nil, glanceSheet == nil else { return }
+        showAlert = .flightDetected
     }
     #endif
 
@@ -834,6 +925,10 @@ struct AdhanView: View {
         if settings.ownsAutomaticCalculationCheck, settings.calculationAutoChanged {
             return .calculationAutomaticChanged
         }
+        #if os(iOS)
+        // A question raised while another card was up, or while the tab was not in front.
+        if flight.detection != nil, flight.plan == nil { return .flightDetected }
+        #endif
         // The permission dialogs are the watch's alone since 2026-11-05: the phone shows a card in the
         // tab instead (`AdhanPermissionSection`). A dismissed one waits a day before it asks again
         // (`snoozePermissionAlert`).
@@ -850,6 +945,17 @@ struct AdhanView: View {
         #endif
         return nil
     }
+
+    #if os(iOS)
+    /// The card's third button. The sheet waits for the card to finish leaving: raised under a
+    /// dialog that is still on its way out, UIKit refuses it ("already presenting").
+    private func openTravelingExplainer() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            guard settingsSheet == nil, glanceSheet == nil else { return }
+            settingsSheet = .travelingExplainer
+        }
+    }
+    #endif
 
     /// The automatic-change cards' copy lives in `Settings.AutoChangeCard`, shared with the settings
     /// sheet's copy of these dialogs.
@@ -869,6 +975,12 @@ struct AdhanView: View {
             return String(localized: "Location Access Needed")
         case .notificationAlert:
             return String(localized: "Notifications Off")
+        case .flightDetected:
+            #if os(iOS)
+            // Asked at an airport, before the flight; or in the air, from a fix.
+            if let found = flight.detection, found.fix == nil { return String(localized: "Flying Today?") }
+            #endif
+            return String(localized: "Are You on a Flight?")
         default:
             return ""
         }
@@ -892,6 +1004,17 @@ struct AdhanView: View {
                     settings.overrideTravelingMode(keepOn: false)
                 }
             }
+
+            // The first card only (`travelingModeExplained`): the explanation, which ends in these
+            // same two answers. Taking it leaves the mode on, as dismissing the card does.
+            #if os(iOS)
+            if let explain = settings.autoChangeCard(.travelOn).explainTitle {
+                Button(explain) {
+                    settings.hapticFeedback()
+                    openTravelingExplainer()
+                }
+            }
+            #endif
 
         case .travelTurnOffAutomatic:
             Button(settings.autoChangeCard(.travelOff).confirmTitle) {
@@ -949,6 +1072,23 @@ struct AdhanView: View {
                 settings.hapticFeedback()
             }
 
+        case .flightDetected:
+            // Accept first, as on the other cards. "Turn On" starts a flight from the fix that gave
+            // it away and opens its page, where the destination is asked for.
+            #if os(iOS)
+            Button(String(localized: "Turn On Flight Mode")) {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) { flight.beginFromDetection() }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { openFlightMode() }
+            }
+            Button(String(localized: "Not Now")) {
+                settings.hapticFeedback()
+                flight.declineDetection()
+            }
+            #else
+            EmptyView()
+            #endif
+
         case .none:
             EmptyView()
         }
@@ -963,9 +1103,29 @@ struct AdhanView: View {
             Text("Please go to Settings and enable location services to accurately determine prayer times.")
         case .notificationAlert:
             Text("Please go to Settings and enable notifications to be notified of prayer times.")
+        case .flightDetected:
+            Text(flightDetectedMessage)
         case .none:
             EmptyView()
         }
+    }
+
+    /// The card's sentence: the evidence (so the question does not come from nowhere), then what
+    /// saying yes does.
+    private var flightDetectedMessage: String {
+        #if os(iOS)
+        let what = String(localized: "Flight Mode gives each prayer's time for where the plane will be, instead of for the ground below.")
+        if let found = flight.detection, found.fix == nil, let airport = found.airport {
+            return String(localized: "You are at \(airport.name). If you are flying, turn on Flight Mode before you board and each prayer's time will follow the plane.")
+        }
+        guard let fix = flight.detection?.fix else { return what }
+        let reading = fix.altitude.map {
+            String(localized: "You are moving at \(FlightFormat.speed(fix.speed)), \(FlightFormat.altitude($0)) up.")
+        } ?? String(localized: "You are moving at \(FlightFormat.speed(fix.speed)).")
+        return "\(reading) \(what)"
+        #else
+        return ""
+        #endif
     }
 
     private func openAppSettings() {
@@ -1409,16 +1569,20 @@ func formatElevation(metres: Double) -> String {
 
 #if os(iOS)
 private enum SettingsSheetTarget: String, Identifiable {
-    case root, prayerCalculation, travelingMode
+    case root, prayerCalculation, travelingMode, flightMode
+    /// "How Traveling Mode Works", from the first Traveling Mode On card: not a settings page, but
+    /// it shares the one sheet this tab may have up at a time.
+    case travelingExplainer
 
     var id: String { rawValue }
 
     /// The settings page the sheet IS, or nil for the whole Prayer Settings.
     var page: SettingsAdhanPage? {
         switch self {
-        case .root: return nil
+        case .root, .travelingExplainer: return nil
         case .prayerCalculation: return .prayerCalculation
         case .travelingMode: return .travelingMode
+        case .flightMode: return .flightMode
         }
     }
 }

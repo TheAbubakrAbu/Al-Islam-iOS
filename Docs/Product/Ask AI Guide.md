@@ -229,6 +229,228 @@ Abu: "When I go to ask ai always make a new chat but maybe show the last 2 chats
 - A conversation with no question in it is never filed; one reopened and set aside again is listed
   once (it keeps its id). "Erase Everything" clears History too.
 
+## Prayer times, dates and the qibla (2026-11-25)
+
+One builder, `AskAISourceFactory.prayerSource(for:place:)`, writes the source for every question the
+app computes an answer to. `AskAIPrayerRequest.parse` reads the place, the day and the `Topics` the
+question asks for; only what is asked goes into the source, because a small model repeats whatever
+sits beside a time (with the rakah counts on every line it gave Isha's counts to iftar).
+
+| Asked | What the source carries |
+|---|---|
+| any time | the answer in the first sentence, worked out by the app: each prayer the question names (`prayers`) with its time and, today, its countdown ("Isha is at 4:52 PM, in 3 hours 51 minutes", "Dhuhr was at 10:45 AM, 2 hours ago"), else what comes next; then the day's times, bare. The model copies, it never subtracts |
+| rakahs, sunnah, fard | the counts beside each time (`.rakahs`); "How many rakahs is Maghrib?" is routed here by `asksRakahCount` (from the library the answer was "two", off a hadith about the sunnah after it) |
+| midnight, tahajjud, qiyam, last third, "when does Isha end" | Islamic midnight and the last third (`.night`, `Settings.optionalPrayers`) |
+| suhoor, iftar, fasting | suhoor's end at Fajr and iftar at Maghrib (`.fasting`) |
+| duha | when Duha opens (`.duha`) |
+| method, calculation, madhab | the reader's method and Asr rule (`.method`, here only) |
+| "this week", "the next 3 days" | one line a day, up to seven (`.week`) |
+| the Hijri date | the day's Hijri date, with the reader's adjustment and the Maghrib switch (`.hijri`) |
+| when is Ramadan, an Eid, Arafah, Ashura, Hajj | the next two occurrences of each named date from `Settings.specialEvents`, with the days left (`.events`) |
+| the qibla's direction | the bearing from true north and its compass point, here or in a named city (`.qibla`) |
+
+A question that is only about the calendar or the qibla gets no timetable (`wantsTimes`), and
+`asksDateOrDirection` sends it to the prayer-times intent only when it asks for the fact itself: "why
+did the qibla change" and "when should I fast Arafah" stay with the library.
+
+**Follow-ups inherit.** "Fajr in Makkah tomorrow", then "And in Cairo?", then "What about Maghrib?":
+a follow-up straight after a prayer-times answer that names a place, a day, a prayer or a topic is a
+prayer-times question (`continuesPrayerTalk`), and takes the place and the day it does not name from
+the request before it (`inheriting`, kept in `AskAIConversation.lastPrayerRequest`). Before this the
+second question was read as a general one, found no timetable, and the model made a time up.
+
+**The timetable is the whole answer.** When the app has computed the source, it is the only source
+of the turn, in every scope: with seven verses and articles beside it ("how long until Asr" pulled
+in Surah Al-Asr) the first word took twice as long, and the model looked elsewhere and said the
+times were not in its sources.
+
+**A week is written by the app.** Asked for a week's times, the model wrote out the first day and
+called it the week. A run of days (`Topics.week`) is a table the app has exact, so `ask` sets the
+source's own lines down as the answer and the model is not called. (`-askAILog` prints `RAW:` when
+the cleaned answer differs from what the model sent; an answer is several lines long, so read the
+whole entry, not its first line.)
+
+**Few lines, one countdown, and the answer first.** What was asked is said in the first sentence,
+beside the time of day: under the list, "What is the next prayer?" got the list's first line, and
+with a countdown on every line plus "the next one is Asr, in 25 minutes", "How long until Isha?" was
+answered "25 minutes". The coming dates are the next occurrence of each named one, or those of the
+year asked for (`eventYear`), never six lines (given six, the model picked the last). The task line
+says the source is the app's calculation and not scripture: given that one source alone, the model
+once opened "The words of Allah in Surah Al-Baqarah, verse 184: Fajr 5:19 AM".
+Suhoor is written as a deadline ("must be finished by Fajr"): "suhoor ends at Fajr" came back as
+"suhoor begins at Fajr".
+
+**The reader's own record (`Topics.tracker`).** "Did I pray Fajr today?", "Did I miss Dhuhr?",
+"Which prayers have I prayed today?" (`AskAIPrayerRequest.asksTracker`) are answered from the Prayer
+Tracker's marks and the clock: whether the prayer's time has come, is still on (and until when) or
+has ended, and how it is marked. The APP writes the answer (`AskAISource.appAnswer`): asked to say
+"Dhuhr's time ended at 1:13 PM; your tracker has no mark for it", the model kept one half and
+dropped the other, a different half each run. A question about what to DO stays with the library
+("I missed Fajr, what should I do?").
+
+**Two or three places.** "Fajr in Makkah and Cairo" (`AskAIPrayerRequest.places(in:)`, `morePlaces`)
+gets one timetable per place and an answer the app writes, the asked prayer's line of each (every
+time when no prayer is named), in the order asked. The tagger does not know every city (it left
+Cairo and Istanbul untagged), so a capitalised name joined to a place phrase by "and", "or", "vs" or
+a comma counts too.
+
+**App-written answers so far:** a week's table, compared places, the tracker. The rule: when every
+part of the answer is a fact the app holds, the app sets it down.
+
+**Starters.** The Prayer Times choice has eight, four a day: two about the day's times and two of
+"When is Ramadan?", "Which way is the qibla?", "What is the Hijri date today?", "When does the last
+third of the night begin?" (catalog keys, translated into the 14 languages with
+`Scripts/localize_catalog.py manual` then `merge`).
+
+**Never a place.** A candidate of filler words alone, or one holding a word from `neverInAPlace`, is
+not looked up: "the last third of the night tonight" once left "the" after the date detector took
+"night tonight", and Apple Maps found a village for it.
+
+## Summaries read the whole text (2026-11-25)
+
+`SummarizeSheet` used to send the first 6,000 characters of a text and nothing after them. One text
+is now read to its end by `OnDeviceAsk.streamTextSummary`:
+
+- up to `singlePassCharacters` (7,000) in one request, as before;
+- longer, in parts: a short first part (`firstPartCharacters`, 3,200, so the first words come in
+  about a second), then parts of about 6,500 (8,000 at most), each its own request and its own
+  paragraph, up to `maximumParts` (10, about 75,000 characters; only a text past that says how far
+  the reading went). The card shows a bar for the reading and "Reading the text..." between parts.
+- A question afterwards (`streamTextFollowUp`) is answered from the passages of the whole text that
+  share its words (`passages(of:for:limit:)`), with the summary beside them for orientation.
+
+Several texts at once ("all tafsirs", a focused Arabic edition) still arrive combined and fitted by
+the caller and are sent as they are.
+
+What made it slow to start, measured with `-summaryProbe` on Ibn Kathir's 2:255 (13,809 characters):
+
+| | first word | whole summary | text read |
+|---|---|---|---|
+| before, first summary of a launch | 5.0 s | 11.0 s | 6,000 characters |
+| before, model already loaded | 2.1 s | 8.1 s | 6,000 characters |
+| now, model already loaded | 2.0 s | 16 s | all 13,809 |
+
+The wait is the model reading the prompt (about a millisecond a token on the simulator) plus 2.9 s
+when it has to be loaded first. `prewarmSummaries` starts that load as the sheet rises. The tokenizer
+is asked only about a part long enough to overflow (`fitting`), since its first count of a launch
+takes up to a second.
+
+### What Abu meant by "laggy" (the same day, second pass)
+
+He meant the app dropping frames while the summary is written, worst while scrolling, not the wait.
+What the simulator can and cannot show of that:
+
+- **The app's own main thread** is measurable, and the first fix made it worse. `StreamReveal` first
+  published the text thirty times a second and SwiftUI redrew `SelectableProse` each time: the whole
+  string built again, set on the text view, and measured through `UITextView.sizeThatFits`, which
+  typesets the whole text. 4.5 ms a redraw, 133 ms of main thread a second against 29 for drawing the
+  model's lumps as they came. The simulator draws 60 frames a second, so nothing was late there; the
+  phone draws 120, 8.3 ms each. `-summaryProbe` now counts run-loop passes longer than that (`over8`,
+  `over16`, `longest`), and `-summaryScroll` scrolls the sheet while the summary is written:
+
+  | drawing | main thread | passes over 8.3 ms, still | scrolled |
+  |---|---|---|---|
+  | each lump set whole (before 2026-11-25) | 29 ms/s | 2 | 4 |
+  | 30 Hz reveal through SwiftUI (first fix) | 133 ms/s | 14 | 42 |
+  | words appended to the text view (now) | 21 ms/s | 0 | 0 |
+
+  Now: `StreamReveal` writes into the text view itself (`StreamedTextView`, a TextKit stack on an
+  `OwnedTextContainer`), a word or two twelve times a second, appended to the storage, and SwiftUI
+  hears of it only when the text takes another line. The sheet's own body is no longer evaluated per
+  snapshot (`summary` and a turn's `answer` are set once, at the end). While the reader scrolls by
+  hand nothing is written at all (`ScrollingByHand`, four seconds at most); the words catch up when
+  the scroll rests.
+- **The old sheet fought the finger during an answer**: every snapshot animated a scroll to the
+  foot. A scroll by hand now stops the follow until the next question.
+- **The model sharing the phone's graphics chip with the screen** is not measurable here. A screen
+  recording of a steady scroll on the Mac (`-summaryScrollTail`, frames counted with ffprobe) missed
+  no frame with the model writing or stopped, but the Mac is not the phone. This is the likeliest
+  cause of "it lagged the whole app" on the old build, whose main thread was already light, and the
+  app cannot change it: it can only ask for less drawing while the model works, which is what the
+  above does. Check on a phone with Instruments (Animation Hitches) before claiming more.
+- **No model work nobody asked for.** For a day the model was also loaded when a tafsir or a surah's
+  background opened (a reader who had summarized lately). Taken out: a model starting up under a
+  screen where nobody asked for it is the complaint itself. The first summary of a launch waits
+  about 3 s longer for its first word because of it.
+
+A real drag between the sheet's half and full heights showed one more stall, up to 41 ms: the Quran
+reader UNDER the sheets building a row (`UICollectionView` prefetch, `WordByWordTextView`), not the
+summary. Left alone; it belongs to the reader.
+
+`-summaryProbe` logs one `SUMMARYPROBE request` line per model request (prompt tokens, wait, total)
+and one line for the whole summary (wait, total, redraws, hitch ms/s, worst frame, main-thread ms/s,
+and the run-loop passes over one and two of the phone's frames), and writes the summary to
+Documents/summary-probe.txt. `-summarizeDelay <s>` holds the tafsir open first; `-summaryScroll`
+scrolls the sheet while it writes; `-summaryDrawAsItComes` draws each lump whole, to compare. An
+article page: `-launchTabIslam -islamOpenArticle QiraatView -articleSummarize -summaryProbe` (19,736
+characters, four parts, 21 s, checked 2026-11-25). Real swipes work on the simulator through idb
+(`idb ui swipe`), and are the only way to see the sheet change height.
+`-summaryAsk "<question>"` asks a question once the summary is written (answer in
+Documents/summary-answer.txt): "What does it say about the Throne and the Kursi?" is answered from
+the end of that tafsir, 8,000 characters past where the old summary stopped reading.
+
+## Finding a passage from its description (2026-11-25)
+
+Abu: "if I tell you verse about fathers killing their children out of shame you find nothing, but
+Google or ChatGPT would be able to find it." The verses meant (16:58-59, 81:8-9) share no word with
+that sentence, the search field's engines score typed words, and the meaning search is word vectors
+(`NLEmbedding`), where "shame" sits nearest "disgust" and "killing" nearest "shooting".
+
+**What does not work on the 3B model** (each tried from a Mac command line against the same model,
+`SystemLanguageModel` in a small Swift script, seconds a try):
+- asking which verse it is: a confident reference and a made-up quotation;
+- asking for search words: noise ("Imam of Najaf", "Goliath, Solomon");
+- handing it twelve candidates to choose from: it passed over the first three, which were the
+  passage, for one that shared a word, and explained it with a practice it does not mention;
+- telling it to present the first candidate: a hadith introduced as "the words of Allah in the surah
+  of Al-Ma'idah, verse 11", provenance lines pasted in.
+
+**What is built** (`AskAIPassageSearch.swift`):
+- `AskAIWords`: a tokenizer, a small stemmer, and a thesaurus of about 210 concepts, one line each
+  (shame, disgrace, humiliation, dishonor; child, daughter, baby, infant, girl; kill, slay, bury).
+- `QuranDescribedSearch`: each word of the description is a concept; each ayah is scored (BM25) on
+  its two translations, on its neighbours (0.35), on what the three English tafsirs say about it
+  (TafsirKeywords.bin, each passage's 120 most telling words, 0.25 each), and on the topic index's
+  names for it (`QuranTopicsStore`, 0.8: "burying daughters alive" lists 16:58-59). Concepts that
+  sit together count for more, and so does a run of the reader's own words found verbatim ("a
+  garment for you").
+- `HadithDescribedSearch`: the same scoring over the eight major collections (HadithSearchWords.bin),
+  the same narration told in several collections kept once.
+- `AskAIQuestion.findsPassage`: "verse about ...", "which hadith ...", "where does the Quran say
+  ...". The lane's first hit leads when it carries enough of the description (`Hit.coverage`), with
+  the verse beside it when the two are one sentence (81:8-9) or share the description.
+- The APP writes the answer's head (`AskAIConversation.PassageAnswer`): the reference and the words,
+  on screen before the model has read anything; the model then explains that one passage under plain
+  instructions of its own (`AskAIPrompt.passageInstructions`), and the app adds what else is close
+  (quoted, when the second match scored within a fifth of the first). When nothing carries the
+  description the model is told to say so (`missedTask`).
+
+**Measured in the app, search only** (`-askAIRetrieveOnly`, 40 described verses and 15 described
+hadiths; `-askAINoDescribed` is the search as it was):
+
+| | reaches the model | first source |
+|---|---|---|
+| verses, before | 31 of 40 | 25 |
+| verses, now | 40 of 40 | 34 |
+| hadiths, before | 7 of 15 | 5 |
+| hadiths, now | 15 of 15 | 12 |
+
+A found passage answers in about 1.5 s (first words 0.5 s), where the same question took 9 s.
+Abu's own example now leads with 6:151 ("do not kill your children out of poverty") and quotes 81:8
+beneath it, with 16:59 fourth in the lane: "shame" is in no verse's words, and the search cannot
+weigh the reason over the act. Not built: a real sentence-embedding model.
+
+**The packs.** `Scripts/build_tafsir_keywords.py` (1.6 MB shipped) and
+`Scripts/build_hadith_search_words.py` (1.9 MB shipped), both `--check`able, both LZFSE through
+`compress_shipped.py`. Rebuild the hadith one after any .hpk rebuild: the app checks each
+collection's row count and leaves a mismatched collection out rather than cite the wrong narration.
+
+**Also fixed on the way.** "Hadith about ..." pulled Surah 88 into every such question (its other
+name opens "hadith"), and the surah-name fold read "road" as Ar-Ra'd, "water" as Wat-Tur and "man"
+as Al-Mani'ah: an ordinary English word (one the translations use) now names a surah only when it IS
+the surah's name. A line that says where a passage is and quotes it is no longer dropped as a copied
+source line (`droppingSourceEchoes`).
+
 ## Headless testing
 
 Use the iOS 27 iPhone 17 Pro simulator. The iOS 26.5 runtime's model fails every generation under

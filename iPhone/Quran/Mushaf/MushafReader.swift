@@ -715,8 +715,10 @@ private final class MushafPagerBandBox {
 
 /// The chrome changes the pager takes in one step, each with its own learned twin geometry
 /// (`MushafPageRenderCache.noteTwins`): the fold, the find bar, the mini player mounting or leaving
-/// (`player`), the mini player switching between its small and big card (`playerSize`), and select mode's
-/// bulk-action bar replacing the controls row (`select`).
+/// (`player`), the mini player switching between its small and big card (`playerSize`). `select` was
+/// select mode's bulk-action bar replacing the controls row; since 2026-11-25 that swap keeps the band
+/// (`SurahPageReader.applySelecting`), so nothing notes it any more. The case stays for the twins it
+/// stored on devices before that.
 enum MushafChromeJump: CaseIterable {
     case fold, find, player, playerSize, select
 
@@ -1027,9 +1029,9 @@ struct SurahPageReader<Controls: View>: View {
     /// (`applyPlayerExpanded`). The card's own size animation is off in page mode (`NowPlayingView`'s
     /// `expanded` override): animated, its height swept the band and the page rode the sweep scaled.
     @State private var playerExpandedRoom = Settings.shared.nowPlayingExpanded
-    /// Select mode's bar in the controls row's place: `isSelecting` is the host's intent, this is the ROOM
-    /// (the bulk-action bar is two rows to the controls' one), moved the same ordered way
-    /// (`applySelecting`, kind `.select`). `selectVisible` is the row's opacity through the swap.
+    /// Select mode's bar in the controls row's place: `isSelecting` is the host's intent, this is the
+    /// swap itself, made the same ordered way (`applySelecting`). The bar takes the row's own size,
+    /// so the band and the page stay put. `selectVisible` is the row's opacity through the swap.
     @State private var selectRoom = false
     @State private var selectVisible = true
     /// The player band's height, FROZEN per mount and size (`playerBand`): measured once when the card
@@ -1705,9 +1707,14 @@ struct SurahPageReader<Controls: View>: View {
     }
 
     /// Select mode's bar replacing the controls row (and back): the row fades out, the bar takes the
-    /// row's place and its room in one step - the page switching with it (kind `.select`) - and fades
-    /// in. The host flips `isSelecting` inside its own `withAnimation`; the swap itself happens here,
-    /// in a still transaction, so the band never sweeps through the two rows' heights.
+    /// row's place in one step and fades in. The host flips `isSelecting` inside its own
+    /// `withAnimation`; the swap itself happens here, in a still transaction.
+    ///
+    /// The page does not move for it. The bar is drawn over the controls row at the row's own size
+    /// (`SurahView.pageReaderControls`), so the band is the same in and out of select mode and there
+    /// is no jump to note for the render cache. Until 2026-11-25 the bar brought its own height, the
+    /// band lost 19 pt on the 17 Pro and the page was re-fitted across the swap (kind `.select`),
+    /// every line landing somewhere else just as the reader went to pick an ayah.
     private func applySelecting(_ selecting: Bool) {
         guard selecting != selectRoom else { return }
         pagerBand.selectGeneration &+= 1
@@ -1715,7 +1722,6 @@ struct SurahPageReader<Controls: View>: View {
         withAnimation(.easeIn(duration: mushafChromeFadeOut)) { selectVisible = false }
         DispatchQueue.main.asyncAfter(deadline: .now() + mushafChromeFadeOut) {
             guard pagerBand.selectGeneration == generation else { return }
-            if !bottomBarsCollapsed { noteJump(.select) }
             withTransaction(mushafStillTransaction) { selectRoom = selecting }
             withAnimation(.easeOut(duration: mushafChromeFadeIn)) { selectVisible = true }
         }

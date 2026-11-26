@@ -2129,14 +2129,14 @@ private struct ArticleSummarySheet: View {
     let article: IslamArticle
 
     var body: some View {
-        let source = article.summarySource(limit: OnDeviceAsk.summarizeSourceLimit,
-                                           keepArabic: OnDeviceAsk.supportsArabic)
+        // The whole page, every section under its heading: the sheet reads a long one in parts.
+        let source = article.summarySource(limit: .max, keepArabic: OnDeviceAsk.supportsArabic)
         SummarizeSheet(
             title: article.title,
             displayTitle: TajweedTopic.topic(pageID: article.id) != nil || article.id.hasPrefix(IslamArticle.lessonPrefix)
                 ? article.title.localizedDisplay : nil,
             sourceText: source.text,
-            articleSource: source
+            isPage: true
         )
     }
 }

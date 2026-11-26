@@ -275,7 +275,8 @@ final class AdhanSettings: ObservableObject, SettingsSlice {
         "calculationAutoDetectedCountryCode", "calculationAutoDetectedMethod", "calculationAutoPreviousMethod", "calculationAutomatic",
         "changedDate", "currentCountryCode", "customFajrAngle", "customIshaAngle",
         "customPrayerNames", "dateFullPrayers", "dateNotifications", "dateNotificationsDayBefore",
-        "datePrayers", "favoriteLocations", "hanafiMadhab", "highLatitudeRule",
+        "datePrayers", "favoriteLocations", "flightAskSnoozedUntil", "flightAutomatic",
+        "flightLastNotificationAt", "flightPlanData", "hanafiMadhab", "highLatitudeRule",
         "hijriDate", "hijriOffset", "homeLocation", "lastCalculationNotificationAt",
         "lastScheduledHijriYear", "lastTravelingNotificationAt", "locationAlertSnoozedUntil", "locationNeverAskAgain",
         "naggingAsr", "naggingAyahInLastCall", "naggingDeadlineStarts", "naggingDhuhr",
@@ -295,7 +296,8 @@ final class AdhanSettings: ObservableObject, SettingsSlice {
         "showLastThird", "showLocationAlert", "showNotificationAlert", "showPrayerInfo",
         "showSkyScene", "showSkyView", "skyFillsAdhanTab", "skyGradients",
         "skySceneStyle", "skyShowsWeather", "switchHijriDateAtMaghrib", "travelAutomatic",
-        "travelTurnOffAutomatic", "travelTurnOnAutomatic", "travelingMode", "travelingShowFullPrayers",
+        "travelTurnOffAutomatic", "travelTurnOnAutomatic", "travelingIntroNotified", "travelingMode",
+        "travelingModeExplained", "travelingModeOnSince", "travelingShowFullPrayers",
     ]
 
     private init() { ObjectPublishCounter.attach(self, label: Self.label) }
@@ -483,6 +485,27 @@ final class AdhanSettings: ObservableObject, SettingsSlice {
     var favoriteLocations: [Location] {
         get { Settings.shared.favoriteLocations }
         set { Settings.shared.favoriteLocations = newValue }
+    }
+    #endif
+
+    #if HAS_ADHAN
+    var flightAskSnoozedUntil: Double {
+        get { Settings.shared.flightAskSnoozedUntil }
+        set { Settings.shared.flightAskSnoozedUntil = newValue }
+    }
+    #endif
+
+    #if HAS_ADHAN
+    var flightAutomatic: Bool {
+        get { Settings.shared.flightAutomatic }
+        set { Settings.shared.flightAutomatic = newValue }
+    }
+    #endif
+
+    #if HAS_ADHAN
+    var flightPlanData: Data {
+        get { Settings.shared.flightPlanData }
+        set { Settings.shared.flightPlanData = newValue }
     }
     #endif
 
@@ -1017,9 +1040,23 @@ final class AdhanSettings: ObservableObject, SettingsSlice {
     #endif
 
     #if HAS_ADHAN
+    var travelingIntroNotified: Bool {
+        get { Settings.shared.travelingIntroNotified }
+        set { Settings.shared.travelingIntroNotified = newValue }
+    }
+    #endif
+
+    #if HAS_ADHAN
     var travelingMode: Bool {
         get { Settings.shared.travelingMode }
         set { Settings.shared.travelingMode = newValue }
+    }
+    #endif
+
+    #if HAS_ADHAN
+    var travelingModeExplained: Bool {
+        get { Settings.shared.travelingModeExplained }
+        set { Settings.shared.travelingModeExplained = newValue }
     }
     #endif
 
@@ -1691,7 +1728,8 @@ final class IslamSettings: ObservableObject, SettingsSlice {
     static let keys: Set<String> = [
         "arabicLetterSizeIndex", "favoriteIslamResources", "favoriteLetterData", "favoriteNameNumbersData",
         "hideEnglishInArabicLetters", "highlightAllahNamesIslam", "islamArabicFontFace", "islamArticleLength",
-        "islamArticleLengthNoAsk", "islamGroupResources", "islamTextSize", "quranicSukoonInLetterPractice", "showDescription",
+        "islamArticleLengthNoAsk", "islamGroupResources", "islamTextSize", "quranicSukoonInLetterPractice",
+        "showDescription",
     ]
 
     private init() { ObjectPublishCounter.attach(self, label: Self.label) }
@@ -1723,6 +1761,11 @@ final class IslamSettings: ObservableObject, SettingsSlice {
     var islamArabicFaceRaw: String {
         get { Settings.shared.islamArabicFaceRaw }
         set { Settings.shared.islamArabicFaceRaw = newValue }
+    }
+
+    var islamArticleLengthNoAsk: Bool {
+        get { Settings.shared.islamArticleLengthNoAsk }
+        set { Settings.shared.islamArticleLengthNoAsk = newValue }
     }
 
     var islamArticleLengthRaw: String {

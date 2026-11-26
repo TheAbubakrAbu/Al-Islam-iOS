@@ -1643,6 +1643,24 @@ struct HadithArabicPreview: View {
     let text: String
     var size: CGFloat = 15
     var lineLimit: Int = 2
+    /// False where the preview stands alone and should be as tall as its text (the Hadith of the
+    /// Day under its summary line): there is no neighbouring card to line up with.
+    var reservesSpace: Bool = true
+    /// True where `size` is already the size to draw at (it follows the text size and is capped,
+    /// `SummaryLineMetrics.arabicSize`): the face is then set at exactly that, where a custom face
+    /// otherwise scales with the text size once more.
+    var fixedSize: Bool = false
+
+    private var font: Font {
+        if fixedSize {
+            return settings.useFontArabic && settings.hadithArabicWantsCustomFace
+                ? .custom(settings.nonQuranArabicFontName, fixedSize: size)
+                : .system(size: size)
+        }
+        return settings.useFontArabic
+            ? (settings.hadithArabicWantsCustomFace ? Font.arabic(settings.nonQuranArabicFontName, size: size) : .system(size: size))
+            : .footnote
+    }
 
     var body: some View {
         HighlightedSnippet(
@@ -1650,15 +1668,13 @@ struct HadithArabicPreview: View {
             // opening is short enough for the chosen face to shape (see `HadithArabicChunks`).
             source: HadithArabicChunks.preview(text),
             term: "",
-            font: settings.useFontArabic
-                ? (settings.hadithArabicWantsCustomFace ? Font.arabic(settings.nonQuranArabicFontName, size: size) : .system(size: size))
-                : .footnote,
+            font: font,
             accent: settings.accentColor.color,
             fg: .primary,
             // The clamp must ride INSIDE the snippet: it applies `.lineLimit` to its own Text, and the
             // innermost value wins - an outer `.reservedLineLimit` here was silently ignored.
             lineLimit: lineLimit,
-            reservesSpace: true
+            reservesSpace: reservesSpace
         )
         .arabicFontDesign(custom: settings.hadithArabicWantsCustomFace)
         .multilineTextAlignment(.trailing)
@@ -1666,6 +1682,52 @@ struct HadithArabicPreview: View {
         // `.trailing` is the RIGHT edge only left to right: the Arabic hugs the right edge in the Arabic
         // interface too.
         .environment(\.layoutDirection, .leftToRight)
+    }
+}
+
+/// The Hadith of the Day under its summary line (`SummaryLineLabel`): the narration's opening in
+/// the hadith reader's Arabic face and in translation, up to two lines of each, at reading size
+/// where the summary tile gave it one line of each at caption size. No space reserved: a short
+/// hadith makes a short line. (The stored previews are a narration's first 120 and 140 characters,
+/// about what two lines hold, so a long hadith ends in an ellipsis and opens on a tap.)
+struct HadithSummaryNarration: View {
+    /// Read because the Arabic bakes a text style's size into a fixed font.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    let arabic: String
+    let english: String
+
+    /// One paragraph: a narration's opening often ends its first line on a line break ("...قَالَ
+    /// رَسُولُ اللَّهِ ﷺ:" and then the saying), and under a two-line clamp the break spent the
+    /// second line on nothing, leaving a blank band between the Arabic and the translation.
+    private static func oneParagraph(_ text: String) -> String {
+        text.split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
+    var body: some View {
+        let arabic = Self.oneParagraph(arabic)
+        let english = Self.oneParagraph(english)
+        let lines = SummaryLineMetrics.detailLines(at: dynamicTypeSize)
+        VStack(alignment: .leading, spacing: 6) {
+            if !arabic.isEmpty {
+                HadithArabicPreview(text: arabic, size: SummaryLineMetrics.arabicSize(at: dynamicTypeSize),
+                                    lineLimit: lines, reservesSpace: false, fixedSize: true)
+            }
+
+            if !english.isEmpty {
+                Text(english)
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+                    .lineLimit(lines)
+                    // The narration's English keeps the left edge in the Arabic interface, like the
+                    // Quran tab's verse.
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .leftToRightContent()
+            }
+        }
     }
 }
 

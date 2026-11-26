@@ -83,13 +83,14 @@ SLICES = {
         'Arabic alphabet screens, the 99 Names.',
         {'islamTextSize', 'islamArabicFaceRaw', 'highlightAllahNamesIslam', 'islamGroupResources',
          'arabicLetterSizeIndex', 'hideEnglishInArabicLetters', 'quranicSukoonInLetterPractice', 'favoriteLetterData',
-         'favoriteIslamResourcesRaw', 'favoriteNameNumbersData', 'showDescription'}),
+         'favoriteIslamResourcesRaw', 'favoriteNameNumbersData', 'showDescription',
+         'islamArticleLengthRaw', 'islamArticleLengthNoAsk'}),
 }
 # Families assigned by prefix (the per-prayer notification, nagging, offset and adhan fields).
 PREFIX_RULES = [
     ('preNotification', 'AdhanSettings'), ('notification', 'AdhanSettings'), ('nagging', 'AdhanSettings'),
     ('offset', 'AdhanSettings'), ('adhan', 'AdhanSettings'), ('shortAdhan', 'AdhanSettings'),
-    ('travel', 'AdhanSettings'), ('calculationAuto', 'AdhanSettings'), ('sky', 'AdhanSettings'),
+    ('travel', 'AdhanSettings'), ('flight', 'AdhanSettings'), ('calculationAuto', 'AdhanSettings'), ('sky', 'AdhanSettings'),
     ('showSky', 'AdhanSettings'), ('showTajweed', 'QuranDisplay'), ('wordByWord', 'QuranDisplay'),
     ('copyAyah', 'QuranDisplay'), ('quranTestMode', 'QuranDisplay'),
 ]

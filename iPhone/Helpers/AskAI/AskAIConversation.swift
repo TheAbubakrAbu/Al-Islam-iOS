@@ -130,8 +130,15 @@ enum AskAIScope: String, CaseIterable, Identifiable, Codable {
                                 "What are the six pillars of iman?", "How do I make up a missed prayer?"]
         case .duas: return ["Is there a dua for anxiety?", "What should I say before sleeping?",
                             "What is the dua for leaving home?", "What does Al-Wadud mean?"]
-        case .prayerTimes: return ["What time is Fajr tomorrow?", "When is Maghrib in Makkah today?",
-                                   "What are the prayer times in London on Friday?", "How long until Asr?"]
+        case .prayerTimes:
+            // Eight, four a day: two about the day's times and two about what else the app works
+            // out (the calendar, the qibla, the night), a different pair of each every day.
+            let times = ["What time is Fajr tomorrow?", "When is Maghrib in Makkah today?",
+                         "What are the prayer times in London on Friday?", "How long until Asr?"]
+            let more = ["When is Ramadan?", "Which way is the qibla?", "What is the Hijri date today?",
+                        "When does the last third of the night begin?"]
+            let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 0
+            return [times[day % 4], more[day % 4], times[(day + 1) % 4], more[(day + 1) % 4]]
         }
     }
 }
@@ -419,6 +426,17 @@ final class AskAIConversation: ObservableObject {
         if scope == .prayerTimes, question.intent.retrieves, question.intent != .appHelp {
             question = question.with(intent: .prayerTimes)
         }
+        #if HAS_ADHAN
+        // A follow-up to a prayer-times answer that names a place, a day or a prayer is about the
+        // times too. Read as a general question, "And in Cairo?" searched the library, found no
+        // timetable, and the model made a time up (2026-11-25).
+        let afterPrayerTimes = previousReply?.intent == .prayerTimes && question.isFollowUp
+        if afterPrayerTimes, question.intent != .prayerTimes, question.intent.retrieves, question.intent != .appHelp,
+           AskAIPrayerRequest.parse(trimmed).continuesPrayerTalk {
+            question = question.with(intent: .prayerTimes)
+        }
+        let previousPrayer = afterPrayerTimes ? lastPrayerRequest : nil
+        #endif
         if !question.isFollowUp, question.intent.retrieves, !question.contentWords.isEmpty {
             topic = question.topic
             topicDisplay = question.topicDisplay
@@ -469,6 +487,8 @@ final class AskAIConversation: ObservableObject {
             var sources: [AskAISource] = []
             var retrievalLog = ""
             var history = history
+            var passageSources = 0
+            var closeSecond = false
             if question.intent == .sourceQuestion || question.intent == .recap {
                 // About the previous answer, or a rework of it: the sources it cited (all of them
                 // only when it cited none), nothing new. They are renumbered by first appearance,
@@ -488,16 +508,40 @@ final class AskAIConversation: ObservableObject {
                 }
                 retrievalLog = "previous turn's sources"
             } else if question.intent.retrieves {
+                #if HAS_ADHAN
+                let outcome = await AskAIRetriever.retrieve(question, budget: profile.retrievalBudget,
+                                                            carried: previousReply?.sources ?? [],
+                                                            carriedCited: previousReply?.citedSources ?? [],
+                                                            focus: focus, scope: scope, previousPrayer: previousPrayer)
+                if let asked = outcome.prayerRequest { lastPrayerRequest = asked }
+                #else
                 let outcome = await AskAIRetriever.retrieve(question, budget: profile.retrievalBudget,
                                                             carried: previousReply?.sources ?? [],
                                                             carriedCited: previousReply?.citedSources ?? [],
                                                             focus: focus, scope: scope)
+                #endif
                 sources = outcome.sources
+                passageSources = outcome.passageSources
+                closeSecond = outcome.hasCloseSecond
                 retrievalLog = String(format: "%.0f ms; lanes ", outcome.elapsed * 1000)
                     + outcome.laneCounts.map { "\($0.key.rawValue)=\($0.value)" }.sorted().joined(separator: " ")
-                    + "; ranking " + outcome.ranking.prefix(12).map { String(format: "%@ %.2f", $0.reference, $0.score) }.joined(separator: " | ")
+                    + "; ranking " + outcome.ranking.prefix(16).map { String(format: "%@ %.2f", $0.reference, $0.score) }.joined(separator: " | ")
+                if !outcome.described.isEmpty { retrievalLog += "; described " + outcome.described.joined(separator: " | ") }
             }
             guard !Task.isCancelled else { return }
+            #if DEBUG
+            // "-askAIRetrieveOnly": the turn ends once its sources are found, so a list of questions
+            // can be scored on what the search brings back in seconds (no model, no answer).
+            if ProcessInfo.processInfo.arguments.contains("-askAIRetrieveOnly") {
+                updateReply { $0.sources = sources; $0.refreshCitations() }
+                lastRetrievalLog = retrievalLog
+                resetStream()
+                streamedText = "(retrieval only)"
+                flushStreamed()
+                finishReply(failed: false, elapsed: 0, firstToken: nil)
+                return
+            }
+            #endif
             #if canImport(FoundationModels)
             if #available(iOS 26.0, *) {
                 let fitted = await AskAIPrompt.fit(question: question, sources: sources, history: history, profile: profile,
@@ -509,11 +553,121 @@ final class AskAIConversation: ObservableObject {
             #endif
             updateReply { $0.sources = sources; $0.refreshCitations() }
             lastRetrievalLog = retrievalLog
-            await answer(question: question, sources: sources, history: history, kind: kind, profile: profile)
+            #if HAS_ADHAN
+            // A run of days is a table, and the app has it exact: it is set down as it stands. Asked
+            // to write a week out, the model gave the first day's times and called it the week
+            // (2026-11-25).
+            // Two or three places compared: one timetable each, and the answer is the line of each
+            // that was asked for, side by side. (Two timetables in one prompt is two places and two
+            // days for the model to keep apart; the app has every time exact.)
+            if question.intent == .prayerTimes, sources.count >= 2,
+               sources.allSatisfy({ if case .cityPrayer = $0.kind { return true } else { return false } }) {
+                let wanted = lastPrayerRequest?.prayers ?? []
+                let lines = sources.enumerated().map { index, source -> String in
+                    let times = source.text.components(separatedBy: "\n").dropFirst().filter { line in
+                        line.range(of: #"^[A-Z][A-Za-z\u{2019}' ]+ \d{1,2}:\d{2}"#, options: .regularExpression) != nil
+                    }
+                    let asked = wanted.isEmpty ? times : times.filter { line in wanted.contains { line.hasPrefix($0 + " ") } }
+                    return "\(source.reference) [\(index + 1)]: " + (asked.isEmpty ? times : asked).joined(separator: ", ")
+                }
+                resetStream()
+                streamedText = lines.joined(separator: "\n\n") + "\n\nEach is in that place\u{2019}s own local time."
+                flushStreamed()
+                finishReply(failed: false, elapsed: 0, firstToken: nil)
+                return
+            }
+            // The reader's own Prayer Tracker, and where a prayer's time stands: the app's facts, in
+            // the app's words (`AskAISource.appAnswer`).
+            if question.intent == .prayerTimes, sources.count == 1, let written = sources.first?.appAnswer, !written.isEmpty {
+                resetStream()
+                streamedText = written + " [1]"
+                flushStreamed()
+                finishReply(failed: false, elapsed: 0, firstToken: nil)
+                return
+            }
+            if question.intent == .prayerTimes, lastPrayerRequest?.topics.contains(.week) == true, sources.count == 1,
+               let table = sources.first, case .cityPrayer = table.kind, let firstBreak = table.text.firstIndex(of: "\n") {
+                resetStream()
+                streamedText = "\(table.reference) [1]:\n" + table.text[table.text.index(after: firstBreak)...]
+                flushStreamed()
+                finishReply(failed: false, elapsed: 0, firstToken: nil)
+                return
+            }
+            #endif
+            // A passage the reader described: found, the app sets down where it is and its words
+            // itself and the model explains it; not found, the model is told to say so.
+            var passage: PassageAnswer?
+            if question.findsPassage {
+                // Fitting may have trimmed the list; the passage is its head or it is nothing.
+                let found = passageSources > 0 && sources.count >= passageSources
+                passage = found ? PassageAnswer(sources: sources, count: passageSources, quotesSecond: closeSecond)
+                    : PassageAnswer(missed: ())
+                lastRetrievalLog += found ? "; passage found (\(passageSources))" : "; passage not found"
+                // Its words are quoted on purpose, whatever an earlier answer quoted.
+                if found { echoGuard = AskAIText.EchoGuard(previousAnswers: []) }
+            }
+            await answer(question: question, sources: sources, history: history, kind: kind, profile: profile, passage: passage)
+        }
+    }
+
+    /// What the app itself writes of an answer to "the verse about ...": the passage it found, by
+    /// reference and in its own words, above the model's explanation, and the next matches beneath
+    /// it. See `AskAIPrompt.foundTask` for why the model writes neither.
+    struct PassageAnswer {
+        /// "Surah At-Takwir 81:8 [1]: “...”", one paragraph per source of the passage.
+        let lead: String
+        /// "Also close: An-Nahl 16:58 [3], Al-An'am 6:151 [4]."
+        let tail: String
+        /// How many of the turn's leading sources the model is handed: the passage alone. 0 when
+        /// nothing was found (the model then reads every source and says so).
+        let promptSources: Int
+
+        var finding: AskAIPrompt.Finding { promptSources > 0 ? .found : .missed }
+
+        init(missed: Void) {
+            lead = ""
+            tail = ""
+            promptSources = 0
+        }
+
+        /// `quotesSecond`: the source after the passage is a match the search could not tell from
+        /// it, and is quoted beneath it instead of only being named.
+        init(sources: [AskAISource], count: Int, quotesSecond: Bool = false) {
+            func name(_ source: AskAISource) -> String {
+                if case .ayah = source.kind { return "Surah " + source.title }
+                return source.reference
+            }
+            func quoted(_ index: Int, limit: Int) -> String {
+                "\(name(sources[index])) [\(index + 1)]: \u{201C}\(AskAISource.clip(sources[index].text, to: limit))\u{201D}"
+            }
+            lead = (0..<count).map { quoted($0, limit: 900) }.joined(separator: "\n\n") + "\n\n"
+            var closing = ""
+            var next = count
+            if quotesSecond, sources.indices.contains(next) {
+                closing += "\n\nAlso close: " + quoted(next, limit: 500)
+                next += 1
+            }
+            let others = sources.indices.dropFirst(next).prefix(quotesSecond ? 2 : 3).map { index in
+                "\(sources[index].kind.isAyah ? sources[index].title : sources[index].reference) [\(index + 1)]"
+            }
+            if !others.isEmpty {
+                closing += "\n\n" + (quotesSecond ? "Other places to look: " : "Also close: ") + others.joined(separator: ", ") + "."
+            }
+            tail = closing
+            promptSources = count
         }
     }
 
     private var lastRetrievalLog = ""
+    #if DEBUG
+    /// The answer as the model sent it, before the app's cleaning (`-askAILog` prints it when the two differ).
+    private var lastRawAnswer = ""
+    #endif
+
+    #if HAS_ADHAN
+    /// What the last prayer-times turn asked for; a follow-up straight after it inherits its place and day.
+    private var lastPrayerRequest: AskAIPrayerRequest?
+    #endif
 
     /// The help line a question ABOUT suicide or self-harm earns beneath its normal answer.
     private var helpLineForCurrentTurn: String?
@@ -554,11 +708,16 @@ final class AskAIConversation: ObservableObject {
 
     #if canImport(FoundationModels)
     private func answer(question: AskAIQuestion, sources initialSources: [AskAISource], history: [AskAIPrompt.Turn],
-                        kind initialKind: AskAIEngineKind, profile initialProfile: AskAIProfile) async {
+                        kind initialKind: AskAIEngineKind, profile initialProfile: AskAIProfile,
+                        passage: PassageAnswer? = nil) async {
         guard #available(iOS 26.0, *) else { finishReply(failed: true); return }
         var kind = initialKind
         var profile = initialProfile
+        // A found passage is all the model reads; the reply keeps every source (the cards, and the
+        // "also close" line's markers).
+        let lead = passage?.lead ?? ""
         var sources = initialSources
+        if let passage, passage.promptSources > 0 { sources = Array(initialSources.prefix(passage.promptSources)) }
         var turns = history
         var retriedForContext = false
         var fellBack = false
@@ -582,19 +741,30 @@ final class AskAIConversation: ObservableObject {
             do {
                 resetStream()
                 updateReply { $0.engine = kind }
-                let prompt = AskAIPrompt.build(question: question, sources: sources, history: turns, profile: profile,
-                                               scope: turnScope)
+                let found = passage?.finding == .found
+                let prompt = found
+                    ? AskAIPrompt.passagePrompt(sources, profile: profile)
+                    : AskAIPrompt.build(question: question, sources: sources, history: turns, profile: profile,
+                                        scope: turnScope, finding: passage?.finding ?? .none)
+                let instructions = found ? AskAIPrompt.passageInstructions
+                    : AskAIPrompt.instructions(readsQiraat: AskAIDepth.readsQiraat)
                 lastPrompt = prompt
+                // The passage is on screen before the model has read a word.
+                if !lead.isEmpty {
+                    _ = receiveStreamed(lead)
+                    flushStreamed()
+                }
                 let options = GenerationOptions(temperature: question.intent.temperature,
                                                 maximumResponseTokens: min(question.intent.maxResponseTokens, profile.responseTokenCap))
-                for try await text in AskAIEngine.stream(kind: kind, instructions: AskAIPrompt.instructions(readsQiraat: AskAIDepth.readsQiraat), prompt: prompt, options: options) {
+                for try await text in AskAIEngine.stream(kind: kind, instructions: instructions, prompt: prompt, options: options) {
                     guard !Task.isCancelled else { resetStream(); return }
                     if firstToken == nil { firstToken = CFAbsoluteTimeGetCurrent() - started }
                     // A small model can fall into repeating itself until the token ceiling: the
                     // moment a paragraph comes back (checked per flush), the answer is over.
-                    if receiveStreamed(text) { break }
+                    if receiveStreamed(lead + text) { break }
                 }
                 guard !Task.isCancelled else { resetStream(); return }
+                if let passage, !passage.tail.isEmpty { streamedText += passage.tail }
                 flushStreamed()
                 finishReply(failed: false, elapsed: CFAbsoluteTimeGetCurrent() - started, firstToken: firstToken)
                 return
@@ -661,7 +831,7 @@ final class AskAIConversation: ObservableObject {
     }
     #else
     private func answer(question: AskAIQuestion, sources: [AskAISource], history: [AskAIPrompt.Turn],
-                        kind: AskAIEngineKind, profile: AskAIProfile) async {
+                        kind: AskAIEngineKind, profile: AskAIProfile, passage: PassageAnswer? = nil) async {
         finishReply(failed: true, message: nil)
     }
     #endif
@@ -756,6 +926,9 @@ final class AskAIConversation: ObservableObject {
     /// a trailing reference list); a failure with nothing streamed shows the reason (or a generic
     /// line), and a failure MID-answer keeps what streamed but says plainly that it stopped early.
     private func finishReply(failed: Bool, message: String? = nil, elapsed: Double? = nil, firstToken: Double? = nil) {
+        #if DEBUG
+        lastRawAnswer = streamedText
+        #endif
         // No flush may land after the reply settles (it would overwrite the settled text).
         resetStream()
         let question = currentQuestion
@@ -837,6 +1010,7 @@ final class AskAIConversation: ObservableObject {
         ERROR: \(failed ? lastErrorDescription : "")
         SUGGESTIONS: \(reply.suggestions.joined(separator: " | "))
         A: \(reply.text)
+        RAW: \(lastRawAnswer == reply.text ? "(as shown)" : lastRawAnswer)
 
         """
         let url = documents.appendingPathComponent("askai-log.txt")

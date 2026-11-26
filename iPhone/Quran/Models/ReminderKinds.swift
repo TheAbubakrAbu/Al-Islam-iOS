@@ -600,7 +600,7 @@ struct ExtraReminderSections: View {
                     adding = true
                 }
             } label: {
-                Label("Add a reminder", systemImage: "plus.circle.fill")
+                Label("Add a Reminder", systemImage: "plus.circle.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(accent)
             }
@@ -634,7 +634,7 @@ struct ExtraReminderSections: View {
                     }
                 }
             )) {
-                ExtraReminderLabel(title: String(localized: "Random duas"), systemImage: "hands.sparkles.fill")
+                ExtraReminderLabel(title: String(localized: "Random Duas"), systemImage: "hands.sparkles.fill")
             }
             if store.config.duaEnabled {
                 Picker("Each day", selection: Binding(
@@ -653,11 +653,11 @@ struct ExtraReminderSections: View {
         Section(header: Text("NUDGES"), footer:
             Text("Pick Up Where You Left Off stays quiet on a day you have already read. Keep Your Streak only speaks while there is a streak to keep.")
         ) {
-            nudgeRow(title: String(localized: "Pick up where you left off"), symbol: "bookmark.fill",
+            nudgeRow(title: String(localized: "Pick Up Where You Left Off"), symbol: "bookmark.fill",
                      enabled: store.config.lastReadEnabled, minutes: store.config.lastReadMinutes,
                      setEnabled: { on in store.updateConfig { $0.lastReadEnabled = on } },
                      setMinutes: { m in store.updateConfig { $0.lastReadMinutes = m } })
-            nudgeRow(title: String(localized: "Keep your streak"), symbol: "flame.fill",
+            nudgeRow(title: String(localized: "Keep Your Streak"), symbol: "flame.fill",
                      enabled: store.config.streakEnabled, minutes: store.config.streakMinutes,
                      setEnabled: { on in store.updateConfig { $0.streakEnabled = on } },
                      setMinutes: { m in store.updateConfig { $0.streakMinutes = m } })

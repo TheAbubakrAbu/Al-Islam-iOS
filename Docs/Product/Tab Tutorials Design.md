@@ -132,7 +132,7 @@ These are draft cards. Each claim comes from the 2026-10-31 survey of the code; 
 | # | Card | What it teaches | Show me |
 |---|---|---|---|
 | 1 | Start Here | Steps chosen from your About You answer, ticked off as you open them. Hide it, or bring it back from About You. Shown only while Start Here is. | About You (`.aboutYou`) |
-| 2 | The library | Resources grouped by subject: Learn, Remembrance, Tools, Faith & Proofs, Ask AI. Grid or list from the ⋯ menu. In Simple Mode, Tools and Ask AI sit behind "More Resources", and the card says so. | none |
+| 2 | The library | Resources grouped by subject: Quran & Arabic, Worship & Remembrance, Tools, Faith & Knowledge, Proofs & Dawah, Ask AI. Grid or list from the ⋯ menu. In Simple Mode, Tools and Ask AI sit behind "More Resources", and the card says so. | none |
 | 3 | Favorites | Hold a tile, or tap its star, to favorite it. Favorites sit at the top. | none |
 | 4 | Begin with the basics | The Five Pillars and Six Beliefs, and the How-To Guides for wudu, salah and Jumuah. | none (see 8, question 2) |
 | 5 | Learn to read Arabic | The Arabic Alphabet, Tajweed Foundations, and the Tajweed Course with a quiz in each lesson (where the app has the Quran). | Arabic Alphabet (`.islamPage(.alphabet)`) |

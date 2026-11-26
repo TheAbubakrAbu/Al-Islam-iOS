@@ -8,9 +8,19 @@ The App Store's install size counts every bundle byte uncompressed. These files 
                                                                            for lookups)
     Resources/Data/Quran/CrossLanguageLexicon.bin  0.47 -> 0.16      lzfse  unpacked in memory on load
     Resources/Data/Quran/WordAlignment.bin         0.37 -> 0.14      lzfse  unpacked in memory on load
+    Resources/Data/Quran/TafsirKeywords.bin        (built by build_tafsir_keywords.py)  lzfse  unpacked in
+                                                                           memory on the first Ask AI search
     Resources/Data/Hadith/HadithLexicon.bin        0.16 -> 0.06      lzfse  unpacked in memory on load
+    Resources/Data/Hadith/HadithSearchWords.bin    (built by build_hadith_search_words.py)  lzfse  unpacked
+                                                                           in memory on the first Ask AI search
     Resources/Data/Semantic/*.svec                 one byte per      lzfse  unpacked in memory on the first AI
                                                    component                search of every launch
+    Resources/Data/Islam/Airports.tsv              (built by build_airports.py) 0.36 -> 0.15  lzfse  unpacked in
+                                                                           memory when Flight Mode's airport list
+                                                                           is first read
+    Resources/Data/Islam/AirportNames-<lang>.tsv   (built by build_airport_names.py, one per language)  lzfse
+                                                                           only the interface language's is
+                                                                           unpacked, with the airport list
 
 The codec follows how often the app unpacks a file. xz is the smallest and the slowest to unpack, so it is
 kept for the one file unpacked once per install. Everything unpacked on every launch is LZFSE, which Apple's
@@ -37,10 +47,16 @@ SHIPPED = {
     os.path.join(DATA, "Quran", "quran-search.qsp"): "xz",
     os.path.join(DATA, "Quran", "CrossLanguageLexicon.bin"): "lzfse",
     os.path.join(DATA, "Quran", "WordAlignment.bin"): "lzfse",
+    os.path.join(DATA, "Quran", "TafsirKeywords.bin"): "lzfse",
     os.path.join(DATA, "Hadith", "HadithLexicon.bin"): "lzfse",
+    os.path.join(DATA, "Hadith", "HadithSearchWords.bin"): "lzfse",
     os.path.join(DATA, "Semantic", "quran-en.svec"): "lzfse",
     os.path.join(DATA, "Semantic", "hadith-all.svec"): "lzfse",
+    os.path.join(DATA, "Islam", "Airports.tsv"): "lzfse",
 }
+# The airports' names in each language the app is translated into (build_airport_names.py).
+for _language in ("ar", "ur", "id", "ms", "tr", "fr", "bn", "ru", "hi", "de", "es", "ml", "ta", "nl"):
+    SHIPPED[os.path.join(DATA, "Islam", f"AirportNames-{_language}.tsv")] = "lzfse"
 
 COMPRESSION_LZMA = 0x306
 COMPRESSION_LZFSE = 0x801

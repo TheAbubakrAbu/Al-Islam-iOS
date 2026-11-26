@@ -53,8 +53,10 @@ islam-names-grid|-launchTabIslam -islamDestination namesOfAllah -seedInt gridMod
 islam-arabic-grid|-launchTabIslam -islamDestination arabicAlphabet -seedInt gridModeIslamRaw=1,gridModeNamesRaw=1,gridModeArabicRaw=1
 islam-arabic-list|-launchTabIslam -islamDestination arabicAlphabet -seedInt gridModeIslamRaw=0,gridModeNamesRaw=0,gridModeArabicRaw=0
 islam-adhkar|-launchTabIslam -islamDestination commonAdhkar
-islam-duas|-launchTabIslam -islamDestination commonDuas
-islam-hisn|-launchTabIslam -islamDestination commonDuas -openHisnLibrary
+islam-duas|-launchTabIslam -islamDestination commonDuas -seedBool duaGridMode=1,hisnGridMode=1
+islam-duas-list|-launchTabIslam -islamDestination commonDuas -seedBool duaGridMode=0,hisnGridMode=0
+islam-hisn|-launchTabIslam -islamDestination commonDuas -openHisnLibrary -seedBool duaGridMode=1,hisnGridMode=1
+islam-hisn-list|-launchTabIslam -islamDestination commonDuas -openHisnLibrary -seedBool duaGridMode=0,hisnGridMode=0
 islam-tajweed-course|-launchTabIslam -islamDestination tajweedCourse
 islam-tajweed-foundations|-launchTabIslam -islamDestination tajweedFoundations
 islam-pillars|-launchTabIslam -islamDestination pillarsAndBasics
@@ -85,4 +87,4 @@ settings-credits|-launchTabSettings -showCredits
 
 # Back to the shipped defaults, whatever they are: the choices are unset, not seeded
 # (today: grid everywhere, the Quran tab and the chapter list lists)
-reset-defaults|-launchTabAdhan -quranSortMode surah -seedClear quranGridMode,hadithGridMode,hadithChapterGridMode -seedInt gridModeIslamRaw=-1,gridModeNamesRaw=-1,gridModeArabicRaw=-1,gridModeSettingsRaw=-1
+reset-defaults|-launchTabAdhan -quranSortMode surah -seedClear quranGridMode,hadithGridMode,hadithChapterGridMode,duaGridMode,hisnGridMode -seedInt gridModeIslamRaw=-1,gridModeNamesRaw=-1,gridModeArabicRaw=-1,gridModeSettingsRaw=-1

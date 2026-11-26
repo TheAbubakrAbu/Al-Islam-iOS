@@ -111,7 +111,7 @@ struct TravelingModeBanner: View {
         return formatter
     }()
 
-    private static func distanceText(_ meters: CLLocationDistance) -> String {
+    static func distanceText(_ meters: CLLocationDistance) -> String {
         distanceFormatter.string(from: Measurement(value: meters, unit: UnitLength.meters))
     }
 

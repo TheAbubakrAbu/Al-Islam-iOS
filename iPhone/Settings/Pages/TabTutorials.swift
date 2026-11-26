@@ -382,7 +382,7 @@ enum TutorialCatalog {
                      isAvailable: { Settings.shared.userBackground?.wantsStartHere != false }),
         TutorialStep(id: "islam.library", tab: .islam, systemImage: "books.vertical.fill",
                      title: InterfaceText("The library"),
-                     detail: InterfaceText("The ⋯ menu shows the resources as a grid or a list, grouped by subject (Learn, Remembrance, Faith & Proofs and more) or in one section. In Simple Mode, the Tools wait under “More Resources”."),
+                     detail: InterfaceText("The ⋯ menu shows the resources as a grid or a list, grouped by subject (Quran & Arabic, Worship & Remembrance, Faith & Knowledge and more) or in one section. In Simple Mode, the Tools wait under “More Resources”."),
                      place: InterfaceText("Islam tab")),
         TutorialStep(id: "islam.favorites", tab: .islam, systemImage: "star.fill",
                      title: InterfaceText("Favorites"),

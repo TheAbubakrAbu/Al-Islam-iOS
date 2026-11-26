@@ -3496,7 +3496,7 @@ struct SurahView: View {
     private func bottomInsetContent(proxy: ScrollViewProxy) -> some View {
         VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
             if isSelectingAyahs {
-                selectionActionBar
+                selectionActionBar()
             } else {
                 playbackAndSearchControls(proxy: proxy)
             }
@@ -3710,19 +3710,23 @@ struct SurahView: View {
     /// All and Done moved up to the navigation bar (`applySurahToolbar`), where Mail and Photos keep
     /// theirs - the old bar stacked all three over labelled actions in one slab and read as clutter
     /// (Abu, 2026-11-08: "the tool bar at the bottom looks hideous").
-    private var selectionActionBar: some View {
+    ///
+    /// `inControlsRow`: the page reader's bar, drawn OVER its controls row at that row's own size
+    /// (`pageReaderControls`), so it brings no height and no air of its own: the slots fill whatever
+    /// height the row has. The list reader's bar stands in the search row's place at its own size.
+    private func selectionActionBar(inControlsRow: Bool = false) -> some View {
         HStack(spacing: 0) {
-            bulkActionButton(String(localized: "Copy"), systemImage: "doc.on.doc") {
+            bulkActionButton(String(localized: "Copy"), systemImage: "doc.on.doc", fillsRow: inControlsRow) {
                 UIPasteboard.general.string = bulkSelectionText()
                 CopyConfirmation.shared.show()
             }
             // The share editor with every selected ayah on one card (was the system sheet with the
             // plain text; Abu, 2026-11-08: "support sharing multiple ayahs in one screen").
-            bulkActionButton(String(localized: "Share"), systemImage: "square.and.arrow.up") {
+            bulkActionButton(String(localized: "Share"), systemImage: "square.and.arrow.up", fillsRow: inControlsRow) {
                 showBulkShareSheet = true
             }
             bulkActionButton(allSelectedBookmarked ? String(localized: "Unbookmark") : String(localized: "Bookmark"),
-                             systemImage: allSelectedBookmarked ? "bookmark.fill" : "bookmark") {
+                             systemImage: allSelectedBookmarked ? "bookmark.fill" : "bookmark", fillsRow: inControlsRow) {
                 bulkToggleBookmarks()
             }
             // On the button, not the screen: iOS 26 draws the dialog as a popover out of whatever
@@ -3743,8 +3747,8 @@ struct SurahView: View {
             } message: {
                 Text(bulkUnbookmarkWords.message)
             }
-            bulkHighlightMenu
-            bulkActionButton(String(localized: "Note"), systemImage: "note.text") {
+            bulkHighlightMenu(fillsRow: inControlsRow)
+            bulkActionButton(String(localized: "Note"), systemImage: "note.text", fillsRow: inControlsRow) {
                 bulkNoteDraft = ""
                 showBulkNoteSheet = true
             }
@@ -3758,17 +3762,19 @@ struct SurahView: View {
                                      offersWordByWord: !settings.quranPageMode)
             } label: {
                 bulkActionLabel(String(localized: "Settings"), systemImage: "slider.horizontal.3",
-                                tint: displayOverrides.hasOverride(selectedAyahs) ? settings.accentColor.accent1 : nil)
+                                tint: displayOverrides.hasOverride(selectedAyahs) ? settings.accentColor.accent1 : nil,
+                                fillsRow: inControlsRow)
             }
             .buttonStyle(.plain)
         }
         .disabled(selectedAyahs.isEmpty)
         .opacity(selectedAyahs.isEmpty ? 0.45 : 1)
         .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.vertical, inControlsRow ? 0 : 4)
+        .frame(maxHeight: inControlsRow ? .infinity : nil)
         .conditionalGlassEffect()
         .padding(.horizontal, 24)
-        .padding(.bottom, 8)
+        .padding(.bottom, inControlsRow ? 0 : 8)
     }
 
     /// Select mode's navigation bar, in place of the title pill, the gear and the back button: the
@@ -3840,7 +3846,7 @@ struct SurahView: View {
     /// Highlighting in bulk: one color applied to the whole selection (bookmarking whatever wasn't saved,
     /// same as the per-ayah rule). Deliberately NOT a toggle - with a mixed selection there is no sensible
     /// "off", so clearing is its own row and only appears when something in the selection is highlighted.
-    private var bulkHighlightMenu: some View {
+    private func bulkHighlightMenu(fillsRow: Bool) -> some View {
         let selected = uniformSelectionHighlight
         let anyHighlighted = selectedAyahs.contains { settings.isAyahHighlighted(surah: $0.surahID, ayah: $0.ayahID) }
 
@@ -3873,17 +3879,19 @@ struct SurahView: View {
                 }
             }
         } label: {
-            bulkActionLabel(String(localized: "Highlight"), systemImage: "highlighter", tint: selected?.color)
+            bulkActionLabel(String(localized: "Highlight"), systemImage: "highlighter", tint: selected?.color,
+                            fillsRow: fillsRow)
         }
         .buttonStyle(.plain)
     }
 
-    private func bulkActionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+    private func bulkActionButton(_ title: String, systemImage: String, fillsRow: Bool = false,
+                                  action: @escaping () -> Void) -> some View {
         Button {
             settings.hapticFeedback()
             action()
         } label: {
-            bulkActionLabel(title, systemImage: systemImage)
+            bulkActionLabel(title, systemImage: systemImage, fillsRow: fillsRow)
         }
         .buttonStyle(.plain)
     }
@@ -3891,12 +3899,14 @@ struct SurahView: View {
     /// Shared by the bar's buttons and its two menus, so a menu slot is the same size and weight as a
     /// button slot instead of quietly rendering as a differently-metricked label. A bare symbol, as
     /// the Hadith reader's bar and the system's toolbars draw theirs; the title is what VoiceOver
-    /// reads.
-    private func bulkActionLabel(_ title: String, systemImage: String, tint: Color? = nil) -> some View {
+    /// reads. `fillsRow`: the slot is as tall as the row it is drawn over (see `selectionActionBar`),
+    /// where the bar otherwise gives each slot 36 pt of its own.
+    private func bulkActionLabel(_ title: String, systemImage: String, tint: Color? = nil,
+                                 fillsRow: Bool = false) -> some View {
         Image(systemName: systemImage)
             .font(.body.weight(.semibold))
             .foregroundColor(tint ?? settings.accentColor.color)
-            .frame(maxWidth: .infinity, minHeight: 36)
+            .frame(maxWidth: .infinity, minHeight: fillsRow ? nil : 36, maxHeight: fillsRow ? .infinity : nil)
             // The whole equal-width slot is tappable, not just the glyph's own ink.
             .contentShape(Rectangle())
             .accessibilityLabel(title)
@@ -4000,17 +4010,27 @@ struct SurahView: View {
                 .padding(.top, SafeAreaInsetVStackSpacing.standard)
                 .background(Color.white.opacity(0.00001))
         case .bar(let selecting):
-            // Select mode swaps the search cluster for the bulk-action bar, exactly like the list.
-            Group {
-                if selecting {
-                    selectionActionBar
-                } else {
-                    // Always present in page mode: search sits dead center, with the tajweed legend and
-                    // the riwayah picker flanking it when they apply (an English page shows neither, so
-                    // the bar is just the search).
-                    pageBottomControlsBar
+            // Always present in page mode: search sits dead center, with the tajweed legend and the
+            // riwayah picker flanking it when they apply (an English page shows neither, so the bar
+            // is just the search).
+            //
+            // Select mode's bulk-action bar takes this row's PLACE and nothing more: the row stays
+            // in the layout, unseen and untouchable, and the bar is drawn over it at the row's own
+            // size, so the band the page is fitted into is the same to the point in and out of
+            // select mode. Until 2026-11-25 the bar came in at its own height (44 pt and 8 under
+            // it, against the row's 32): the band lost 19 pt on the 17 Pro and the page re-fitted
+            // itself into what was left, every line of it moving, at the very moment the reader
+            // was looking for the ayah they meant to pick (Abu: "it repositions the page and that
+            // makes it annoying cause its hard to refind the ayahs").
+            pageBottomControlsBar
+                .opacity(selecting ? 0 : 1)
+                .allowsHitTesting(!selecting)
+                .accessibilityHidden(selecting)
+                .overlay {
+                    if selecting {
+                        selectionActionBar(inControlsRow: true)
+                    }
                 }
-            }
             // Top: the breathing room under the player (or under the page). Bottom: what separates it
             // from the page-navigation footer pinned underneath.
             .padding(.top, SafeAreaInsetVStackSpacing.standard)

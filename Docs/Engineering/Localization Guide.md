@@ -3,9 +3,9 @@
 The app speaks English, Arabic (since 2026-10-24), Urdu (since 2026-10-26), Indonesian, Malay and Turkish
 (since 2026-11-19), French, Bangla, Russian, Hindi, German and Spanish (since 2026-11-20), and Malayalam,
 Tamil and Dutch (since 2026-11-21). Everything is translated, the Islam tab included, except the Islam tab's ARTICLES:
-the seven Faith & Proofs resources (Pillars and Beliefs, How-To Guides, Miracles of the Quran, Prophecies of the
-Prophet, Miracles of the Prophets, Sunnahs of the Prophet, Proving Islam). Those stay English, and read left to
-right inside the Arabic and Urdu interfaces. Hadith & Its Sciences and the riwayat differences page are not a
+the seven article resources (Pillars and Beliefs, How-To Guides, Miracles of the Quran, Prophecies of the
+Prophet, Miracles of the Prophets, Sunnahs of the Prophet, Proving Islam) and the six reading libraries of
+2026-11-24. Those stay English, and read left to right inside the Arabic and Urdu interfaces. Hadith & Its Sciences and the riwayat differences page are not a
 separate set: they are groups and pages INSIDE Pillars and Beliefs. The Hadith tab's "About Hadith & the Sunnah"
 section and Quran Words only link into them.
 
@@ -16,9 +16,10 @@ and the word-by-word meanings. The Arabic is always beside them. Other languages
 translation chosen for each, never a machine one.
 
 Outside English the app says so (2026-11-24, Abu: "say it only supports English clearly"; `EnglishOnly` in
-ArticleDesign.swift): every Faith & Proofs tile carries "EN" in its corner, its rows and banners an "English
-only" tag, the FAITH & PROOFS header the same tag, and each of the seven pages opens with "Available in
-English only" at the top of its card (`ResourceHero` reads `isEnglishArticle`, which `englishArticle()` sets).
+ArticleDesign.swift): each of those resources' tiles carries "EN" in its corner and its row an "English
+only" tag (`IslamDestination.readsEnglishOnly`, the resource's own since the sections were redrawn on
+2026-11-25), a section whose every resource is one (PROOFS & DAWAH) carries the tag on its header too, and
+each of the pages opens with "Available in English only" at the top of its card (`ResourceHero` reads `isEnglishArticle`, which `englishArticle()` sets).
 The Hadith tab's section of article links says it in its footer. In English none of it is drawn.
 
 ## Where things live

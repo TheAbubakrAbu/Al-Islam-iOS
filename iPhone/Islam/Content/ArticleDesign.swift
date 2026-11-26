@@ -1224,6 +1224,12 @@ struct ResourceHeroStat: Hashable {
 /// it, and up to three figures. The accent wash falls away corner to corner, the symbol sits large and
 /// faint in the bottom corner, and a hairline frames it.
 ///
+/// Set small since 2026-11-25 (Abu: "the whole top section be smaller but still just as informative"):
+/// the card had grown past a whole screen on most resources, with the tool or the index under it out
+/// of sight. Every word and figure is still there: the headline is a size down, the sentence is the
+/// footnote size, the figures are one line of text instead of three tiles (`ResourceHeroStats`), and the
+/// card's own padding and gaps are tighter.
+///
 /// A resource puts it in its List through `ResourceHeroSection`, which draws nothing on the watch: the
 /// watch compiles every resource that carries one, and a card this size would be the whole screen there.
 struct ResourceHero<Footer: View>: View {
@@ -1259,7 +1265,7 @@ struct ResourceHero<Footer: View>: View {
 
     private var headlineText: some View {
         Text(headline)
-            .font(.title2.weight(.bold))
+            .font(.title3.weight(.bold))
             .foregroundColor(.primary)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -1294,7 +1300,7 @@ struct ResourceHero<Footer: View>: View {
     @ViewBuilder
     private func arabicText(_ arabic: String, accent: Color) -> some View {
         Text.islamArabic(arabic, highlightAllah: appearance.highlightAllahIslam)
-            .font(appearance.islamArabicFont(base: 26, relativeTo: .title2))
+            .font(appearance.islamArabicFont(base: 23, relativeTo: .title3))
             .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
             .foregroundColor(accent)
             .multilineTextAlignment(.trailing)
@@ -1304,7 +1310,7 @@ struct ResourceHero<Footer: View>: View {
 
     var body: some View {
         let accent = appearance.accent
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 9) {
             if isEnglishArticle && EnglishOnly.isShown {
                 EnglishOnlyNotice()
             }
@@ -1322,7 +1328,7 @@ struct ResourceHero<Footer: View>: View {
             .font(.caption.weight(.bold))
             .foregroundColor(accent)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 if let arabic, !arabic.isEmpty {
                     headlineWithArabic(arabic, accent: accent)
                 } else {
@@ -1343,19 +1349,18 @@ struct ResourceHero<Footer: View>: View {
 
             if !message.isEmpty {
                 Text(message.articleDisplayDigits)
-                    .font(.subheadline)
+                    .font(.footnote)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             if !stats.isEmpty {
                 ResourceHeroStats(stats)
-                    .padding(.top, 2)
             }
 
             footer
         }
-        .padding(16)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -1363,9 +1368,9 @@ struct ResourceHero<Footer: View>: View {
                                      startPoint: .topLeading, endPoint: .bottomTrailing))
                 .overlay(
                     Image(systemName: systemImage)
-                        .font(.system(size: 110, weight: .bold))
+                        .font(.system(size: 88, weight: .bold))
                         .foregroundColor(accent.opacity(0.07))
-                        .offset(x: 24, y: 24),
+                        .offset(x: 20, y: 20),
                     alignment: .bottomTrailing
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -1453,11 +1458,15 @@ struct EnglishOnlyNotice: View {
     }
 }
 
-/// A hero's figures as chips, side by side: `ResourceHero`'s own row, and the one a hero's footer
-/// draws when its figures belong below other lines (a hadith book's, under its compiler).
+/// A hero's figures as one line: each number in the accent, its label after it, a dot between them
+/// ("36 chapters · 25 prophets named · 10 parts"). `ResourceHero`'s own line, and the one a hero's
+/// footer draws when its figures belong below other lines (a hadith book's, under its compiler).
+///
+/// One line of text since 2026-11-25, where there were three tiles side by side: the tiles took as
+/// much height as the sentence above them to say three numbers. It wraps like any sentence, so a long
+/// label is never shrunk or cut, and nothing here is measured.
 struct ResourceHeroStats: View {
     @Environment(\.appearance) private var appearance
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let stats: [ResourceHeroStat]
 
@@ -1466,36 +1475,31 @@ struct ResourceHeroStats: View {
     }
 
     var body: some View {
-        // One column at the accessibility sizes, where three figures to a row shrank their labels
-        // past reading.
-        // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
-        // each self-sizing pass, which iOS 26 traps on.
-        SummaryTileGrid(columns: dynamicTypeSize.isAccessibilitySize ? 1 : max(stats.count, 1), spacing: 8) {
-            ForEach(stats, id: \.self) { stat in
-                statChip(stat, accent: appearance.accent)
-            }
-        }
-        // Simple Mode drops the figures: a hero is a welcome, not a dashboard (spec rule 8).
-        .hiddenInSimple(.heroStats)
+        line
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // Simple Mode drops the figures: a hero is a welcome, not a dashboard (spec rule 8).
+            .hiddenInSimple(.heroStats)
     }
 
-    private func statChip(_ stat: ResourceHeroStat, accent: Color) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(stat.value.localizedDigits)
-                .font(.system(.title3, design: .rounded).weight(.bold))
-                .foregroundColor(accent)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            Text(stat.label.articleDisplayDigits)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+    /// The figures joined into one `Text`, so the line breaks between figures the way a sentence
+    /// breaks between words. A figure and its label are tied by a no-break space.
+    private var line: Text {
+        let accent = appearance.accent
+        var text = Text(verbatim: "")
+        for (index, stat) in stats.enumerated() {
+            if index > 0 {
+                text = text + Text(verbatim: "   \u{00B7}   ").font(.caption).foregroundColor(.secondary)
+            }
+            text = text
+                + Text(verbatim: stat.value.localizedDigits)
+                    .font(.system(.subheadline, design: .rounded).weight(.bold))
+                    .foregroundColor(accent)
+                + Text(verbatim: "\u{00A0}" + stat.label.articleDisplayDigits.replacingOccurrences(of: " ", with: "\u{00A0}"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
         }
-        .padding(.vertical, 7)
-        .padding(.horizontal, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.05)))
+        return text
     }
 }
 

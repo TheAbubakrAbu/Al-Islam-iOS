@@ -851,16 +851,22 @@ struct NextPrayerProgressWidget: Widget {
 
 // MARK: - Prayer Ring (lock screen and home screen)
 
-/// The countdown ring the Prayer Ring widgets wear: the capacity gauge's look (a dim track, the bright arc
-/// running clockwise from twelve) holding what is LEFT of the current prayer's window, so it empties as
-/// the next prayer comes, with the current prayer's symbol in the middle. Abu, 2026-11-16, from a lock
-/// screen photo: "add a widget like that as a lock screen and maybe home screen too".
+/// The ring the Prayer Ring widgets wear: the capacity gauge's look (a dim track, the bright arc running
+/// clockwise from twelve) holding how much of the current prayer's window has PASSED, so it fills as
+/// the next prayer comes and is whole when its time is in, with the current prayer's symbol in the
+/// middle. Abu, 2026-11-16, from a lock screen photo: "add a widget like that as a lock screen and maybe
+/// home screen too".
+///
+/// It held what was LEFT of the window until 2026-11-26 and so emptied, as the photo's did. On a ring
+/// that reads as progress that was backwards (Abu: "if im 5 hours away from a prayer it's almost full
+/// if im like 30 minutes it's empty"): the nearer the prayer, the fuller the ring now, the way every
+/// progress bar in these widgets already fills (`PrayerIntervalProgressBar`).
 ///
 /// In a widget a circular `ProgressView(timerInterval:)` IS that gauge and WidgetKit runs it live between
 /// timeline entries. Outside a widget the same view is the indeterminate spinner, so the in-app gallery
 /// (`previewWidgetFamily` set) draws the gauge itself from the entry's own moment.
 @available(iOS 16.0, *)
-struct PrayerCountdownRing: View {
+struct PrayerWindowRing: View {
     let current: Prayer
     let next: Prayer
     /// The entry's date, for the gallery's still gauge (never `Date()`, see `PrayerIntervalProgressBar`).
@@ -868,28 +874,40 @@ struct PrayerCountdownRing: View {
     /// nil on the lock screen, where the system's vibrant rendering colours it.
     var tint: Color? = nil
     var symbolFont: Font = .system(size: 17, weight: .semibold)
+    /// The ring's width on screen. A widget's ring follows its frame (measured on a real lock screen,
+    /// 2026-11-26: framed at 46 it drew 46, its stroke the system's own). The gallery's stand-in does
+    /// not: the capacity gauge keeps its 58 pt whatever frame it is given, and framed at 46 it ran
+    /// over the lines beside it, so there it is laid out at its own size and scaled.
+    var diameter: CGFloat = PrayerWindowRing.gaugeDiameter
+
+    /// The capacity gauge's own size on an iPhone, outside a widget.
+    static let gaugeDiameter: CGFloat = 58
 
     @Environment(\.previewWidgetFamily) private var previewWidgetFamily
 
-    private var remainingFraction: Double {
-        let total = next.time.timeIntervalSince(current.time)
+    /// The share of the window from the current prayer's time to the next one's that lies behind `date`.
+    static func elapsedFraction(from start: Date, to end: Date, at date: Date) -> Double {
+        let total = end.timeIntervalSince(start)
         guard total > 0 else { return 0 }
-        return min(max(next.time.timeIntervalSince(entryDate) / total, 0), 1)
+        return min(max(date.timeIntervalSince(start) / total, 0), 1)
     }
 
     var body: some View {
         ZStack {
             Group {
                 if previewWidgetFamily != nil {
-                    Gauge(value: remainingFraction) { EmptyView() }
+                    Gauge(value: Self.elapsedFraction(from: current.time, to: next.time, at: entryDate)) { EmptyView() }
                         .gaugeStyle(.accessoryCircularCapacity)
+                        .frame(width: Self.gaugeDiameter, height: Self.gaugeDiameter)
+                        .scaleEffect(diameter / Self.gaugeDiameter)
                 } else {
-                    ProgressView(timerInterval: current.time...next.time, countsDown: true,
+                    ProgressView(timerInterval: current.time...next.time, countsDown: false,
                                  label: { EmptyView() }, currentValueLabel: { EmptyView() })
                         .progressViewStyle(.circular)
                 }
             }
             .tint(tint)
+            .frame(width: diameter, height: diameter)
 
             Image(systemName: current.image)
                 .font(symbolFont)
@@ -898,28 +916,52 @@ struct PrayerCountdownRing: View {
     }
 }
 
-/// Lock screen, rectangular: the ring, then the NEXT prayer's name, the live countdown to it and the
-/// city, three lines in the weather widget's grammar (name and countdown bold, the place regular).
+/// The Prayer Ring widgets' first line: the NEXT prayer's name with the time it comes in beside it
+/// ("Asr 3:45 PM"), the name in `nameFont`, the time a step lighter (Abu, 2026-11-26: "would be fire
+/// if it mentions the time of the next prayer"). One run of text, so the two shrink together where
+/// the line is tight (a long name on the lock screen) and never each on its own. `timeColor` is for
+/// the home screen, where the name wears the accent; nil leaves the time the line's own colour, as
+/// the lock screen's one-colour rendering wants.
+@available(iOS 16.0, *)
+struct PrayerRingNameLine: View {
+    let next: Prayer
+    var nameFont: Font = .headline.bold()
+    var timeFont: Font = .subheadline
+    var timeColor: Color? = nil
+
+    var body: some View {
+        Text(next.displayName.localizedDisplay).font(nameFont)
+            + Text(verbatim: " ")
+            + Text(next.time, style: .time).font(timeFont).foregroundColor(timeColor)
+    }
+}
+
+/// Lock screen, rectangular: the ring, then the NEXT prayer's name and time, the live countdown to it
+/// and the city, three lines in the weather widget's grammar (name and countdown bold, the place regular).
+///
+/// The ring is 46 pt and 8 pt from the lines since 2026-11-26. It was 58 and 10, 14 pt more of a widget
+/// that is 160 pt wide on a 17 Pro, and a city of any length was set at the 0.6 floor and still cut
+/// (Abu: "circle is a little too big the city barely has any space"). The lines have that 14 pt now,
+/// and the city is a size down so that more of it is read before it shrinks at all.
 @available(iOS 16.0, *)
 struct PrayerRingLockView: View {
     var entry: PrayersProvider.Entry
 
     var body: some View {
         if let current = entry.currentPrayer, let next = entry.nextPrayer, current.time < next.time {
-            HStack(spacing: 10) {
-                PrayerCountdownRing(current: current, next: next, entryDate: entry.date)
-                    .frame(width: 58, height: 58)
+            HStack(spacing: 8) {
+                PrayerWindowRing(current: current, next: next, entryDate: entry.date,
+                                 symbolFont: .system(size: 14, weight: .semibold), diameter: 46)
 
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(next.displayName.localizedDisplay)
-                        .font(.headline.bold())
+                    PrayerRingNameLine(next: next)
 
                     PrayerRingTimer(entry: entry, next: next)
                         .font(.headline.bold().monospacedDigit())
 
                     if !entry.currentCity.isEmpty {
                         Text(entry.currentCity)
-                            .font(.subheadline)
+                            .font(.footnote)
                     }
                 }
                 .lineLimit(1)
@@ -959,12 +1001,13 @@ struct PrayerRingLockWidget: Widget {
         }
         .supportedFamilies([.accessoryRectangular])
         .configurationDisplayName("Prayer Ring")
-        .description("A ring that empties as the next prayer comes, with its countdown and your city")
+        .description("A ring that fills as the next prayer comes, with its time, countdown and your city")
     }
 }
 
 /// Home screen, small: the same ring and lines, stacked. The ring sits top-leading in the accent, the
-/// next prayer and its countdown hold the bottom, and the city (with the weather when it is on) closes.
+/// next prayer with its time and its countdown hold the bottom, and the city (with the weather when
+/// it is on) closes.
 @available(iOS 16.0, *)
 struct PrayerRingSmallView: View {
     var entry: PrayersProvider.Entry
@@ -974,16 +1017,14 @@ struct PrayerRingSmallView: View {
     var body: some View {
         if let current = entry.currentPrayer, let next = entry.nextPrayer, current.time < next.time {
             VStack(alignment: .leading, spacing: 0) {
-                PrayerCountdownRing(current: current, next: next, entryDate: entry.date,
-                                    tint: skyStyle ? .white : entry.accentColor.color,
-                                    symbolFont: .system(size: 18, weight: .semibold))
+                PrayerWindowRing(current: current, next: next, entryDate: entry.date,
+                                 tint: skyStyle ? .white : entry.accentColor.color,
+                                 symbolFont: .system(size: 18, weight: .semibold), diameter: 56)
                     .foregroundColor(skyStyle ? .white : entry.accentColor.color)
-                    .frame(width: 56, height: 56)
 
                 Spacer(minLength: 4)
 
-                Text(next.displayName.localizedDisplay)
-                    .font(.headline.bold())
+                PrayerRingNameLine(next: next, timeColor: skyStyle ? .white.opacity(0.75) : .secondary)
                     .foregroundColor(skyStyle ? .white : entry.accentColor.color)
 
                 PrayerRingTimer(entry: entry, next: next)
@@ -1017,7 +1058,7 @@ struct PrayerRingWidget: Widget {
         }
         .supportedFamilies([.systemSmall])
         .configurationDisplayName("Prayer Ring")
-        .description("A ring that empties as the next prayer comes, with its countdown and your city")
+        .description("A ring that fills as the next prayer comes, with its time, countdown and your city")
     }
 }
 

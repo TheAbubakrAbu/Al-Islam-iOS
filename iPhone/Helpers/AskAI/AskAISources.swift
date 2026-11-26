@@ -3,6 +3,9 @@ import Foundation
 import CoreLocation
 import MapKit
 import NaturalLanguage
+#if HAS_ADHAN
+import Adhan
+#endif
 
 // Ask AI - the SOURCES an answer is built on, and where each one comes from.
 //
@@ -44,6 +47,11 @@ struct AskAISource: Identifiable, Equatable, Codable {
         case tip(id: String)
         /// A settings search entry: where a setting lives in THIS app (`SettingsSearchEntry.id`).
         case setting(id: String)
+
+        var isAyah: Bool {
+            if case .ayah = self { return true }
+            return false
+        }
     }
 
     let kind: Kind
@@ -84,6 +92,12 @@ struct AskAISource: Identifiable, Equatable, Codable {
     /// translation, a tafsir, how the readings differ, the hadith's explanation, its other
     /// narrations. Set under the source's line in the prompt, cited by its number, listed on its card.
     var notes: [AskAISourceNote] = []
+    /// The answer in the app's own words, when the source IS the answer and every part of it is a
+    /// fact the app holds (the reader's Prayer Tracker marks and where a prayer's time stands): set
+    /// down as it is, with no model between. Asked to say it, the model kept one half of "Dhuhr's
+    /// time ended at 1:13 PM; your tracker has no mark for it" and dropped the other, a different
+    /// half each time (2026-11-25). This turn only, like `focusTerms`: never saved.
+    var appAnswer: String? = nil
 
     var id: String { reference }
 
@@ -532,128 +546,367 @@ enum AskAISourceFactory {
     #endif
 
     #if HAS_ADHAN
-    /// Today's schedule as a source: the times this app computed for this location, with each
-    /// prayer's fard count and its sunnah rakahs. Nil when no times have been computed yet.
-    static func prayerTimes() -> AskAISource? {
-        guard let today = Settings.shared.prayers, !today.fullPrayers.isEmpty else { return nil }
-        // The model reads English: the prayer names, the times and the date. In English the clock and the
-        // date keep the reader's own region format, as they always have; in another interface language
-        // they are pinned to US English (Western digits, English month names, the Gregorian calendar),
-        // where they would otherwise reach the model in that language's digits and month names.
-        let pinsEnglish = !AppLanguage.code.hasPrefix("en")
-        let clock = DateFormatter()
-        if pinsEnglish { clock.locale = Locale(identifier: "en_US") }
-        clock.timeStyle = .short
-        clock.dateStyle = .none
-        let lines = today.fullPrayers.map { prayerLine($0, clock: clock) }
-        let day = pinsEnglish
-            ? today.day.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: Locale(identifier: "en_US"),
-                                                   calendar: Calendar(identifier: .gregorian)))
-            : today.day.formatted(date: .abbreviated, time: .omitted)
-        // The city is geocoded in the interface language, so outside English it can be an Arabic name, and
-        // there is no English one stored beside it. The model gets "your current location" instead: Apple's
-        // model turns away a prompt with much Arabic, and an English answer would quote the name. The card's
-        // title keeps the name the reader knows.
-        let city = pinsEnglish && today.city.isMostlyArabicScript ? "your current location" : today.city
-        let place = city.isEmpty ? "" : " in \(city)"
-        // Told the current time too: "how long until Asr" is arithmetic the model can only do if it
-        // knows where the day stands.
-        let text = "Prayer times\(place) for \(day), computed by this app. It is now \(clock.string(from: Date())).\n"
-            + lines.joined(separator: "\n")
-        return AskAISource(
-            kind: .prayer,
-            reference: "Prayer times today",
-            title: "Prayer times today" + (today.city.isEmpty ? "" : " \u{00B7} \(today.city)"),
-            text: text,
-            provenance: ["Computed by this app for \(city.isEmpty ? "your location" : city) on \(day)"],
-            aliases: ["today's prayer times", "the prayer times", "prayer times"],
-            maxCharacters: 900,
-            isSubject: true)
+    /// Today's schedule where the reader is, as a source: what a question that only NAMES a prayer
+    /// is given beside its other sources ("did I miss Asr"). Nil when there is no location yet.
+    static func prayerTimes(asking raw: String? = nil) -> AskAISource? {
+        // What the question asks for beside the times (the rakah counts, the night's times), for
+        // today and here whatever else it says.
+        var request = raw.map { AskAIPrayerRequest.parse($0) } ?? AskAIPrayerRequest()
+        request.place = nil
+        request.day = nil
+        request.dayPhrase = nil
+        request.topics.subtract([.week, .events, .hijri, .qibla])
+        request.namesPrayer = true
+        return prayerSource(for: request, place: nil)
     }
 
-    /// One prayer's line for the model: "Asr 2:31 PM (4 fard)", with its sunnah counts and note.
-    private static func prayerLine(_ prayer: Prayer, clock: DateFormatter) -> String {
-        var line = "\(prayer.nameCustom ?? prayer.nameTransliteration) \(clock.string(from: prayer.time))"
-        var counts: [String] = []
-        if prayer.rakah != "0" { counts.append("\(prayer.rakah) fard") }
-        if prayer.sunnahBefore != "0" { counts.append("\(prayer.sunnahBefore) sunnah before") }
-        if prayer.sunnahAfter != "0" { counts.append("\(prayer.sunnahAfter) sunnah after") }
-        if !counts.isEmpty { line += " (" + counts.joined(separator: ", ") + ")" }
-        if let note = prayer.sunnahNote { line += ". " + note }
-        return line
-    }
-
-    /// A day's times for a place the question named, or for another day where the reader is, computed
-    /// the way City Prayer Times computes them: a named place with the method of its own country, the
-    /// reader's place with the reader's own method, every time in the place's local clock. Nil for the
-    /// plain "today, here" question (`prayerTimes()` answers that), or when nothing can be computed.
+    /// What a prayer-times question asks for, computed by the app so the model copies and never
+    /// calculates: the day's times (a named place with the method of its own country, as City Prayer
+    /// Times does; the reader's place with the reader's own method; every time in the place's own
+    /// clock), how long until each one, and, when the question asks, the night's times, the fast,
+    /// a week's timetable, the Hijri date, the coming Islamic dates and the qibla's bearing.
     static func prayerTimes(for request: AskAIPrayerRequest) async -> AskAISource? {
-        guard !request.isPlainToday else { return nil }
+        guard let named = request.place else { return prayerSource(for: request, place: nil) }
+        guard let found = await AskAIPrayerRequest.locate(named) else {
+            // Said plainly, so the answer says it rather than giving the times of somewhere else.
+            return AskAISource(
+                kind: .prayer,
+                reference: "Prayer times: place not found",
+                title: "Prayer times \u{00B7} \(named)",
+                text: "The reader asked about \u{201C}\(named)\u{201D}, but this app could not find that place on the map (looking a place up needs an internet connection). Say so, suggest checking the spelling or adding the country, and mention City Prayer Times in the Adhan tab, where any city can be chosen on a map.",
+                provenance: ["Looked up by this app on Apple Maps"],
+                aliases: ["prayer times", "the prayer times"],
+                maxCharacters: 600,
+                isSubject: true)
+        }
+        return prayerSource(for: request, place: found)
+    }
+
+    private static func prayerSource(for request: AskAIPrayerRequest, place named: AskAIPrayerRequest.Place?) -> AskAISource? {
         let settings = Settings.shared
         let place: AskAIPrayerRequest.Place
-        if let named = request.place {
-            guard let found = await AskAIPrayerRequest.locate(named) else {
-                // Said plainly, so the answer says it rather than giving the times of somewhere else.
-                return AskAISource(
-                    kind: .prayer,
-                    reference: "Prayer times: place not found",
-                    title: "Prayer times \u{00B7} \(named)",
-                    text: "The reader asked for the prayer times in \u{201C}\(named)\u{201D}, but this app could not find that place on the map (looking a place up needs an internet connection). Say so, suggest checking the spelling or adding the country, and mention City Prayer Times in the Adhan tab, where any city can be chosen on a map.",
-                    provenance: ["Looked up by this app on Apple Maps"],
-                    aliases: ["prayer times", "the prayer times"],
-                    maxCharacters: 600,
-                    isSubject: true)
-            }
-            place = found
+        if let named {
+            place = named
         } else {
             guard let here = settings.currentLocation, here.latitude != 1000, here.longitude != 1000 else { return nil }
+            // The city is geocoded in the interface language, so outside English it can be an Arabic
+            // name with no English one beside it: Apple's model turns away a prompt with much Arabic,
+            // and an English answer would quote the name. The card's title keeps the name the reader knows.
             let name = here.city.isMostlyArabicScript || here.city.isEmpty ? "your current location" : here.city
             place = .init(location: here, name: name, timeZone: .current, countryCode: nil, isHere: true)
         }
 
-        let day = request.day ?? Date()
+        let now = Date()
+        let day = request.day ?? now
+        let topics = request.topics
         // The reader's own method where the reader is; the country's own method elsewhere (the City
         // Prayer Times rule), so Makkah reads Umm al-Qura and London the method used in Britain.
         let method = place.isHere ? nil : place.countryCode.map { settings.recommendedCalculationMethod(forCountryCode: $0) }
-        guard let prayers = settings.getPrayerTimes(for: day, at: place.location, fullPrayers: true, calculationOverride: method),
-              !prayers.isEmpty else { return nil }
+        let methodName = method ?? settings.prayerCalculation
+        func times(on date: Date) -> [Prayer] {
+            settings.getPrayerTimes(for: date, at: place.location, fullPrayers: true, calculationOverride: method) ?? []
+        }
+        let prayers = times(on: day)
+        guard !prayers.isEmpty else { return nil }
 
-        // English for the model, as in `prayerTimes()`, and the PLACE's clock and calendar day.
+        // The model reads English: the prayer names, the times and the dates. In an English interface
+        // the clock keeps the reader's own region format (a 24-hour clock stays one); in another
+        // language it is pinned to US English (Western digits, English month names).
         let english = Locale(identifier: "en_US")
         let clock = DateFormatter()
-        clock.locale = english
+        clock.locale = AppLanguage.code.hasPrefix("en") ? .current : english
         clock.timeZone = place.timeZone
         clock.timeStyle = .short
         clock.dateStyle = .none
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = place.timeZone
-        let longDay = day.formatted(Date.FormatStyle(date: .complete, time: .omitted, locale: english, calendar: calendar,
-                                                     timeZone: place.timeZone))
-        let shortDay = day.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: english, calendar: calendar,
-                                                      timeZone: place.timeZone))
-        let isTodayThere = calendar.isDate(day, inSameDayAs: Date())
-        let methodName = method ?? settings.prayerCalculation
-        var text = "Prayer times in \(place.name) for \(longDay), computed by this app with the \(methodName) method"
-        text += place.isHere ? "." : ", in the local time of \(place.name)."
-        if isTodayThere { text += " It is now \(clock.string(from: Date())) there." }
-        if let phrase = request.dayPhrase { text += " (The reader said \u{201C}\(phrase)\u{201D}.)" }
-        // The times alone: the rakah counts are the same in every city, and beside them the model
-        // read Fajr's "2 sunnah before" back as "2 sunnah after" for a question that asked only the time.
-        text += "\n" + prayers.map { "\($0.nameCustom ?? $0.nameTransliteration) \(clock.string(from: $0.time))" }
-            .joined(separator: "\n")
+        func written(_ date: Date, _ style: Date.FormatStyle.DateStyle) -> String {
+            date.formatted(Date.FormatStyle(date: style, time: .omitted, locale: english, calendar: calendar, timeZone: place.timeZone))
+        }
+        func name(_ prayer: Prayer) -> String { prayer.nameCustom ?? prayer.nameTransliteration }
+        func time(_ named: String, in list: [Prayer]) -> Date? { list.first { $0.nameTransliteration == named }?.time }
+        let isToday = calendar.isDate(day, inSameDayAs: now)
+        let nextDay = calendar.date(byAdding: .day, value: 1, to: day) ?? day
+        let at = place.name == "your current location" ? "at" : "in"
 
-        return AskAISource(
-            kind: .cityPrayer(latitude: place.location.latitude, longitude: place.location.longitude,
-                              city: place.location.city, day: day),
-            reference: "Prayer times in \(place.name) on \(shortDay)",
-            title: "Prayer times \u{00B7} \(place.isHere ? place.location.city : place.name) \u{00B7} \(shortDay)",
+        var text = request.wantsTimes ? "Prayer times \(at) \(place.name) for \(written(day, .complete))" : "\(written(day, .complete)) \(at) \(place.name)"
+        // Which day the reader's word meant, said as a fact: beside a bare (The reader said "tomorrow")
+        // the model counted a day on from the date given.
+        if let phrase = request.dayPhrase { text += " (the day the reader calls \u{201C}\(phrase)\u{201D})" }
+        if request.wantsTimes {
+            text += ", computed by this app with the \(methodName) method" + (place.isHere ? "." : ", in the local time of \(place.name).")
+        } else {
+            text += "."
+        }
+        if isToday {
+            text += " It is now \(clock.string(from: now))\(place.isHere ? "" : " there")."
+        }
+        // The answer itself, said first and worked out here: the prayers the question names, each
+        // with how far off it is today, else what comes next. ONE countdown on purpose. With "the
+        // next one is Asr, in 25 minutes" above a list that gave every prayer its own, "How long
+        // until Isha?" was answered "25 minutes"; and left under the list, "What is the next
+        // prayer?" got the list's first line (Fajr, at midday).
+        if request.wantsTimes, !topics.contains(.week), !(topics.contains(.tracker) && place.isHere) {
+            let asked = request.prayers.compactMap { wanted in
+                prayers.first { $0.nameTransliteration == wanted }
+                    ?? (wanted == "Dhuhr" ? prayers.first { $0.nameTransliteration == "Jumuah" } : nil)
+            }
+            for prayer in asked.prefix(3) {
+                let at = clock.string(from: prayer.time)
+                if !isToday {
+                    text += " \(name(prayer)) is at \(at)."
+                } else if prayer.time > now {
+                    text += " \(name(prayer)) is at \(at), in \(span(now, prayer.time))."
+                } else {
+                    text += " \(name(prayer)) was at \(at), \(span(prayer.time, now)) ago."
+                }
+            }
+            if asked.isEmpty, isToday, !topics.contains(.tracker) {
+                if let next = prayers.first(where: { $0.time > now }) {
+                    text += " The next one is \(name(next)) at \(clock.string(from: next.time)), in \(span(now, next.time))."
+                } else if let fajr = time("Fajr", in: times(on: nextDay)) {
+                    text += " Every time for today has come: the next one is Fajr tomorrow at \(clock.string(from: fajr)), in \(span(now, fajr))."
+                }
+            }
+        }
+
+        var trackerAnswer: String?
+        // The reader's own record (here only: the tracker is theirs, not a city's), and for a
+        // prayer they name, where its time stands. Everything the model could get wrong is worked
+        // out: "its time is still on" and "its time ended" are said, never left to be reckoned.
+        if topics.contains(.tracker), place.isHere {
+            let five = prayers.filter { ["Fajr", "Dhuhr", "Jumuah", "Asr", "Maghrib", "Isha"].contains($0.nameTransliteration) }
+            func ends(_ prayer: Prayer) -> (time: Date, what: String)? {
+                if prayer.nameTransliteration == "Fajr", let sunrise = time("Shurooq", in: prayers) { return (sunrise, "at sunrise") }
+                if let index = five.firstIndex(where: { $0.nameTransliteration == prayer.nameTransliteration }), index + 1 < five.count {
+                    return (five[index + 1].time, "when \(name(five[index + 1])) began")
+                }
+                if let fajr = time("Fajr", in: times(on: nextDay)) { return (fajr, "at Fajr the next morning") }
+                return nil
+            }
+            func record(_ prayer: Prayer) -> String {
+                switch settings.prayerMark(for: prayer.nameTransliteration, on: day) {
+                case .onTime?: return "marked as prayed on time"
+                case .late?: return "marked as prayed late"
+                case .missed?: return "marked as missed"
+                case nil: return isToday && prayer.time > now ? "not marked (its time has not come yet)" : "not marked"
+                }
+            }
+            let asked = request.prayers.compactMap { wanted in
+                five.first { $0.nameTransliteration == wanted } ?? (wanted == "Dhuhr" ? five.first { $0.nameTransliteration == "Jumuah" } : nil)
+            }
+            // One sentence a prayer, the clock and the record together: given the two apart, "Did I
+            // miss Dhuhr?" was answered with the record alone, and whether its time had passed is
+            // the half that was asked.
+            let trackerStart = text.utf8.count
+            for prayer in asked.prefix(3) {
+                let began = clock.string(from: prayer.time)
+                var sentence: String
+                if !isToday {
+                    sentence = " \(name(prayer)) is at \(began)"
+                } else if prayer.time > now {
+                    sentence = " \(name(prayer)) is at \(began), in \(span(now, prayer.time)), so its time has not come yet"
+                } else if let end = ends(prayer), end.time > now {
+                    sentence = " \(name(prayer)) began at \(began) and its time is still on, until \(clock.string(from: end.time)) (\(span(now, end.time)) from now)"
+                } else if let end = ends(prayer) {
+                    sentence = " \(name(prayer)) was at \(began) and its time ended at \(clock.string(from: end.time)), \(end.what)"
+                } else {
+                    sentence = " \(name(prayer)) was at \(began)"
+                }
+                text += sentence + ". In your Prayer Tracker it is \(record(prayer)) for \(isToday ? "today" : "that day")."
+            }
+            if asked.isEmpty {
+                text += " Your Prayer Tracker for \(isToday ? "today" : written(day, .abbreviated)):\n"
+                    + five.map { "\(name($0)): \(record($0))" }.joined(separator: "\n")
+            }
+            trackerAnswer = String(decoding: text.utf8.dropFirst(trackerStart), as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+            text += "\n(The tracker holds only what the reader has marked themselves.)"
+        }
+
+        var shortSpan = written(day, .abbreviated)
+        if request.wantsTimes, topics.contains(.week) {
+            // A run of days, one line each: the times alone.
+            let count = max(2, min(7, request.days))
+            let last = calendar.date(byAdding: .day, value: count - 1, to: day) ?? day
+            shortSpan += " to " + written(last, .abbreviated)
+            text += " The \(count) days from then:"
+            for offset in 0..<count {
+                guard let date = calendar.date(byAdding: .day, value: offset, to: day) else { continue }
+                let list = offset == 0 ? prayers : times(on: date)
+                let weekday = date.formatted(Date.FormatStyle(locale: english, calendar: calendar, timeZone: place.timeZone)
+                    .weekday(.abbreviated).month(.abbreviated).day())
+                text += "\n\(weekday): " + list.map { "\(name($0)) \(clock.string(from: $0.time))" }.joined(separator: ", ")
+            }
+        } else if request.wantsTimes, !(topics.contains(.tracker) && place.isHere) {
+            // The times alone. The rakah counts ride along only when asked for (beside every time,
+            // the model read Fajr's "2 sunnah before" back as "2 sunnah after" and gave Isha's
+            // counts to iftar).
+            text += "\n" + prayers.map { prayer in
+                var line = "\(name(prayer)) \(clock.string(from: prayer.time))"
+                var notes: [String] = []
+                if topics.contains(.rakahs) {
+                    if prayer.rakah != "0" { notes.append("\(prayer.rakah) fard") }
+                    if prayer.sunnahBefore != "0" { notes.append("\(prayer.sunnahBefore) sunnah before") }
+                    if prayer.sunnahAfter != "0" { notes.append("\(prayer.sunnahAfter) sunnah after") }
+                }
+                if !notes.isEmpty { line += " (" + notes.joined(separator: "; ") + ")" }
+                if topics.contains(.rakahs), let note = prayer.sunnahNote { line += ". " + note }
+                return line
+            }.joined(separator: "\n")
+        }
+
+        if topics.contains(.night) || topics.contains(.duha) {
+            let extra = settings.optionalPrayers(for: day, at: place.location, calculationOverride: method,
+                                                 duha: true, islamicMidnight: true, lastThird: true)
+            if topics.contains(.night), let midnight = time("Islamic Midnight", in: extra), let third = time("Last Third", in: extra) {
+                text += "\nThe night: the preferred time of Isha ends at Islamic midnight, \(clock.string(from: midnight)). The last third of the night, the best time for Tahajjud and the night prayer, begins at \(clock.string(from: third))"
+                if let fajr = time("Fajr", in: times(on: nextDay)) { text += " and lasts until Fajr the next morning, \(clock.string(from: fajr))" }
+                text += "."
+            }
+            if topics.contains(.duha), let duha = time("Duhaa", in: extra) {
+                text += "\nDuha, the forenoon prayer, can be prayed from \(clock.string(from: duha)) until shortly before Dhuhr."
+            }
+        }
+        if topics.contains(.fasting), let fajr = time("Fajr", in: prayers), let maghrib = time("Maghrib", in: prayers) {
+            // "Suhoor ends at Fajr" came back as "suhoor begins at Fajr": said as a deadline.
+            text += "\nFasting on this day: suhoor, the meal before dawn, must be finished by Fajr at \(clock.string(from: fajr)), when the fast begins. Iftar, breaking the fast, is at Maghrib, \(clock.string(from: maghrib))."
+        }
+        if topics.contains(.method), place.isHere {
+            text += "\nThe reader\u{2019}s prayer settings: the \(methodName) calculation method, and Asr by the \(settings.hanafiMadhab ? "Hanafi" : "standard (Shafi\u{2019}i, Maliki and Hanbali)") shadow rule. Both are changed in the app\u{2019}s prayer settings."
+        }
+        if topics.contains(.hijri) || topics.contains(.events) {
+            // Today's Hijri date as the Adhan tab shows it (it turns at Maghrib when the reader has
+            // that on); another day's by the calendar.
+            let reference = isToday && place.isHere ? settings.effectiveHijriReferenceDate(now: now) : day
+            text += "\nThe Hijri date \(isToday ? "now" : "that day") is \(hijriDate(reference)), on this app\u{2019}s Umm al-Qura calendar"
+                + (settings.hijriOffset == 0 ? "." : " with the reader\u{2019}s adjustment of \(settings.hijriOffset) day\(abs(settings.hijriOffset) == 1 ? "" : "s").")
+        }
+        if topics.contains(.events) {
+            let lines = comingEvents(matching: request.eventWords, after: now, year: request.eventYear)
+            if !lines.isEmpty {
+                text += "\nComing dates on this app\u{2019}s Hijri calendar, soonest first (a month really begins when its crescent is sighted, so a date can fall a day either side):\n"
+                    + lines.joined(separator: "\n")
+            }
+        }
+        if topics.contains(.qibla) {
+            let bearing = Qibla(coordinates: Coordinates(latitude: place.location.latitude, longitude: place.location.longitude)).direction
+            text += "\nThe qibla from \(place.name): the Kaaba lies \(Int(bearing.rounded())) degrees clockwise from true north, to the \(compassPoint(bearing)). The Qibla compass in the Adhan tab points to it."
+        }
+
+        let plainToday = place.isHere && isToday && !topics.contains(.week)
+        let cityTitle = place.isHere ? place.location.city : place.name
+        // A card of its own name for what is not a timetable: the qibla from a place, the calendar.
+        let reference: String
+        let title: String
+        if !request.wantsTimes, topics.contains(.qibla) {
+            reference = "Qibla direction from \(place.name)"
+            title = "Qibla direction" + (cityTitle.isEmpty ? "" : " \u{00B7} \(cityTitle)")
+        } else if !request.wantsTimes {
+            reference = "Islamic dates on \(shortSpan)"
+            title = "Islamic dates \u{00B7} \(shortSpan)"
+        } else if plainToday {
+            reference = "Prayer times today"
+            title = "Prayer times today" + (cityTitle.isEmpty ? "" : " \u{00B7} \(cityTitle)")
+        } else {
+            reference = "Prayer times \(at) \(place.name) on \(shortSpan)"
+            title = "Prayer times \u{00B7} \(cityTitle) \u{00B7} \(shortSpan)"
+        }
+        var source = AskAISource(
+            kind: plainToday ? .prayer : .cityPrayer(latitude: place.location.latitude, longitude: place.location.longitude,
+                                                     city: place.location.city, day: day),
+            reference: reference,
+            title: title,
             text: text,
-            provenance: ["Computed by this app for \(place.name) on \(longDay)",
-                         "Calculation method: \(methodName)",
-                         "Times in local time (\(place.timeZone.identifier))"],
-            aliases: ["prayer times", "the prayer times", "prayer times in \(place.name.lowercased())"],
-            maxCharacters: 1_000,
+            provenance: ["Computed by this app for \(place.name) on \(written(day, .complete))"]
+                + (request.wantsTimes ? ["Calculation method: \(methodName)"] : [])
+                + (place.isHere ? [] : ["Times in local time (\(place.timeZone.identifier))"]),
+            aliases: ["today's prayer times", "the prayer times", "prayer times", "prayer times in \(place.name.lowercased())"],
+            maxCharacters: 1_500,
             isSubject: true)
+        source.appAnswer = trackerAnswer
+        return source
+    }
+
+    /// "53 minutes", "1 hour 5 minutes", "2 hours": the whole minutes from one moment to a later one,
+    /// counted the way a countdown reads (12:20 to 1:13 is 53 minutes at any second of 12:20).
+    private static func span(_ from: Date, _ to: Date) -> String {
+        let start = (from.timeIntervalSinceReferenceDate / 60).rounded(.down) * 60
+        let minutes = max(0, Int(((to.timeIntervalSinceReferenceDate - start) / 60).rounded(.down)))
+        let hours = minutes / 60, rest = minutes % 60
+        var parts: [String] = []
+        if hours > 0 { parts.append("\(hours) hour\(hours == 1 ? "" : "s")") }
+        if rest > 0 || hours == 0 { parts.append("\(rest) minute\(rest == 1 ? "" : "s")") }
+        return parts.joined(separator: " ")
+    }
+
+    /// The Hijri date of `date` in English ("15 Jumada II 1448 AH"), with the reader's adjustment.
+    private static func hijriDate(_ date: Date) -> String {
+        let settings = Settings.shared
+        var calendar = Calendar(identifier: .islamicUmmAlQura)
+        calendar.timeZone = .current
+        let adjusted = calendar.date(byAdding: .day, value: settings.hijriOffset, to: date) ?? date
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "en_US")
+        formatter.dateFormat = "d MMMM y"
+        return formatter.string(from: adjusted) + " AH"
+    }
+
+    /// The app's Islamic dates still to come, soonest first, as lines for the model: the next
+    /// occurrence of each one the question names ("ramadan", "eid"), or the ones in the civil year it
+    /// names ("next year", "2028"), else the next five of any. Few lines on purpose: given six, the
+    /// model answered "how many days until Eid" with the last. Placed on the civil calendar as the
+    /// Hijri calendar screen places them (`IslamicEventLookup`).
+    private static func comingEvents(matching words: [String], after now: Date, year civilYear: Int?) -> [String] {
+        let settings = Settings.shared
+        let hijri = settings.hijriCalendar
+        let civil = Calendar.current
+        let today = civil.startOfDay(for: now)
+        let adjusted = hijri.date(byAdding: .day, value: settings.hijriOffset, to: now) ?? now
+        let year = hijri.component(.year, from: adjusted)
+        var found: [(title: String, date: Date, night: Bool)] = []
+        for hijriYear in year...(year + 2) {
+            for event in Settings.specialEvents(inHijriYear: hijriYear) {
+                var components = event.1
+                components.year = hijriYear
+                guard let unadjusted = hijri.date(from: components) else { continue }
+                let placed = civil.startOfDay(for: hijri.date(byAdding: .day, value: -settings.hijriOffset, to: unadjusted) ?? unadjusted)
+                if placed >= today { found.append((event.0, placed, Settings.nightEventTitles.contains(event.0))) }
+            }
+        }
+        found.sort { $0.date < $1.date }
+        // "eid" names both Eids; "hajj" and "dhul hijjah" the days around it.
+        let wanted = words.map { $0 == "arafat" ? "arafah" : $0 == "ramadhan" ? "ramadan" : $0 == "hijjah" || $0 == "dhul" ? "dhul-hijjah" : $0 }
+        // "End of Eid Al-Adha" answers no "when is Eid".
+        let named = found.filter { event in
+            wanted.contains { event.title.lowercased().contains($0) } && !event.title.hasPrefix("End of")
+        }
+        let inYear = civilYear.map { wanted in named.filter { civil.component(.year, from: $0.date) == wanted } } ?? []
+        let chosen: [(title: String, date: Date, night: Bool)]
+        if !inYear.isEmpty {
+            chosen = Array(inYear.prefix(4))
+        } else if named.isEmpty {
+            chosen = Array(found.prefix(5))
+        } else {
+            var seen = Set<String>()
+            chosen = Array(named.filter { seen.insert($0.title).inserted }.prefix(4))
+        }
+        let english = Locale(identifier: "en_US")
+        return chosen.map { event in
+            let days = civil.dateComponents([.day], from: today, to: event.date).day ?? 0
+            let when = days == 0 ? "today" : days == 1 ? "tomorrow" : "in \(days) days"
+            let date = event.date.formatted(Date.FormatStyle(date: .complete, time: .omitted, locale: english, calendar: Calendar(identifier: .gregorian)))
+            return "\(event.title): \(date) (\(when))" + (event.night ? ", beginning at Maghrib the evening before" : "")
+        }
+    }
+
+    /// The compass point a bearing falls in ("northeast", "east-northeast").
+    private static func compassPoint(_ degrees: Double) -> String {
+        let points = ["north", "north-northeast", "northeast", "east-northeast", "east", "east-southeast", "southeast",
+                      "south-southeast", "south", "south-southwest", "southwest", "west-southwest", "west",
+                      "west-northwest", "northwest", "north-northwest"]
+        let turned = (degrees.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360)
+        return points[Int((turned / 22.5).rounded()) % 16]
     }
     #endif
 }
@@ -670,8 +923,77 @@ struct AskAIPrayerRequest: Equatable {
     var day: Date?
     /// The day's words as written, so the model can say "tomorrow" back.
     var dayPhrase: String?
+    /// What the question asks for beside (or instead of) the day's times.
+    var topics: Topics = []
+    /// The Islamic dates it names ("ramadan", "eid"), for `Topics.events`.
+    var eventWords: [String] = []
+    /// The civil year it asks about ("next year", "in 2028"), for `Topics.events`.
+    var eventYear: Int?
+    /// How many days a `Topics.week` timetable runs (2 to 7).
+    var days = 7
+    /// It names a prayer, or the prayer times as such.
+    var namesPrayer = false
+    /// The prayers of the day it names, by `Prayer.nameTransliteration` ("Fajr", "Isha").
+    var prayers: [String] = []
+    /// The other places a question names beside `place` ("Fajr in Makkah and Cairo"), in the order
+    /// written: each gets its own timetable, and the app sets the answer down itself.
+    var morePlaces: [String] = []
+
+    struct Topics: OptionSet, Equatable {
+        let rawValue: Int
+        /// The fard and sunnah counts beside each time.
+        static let rakahs = Topics(rawValue: 1 << 0)
+        /// Islamic midnight (when Isha's preferred time ends) and the last third of the night.
+        static let night = Topics(rawValue: 1 << 1)
+        /// Suhoor's end and iftar.
+        static let fasting = Topics(rawValue: 1 << 2)
+        static let duha = Topics(rawValue: 1 << 3)
+        /// The calculation method and the Asr rule the reader's times use.
+        static let method = Topics(rawValue: 1 << 4)
+        /// The Hijri date of the day.
+        static let hijri = Topics(rawValue: 1 << 5)
+        /// When Ramadan, an Eid, Arafah or another date of the app's Hijri calendar falls.
+        static let events = Topics(rawValue: 1 << 6)
+        /// The qibla's bearing from the place.
+        static let qibla = Topics(rawValue: 1 << 7)
+        /// Several days' times at once.
+        static let week = Topics(rawValue: 1 << 8)
+        /// The reader's own marks in the Prayer Tracker ("did I pray Fajr today?", "did I miss
+        /// Dhuhr?"), with whether a named prayer's time has come, is on, or has passed.
+        static let tracker = Topics(rawValue: 1 << 9)
+
+        /// What is answered without the day's timetable.
+        static let calendarOnly: Topics = [.hijri, .events, .qibla]
+    }
 
     var isPlainToday: Bool { place == nil && day == nil }
+
+    /// The day's times belong in the answer: always, except for a question that is only about the
+    /// calendar or the qibla ("When is Ramadan?", "Which way is the qibla?").
+    var wantsTimes: Bool { namesPrayer || topics.isEmpty || !topics.subtracting(.calendarOnly).isEmpty }
+
+    /// It carries on a talk about the times: a place, a day, a prayer or one of the topics.
+    var continuesPrayerTalk: Bool { place != nil || day != nil || namesPrayer || !topics.isEmpty }
+
+    /// A follow-up's request: what it does not say itself is what the question before it asked
+    /// ("Fajr in Makkah tomorrow", then "And in Cairo?", then "What about Maghrib?").
+    func inheriting(_ previous: AskAIPrayerRequest) -> AskAIPrayerRequest {
+        var merged = self
+        if merged.place == nil { merged.place = previous.place }
+        if merged.day == nil {
+            merged.day = previous.day
+            merged.dayPhrase = previous.dayPhrase
+        }
+        if merged.topics.isEmpty, !merged.namesPrayer {
+            merged.topics = previous.topics
+            merged.eventWords = previous.eventWords
+            merged.eventYear = previous.eventYear
+            merged.days = previous.days
+            merged.namesPrayer = previous.namesPrayer
+            merged.prayers = previous.prayers
+        }
+        return merged
+    }
 
     /// A place found on the map.
     struct Place {
@@ -696,14 +1018,137 @@ struct AskAIPrayerRequest: Equatable {
             }
             remainder = ns.replacingCharacters(in: match.range, with: " ")
         }
-        request.place = place(in: remainder)
+        let named = places(in: remainder)
+        request.place = named.last
+        request.morePlaces = Array(named.dropLast().suffix(2))
+
+        let folded = AskAILexicon.fold(raw)
+        let words = Set(folded.split(separator: " ").map(String.init))
+        func has(_ list: Set<String>) -> Bool { !words.isDisjoint(with: list) }
+        request.namesPrayer = has(AskAILexicon.prayerNames) || folded.contains("prayer time") || folded.contains("salah time")
+        // In the day's order; iftar is Maghrib's time and suhoor ends at Fajr's.
+        request.prayers = prayerSpellings.filter { has($0.words) }.map(\.name)
+        if has(["rakah", "rakahs", "rakat", "rakats", "rakaat", "rakaats", "sunnah", "sunnahs", "fard", "nafl", "units"]) {
+            request.topics.insert(.rakahs)
+        }
+        if has(["midnight", "tahajjud", "tahajud", "qiyam", "third"])
+            || (words.contains("isha") && has(["end", "ends", "late", "latest", "last", "deadline", "delay"]))
+            || (words.contains("night") && has(["half", "middle", "last"])) {
+            request.topics.insert(.night)
+        }
+        if has(["suhoor", "suhur", "sahur", "sahoor", "sehri", "iftar", "iftaar", "fast", "fasting", "imsak"]) { request.topics.insert(.fasting) }
+        if has(["duha", "duhaa", "dhuha", "ishraq", "forenoon"]) { request.topics.insert(.duha) }
+        if has(["method", "calculation", "calculated", "calculate", "computed", "madhab", "madhhab", "hanafi", "angle", "angles", "convention"]) {
+            request.topics.insert(.method)
+        }
+        if words.contains("hijri") || ["islamic date", "islamic calendar", "islamic month", "islamic year", "lunar date"].contains(where: folded.contains) {
+            request.topics.insert(.hijri)
+        }
+        request.eventWords = eventWords.filter(words.contains)
+        if folded.contains("new year") { request.eventWords.append("new year") }
+        let thisYear = Calendar(identifier: .gregorian).component(.year, from: now)
+        if let written = words.compactMap({ Int($0) }).first(where: { (2000...2200).contains($0) }) {
+            request.eventYear = written
+        } else if folded.contains("next year") {
+            request.eventYear = thisYear + 1
+        } else if folded.contains("this year") {
+            request.eventYear = thisYear
+        }
+        if !request.eventWords.isEmpty, has(["when", "date", "dates", "day", "days", "long", "until", "till", "far", "start", "starts", "begin",
+                                              "begins", "end", "ends", "next", "coming", "upcoming", "soon", "left", "countdown", "calendar"]) {
+            request.topics.insert(.events)
+        }
+        if has(["qibla", "qiblah", "qiblat", "kiblat"]) { request.topics.insert(.qibla) }
+        // The reader's own record: "did I pray Fajr", "have I missed Asr", "which prayers have I
+        // prayed today". A question about the record, not about the clock or what is allowed: "What
+        // time should I pray Fajr tomorrow?" and "Can I pray Asr now?" hold the same words and ask
+        // for a time.
+        if has(["i", "ive", "my", "me"]),
+           has(["pray", "prayed", "miss", "missed", "mark", "marked", "log", "logged", "track", "tracked", "tracker", "done", "offered"]),
+           request.namesPrayer || has(["prayer", "prayers", "salah", "salat", "namaz", "tracker"]),
+           has(["did", "have", "ive", "which", "any", "tracker", "am"]),
+           !has(["when", "time", "times", "should", "can", "could", "may", "until", "till", "long", "where", "why"]),
+           !words.contains("how") || folded.contains("how many") {
+            request.topics.insert(.tracker)
+        }
+        if has(["week", "weekly", "weeks", "weekend"]) {
+            request.topics.insert(.week)
+        } else if let match = daysRegex.firstMatch(in: folded, range: NSRange(location: 0, length: (folded as NSString).length)) {
+            let written = (folded as NSString).substring(with: match.range(at: 1))
+            let count = Int(written) ?? ["two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7][written] ?? 0
+            if count >= 2 {
+                request.topics.insert(.week)
+                request.days = min(7, count)
+            }
+        }
         return request
+    }
+
+    private static let prayerSpellings: [(name: String, words: Set<String>)] = [
+        ("Fajr", ["fajr", "suhoor", "suhur", "sahur", "sahoor", "sehri"]), ("Shurooq", ["sunrise", "shuruq", "shurooq"]),
+        ("Dhuhr", ["dhuhr", "duhr", "zuhr", "dhur"]), ("Jumuah", ["jumuah", "jumaah", "jummah"]), ("Asr", ["asr"]),
+        ("Maghrib", ["maghrib", "iftar", "iftaar"]), ("Isha", ["isha", "ishaa", "esha"]),
+    ]
+
+    /// The Islamic dates a question can name, as the app's Hijri calendar lists them.
+    private static let eventWords = ["ramadan", "ramadhan", "eid", "arafah", "arafat", "ashura", "hajj", "dhul", "hijjah", "muharram"]
+    private static let daysRegex = try! NSRegularExpression(pattern: #"\b(?:next|coming|following) (\d|two|three|four|five|six|seven) days\b"#)
+
+    /// "How many rakahs is Maghrib?": the fard and sunnah counts of the five prayers are the app's own
+    /// data, beside each time. Read from the library instead, the answer was "Maghrib is two rakahs",
+    /// from a hadith about the two sunnah after it (2026-11-25). A prayer the day's list does not
+    /// hold (Tahajjud, Witr, Tarawih) stays with the library.
+    static func asksRakahCount(_ raw: String) -> Bool {
+        let request = parse(raw)
+        guard request.topics.contains(.rakahs), !request.prayers.isEmpty else { return false }
+        let words = Set(AskAILexicon.fold(raw).split(separator: " ").map(String.init))
+        return !words.isDisjoint(with: ["many", "number", "count", "counts"])
+            && words.isDisjoint(with: ["why", "travel", "traveling", "travelling", "traveler", "qasr", "shorten", "missed", "miss", "witr", "tahajjud", "tarawih", "taraweeh", "eid", "janazah"])
+    }
+
+    /// "Did I pray Fajr today?", "Did I miss Dhuhr?", "Which prayers have I prayed today?": the
+    /// reader's own record and the clock, both the app's. Read as fiqh ("miss" is a fiqh word),
+    /// "Did I miss Dhuhr?" was answered with the ruling on making up a missed prayer (2026-11-25).
+    /// A question that asks what to DO about it stays with the library ("I missed Fajr, what should I do?").
+    static func asksTracker(_ raw: String) -> Bool {
+        let request = parse(raw)
+        guard request.topics.contains(.tracker) else { return false }
+        let folded = AskAILexicon.fold(raw)
+        let words = Set(folded.split(separator: " ").map(String.init))
+        let asksWhatToDo: Set<String> = ["should", "how", "ruling", "sin", "sinful", "allowed", "permissible", "haram", "qada",
+                                         "makeup", "kaffarah", "why", "forgive", "forgiven", "repent", "valid", "count", "counts"]
+        guard words.isDisjoint(with: asksWhatToDo), !folded.contains("make up"), !folded.contains("what do i do") else { return false }
+        // A question about now: "did I", "have I", "am I", "which", "what" with the reader as its subject.
+        return !words.isDisjoint(with: ["did", "have", "ive", "which", "what", "am", "is", "any", "tracker", "show"])
+    }
+
+    /// Whether a question asks for something the app computes beside the times: today's Hijri date,
+    /// when one of its Islamic dates falls, or the qibla's bearing. A question about their history or
+    /// their rulings is left to the library ("why did the qibla change", "when should I fast Arafah").
+    static func asksDateOrDirection(_ raw: String) -> Bool {
+        let request = parse(raw)
+        guard !request.topics.isDisjoint(with: .calendarOnly) else { return false }
+        let words = Set(AskAILexicon.fold(raw).split(separator: " ").map(String.init))
+        let history: Set<String> = ["why", "was", "were", "did", "history", "story", "revealed", "changed", "change", "originally",
+                                    "before", "jerusalem", "compass", "who", "meaning", "virtue", "virtues", "reward"]
+        guard words.isDisjoint(with: history), words.isDisjoint(with: AskAILexicon.prayerFiqhWords) else { return false }
+        if request.topics.contains(.events) { return true }
+        if request.topics.contains(.hijri) {
+            return !words.isDisjoint(with: ["date", "today", "todays", "now", "tonight", "tomorrow", "month", "year"])
+        }
+        return !words.isDisjoint(with: ["direction", "way", "where", "degrees", "degree", "bearing", "face", "facing", "angle", "which"])
     }
 
     private static let dateDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
 
     /// The place the words name, or nil.
-    static func place(in text: String) -> String? {
+    static func place(in text: String) -> String? { places(in: text).last }
+
+    /// Every place the words name, in the order written; the last is the one a single-place
+    /// question means ("in Ramadan in Istanbul"). Two or three come of a comparison ("Fajr in Makkah
+    /// and Cairo"): only names the tagger knows as places count beyond the first, and a name that
+    /// is part of the last one's phrase is that place said more fully ("Irvine, CA"), not another.
+    static func places(in text: String) -> [String] {
         let candidates = phraseCandidates(in: text)
         let tagger = NLTagger(tagSchemes: [.nameType])
         tagger.string = text
@@ -715,11 +1160,61 @@ struct AskAIPrayerRequest: Equatable {
         }
         tagged = tagged.filter { !isNotAPlace($0) }
         // "Irvine, CA": the phrase that holds the tagged name says more than the name alone.
-        if let name = tagged.last {
-            return candidates.last(where: { $0.localizedCaseInsensitiveContains(name) }) ?? name
+        let last = tagged.last.map { name in candidates.last(where: { $0.localizedCaseInsensitiveContains(name) }) ?? name } ?? candidates.last
+        guard let last else { return [] }
+        var out: [String] = []
+        func add(_ other: String) {
+            guard !isNotAPlace(other), !last.localizedCaseInsensitiveContains(other), !other.localizedCaseInsensitiveContains(last),
+                  !out.contains(where: { $0.caseInsensitiveCompare(other) == .orderedSame }) else { return }
+            out.append(other)
         }
-        return candidates.last
+        for other in tagged.dropLast() { add(other) }
+        // "in Makkah and Cairo", "in London, Paris and Istanbul": the names joined to a place phrase,
+        // which the tagger does not always know (it left Cairo and Istanbul untagged, 2026-11-25).
+        // A joined name is written with a capital: "in London and how long until Asr" joins nothing.
+        for joined in joinedNames(in: text) { add(joined) }
+        func position(_ place: String) -> Int {
+            text.range(of: place, options: .caseInsensitive).map { text.distance(from: text.startIndex, to: $0.lowerBound) } ?? Int.max
+        }
+        return (out + [last]).sorted { position($0) < position($1) }
     }
+
+    /// The capitalised names on either side of an "and", "or", "vs" or a comma, where one side is a
+    /// place phrase ("in X"): every name of the run, in the order written.
+    private static func joinedNames(in text: String) -> [String] {
+        let tokens = text.split(whereSeparator: \.isWhitespace).map(String.init)
+        var out: [String] = []
+        for (index, token) in tokens.enumerated() where prepositions.contains(bare(token)) {
+            var names: [String] = []
+            var current: [String] = []
+            var sawJoin = false
+            func close() {
+                if !current.isEmpty { names.append(current.joined(separator: " ").trimmingCharacters(in: CharacterSet(charactersIn: " ,.;:!?"))) }
+                current = []
+            }
+            for word in tokens.dropFirst(index + 1) {
+                let plain = bare(word)
+                if joiners.contains(plain) {
+                    close()
+                    sawJoin = true
+                    continue
+                }
+                guard word.first?.isUppercase == true, !stopWords.contains(plain), !prepositions.contains(plain) else { break }
+                current.append(word)
+                if word.hasSuffix(",") {
+                    close()
+                    sawJoin = true
+                } else if word.last.map({ ".?!;:".contains($0) }) == true {
+                    break
+                }
+            }
+            close()
+            if sawJoin, names.count >= 2 { out += names.filter { !$0.isEmpty } }
+        }
+        return out
+    }
+
+    private static let joiners: Set<String> = ["and", "or", "vs", "versus", "&"]
 
     /// "in <words>", "at <words>", "for <words>", "of <words>", each cut at the next joining word,
     /// with the words that are never places dropped ("in Ramadan", "for Fajr", "in the morning").
@@ -763,12 +1258,21 @@ struct AskAIPrayerRequest: Equatable {
         if folded.count < 2 || folded.first?.isNumber == true { return true }
         let words = folded.split(separator: " ").map(String.init)
         if !Set(words).isDisjoint(with: AskAILexicon.prayerNames) { return true }
+        // Filler alone ("When is the last third of the night tonight?" left "the" once the day was
+        // taken out, and the map found a village for it), or a word that is never part of a place.
+        if words.allSatisfy(AskAILexicon.stopWords.contains) { return true }
+        if !Set(words).isDisjoint(with: neverInAPlace) { return true }
         if let first = words.first, ["a", "an", "my", "your", "our", "this", "that", "general", "order", "congregation",
                                      "jamaah", "jamaat", "advance", "case", "sha", "shaa"].contains(first) {
             return true
         }
         return notPlaces.contains(folded)
     }
+
+    private static let neverInAPlace: Set<String> = [
+        "qibla", "qiblah", "kaaba", "here", "hijri", "calendar", "date", "direction", "method", "calculation", "night",
+        "day", "days", "week", "month", "year", "eid", "ramadan", "ramadhan", "arafah", "ashura", "tahajjud", "suhoor", "iftar",
+    ]
 
     private static let notPlaces: Set<String> = [
         "ramadan", "shaban", "muharram", "dhul hijjah", "dhul-hijjah", "hajj", "umrah", "morning", "evening", "afternoon",

@@ -43,7 +43,8 @@ enum SettingsQuranPage: String, CaseIterable, Hashable {
     var caption: String {
         switch self {
         case .recitation: return String(localized: "Reciter, recitation type, what plays next")
-        case .readingView: return String(localized: "List or pages, dividers, the Quran tab")
+        // What the page holds: the List or Pages choice is LAYOUT on the Quran Settings root.
+        case .readingView: return String(localized: "The Quran tab, dividers, ayah actions")
         case .arabicText: return String(localized: "Fonts, tajweed, riwayat, word by word")
         case .englishText: return String(localized: "Translations and transliteration")
         case .testMode: return String(localized: "Hide the text and recite from memory")
@@ -58,12 +59,13 @@ enum SettingsQuranPage: String, CaseIterable, Hashable {
 #if HAS_ADHAN
 /// The prayer settings' sub-screens.
 enum SettingsAdhanPage: String, CaseIterable, Hashable {
-    case prayerCalculation, travelingMode, optionalPrayers, manualOffsets, customPrayerNames, sky, skyColors
+    case prayerCalculation, travelingMode, flightMode, optionalPrayers, manualOffsets, customPrayerNames, sky, skyColors
 
     var title: String {
         switch self {
         case .prayerCalculation: return String(localized: "Prayer Calculation")
         case .travelingMode: return String(localized: "Traveling Mode")
+        case .flightMode: return String(localized: "Flight Mode")
         case .optionalPrayers: return String(localized: "Optional Prayers")
         case .manualOffsets: return String(localized: "Manual Offsets")
         case .customPrayerNames: return String(localized: "Custom Prayer Names")
@@ -76,6 +78,7 @@ enum SettingsAdhanPage: String, CaseIterable, Hashable {
         switch self {
         case .prayerCalculation: return "function"
         case .travelingMode: return "airplane"
+        case .flightMode: return "airplane.departure"
         case .optionalPrayers: return "moon.stars"
         case .manualOffsets: return "slider.horizontal.3"
         case .customPrayerNames: return "character.cursor.ibeam"
@@ -88,6 +91,7 @@ enum SettingsAdhanPage: String, CaseIterable, Hashable {
         switch self {
         case .prayerCalculation: return String(localized: "Method, angles, madhab, high latitude")
         case .travelingMode: return String(localized: "Shorten and combine while away")
+        case .flightMode: return String(localized: "Prayer times that follow the plane")
         case .optionalPrayers: return String(localized: "Duha, Islamic midnight, last third")
         case .manualOffsets: return String(localized: "Nudge each prayer and the Hijri date")
         case .customPrayerNames: return String(localized: "Call the prayers what you call them")
@@ -301,6 +305,10 @@ struct SettingsRowLabel: View {
     /// Lines the caption may take: one on a settings row (the row stays one height), two on a
     /// content row whose caption is a sentence (a dua collection's).
     var subtitleLineLimit: Int = 1
+    /// Lines the TITLE may take. One everywhere, except a door whose name is another page's own
+    /// title and cannot be shortened (a how-to guide's): "How to Combine Prayers While Tra..." named
+    /// nothing a reader could tell from its neighbour.
+    var titleLineLimit: Int = 1
     /// The List's own disclosure chevron, for a door drawn as a `Button` (a row that pushes through
     /// one piece of state rather than a `NavigationLink`, see `one-link-per-list-row`): without it
     /// the row read as an action, not a door.
@@ -338,7 +346,7 @@ struct SettingsRowLabel: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
                     .foregroundColor(.primary)
-                    .lineLimit(stacks ? nil : 1)
+                    .lineLimit(stacks ? nil : titleLineLimit)
 
                 // The caption column is an iPhone luxury - the 40mm screen has no room for it.
                 #if os(iOS)
@@ -437,7 +445,7 @@ enum SettingsSearchScope: Hashable {
         let title: String.LocalizationValue
         switch self {
         #if HAS_ADHAN
-        case .notifications: title = "Notification Settings"
+        case .notifications: title = "Notifications"
         case .prayer: title = "Prayer Settings"
         #endif
         #if HAS_QURAN

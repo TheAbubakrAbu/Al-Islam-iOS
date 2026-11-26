@@ -585,6 +585,17 @@ extension ProphetMiraclesView {
     /// paraclete will be with you soon (Ahmed) and the prophecy in genesis about making Ishmael a great
     /// nation ... and the Daniel prophecy"). The Bible is quoted as written (`.quote`, King James); the
     /// Quran and hadith by reference as everywhere else.
+    ///
+    /// 2026-11-25 (Abu: Kedar and the conquest, "another tongue" and the broken letters, the prophet like
+    /// Musa and al-Muzzammil, "any other prophecies in the Bible"): nine more, from kedar-flight to
+    /// girded-sword. Each says WHO made the reading, checked in the texts themselves (al-Jawab as-Sahih,
+    /// Hidayat al-Hayara, al-Mawardi, al-Qarafi, al-Qurtubi, Ibn Kathir, Izhar al-Haqq): classical for the
+    /// riders, Isaiah 54 and 60, Psalms 45 and 72 and the rout of Kedar at Badr; nineteenth-century for
+    /// Deuteronomy 32:21; modern for Isaiah 28 and 29:12, Baca, the Hijrah in Isaiah 21 and Sela as Sal'.
+    /// No source links Isaiah's tsav la-tsav to the opening letters of the surahs, and the entry says so.
+    /// Then (Abu: "should include this") Song of Songs 5:16 ("Muhammadim", a plural meaning delightful
+    /// things, cautioned against by IslamQA 246893) and Haggai 2:7: both modern and resting on a root
+    /// alone, so each carries a WHY IT IS WEAK section and is kept out of `strongestIDs`.
     static let foretoldEntries: [Entry] = [
         .init(id: "paraclete", title: "The Comforter Jesus promised",
               summary: "On his last night 'Isa promised another Comforter, who would come only once he had gone, speak only what he heard, and abide for ever.",
@@ -706,6 +717,7 @@ extension ProphetMiraclesView {
                       .quote("“And there arose not a prophet since in Israel like unto Moses, whom the LORD knew face to face” (Deuteronomy 34:10, KJV)"),
                       .text("Muslim scholars read the promise as the Prophet Muhammad (peace and blessings be upon him), and the Quran describes his sending in the very terms of the comparison:"),
                       .quran("73:15"),
+                      .text("The comparison was made early. Al-Muzzammil is among the first surahs revealed in Makkah, when the believers were a handful and nothing of the likeness had happened yet: no emigration, no law, no army, no victory over the men who persecuted them. All that made him like Musa came after the ayah that said he was."),
                       .text("The likeness is close. Each brought a law from God, not only a message; each led a people, judged between them and fought for them; each led those who believed out of the land that persecuted them; each saw his enemies overthrown, Pharaoh in the sea and the chiefs of Quraysh at Badr, until in the end Makkah opened to the Prophet; and each married, had children, and died a natural death. The prophets of Israel who came after Musa judged by the Torah rather than bringing a new law of their own, and of the law and the prophets 'Isa says, “I am not come to destroy, but to fulfil” (Matthew 5:17). The one like Musa is the one who brought a law as Musa did."),
                   ]),
                   SignSection("FROM AMONG THEIR BRETHREN", [
@@ -716,6 +728,13 @@ extension ProphetMiraclesView {
                       .quran("26:196-197"),
                       .text("'Abdullah ibn 'Amr ibn al-'As said that an ayah of the Quran describing the Prophet appears in the Torah in these words:"),
                       .hadith("bukhari:4838", cite: "Sahih al-Bukhari 4838", arabic: 30...96, english: 0...156),
+                  ]),
+                  SignSection("IN MY NAME", [
+                      .text("The promise goes on to the test that tells the true prophet from the false, and both halves bear on him. The true one speaks God's words “in my name” (Deuteronomy 18:19); the false one dies:"),
+                      .quote("“But the prophet, which shall presume to speak a word in my name, which I have not commanded him to speak, or that shall speak in the name of other gods, even that prophet shall die.” (Deuteronomy 18:20, KJV)"),
+                      .text("Muslim writers have noted that every surah of the Quran but one opens with the words “In the name of Allah, the Entirely Merciful, the Especially Merciful”, recited as he was given them. And the Quran gives the same warning the Torah gives against a prophet who invents, and gives it about him:"),
+                      .quran("69:44-47"),
+                      .text("He was not cut off. He was told that Allah would protect him from the people (5:67), came through the plots in Makkah, the cave and the battles, and died in Madinah in his sixty-third year, after the ayah that told the believers their religion was complete (5:3). By the Torah's own test, a man who presumed would not have lived to finish."),
                   ]),
                   SignSection("THE OTHER READING", [
                       .text("Christians read the promise as Jesus, as Peter applies it in Acts 3:22. Jews, following their classical commentators, read it as the line of Israelite prophets who came after Musa one by one. Yet the Gospel of John has the priests ask John the Baptist whether he is the Christ, or Elias, or “that prophet” (John 1:21), so the Jews of that day awaited the prophet like Moses as someone other than the Messiah. And one prophet like Musa is promised, while the Torah's last chapter says none like him arose in Israel. Proving Islam's chapter on the Bible gives the full argument."),
@@ -742,13 +761,315 @@ extension ProphetMiraclesView {
                   SignSection("WHY PARAN IS MAKKAH", [
                       .text("The argument rests on Genesis 21:21. Isma'il grew up in the wilderness of Paran, and it is known by mass transmission and the agreement of the nations, said Ibn Taymiyyah, that Isma'il was raised in Makkah and built the House there with his father; so the land of Makkah is Paran. The Quran keeps Ibrahim's prayer as he left them there:"),
                       .quran("14:37"),
-                      .text("The blessing also says he came “with ten thousands of saints”. Later writers set this beside the conquest of Makkah, when the Prophet came to the city of Isma'il with an army of ten thousand:"),
+                      .text("The blessing also says he came “with ten thousands of saints”. Al-Qarafi read those holy myriads at his right hand as the Prophet's Companions, and modern writers set the number beside the conquest of Makkah, when he came to the city of Isma'il with an army of ten thousand:"),
                       .hadith("bukhari:4276", cite: "Sahih al-Bukhari 4276", arabic: 24...54, english: 0...45),
                       .text("“Ten thousands” is a multitude, not a count, so this is a resonance, not the argument. Nor does the argument rest on Habakkuk's “his praise”: the Arabic rendering Ibn al-Qayyim quoted reads that the earth was filled with the praise of Ahmad, which says more than the Bible's text does."),
                   ]),
                   SignSection("THE OTHER READING", [
                       .text("Jewish and Christian readers place all three in the south, on the route of the Exodus. Seir is the hill country of Edom, where the Torah itself says “the children of Esau” lived (Deuteronomy 2:4), and Paran is the wilderness between Sinai and Canaan, where the Israelites came after they left Sinai (Numbers 10:12). On this reading the verse describes one event, God's appearing at Sinai, seen blazing over the mountains around it, and the fiery law in His right hand is the Torah."),
                       .text("The Muslim scholars knew this geography. Ibn Taymiyyah himself notes that the wilderness between Makkah and Sinai is called the wilderness of Paran. Their answer is that the name reaches to Makkah, as Genesis shows by settling Isma'il in Paran; that the three verbs grow brighter one after another, which suits three revelations in sequence better than a single event; and that after 'Isa no scripture came down and no prophet was sent anywhere in that land except at Makkah. It is a reading, and it is argued, but it was not invented: it was made from the text of the Torah and the history of Isma'il."),
+                  ]),
+              ]),
+        .init(id: "kedar-flight", title: "The flight, and Kedar's fall within a year",
+              summary: "Isaiah's burden upon Arabia tells of men fleeing the drawn sword, fed by the people of Tema, and of the glory of Kedar failing within a year.",
+              group: .foretold,
+              aliases: ["isaiah 21", "burden upon arabia", "tema", "tayma", "taima", "dedan", "dedanim", "kedar", "qedar", "qaydar", "hijrah", "hijra", "migration", "emigration", "madinah", "medina", "yathrib", "ansar", "badr", "within a year", "archers", "isaiah 42", "sela", "sal'", "sala", "mount sal", "the rock", "ten thousand", "conquest of makkah"],
+              sections: [
+                  SignSection("THE BURDEN UPON ARABIA", [
+                      .text("Among Isaiah's oracles against the nations is one headed “The burden upon Arabia”. It speaks of caravans sleeping rough in the thickets, of a people who bring water and bread to men in flight, and of a year at whose end the glory of Kedar fails:"),
+                      .quote("“The burden upon Arabia. In the forest in Arabia shall ye lodge, O ye travelling companies of Dedanim. The inhabitants of the land of Tema brought water to him that was thirsty, they prevented with their bread him that fled. For they fled from the swords, from the drawn sword, and from the bent bow, and from the grievousness of war.” (Isaiah 21:13–15, KJV)"),
+                      .quote("“For thus hath the Lord said unto me, Within a year, according to the years of an hireling, and all the glory of Kedar shall fail: And the residue of the number of archers, the mighty men of the children of Kedar, shall be diminished: for the LORD God of Israel hath spoken it.” (Isaiah 21:16–17, KJV)"),
+                      .text("Every name in it is a name of Isma'il's Arabia. Kedar and Tema are two of Isma'il's twelve sons (Genesis 25:13–15), and the Bible uses Kedar for the Arabs of the desert as a whole. Tema survives as the oasis of Tayma in the north of the Hijaz, and Dedan was the old name of al-'Ula, on the incense road north of Madinah."),
+                  ]),
+                  SignSection("THE MUSLIM READING", [
+                      .text("Ibn al-Qayyim, in Hidayat al-Hayara, quotes from Isaiah the Arabs routed before drawn swords and bent bows, from the severity of the battle, and says what it describes:"),
+                      .quote("“This tells of what befell the worshippers of idols at the hands of the Messenger of Allah (peace and blessings be upon him) and his Companions on the day of Badr and the day of Hunayn.” (Ibn al-Qayyim, Hidayat al-Hayara)"),
+                      .text("Ibn Kathir quotes the same lines in al-Bidayah wan-Nihayah. Later Muslim writers carried the reading back to the start of the oracle, to the flight that came before Badr, and line by line it fits."),
+                      .text("They fled from the drawn sword. The chiefs of Quraysh met to decide whether to hold him, kill him or drive him out, and he left Makkah by night with Abu Bakr:"),
+                      .quran("8:30"),
+                      .text("The people of the land he reached took them in, and the Quran praises them for it: they loved those who came to them, and preferred them over themselves even when they were in need:"),
+                      .quran("59:9"),
+                      .hadith("bukhari:3925", cite: "Sahih al-Bukhari 3925", arabic: 62...85, english: 56...86),
+                      .text("Then the glory of Kedar failed. Quraysh were of the line of Isma'il, and Badr was where their chiefs fell: Abu Jahl, 'Utbah and Shaybah, Umayyah ibn Khalaf and the others whose names Quraysh had been proud of. Al-Bara' ibn 'Azib gave the count:"),
+                      .hadith("bukhari:3986", cite: "Sahih al-Bukhari 3986", arabic: 37...54, english: 25...53),
+                      .quran("3:123"),
+                  ]),
+                  SignSection("THE ROCK", [
+                      .text("Isaiah names Kedar once more, in the chapter that opens with the servant who brings judgment to the Gentiles. The wilderness and the villages of Kedar are told to lift up their voice:"),
+                      .quote("“Let the wilderness and the cities thereof lift up their voice, the villages that Kedar doth inhabit: let the inhabitants of the rock sing, let them shout from the top of the mountains. Let them give glory unto the LORD, and declare his praise in the islands.” (Isaiah 42:11–12, KJV)"),
+                      .text("Where the King James has “the rock”, the Hebrew has Sela. The classical scholars read an Arabic version that gave “the dwellers of the caves”, and asked who dwells in those caves and mountains, if not the Arabs. Some later writers have gone further and read Sela as Sal', the mountain that overlooks Madinah; no classical scholar is known to have said so, and it rests on the likeness of a name. Sal' itself is named in the hadith, as the mountain the people of Madinah looked out on:"),
+                      .hadith("bukhari:1013", cite: "Sahih al-Bukhari 1013", arabic: 81...107, english: 94...136),
+                      .text("Proving Islam's chapter on the Bible reads the servant of Isaiah 42 at length. And eight years after the flight, the one who had fled came back to Makkah with an army of ten thousand: the return that the entry “He shone forth from Paran” sets beside Musa's blessing."),
+                  ]),
+                  SignSection("THE OTHER READING", [
+                      .text("Jewish and Christian commentators place the oracle in Isaiah's own century, the eighth before Christ, when the kings of Assyria campaigned against the tribes of north Arabia; Kedar is named among the peoples the Assyrian inscriptions record defeating. On that reading the fugitives are caravans of Dedan caught in those wars, Tema shelters them, and the year is the time left before Assyria broke Kedar's power. The rock of Isaiah 42 is read as Sela, the rock city of Edom (2 Kings 14:7), or simply as the people of the cliffs."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("This is a reading, argued, not a proof text, and it is held at two strengths. That the oracle's rout of Kedar is Badr is the reading of Ibn al-Qayyim; that its fugitives are the Hijrah is a modern one, and the dates fit only loosely: Badr was fought about a year and a half after the Prophet reached Madinah, and Tayma lies some four hundred kilometres north of it. Nor is Kedar certainly the ancestor of Quraysh: Ibn Kathir writes that the Arabs of the Hijaz trace themselves to Isma'il's two sons Nabit and Qaydar, and the genealogists most often trace 'Adnan through Nabit. What can fairly be said is that it describes men fleeing the drawn sword into Arabia, fed and sheltered by its people, and the glory and the fighting men of Kedar cut down soon after; and that the history of the Hijrah and Badr matches those lines closely."),
+                  ]),
+              ]),
+        .init(id: "two-riders", title: "A rider on a donkey, and a rider on a camel",
+              summary: "Isaiah's watchman sees riders on donkeys and riders on camels, and then hears that Babylon is fallen and its idols broken.",
+              group: .foretold,
+              aliases: ["isaiah 21", "watchman", "chariot of asses", "chariot of camels", "donkey", "ass", "camel", "two riders", "babylon is fallen", "graven images", "idols", "persia", "chosroes", "kisra", "ctesiphon", "mada'in", "iraq", "jesus", "isa"],
+              sections: [
+                  SignSection("THE WATCHMAN", [
+                      .text("The same chapter of Isaiah opens with a vision in the desert. The prophet is told to set a watchman and have him report what he sees:"),
+                      .quote("“For thus hath the Lord said unto me, Go, set a watchman, let him declare what he seeth. And he saw a chariot with a couple of horsemen, a chariot of asses, and a chariot of camels; and he hearkened diligently with much heed.” (Isaiah 21:6–7, KJV)"),
+                      .quote("“And, behold, here cometh a chariot of men, with a couple of horsemen. And he answered and said, Babylon is fallen, is fallen; and all the graven images of her gods he hath broken unto the ground.” (Isaiah 21:9, KJV)"),
+                  ]),
+                  SignSection("THE MUSLIM READING", [
+                      .text("This is one of the oldest of the readings. Ibn Taymiyyah relays it from the scholars before him, in the Arabic version they knew, in which the watchman sees two riders coming, one on a donkey and the other on a camel, and one says to the other, Babylon is fallen:"),
+                      .quote("“They said: the rider of the donkey is the Messiah, and the rider of the camel is Muhammad (peace and blessings be upon him), and he is better known for riding the camel than the Messiah for riding the donkey. And through Muhammad the idols of Babylon fell.” (Ibn Taymiyyah, al-Jawab as-Sahih)"),
+                      .text("Ibn al-Qayyim gives the same reading in Hidayat al-Hayara, adding that the rider of the donkey is the Messiah by the Christians' own account as well as ours, and that the idols of Babylon fell through Muhammad, not through the Messiah; al-Mawardi, al-Qurtubi and al-Qarafi quote the passage too. The Gospels tell that 'Isa rode into Jerusalem on a donkey (Matthew 21:5–7), and the Prophet was a man of the Arabs, the people of the camel."),
+                      .text("That is the order history kept. The empire that ruled from Iraq in his day was Persia, its capital at al-Mada'in on the Tigris, some seventy kilometres from the ruins of Babylon. He foretold its end and its treasures spent in the cause of Allah:"),
+                      .hadith("bukhari:3618", cite: "Sahih al-Bukhari 3618", arabic: 29...49, english: 4...46),
+                      .text("Within a few years of his death al-Mada'in fell to the Muslims and the treasures of Chosroes were carried to Madinah, as he had said. And the idols of his own land he broke with his own hand, on the day Makkah opened:"),
+                      .hadith("bukhari:4287", cite: "Sahih al-Bukhari 4287", arabic: 25...58, english: 0...47),
+                  ]),
+                  SignSection("THE OTHER READING", [
+                      .text("The chapter itself opens with “the burden of the desert of the sea” and calls on Elam and Media to go up (Isaiah 21:1–2), so Jewish and Christian commentators read the vision as Babylon's fall to the Medes and the Persians under Cyrus in 539 BC, or to an Assyrian king before him. On that reading the riders on donkeys and camels are the columns of the army, or the messengers who bring the news, and the broken images are Babylon's own gods."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("This is a reading, argued, not a proof text. The Hebrew can be read as troops of riders rather than two men, and the city of Babylon had long been a ruin when the Muslims came to Iraq. What can fairly be said is that the vision pairs a rider of donkeys with a rider of camels and puts the fall of Babylon's kingdom and the breaking of its idols after them; that 'Isa is the prophet remembered on a donkey; and that the kingdom which ruled Babylon's land fell, after Muhammad, to the people of the camel."),
+                  ]),
+              ]),
+        .init(id: "another-tongue", title: "Another tongue, line upon line",
+              summary: "Musa warned Israel of a nation that was not a people, and Isaiah of a message in another tongue, given here a little and there a little.",
+              group: .foretold,
+              aliases: ["deuteronomy 32", "isaiah 28", "not a people", "foolish nation", "jealousy", "stammering lips", "another tongue", "other tongues", "foreign tongue", "arabic", "precept upon precept", "line upon line", "here a little", "tsav", "qav", "huruf muqattaat", "muqatta'at", "disconnected letters", "broken letters", "alif lam mim", "unlettered", "ummi"],
+              sections: [
+                  SignSection("A NATION THAT WAS NOT A PEOPLE", [
+                      .text("In the song Musa taught the Children of Israel before his death, God says that because they provoked Him with what was not God, He would provoke them with what was not a people:"),
+                      .quote("“They have moved me to jealousy with that which is not God; they have provoked me to anger with their vanities: and I will move them to jealousy with those which are not a people; I will provoke them to anger with a foolish nation.” (Deuteronomy 32:21, KJV)"),
+                      .text("Rahmatullah al-Kairanawi, the nineteenth-century scholar of India who debated the missionaries, wrote in Izhar al-Haqq that the foolish nation is the Arabs, and rejected Paul's reading of it as the Greeks. The Arabs had no scripture and no prophet of their own since Isma'il, and it was among them, the unlettered, that the last messenger was raised:"),
+                      .quran("62:2"),
+                      .text("The Quran states the same rule of replacement in its own words, to those who were given the message and turn away from it:"),
+                      .quran("47:38"),
+                  ]),
+                  SignSection("ANOTHER TONGUE", [
+                      .text("Isaiah speaks to leaders who mocked his teaching, and warns them that God would speak to them another way:"),
+                      .quote("“For precept must be upon precept, precept upon precept; line upon line, line upon line; here a little, and there a little: For with stammering lips and another tongue will he speak to this people. To whom he said, This is the rest wherewith ye may cause the weary to rest; and this is the refreshing: yet they would not hear.” (Isaiah 28:10–12, KJV)"),
+                      .text("Modern Muslim writers, Jamal Badawi among them, read this of the Quran: God would speak to the people of the earlier scripture in another tongue, through a messenger who was not of them, and the Quran calls itself a book in Arabic that confirms the book of Musa:"),
+                      .quran("46:12"),
+                      .text("And “here a little, and there a little” is how it came: not as one book handed down whole, but piece by piece over twenty-three years, as events called for it. The Quran answers those who asked why:"),
+                      .quran("17:106"),
+                      .text("“Yet they would not hear” is what the Quran says of those who knew the promise and refused it when it came:"),
+                      .quran("2:89"),
+                  ]),
+                  SignSection("THE LETTERS", [
+                      .text("In Hebrew the words translated “precept upon precept, line upon line” are short and strange: tsav la-tsav, tsav la-tsav, qav la-qav, qav la-qav, ze'er sham, ze'er sham. The word tsav occurs nowhere else in the Bible but these two verses. Many commentators hear in it the babble the drunken leaders made of Isaiah's teaching, as if he spoke to infants; others hear the names of two letters of the Hebrew alphabet, tsade and qof, drilled one by one as a child is taught to read."),
+                      .text("Some Muslims have set beside these syllables the letters that open twenty-nine surahs of the Quran, each read out letter by letter: Alif. Lam. Mim. It is a recent observation, made by no scholar early or late that we know of, and it is offered here only as a likeness:"),
+                      .quran("2:1-2"),
+                      .text("What the letters mean, Allah knows best, and the scholars of tafsir held many views. Ibn Kathir, after setting them out, inclined to the view he credits to Ibn Taymiyyah and al-Mizzi: that the letters open the surahs to show that the Quran is made of the very letters the Arabs spoke with, and still they could not bring its like."),
+                  ]),
+                  SignSection("THE OTHER READING", [
+                      .text("In its setting, Isaiah 28 is addressed to the drunkards of Ephraim, the priests and prophets who erred through strong drink, and the scoffers who ruled Jerusalem (28:1, 7, 14), and the “stammering lips and another tongue” are read as the Assyrian invaders, whose foreign speech would teach the people what they refused to hear from their own prophet. Paul applies the verse to speaking in tongues (1 Corinthians 14:21), and Deuteronomy 32:21 to the Gentiles who accepted the Gospel (Romans 10:19). Jewish commentators read the foolish nation as the heathen nations God used to chastise Israel."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("These are readings, argued, not proof texts, and none of them is classical: Deuteronomy 32:21 was read of the Arabs in the nineteenth century, Isaiah 28 only in modern times, and the link between Isaiah's syllables and the letters that open the surahs is an observation no scholar is known to have made, to be held lightly. Neither passage names a prophet or a people. What can fairly be said is that the Torah threatens Israel with a nation that was not a people, that Isaiah warns of God speaking to them in another tongue, a little here and a little there, and that they would not hear; and that the Quran came in Arabic, to an unlettered nation, piece by piece, and was refused by many of those who had awaited it."),
+                  ]),
+              ]),
+        .init(id: "unlettered-reader", title: "The book given to one who could not read",
+              summary: "Isaiah describes a book handed to a man who is not learned, with the words “Read this”, and his answer, “I am not learned”.",
+              group: .foretold,
+              aliases: ["isaiah 29", "read this", "i am not learned", "iqra", "read", "ma ana bi qari", "unlettered", "ummi", "illiterate", "hira", "first revelation", "jibril", "gabriel", "sealed book"],
+              sections: [
+                  SignSection("THE SEALED BOOK", [
+                      .text("Isaiah compares the people's blindness to a book no one will read. The learned man says it is sealed; then it is given to one who cannot read at all:"),
+                      .quote("“And the vision of all is become unto you as the words of a book that is sealed, which men deliver to one that is learned, saying, Read this, I pray thee: and he saith, I cannot; for it is sealed: And the book is delivered to him that is not learned, saying, Read this, I pray thee: and he saith, I am not learned.” (Isaiah 29:11–12, KJV)"),
+                  ]),
+                  SignSection("THE FIRST NIGHT IN HIRA", [
+                      .text("Ahmed Deedat, in his lecture What the Bible Says about Muhammad, set this verse beside the first night of revelation, and many Muslim writers have done so since. 'A'ishah's account of that night, in the cave of Hira:"),
+                      .hadith("bukhari:3", cite: "Sahih al-Bukhari 3", arabic: 84...92, english: 103...123),
+                      .text("The Hebrew of Isaiah's “Read this” is qra na zeh, and qara is the Hebrew form of the Arabic qara'a, the verb of the angel's command, iqra'. The answer, lo yada'ti sefer, is literally “I do not know a book”, that is, I cannot read. Three times the angel said it and three times he answered, and then came the first words of the Quran:"),
+                      .quran("96:1-5"),
+                      .text("That he could not read or write is not a weakness Muslims explain away. The Quran calls him the unlettered prophet whom the People of the Book find written in their own books, and gives the reason it matters:"),
+                      .quran("29:48"),
+                  ]),
+                  SignSection("THE OTHER READING", [
+                      .text("In its setting the passage is a parable, not a prediction of a person. Isaiah tells a people who would not see that the prophetic vision has become to them like a sealed book: the learned will not read it because it is sealed, the unlearned cannot because he does not know how, and so no one reads it at all. The verses that follow rebuke a people who honour God with their lips while their hearts are far from Him (Isaiah 29:13)."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("This is a modern reading, not one the classical scholars made, and read in its setting the book is a figure for a vision no one understood. What can fairly be said is that the scene in the second verse, a book handed to a man who cannot read, the words “Read this”, and the answer “I am not learned”, is the scene in the cave of Hira, as 'A'ishah reported it, almost word for word."),
+                  ]),
+              ]),
+        .init(id: "flocks-of-kedar", title: "The flocks of Kedar at the house of glory",
+              summary: "Isaiah sees camels covering the land, the flocks of Kedar and the rams of Nebaioth offered at the house of His glory, and gates never shut.",
+              group: .foretold,
+              aliases: ["isaiah 60", "arise shine", "camels", "dromedaries", "midian", "sheba", "kedar", "nebaioth", "nabit", "flocks", "rams", "sacrifice", "altar", "house of my glory", "kaaba", "hajj", "pilgrims", "gates open", "day and night", "masjid al-haram"],
+              sections: [
+                  SignSection("ARISE, SHINE", [
+                      .text("Isaiah 60 is addressed to a city and a house that God will glorify. The nations come to its light, carried on camels, bringing their flocks to its altar:"),
+                      .quote("“Arise, shine; for thy light is come, and the glory of the LORD is risen upon thee. For, behold, the darkness shall cover the earth, and gross darkness the people: but the LORD shall arise upon thee, and his glory shall be seen upon thee. And the Gentiles shall come to thy light, and kings to the brightness of thy rising.” (Isaiah 60:1–3, KJV)"),
+                      .quote("“The multitude of camels shall cover thee, the dromedaries of Midian and Ephah; all they from Sheba shall come: they shall bring gold and incense; and they shall shew forth the praises of the LORD. All the flocks of Kedar shall be gathered together unto thee, the rams of Nebaioth shall minister unto thee: they shall come up with acceptance on mine altar, and I will glorify the house of my glory.” (Isaiah 60:6–7, KJV)"),
+                      .quote("“Therefore thy gates shall be open continually; they shall not be shut day nor night.” (Isaiah 60:11, KJV)"),
+                  ]),
+                  SignSection("THE MUSLIM READING", [
+                      .text("The classical scholars read this chapter of Makkah. Al-Mawardi in A'lam an-Nubuwwah, Ibn Taymiyyah in al-Jawab as-Sahih, Ibn al-Qayyim in Hidayat al-Hayara and al-Qarafi all quote it, in an Arabic version whose gates “are opened night and day and never shut, and they take you as their qiblah”, and they reach the same verdict:"),
+                      .quote("“These attributes, all of them, came to pass in Makkah.” (Ibn Taymiyyah, al-Jawab as-Sahih, relaying the scholars before him)"),
+                      .text("Nebaioth and Kedar are the first two sons of Isma'il (Genesis 25:13). Their flocks are offered at a house of God, brought by a multitude of camels from the lands of Arabia. That is the Hajj, as Ibrahim was told to call it:"),
+                      .quran("22:27"),
+                      .quran("22:36"),
+                      .text("The house is the one Ibrahim and Isma'il raised, the first set up for mankind, in the valley where Ibrahim left his son and prayed that hearts would incline to them:"),
+                      .quran("3:96-97"),
+                      .text("And its gates are not shut, day or night. The Prophet forbade the guardians of the House to keep anyone from it at any hour:"),
+                      .hadith("tirmidhi:868", cite: "Sunan al-Tirmidhi 868", arabic: 32...49, english: 3...27),
+                  ]),
+                  SignSection("THE OTHER READING", [
+                      .text("Jewish and Christian readers take the chapter as addressed to Jerusalem, restored after the exile, and the house as the temple there; the chapter itself goes on to call the city “The city of the LORD, The Zion of the Holy One of Israel” (Isaiah 60:14). Christians read it further of the Church, to which the nations come."),
+                      .text("The Muslim answer is that the details are Arabian before they are anything else: the camels, the gold and incense of Sheba, the flocks of Isma'il's own sons offered at the altar. The tribes of Kedar and Nebaioth never brought their flocks to an altar in Jerusalem; their descendants have brought them to Makkah every year for fourteen centuries, and its gates have not been shut."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("This is a reading, argued, not a proof text, and the chapter does name Zion. What can fairly be said is that it describes a house of God to which the nations come on camels, where the flocks of Isma'il's sons are offered, and whose gates stand open night and day; and that one house on earth has answered to that description, every year, without a break."),
+                  ]),
+              ]),
+        .init(id: "barren-one", title: "Sing, O barren",
+              summary: "Isaiah calls on a barren woman to sing, for the children of the desolate one will outnumber the children of the married wife.",
+              group: .foretold,
+              aliases: ["isaiah 54", "barren", "desolate", "married wife", "hajar", "hagar", "sarah", "makkah", "mecca", "children", "ummah", "followers", "galatians 4", "enlarge thy tent", "inherit the gentiles"],
+              sections: [
+                  SignSection("THE BARREN ONE", [
+                      .quote("“Sing, O barren, thou that didst not bear; break forth into singing, and cry aloud, thou that didst not travail with child: for more are the children of the desolate than the children of the married wife, saith the LORD. Enlarge the place of thy tent, and let them stretch forth the curtains of thine habitations: spare not, lengthen thy cords, and strengthen thy stakes; For thou shalt break forth on the right hand and on the left; and thy seed shall inherit the Gentiles, and make the desolate cities to be inhabited.” (Isaiah 54:1–3, KJV)"),
+                  ]),
+                  SignSection("THE MUSLIM READING", [
+                      .text("Ibn Taymiyyah, Ibn al-Qayyim, al-Qurtubi and Ibn Kathir all read the barren one as Makkah, and Ibn Taymiyyah gives the reason:"),
+                      .quote("“By the barren one he means Makkah, for she bore no prophet before ours. And he cannot mean Jerusalem by the barren one, for it is the house of the prophets and the mine of revelation.” (Ibn Taymiyyah, al-Jawab as-Sahih)"),
+                      .text("Al-Qarafi read it also of Hajar, the mother of the Arabs, given the good news that her offspring would be greater than Sarah's. Two women stand behind the verse in Genesis, and Paul himself read it of them: Sarah, the wife, from whose line came Israel and prophet after prophet; and Hajar, sent away into the desert with her son, in whose valley no prophet arose after Isma'il for more than two thousand years, until the last. He hoped that his followers would be the greater number:"),
+                      .hadith("bukhari:4981", cite: "Sahih al-Bukhari 4981", arabic: 43...49, english: 29...47),
+                      .text("“Thy seed shall inherit the Gentiles” is what followed: within a century of his death the religion that began in a barren valley had reached from Spain to India, and the nations it reached became its people."),
+                  ]),
+                  SignSection("THE OTHER READING", [
+                      .text("Jewish readers take the barren one as Jerusalem, desolate in exile, promised more children on her return than she had before it. Paul, writing to the Galatians, applies the verse to the Jerusalem above, and in the same passage makes Hagar the figure of Sinai and of bondage, and Sarah the free woman (Galatians 4:22–27)."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("This is a reading, argued, not a proof text; the chapter speaks to a woman, not of a prophet, and each reader identifies her by his own faith. What can fairly be said is that it promises a barren, forsaken one more children than the wife, a tent to be widened and a seed to inherit the nations; and that the valley of Hajar, which bore no prophet after Isma'il for more than two thousand years, now has more people facing it in prayer than any city on earth."),
+                  ]),
+              ]),
+        .init(id: "valley-of-baca", title: "The valley of Baca",
+              summary: "A psalm blesses pilgrims who pass through the valley of Baca and make it a well; the Quran names the first House as the one at Bakkah.",
+              group: .foretold,
+              aliases: ["psalm 84", "baca", "bakkah", "bakka", "makkah", "mecca", "valley", "well", "zamzam", "pilgrims", "pilgrimage", "hajj", "house of god", "dwell in thy house"],
+              sections: [
+                  SignSection("THE PSALM", [
+                      .text("Psalm 84 is a pilgrim's song: it longs for the courts of God's house and blesses those who make the journey to it:"),
+                      .quote("“Blessed are they that dwell in thy house: they will be still praising thee. Selah. Blessed is the man whose strength is in thee; in whose heart are the ways of them. Who passing through the valley of Baca make it a well; the rain also filleth the pools.” (Psalm 84:4–6, KJV)"),
+                  ]),
+                  SignSection("THE MUSLIM READING", [
+                      .text("No classical scholar read the psalm this way; it is a modern reading, made by Jamal Badawi and others, from the name. The Quran calls the place of the first House by the same sound:"),
+                      .quran("3:96"),
+                      .text("The Arabic of that ayah does not say Makkah; it says bi-Bakkah, “at Bakkah”, the name the Quran gives the place of the House. And a well in a dry valley is exactly what Makkah was given, when Hajar ran between the hills looking for water for Isma'il:"),
+                      .hadith("bukhari:3364", cite: "Sahih al-Bukhari 3364", arabic: 281...296, english: 485...510),
+                  ]),
+                  SignSection("THE OTHER READING", [
+                      .text("Most translators take Baca as a word, not a name: the valley of weeping, from the Hebrew bakah, to weep, or the valley of the balsam trees. On that reading the psalm describes pilgrims going up to Jerusalem, who turn a dry valley into springs by their faith, and the next verse says so: “every one of them in Zion appeareth before God” (Psalm 84:7)."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("This is a resonance, not a proof text. The psalm's goal is Zion, and the likeness rests on a single name. What can fairly be said is that it speaks of a house of God, of pilgrims who pass through a valley called Baca and find a well there, and that the Quran calls the valley of the first House Bakkah, where a well was opened in a dry valley and pilgrims have drunk from it ever since."),
+                  ]),
+              ]),
+        .init(id: "praised-continually", title: "Prayer made for him continually",
+              summary: "A psalm describes a king who rules from sea to sea, for whom prayer is made continually and who is praised every day.",
+              group: .foretold,
+              aliases: ["psalm 72", "from sea to sea", "dominion", "prayer made for him", "praised daily", "his name shall endure", "salawat", "salah ala an-nabi", "durood", "blessings on the prophet", "adhan", "name raised", "sheba"],
+              sections: [
+                  SignSection("THE PSALM", [
+                      .text("Psalm 72 is a prayer for a king. It asks that he judge the poor with righteousness, and then describes his reign:"),
+                      .quote("“He shall have dominion also from sea to sea, and from the river unto the ends of the earth. They that dwell in the wilderness shall bow before him; and his enemies shall lick the dust.” (Psalm 72:8–9, KJV)"),
+                      .quote("“And he shall live, and to him shall be given of the gold of Sheba: prayer also shall be made for him continually; and daily shall he be praised. … His name shall endure for ever: his name shall be continued as long as the sun: and men shall be blessed in him: all nations shall call him blessed.” (Psalm 72:15, 17, KJV)"),
+                  ]),
+                  SignSection("THE MUSLIM READING", [
+                      .text("Al-Mawardi, Ibn Taymiyyah, Ibn al-Qayyim and Ibn Kathir all quote this psalm, in an Arabic version that reads:"),
+                      .quote("“He will be given of the gold of the land of Sheba; prayer will be made for him at every time, and he will be blessed every day, and his remembrance will endure for ever.” (al-Mawardi, A'lam an-Nubuwwah)"),
+                      .text("Ibn Taymiyyah explained the prayer as the one Muslims make in every one of the five daily prayers: O Allah, send blessings on Muhammad. Allah commands it of the believers:"),
+                      .quran("33:56"),
+                      .hadith("bukhari:3370", cite: "Sahih al-Bukhari 3370", arabic: 76...96, english: 66...103),
+                      .text("Daily he is praised, and his name is continued as long as the sun: the call to prayer names him five times a day, and as the day moves around the earth, it is being called somewhere at every hour:"),
+                      .quran("94:4"),
+                      .text("And the dominion from sea to sea, with those who dwell in the wilderness bowing before him, is what he was shown of his nation's reach:"),
+                      .hadith("muslim:2889a", cite: "Sahih Muslim 2889a", arabic: 38...53, english: 0...37),
+                  ]),
+                  SignSection("THE OTHER READING", [
+                      .text("The psalm is headed “A Psalm for Solomon”, and Jewish readers take it as a prayer for the son of Dawud and the kings of his line, or for the Messiah. Christians read it of Jesus, to whom the wise men brought gold and incense."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("This is a reading, argued, not a proof text; the psalm is a prayer for a king, and each faith reads its king into it. The Arabic version the classical scholars read also differs from the Hebrew in places: it has the kings of Persia where the Hebrew has Tarshish and Sheba. What can fairly be said is that no man has had prayer made for him, by name, by so many people, every day, for fourteen centuries; and that of all the readings, the line “prayer also shall be made for him continually; and daily shall he be praised” is lived out word for word in the prayers of the Muslims."),
+                  ]),
+              ]),
+        .init(id: "girded-sword", title: "The king girded with the sword",
+              summary: "A psalm praises one fairer than the children of men, grace on his lips, girded with a sword, whose arrows bring the peoples down under him.",
+              group: .foretold,
+              aliases: ["psalm 45", "gird thy sword", "sword", "most mighty", "arrows", "grace is poured into thy lips", "fairer than the children of men", "jawami al-kalim", "victorious with awe", "nusirtu bir-ru'b", "after dawud", "after david", "jihad"],
+              sections: [
+                  SignSection("THE PSALM", [
+                      .text("Psalm 45 is addressed to a king. It praises his beauty and his speech, and then arms him:"),
+                      .quote("“Thou art fairer than the children of men: grace is poured into thy lips: therefore God hath blessed thee for ever. Gird thy sword upon thy thigh, O most mighty, with thy glory and thy majesty. And in thy majesty ride prosperously because of truth and meekness and righteousness; and thy right hand shall teach thee terrible things. Thine arrows are sharp in the heart of the king's enemies; whereby the people fall under thee.” (Psalm 45:2–5, KJV)"),
+                      .quote("“I will make thy name to be remembered in all generations: therefore shall the people praise thee for ever and ever.” (Psalm 45:17, KJV)"),
+                  ]),
+                  SignSection("THE MUSLIM READING", [
+                      .text("The classical scholars quoted it as part of the Zabur, the book given to Dawud, and argued that its king must be a prophet who came after him. Ibn Taymiyyah relays the argument from the scholars before him, and Ibn al-Qayyim and al-Qurtubi make it too:"),
+                      .quote("“They said: no one among the prophets after Dawud girded the sword except Muhammad.” (Ibn Taymiyyah, al-Jawab as-Sahih)"),
+                      .text("'Isa did not take up the sword; in the Gospels he tells the disciple who drew one to put it back in its place (Matthew 26:52). The prophet after Dawud who rode out because of truth, whose enemies fell before him and whose name the peoples praise in every generation, is the one the Quran describes with his Companions, forceful against the disbelievers and merciful among themselves:"),
+                      .quran("48:29"),
+                      .text("And the two gifts the psalm begins with, grace on his lips and a right hand that teaches terrible things, are the two he named himself:"),
+                      .hadith("bukhari:2977", cite: "Sahih al-Bukhari 2977", arabic: 33...37, english: 4...30),
+                  ]),
+                  SignSection("THE OTHER READING", [
+                      .text("The psalm calls itself “a Song of loves” and goes on to a royal wedding, the queen at the king's right hand in gold of Ophir and the princess brought to him (Psalm 45:9–15), so Jewish readers take it as a wedding song for a king of Dawud's line, and in time for the Messiah. Christians read it of Jesus, as the Letter to the Hebrews applies its sixth and seventh verses to him (Hebrews 1:8–9), and take the sword as the word of God."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("This is a reading, argued, not a proof text; the psalm names no one, its own heading gives it to the sons of Korah, and much of it is about a wedding. What can fairly be said is that it praises a king after Dawud for the grace of his speech and arms him with a sword in the cause of truth, with peoples falling before him and his name praised in every generation; and that among the prophets after Dawud, the one whose life matches those lines is Muhammad (peace and blessings be upon him)."),
+                  ]),
+              ]),
+        .init(id: "altogether-lovely", title: "Altogether lovely, the chiefest among ten thousand",
+              summary: "The Song of Songs praises a beloved who is white and ruddy, chief among ten thousand, and altogether lovely: in Hebrew, machamaddim.",
+              group: .foretold,
+              aliases: ["song of songs", "song of solomon", "song 5", "machamaddim", "mahamaddim", "muhammadim", "muhammad by name", "altogether lovely", "white and ruddy", "chiefest among ten thousand", "ten thousand", "conquest of makkah", "beloved", "deedat", "zakir naik"],
+              sections: [
+                  SignSection("THE SONG", [
+                      .text("The Song of Songs is a love poem in which a bride and her beloved praise each other. When the daughters of Jerusalem ask what makes her beloved more than another, she describes him from head to foot:"),
+                      .quote("“My beloved is white and ruddy, the chiefest among ten thousand. His head is as the most fine gold, his locks are bushy, and black as a raven.” (Song of Solomon 5:10–11, KJV)"),
+                      .quote("“His mouth is most sweet: yea, he is altogether lovely. This is my beloved, and this is my friend, O daughters of Jerusalem.” (Song of Solomon 5:16, KJV)"),
+                  ]),
+                  SignSection("THE MUSLIM READING", [
+                      .text("This is a modern reading. Ahmed Deedat noted it in 1976, and Zakir Naik and others have made it widely known. In Hebrew “he is altogether lovely” is wekhullo machamaddim, and the argument is that machamaddim is the name Muhammad with the Hebrew plural of honour, -im, as Elohim is a plural used of the One God. The root ḥ-m-d is the same root that gives the Arabic Muhammad, Ahmad and hamd."),
+                      .text("Those who make it point to the rest of the description too. The beloved is “white and ruddy”, and the Companions described the Prophet (peace and blessings be upon him) as white and handsome of face:"),
+                      .hadith("muslim:2340a", cite: "Sahih Muslim 2340a", arabic: 24...29, english: 11...19),
+                      .hadith("bukhari:3549", cite: "Sahih al-Bukhari 3549", arabic: 24...35, english: 0...14),
+                      .text("And he is “the chiefest among ten thousand”: the Prophet marched on Makkah at the head of ten thousand:"),
+                      .hadith("bukhari:4276", cite: "Sahih al-Bukhari 4276", arabic: 24...54, english: 0...45),
+                  ]),
+                  SignSection("WHY IT IS WEAK", [
+                      .text("Machamaddim is not a name. It is a plural noun from machmad, a delight or a desirable thing, and the Bible uses the word a dozen times, always as a common noun and never as a name: “all our pleasant things are laid waste” (Isaiah 64:11), “the desire of thine eyes” (Ezekiel 24:16), “the beloved fruit of their womb” (Hosea 9:16). The same verse has another plural of the same kind: “his mouth is most sweet” is chikko mamtaqqim, “his palate is sweetnesses”. The -im is the poem's way of praising qualities, not a plural of honour on a proper name."),
+                      .text("The root is shared, but its sense is not. In Hebrew ḥ-m-d is to desire, and it is the verb of the commandment “Thou shalt not covet” (Exodus 20:17); in Arabic it is to praise. A name built from one is not the name built from the other."),
+                      .text("Muslim scholars have said as much. A published answer of the IslamQA site (no. 246893) cautions against the argument: machamaddim is not anyone's proper name but means beauty and desirability, and the context does not allow a proper name to be forced into it. No classical scholar used the verse, and al-Kairanawi, who gathered the Bible's glad tidings at length in the nineteenth century, held the Song itself to be of very weak standing."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("It is included here because it is so often repeated, so that a Muslim knows what it is before he uses it. It is the weakest of the passages in this group: the word means delightful things, the poem is a love song, and the likeness rests on a root alone. The beloved's being white and ruddy and chief among ten thousand fits the Prophet, but it fits many a praised man. The arguments that do not need it are stronger without it."),
+                  ]),
+              ]),
+        .init(id: "desire-of-nations", title: "The desire of all nations",
+              summary: "Haggai promises that the desire of all nations shall come, that the latter house will be more glorious than the former, and that in this place God will give peace.",
+              group: .foretold,
+              aliases: ["haggai", "haggai 2", "desire of all nations", "chemdah", "hemdah", "himda", "ahmad", "latter house", "this house", "second temple", "in this place will i give peace", "shalom", "salam", "islam", "jerusalem", "bayt al-maqdis", "al-aqsa", "abdul-ahad dawud"],
+              sections: [
+                  SignSection("THE PROMISE", [
+                      .text("Haggai spoke to the Jews who had come back from Babylon and were slow to rebuild the temple. Some still remembered the first house, and beside it the new one was “as nothing” in their eyes (Haggai 2:3). Haggai answered them:"),
+                      .quote("“For thus saith the LORD of hosts; Yet once, it is a little while, and I will shake the heavens, and the earth, and the sea, and the dry land; And I will shake all nations, and the desire of all nations shall come: and I will fill this house with glory, saith the LORD of hosts. The silver is mine, and the gold is mine, saith the LORD of hosts. The glory of this latter house shall be greater than of the former, saith the LORD of hosts: and in this place will I give peace, saith the LORD of hosts.” (Haggai 2:6–9, KJV)"),
+                  ]),
+                  SignSection("THE MUSLIM READING", [
+                      .text("This is a modern reading, made by Abdul-Ahad Dawud, a former Catholic priest, in his book Muhammad in the Bible. “The desire” is chemdah in Hebrew, from the root ḥ-m-d, and he read it as Ahmad: “And the Ahmed of all nations will come”. “Peace” is shalom, the Hebrew of the Arabic salam, the root of Islam; so in that place God would give Islam."),
+                      .text("He set beside it what happened in that place. The Prophet was taken there by night and led the prophets in prayer, the scholars say at Bayt al-Maqdis:"),
+                      .quran("17:1"),
+                      .hadith("muslim:172", cite: "Sahih Muslim 172", arabic: 129...131, english: 148...156),
+                      .text("And in the caliphate of 'Umar the city was handed to the Muslims by treaty after a siege, and apart from the ninety years of the Crusaders a masjid has stood on the site of that house ever since."),
+                  ]),
+                  SignSection("WHY IT IS WEAK", [
+                      .text("The Hebrew verb “shall come” is plural, u-va'u, “they shall come”, so most modern translations take chemdah as a collective, the precious things of the nations: “the treasures of all nations shall come in”. The next verse supports them: “The silver is mine, and the gold is mine.” The word is the same root as the Hebrew “covet”, and its sense is desirable things, not praise."),
+                      .text("Christians read the desire of all nations as the Messiah, who came to the second house before it was destroyed, and Jewish readers as the wealth of the nations brought to adorn it. No classical Muslim scholar used the verse."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("This is a resonance, not a proof text, and a weak one: it rests on the root of one word and the meaning of another, and the grammar of the verse points to treasures. What can fairly be said is that it promises the house in Jerusalem a greater glory than the first and peace in that place; and that the place has been, for most of the fourteen centuries since, in the hands of those whose religion is named for peace, and the Prophet prayed there at the head of the prophets."),
                   ]),
               ]),
     ]

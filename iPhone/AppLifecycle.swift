@@ -87,6 +87,11 @@ enum AppLifecycle {
         let settings = Settings.shared
 
         if phase == .active {
+            #if os(iOS)
+            // A flight whose takeoff or landing time passed while the app was away (FlightMode.swift):
+            // the board comes up, or the flight ends, before anything below asks whose times count.
+            FlightMode.shared.refresh()
+            #endif
             // An adhan whose moment passed in the last few minutes while the app was CLOSED: play it
             // now, in full and through Silent Mode if that is on. Before `reschedule()`, which only
             // ever looks forward - this is the one path that looks back (Abu, 2026-09-14).

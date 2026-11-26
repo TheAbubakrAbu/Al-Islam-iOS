@@ -30,7 +30,6 @@ enum SimpleTrim: String, CaseIterable, Identifiable {
     case calendarFootStepper
     case quranTodayPill
     case lastListenedTiles
-    case wordOfDayTile
     case surahShuffle
     case sortRow
     case juzRail
@@ -163,7 +162,6 @@ enum SimpleTrim: String, CaseIterable, Identifiable {
         Entry(.calendarFootStepper, surface: .adhan, title: "The Hijri Calendar's second year stepper", door: .elsewhere("the stepper at the top of IMPORTANT ISLAMIC DATES")),
         Entry(.quranTodayPill, surface: .quran, title: "The Today pill on the Quran tab's YOUR SUMMARY", door: .moreMenu("Today")),
         Entry(.lastListenedTiles, surface: .quran, title: "The Last Listened Ayah and Surah tiles", door: .elsewhere("the play menu's Play Last Listened Surah")),
-        Entry(.wordOfDayTile, surface: .quran, title: "The Word of the Day tile", door: .elsewhere("the Word of the Day button under YOUR SUMMARY")),
         Entry(.surahShuffle, surface: .quran, title: "The SURAHS shuffle", door: .elsewhere("the Random Surah button under YOUR SUMMARY")),
         Entry(.sortRow, surface: .quran, title: "The sort row, while the sort is surah ascending", door: .moreMenu("Sort")),
         Entry(.juzRail, surface: .quran, title: "The 1 to 30 juz index down the edge, outside the Juz sorts", door: .elsewhere("the Juz and Simple Juz sorts, under the ⋯ menu's Sort")),

@@ -405,153 +405,255 @@ struct LastListenedSurahRow: View {
     }
 }
 
-/// Every summary tile reports the height its content wants (the reciter line counted as ONE line),
-/// keyed by title; the grid takes the tallest and gives every tile that height, so all four tiles
-/// are the same size whatever mix of Arabic / transliteration / English the reader shows - and
-/// whichever tiles happen to share a row.
-struct SummaryTileHeightKey: PreferenceKey {
-    static var defaultValue: [String: CGFloat] = [:]
-    static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) {
-        value.merge(nextValue(), uniquingKeysWith: { max($0, $1) })
-    }
-}
+// MARK: - Summary lines
 
-/// Compact summary-mode tile that previews a single ayah (Arabic / transliteration / English),
-/// each limited to one line - like a normal AyahRow but trimmed to fit a tile.
-struct SummaryAyahTile: View {
+/// One item of a tab's YOUR SUMMARY, as a full-width line: the icon chip and the item's name
+/// leading, its reference in the accent trailing, the history expander last. Under the line, for
+/// the one item that is there to be READ rather than returned to (the Ayah or Hadith of the Day),
+/// its text at reading size.
+///
+/// The summaries were 2x2 grids of half-width tiles until 2026-11-25. Half a screen is too narrow
+/// for what a tile was asked to hold: "Last Listened Ayah" wrapped to two lines where the other
+/// titles took one, every tile was then stretched to the tallest, and a verse got about four words
+/// at caption size (Abu: "Summary tiles are so ugly with inconsistencies 2 lines for headers and the
+/// actual verses are too small"). He looked at four layouts built as real screens and chose this
+/// one: a line is as wide as the screen, so every name fits on one line at one size, the day's verse
+/// is whole, and the places to pick up from are 44 pt each.
+///
+/// The label alone, so a host can put its own control round it (`GridTileMenu` on the Hadith of the
+/// Day, for its long-press menu); `SummaryLine` is the label as a plain button.
+struct SummaryLineLabel<Accessory: View, Detail: View>: View {
     private let settings = Settings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
-    @ObservedObject private var quranDisplay = QuranDisplay.shared
-    @ObservedObject private var systemSettings = SystemSettings.shared
-    /// An iPad sidebar's half-width tile is about 120 pt: "Last Listened Ayah" needs its third line
-    /// there, where two cut it to "Last Listen..." (2026-10-12).
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// An iPad sidebar's column, where the name and the reference cannot share a line.
     @Environment(\.isSidebarColumn) private var isSidebarColumn
 
     let title: String
     let icon: String
-    let surah: Surah
-    let ayah: Ayah
-    var titleColor: Color = .secondaryOnGlass
-    /// The grid's common tile height (the tallest tile's natural height), once measured.
-    var rowHeight: CGFloat? = nil
-    /// Whether this tile's recents are the ones currently unfolded below the grid (flips the corner icon).
+    let reference: String
+    /// Whether `detail` draws anything: the line then keeps air above and below, where a bare line
+    /// is centred in its 44 pt.
+    var hasDetail: Bool = false
+    /// Whether the line keeps the expander's slot when it has none, so every reference in the
+    /// summary ends on the same edge.
+    var keepsExpanderSlot: Bool = true
+    /// Whether this item's recents are the ones unfolded under the summary (flips the expander).
     var isExpanded: Bool = false
-    /// When set, the tile grows a small toggle in its corner that unfolds this tile's recent history below
-    /// the summary grid - the summary-mode counterpart of the +/- the full-size rows carry on their headers.
+    /// Unfolds this item's recents under the summary; nil, no expander.
+    var onExpand: (() -> Void)? = nil
+    /// Before the reference: the last listened surah's play button.
+    @ViewBuilder var accessory: Accessory
+    /// Under the line: the day's verse or narration.
+    @ViewBuilder var detail: Detail
+
+    var body: some View {
+        // The name over the reference where one line cannot hold both: the accessibility text sizes
+        // and an iPad sidebar. Decided from the environment, never by `ViewThatFits`: in a List row
+        // that measures the taller form while the shorter one draws.
+        let stacked = dynamicTypeSize.isAccessibilitySize || isSidebarColumn
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: stacked ? .top : .center, spacing: SummaryLineMetrics.chipGap) {
+                AccentIconChip(systemImage: icon, size: SummaryLineMetrics.chipSize)
+
+                if stacked {
+                    VStack(alignment: .leading, spacing: 2) {
+                        name
+                        HStack(spacing: 6) {
+                            accessory
+                            referenceText
+                        }
+                    }
+                    Spacer(minLength: 6)
+                } else {
+                    name.layoutPriority(1)
+                    Spacer(minLength: 6)
+                    accessory
+                    referenceText
+                }
+
+                expander
+            }
+
+            if hasDetail {
+                detail
+            }
+        }
+        // The content keeps its IDEAL height. A VStack offers each child an equal share of the
+        // height it is given before it offers the rest, and a Text offered less than its lines need
+        // truncates to fit the offer: the day's Arabic came out as ONE line ending in an ellipsis,
+        // with the room for its second line left empty above the block (at the accessibility sizes
+        // on 26:8; at any size on an ayah two lines long).
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.vertical, hasDetail || stacked ? 10 : 0)
+        // 44 pt, the smallest thing a finger should be asked to hit.
+        .frame(maxWidth: .infinity, minHeight: SummaryLineMetrics.minHeight, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+
+    private var name: some View {
+        Text(title)
+            .font(.footnote.weight(.medium))
+            .foregroundColor(.secondaryOnGlass)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+    }
+
+    private var referenceText: some View {
+        Text(reference.localizedDigits)
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(settings.accentColor.color)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+    }
+
+    @ViewBuilder
+    private var expander: some View {
+        if let onExpand {
+            Image(systemName: isExpanded ? "minus.circle" : "plus.circle")
+                .font(.subheadline)
+                .foregroundColor(settings.accentColor.color)
+                .frame(width: SummaryLineMetrics.expanderWidth)
+                .contentShape(Rectangle().inset(by: -10))
+                .onTapGesture {
+                    settings.hapticFeedback()
+                    onExpand()
+                }
+                .accessibilityLabel("Show recent \(title)")
+        } else if keepsExpanderSlot {
+            Color.clear.frame(width: SummaryLineMetrics.expanderWidth, height: 1)
+        }
+    }
+}
+
+/// A summary line as a button (see `SummaryLineLabel`).
+struct SummaryLine<Accessory: View, Detail: View>: View {
+    let title: String
+    let icon: String
+    let reference: String
+    var hasDetail: Bool = false
+    var keepsExpanderSlot: Bool = true
+    var isExpanded: Bool = false
     var onExpand: (() -> Void)? = nil
     let onTap: () -> Void
+    @ViewBuilder var accessory: Accessory
+    @ViewBuilder var detail: Detail
 
-    /// e.g. "Al-Fatiha 1:5"
-    private var detail: String { "\(surah.displayName) \(surah.id):\(ayah.id)" }
+    var body: some View {
+        Button {
+            Settings.shared.hapticFeedback()
+            onTap()
+        } label: {
+            SummaryLineLabel(title: title, icon: icon, reference: reference, hasDetail: hasDetail,
+                             keepsExpanderSlot: keepsExpanderSlot, isExpanded: isExpanded, onExpand: onExpand,
+                             accessory: { accessory }, detail: { detail })
+        }
+        .buttonStyle(SummaryLineButtonStyle())
+    }
+}
 
-    private func arabicDisplayText() -> String {
+/// The lines' shared measures. File scope: the lines are generic and cannot hold static stored constants.
+enum SummaryLineMetrics {
+    static let chipSize: CGFloat = 24
+    static let chipGap: CGFloat = 10
+    static let expanderWidth: CGFloat = 22
+    static let minHeight: CGFloat = 44
+    /// Where a line's name starts, past its chip: where the hairline between two lines starts too.
+    static let textInset: CGFloat = chipSize + chipGap
+
+    /// The day's Arabic under its line: title3, the size a verse reads at, and no larger than 34 pt
+    /// at the accessibility sizes, where uncapped it left room for four words in two lines.
+    static func arabicSize(at size: DynamicTypeSize) -> CGFloat {
+        min(textStylePointSize(.title3, at: size), 34)
+    }
+
+    /// `name` at exactly `arabicSize`. A FIXED size: `Font.custom(_:size:)` scales with the text
+    /// size again on top of a size that already follows it, and at the accessibility sizes the
+    /// 34 pt this asks for was drawn near 66.
+    static func arabicFont(_ name: String, at size: DynamicTypeSize) -> Font {
+        let points = arabicSize(at: size)
+        return name == Settings.systemArabicFontName
+            ? .system(size: points, design: .rounded)
+            : .custom(name, fixedSize: points)
+    }
+
+    /// How many lines of each script the day's text gets under its line.
+    static func detailLines(at size: DynamicTypeSize) -> Int {
+        size.isAccessibilitySize ? 3 : 2
+    }
+}
+
+/// The hairline between two summary lines, from where their names start.
+struct SummaryLineDivider: View {
+    var body: some View {
+        Divider().padding(.leading, SummaryLineMetrics.textInset)
+    }
+}
+
+/// A summary line under the finger dims, the way a list row answers a touch.
+struct SummaryLineButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.5 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+/// The Ayah of the Day under its summary line: the Arabic in the reader's own face and colours,
+/// then whichever transliteration and translation the reader shows, up to two lines of each. A line
+/// is the screen's width, so most ayahs are here whole; a long one ends in an ellipsis and opens on
+/// a tap.
+struct SummaryVerseLines: View {
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
+    /// Read because the Arabic bakes a text style's size into a fixed font.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    let surah: Surah
+    let ayah: Ayah
+
+    private var arabicText: String {
         let text = ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText)
         return settings.beginnerMode ? text.beginnerSpaced : text
     }
 
-    private var shouldShowTajweedColors: Bool {
-        settings.showTajweedColors && settings.showArabicText && settings.isHafsDisplay
-    }
-
-    private func arabicTajweedText() -> AttributedString? {
-        guard shouldShowTajweedColors else { return nil }
+    private var tajweedText: AttributedString? {
+        guard settings.showTajweedColors, settings.showArabicText, settings.isHafsDisplay else { return nil }
         let text = ayah.displayArabicText(surahId: surah.id, clean: false)
         let displayText = settings.cleanArabicText ? ayah.displayArabicText(surahId: surah.id, clean: true) : text
-        let renderedDisplayText = settings.beginnerMode ? displayText.beginnerSpaced : displayText
         return TajweedStore.shared.attributedText(
             surah: surah.id,
             ayah: ayah.id,
             text: text,
-            displayText: renderedDisplayText,
+            displayText: settings.beginnerMode ? displayText.beginnerSpaced : displayText,
             cleanDisplayText: settings.cleanArabicText,
             beginnerSpacing: settings.beginnerMode
         )
     }
 
-    var body: some View {
-        Button {
-            settings.hapticFeedback()
-            onTap()
-        } label: {
-            // Tight on purpose (Abu, 2026-09-16: the summary took too much of the tab): 4 pt between
-            // lines, 10 pt of padding, one line of each script, and a small chip for the icon so the
-            // tile still has a spot of colour.
-            // LEADING, unlike the short-label tiles elsewhere, which centre (Abu, 2026-10-05:
-            // "summary tiles and hadiths/ayahs should be leading everything else centered"): an ayah
-            // and its translation are prose, and prose is read down a straight left edge. The Arabic
-            // line below keeps its own RTL side.
-            VStack(alignment: .leading, spacing: 4) {
-                if !title.isEmpty {
-                    HStack(spacing: 6) {
-                        AccentIconChip(systemImage: icon, size: 18)
-                        Text(title)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundColor(titleColor)
-                            // Two lines at the large text sizes ("Last Listened Ayah" was "Last Li..."
-                            // in a half-width tile), one everywhere else; three in an iPad sidebar.
-                            .lineLimit(isSidebarColumn ? 3 : 2)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .layoutPriority(1)
-
-                        // No timestamp on the compact tile - the "when" lives on the unfolded
-                        // history rows (the +'s expanded card) instead.
-                        if let onExpand {
-                            Spacer(minLength: 0)
-
-                            Image(systemName: isExpanded ? "minus.circle" : "plus.circle")
-                                .font(.caption)
-                                .foregroundColor(settings.accentColor.color)
-                                .contentShape(Rectangle().inset(by: -8))
-                                .onTapGesture {
-                                    settings.hapticFeedback()
-                                    onExpand()
-                                }
-                                .accessibilityLabel("Show recent \(title)")
-                        }
-                    }
-                }
-
-                Text(detail.localizedDigits)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(settings.accentColor.color)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-
-                ayahPreview
-            }
-            .padding(10)
-            // The content keeps its IDEAL height whatever the tile is stretched to, so the measurement
-            // below can never depend on the frame it feeds. (The loop that once froze this grid lived
-            // in `SummarySurahTile.oneLineReciterHeight`; this keeps the ayah tiles out of any other.)
-            .fixedSize(horizontal: false, vertical: true)
-            // Natural height, measured BEFORE the fill frame below (which stretches to the row).
-            .background(GeometryReader { proxy in
-                Color.clear.preference(key: SummaryTileHeightKey.self, value: [title: proxy.size.height])
-            })
-            // Top-left, not `.leading`: `.leading` centres the content vertically in a stretched tile.
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .frame(height: rowHeight)
-            // Clear conditional glass (never accent-tinted) - these summary tiles have no favorite state, so
-            // they stay a plain glass card like the rest of the app's clear tiles.
-            .contentSurface(clear: true, rectangle: true, inRow: true)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+    private var translation: String? {
+        guard settings.isHafsDisplay else { return nil }
+        if settings.showEnglishSaheeh { return ayah.textEnglishSaheeh }
+        if settings.showEnglishMustafa { return ayah.textEnglishMustafa }
+        return nil
     }
 
-    @ViewBuilder
-    private var ayahPreview: some View {
-        VStack(alignment: .leading, spacing: 3) {
+    var body: some View {
+        // A third line of each at the accessibility text sizes, where two hold only a few words.
+        let lines = SummaryLineMetrics.detailLines(at: dynamicTypeSize)
+        VStack(alignment: .leading, spacing: 6) {
             if settings.showArabicText {
                 HighlightedSnippet(
-                    source: arabicDisplayText(),
+                    source: arabicText,
                     term: "",
-                    font: Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize),
+                    font: SummaryLineMetrics.arabicFont(settings.quranDisplayFontName, at: dynamicTypeSize),
                     accent: settings.accentColor.color,
                     fg: .primary,
-                    preStyledSource: arabicTajweedText(),
+                    preStyledSource: tajweedText,
                     beginnerMode: settings.beginnerMode,
-                    lineLimit: 1
+                    lineLimit: lines
                 )
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .multilineTextAlignment(.trailing)
@@ -562,25 +664,18 @@ struct SummaryAyahTile: View {
 
             if settings.showTransliteration, settings.isHafsDisplay {
                 Text(ayah.textTransliteration)
-                    .font(.caption)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
+                    .font(.footnote)
+                    .foregroundColor(.secondaryOnGlass)
+                    .lineLimit(lines)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .leftToRightContent()
             }
 
-            if settings.showEnglishSaheeh, settings.isHafsDisplay {
-                Text(ayah.textEnglishSaheeh)
-                    .font(.caption)
+            if let translation {
+                Text(translation)
+                    .font(.subheadline)
                     .foregroundColor(.primary)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .leftToRightContent()
-            } else if settings.showEnglishMustafa, settings.isHafsDisplay {
-                Text(ayah.textEnglishMustafa)
-                    .font(.caption)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
+                    .lineLimit(lines)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .leftToRightContent()
             }
@@ -588,220 +683,59 @@ struct SummaryAyahTile: View {
     }
 }
 
-/// Compact summary-mode tile for the last-listened surah. There is no ayah, so it shows the reciter,
-/// duration, a play button, and a tiny progress bar instead - sized to match the ayah tile beside it.
-struct SummarySurahTile: View {
+/// The last listened surah's play button, before its name on the summary line: a tap opens its two
+/// ways to play, a hold resumes where the listening stopped.
+struct SummarySurahPlayButton: View {
     private let settings = Settings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
-    @ObservedObject private var systemSettings = SystemSettings.shared
-    /// A third title line in an iPad sidebar's half-width tile, as `SummaryAyahTile` ("Last Listened
-    /// Surah" was "Last Listene..." there, 2026-10-12).
-    @Environment(\.isSidebarColumn) private var isSidebarColumn
-    /// Actions only: not observed. Play state and the history lists publish on their own objects
-    /// (see `NowPlayingState`), so an ayah advance no longer re-evaluates the summary tiles.
+    /// Actions only: not observed. Play state publishes on its own object (see `NowPlayingState`).
     private let quranPlayer = QuranPlayer.shared
     @ObservedObject private var playbackPhase = QuranPlayer.shared.phase
-    @ObservedObject private var playbackHistory = QuranPlayer.shared.history
 
-    let title: String
-    let icon: String
     let surah: Surah
     let lastListenedSurah: LastListenedSurah
-    var titleColor: Color = .secondaryOnGlass
-    /// See `SummaryAyahTile.rowHeight`.
-    var rowHeight: CGFloat? = nil
-    /// See `SummaryAyahTile.isExpanded` / `.onExpand`.
-    var isExpanded: Bool = false
-    var onExpand: (() -> Void)? = nil
-    let onTap: () -> Void
-
-    /// The reciter line's measured height (two lines when it wraps) and the whole content's, so the
-    /// tile can report what it would need with the reciter on ONE line - the number the grid sizes
-    /// rows from. Reporting the wrapped height instead would grow the row to fit the second line,
-    /// which is the opposite of "only when there is room".
-    @State private var reciterHeight: CGFloat = 0
-    @State private var contentHeight: CGFloat = 0
-    /// What the reciter line measures at exactly ONE line and at TWO, from two hidden twins of the
-    /// visible `Text` (same string, font, width and scaling) that never change their line limit - so
-    /// the height this tile reports is the same number whichever limit the visible line is showing.
-    /// The one-line figure used to be `UIFont.lineHeight`, which counts leading that a SwiftUI `Text`
-    /// does not: the figure reported with the reciter WRAPPED came out a point or two shorter than
-    /// the figure reported unwrapped, and when the row's spare height sat inside that gap (the largest
-    /// text size with a long last-read ayah beside this tile, 2:255) the line limit flipped 1, 2, 1,
-    /// 2 forever - a layout loop that froze the Quran tab at 100% CPU. (Latching the visible line's
-    /// own one-line measurement instead raced the content measurement and looped at every size.)
-    @State private var oneLineReciterHeight: CGFloat = 0
-    @State private var twoLineReciterHeight: CGFloat = 0
-
-    private var oneLineContentHeight: CGFloat {
-        contentHeight - max(0, reciterHeight - oneLineReciterHeight)
-    }
-
-    /// Two reciter lines ONLY when the row is already tall enough for the second one (an ayah tile
-    /// beside it showing Arabic + transliteration + English, say); otherwise one line, truncated,
-    /// so this tile never makes the row taller than its neighbours.
-    private var reciterLineLimit: Int {
-        guard let rowHeight, contentHeight > 0, oneLineReciterHeight > 0,
-              twoLineReciterHeight > oneLineReciterHeight else { return 1 }
-        return rowHeight - oneLineContentHeight >= twoLineReciterHeight - oneLineReciterHeight - 0.5 ? 2 : 1
-    }
-
-    private var reciterDisplayName: String { lastListenedSurah.reciter.displayNameWithEnglishQiraah }
-
-    /// A hidden twin of the reciter line at a fixed line limit, reporting its height (see
-    /// `oneLineReciterHeight`). Laid out at the visible line's full width; never drawn.
-    private func reciterTwin(lines: Int, report: @escaping (CGFloat) -> Void) -> some View {
-        Text(reciterDisplayName)
-            .font(.caption2)
-            .lineLimit(lines)
-            .minimumScaleFactor(0.6)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .fixedSize(horizontal: false, vertical: true)
-            .hidden()
-            .background(GeometryReader { proxy in
-                Color.clear.onAppear { report(proxy.size.height) }
-                    .onChange(of: proxy.size.height) { report($0) }
-            })
-            .accessibilityHidden(true)
-    }
-
-    /// e.g. "1 - Al-Fatiha"
-    private var detail: String { "\(surah.id) - \(surah.displayName)" }
 
     var body: some View {
-        Button {
+        ShortcutMenu(hold: MenuShortcut(String(localized: "Play Last Listened")) {
             settings.hapticFeedback()
-            onTap()
-        } label: {
-            // Leading, like its twin beside it (`SummaryAyahTile`): both are summary tiles, so they
-            // share an edge (Abu, 2026-10-05).
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    AccentIconChip(systemImage: icon, size: 18)
-                    Text(title)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundColor(titleColor)
-                        // Two lines at the large text sizes, one everywhere else (see `SummaryAyahTile`).
-                        .lineLimit(isSidebarColumn ? 3 : 2)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .layoutPriority(1)
+            quranPlayer.playSurah(surahNumber: lastListenedSurah.surahNumber,
+                                  surahName: lastListenedSurah.surahName, certainReciter: true)
+        }) {
+            // Who recited it and how far in: the tile drew these on lines of their own.
+            Text(verbatim: "\(lastListenedSurah.reciter.displayNameWithEnglishQiraah), \(formatMMSS(lastListenedSurah.currentDuration).localizedDigits) / \(formatMMSS(lastListenedSurah.fullDuration).localizedDigits)")
+                .foregroundStyle(.secondary)
 
-                    // No timestamp on the compact tile - the "when" lives on the unfolded
-                    // history rows (the +'s expanded card) instead.
-                    if let onExpand {
-                        Spacer(minLength: 0)
-
-                        Image(systemName: isExpanded ? "minus.circle" : "plus.circle")
-                            .font(.caption)
-                            .foregroundColor(settings.accentColor.color)
-                            .contentShape(Rectangle().inset(by: -8))
-                            .onTapGesture {
-                                settings.hapticFeedback()
-                                onExpand()
-                            }
-                            .accessibilityLabel("Show recent \(title)")
-                    }
-                }
-
-                Text(detail.localizedDigits)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(settings.accentColor.color)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-
-                // One line unless the row has room for two (`reciterLineLimit`): a long reciter +
-                // riwayah name truncates rather than pushing the tile taller than its neighbour.
-                Text(reciterDisplayName)
-                    .font(.caption2)
-                    .foregroundColor(.primary)
-                    .lineLimit(reciterLineLimit)
-                    .minimumScaleFactor(0.6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(GeometryReader { proxy in
-                        Color.clear.onAppear { reciterHeight = proxy.size.height }
-                            .onChange(of: proxy.size.height) { reciterHeight = $0 }
-                    })
-                    // The twins: what this line measures at one line and at two, whatever it shows.
-                    .background(alignment: .topLeading) {
-                        reciterTwin(lines: 1) { oneLineReciterHeight = $0 }
-                    }
-                    .background(alignment: .topLeading) {
-                        reciterTwin(lines: 2) { twoLineReciterHeight = $0 }
-                    }
-
-                HStack(spacing: 6) {
-                    Text("\(formatMMSS(lastListenedSurah.currentDuration).localizedDigits) / \(formatMMSS(lastListenedSurah.fullDuration).localizedDigits)")
-                        .font(.caption2)
-                        // The system secondary read 3.1:1 on this glass (see `secondaryOnGlass`).
-                        .foregroundColor(.secondaryOnGlass)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-
-                    Spacer()
-
-                    ShortcutMenu(hold: MenuShortcut(String(localized: "Play Last Listened")) {
-                        settings.hapticFeedback()
-                        quranPlayer.playSurah(surahNumber: lastListenedSurah.surahNumber,
-                                              surahName: lastListenedSurah.surahName, certainReciter: true)
-                    }) {
-                        Text("Last Listened")
-                            .foregroundStyle(.secondary)
-
-                        Button {
-                            settings.hapticFeedback()
-                            quranPlayer.playSurah(
-                                surahNumber: lastListenedSurah.surahNumber,
-                                surahName: lastListenedSurah.surahName,
-                                certainReciter: true
-                            )
-                        } label: {
-                            Label("Play Last Listened", systemImage: "play.fill")
-                        }
-
-                        Button {
-                            settings.hapticFeedback()
-                            quranPlayer.playSurah(
-                                surahNumber: lastListenedSurah.surahNumber,
-                                surahName: surah.nameTransliteration
-                            )
-                        } label: {
-                            Label("Play from Beginning", systemImage: "memories")
-                        }
-                    } label: {
-                        Image(systemName: "play.fill")
-                            .font(.subheadline)
-                            .foregroundColor(settings.accentColor.color)
-                            .opacity(!playbackPhase.isPlaying && !playbackPhase.isPaused ? 1 : 0.35)
-                            .contentShape(Rectangle())
-                    }
-                    .disabled(playbackPhase.isPlaying || playbackPhase.isPaused)
-                }
-
-                TinyProgressBar(
-                    fraction: lastListenedSurah.fullDuration > 0 ? lastListenedSurah.currentDuration / lastListenedSurah.fullDuration : 0,
-                    color: settings.accentColor.color
+            Button {
+                settings.hapticFeedback()
+                quranPlayer.playSurah(
+                    surahNumber: lastListenedSurah.surahNumber,
+                    surahName: lastListenedSurah.surahName,
+                    certainReciter: true
                 )
-                .padding(.top, 1)
+            } label: {
+                Label("Play Last Listened", systemImage: "play.fill")
             }
-            .padding(10)
-            // See `SummaryAyahTile`: the measured content never depends on the proposed height.
-            .fixedSize(horizontal: false, vertical: true)
-            .background(GeometryReader { proxy in
-                Color.clear.onAppear { contentHeight = proxy.size.height }
-                    .onChange(of: proxy.size.height) { contentHeight = $0 }
-            })
-            // The grid sizes rows from the ONE-line figure, never the wrapped one.
-            .preference(key: SummaryTileHeightKey.self, value: contentHeight > 0 ? [title: oneLineContentHeight] : [:])
-            // Top-left, not `.leading` (which centred this tile's content vertically while the ayah
-            // tiles beside it, ending in a spacer, sat at the top).
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .frame(height: rowHeight)
-            // Clear conditional glass (never accent-tinted) - these summary tiles have no favorite state, so
-            // they stay a plain glass card like the rest of the app's clear tiles.
-            .contentSurface(clear: true, rectangle: true, inRow: true)
-            .contentShape(Rectangle())
+
+            Button {
+                settings.hapticFeedback()
+                quranPlayer.playSurah(
+                    surahNumber: lastListenedSurah.surahNumber,
+                    surahName: surah.nameTransliteration
+                )
+            } label: {
+                Label("Play from Beginning", systemImage: "memories")
+            }
+        } label: {
+            Image(systemName: "play.fill")
+                .font(.subheadline)
+                .foregroundColor(settings.accentColor.color)
+                .opacity(!playbackPhase.isPlaying && !playbackPhase.isPaused ? 1 : 0.35)
+                // The glyph is small: the target is the line's whole height and reaches back
+                // toward the name's side, while the glyph itself stays beside the surah it plays.
+                .frame(minWidth: 30, minHeight: SummaryLineMetrics.minHeight, alignment: .trailing)
+                .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .disabled(playbackPhase.isPlaying || playbackPhase.isPaused)
     }
 }
 #endif

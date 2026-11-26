@@ -339,7 +339,7 @@ struct AyahQiraahComparisonSheet: View {
                 Text("Compare Two").tag(true)
             }
             .pickerStyle(.segmented)
-            .accessibilityLabel("Comparison mode")
+            .accessibilityLabel("Comparison Mode")
             .padding(.horizontal)
 
             if duelMode {

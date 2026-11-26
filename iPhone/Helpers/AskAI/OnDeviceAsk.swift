@@ -61,7 +61,9 @@ enum OnDeviceAsk {
     /// Whether a failed generation ran out of context window - the one error worth retrying leaner.
     @available(iOS 26.0, *)
     static func isContextOverflow(_ error: Error) -> Bool {
-        if case LanguageModelSession.GenerationError.exceededContextWindowSize = error { return true }
+        // Through the chat's classifier: iOS 27 reports it as `LanguageModelError.contextSizeExceeded`,
+        // which the iOS 26 case alone missed (no leaner retry, and the generic failure line).
+        if case .contextOverflow = AskAIEngine.classify(error) { return true }
         return false
     }
 
@@ -69,17 +71,21 @@ enum OnDeviceAsk {
     /// generic case (the caller's own wording applies).
     @available(iOS 26.0, *)
     static func failureMessage(for error: Error) -> String? {
-        guard let generationError = error as? LanguageModelSession.GenerationError else { return nil }
-        switch generationError {
-        case .guardrailViolation:
+        // The chat's classifier reads both error families (iOS 26's `GenerationError`, iOS 27's
+        // `LanguageModelError`); the wording here is the summary's own.
+        let failure = AskAIEngine.classify(error)
+        switch failure {
+        case .guardrail, .refusal:
             return String(localized: "Apple Intelligence declined to answer this one. Try rephrasing the question, or asking about it in a different way.")
-        case .unsupportedLanguageOrLocale:
+        case .unsupportedLanguage:
             return String(localized: "Apple Intelligence can\u{2019}t work in that language yet. Try asking in English.")
-        case .rateLimited, .concurrentRequests:
+        case .busy:
             return String(localized: "Apple Intelligence is busy right now. Try again in a moment.")
-        case .exceededContextWindowSize:
+        case .contextOverflow:
             return String(localized: "This text is longer than Apple Intelligence can read in one go on this device.")
-        default:
+        case .modelUnavailable:
+            return AskAIEngine.message(for: failure)
+        case .cloudUnavailable, .other:
             return nil
         }
     }
@@ -181,10 +187,6 @@ enum OnDeviceAsk {
     """
     }
 
-    /// How much source text a summarize prompt carries. ~6000 characters is a sensible fit for the
-    /// on-device model's small context window once instructions, transcript, and answer share it.
-    static let summarizeSourceLimit = 6000
-
     /// The cap for the MULTI-SOURCE case (all tafsirs of an ayah at once): higher, because the whole
     /// point is breadth, but still leaving the small context window room for instructions, the
     /// transcript, and the answer. Each section is truncated proportionally against this.
@@ -194,13 +196,365 @@ enum OnDeviceAsk {
     /// leaner once should a dense text still overflow (`isContextOverflow`).
     static let summarizeMultiSourceLimit = 9000
 
-    /// The source text a summarize session is grounded on: trimmed, clipped to the model's sensible
-    /// context, with a flag so the UI can disclose the truncation.
-    static func clippedSource(_ text: String) -> (text: String, truncated: Bool) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count > summarizeSourceLimit else { return (trimmed, false) }
-        return (String(trimmed.prefix(summarizeSourceLimit)) + "…", true)
+    // MARK: - Reading a long text whole
+    //
+    // The model's window is 4,096 tokens, and until 2026-11-25 a summary read the first 6,000
+    // characters of its text and nothing after them (Abu: "why only first 6k characters"). A longer
+    // text is now read to its end, in parts: each part is one request that fits the window, its
+    // paragraph joins the summary as it is written, and a question afterwards is answered from the
+    // passages of the whole text that bear on it (`passages(of:for:limit:)`).
+    //
+    // Measured on the simulator, 2026-11-25, Ibn Kathir on 2:255 (13,809 characters): the wait for
+    // the first word is the model reading the prompt, about a millisecond a token on top of half a
+    // second (1,500 characters 0.95 s, 6,000 2.1 s, 10,500 4.2 s), and 2.9 s more when the model
+    // has to be loaded first. So the first part is short (the first words come in about a second),
+    // the model starts loading as the sheet rises (`prewarmSummaries`), and the parts after it are
+    // read while the reader is on the paragraphs before them. The text runs 3.6 characters a token where it is
+    // plain prose and 2.6 where it is names and transliteration, so a part is sized for the dense
+    // case and, where the tokenizer can be asked (iOS 26.4), measured before it is sent.
+
+    /// A text up to this long is summarized in one request, as it always was.
+    static let singlePassCharacters = 7_000
+    /// The first part of a longer text: short, because the reader is waiting on it.
+    static let firstPartCharacters = 3_200
+    /// What a part after the first aims for, and the most it may be.
+    static let partCharacters = 6_500
+    static let partCharactersCeiling = 8_000
+    /// The parts one summary reads: about 75,000 characters. A text past that is summarized up to
+    /// there, and the sheet says how far it read.
+    static let maximumParts = 10
+
+    /// The most of a text a summary reads (`maximumParts` full parts).
+    static var summarizeReach: Int { firstPartCharacters + (maximumParts - 1) * partCharactersCeiling }
+
+    /// The tokens a summary's answer may take: one request's few paragraphs, one part's paragraph,
+    /// the answer to a question about the text.
+    private static let summaryResponseTokens = 700
+    private static let partResponseTokens = 260
+    private static let followUpResponseTokens = 500
+    /// The instructions (323 tokens measured, the Arabic rule a little more), the prompt's heading
+    /// and task line, and a margin.
+    private static let frameTokens = 520
+
+    /// The tokens the text of one request may take beside an answer of `responseTokens`.
+    @available(iOS 26.0, *)
+    private static func textTokens(beside responseTokens: Int) -> Int {
+        max(1_024, AskAIEngine.onDeviceModel.contextSize) - frameTokens - responseTokens
     }
+
+    /// The opening of `text`, at most `limit` characters long: cut after a paragraph where one ends
+    /// in its last two fifths, else after a line, else after a sentence, else at a space.
+    static func head(of text: Substring, limit: Int) -> Substring {
+        guard limit > 0, let hard = text.index(text.startIndex, offsetBy: limit, limitedBy: text.endIndex),
+              hard < text.endIndex else { return text }
+        let floor = text.index(text.startIndex, offsetBy: limit * 3 / 5)
+        let tail = text[floor..<hard]
+        if let paragraph = tail.range(of: "\n\n", options: .backwards) { return text[..<paragraph.upperBound] }
+        if let line = tail.lastIndex(where: \.isNewline) { return text[...line] }
+        var index = tail.endIndex
+        while index > tail.startIndex {
+            let next = index
+            index = tail.index(before: index)
+            if ".!?\u{06D4}".contains(tail[index]), next == tail.endIndex || tail[next].isWhitespace {
+                return text[...index]
+            }
+        }
+        if let space = tail.lastIndex(where: \.isWhitespace) { return text[..<space] }
+        return text[..<hard]
+    }
+
+    /// `text` cut back, at a paragraph or a sentence end, until the model's own tokenizer counts it
+    /// within `tokens`. Unchanged where it already fits, and where the tokenizer cannot be asked
+    /// (iOS 26.0 to 26.3: the character sizes above are set for that case, and a request that still
+    /// overflows is retried shorter).
+    @available(iOS 26.0, *)
+    static func fitting(_ text: Substring, tokens budget: Int) async -> Substring {
+        guard #available(iOS 26.4, *) else { return text }
+        // Asked only for a text long enough to overflow: the densest prose measured runs 2.6
+        // characters a token, and the first count of a launch takes up to a second, which the
+        // short opening part (the one the reader is waiting on) must not pay.
+        guard Double(text.count) > Double(budget) * 2.2 else { return text }
+        var kept = text
+        for _ in 0..<3 {
+            guard let count = try? await AskAIEngine.onDeviceModel.tokenCount(for: String(kept)), count > budget else { break }
+            let limit = Int(Double(kept.count) * Double(budget) / Double(count) * 0.96)
+            kept = head(of: kept, limit: max(400, limit))
+        }
+        return kept
+    }
+
+    /// A part's paragraph as it joins the summary: trimmed, and when the answer ran into its token
+    /// ceiling mid-sentence, cut back to its last whole sentence (the next part's paragraph follows
+    /// straight on, and half a sentence before it reads as a fault).
+    static func wholeSentences(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let last = trimmed.last, !".!?\u{201D}\")\u{06D4}".contains(last) else { return trimmed }
+        guard let end = trimmed.lastIndex(where: { ".!?".contains($0) }),
+              trimmed.distance(from: trimmed.startIndex, to: end) > trimmed.count / 2 else { return trimmed }
+        return String(trimmed[...end])
+    }
+
+    /// What a summary has read and written so far.
+    struct SummaryProgress: Sendable {
+        /// The summary so far: the paragraph of every part already read, then the one being written.
+        var text: String
+        /// How many characters of the text are summarized, and how long the text is.
+        var read: Int
+        var total: Int
+        /// The next part is being read: nothing new to show until its first words arrive.
+        var isReading = false
+        /// The summary ended before the text did (longer than `summarizeReach`, or a part the model
+        /// could not read): `read` says how far it got.
+        var stoppedShort = false
+
+        /// Whether the text is being read in parts at all.
+        var isInParts: Bool { total > OnDeviceAsk.singlePassCharacters }
+    }
+
+    /// Stream a faithful summary of ONE text, whatever its length: a text of `singlePassCharacters`
+    /// or less in one request, a longer one part by part to its end. Each yielded value holds the
+    /// whole summary so far.
+    @available(iOS 26.0, *)
+    static func streamTextSummary(title: String, text: String,
+                                  language: SummaryLanguage = .english) -> AsyncThrowingStream<SummaryProgress, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                let whole = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                let total = whole.count
+                let instructions = summarizeInstructions(language)
+                do {
+                    guard total > singlePassCharacters else {
+                        let source = await fitting(Substring(whole), tokens: textTokens(beside: summaryResponseTokens))
+                        let read = source.count
+                        let prompt = """
+                        SOURCE TEXT ("\(title)"):
+                        \(source)
+
+                        TASK: Summarize this source text faithfully IN \(language.promptName), in a few short paragraphs: \
+                        its main points, in its own emphasis, nothing added.
+                        """
+                        let options = GenerationOptions(maximumResponseTokens: summaryResponseTokens)
+                        for try await snapshot in streamSummarizeTask(instructions: instructions, prompt: prompt, options: options) {
+                            continuation.yield(SummaryProgress(text: snapshot, read: read, total: total, stoppedShort: read < total))
+                        }
+                        continuation.finish()
+                        return
+                    }
+
+                    var rest = Substring(whole)
+                    var paragraphs: [String] = []
+                    var part = 0
+                    var partSize = partCharacters
+                    var failedPart = false
+                    // A part counts as read once its first words arrive (the model has been through
+                    // it by then), so the bar moves with the reading and not a paragraph behind it.
+                    func progress(writing: String? = nil, isReading: Bool = false, reading: Int = 0) -> SummaryProgress {
+                        SummaryProgress(text: (paragraphs + (writing.map { [$0] } ?? [])).joined(separator: "\n\n"),
+                                        read: total - rest.count + reading, total: total, isReading: isReading)
+                    }
+                    while !rest.isEmpty, part < maximumParts, !failedPart {
+                        try Task.checkCancellation()
+                        if part > 0 { continuation.yield(progress(isReading: true)) }
+                        let target = part == 0 ? firstPartCharacters : partSize
+                        // A short remainder is read with this part, never left as a scrap of its own.
+                        var piece = rest.count <= target + target / 4 ? rest : head(of: rest, limit: target)
+                        piece = await fitting(piece, tokens: textTokens(beside: partResponseTokens))
+                        var paragraph = ""
+                        var retriedShorter = false
+                        while true {
+                            let place = part == 0 ? "the opening passage" : piece.endIndex == rest.endIndex ? "the closing passage" : "a later passage"
+                            let prompt = """
+                            SOURCE TEXT ("\(title)", \(place) of a long text that is being read in order):
+                            \(piece)
+
+                            TASK: Summarize this passage faithfully IN \(language.promptName), in one short paragraph: its main \
+                            points, in its own emphasis and in your own words, saying who said or did each thing. Quote \
+                            nothing at length. Nothing added, no introduction, no conclusion, no remark on what the \
+                            text leaves out, and do not call it a passage or a part.
+                            """
+                            do {
+                                let options = GenerationOptions(maximumResponseTokens: partResponseTokens)
+                                for try await snapshot in streamSummarizeTask(instructions: instructions, prompt: prompt, options: options) {
+                                    paragraph = snapshot
+                                    continuation.yield(progress(writing: snapshot, reading: piece.count))
+                                }
+                            } catch {
+                                // Denser than the sizes allow for: once, three fifths of the part.
+                                if !retriedShorter, paragraph.isEmpty, isContextOverflow(error) {
+                                    retriedShorter = true
+                                    piece = head(of: piece, limit: piece.count * 3 / 5)
+                                    continue
+                                }
+                                // Nothing written at all is the summary's failure; a later part that
+                                // cannot be read ends the summary where the reading stopped.
+                                if paragraphs.isEmpty, paragraph.isEmpty { throw error }
+                                failedPart = true
+                            }
+                            break
+                        }
+                        let written = wholeSentences(paragraph)
+                        if !written.isEmpty { paragraphs.append(written) }
+                        if failedPart, written.isEmpty { break }
+                        rest = rest[piece.endIndex...].drop(while: \.isWhitespace)
+                        part += 1
+                        if part == 1 {
+                            // What is left, shared evenly over the parts it takes.
+                            let parts = max(1, min(maximumParts - 1, (rest.count + partCharacters - 1) / partCharacters))
+                            partSize = min(partCharactersCeiling, rest.count / parts + 200)
+                        }
+                        continuation.yield(progress())
+                    }
+                    var last = progress()
+                    last.stoppedShort = !rest.isEmpty
+                    continuation.yield(last)
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    /// The passages of `text` a question is answered from when the whole of it is longer than
+    /// `limit` characters: the ones that share the most of the question's own words, in the text's
+    /// order, with "[...]" where text between them is left out. The opening of the text when the
+    /// question names nothing in it ("what is the main point?").
+    static func passages(of text: String, for question: String, limit: Int) -> String {
+        let whole = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard whole.count > limit else { return whole }
+        let opening = String(head(of: Substring(whole), limit: limit))
+        let terms = Set(AskAILexicon.fold(question).split(separator: " ").map(String.init)
+            .filter { $0.count >= 3 && !AskAILexicon.stopWords.contains($0) })
+        guard !terms.isEmpty else { return opening }
+        // A word counts when the passage has it, or a word that begins as it does ("fasting", "fasts").
+        let stems = terms.map { $0.count > 5 ? String($0.prefix($0.count - 2)) : $0 }
+
+        var blocks: [(text: Substring, score: Int)] = []
+        var rest = Substring(whole)
+        while !rest.isEmpty {
+            let block = head(of: rest, limit: 900)
+            let words = AskAILexicon.fold(String(block)).split(separator: " ")
+            let score = stems.reduce(0) { total, stem in total + (words.contains { $0.hasPrefix(stem) } ? 1 : 0) }
+            blocks.append((block, score))
+            rest = rest[block.endIndex...]
+        }
+        guard blocks.contains(where: { $0.score > 0 }) else { return opening }
+
+        // The best passages first, each with the one after it (an answer often runs on), until the
+        // room is used; then put back in the text's order.
+        var chosen = Set<Int>()
+        var used = 0
+        for index in blocks.indices.sorted(by: { (blocks[$0].score, -$0) > (blocks[$1].score, -$1) }) where blocks[index].score > 0 {
+            for candidate in [index, index + 1] where blocks.indices.contains(candidate) && !chosen.contains(candidate) {
+                guard used + blocks[candidate].text.count <= limit else { continue }
+                chosen.insert(candidate)
+                used += blocks[candidate].text.count
+            }
+        }
+        guard !chosen.isEmpty else { return opening }
+        var out = ""
+        var previous: Int?
+        for index in chosen.sorted() {
+            if let previous, index != previous + 1 { out += "\n[...]\n" } else if previous == nil, index > 0 { out += "[...]\n" }
+            out += blocks[index].text
+            previous = index
+        }
+        return out.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Stream the answer to a question about ONE text of any length (the twin of `streamTextSummary`):
+    /// grounded on the whole text when it fits beside the conversation, else on the passages of it
+    /// that bear on the question, with the summary written earlier for orientation.
+    @available(iOS 26.0, *)
+    static func streamTextFollowUp(title: String, text: String, summary: String, transcript: [SummarizeTurn],
+                                   question: String, language: SummaryLanguage = .english) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                // The last few turns, clipped: the text is what an answer comes from.
+                let recent = transcript.suffix(4).map { turn in
+                    "Q: \(String(turn.question.prefix(300)))\nA: \(String(turn.answer.prefix(500)))"
+                }.joined(separator: "\n")
+                let conversation = recent.isEmpty ? "" : "\nCONVERSATION SO FAR:\n\(recent)\n"
+                let asked = String(question.prefix(600))
+                let whole = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                let overview = String(head(of: Substring(summary.trimmingCharacters(in: .whitespacesAndNewlines)), limit: 1_200))
+
+                func prompt(sourceLimit: Int) -> String {
+                    let source = passages(of: whole, for: asked, limit: sourceLimit)
+                    guard source.count < whole.count else {
+                        return """
+                        SOURCE TEXT ("\(title)"):
+                        \(source)
+                        \(conversation)
+                        QUESTION: \(asked)
+
+                        Answer IN \(language.promptName), only from the source text above.
+                        """
+                    }
+                    return """
+                    SOURCE TEXT ("\(title)": the passages of a long text that bear on the question, with [...] where \
+                    text between them is left out):
+                    \(source)
+
+                    A SUMMARY OF THE WHOLE TEXT, written earlier (for orientation only):
+                    \(overview)
+                    \(conversation)
+                    QUESTION: \(asked)
+
+                    Answer IN \(language.promptName), only from the passages above and the summary. If they do not \
+                    cover what is asked, say that the part of the text you were given does not address it.
+                    """
+                }
+
+                // Sized in characters for the dense case, then measured where the tokenizer can be
+                // asked: the passages give way, never the question or the conversation.
+                let tokens = textTokens(beside: followUpResponseTokens)
+                let fixed = conversation.count + asked.count + overview.count
+                var limit = max(1_500, Int(Double(tokens) * 2.7) - fixed)
+                var request = prompt(sourceLimit: limit)
+                if #available(iOS 26.4, *) {
+                    for _ in 0..<2 {
+                        guard let count = try? await AskAIEngine.onDeviceModel.tokenCount(for: request), count > tokens else { break }
+                        limit = max(1_000, Int(Double(limit) * Double(tokens) / Double(count) * 0.92))
+                        request = prompt(sourceLimit: limit)
+                    }
+                }
+                do {
+                    let options = GenerationOptions(maximumResponseTokens: followUpResponseTokens)
+                    for try await snapshot in streamSummarizeTask(instructions: summarizeInstructions(language), prompt: request, options: options) {
+                        continuation.yield(snapshot)
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    // MARK: - Loading the model ahead
+
+    /// Loads the model as the Summarize sheet rises, so it comes into memory while the sheet opens
+    /// (and, for a gatherer, while the texts are fetched). Cheap when it is already there; at most
+    /// once every 45 seconds either way.
+    ///
+    /// Only there. For a day (2026-11-25) the model was also loaded when a tafsir or a surah's
+    /// background opened, for a reader who had summarized lately, which took the first word of a
+    /// launch's first summary from 4 seconds to 1.3. Taken out the same day: Abu's complaint was the
+    /// phone lagging while the model works, and a model that starts working on a screen where nobody
+    /// asked for it is that, for the sake of a wait he had not complained about.
+    @available(iOS 26.0, *)
+    static func prewarmSummaries() {
+        guard isAvailable else { return }
+        let now = CFAbsoluteTimeGetCurrent()
+        guard now - lastSummaryPrewarm > 45 else { return }
+        lastSummaryPrewarm = now
+        LanguageModelSession(model: AskAIEngine.onDeviceModel, instructions: summarizeInstructions(.english)).prewarm()
+    }
+
+    nonisolated(unsafe) private static var lastSummaryPrewarm: CFAbsoluteTime = 0
 
     /// One labeled section of a multi-source summarize (e.g. "Tafsir Ibn Kathir (English)" + its text).
     struct SummarizeSection {
@@ -384,21 +738,17 @@ enum OnDeviceAsk {
                     // met on the iOS 26.5 simulator while Ask AI, already permissive, answered).
                     let session = LanguageModelSession(model: AskAIEngine.onDeviceModel, instructions: instructions)
                     #if DEBUG
-                    // `-summaryProbe`: what the prompt really costs against the model's window.
-                    if ProcessInfo.processInfo.arguments.contains("-summaryProbe") {
-                        var counted = "n/a"
-                        if #available(iOS 26.4, *) {
-                            let promptTokens = try? await AskAIEngine.onDeviceModel.tokenCount(for: prompt)
-                            let ruleTokens = try? await AskAIEngine.onDeviceModel.tokenCount(for: Instructions(instructions))
-                            counted = "prompt \(promptTokens ?? -1) + instructions \(ruleTokens ?? -1)"
-                        }
-                        NSLog("SUMMARYPROBE prompt chars=%d tokens=%@ window=%d", prompt.count, counted,
-                              AskAIEngine.onDeviceModel.contextSize)
-                    }
+                    let began = CFAbsoluteTimeGetCurrent()
+                    var firstWord: CFAbsoluteTime?
+                    var written = 0
                     #endif
                     let stream = session.streamResponse(to: prompt, options: options)
                     for try await partial in stream {
                         if Task.isCancelled { break }
+                        #if DEBUG
+                        if firstWord == nil { firstWord = CFAbsoluteTimeGetCurrent() }
+                        written = partial.content.count
+                        #endif
                         if let cut = repetitionCutoff(in: partial.content) {
                             let kept = String(partial.content[..<cut]).trimmingCharacters(in: .whitespacesAndNewlines)
                             continuation.yield(kept)
@@ -406,6 +756,22 @@ enum OnDeviceAsk {
                         }
                         continuation.yield(partial.content)
                     }
+                    #if DEBUG
+                    // `-summaryProbe`: one line per request, with what the prompt really cost against
+                    // the model's window (counted after the answer, so it adds nothing to the wait).
+                    if ProcessInfo.processInfo.arguments.contains("-summaryProbe") {
+                        let now = CFAbsoluteTimeGetCurrent()
+                        var counted = "n/a"
+                        if #available(iOS 26.4, *) {
+                            let promptTokens = try? await AskAIEngine.onDeviceModel.tokenCount(for: prompt)
+                            let ruleTokens = try? await AskAIEngine.onDeviceModel.tokenCount(for: Instructions(instructions))
+                            counted = "\(promptTokens ?? -1)+\(ruleTokens ?? -1)"
+                        }
+                        NSLog("SUMMARYPROBE request chars=%d tokens=%@ window=%d wait=%.2fs total=%.2fs wrote=%d counting=%.2fs", prompt.count,
+                              counted, AskAIEngine.onDeviceModel.contextSize, (firstWord ?? now) - began, now - began, written,
+                              CFAbsoluteTimeGetCurrent() - now)
+                    }
+                    #endif
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)

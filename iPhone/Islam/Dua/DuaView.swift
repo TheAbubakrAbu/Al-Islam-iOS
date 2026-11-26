@@ -251,6 +251,12 @@ struct DuaView: View {
     @State private var barsCollapsed = false
     /// The collection row a result asked to scroll to ("Scroll To Collection"), consumed once the search clears.
     @State private var scrollTarget: String?
+    #if os(iOS)
+    /// The collections as tiles or as rows: this screen's own choice, a grid until it is changed
+    /// (Abu, 2026-11-26: "Support grid mode for dua and Hisn al Muslim"; 2026-11-15: "Use grid mode
+    /// everywhere default"). The duas themselves are passages and stay rows in both.
+    @AppStorage("duaGridMode") private var gridMode = true
+    #endif
 
     /// The collections with their referenced duas' words filled in (`DuaLibrary`). The screen reads
     /// them through the library, never from the authored literals, so a dua written as a reference
@@ -564,60 +570,17 @@ struct DuaView: View {
                         #endif
                     }
 
-                    ForEach(shownCollections) { collection in
-                        NavigationLink {
-                            LazyDestination {
-                                DuaCollectionView(collection: collection)
-                            }
-                        } label: {
-                            // The app's door row: an accent chip for the icon, the title and its
-                            // subtitle, and the collection's size as the count pill every counted row
-                            // wears - so the shelf reads as a set of books rather than a plain menu.
-                            // Title and subtitle are the collection's English DATA (its id, its search
-                            // text, the on-device model's source line): translated here only.
-                            SettingsRowLabel(
-                                title: collection.displayTitle,
-                                systemImage: collection.systemImage,
-                                subtitle: collection.subtitle.localizedDisplay,
-                                accessory: AnyView(CountPill(count: collection.items.count)),
-                                subtitleLineLimit: 2
-                            )
-                        }
-                        .id(Self.collectionRowID(collection))
-                        #if os(iOS)
-                        .contextMenu {
-                            Text(collection.displayTitle)
-                                .foregroundStyle(.secondary)
-
-                            if !query.isEmpty {
-                                Button {
-                                    settings.hapticFeedback()
-                                    scrollToCollection(collection)
-                                } label: {
-                                    Label("Scroll To Collection", systemImage: "arrow.down.circle")
-                                }
-                            }
-
-                            Button {
-                                settings.hapticFeedback()
-                                UIPasteboard.general.string = collection.displayTitle
-                            } label: {
-                                Label("Copy Title", systemImage: "doc.on.doc")
-                            }
-                        }
-                        .swipeActions(edge: .trailing) {
-                            if !query.isEmpty {
-                                Button {
-                                    settings.hapticFeedback()
-                                    scrollToCollection(collection)
-                                } label: {
-                                    Image(systemName: "arrow.down.circle")
-                                }
-                                .tint(.secondary)
-                            }
-                        }
-                        #endif
+                    #if os(iOS)
+                    // Tiles while nothing is typed; a search filters ROWS in place, as search
+                    // results are rows everywhere.
+                    if gridMode, query.isEmpty {
+                        collectionTiles(shownCollections)
+                    } else {
+                        collectionRows(shownCollections, query: query)
                     }
+                    #else
+                    collectionRows(shownCollections, query: query)
+                    #endif
                 } header: {
                     HStack {
                         Text("DUA COLLECTIONS")
@@ -763,6 +726,9 @@ struct DuaView: View {
         #endif
         .navigationTitle("Dua & Supplications")
         #if os(iOS)
+        // The grid toggle, then the Islam Settings gear, in ONE toolbar (see `IslamSettingsToolbar`
+        // for why a screen with a button of its own places the gear itself).
+        .islamSettingsToolbar { DuaGridModeButton(gridMode: $gridMode) }
         .task {
             // The referenced duas' words, from the app's own Quran and hadith shelf.
             library.load()
@@ -803,6 +769,98 @@ struct DuaView: View {
         }
     }
 
+    /// The collections as the door rows they have always been.
+    @ViewBuilder
+    private func collectionRows(_ shown: [DuaCollection], query: String) -> some View {
+        ForEach(shown) { collection in
+            NavigationLink {
+                LazyDestination {
+                    DuaCollectionView(collection: collection)
+                }
+            } label: {
+                // The app's door row: an accent chip for the icon, the title and its
+                // subtitle, and the collection's size as the count pill every counted row
+                // wears - so the shelf reads as a set of books rather than a plain menu.
+                // Title and subtitle are the collection's English DATA (its id, its search
+                // text, the on-device model's source line): translated here only.
+                SettingsRowLabel(
+                    title: collection.displayTitle,
+                    systemImage: collection.systemImage,
+                    subtitle: collection.subtitle.localizedDisplay,
+                    // Its own width, always: beside a two-line caption the row squeezed the
+                    // pill until a two-figure count stood one figure over the other ("1 / 1").
+                    accessory: AnyView(CountPill(count: collection.items.count).fixedSize()),
+                    subtitleLineLimit: 2
+                )
+            }
+            .id(Self.collectionRowID(collection))
+            #if os(iOS)
+            .contextMenu {
+                Text(collection.displayTitle)
+                    .foregroundStyle(.secondary)
+
+                if !query.isEmpty {
+                    Button {
+                        settings.hapticFeedback()
+                        scrollToCollection(collection)
+                    } label: {
+                        Label("Scroll To Collection", systemImage: "arrow.down.circle")
+                    }
+                }
+
+                Button {
+                    settings.hapticFeedback()
+                    UIPasteboard.general.string = collection.displayTitle
+                } label: {
+                    Label("Copy Title", systemImage: "doc.on.doc")
+                }
+            }
+            .swipeActions(edge: .trailing) {
+                if !query.isEmpty {
+                    Button {
+                        settings.hapticFeedback()
+                        scrollToCollection(collection)
+                    } label: {
+                        Image(systemName: "arrow.down.circle")
+                    }
+                    .tint(.secondary)
+                }
+            }
+            #endif
+        }
+    }
+
+    #if os(iOS)
+    /// The collection grid's columns, on every width.
+    private static let collectionGridColumns = 2
+
+    /// A collection grid row's id: the index of its first tile.
+    private static func collectionGridRowID(_ start: Int) -> String { "collection_row_\(start)" }
+
+    /// The collections as tiles, one grid row per List row (`tileGridChunk`), each with an id
+    /// "Scroll To Collection" can land on. A tile pushes through the screen's one door state: a link
+    /// per tile would push every tile of its row at once.
+    @ViewBuilder
+    private func collectionTiles(_ shown: [DuaCollection]) -> some View {
+        let chunk = tileGridChunk(columns: Self.collectionGridColumns)
+        ForEach(Array(stride(from: 0, to: shown.count, by: chunk)), id: \.self) { start in
+            SummaryTileGrid(columns: Self.collectionGridColumns) {
+                ForEach(shown[start..<min(start + chunk, shown.count)]) { collection in
+                    DuaShelfTile(title: collection.displayTitle,
+                                 systemImage: collection.systemImage,
+                                 caption: collection.subtitle.localizedDisplay,
+                                 count: collection.items.count) {
+                        // One door at a time: the About card's push is the List's other destination.
+                        if aboutDoor == nil, hisnCardDoor == nil { hisnCardDoor = .collection(collection) }
+                    }
+                }
+            }
+            .tileGridChunkRow(start: start, count: shown.count, chunk: chunk)
+            .id(Self.collectionGridRowID(start))
+        }
+    }
+    #endif
+
     /// The row id of a collection in the root list.
     private static func collectionRowID(_ collection: DuaCollection) -> String { "collection_\(collection.id)" }
 
@@ -816,6 +874,15 @@ struct DuaView: View {
 
     private func scrollToCollection(_ collection: DuaCollection) {
         withAnimation { searchText = "" }
+        #if os(iOS)
+        // With the search cleared the collections are tiles again in grid mode: land on the grid
+        // row that holds this one.
+        if gridMode, let index = collections.firstIndex(where: { $0.id == collection.id }) {
+            let chunk = tileGridChunk(columns: Self.collectionGridColumns)
+            scrollTarget = Self.collectionGridRowID(index - index % chunk)
+            return
+        }
+        #endif
         scrollTarget = Self.collectionRowID(collection)
     }
 }
@@ -1568,6 +1635,163 @@ struct HisnDuaAudioButton: View {
     }
 }
 
+// MARK: - Grid mode
+
+/// The grid / list button the Dua screens put in their toolbar, before the Islam Settings gear: the
+/// one the 99 Names, the Alphabet and a hadith book carry (Abu, 2026-11-26: "Support grid mode for
+/// dua and Hisn al Muslim"). Each screen owns its choice, a grid until it is changed, as everywhere.
+struct DuaGridModeButton: View {
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @Binding var gridMode: Bool
+
+    var body: some View {
+        Button {
+            Settings.shared.hapticFeedback()
+            withAnimation { gridMode.toggle() }
+        } label: {
+            Image(systemName: gridMode ? "list.bullet" : "square.grid.2x2")
+        }
+        .accessibilityLabel(gridMode ? String(localized: "Show list") : String(localized: "Show grid"))
+        .tint(Settings.shared.accentColor.accent2)
+    }
+}
+
+/// A shelf of duas as a grid tile (a collection on the Dua screen, one of Hisn al-Muslim's shelves of
+/// the day): the row's own chip, title, caption and count, stacked and centred like every tile that
+/// is not a passage. A tap opens it, a hold offers the row's menu.
+struct DuaShelfTile: View {
+    let title: String
+    let systemImage: String
+    let caption: String?
+    let count: Int
+    /// Lines the caption may take: a collection's is a sentence, a shelf's its name in Arabic.
+    var captionLines = 3
+    let open: () -> Void
+
+    var body: some View {
+        GridTileMenu {
+            Settings.shared.hapticFeedback()
+            open()
+        } menu: {
+            DuaTileMenuItems(title: title)
+        } label: {
+            VStack(spacing: 5) {
+                AccentIconChip(systemImage: systemImage, size: 32)
+
+                Text(title)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+
+                if let caption, !caption.isEmpty {
+                    Text(caption)
+                        .font(.caption2)
+                        .foregroundColor(.secondaryOnGlass)
+                        .lineLimit(captionLines)
+                }
+            }
+            .multilineTextAlignment(.center)
+            // Its lines are the tile's height: a row of tiles is as tall as its tallest (the grid's
+            // own rule) and each fills it from the top, so a caption is never squeezed to fit a
+            // fixed box and the chips of a row stand level whatever their captions run to.
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 8)
+            // The count in the trailing corner, where the row keeps it. A bare figure, as a tile
+            // writes its counts (a hadith chapter's): three across, the row's pill sat on the chip.
+            .overlay(alignment: .topTrailing) {
+                Text("\(count)")
+                    .font(.caption2.weight(.semibold).monospacedDigit())
+                    .foregroundColor(.secondaryOnGlass)
+                    .padding(.top, 9)
+                    .padding(.trailing, 11)
+                    .hiddenInSimple(.sectionCounts)
+            }
+            .contentShape(Rectangle())
+        }
+        .contentSurface(clear: true, rectangle: true, inRow: true)
+    }
+}
+
+/// One of Hisn al-Muslim's 132 situations as a grid tile: its number and its count in the corners
+/// the row keeps them at, the title on as many lines as it needs (half of them run past thirty
+/// letters), the book's own Arabic chapter title beneath.
+struct HisnSituationTile: View {
+    @Environment(\.appearance) private var appearance
+    let category: HisnDuasStore.Category
+    let open: () -> Void
+
+    var body: some View {
+        GridTileMenu {
+            Settings.shared.hapticFeedback()
+            open()
+        } menu: {
+            DuaTileMenuItems(title: category.displayLabel)
+        } label: {
+            VStack(spacing: 3) {
+                HStack {
+                    Text(category.number.localizedDigits)
+                        .font(.caption.weight(.bold).monospacedDigit())
+                        .foregroundColor(appearance.accent)
+
+                    Spacer(minLength: 4)
+
+                    Text("\(category.count)")
+                        .font(.caption2.weight(.semibold).monospacedDigit())
+                        .foregroundColor(.secondaryOnGlass)
+                        .hiddenInSimple(.sectionCounts)
+                }
+
+                Spacer(minLength: 0)
+
+                Text(category.displayLabel)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(4)
+                    .minimumScaleFactor(0.85)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                // The Arabic title once: in the Arabic interface it IS the title.
+                if category.displayLabel != category.arabic, !category.arabic.isEmpty {
+                    Text(category.arabic)
+                        .font(.caption)
+                        .foregroundColor(.secondaryOnGlass)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .frame(minHeight: 78)
+            .contentShape(Rectangle())
+        }
+        .contentSurface(clear: true, rectangle: true, inRow: true)
+    }
+}
+
+/// What a dua tile's hold offers: its name, and the name to copy (the collection row's own menu).
+private struct DuaTileMenuItems: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .foregroundStyle(.secondary)
+
+        Button {
+            Settings.shared.hapticFeedback()
+            UIPasteboard.general.string = title
+        } label: {
+            Label("Copy Title", systemImage: "doc.on.doc")
+        }
+    }
+}
+
 /// The library's root: the 14 collections of the day, then every situation the book covers.
 struct HisnDuaLibraryView: View {
     private let settings = Settings.shared
@@ -1584,6 +1808,24 @@ struct HisnDuaLibraryView: View {
     @State private var shownCategories: [HisnDuasStore.Category] = HisnDuasStore.shared.libraryIfLoaded?.categories ?? []
     @State private var shownMatches: [HisnDuasStore.Entry] = []
     @State private var filterTask: Task<Void, Never>?
+    /// The shelves and the situations as tiles or as rows: this screen's own choice, a grid until
+    /// it is changed (Abu, 2026-11-26: "Support grid mode for dua and Hisn al Muslim").
+    @AppStorage("hisnGridMode") private var gridMode = true
+    /// The shelf or situation a tile opened. One door for the whole grid: a link per tile would
+    /// push every tile of its row at once.
+    @State private var pushedCollection: DuaCollection?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// Tiles while nothing is typed; a search shows ROWS, as search results are everywhere.
+    private var showsGrid: Bool { gridMode && query.isEmpty }
+    /// The shelves of the day run three across like the Islam tab's resources (their names are a
+    /// word or two), two at the accessibility sizes.
+    private var shelfColumns: Int { dynamicTypeSize.isAccessibilitySize ? 2 : 3 }
+    /// The situations' columns, on every width: their names are sentences.
+    private static let situationColumns = 2
+    /// A situation grid row's id, where the situation rail lands in grid mode: the index of its
+    /// first tile.
+    private static func situationGridRowID(_ start: Int) -> String { "hisn-situation-row-\(start)" }
 
     private var accent: Color { settings.accentColor.color }
     private var query: String {
@@ -1642,15 +1884,19 @@ struct HisnDuaLibraryView: View {
                         }
 
                         Section(header: SectionPillHeader(title: String(localized: "THROUGH THE DAY"), count: library.collections.count)) {
-                            ForEach(library.collections) { shelf in
-                                NavigationLink(destination: LazyDestination { DuaCollectionView(collection: Self.collection(for: shelf, library: library)) }) {
-                                    // The Arabic title once: in the Arabic interface it IS the title.
-                                    SettingsRowLabel(
-                                        title: shelf.displayLabel,
-                                        systemImage: shelf.systemImage,
-                                        subtitle: shelf.displayLabel != shelf.arabic ? shelf.arabic : nil,
-                                        accessory: AnyView(CountPill(count: shelf.entryIDs.count))
-                                    )
+                            if showsGrid {
+                                shelfTiles(library)
+                            } else {
+                                ForEach(library.collections) { shelf in
+                                    NavigationLink(destination: LazyDestination { DuaCollectionView(collection: Self.collection(for: shelf, library: library)) }) {
+                                        // The Arabic title once: in the Arabic interface it IS the title.
+                                        SettingsRowLabel(
+                                            title: shelf.displayLabel,
+                                            systemImage: shelf.systemImage,
+                                            subtitle: shelf.displayLabel != shelf.arabic ? shelf.arabic : nil,
+                                            accessory: AnyView(CountPill(count: shelf.entryIDs.count))
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1684,29 +1930,33 @@ struct HisnDuaLibraryView: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
-                        // Identified by the rail's row id: an `.id` on the link itself never
-                        // reached the List, so a jump to it did nothing.
-                        ForEach(categories, id: \.railRowID) { category in
-                            NavigationLink(destination: LazyDestination { DuaCollectionView(collection: Self.collection(for: category, library: library)) }) {
-                                HStack(spacing: 10) {
-                                    Text(category.number.localizedDigits)
-                                        .font(.caption2.weight(.semibold).monospacedDigit())
-                                        .foregroundStyle(.secondary)
-                                        .frame(width: 30, alignment: .leading)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        HighlightedSnippet(source: category.displayLabel, term: searchText, font: .subheadline, accent: accent, fg: .primary)
-                                        // The Arabic title once, in the Arabic interface.
-                                        if category.displayLabel != category.arabic {
-                                            Text(category.arabic)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
+                        if showsGrid {
+                            situationTiles(categories, library: library)
+                        } else {
+                            // Identified by the rail's row id: an `.id` on the link itself never
+                            // reached the List, so a jump to it did nothing.
+                            ForEach(categories, id: \.railRowID) { category in
+                                NavigationLink(destination: LazyDestination { DuaCollectionView(collection: Self.collection(for: category, library: library)) }) {
+                                    HStack(spacing: 10) {
+                                        Text(category.number.localizedDigits)
+                                            .font(.caption2.weight(.semibold).monospacedDigit())
+                                            .foregroundStyle(.secondary)
+                                            .frame(width: 30, alignment: .leading)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            HighlightedSnippet(source: category.displayLabel, term: searchText, font: .subheadline, accent: accent, fg: .primary)
+                                            // The Arabic title once, in the Arabic interface.
+                                            if category.displayLabel != category.arabic {
+                                                Text(category.arabic)
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
                                         }
+                                        Spacer(minLength: 8)
+                                        Text("\(category.count)")
+                                            .font(.caption2.weight(.semibold).monospacedDigit())
+                                            .foregroundStyle(.secondary)
+                                            .hiddenInSimple(.sectionCounts)
                                     }
-                                    Spacer(minLength: 8)
-                                    Text("\(category.count)")
-                                        .font(.caption2.weight(.semibold).monospacedDigit())
-                                        .foregroundStyle(.secondary)
-                                        .hiddenInSimple(.sectionCounts)
                                 }
                             }
                         }
@@ -1735,8 +1985,12 @@ struct HisnDuaLibraryView: View {
         .applyConditionalListStyle(disableNowPlayingInset: true)
         .compactListSectionSpacing()
         #if os(iOS)
-        .jumpIndexRail(railItems, accessibilityName: String(localized: "Situation index"), proxy: proxy) { item in
-            shownCategories.indices.contains(item.id) ? shownCategories[item.id].railRowID : nil
+        .jumpIndexRail(railItems, accessibilityName: String(localized: "Situation index"), proxy: proxy) { item -> String? in
+            guard shownCategories.indices.contains(item.id) else { return nil }
+            let chunk = tileGridChunk(columns: Self.situationColumns)
+            return showsGrid
+                ? Self.situationGridRowID(item.id - item.id % chunk)
+                : shownCategories[item.id].railRowID
         }
         #endif
         }
@@ -1748,11 +2002,55 @@ struct HisnDuaLibraryView: View {
         }
         .navigationTitle("Hisn al-Muslim")
         .navigationBarTitleDisplayMode(.inline)
+        // The grid toggle, then the Islam Settings gear: a hadith book's chapters carry the same pair.
+        .islamSettingsToolbar { DuaGridModeButton(gridMode: $gridMode) }
+        .pushDestination(item: $pushedCollection) { DuaCollectionView(collection: $0) }
         .onChange(of: searchText) { _ in scheduleFilter() }
         .task {
             guard library == nil else { return }
             library = await Task.detached(priority: .userInitiated) { HisnDuasStore.shared.loaded() }.value
             applyFilter()
+        }
+    }
+
+    /// The shelves of the day as tiles, one grid row per List row (`tileGridChunk`).
+    @ViewBuilder
+    private func shelfTiles(_ library: HisnDuasStore.Library) -> some View {
+        let shelves = library.collections
+        let columns = shelfColumns
+        let chunk = tileGridChunk(columns: columns)
+        ForEach(Array(stride(from: 0, to: shelves.count, by: chunk)), id: \.self) { start in
+            SummaryTileGrid(columns: columns) {
+                ForEach(shelves[start..<min(start + chunk, shelves.count)]) { shelf in
+                    DuaShelfTile(title: shelf.displayLabel,
+                                 systemImage: shelf.systemImage,
+                                 // The Arabic title once: in the Arabic interface it IS the title.
+                                 caption: shelf.displayLabel != shelf.arabic ? shelf.arabic : nil,
+                                 count: shelf.entryIDs.count,
+                                 captionLines: 1) {
+                        if pushedCollection == nil { pushedCollection = Self.collection(for: shelf, library: library) }
+                    }
+                }
+            }
+            .tileGridChunkRow(start: start, count: shelves.count, chunk: chunk)
+        }
+    }
+
+    /// Every situation as a tile, one grid row per List row, each row with an id the situation
+    /// rail lands on (a tile's own id is unknown to the List until its row is built).
+    @ViewBuilder
+    private func situationTiles(_ categories: [HisnDuasStore.Category], library: HisnDuasStore.Library) -> some View {
+        let chunk = tileGridChunk(columns: Self.situationColumns)
+        ForEach(Array(stride(from: 0, to: categories.count, by: chunk)), id: \.self) { start in
+            SummaryTileGrid(columns: Self.situationColumns) {
+                ForEach(categories[start..<min(start + chunk, categories.count)]) { category in
+                    HisnSituationTile(category: category) {
+                        if pushedCollection == nil { pushedCollection = Self.collection(for: category, library: library) }
+                    }
+                }
+            }
+            .tileGridChunkRow(start: start, count: categories.count, chunk: chunk)
+            .id(Self.situationGridRowID(start))
         }
     }
 

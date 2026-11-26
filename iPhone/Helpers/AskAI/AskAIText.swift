@@ -235,22 +235,41 @@ enum AskAIText {
 
     /// The model sometimes copies the prompt's SOURCES block into its answer ("[1] How to Make
     /// Wudhu (Al-Islam's own article...): ..."): a line that opens with a marker followed by that
-    /// source's reference or title is a copied source line, and goes.
+    /// source's reference or title AND then its provenance is a copied source line, and goes.
+    ///
+    /// A line that opens "[1] Jami` at-Tirmidhi 1956, “Your smiling in the face of your brother is
+    /// charity...”" is not one: it is the model saying where a passage is and quoting it, which a
+    /// reader looking for a passage is told to expect (`AskAIPrompt.findTask`). It was dropped as a
+    /// copy, and the answer to "is there a hadith about smiling being charity?" lost the hadith
+    /// (2026-11-25). Such a line stays, its marker moved to the end, where a citation goes.
     static func droppingSourceEchoes(_ text: String, sources: [AskAISource]) -> String {
         guard !sources.isEmpty, !text.isEmpty else { return text }
-        /// Whether the text right after a "[n]" marker is that source's own reference, title or
-        /// provenance: the mark of a copied source line rather than a citation.
-        func namesSource(_ n: Int, after rest: String) -> Bool {
+        enum Opening { case other, named, copied }
+        /// What the text right after a "[n]" marker is: that source's line from the prompt (its
+        /// reference or title followed by the provenance in parentheses, or the provenance itself),
+        /// the source merely named, or neither.
+        func opening(_ n: Int, after rest: String) -> Opening {
             // `n > 0` first: a reply line "[-9223372036854775808]" reads as Int.min, and `n - 1` trapped.
-            guard n > 0, sources.indices.contains(n - 1) else { return false }
+            guard n > 0, sources.indices.contains(n - 1) else { return .other }
             var rest = rest.trimmingCharacters(in: .whitespaces)
-            if rest.hasPrefix("subject of the question:") { rest = String(rest.dropFirst(24)).trimmingCharacters(in: .whitespaces) }
+            var marked = false
+            if rest.hasPrefix("subject of the question:") {
+                rest = String(rest.dropFirst(24)).trimmingCharacters(in: .whitespaces)
+                marked = true
+            }
             let source = sources[n - 1]
             let head = String(rest.prefix(140))
-            let names = [source.reference.lowercased(), source.title.lowercased()]
-                + source.provenance.map { String($0.lowercased().prefix(28)) }
-            return names.contains(where: { $0.count >= 4 && head.hasPrefix($0) })
+            if source.provenance.contains(where: { $0.count >= 4 && head.hasPrefix($0.lowercased().prefix(28)) }) { return .copied }
+            for name in [source.reference.lowercased(), source.title.lowercased()] where name.count >= 4 && head.hasPrefix(name) {
+                let after = head.dropFirst(name.count).trimmingCharacters(in: .whitespaces)
+                // The prompt's own line goes on with the provenance in parentheses (straight to the
+                // text after a colon when the source has none).
+                if marked || after.hasPrefix("(") || (source.provenance.isEmpty && after.hasPrefix(":")) { return .copied }
+                return .named
+            }
+            return .other
         }
+        func namesSource(_ n: Int, after rest: String) -> Bool { opening(n, after: rest) == .copied }
         let paragraphs = text.components(separatedBy: "\n\n")
         var kept: [String] = []
         for paragraph in paragraphs {
@@ -267,14 +286,24 @@ enum AskAIText {
                 if namesSource(n, after: after) { listed += 1 }
             }
             if listed >= 2 { continue }
-            let lines = paragraph.components(separatedBy: "\n").filter { line in
+            let lines: [String] = paragraph.components(separatedBy: "\n").compactMap { line in
                 let trimmed = line.trimmingCharacters(in: .whitespaces).lowercased()
                 // A copied note line: "With [2], the tafsir Ibn Kathir on this verse: ...".
-                if copiedNoteLine(trimmed, sources: sources) { return false }
-                guard let close = trimmed.firstIndex(of: "]"), trimmed.hasPrefix("[") else { return true }
+                if copiedNoteLine(trimmed, sources: sources) { return nil }
+                guard let close = trimmed.firstIndex(of: "]"), trimmed.hasPrefix("[") else { return line }
                 let number = trimmed[trimmed.index(after: trimmed.startIndex)..<close]
-                guard let n = Int(number) else { return true }
-                return !namesSource(n, after: String(trimmed[trimmed.index(after: close)...]))
+                guard let n = Int(number) else { return line }
+                switch opening(n, after: String(trimmed[trimmed.index(after: close)...])) {
+                case .copied: return nil
+                case .other: return line
+                case .named:
+                    // "[1] Sahih Muslim 2766a, “...”" reads as "Sahih Muslim 2766a, “...” [1]".
+                    let original = line.trimmingCharacters(in: .whitespaces)
+                    guard let bracket = original.firstIndex(of: "]") else { return line }
+                    let marker = String(original[...bracket])
+                    let body = original[original.index(after: bracket)...].trimmingCharacters(in: .whitespaces)
+                    return body.contains(marker) ? body : body + " " + marker
+                }
             }
             let joined = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
             if !joined.isEmpty { kept.append(joined) }

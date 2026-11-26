@@ -27,7 +27,11 @@ enum AskAIRetriever {
         /// The article the chat was opened from (its page's Ask AI button): `retrieve(focus:)`.
         case focus
         case quranSemantic, quranKeyword, quranTopics
+        /// The Quran searched by what a verse SAYS, in the reader's own words (`QuranDescribedSearch`).
+        case quranDescribed
         case hadithSemantic, hadithRanked, hadithTopics
+        /// The major collections searched by what a narration SAYS (`HadithDescribedSearch`).
+        case hadithDescribed
         case names, duas
     }
 
@@ -39,6 +43,19 @@ enum AskAIRetriever {
         var ranking: [(reference: String, score: Double)] = []
         var searchText = ""
         var elapsed: TimeInterval = 0
+        /// A passage the reader described and the search is confident it found: how many of the
+        /// leading sources make it up (1, or 2 for a verse and the one beside it). 0 when the
+        /// question looks for none, or nothing carries enough of the description.
+        var passageSources = 0
+        /// Whether the source right after the passage is a second match nearly as close as it (the
+        /// search could not tell the two apart): it is quoted beneath the first, not just named.
+        var hasCloseSecond = false
+        /// The described-passage lanes' own order, best first, for the debug log.
+        var described: [String] = []
+        #if HAS_ADHAN
+        /// What a prayer-times turn asked for (place, day, topics): the next follow-up inherits it.
+        var prayerRequest: AskAIPrayerRequest?
+        #endif
     }
 
     /// The budget for one turn: how many sources, how much of each, how much of a subject text, and
@@ -60,8 +77,8 @@ enum AskAIRetriever {
         var w: [Lane: Double] = [
             .subject: 24, .surahName: 1.6, .carried: 0.6, .prayer: 12, .tips: 0.15, .settings: 0.15, .articles: 1.1,
             .focus: 3.2, .keyEvidence: 8,
-            .quranSemantic: 1.0, .quranKeyword: 0.95, .quranTopics: 0.7,
-            .hadithSemantic: 0.9, .hadithRanked: 0.9, .hadithTopics: 0.85,
+            .quranSemantic: 1.0, .quranKeyword: 0.95, .quranTopics: 0.7, .quranDescribed: 1.0,
+            .hadithSemantic: 0.9, .hadithRanked: 0.9, .hadithTopics: 0.85, .hadithDescribed: 0.95,
             .names: 0.8, .duas: 0.8,
         ]
         func scale(_ lanes: [Lane], _ factor: Double) { for lane in lanes { w[lane, default: 0] *= factor } }
@@ -69,38 +86,58 @@ enum AskAIRetriever {
         case .appHelp:
             w[.tips] = 30
             w[.settings] = 34
-            scale([.articles, .focus, .quranSemantic, .quranKeyword, .quranTopics, .hadithSemantic, .hadithRanked, .hadithTopics, .names, .duas, .surahName, .keyEvidence], 0.05)
+            scale([.articles, .focus, .quranSemantic, .quranKeyword, .quranTopics, .quranDescribed, .hadithSemantic, .hadithRanked, .hadithTopics, .hadithDescribed, .names, .duas, .surahName, .keyEvidence], 0.05)
         case .scripture:
-            scale([.quranSemantic, .quranKeyword, .quranTopics], 1.3)
+            scale([.quranSemantic, .quranKeyword, .quranTopics, .quranDescribed], 1.3)
+            // What scripture says on a subject is what the described-passage search reads best:
+            // it leads the lanes that score the typed words. (Not for a how-to or a ruling, where
+            // the app's own article is the answer: at this weight a narration that merely shares
+            // the question's words outranked the wudhu guide's steps, 2026-11-25.)
+            scale([.quranDescribed, .hadithDescribed], 1.9)
         case .hadith:
-            scale([.hadithSemantic, .hadithRanked, .hadithTopics], 1.5)
-            scale([.quranSemantic, .quranKeyword, .quranTopics], 0.75)
+            scale([.hadithSemantic, .hadithRanked, .hadithTopics, .hadithDescribed], 1.5)
+            scale([.quranSemantic, .quranKeyword, .quranTopics, .quranDescribed], 0.75)
+            scale([.hadithDescribed], 1.9)
         case .define:
             scale([.articles], 1.6)
             scale([.names], 1.3)
         case .story:
             scale([.articles], 1.7)
-            scale([.quranSemantic, .quranKeyword], 1.1)
+            scale([.quranSemantic, .quranKeyword, .quranDescribed], 1.1)
+            scale([.quranDescribed, .hadithDescribed], 1.4)
         case .howTo:
             scale([.articles], 1.8)
-            scale([.hadithRanked, .hadithTopics], 1.15)
+            scale([.hadithRanked, .hadithTopics, .hadithDescribed], 1.15)
         case .ruling:
             scale([.articles], 1.4)
-            scale([.hadithRanked, .hadithSemantic], 1.2)
+            scale([.hadithRanked, .hadithSemantic, .hadithDescribed], 1.2)
         case .dua:
             w[.duas] = 4
             scale([.articles], 0.6)
         case .reference:
-            scale([.quranSemantic, .quranKeyword, .quranTopics, .hadithSemantic, .hadithRanked, .hadithTopics, .articles], 0.55)
+            scale([.quranSemantic, .quranKeyword, .quranTopics, .quranDescribed, .hadithSemantic, .hadithRanked, .hadithTopics, .hadithDescribed, .articles], 0.55)
         case .prayerTimes:
-            scale([.quranSemantic, .quranKeyword, .quranTopics, .hadithSemantic, .hadithRanked, .hadithTopics], 0.5)
+            scale([.quranSemantic, .quranKeyword, .quranTopics, .quranDescribed, .hadithSemantic, .hadithRanked, .hadithTopics, .hadithDescribed], 0.5)
             scale([.articles, .tips], 0.9)
         default:
             break
         }
-        if question.leansQuran, question.intent != .hadith { scale([.quranSemantic, .quranKeyword, .quranTopics], 1.2) }
-        if question.leansHadith, question.intent != .hadith { scale([.hadithSemantic, .hadithRanked, .hadithTopics], 1.2) }
+        if question.leansQuran, question.intent != .hadith { scale([.quranSemantic, .quranKeyword, .quranTopics, .quranDescribed], 1.2) }
+        if question.leansHadith, question.intent != .hadith { scale([.hadithSemantic, .hadithRanked, .hadithTopics, .hadithDescribed], 1.2) }
         if question.mentionsApp, question.intent != .appHelp { w[.tips] = 0.6; w[.settings] = 0.7 }
+        #if DEBUG
+        if AskAIQuestion.describedSearchOff { w[.quranDescribed] = 0; w[.hadithDescribed] = 0 }
+        #endif
+        // A passage being looked for by its description: the lanes that read a description lead,
+        // the lanes that score the typed words and the subject trail, and the library asked of
+        // (a verse, a hadith) is the one searched.
+        if question.findsPassage {
+            scale([.quranDescribed, .hadithDescribed], 1.7)
+            scale([.quranSemantic, .quranKeyword, .quranTopics, .hadithSemantic, .hadithRanked, .hadithTopics], 0.55)
+            scale([.articles, .names, .duas, .surahName], 0.4)
+            if question.leansQuran, !question.leansHadith { scale([.hadithSemantic, .hadithRanked, .hadithTopics, .hadithDescribed], 0.35) }
+            if question.leansHadith, !question.leansQuran { scale([.quranSemantic, .quranKeyword, .quranTopics, .quranDescribed], 0.35) }
+        }
         return w
     }
 
@@ -115,11 +152,22 @@ enum AskAIRetriever {
     /// own lanes reach deeper, and the other libraries' lanes are not run at all.
     static func retrieve(_ question: AskAIQuestion, budget: Budget,
                          carried: [AskAISource] = [], carriedCited: [AskAISource] = [],
-                         focus: IslamArticle? = nil, scope: AskAIScope = .everything) async -> Outcome {
+                         focus: IslamArticle? = nil, scope: AskAIScope = .everything,
+                         previousPrayer: PreviousPrayer = nil) async -> Outcome {
         let started = CFAbsoluteTimeGetCurrent()
         var outcome = Outcome()
         outcome.searchText = question.searchText
         guard question.raw.count >= 2 else { return outcome }
+        // A passage being looked for: the search's own order is the answer, so the model is handed
+        // its best few and nothing to choose among. Handed twelve to read and pick from, it passed
+        // over 81:8 and 16:58-59, first and second for "burying baby girls alive", for 2:49
+        // ("keeping your females alive"), and explained that one with a practice it does not
+        // mention (2026-11-25). The search has the passage first for 34 of 40 descriptions.
+        var budget = budget
+        if question.findsPassage {
+            budget.limit = min(budget.limit, 5)
+            budget.notedSources = min(budget.notedSources, 2)
+        }
 
         #if HAS_QURAN
         let quranData = QuranData.shared
@@ -163,19 +211,52 @@ enum AskAIRetriever {
             for (rank, source) in carried.compactMap({ carriedForm($0, quotedBefore: false) }).prefix(6).enumerated() { pool.add(source, lane: .carried, rank: rank) }
         }
         #if HAS_ADHAN
+        var timetable: AskAISource?
         if question.intent == .prayerTimes {
             // Another place or another day (`AskAIPrayerRequest`) is computed the way City Prayer
             // Times computes it; "today, here" is the Adhan tab's own timetable.
-            let request = AskAIPrayerRequest.parse(question.raw)
+            // A follow-up keeps the place and the day of the question before it ("And in Cairo?").
+            var request = AskAIPrayerRequest.parse(question.raw)
+            if question.isFollowUp, let previousPrayer { request = request.inheriting(previousPrayer) }
+            outcome.prayerRequest = request
+            // "Fajr in Makkah and Cairo": a timetable for each place named, in the order written.
+            var others: [AskAISource] = []
+            if request.place != nil, !request.topics.contains(.week) {
+                for other in request.morePlaces {
+                    var single = request
+                    single.place = other
+                    single.morePlaces = []
+                    if let source = await AskAISourceFactory.prayerTimes(for: single), case .cityPrayer = source.kind { others.append(source) }
+                }
+            }
             if let asked = await AskAISourceFactory.prayerTimes(for: request) {
                 pool.add(asked, lane: .prayer, rank: 0)
-            } else if let prayer = AskAISourceFactory.prayerTimes() {
-                pool.add(prayer, lane: .prayer, rank: 0)
+                timetable = asked
+                if !others.isEmpty, case .cityPrayer = asked.kind {
+                    outcome.laneCounts = [.prayer: others.count + 1]
+                    // In the order the question named them (`request.place` is the last).
+                    outcome.sources = others + [asked]
+                    outcome.ranking = outcome.sources.map { ($0.reference, 1) }
+                    outcome.elapsed = CFAbsoluteTimeGetCurrent() - started
+                    return outcome
+                }
             }
         }
+        #else
+        let timetable: AskAISource? = nil
         #endif
         if Task.isCancelled { return outcome }
-        // Prayer Times chosen: the timetable is the whole answer.
+        // Prayer Times chosen, or a prayer-times question the app has computed the answer to: the
+        // timetable is the whole answer. Seven verses and articles beside it (2026-11-25: the surah
+        // named Al-Asr for "how long until Asr") doubled the wait for the first word and gave the
+        // model somewhere else to look, and it said the times were not in its sources.
+        if let timetable, scope != .prayerTimes, question.intent != .appHelp {
+            outcome.laneCounts = [.prayer: 1]
+            outcome.sources = [timetable]
+            outcome.ranking = [(timetable.reference, 1)]
+            outcome.elapsed = CFAbsoluteTimeGetCurrent() - started
+            return outcome
+        }
         if scope == .prayerTimes, question.intent != .appHelp {
             outcome.laneCounts = pool.counts
             (outcome.sources, outcome.ranking) = pool.select(limit: budget.limit)
@@ -196,6 +277,12 @@ enum AskAIRetriever {
             return outcome
         }
 
+        /// What the described-passage lanes are confident the description means (their first hit
+        /// each), and for a verse the ayah beside it that shares the description.
+        var describedLeads: [AskAISource] = []
+        var describedPartner: Int?
+        /// Per lead (by reference), the next different passage when it scored nearly as well.
+        var describedSeconds: [String: AskAISource] = [:]
         let semantic = !question.isArabic && SemanticSearchEngine.isSupported
         let engine = SemanticSearchEngine.shared
         let searchText = question.searchText
@@ -265,6 +352,41 @@ enum AskAIRetriever {
         }
         if Task.isCancelled { return outcome }
 
+        // Lane: the Quran searched by what a verse says, in the reader's own words: each word as a
+        // concept, over the translations, the neighbouring verses and the tafsirs' words.
+        if wantsQuran, !question.isArabic, let described = await QuranDescribedSearch.index(quranData: quranData) {
+            let description = question.isFollowUp ? question.searchText : question.raw
+            let describedLimit = scope == .quran ? 12 : 8
+            let hits = await Task.detached(priority: .userInitiated) { described.search(description, limit: describedLimit) }.value
+            if let lead = hits.first, lead.isConfident,
+               let source = AskAISourceFactory.ayah(surah: lead.surah, ayah: lead.ayah, quranData: quranData,
+                                                    maxCharacters: budget.sourceCharacters) {
+                describedLeads.append(source)
+                describedPartner = lead.partner
+                // The next passage, not the lead's own neighbour, within a fifth of its score.
+                if let second = hits.dropFirst().first(where: { !($0.surah == lead.surah && abs($0.ayah - lead.ayah) <= 1) }),
+                   second.score >= lead.score * Self.closeSecondShare,
+                   let other = AskAISourceFactory.ayah(surah: second.surah, ayah: second.ayah, quranData: quranData,
+                                                       maxCharacters: budget.sourceCharacters) {
+                    describedSeconds[source.reference] = other
+                }
+            }
+            outcome.described += hits.prefix(6).map { String(format: "%d:%d %.1f/%.2f", $0.surah, $0.ayah, $0.score, $0.coverage) }
+            var rank = 0
+            for hit in hits {
+                // A passage being looked for is read with the verse beside it when that verse holds
+                // part of the description ("the girl buried alive" is 81:8, "for what sin she was
+                // killed" 81:9): the two follow each other in the ranking.
+                for ayah in [hit.ayah] + (question.findsPassage ? [hit.partner].compactMap { $0 } : []) {
+                    guard let source = AskAISourceFactory.ayah(surah: hit.surah, ayah: ayah, quranData: quranData,
+                                                               maxCharacters: budget.sourceCharacters) else { continue }
+                    pool.add(source, lane: .quranDescribed, rank: rank)
+                    rank += 1
+                }
+            }
+        }
+        if Task.isCancelled { return outcome }
+
         // Lane: the Quran's meaning search.
         if semantic, wantsQuran {
             await engine.awaitDiskLoad(QuranSemanticCorpus.id)
@@ -313,6 +435,42 @@ enum AskAIRetriever {
                                                          maxCharacters: budget.sourceCharacters + 100) else { continue }
             pool.add(source, lane: .hadithRanked, rank: rank)
         }
+        // Lane: the major collections searched by what a narration says, in the reader's own words.
+        // The same narration sits in several collections: one telling of it is enough.
+        if hadithLimit > 0, !question.isArabic, !nameOnly,
+           let described = await HadithDescribedSearch.index(
+               rowCounts: Dictionary(books.map { ($0.0.slug, $0.1.hadiths.count) }, uniquingKeysWith: { first, _ in first })) {
+            let description = question.isFollowUp ? question.searchText : question.raw
+            let hits = await Task.detached(priority: .userInitiated) { described.search(description, limit: hadithLimit * 2) }.value
+            var found: [(book: HadithCatalogBook, data: HadithBookData, hadith: HadithBookData.Hadith)] = []
+            for hit in hits {
+                guard let entry = books.first(where: { $0.0.slug == hit.slug }), entry.1.hadiths.indices.contains(hit.row) else { continue }
+                found.append((entry.0, entry.1, entry.1.hadiths[hit.row]))
+            }
+            await prewarmHadithText(found.map { ($0.data, $0.hadith.row) })
+            var told: [Set<String>] = []
+            var rank = 0
+            var leadReference: String?
+            let scores = Dictionary(hits.map { ("\($0.slug)|\($0.row)", $0.score) }, uniquingKeysWith: { first, _ in first })
+            for entry in found where rank < hadithLimit {
+                guard let source = AskAISourceFactory.hadith(book: entry.book, data: entry.data, hadith: entry.hadith,
+                                                             maxCharacters: budget.sourceCharacters + 100) else { continue }
+                let words = Set(AskAIWords.stems(source.text))
+                if told.contains(where: { AskAIWords.overlap($0, words) >= 0.6 }) { continue }
+                told.append(words)
+                if rank == 0, let lead = hits.first, lead.isConfident, lead.slug == entry.book.slug, lead.row == entry.hadith.row {
+                    describedLeads.append(source)
+                    leadReference = source.reference
+                } else if rank == 1, let leadReference, let lead = hits.first,
+                          (scores["\(entry.book.slug)|\(entry.hadith.row)"] ?? 0) >= lead.score * Self.closeSecondShare {
+                    describedSeconds[leadReference] = source
+                }
+                pool.add(source, lane: .hadithDescribed, rank: rank)
+                rank += 1
+            }
+        }
+        if Task.isCancelled { return outcome }
+
         var topicFound: [(rank: Int, book: HadithCatalogBook, data: HadithBookData, hadith: HadithBookData.Hadith)] = []
         for (rank, entry) in (await topicHadiths).enumerated() where !nameOnly {
             let parts = entry.citationParts
@@ -389,14 +547,60 @@ enum AskAIRetriever {
             #endif
         }
         #if HAS_ADHAN
-        if question.intent != .prayerTimes, mentionsTodaysPrayer(question), let prayer = AskAISourceFactory.prayerTimes() {
+        if question.intent != .prayerTimes, mentionsTodaysPrayer(question), let prayer = AskAISourceFactory.prayerTimes(asking: question.raw) {
             pool.add(prayer, lane: .prayer, rank: 0)
         }
         #endif
         _ = (semantic, engine, semanticQuery, nameOnly, wantsQuran, wantsHadith, narrowed)
 
         outcome.laneCounts = pool.counts
-        (outcome.sources, outcome.ranking) = pool.select(limit: budget.limit)
+        // "The verse about ..." is answered by a verse and "the hadith about ..." by a hadith: the
+        // candidates are all of the library asked of, with no share kept for the others.
+        let oneLibrary = question.findsPassage && question.leansQuran != question.leansHadith
+        (outcome.sources, outcome.ranking) = pool.select(limit: budget.limit, capped: !oneLibrary)
+        // The passage found: what a described-passage lane is confident the description means
+        // leads the turn, whatever the other lanes ranked above it (they score the typed words:
+        // "wives" and "garments" both stand in 33:59, and it led 2:187, "your spouses are a garment
+        // for you"). A verse is read with the one beside it when that one shares the description,
+        // or when the verse stops mid-sentence ("And when the girl buried alive is asked" is 81:8;
+        // "for what sin she was killed" is 81:9), the two in the Quran's order.
+        if question.findsPassage, !describedLeads.isEmpty {
+            func position(_ source: AskAISource) -> Int {
+                outcome.sources.firstIndex(where: { $0.reference == source.reference }) ?? Int.max
+            }
+            var leads = describedLeads
+            if oneLibrary { leads = leads.filter { $0.kind.isAyah == question.leansQuran } }
+            if let lead = leads.min(by: { position($0) < position($1) }) {
+                outcome.sources.removeAll { $0.reference == lead.reference }
+                outcome.sources.insert(lead, at: 0)
+                outcome.passageSources = 1
+                #if HAS_QURAN
+                if case .ayah(let surah, let ayah) = lead.kind {
+                    // A short ayah with no full stop is a clause of a sentence the next ayah ends.
+                    let text = lead.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let fragment = text.count < 70 && !(text.last.map { ".!?\u{201D}\"')".contains($0) } ?? true)
+                    if let beside = describedPartner ?? (fragment ? ayah + 1 : nil) {
+                        let reference = "\(surah):\(beside)"
+                        let partner = outcome.sources.first(where: { $0.reference == reference })
+                            ?? AskAISourceFactory.ayah(surah: surah, ayah: beside, quranData: quranData, maxCharacters: budget.sourceCharacters)
+                        if let partner {
+                            outcome.sources.removeAll { $0.reference == reference }
+                            outcome.sources.insert(partner, at: beside < ayah ? 0 : 1)
+                            outcome.passageSources = 2
+                        }
+                    }
+                }
+                #endif
+                // A second match the search could not tell from the first follows it, to be quoted.
+                if let second = describedSeconds[lead.reference],
+                   !outcome.sources.prefix(outcome.passageSources).contains(where: { $0.reference == second.reference }) {
+                    outcome.sources.removeAll { $0.reference == second.reference }
+                    outcome.sources.insert(second, at: outcome.passageSources)
+                    outcome.hasCloseSecond = true
+                }
+                if outcome.sources.count > budget.limit { outcome.sources.removeLast(outcome.sources.count - budget.limit) }
+            }
+        }
         // A long source is clipped around the sentence that matched, not from its opening; a
         // subject is the whole point of the question, so it keeps its opening.
         let focus = question.searchTerms
@@ -412,6 +616,9 @@ enum AskAIRetriever {
         outcome.elapsed = CFAbsoluteTimeGetCurrent() - started
         return outcome
     }
+
+    /// A second passage is "nearly as close" from this share of the first one's score.
+    private static let closeSecondShare = 0.8
 
     // MARK: - Fusion
 
@@ -450,14 +657,14 @@ enum AskAIRetriever {
 
         /// Best first, subjects always leading, with a diversity cap: no family takes more than
         /// three fifths of the budget while another family still has candidates.
-        func select(limit: Int) -> ([AskAISource], [(reference: String, score: Double)]) {
+        func select(limit: Int, capped: Bool = true) -> ([AskAISource], [(reference: String, score: Double)]) {
             let ranked = order.map { ($0, scores[$0] ?? 0) }
                 .sorted { a, b in
                     let sa = sources[a.0]?.isSubject ?? false, sb = sources[b.0]?.isSubject ?? false
                     if sa != sb { return sa }
                     return a.1 > b.1
                 }
-            let cap = max(2, Int((Double(limit) * 0.6).rounded(.up)))
+            let cap = capped ? max(2, Int((Double(limit) * 0.6).rounded(.up))) : limit
             var perFamily: [AskAISource.Family: Int] = [:]
             var chosen: [AskAISource] = []
             var skipped: [AskAISource] = []
@@ -491,6 +698,12 @@ enum AskAIRetriever {
         let terms = Array(question.searchTerms.prefix(8))
         return terms.isEmpty ? question.searchText : terms.joined(separator: " ")
     }
+
+    #if HAS_ADHAN
+    typealias PreviousPrayer = AskAIPrayerRequest?
+    #else
+    typealias PreviousPrayer = Never?
+    #endif
 
     /// Whether a non-clock question still names today's schedule ("did I miss asr", "how many
     /// rakahs is dhuhr" without a clock word): a named prayer with prayer-general words.
@@ -540,6 +753,9 @@ enum AskAIRetriever {
         "ornaments", "crouching", "dunes", "chambers", "scatterer", "mount", "beneficent", "event", "gathering", "exile",
         "examined", "ranks", "hypocrites", "loss", "sovereignty", "ascending", "wrapped", "cloaked", "tidings", "frowned",
         "splitting", "cleaving", "sky", "traveller", "most", "high", "morning", "brightness", "relief", "consolation",
+        // "Hadith about ..." is the reader asking for a narration, not Al-Ghashiyah by its opening
+        // words (2026-11-25: Surah 88 rode along with every question that began that way).
+        "hadith", "hadiths", "hadeeth", "verse", "verses", "ayah", "ayat", "narration",
     ]
 
     private static func subjectSources(for question: AskAIQuestion, budget: Budget) async -> (subjects: [AskAISource], support: [AskAISource]) {
@@ -584,7 +800,10 @@ enum AskAIRetriever {
         // A surah named WITHOUT the word: "what is al-kahf about", "explain yaseen", "tell me about
         // yusuf". Only an exact spelling of one surah's name counts, never a substring; a person's
         // name adds the surah as support, so the prophet's own article can still lead.
-        if surahs.isEmpty, !question.isArabic {
+        // Not while a passage is being described: its words are the description's ("the bird that
+        // told Solomon about a queen" is not a question about Surah An-Naml by name).
+        if surahs.isEmpty, !question.isArabic, !question.findsPassage {
+            let described = QuranDescribedSearch.builtIndex
             let words = lowered.split(separator: " ").map(String.init)
             for (index, word) in words.enumerated() where word.count >= 3 && !surahWordStop.contains(word) && !AskAILexicon.stopWords.contains(word) {
                 var candidates = [word]
@@ -593,6 +812,12 @@ enum AskAIRetriever {
                     // Whole-key matches only: the looser tier read "wudu" as Ad-Duhaa.
                     let matches = SurahSpelling.matches(candidate, in: quranData.quran, wholeKeyOnly: true)
                     if matches.count == 1, let surah = matches.first {
+                        // An ordinary English word is not a surah by its consonants: the spelling
+                        // fold read "road" as Ar-Ra'd, "water" as Wat-Tur and "man" as Al-Mani'ah
+                        // (2026-11-25, one of them riding along with most questions). A word the
+                        // translations use counts only when it IS the surah's name.
+                        if let described, candidate.split(separator: " ").allSatisfy({ described.knows(String($0)) }),
+                           !isName(candidate, of: surah) { continue }
                         let saysSurah = question.leansQuran
                         if !surahs.contains(where: { $0.id == surah.id }) { surahs.append((surah.id, saysSurah)) }
                         break
@@ -645,6 +870,22 @@ enum AskAIRetriever {
         }
         return (out, support)
     }
+
+    #if HAS_QURAN
+    private static let nameArticlesAndThe: Set<String> = ["al", "ar", "as", "an", "ad", "at", "ash", "az", "adh", "ath", "the"]
+
+    /// Whether `candidate` is the surah's own name as the app writes it, in transliteration or in
+    /// English, the article aside ("yusuf", "the cave", "maryam").
+    private static func isName(_ candidate: String, of surah: Surah) -> Bool {
+        func bare(_ text: String) -> String {
+            var words = AskAILexicon.fold(text).split(separator: " ").map(String.init)
+            if let first = words.first, words.count > 1, nameArticlesAndThe.contains(first) { words.removeFirst() }
+            return words.joined(separator: " ")
+        }
+        let asked = bare(candidate)
+        return !asked.isEmpty && (asked == bare(surah.nameTransliteration) || asked == bare(surah.nameEnglish))
+    }
+    #endif
 
     #if HAS_HADITH
     /// The hadith a question names by collection and number. `HadithReferenceParser` reads a whole
@@ -712,6 +953,7 @@ enum AskAIRetriever {
             let quranData = QuranData.shared
             await quranData.waitUntilCoreLoaded()
             quranData.ensureVerseSearchIndex(priority: .utility)
+            QuranDescribedSearch.prewarm(quranData: quranData)
             #endif
             guard SemanticSearchEngine.isSupported else { return }
             let engine = SemanticSearchEngine.shared
